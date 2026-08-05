@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { mockWorkOrders, mockCustomers, mockVehicles, mockUsers, mockAssignments } from '../services/mockData';
 import type { OrderStatus, WorkOrder } from '../types/database';
-import { Calendar, User, Gauge } from 'lucide-react';
+import { Calendar, Gauge } from 'lucide-react';
 
 const COLUMNS: { status: OrderStatus; emoji: string }[] = [
   { status: 'recepcion', emoji: '📥' },

@@ -1,6 +1,6 @@
 import { useLanguage } from '../context/LanguageContext';
-import { mockPayroll, mockUsers, mockSedes } from '../services/mockData';
-import { Plus, CreditCard, Calendar } from 'lucide-react';
+import { mockPayroll, mockUsers } from '../services/mockData';
+import { Plus, Calendar } from 'lucide-react';
 
 export default function Payroll() {
   const { t } = useLanguage();

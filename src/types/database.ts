@@ -88,6 +88,7 @@ export interface WorkOrder {
   nivel_gasolina: string;
   deposito_inicial: number;
   inspeccion_360_notas: string;
+  inspeccion_360_fotos?: (string | undefined)[];
   fecha_ingreso: string;
   fecha_estimada_entrega: string;
   fecha_finalizacion?: string;

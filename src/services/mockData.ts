@@ -11,15 +11,12 @@ import type {
   WorkOrder,
   LaborItem,
   OrderAssignment,
-  InspectionPhoto,
   WorkOrderPart,
   FinancialTransaction,
   PayrollEntry,
   DashboardStats,
 } from '../types/database';
 
-// ===== Helper =====
-const uuid = () => crypto.randomUUID();
 
 // ===== Sedes =====
 export const mockSedes: Sede[] = [

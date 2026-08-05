@@ -1,6 +1,6 @@
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { mockDashboardStats, mockWorkOrders, mockCustomers, mockVehicles, mockUsers } from '../services/mockData';
+import { mockDashboardStats, mockWorkOrders, mockCustomers, mockVehicles } from '../services/mockData';
 import {
   ClipboardList,
   DollarSign,

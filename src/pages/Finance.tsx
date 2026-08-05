@@ -10,7 +10,6 @@ import {
   Plus,
   Download,
   X,
-  Filter,
 } from 'lucide-react';
 
 export default function Finance() {

@@ -10,14 +10,12 @@ import {
   ChevronLeft,
   Calendar,
   Fuel,
-  Gauge,
   DollarSign,
   User,
   Wrench,
   Paintbrush,
   Camera,
   X,
-  Upload,
   CheckCircle2,
 } from 'lucide-react';
 
@@ -102,13 +100,13 @@ export default function WorkOrders() {
       nivel_gasolina: fuelLevel,
       millas_ingreso: parseInt(milesIn) || 0,
       deposito_inicial: parseFloat(deposit) || 0,
-      subtotal: 0,
-      descuento: 0,
-      impuestos: 0,
+      total_labor: 0,
+      total_repuestos: 0,
       total_general: parseFloat(deposit) || 0,
+      fecha_ingreso: new Date().toISOString(),
       fecha_estimada_entrega: new Date(Date.now() + 864000000).toISOString().split('T')[0],
+      creado_por: 'admin',
       creado_en: new Date().toISOString(),
-      actualizado_en: new Date().toISOString(),
     };
 
     setOrders([newOrder, ...orders]);
