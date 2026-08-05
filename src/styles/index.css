@@ -1,0 +1,325 @@
+/* ===================================================
+   RESTORIFY — Design System
+   Premium dark theme with golden amber accents
+   Derived from Restorify brand identity
+   =================================================== */
+
+/* ===== CSS Custom Properties / Design Tokens ===== */
+:root {
+  /* Brand Colors - extracted from logo */
+  --color-primary: #D4A017;
+  --color-primary-light: #F0C040;
+  --color-primary-dark: #B8860B;
+  --color-primary-glow: rgba(212, 160, 23, 0.25);
+  --color-primary-subtle: rgba(212, 160, 23, 0.08);
+
+  /* Neutral Palette */
+  --color-bg-primary: #0A0A0F;
+  --color-bg-secondary: #111118;
+  --color-bg-tertiary: #1A1A24;
+  --color-bg-elevated: #22222E;
+  --color-bg-hover: #2A2A38;
+  --color-bg-active: #32324A;
+
+  /* Surface / Cards */
+  --color-surface: rgba(26, 26, 36, 0.8);
+  --color-surface-hover: rgba(34, 34, 46, 0.9);
+  --color-surface-border: rgba(255, 255, 255, 0.06);
+  --color-surface-glass: rgba(26, 26, 36, 0.6);
+
+  /* Text */
+  --color-text-primary: #F0F0F5;
+  --color-text-secondary: #9A9AB0;
+  --color-text-tertiary: #6A6A80;
+  --color-text-inverse: #0A0A0F;
+
+  /* Semantic Colors */
+  --color-success: #10B981;
+  --color-success-bg: rgba(16, 185, 129, 0.1);
+  --color-warning: #F59E0B;
+  --color-warning-bg: rgba(245, 158, 11, 0.1);
+  --color-danger: #EF4444;
+  --color-danger-bg: rgba(239, 68, 68, 0.1);
+  --color-info: #3B82F6;
+  --color-info-bg: rgba(59, 130, 246, 0.1);
+
+  /* Status Colors for Work Orders */
+  --color-status-recepcion: #8B5CF6;
+  --color-status-en-proceso: #3B82F6;
+  --color-status-espera: #F59E0B;
+  --color-status-finalizado: #10B981;
+  --color-status-entregado: #6B7280;
+
+  /* Typography */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-size-xs: 0.6875rem;    /* 11px */
+  --font-size-sm: 0.75rem;      /* 12px */
+  --font-size-base: 0.875rem;   /* 14px */
+  --font-size-md: 1rem;         /* 16px */
+  --font-size-lg: 1.125rem;     /* 18px */
+  --font-size-xl: 1.25rem;      /* 20px */
+  --font-size-2xl: 1.5rem;      /* 24px */
+  --font-size-3xl: 1.875rem;    /* 30px */
+  --font-size-4xl: 2.25rem;     /* 36px */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Spacing Scale */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+
+  /* Border Radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 12px 48px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 20px var(--color-primary-glow);
+  --shadow-glow-sm: 0 0 10px var(--color-primary-glow);
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Layout */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 72px;
+  --header-height: 64px;
+  --page-max-width: 1400px;
+
+  /* Z-index scale */
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+}
+
+/* ===== Reset & Base ===== */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+a {
+  color: var(--color-primary-light);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+a:hover {
+  color: var(--color-primary);
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  background: none;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+ul, ol {
+  list-style: none;
+}
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-bg-hover);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}
+
+/* ===== Animations ===== */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes progressGlow {
+  0%, 100% { box-shadow: 0 0 4px var(--color-primary-glow); }
+  50% { box-shadow: 0 0 12px var(--color-primary-glow); }
+}
+
+/* ===== Utility Classes ===== */
+.animate-fade-in { animation: fadeIn var(--transition-base) ease-out; }
+.animate-fade-in-up { animation: fadeInUp var(--transition-slow) ease-out; }
+.animate-fade-in-down { animation: fadeInDown var(--transition-slow) ease-out; }
+.animate-slide-in-left { animation: slideInLeft var(--transition-slow) ease-out; }
+.animate-slide-in-right { animation: slideInRight var(--transition-slow) ease-out; }
+.animate-scale-in { animation: scaleIn var(--transition-base) ease-out; }
+
+.stagger-1 { animation-delay: 50ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 150ms; }
+.stagger-4 { animation-delay: 200ms; }
+.stagger-5 { animation-delay: 250ms; }
+.stagger-6 { animation-delay: 300ms; }
+
+.text-xs { font-size: var(--font-size-xs); }
+.text-sm { font-size: var(--font-size-sm); }
+.text-base { font-size: var(--font-size-base); }
+.text-md { font-size: var(--font-size-md); }
+.text-lg { font-size: var(--font-size-lg); }
+.text-xl { font-size: var(--font-size-xl); }
+.text-2xl { font-size: var(--font-size-2xl); }
+.text-3xl { font-size: var(--font-size-3xl); }
+
+.font-light { font-weight: var(--font-weight-light); }
+.font-normal { font-weight: var(--font-weight-normal); }
+.font-medium { font-weight: var(--font-weight-medium); }
+.font-semibold { font-weight: var(--font-weight-semibold); }
+.font-bold { font-weight: var(--font-weight-bold); }
+
+.text-primary { color: var(--color-text-primary); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-tertiary { color: var(--color-text-tertiary); }
+.text-accent { color: var(--color-primary-light); }
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+.text-danger { color: var(--color-danger); }
+
+/* ===== Glass Morphism ===== */
+.glass {
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-surface-border);
+}
+
+.glass-strong {
+  background: var(--color-surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-surface-border);
+}

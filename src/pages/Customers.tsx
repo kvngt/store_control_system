@@ -1,0 +1,338 @@
+import { useState } from 'react';
+import { useLanguage } from '../context/LanguageContext';
+import { mockCustomers, mockVehicles, mockWorkOrders } from '../services/mockData';
+import {
+  Plus,
+  Search,
+  Eye,
+  Edit3,
+  Trash2,
+  X,
+  Car,
+  ClipboardList,
+  Phone,
+  Mail,
+  MapPin,
+  StickyNote,
+  ChevronLeft,
+} from 'lucide-react';
+import type { Customer } from '../types/database';
+
+export default function Customers() {
+  const { t } = useLanguage();
+  const [search, setSearch] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [viewProfile, setViewProfile] = useState<Customer | null>(null);
+
+  const filtered = mockCustomers.filter(
+    (c) =>
+      c.nombre.toLowerCase().includes(search.toLowerCase()) ||
+      c.telefono.includes(search) ||
+      c.email.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Profile view
+  if (viewProfile) {
+    const vehicles = mockVehicles.filter((v) => v.cliente_id === viewProfile.id);
+    const orders = mockWorkOrders.filter((o) => o.cliente_id === viewProfile.id);
+
+    const statusLabels: Record<string, string> = {
+      recepcion: t('workOrders.intake'),
+      en_proceso: t('workOrders.inProgress'),
+      espera_repuestos: t('workOrders.waitingParts'),
+      finalizado: t('workOrders.completed'),
+      entregado: t('workOrders.delivered'),
+    };
+
+    return (
+      <div className="animate-fade-in">
+        <button
+          className="btn btn-ghost"
+          onClick={() => setViewProfile(null)}
+          style={{ marginBottom: 'var(--space-4)' }}
+        >
+          <ChevronLeft size={18} /> {t('common.back')}
+        </button>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 'var(--space-4)' }}>
+          {/* Customer Info Card */}
+          <div className="card">
+            <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
+              <div
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto var(--space-3)',
+                  fontSize: 'var(--font-size-2xl)',
+                  fontWeight: 700,
+                  color: 'var(--color-text-inverse)',
+                }}
+              >
+                {viewProfile.nombre.split(' ').map(n => n[0]).slice(0, 2).join('')}
+              </div>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700 }}>
+                {viewProfile.nombre}
+              </h2>
+              <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', marginTop: '4px' }}>
+                {t('customers.customerProfile')}
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', fontSize: 'var(--font-size-sm)' }}>
+                <Phone size={16} style={{ color: 'var(--color-text-tertiary)' }} />
+                <span>{viewProfile.telefono}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', fontSize: 'var(--font-size-sm)' }}>
+                <Mail size={16} style={{ color: 'var(--color-text-tertiary)' }} />
+                <span>{viewProfile.email}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', fontSize: 'var(--font-size-sm)' }}>
+                <MapPin size={16} style={{ color: 'var(--color-text-tertiary)' }} />
+                <span>{viewProfile.direccion}</span>
+              </div>
+            </div>
+
+            {viewProfile.notas_crm && (
+              <div style={{ marginTop: 'var(--space-6)', padding: 'var(--space-4)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)', fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                  <StickyNote size={14} />
+                  {t('customers.crmNotes')}
+                </div>
+                <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+                  {viewProfile.notas_crm}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Right side */}
+          <div>
+            {/* Vehicles */}
+            <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
+              <div className="card-header">
+                <h3 className="card-title">
+                  <Car size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+                  {t('customers.registeredVehicles')} ({vehicles.length})
+                </h3>
+              </div>
+              {vehicles.length === 0 ? (
+                <p style={{ color: 'var(--color-text-tertiary)' }}>{t('customers.noVehicles')}</p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 'var(--space-3)' }}>
+                  {vehicles.map((v) => (
+                    <div
+                      key={v.id}
+                      style={{
+                        padding: 'var(--space-4)',
+                        background: 'var(--color-bg-tertiary)',
+                        borderRadius: 'var(--radius-lg)',
+                        border: '1px solid var(--color-surface-border)',
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+                        {v.anio} {v.marca} {v.modelo}
+                      </div>
+                      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+                        {v.color} · {v.placa}
+                      </div>
+                      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: '4px' }}>
+                        VIN: {v.vin.slice(0, 11)}...
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Service History */}
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title">
+                  <ClipboardList size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+                  {t('customers.serviceHistory')} ({orders.length})
+                </h3>
+              </div>
+              <div className="table-container" style={{ border: 'none' }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{t('workOrders.orderNumber')}</th>
+                      <th>{t('vehicles.title')}</th>
+                      <th>{t('common.type')}</th>
+                      <th>{t('common.status')}</th>
+                      <th>{t('common.total')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((o) => {
+                      const veh = mockVehicles.find((v) => v.id === o.vehiculo_id);
+                      return (
+                        <tr key={o.id}>
+                          <td style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>{o.numero_orden}</td>
+                          <td>{veh?.anio} {veh?.marca} {veh?.modelo}</td>
+                          <td><span className={`badge badge-${o.tipo_trabajo}`}>{o.tipo_trabajo}</span></td>
+                          <td><span className={`badge badge-${o.estatus}`}>{statusLabels[o.estatus]}</span></td>
+                          <td style={{ fontWeight: 600 }}>${o.total_general.toLocaleString()}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // List view
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">{t('customers.title')}</h1>
+          <p className="page-subtitle">{filtered.length} {t('common.results')}</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => { setSelectedCustomer(null); setShowModal(true); }} id="new-customer-btn">
+          <Plus size={18} /> {t('customers.newCustomer')}
+        </button>
+      </div>
+
+      {/* Search */}
+      <div style={{ marginBottom: 'var(--space-4)', position: 'relative', maxWidth: 400 }}>
+        <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)' }} />
+        <input
+          className="form-input"
+          placeholder={t('common.search')}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ paddingLeft: 36 }}
+          id="customer-search"
+        />
+      </div>
+
+      {/* Table */}
+      <div className="table-container animate-fade-in">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>{t('common.name')}</th>
+              <th>{t('common.phone')}</th>
+              <th>{t('common.email')}</th>
+              <th>{t('customers.vehicles')}</th>
+              <th>{t('workOrders.title')}</th>
+              <th>{t('common.actions')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((customer) => (
+              <tr key={customer.id}>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: '50%',
+                        background: 'var(--color-bg-hover)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 'var(--font-size-sm)',
+                        fontWeight: 700,
+                        color: 'var(--color-primary-light)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {customer.nombre.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                    </div>
+                    <span style={{ fontWeight: 500 }}>{customer.nombre}</span>
+                  </div>
+                </td>
+                <td>{customer.telefono}</td>
+                <td style={{ color: 'var(--color-text-secondary)' }}>{customer.email}</td>
+                <td>
+                  <span className="badge badge-en_proceso">{customer.vehiculos_count || 0}</span>
+                </td>
+                <td>
+                  <span className="badge badge-finalizado">{customer.ordenes_count || 0}</span>
+                </td>
+                <td>
+                  <div className="table-actions">
+                    <button className="btn btn-ghost btn-sm btn-icon" title={t('common.view')} onClick={() => setViewProfile(customer)}>
+                      <Eye size={16} />
+                    </button>
+                    <button className="btn btn-ghost btn-sm btn-icon" title={t('common.edit')} onClick={() => { setSelectedCustomer(customer); setShowModal(true); }}>
+                      <Edit3 size={16} />
+                    </button>
+                    <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }}>
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Create/Edit Modal */}
+      {showModal && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                {selectedCustomer ? t('customers.editCustomer') : t('customers.newCustomer')}
+              </h3>
+              <button className="modal-close" onClick={() => setShowModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">{t('common.name')}</label>
+                  <input className="form-input" defaultValue={selectedCustomer?.nombre || ''} id="customer-name" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">{t('common.phone')}</label>
+                  <input className="form-input" defaultValue={selectedCustomer?.telefono || ''} id="customer-phone" />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">{t('common.email')}</label>
+                  <input className="form-input" type="email" defaultValue={selectedCustomer?.email || ''} id="customer-email" />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">{t('common.address')}</label>
+                <input className="form-input" defaultValue={selectedCustomer?.direccion || ''} id="customer-address" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">{t('customers.crmNotes')}</label>
+                <textarea className="form-input form-textarea" defaultValue={selectedCustomer?.notas_crm || ''} id="customer-notes" />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowModal(false)}>
+                {t('common.cancel')}
+              </button>
+              <button className="btn btn-primary" onClick={() => setShowModal(false)} id="customer-save">
+                {selectedCustomer ? t('common.update') : t('common.create')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
