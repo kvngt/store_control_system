@@ -22,10 +22,10 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
     <header className={`header ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <div className="header-left">
         <button
-          className="btn btn-ghost btn-icon"
+          className="btn btn-ghost btn-icon mobile-menu-btn"
           onClick={onMobileMenuToggle}
-          style={{ display: 'none' }}
           id="mobile-menu-btn"
+          aria-label="Abrir menú"
         >
           <Menu size={20} />
         </button>

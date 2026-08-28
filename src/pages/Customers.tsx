@@ -140,7 +140,7 @@ export default function Customers() {
 
         {error && <div className="alert-error">{error}</div>}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 'var(--space-4)' }}>
+        <div className="responsive-grid-sidebar">
           {/* Customer Info Card */}
           <div className="card">
             <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>

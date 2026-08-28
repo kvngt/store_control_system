@@ -131,6 +131,7 @@ const translations: Record<Language, Translations> = {
       fuelLevel: 'Nivel de Gasolina',
       deposit: 'Depósito',
       inspection360: 'Inspección 360°',
+      tapToCapture: 'Toca una zona para tomar la foto con la cámara o elegirla de la galería.',
       inspectionNotes: 'Notas de Inspección',
       laborDescription: 'Descripción de Labor',
       partsDescription: 'Descripción de Repuestos',
@@ -201,6 +202,7 @@ const translations: Record<Language, Translations> = {
       spanish: 'Español',
       english: 'English',
       profile: 'Mi Perfil',
+      capacity: 'Capacidad del taller',
     },
     // Auth
     auth: {
@@ -335,6 +337,7 @@ const translations: Record<Language, Translations> = {
       fuelLevel: 'Fuel Level',
       deposit: 'Deposit',
       inspection360: '360° Inspection',
+      tapToCapture: 'Tap a zone to take the photo with the camera or pick one from the gallery.',
       inspectionNotes: 'Inspection Notes',
       laborDescription: 'Labor Description',
       partsDescription: 'Parts Description',
@@ -401,6 +404,7 @@ const translations: Record<Language, Translations> = {
       spanish: 'Español',
       english: 'English',
       profile: 'My Profile',
+      capacity: 'Workshop capacity',
     },
     auth: {
       login: 'Log In',

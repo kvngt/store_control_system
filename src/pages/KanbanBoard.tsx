@@ -13,8 +13,6 @@ const COLUMNS: { status: OrderStatus; emoji: string }[] = [
   { status: 'entregado', emoji: '🚗' },
 ];
 
-const CAPACITY = 10;
-
 export default function KanbanBoard() {
   const { t } = useLanguage();
   const { user, currentSede } = useAuth();
@@ -73,8 +71,9 @@ export default function KanbanBoard() {
     }
   };
 
+  const capacity = currentSede?.capacidad ?? 10;
   const totalActive = orders.filter((o) => !['finalizado', 'entregado'].includes(o.estatus)).length;
-  const occupancy = Math.min(100, Math.round((totalActive / CAPACITY) * 100));
+  const occupancy = Math.min(100, Math.round((totalActive / capacity) * 100));
 
   if (loading) {
     return <div className="loading-state"><div className="spinner" /></div>;
@@ -86,7 +85,7 @@ export default function KanbanBoard() {
         <div>
           <h1 className="page-title">{t('kanban.title')}</h1>
           <p className="page-subtitle">
-            {t('kanban.occupancy')}: {totalActive}/{CAPACITY} ({occupancy}%)
+            {t('kanban.occupancy')}: {totalActive}/{capacity} ({occupancy}%)
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>

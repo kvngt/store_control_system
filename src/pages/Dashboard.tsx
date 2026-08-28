@@ -40,7 +40,7 @@ export default function Dashboard() {
     const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
 
     Promise.all([
-      supabaseService.getDashboardStats(sedeId),
+      supabaseService.getDashboardStats(sedeId, currentSede?.capacidad),
       supabaseService.getWorkOrders(sedeId),
     ])
       .then(([statsData, orders]) => {
@@ -139,7 +139,7 @@ export default function Dashboard() {
       </div>
 
       {/* Main content grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+      <div className="responsive-grid-2">
         {/* Revenue Chart */}
         <div className="card">
           <div className="card-header">

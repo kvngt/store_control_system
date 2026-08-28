@@ -20,18 +20,39 @@ export default function Settings() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [capacityDrafts, setCapacityDrafts] = useState<Record<string, string>>({});
+  const [savingSedeId, setSavingSedeId] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadData = () => {
     setLoading(true);
     setError('');
     Promise.all([supabaseService.getSedes(), supabaseService.getUsers()])
       .then(([s, u]) => {
         setSedes(s);
         setUsers(u);
+        setCapacityDrafts(Object.fromEntries(s.map((sede) => [sede.id, String(sede.capacidad)])));
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
+
+  const handleSaveCapacity = async (sedeId: string) => {
+    const value = parseInt(capacityDrafts[sedeId], 10);
+    if (!value || value <= 0) return;
+    setSavingSedeId(sedeId);
+    try {
+      await supabaseService.updateSede(sedeId, { capacidad: value });
+      loadData();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSavingSedeId(null);
+    }
+  };
 
   return (
     <div>
@@ -129,6 +150,30 @@ export default function Settings() {
                         <Users size={14} /> {sedeUsers.length} {language === 'es' ? 'empleados' : 'employees'}
                       </div>
                     </div>
+
+                    {user?.rol === 'admin' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
+                        <label style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+                          {t('settings.capacity')}
+                        </label>
+                        <input
+                          className="form-input"
+                          type="number"
+                          min={1}
+                          style={{ width: 80 }}
+                          value={capacityDrafts[sede.id] ?? ''}
+                          onChange={(e) => setCapacityDrafts((prev) => ({ ...prev, [sede.id]: e.target.value }))}
+                        />
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleSaveCapacity(sede.id)}
+                          disabled={savingSedeId === sede.id || capacityDrafts[sede.id] === String(sede.capacidad)}
+                        >
+                          {savingSedeId === sede.id ? t('common.loading') : t('common.update')}
+                        </button>
+                      </div>
+                    )}
+
                     <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-4)', flexWrap: 'wrap' }}>
                       {sedeUsers.map((u) => (
                         <div

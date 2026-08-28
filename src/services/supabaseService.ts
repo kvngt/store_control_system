@@ -14,7 +14,7 @@ import type {
   OrderStatus,
 } from '../types/database';
 
-const WORKSHOP_CAPACITY = 10;
+const DEFAULT_CAPACITY = 10;
 
 function isSameMonth(dateStr: string, ref: Date) {
   const d = new Date(dateStr);
@@ -31,6 +31,12 @@ export const supabaseService = {
 
   createSede: async (input: Omit<Sede, 'id' | 'fecha_creacion'>) => {
     const { data, error } = await supabase.from('sedes').insert(input).select().single();
+    if (error) throw error;
+    return data as Sede;
+  },
+
+  updateSede: async (id: string, input: Partial<Pick<Sede, 'nombre' | 'direccion' | 'telefono' | 'capacidad'>>) => {
+    const { data, error } = await supabase.from('sedes').update(input).eq('id', id).select().single();
     if (error) throw error;
     return data as Sede;
   },
@@ -331,7 +337,7 @@ export const supabaseService = {
   },
 
   // ===== Dashboard =====
-  getDashboardStats: async (sedeId?: string): Promise<DashboardStats> => {
+  getDashboardStats: async (sedeId?: string, capacity: number = DEFAULT_CAPACITY): Promise<DashboardStats> => {
     let ordersQuery = supabase.from('ordenes_trabajo').select('*');
     if (sedeId) ordersQuery = ordersQuery.eq('sede_id', sedeId);
     const { data: ordersData, error: ordersError } = await ordersQuery;
@@ -390,7 +396,7 @@ export const supabaseService = {
       ingresos_mes: incomeMonth,
       egresos_mes: expenseMonth,
       clientes_nuevos_mes: customers.filter((c) => isSameMonth(c.creado_en, now)).length,
-      tasa_ocupacion: Math.min(100, Math.round((activeOrders.length / WORKSHOP_CAPACITY) * 100)),
+      tasa_ocupacion: Math.min(100, Math.round((activeOrders.length / capacity) * 100)),
       ordenes_por_estatus: statusCounts,
       ingresos_por_mes,
     };

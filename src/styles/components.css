@@ -170,6 +170,10 @@
   gap: var(--space-4);
 }
 
+.mobile-menu-btn {
+  display: none;
+}
+
 .header-breadcrumb {
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
@@ -733,7 +737,9 @@
   width: 100%;
   max-width: 600px;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   animation: scaleIn 0.3s ease-out;
 }
 
@@ -747,6 +753,7 @@
   justify-content: space-between;
   padding: var(--space-5) var(--space-6);
   border-bottom: 1px solid var(--color-surface-border);
+  flex-shrink: 0;
 }
 
 .modal-title {
@@ -768,6 +775,9 @@
 
 .modal-body {
   padding: var(--space-6);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .modal-footer {
@@ -777,6 +787,7 @@
   gap: var(--space-3);
   padding: var(--space-4) var(--space-6);
   border-top: 1px solid var(--color-surface-border);
+  flex-shrink: 0;
 }
 
 /* ===== Progress Bar ===== */
@@ -1198,8 +1209,229 @@
   }
 }
 
+/* ===== Responsive layout utilities ===== */
+.responsive-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.responsive-grid-sidebar {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: var(--space-4);
+}
+
+.mobile-only {
+  display: none !important;
+}
+
+/* ===== Photo capture (360° inspection) ===== */
+.photo-zone-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+
+.photo-zone {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  overflow: hidden;
+  background: var(--color-bg-tertiary);
+  border: 2px dashed var(--color-surface-border);
+  transition: all var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.photo-zone:hover {
+  border-color: var(--color-primary);
+}
+
+.photo-zone:active {
+  transform: scale(0.96);
+}
+
+.photo-zone.filled {
+  border: 2px solid var(--color-success);
+}
+
+.photo-zone-icon {
+  color: var(--color-primary-light);
+}
+
+.photo-zone-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: 0 var(--space-1);
+}
+
+.photo-zone-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  color: #fff;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  padding: var(--space-4) var(--space-2) var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.photo-zone-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(10, 10, 15, 0.7);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.photo-zone-remove:hover {
+  background: var(--color-danger);
+}
+
+.photo-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+
+.photo-gallery-thumb {
+  display: block;
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-surface-border);
+  cursor: pointer;
+  padding: 0;
+  background: none;
+}
+
+.photo-gallery-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-fast);
+}
+
+.photo-gallery-thumb:hover img {
+  transform: scale(1.05);
+}
+
+/* ===== Lightbox ===== */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-toast);
+  padding: var(--space-6);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.lightbox-overlay img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--radius-lg);
+  object-fit: contain;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ===== Work order mobile card list ===== */
+.workorder-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.workorder-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transition: all var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.workorder-card:active {
+  background: var(--color-bg-hover);
+}
+
+.workorder-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.workorder-card-number {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-light);
+}
+
+.workorder-card-meta {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.workorder-card-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.workorder-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
 /* ===== Responsive ===== */
-@media (max-width: 1024px) {
+/* Tablet range: icon-only rail. Below 768px the sidebar switches to a
+   full-width off-canvas drawer (see next block) and must keep its labels. */
+@media (max-width: 1024px) and (min-width: 769px) {
   .sidebar {
     width: var(--sidebar-collapsed-width);
   }
@@ -1266,9 +1498,56 @@
     grid-template-columns: 1fr;
   }
 
+  .mobile-menu-btn {
+    display: inline-flex;
+  }
+
+  .responsive-grid-2,
+  .responsive-grid-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-only {
+    display: block !important;
+  }
+
+  /* Full-screen modal on phones/small tablets — easier to fill out a long
+     work order form without losing the header/footer to page scroll. */
+  .modal-overlay {
+    padding: 0;
+  }
+
   .modal {
-    margin: var(--space-4);
-    max-height: 85vh;
+    max-width: 100%;
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
+
+  .btn {
+    min-height: 44px;
+  }
+
+  .btn-icon {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .btn-sm {
+    min-height: 38px;
+  }
+
+  .form-input {
+    min-height: 46px;
+  }
+
+  .photo-zone-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -1281,4 +1560,9 @@
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .login-card {
+    padding: var(--space-6);
+  }
 }
+

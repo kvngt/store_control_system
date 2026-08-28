@@ -34,6 +34,7 @@ export interface Sede {
   nombre: string;
   direccion: string;
   telefono: string;
+  capacidad: number;
   fecha_creacion: string;
 }
 

@@ -19,6 +19,7 @@ import {
   X,
   CheckCircle2,
   Trash2,
+  ChevronRight,
 } from 'lucide-react';
 
 interface PhotoZone {
@@ -57,6 +58,7 @@ export default function WorkOrders() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [viewOrder, setViewOrder] = useState<WorkOrder | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   // Create modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -142,6 +144,15 @@ export default function WorkOrders() {
     setSelectedOperators([]);
     setLaborItems([]);
     setParts([]);
+  };
+
+  const removePhoto = (zoneKey: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPhotos((prev) => {
+      const next = { ...prev };
+      delete next[zoneKey];
+      return next;
+    });
   };
 
   const toggleOperator = (id: string) => {
@@ -265,18 +276,18 @@ export default function WorkOrders() {
             </h1>
             <p className="page-subtitle">{customer?.nombre} — {vehicle?.anio} {vehicle?.marca} {vehicle?.modelo}</p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap', width: '100%', maxWidth: 420 }}>
             <select
               className="form-input form-select"
               value={viewOrder.estatus}
               onChange={(e) => handleStatusChange(e.target.value as OrderStatus)}
-              style={{ width: 'auto' }}
+              style={{ flex: '1 1 160px' }}
             >
               {Object.keys(statusLabels).map((s) => (
                 <option key={s} value={s}>{statusLabels[s]}</option>
               ))}
             </select>
-            <div style={{ textAlign: 'right', minWidth: 140 }}>
+            <div style={{ textAlign: 'right', flex: '1 1 140px' }}>
               <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>{t('workOrders.progress')}</div>
               <input
                 type="range"
@@ -292,7 +303,7 @@ export default function WorkOrders() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+        <div className="responsive-grid-2">
           {/* Vehicle Info */}
           <div className="card">
             <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>
@@ -343,17 +354,16 @@ export default function WorkOrders() {
             </p>
 
             {photoUrls.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-3)' }}>
+              <div className="photo-gallery-grid">
                 {photoUrls.map((url, i) => (
-                  <a
+                  <button
                     key={i}
-                    href={url}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ display: 'block', height: 100, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-surface-border)' }}
+                    type="button"
+                    className="photo-gallery-thumb"
+                    onClick={() => setLightboxUrl(url)}
                   >
-                    <img src={url} alt={`foto-${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </a>
+                    <img src={url} alt={`foto-${i}`} loading="lazy" />
+                  </button>
                 ))}
               </div>
             ) : (
@@ -499,6 +509,15 @@ export default function WorkOrders() {
             ))}
           </div>
         </div>
+
+        {lightboxUrl && (
+          <div className="lightbox-overlay" onClick={() => setLightboxUrl(null)}>
+            <button className="lightbox-close" onClick={() => setLightboxUrl(null)} aria-label={t('common.close')}>
+              <X size={20} />
+            </button>
+            <img src={lightboxUrl} alt="Foto de inspección" onClick={(e) => e.stopPropagation()} />
+          </div>
+        )}
       </div>
     );
   }
@@ -524,13 +543,13 @@ export default function WorkOrders() {
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)' }} />
           <input className="form-input" placeholder={t('common.search')} value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 36 }} />
         </div>
-        <div style={{ display: 'flex', gap: 'var(--space-1)' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-1)', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 }}>
           {['all', 'recepcion', 'en_proceso', 'espera_repuestos', 'finalizado', 'entregado'].map((status) => (
             <button
               key={status}
               className={`tab ${filterStatus === status ? 'active' : ''}`}
               onClick={() => setFilterStatus(status)}
-              style={{ borderBottom: 'none', padding: 'var(--space-2) var(--space-3)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-sm)' }}
+              style={{ borderBottom: 'none', padding: 'var(--space-2) var(--space-3)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-sm)', flexShrink: 0 }}
             >
               {status === 'all' ? t('common.all') : statusLabels[status]}
             </button>
@@ -541,57 +560,101 @@ export default function WorkOrders() {
       {loading ? (
         <div className="loading-state"><div className="spinner" /></div>
       ) : (
-        <div className="table-container animate-fade-in">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>{t('workOrders.orderNumber')}</th>
-                <th>{t('common.name')}</th>
-                <th>{t('vehicles.title')}</th>
-                <th>{t('common.type')}</th>
-                <th>{t('common.status')}</th>
-                <th>{t('workOrders.progress')}</th>
-                <th>{t('workOrders.estimatedDelivery')}</th>
-                <th>{t('common.total')}</th>
-                <th>{t('common.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((order) => (
-                <tr key={order.id}>
-                  <td style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>{order.numero_orden}</td>
-                  <td>{order.cliente?.nombre}</td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                      <Car size={14} style={{ color: 'var(--color-text-tertiary)' }} />
-                      {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
-                    </div>
-                  </td>
-                  <td><span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span></td>
-                  <td><span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span></td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: 100 }}>
-                      <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
-                        <div className={`progress-fill ${order.porcentaje_avance === 100 ? 'success' : ''}`} style={{ width: `${order.porcentaje_avance}%` }}></div>
-                      </div>
-                      <span style={{ fontSize: 'var(--font-size-xs)', minWidth: 28 }}>{order.porcentaje_avance}%</span>
-                    </div>
-                  </td>
-                  <td style={{ fontSize: 'var(--font-size-sm)' }}>
-                    <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle', color: 'var(--color-text-tertiary)' }} />
-                    {order.fecha_estimada_entrega}
-                  </td>
-                  <td style={{ fontWeight: 600 }}>${order.total_general.toLocaleString()}</td>
-                  <td>
-                    <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openDetail(order.id)}>
-                      <Eye size={16} />
-                    </button>
-                  </td>
+        <>
+          {/* Desktop table */}
+          <div className="table-container animate-fade-in desktop-only">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t('workOrders.orderNumber')}</th>
+                  <th>{t('common.name')}</th>
+                  <th>{t('vehicles.title')}</th>
+                  <th>{t('common.type')}</th>
+                  <th>{t('common.status')}</th>
+                  <th>{t('workOrders.progress')}</th>
+                  <th>{t('workOrders.estimatedDelivery')}</th>
+                  <th>{t('common.total')}</th>
+                  <th>{t('common.actions')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filtered.map((order) => (
+                  <tr key={order.id}>
+                    <td style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>{order.numero_orden}</td>
+                    <td>{order.cliente?.nombre}</td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                        <Car size={14} style={{ color: 'var(--color-text-tertiary)' }} />
+                        {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
+                      </div>
+                    </td>
+                    <td><span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span></td>
+                    <td><span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span></td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: 100 }}>
+                        <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
+                          <div className={`progress-fill ${order.porcentaje_avance === 100 ? 'success' : ''}`} style={{ width: `${order.porcentaje_avance}%` }}></div>
+                        </div>
+                        <span style={{ fontSize: 'var(--font-size-xs)', minWidth: 28 }}>{order.porcentaje_avance}%</span>
+                      </div>
+                    </td>
+                    <td style={{ fontSize: 'var(--font-size-sm)' }}>
+                      <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle', color: 'var(--color-text-tertiary)' }} />
+                      {order.fecha_estimada_entrega}
+                    </td>
+                    <td style={{ fontWeight: 600 }}>${order.total_general.toLocaleString()}</td>
+                    <td>
+                      <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openDetail(order.id)}>
+                        <Eye size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile card list — easier to tap through on a phone than a table */}
+          <div className="workorder-card-list mobile-only animate-fade-in">
+            {filtered.map((order) => (
+              <div key={order.id} className="workorder-card" onClick={() => openDetail(order.id)}>
+                <div className="workorder-card-top">
+                  <span className="workorder-card-number">{order.numero_orden}</span>
+                  <ChevronRight size={18} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+                </div>
+                <div className="workorder-card-meta">
+                  {order.cliente?.nombre}
+                </div>
+                <div className="workorder-card-meta" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <Car size={14} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+                  {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
+                </div>
+                <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                  <span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span>
+                  <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
+                </div>
+                <div className="workorder-card-progress">
+                  <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
+                    <div className={`progress-fill ${order.porcentaje_avance === 100 ? 'success' : ''}`} style={{ width: `${order.porcentaje_avance}%` }}></div>
+                  </div>
+                  <span style={{ fontSize: 'var(--font-size-xs)', minWidth: 28 }}>{order.porcentaje_avance}%</span>
+                </div>
+                <div className="workorder-card-footer">
+                  <span>
+                    <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+                    {order.fecha_estimada_entrega}
+                  </span>
+                  <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>${order.total_general.toLocaleString()}</span>
+                </div>
+              </div>
+            ))}
+            {filtered.length === 0 && (
+              <p style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
+                {t('common.noResults')}
+              </p>
+            )}
+          </div>
+        </>
       )}
 
       {/* CREATE WORK ORDER MODAL */}
@@ -604,7 +667,7 @@ export default function WorkOrders() {
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleCreateOrder}>
+            <form onSubmit={handleCreateOrder} style={{ display: 'contents' }}>
               <div className="modal-body">
                 <input type="file" ref={fileInputRef} accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileChange} />
 
@@ -703,41 +766,55 @@ export default function WorkOrders() {
 
                 {/* 360 Photos upload */}
                 <div className="form-group" style={{ marginTop: 'var(--space-2)' }}>
-                  <label className="form-label">{t('workOrders.inspection360')} (Fotos)</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-2)' }}>
+                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>{t('workOrders.inspection360')}</span>
+                    <span style={{ fontSize: 'var(--font-size-xs)', color: Object.keys(photos).length === ZONES.length ? 'var(--color-success)' : 'var(--color-text-tertiary)', fontWeight: 600 }}>
+                      {Object.keys(photos).length}/{ZONES.length}
+                    </span>
+                  </label>
+                  <div className="photo-zone-grid">
                     {ZONES.map(({ key, label }) => {
                       const photo = photos[key];
                       return (
                         <div
                           key={key}
                           onClick={() => handleZoneClick(key)}
-                          style={{
-                            height: 75,
-                            background: photo ? `url(${photo.preview}) center/cover no-repeat` : 'var(--color-bg-tertiary)',
-                            border: photo ? '2px solid var(--color-success)' : '1px dashed var(--color-surface-border)',
-                            borderRadius: 'var(--radius-md)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 2,
-                            cursor: 'pointer',
-                          }}
+                          className={`photo-zone ${photo ? 'filled' : ''}`}
                         >
+                          {photo && (
+                            <>
+                              <img
+                                src={photo.preview}
+                                alt={label}
+                                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                              />
+                              <button
+                                type="button"
+                                className="photo-zone-remove"
+                                onClick={(e) => removePhoto(key, e)}
+                                aria-label={`${t('common.delete')} ${label}`}
+                              >
+                                <X size={14} />
+                              </button>
+                            </>
+                          )}
                           {!photo ? (
                             <>
-                              <Camera size={16} style={{ color: 'var(--color-text-tertiary)' }} />
-                              <span style={{ fontSize: '11px', color: 'var(--color-text-tertiary)' }}>{label}</span>
+                              <Camera size={24} className="photo-zone-icon" />
+                              <span className="photo-zone-label">{label}</span>
                             </>
                           ) : (
-                            <div style={{ background: 'rgba(0,0,0,0.6)', padding: '2px 6px', borderRadius: 4, fontSize: '10px', color: '#fff', display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <CheckCircle2 size={10} /> {label}
-                            </div>
+                            <span className="photo-zone-caption">
+                              <CheckCircle2 size={12} /> {label}
+                            </span>
                           )}
                         </div>
                       );
                     })}
                   </div>
+                  <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 'var(--space-2)' }}>
+                    {t('workOrders.tapToCapture')}
+                  </p>
                 </div>
 
                 <div className="form-group" style={{ marginTop: 'var(--space-3)' }}>
