@@ -203,6 +203,9 @@ const translations: Record<Language, Translations> = {
       english: 'English',
       profile: 'Mi Perfil',
       capacity: 'Capacidad del taller',
+      theme: 'Apariencia',
+      themeDark: 'Oscuro',
+      themeLight: 'Claro',
     },
     // Auth
     auth: {
@@ -405,6 +408,9 @@ const translations: Record<Language, Translations> = {
       english: 'English',
       profile: 'My Profile',
       capacity: 'Workshop capacity',
+      theme: 'Appearance',
+      themeDark: 'Dark',
+      themeLight: 'Light',
     },
     auth: {
       login: 'Log In',

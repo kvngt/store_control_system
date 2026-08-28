@@ -64,6 +64,12 @@ export default function WorkOrders() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState('');
+  const [customerMode, setCustomerMode] = useState<'existing' | 'new'>('existing');
+  const [vehicleMode, setVehicleMode] = useState<'existing' | 'new'>('existing');
+  const [newCustomer, setNewCustomer] = useState({ nombre: '', telefono: '', email: '', direccion: '' });
+  const [newVehicle, setNewVehicle] = useState({
+    marca: '', modelo: '', anio: String(new Date().getFullYear()), vin: '', placa: '', color: '',
+  });
   const [workType, setWorkType] = useState<'mecanica' | 'pintura' | 'combinado'>('mecanica');
   const [fuelLevel, setFuelLevel] = useState('1/2');
   const [milesIn, setMilesIn] = useState('');
@@ -116,6 +122,27 @@ export default function WorkOrders() {
 
   const vehiclesForCustomer = vehicles.filter((v) => v.cliente_id === selectedCustomer);
 
+  const handleSelectCustomer = (value: string) => {
+    if (value === '__new__') {
+      setCustomerMode('new');
+      setVehicleMode('new');
+      setSelectedCustomer('');
+      setSelectedVehicle('');
+    } else {
+      setSelectedCustomer(value);
+      setSelectedVehicle('');
+    }
+  };
+
+  const handleSelectVehicle = (value: string) => {
+    if (value === '__new__') {
+      setVehicleMode('new');
+      setSelectedVehicle('');
+    } else {
+      setSelectedVehicle(value);
+    }
+  };
+
   const handleZoneClick = (zoneKey: string) => {
     setActiveZone(zoneKey);
     fileInputRef.current?.click();
@@ -134,6 +161,10 @@ export default function WorkOrders() {
   const resetForm = () => {
     setSelectedCustomer('');
     setSelectedVehicle('');
+    setCustomerMode('existing');
+    setVehicleMode('existing');
+    setNewCustomer({ nombre: '', telefono: '', email: '', direccion: '' });
+    setNewVehicle({ marca: '', modelo: '', anio: String(new Date().getFullYear()), vin: '', placa: '', color: '' });
     setWorkType('mecanica');
     setFuelLevel('1/2');
     setMilesIn('');
@@ -161,19 +192,59 @@ export default function WorkOrders() {
 
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCustomer || !selectedVehicle || !user) return;
+    if (!user) return;
+    if (customerMode === 'existing' && !selectedCustomer) return;
+    if (customerMode === 'new' && (!newCustomer.nombre.trim() || !newCustomer.telefono.trim())) {
+      setError(t('customers.newCustomer') + ': ' + t('common.name') + ' / ' + t('common.phone'));
+      return;
+    }
+    if (vehicleMode === 'existing' && !selectedVehicle) return;
+    if (vehicleMode === 'new' && (!newVehicle.marca.trim() || !newVehicle.modelo.trim() || !newVehicle.vin.trim())) {
+      setError(t('vehicles.newVehicle') + ': ' + t('vehicles.brand') + ' / ' + t('vehicles.model') + ' / ' + t('vehicles.vin'));
+      return;
+    }
+
     setSaving(true);
     setError('');
     try {
+      const targetSedeId = sedeId || currentSede?.id || '';
+
+      let customerId = selectedCustomer;
+      if (customerMode === 'new') {
+        const created = await supabaseService.createCustomer({
+          nombre: newCustomer.nombre,
+          telefono: newCustomer.telefono,
+          email: newCustomer.email,
+          direccion: newCustomer.direccion,
+          notas_crm: '',
+          sede_id: targetSedeId,
+        });
+        customerId = created.id;
+      }
+
+      let vehicleId = selectedVehicle;
+      if (vehicleMode === 'new') {
+        const createdVehicle = await supabaseService.createVehicle({
+          cliente_id: customerId,
+          marca: newVehicle.marca,
+          modelo: newVehicle.modelo,
+          anio: parseInt(newVehicle.anio, 10) || new Date().getFullYear(),
+          vin: newVehicle.vin,
+          placa: newVehicle.placa,
+          color: newVehicle.color,
+        });
+        vehicleId = createdVehicle.id;
+      }
+
       const asignaciones = selectedOperators.map((id) => {
         const op = operators.find((o) => o.id === id);
         return { usuario_id: id, tipo_tarea: (op?.rol === 'pintor' ? 'pintura' : 'mecanica') as 'mecanica' | 'pintura' };
       });
 
       const order = await supabaseService.createWorkOrder({
-        sede_id: sedeId || currentSede?.id || '',
-        cliente_id: selectedCustomer,
-        vehiculo_id: selectedVehicle,
+        sede_id: targetSedeId,
+        cliente_id: customerId,
+        vehiculo_id: vehicleId,
         tipo_trabajo: workType,
         millas_ingreso: parseInt(milesIn, 10) || 0,
         nivel_gasolina: fuelLevel,
@@ -203,6 +274,10 @@ export default function WorkOrders() {
       setShowCreateModal(false);
       resetForm();
       loadOrders();
+      if (customerMode === 'new' || vehicleMode === 'new') {
+        supabaseService.getCustomers(sedeId).then(setCustomers).catch(() => {});
+        supabaseService.getVehicles().then(setVehicles).catch(() => {});
+      }
       openDetail(order.id);
     } catch (err) {
       setError((err as Error).message);
@@ -675,32 +750,140 @@ export default function WorkOrders() {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">{t('customers.customerProfile')}</label>
-                    <select
-                      className="form-input form-select"
-                      value={selectedCustomer}
-                      onChange={(e) => { setSelectedCustomer(e.target.value); setSelectedVehicle(''); }}
-                      required
-                    >
-                      <option value="">-- Seleccionar Cliente --</option>
-                      {customers.map((c) => (
-                        <option key={c.id} value={c.id}>{c.nombre}</option>
-                      ))}
-                    </select>
+                    {customerMode === 'existing' ? (
+                      <select
+                        className="form-input form-select"
+                        value={selectedCustomer}
+                        onChange={(e) => handleSelectCustomer(e.target.value)}
+                        required
+                      >
+                        <option value="">-- Seleccionar Cliente --</option>
+                        <option value="__new__">+ {t('customers.newCustomer')}</option>
+                        {customers.map((c) => (
+                          <option key={c.id} value={c.id}>{c.nombre}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div style={{ padding: 'var(--space-3)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-surface-border)' }}>
+                        <div className="form-row">
+                          <input
+                            className="form-input"
+                            placeholder={t('common.name')}
+                            value={newCustomer.nombre}
+                            onChange={(e) => setNewCustomer({ ...newCustomer, nombre: e.target.value })}
+                            required
+                          />
+                          <input
+                            className="form-input"
+                            placeholder={t('common.phone')}
+                            value={newCustomer.telefono}
+                            onChange={(e) => setNewCustomer({ ...newCustomer, telefono: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div className="form-row" style={{ marginTop: 'var(--space-2)' }}>
+                          <input
+                            className="form-input"
+                            type="email"
+                            placeholder={t('common.email')}
+                            value={newCustomer.email}
+                            onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                          />
+                          <input
+                            className="form-input"
+                            placeholder={t('common.address')}
+                            value={newCustomer.direccion}
+                            onChange={(e) => setNewCustomer({ ...newCustomer, direccion: e.target.value })}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          style={{ marginTop: 'var(--space-2)' }}
+                          onClick={() => { setCustomerMode('existing'); setVehicleMode('existing'); }}
+                        >
+                          <ChevronLeft size={14} /> {t('common.back')}
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div className="form-group">
                     <label className="form-label">{t('vehicles.title')}</label>
-                    <select
-                      className="form-input form-select"
-                      value={selectedVehicle}
-                      onChange={(e) => setSelectedVehicle(e.target.value)}
-                      required
-                      disabled={!selectedCustomer}
-                    >
-                      <option value="">-- Seleccionar Vehículo --</option>
-                      {vehiclesForCustomer.map((v) => (
-                        <option key={v.id} value={v.id}>{v.marca} {v.modelo} ({v.placa})</option>
-                      ))}
-                    </select>
+                    {vehicleMode === 'existing' ? (
+                      <select
+                        className="form-input form-select"
+                        value={selectedVehicle}
+                        onChange={(e) => handleSelectVehicle(e.target.value)}
+                        required
+                        disabled={!selectedCustomer}
+                      >
+                        <option value="">-- Seleccionar Vehículo --</option>
+                        <option value="__new__">+ {t('vehicles.newVehicle')}</option>
+                        {vehiclesForCustomer.map((v) => (
+                          <option key={v.id} value={v.id}>{v.marca} {v.modelo} ({v.placa})</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div style={{ padding: 'var(--space-3)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-surface-border)' }}>
+                        <div className="form-row">
+                          <input
+                            className="form-input"
+                            placeholder={t('vehicles.brand')}
+                            value={newVehicle.marca}
+                            onChange={(e) => setNewVehicle({ ...newVehicle, marca: e.target.value })}
+                            required
+                          />
+                          <input
+                            className="form-input"
+                            placeholder={t('vehicles.model')}
+                            value={newVehicle.modelo}
+                            onChange={(e) => setNewVehicle({ ...newVehicle, modelo: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div className="form-row" style={{ marginTop: 'var(--space-2)' }}>
+                          <input
+                            className="form-input"
+                            type="number"
+                            placeholder={t('vehicles.year')}
+                            value={newVehicle.anio}
+                            onChange={(e) => setNewVehicle({ ...newVehicle, anio: e.target.value })}
+                          />
+                          <input
+                            className="form-input"
+                            placeholder={t('vehicles.color')}
+                            value={newVehicle.color}
+                            onChange={(e) => setNewVehicle({ ...newVehicle, color: e.target.value })}
+                          />
+                        </div>
+                        <div className="form-row" style={{ marginTop: 'var(--space-2)' }}>
+                          <input
+                            className="form-input"
+                            placeholder={t('vehicles.vin')}
+                            maxLength={17}
+                            value={newVehicle.vin}
+                            onChange={(e) => setNewVehicle({ ...newVehicle, vin: e.target.value })}
+                            required
+                          />
+                          <input
+                            className="form-input"
+                            placeholder={t('vehicles.plate')}
+                            value={newVehicle.placa}
+                            onChange={(e) => setNewVehicle({ ...newVehicle, placa: e.target.value })}
+                          />
+                        </div>
+                        {customerMode === 'existing' && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            style={{ marginTop: 'var(--space-2)' }}
+                            onClick={() => setVehicleMode('existing')}
+                          >
+                            <ChevronLeft size={14} /> {t('common.back')}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 

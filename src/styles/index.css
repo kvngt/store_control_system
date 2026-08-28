@@ -116,6 +116,48 @@
   --z-toast: 500;
 }
 
+/* ===== Light Theme ===== */
+:root[data-theme='light'] {
+  --color-bg-primary: #F7F7FA;
+  --color-bg-secondary: #FFFFFF;
+  --color-bg-tertiary: #F0F0F5;
+  --color-bg-elevated: #FFFFFF;
+  --color-bg-hover: #E8E8F0;
+  --color-bg-active: #DCDCE8;
+
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F5F5FA;
+  --color-surface-border: rgba(10, 10, 15, 0.09);
+  --color-surface-glass: rgba(255, 255, 255, 0.75);
+
+  --color-text-primary: #14141C;
+  --color-text-secondary: #55556B;
+  --color-text-tertiary: #8A8AA0;
+  --color-text-inverse: #0A0A0F;
+
+  --color-success-bg: rgba(16, 185, 129, 0.12);
+  --color-warning-bg: rgba(245, 158, 11, 0.12);
+  --color-danger-bg: rgba(239, 68, 68, 0.12);
+  --color-info-bg: rgba(59, 130, 246, 0.12);
+
+  --shadow-sm: 0 1px 2px rgba(20, 20, 28, 0.06);
+  --shadow-md: 0 4px 12px rgba(20, 20, 28, 0.08);
+  --shadow-lg: 0 8px 24px rgba(20, 20, 28, 0.1);
+  --shadow-xl: 0 12px 48px rgba(20, 20, 28, 0.14);
+}
+
+:root[data-theme='light'] .badge-recepcion { color: #7C3AED; }
+:root[data-theme='light'] .badge-en_proceso,
+:root[data-theme='light'] .badge-mecanica { color: #2563EB; }
+:root[data-theme='light'] .badge-espera_repuestos { color: #B45309; }
+:root[data-theme='light'] .badge-finalizado { color: #059669; }
+:root[data-theme='light'] .badge-entregado { color: #4B5563; }
+:root[data-theme='light'] .badge-pintura { color: #DB2777; }
+:root[data-theme='light'] .badge-combinado { color: #7C3AED; }
+:root[data-theme='light'] .chart-bar.expense {
+  background: linear-gradient(to top, #4B5563, #6B7280);
+}
+
 /* ===== Reset & Base ===== */
 *, *::before, *::after {
   margin: 0;

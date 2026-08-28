@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { supabaseService } from '../services/supabaseService';
 import type { Sede, UserProfile } from '../types/database';
@@ -11,10 +12,13 @@ import {
   Globe,
   User,
   Shield,
+  Sun,
+  Moon,
 } from 'lucide-react';
 
 export default function Settings() {
   const { t, language, setLanguage } = useLanguage();
+  const { theme, setTheme } = useTheme();
   const { user } = useAuth();
   const [sedes, setSedes] = useState<Sede[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -64,7 +68,7 @@ export default function Settings() {
 
       {error && <div className="alert-error">{error}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+      <div className="responsive-grid-2">
         {/* Profile */}
         <div className="card">
           <h3 className="card-title" style={{ marginBottom: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
@@ -109,6 +113,29 @@ export default function Settings() {
               style={{ flex: 1 }}
             >
               🇺🇸 {t('settings.english')}
+            </button>
+          </div>
+        </div>
+
+        {/* Theme */}
+        <div className="card">
+          <h3 className="card-title" style={{ marginBottom: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <Sun size={18} /> {t('settings.theme')}
+          </h3>
+          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <button
+              className={`btn ${theme === 'dark' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setTheme('dark')}
+              style={{ flex: 1 }}
+            >
+              <Moon size={16} /> {t('settings.themeDark')}
+            </button>
+            <button
+              className={`btn ${theme === 'light' ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setTheme('light')}
+              style={{ flex: 1 }}
+            >
+              <Sun size={16} /> {t('settings.themeLight')}
             </button>
           </div>
         </div>
