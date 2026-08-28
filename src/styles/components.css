@@ -1,5 +1,5 @@
 /* ===================================================
-   RESTORIFY — Component Styles
+   RESTORIFY â€” Component Styles
    ===================================================  */
 
 /* ===== Sidebar ===== */
@@ -1297,7 +1297,7 @@
   display: none !important;
 }
 
-/* ===== Photo capture (360° inspection) ===== */
+/* ===== Photo capture (360Â° inspection) ===== */
 .photo-zone-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1586,7 +1586,7 @@
     display: block !important;
   }
 
-  /* Full-screen modal on phones/small tablets — easier to fill out a long
+  /* Full-screen modal on phones/small tablets â€” easier to fill out a long
      work order form without losing the header/footer to page scroll. */
   .modal-overlay {
     padding: 0;
@@ -1637,45 +1637,44 @@
   }
 }
 
+/* ===== Bottom Navigation ===== */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: var(--color-bg-secondary);
+  border-top: 1px solid var(--color-surface-border);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: var(--z-sticky);
+  padding-bottom: env(safe-area-inset-bottom);
+}
 
- / *   = = = = =   B o t t o m   N a v i g a t i o n   = = = = =   * / 
- . b o t t o m - n a v   { 
-     p o s i t i o n :   f i x e d ; 
-     b o t t o m :   0 ; 
-     l e f t :   0 ; 
-     r i g h t :   0 ; 
-     h e i g h t :   6 4 p x ; 
-     b a c k g r o u n d :   v a r ( - - c o l o r - b g - s e c o n d a r y ) ; 
-     b o r d e r - t o p :   1 p x   s o l i d   v a r ( - - c o l o r - s u r f a c e - b o r d e r ) ; 
-     d i s p l a y :   f l e x ; 
-     j u s t i f y - c o n t e n t :   s p a c e - a r o u n d ; 
-     a l i g n - i t e m s :   c e n t e r ; 
-     z - i n d e x :   v a r ( - - z - s t i c k y ) ; 
-     p a d d i n g - b o t t o m :   e n v ( s a f e - a r e a - i n s e t - b o t t o m ) ;   / *   F o r   i P h o n e   n o t c h   * / 
- } 
- 
- . b o t t o m - n a v - i t e m   { 
-     d i s p l a y :   f l e x ; 
-     f l e x - d i r e c t i o n :   c o l u m n ; 
-     a l i g n - i t e m s :   c e n t e r ; 
-     j u s t i f y - c o n t e n t :   c e n t e r ; 
-     g a p :   4 p x ; 
-     c o l o r :   v a r ( - - c o l o r - t e x t - t e r t i a r y ) ; 
-     t e x t - d e c o r a t i o n :   n o n e ; 
-     f l e x :   1 ; 
-     h e i g h t :   1 0 0 % ; 
- } 
- 
- . b o t t o m - n a v - i t e m . a c t i v e   { 
-     c o l o r :   v a r ( - - c o l o r - p r i m a r y - l i g h t ) ; 
- } 
- 
- . b o t t o m - n a v - i c o n   { 
-     m a r g i n - b o t t o m :   2 p x ; 
- } 
- 
- . b o t t o m - n a v - l a b e l   { 
-     f o n t - s i z e :   1 0 p x ; 
-     f o n t - w e i g h t :   v a r ( - - f o n t - w e i g h t - m e d i u m ) ; 
- }  
- 
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--color-text-tertiary);
+  text-decoration: none;
+  flex: 1;
+  height: 100%;
+}
+
+.bottom-nav-item.active {
+  color: var(--color-primary-light);
+}
+
+.bottom-nav-icon {
+  margin-bottom: 2px;
+}
+
+.bottom-nav-label {
+  font-size: 10px;
+  font-weight: var(--font-weight-medium);
+}
+
