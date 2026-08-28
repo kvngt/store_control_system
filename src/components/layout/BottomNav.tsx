@@ -18,7 +18,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <div className="bottom-nav mobile-only">
+    <div className="bottom-nav">
       {navItems.map((item) => (
         <NavLink
           key={item.to}

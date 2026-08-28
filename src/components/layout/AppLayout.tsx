@@ -21,7 +21,7 @@ export default function AppLayout() {
           sidebarCollapsed={sidebarCollapsed}
           onMobileMenuToggle={() => setMobileOpen(!mobileOpen)}
         />
-        <main className="page-content" style={{ paddingBottom: 'calc(var(--space-6) + 64px)' }}>
+        <main className="page-content">
           <Outlet />
         </main>
         <BottomNav />

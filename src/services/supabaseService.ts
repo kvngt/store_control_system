@@ -317,7 +317,7 @@ export const supabaseService = {
   getPayroll: async (sedeId?: string) => {
     let query = supabase.from('nomina_pagos').select(`
       *,
-      usuario:perfiles(*)
+      usuario:perfiles!usuario_id(*)
     `).order('fecha_pago', { ascending: false });
     if (sedeId) query = query.eq('sede_id', sedeId);
     const { data, error } = await query;
