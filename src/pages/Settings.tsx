@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { mockSedes, mockUsers } from '../services/mockData';
+import { supabaseService } from '../services/supabaseService';
+import type { Sede, UserProfile } from '../types/database';
 import {
   Building2,
   Phone,
@@ -14,6 +16,22 @@ import {
 export default function Settings() {
   const { t, language, setLanguage } = useLanguage();
   const { user } = useAuth();
+  const [sedes, setSedes] = useState<Sede[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    setError('');
+    Promise.all([supabaseService.getSedes(), supabaseService.getUsers()])
+      .then(([s, u]) => {
+        setSedes(s);
+        setUsers(u);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div>
@@ -22,6 +40,8 @@ export default function Settings() {
           <h1 className="page-title">{t('settings.title')}</h1>
         </div>
       </div>
+
+      {error && <div className="alert-error">{error}</div>}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
         {/* Profile */}
@@ -79,53 +99,57 @@ export default function Settings() {
               <Building2 size={18} /> {t('settings.workshops')}
             </h3>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--space-4)' }}>
-            {mockSedes.map((sede) => {
-              const sedeUsers = mockUsers.filter((u) => u.sede_id === sede.id);
-              return (
-                <div
-                  key={sede.id}
-                  style={{
-                    padding: 'var(--space-5)',
-                    background: 'var(--color-bg-tertiary)',
-                    borderRadius: 'var(--radius-lg)',
-                    border: '1px solid var(--color-surface-border)',
-                  }}
-                >
-                  <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>
-                    {sede.nombre}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                      <MapPin size={14} /> {sede.direccion}
+          {loading ? (
+            <div className="loading-state"><div className="spinner" /></div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--space-4)' }}>
+              {sedes.map((sede) => {
+                const sedeUsers = users.filter((u) => u.sede_id === sede.id);
+                return (
+                  <div
+                    key={sede.id}
+                    style={{
+                      padding: 'var(--space-5)',
+                      background: 'var(--color-bg-tertiary)',
+                      borderRadius: 'var(--radius-lg)',
+                      border: '1px solid var(--color-surface-border)',
+                    }}
+                  >
+                    <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>
+                      {sede.nombre}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                      <Phone size={14} /> {sede.telefono}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                      <Users size={14} /> {sedeUsers.length} {language === 'es' ? 'empleados' : 'employees'}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-4)', flexWrap: 'wrap' }}>
-                    {sedeUsers.map((u) => (
-                      <div
-                        key={u.id}
-                        style={{
-                          padding: '4px 10px',
-                          background: 'var(--color-bg-hover)',
-                          borderRadius: 'var(--radius-full)',
-                          fontSize: 'var(--font-size-xs)',
-                          color: 'var(--color-text-secondary)',
-                        }}
-                      >
-                        {u.nombre_completo.split(' ')[0]} · <span style={{ textTransform: 'capitalize' }}>{u.rol}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+                        <MapPin size={14} /> {sede.direccion}
                       </div>
-                    ))}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+                        <Phone size={14} /> {sede.telefono}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+                        <Users size={14} /> {sedeUsers.length} {language === 'es' ? 'empleados' : 'employees'}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-4)', flexWrap: 'wrap' }}>
+                      {sedeUsers.map((u) => (
+                        <div
+                          key={u.id}
+                          style={{
+                            padding: '4px 10px',
+                            background: 'var(--color-bg-hover)',
+                            borderRadius: 'var(--radius-full)',
+                            fontSize: 'var(--font-size-xs)',
+                            color: 'var(--color-text-secondary)',
+                          }}
+                        >
+                          {u.nombre_completo.split(' ')[0]} · <span style={{ textTransform: 'capitalize' }}>{u.rol}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

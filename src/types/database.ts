@@ -146,12 +146,13 @@ export interface WorkOrderPart {
 export interface FinancialTransaction {
   id: string;
   sede_id: string;
-  orden_id?: string;
+  referencia_orden_id?: string;
   tipo: TransactionType;
   categoria: TransactionCategory;
   monto: number;
   descripcion: string;
   fecha: string;
+  registrado_por?: string;
   creado_en: string;
 }
 

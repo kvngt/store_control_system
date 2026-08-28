@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { mockCustomers, mockVehicles, mockWorkOrders } from '../services/mockData';
+import { useAuth } from '../context/AuthContext';
+import { supabaseService } from '../services/supabaseService';
 import {
   Plus,
   Search,
@@ -16,34 +17,116 @@ import {
   StickyNote,
   ChevronLeft,
 } from 'lucide-react';
-import type { Customer } from '../types/database';
+import type { Customer, Vehicle, WorkOrder } from '../types/database';
 
 export default function Customers() {
   const { t } = useLanguage();
+  const { user, currentSede } = useAuth();
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [viewProfile, setViewProfile] = useState<Customer | null>(null);
+  const [profileData, setProfileData] = useState<{ vehicles: Vehicle[]; orders: WorkOrder[] } | null>(null);
 
-  const filtered = mockCustomers.filter(
+  const [form, setForm] = useState({ nombre: '', telefono: '', email: '', direccion: '', notas_crm: '' });
+
+  const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
+
+  const loadCustomers = useCallback(() => {
+    setLoading(true);
+    setError('');
+    supabaseService
+      .getCustomers(sedeId)
+      .then(setCustomers)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [sedeId]);
+
+  useEffect(() => {
+    loadCustomers();
+  }, [loadCustomers]);
+
+  useEffect(() => {
+    if (!viewProfile) {
+      setProfileData(null);
+      return;
+    }
+    supabaseService
+      .getCustomerDetail(viewProfile.id)
+      .then((data) => setProfileData({ vehicles: data.vehicles, orders: data.orders }))
+      .catch((err) => setError(err.message));
+  }, [viewProfile]);
+
+  const filtered = customers.filter(
     (c) =>
       c.nombre.toLowerCase().includes(search.toLowerCase()) ||
       c.telefono.includes(search) ||
       c.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  const openCreateModal = () => {
+    setSelectedCustomer(null);
+    setForm({ nombre: '', telefono: '', email: '', direccion: '', notas_crm: '' });
+    setShowModal(true);
+  };
+
+  const openEditModal = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setForm({
+      nombre: customer.nombre,
+      telefono: customer.telefono,
+      email: customer.email,
+      direccion: customer.direccion,
+      notas_crm: customer.notas_crm || '',
+    });
+    setShowModal(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.nombre.trim() || !form.telefono.trim()) return;
+    setSaving(true);
+    try {
+      if (selectedCustomer) {
+        await supabaseService.updateCustomer(selectedCustomer.id, form);
+      } else {
+        await supabaseService.createCustomer({ ...form, sede_id: sedeId || currentSede?.id || '' });
+      }
+      setShowModal(false);
+      loadCustomers();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (customer: Customer) => {
+    if (!confirm(`${t('common.delete')}: ${customer.nombre}?`)) return;
+    try {
+      await supabaseService.deleteCustomer(customer.id);
+      loadCustomers();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const statusLabels: Record<string, string> = {
+    recepcion: t('workOrders.intake'),
+    en_proceso: t('workOrders.inProgress'),
+    espera_repuestos: t('workOrders.waitingParts'),
+    finalizado: t('workOrders.completed'),
+    entregado: t('workOrders.delivered'),
+  };
+
   // Profile view
   if (viewProfile) {
-    const vehicles = mockVehicles.filter((v) => v.cliente_id === viewProfile.id);
-    const orders = mockWorkOrders.filter((o) => o.cliente_id === viewProfile.id);
-
-    const statusLabels: Record<string, string> = {
-      recepcion: t('workOrders.intake'),
-      en_proceso: t('workOrders.inProgress'),
-      espera_repuestos: t('workOrders.waitingParts'),
-      finalizado: t('workOrders.completed'),
-      entregado: t('workOrders.delivered'),
-    };
+    const vehicles = profileData?.vehicles || [];
+    const orders = profileData?.orders || [];
 
     return (
       <div className="animate-fade-in">
@@ -54,6 +137,8 @@ export default function Customers() {
         >
           <ChevronLeft size={18} /> {t('common.back')}
         </button>
+
+        {error && <div className="alert-error">{error}</div>}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 'var(--space-4)' }}>
           {/* Customer Info Card */}
@@ -164,25 +249,20 @@ export default function Customers() {
                   <thead>
                     <tr>
                       <th>{t('workOrders.orderNumber')}</th>
-                      <th>{t('vehicles.title')}</th>
                       <th>{t('common.type')}</th>
                       <th>{t('common.status')}</th>
                       <th>{t('common.total')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((o) => {
-                      const veh = mockVehicles.find((v) => v.id === o.vehiculo_id);
-                      return (
-                        <tr key={o.id}>
-                          <td style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>{o.numero_orden}</td>
-                          <td>{veh?.anio} {veh?.marca} {veh?.modelo}</td>
-                          <td><span className={`badge badge-${o.tipo_trabajo}`}>{o.tipo_trabajo}</span></td>
-                          <td><span className={`badge badge-${o.estatus}`}>{statusLabels[o.estatus]}</span></td>
-                          <td style={{ fontWeight: 600 }}>${o.total_general.toLocaleString()}</td>
-                        </tr>
-                      );
-                    })}
+                    {orders.map((o) => (
+                      <tr key={o.id}>
+                        <td style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>{o.numero_orden}</td>
+                        <td><span className={`badge badge-${o.tipo_trabajo}`}>{o.tipo_trabajo}</span></td>
+                        <td><span className={`badge badge-${o.estatus}`}>{statusLabels[o.estatus]}</span></td>
+                        <td style={{ fontWeight: 600 }}>${o.total_general.toLocaleString()}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -201,10 +281,12 @@ export default function Customers() {
           <h1 className="page-title">{t('customers.title')}</h1>
           <p className="page-subtitle">{filtered.length} {t('common.results')}</p>
         </div>
-        <button className="btn btn-primary" onClick={() => { setSelectedCustomer(null); setShowModal(true); }} id="new-customer-btn">
+        <button className="btn btn-primary" onClick={openCreateModal} id="new-customer-btn">
           <Plus size={18} /> {t('customers.newCustomer')}
         </button>
       </div>
+
+      {error && <div className="alert-error">{error}</div>}
 
       {/* Search */}
       <div style={{ marginBottom: 'var(--space-4)', position: 'relative', maxWidth: 400 }}>
@@ -219,70 +301,73 @@ export default function Customers() {
         />
       </div>
 
-      {/* Table */}
-      <div className="table-container animate-fade-in">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>{t('common.name')}</th>
-              <th>{t('common.phone')}</th>
-              <th>{t('common.email')}</th>
-              <th>{t('customers.vehicles')}</th>
-              <th>{t('workOrders.title')}</th>
-              <th>{t('common.actions')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((customer) => (
-              <tr key={customer.id}>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                    <div
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: '50%',
-                        background: 'var(--color-bg-hover)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 'var(--font-size-sm)',
-                        fontWeight: 700,
-                        color: 'var(--color-primary-light)',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {customer.nombre.split(' ').map(n => n[0]).slice(0, 2).join('')}
-                    </div>
-                    <span style={{ fontWeight: 500 }}>{customer.nombre}</span>
-                  </div>
-                </td>
-                <td>{customer.telefono}</td>
-                <td style={{ color: 'var(--color-text-secondary)' }}>{customer.email}</td>
-                <td>
-                  <span className="badge badge-en_proceso">{customer.vehiculos_count || 0}</span>
-                </td>
-                <td>
-                  <span className="badge badge-finalizado">{customer.ordenes_count || 0}</span>
-                </td>
-                <td>
-                  <div className="table-actions">
-                    <button className="btn btn-ghost btn-sm btn-icon" title={t('common.view')} onClick={() => setViewProfile(customer)}>
-                      <Eye size={16} />
-                    </button>
-                    <button className="btn btn-ghost btn-sm btn-icon" title={t('common.edit')} onClick={() => { setSelectedCustomer(customer); setShowModal(true); }}>
-                      <Edit3 size={16} />
-                    </button>
-                    <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }}>
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </td>
+      {loading ? (
+        <div className="loading-state"><div className="spinner" /></div>
+      ) : (
+        <div className="table-container animate-fade-in">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{t('common.name')}</th>
+                <th>{t('common.phone')}</th>
+                <th>{t('common.email')}</th>
+                <th>{t('customers.vehicles')}</th>
+                <th>{t('workOrders.title')}</th>
+                <th>{t('common.actions')}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {filtered.map((customer) => (
+                <tr key={customer.id}>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                      <div
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: '50%',
+                          background: 'var(--color-bg-hover)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 'var(--font-size-sm)',
+                          fontWeight: 700,
+                          color: 'var(--color-primary-light)',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {customer.nombre.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                      </div>
+                      <span style={{ fontWeight: 500 }}>{customer.nombre}</span>
+                    </div>
+                  </td>
+                  <td>{customer.telefono}</td>
+                  <td style={{ color: 'var(--color-text-secondary)' }}>{customer.email}</td>
+                  <td>
+                    <span className="badge badge-en_proceso">{customer.vehiculos_count || 0}</span>
+                  </td>
+                  <td>
+                    <span className="badge badge-finalizado">{customer.ordenes_count || 0}</span>
+                  </td>
+                  <td>
+                    <div className="table-actions">
+                      <button className="btn btn-ghost btn-sm btn-icon" title={t('common.view')} onClick={() => setViewProfile(customer)}>
+                        <Eye size={16} />
+                      </button>
+                      <button className="btn btn-ghost btn-sm btn-icon" title={t('common.edit')} onClick={() => openEditModal(customer)}>
+                        <Edit3 size={16} />
+                      </button>
+                      <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={() => handleDelete(customer)}>
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Create/Edit Modal */}
       {showModal && (
@@ -300,34 +385,34 @@ export default function Customers() {
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">{t('common.name')}</label>
-                  <input className="form-input" defaultValue={selectedCustomer?.nombre || ''} id="customer-name" />
+                  <input className="form-input" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} id="customer-name" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">{t('common.phone')}</label>
-                  <input className="form-input" defaultValue={selectedCustomer?.telefono || ''} id="customer-phone" />
+                  <input className="form-input" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} id="customer-phone" />
                 </div>
               </div>
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">{t('common.email')}</label>
-                  <input className="form-input" type="email" defaultValue={selectedCustomer?.email || ''} id="customer-email" />
+                  <input className="form-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} id="customer-email" />
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">{t('common.address')}</label>
-                <input className="form-input" defaultValue={selectedCustomer?.direccion || ''} id="customer-address" />
+                <input className="form-input" value={form.direccion} onChange={(e) => setForm({ ...form, direccion: e.target.value })} id="customer-address" />
               </div>
               <div className="form-group">
                 <label className="form-label">{t('customers.crmNotes')}</label>
-                <textarea className="form-input form-textarea" defaultValue={selectedCustomer?.notas_crm || ''} id="customer-notes" />
+                <textarea className="form-input form-textarea" value={form.notas_crm} onChange={(e) => setForm({ ...form, notas_crm: e.target.value })} id="customer-notes" />
               </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>
                 {t('common.cancel')}
               </button>
-              <button className="btn btn-primary" onClick={() => setShowModal(false)} id="customer-save">
-                {selectedCustomer ? t('common.update') : t('common.create')}
+              <button className="btn btn-primary" onClick={handleSave} disabled={saving} id="customer-save">
+                {saving ? t('common.loading') : selectedCustomer ? t('common.update') : t('common.create')}
               </button>
             </div>
           </div>

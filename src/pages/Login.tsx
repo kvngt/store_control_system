@@ -18,13 +18,13 @@ export default function Login() {
     setError('');
     setLoading(true);
 
-    const success = await login(email, password);
+    const result = await login(email, password);
     setLoading(false);
 
-    if (success) {
+    if (result.success) {
       navigate('/');
     } else {
-      setError(t('auth.loginError'));
+      setError(result.error || t('auth.loginError'));
     }
   };
 
@@ -79,18 +79,6 @@ export default function Login() {
             {loading ? t('common.loading') : t('auth.loginButton')}
           </button>
         </form>
-
-        <div className="login-demo-hint">
-          <p style={{ marginBottom: '8px' }}>
-            <strong>Demo Mode</strong> — {language === 'es' ? 'Usa estos correos para probar' : 'Use these emails to test'}:
-          </p>
-          <p><code>admin@restorify.com</code> → Admin</p>
-          <p><code>miguel@restorify.com</code> → {language === 'es' ? 'Mecánico' : 'Mechanic'}</p>
-          <p><code>david@restorify.com</code> → {language === 'es' ? 'Pintor' : 'Painter'}</p>
-          <p style={{ marginTop: '8px', fontSize: '11px', opacity: 0.7 }}>
-            {language === 'es' ? 'Cualquier contraseña funciona en modo demo' : 'Any password works in demo mode'}
-          </p>
-        </div>
 
         {/* Language toggle at bottom */}
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--space-4)', gap: 'var(--space-2)' }}>

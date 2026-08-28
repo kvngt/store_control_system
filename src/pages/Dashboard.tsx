@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { mockDashboardStats, mockWorkOrders, mockCustomers, mockVehicles } from '../services/mockData';
+import { supabaseService } from '../services/supabaseService';
+import type { DashboardStats, WorkOrder } from '../types/database';
 import {
   ClipboardList,
   DollarSign,
@@ -8,20 +10,53 @@ import {
   UserPlus,
   AlertTriangle,
   Clock,
-  TrendingUp,
   Car,
 } from 'lucide-react';
 
+const EMPTY_STATS: DashboardStats = {
+  ordenes_activas: 0,
+  ordenes_finalizadas_mes: 0,
+  ingresos_mes: 0,
+  egresos_mes: 0,
+  clientes_nuevos_mes: 0,
+  tasa_ocupacion: 0,
+  ordenes_por_estatus: { recepcion: 0, en_proceso: 0, espera_repuestos: 0, finalizado: 0, entregado: 0 },
+  ingresos_por_mes: [],
+};
+
 export default function Dashboard() {
   const { t } = useLanguage();
-  const { user } = useAuth();
-  const stats = mockDashboardStats;
+  const { user, currentSede } = useAuth();
+  const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
+  const [recentOrders, setRecentOrders] = useState<WorkOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const recentOrders = mockWorkOrders
-    .sort((a, b) => new Date(b.creado_en).getTime() - new Date(a.creado_en).getTime())
-    .slice(0, 5);
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError('');
 
-  const maxRevenue = Math.max(...stats.ingresos_por_mes.map((m) => Math.max(m.ingresos, m.egresos)));
+    const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
+
+    Promise.all([
+      supabaseService.getDashboardStats(sedeId),
+      supabaseService.getWorkOrders(sedeId),
+    ])
+      .then(([statsData, orders]) => {
+        if (!active) return;
+        setStats(statsData);
+        setRecentOrders(orders.slice(0, 5));
+      })
+      .catch((err) => active && setError(err.message))
+      .finally(() => active && setLoading(false));
+
+    return () => {
+      active = false;
+    };
+  }, [user, currentSede]);
+
+  const maxRevenue = Math.max(1, ...stats.ingresos_por_mes.map((m) => Math.max(m.ingresos, m.egresos)));
 
   const statusLabels: Record<string, string> = {
     recepcion: t('workOrders.intake'),
@@ -31,8 +66,17 @@ export default function Dashboard() {
     entregado: t('workOrders.delivered'),
   };
 
+  const waitingOrders = recentOrders.filter((o) => o.estatus === 'espera_repuestos');
+  const laggingOrders = recentOrders.filter((o) => o.estatus === 'en_proceso' && o.porcentaje_avance < 30);
+
+  if (loading) {
+    return <div className="loading-state"><div className="spinner" /></div>;
+  }
+
   return (
     <div>
+      {error && <div className="alert-error">{error}</div>}
+
       {/* Welcome */}
       <div className="page-header">
         <div>
@@ -65,9 +109,6 @@ export default function Dashboard() {
           <div className="stat-content">
             <div className="stat-label">{t('dashboard.monthlyRevenue')}</div>
             <div className="stat-value">${stats.ingresos_mes.toLocaleString()}</div>
-            <div className="stat-change positive">
-              <TrendingUp size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> +12.5%
-            </div>
           </div>
         </div>
 
@@ -93,9 +134,6 @@ export default function Dashboard() {
           <div className="stat-content">
             <div className="stat-label">{t('dashboard.newCustomers')}</div>
             <div className="stat-value">{stats.clientes_nuevos_mes}</div>
-            <div className="stat-change positive">
-              {mockCustomers.length} total
-            </div>
           </div>
         </div>
       </div>
@@ -103,7 +141,7 @@ export default function Dashboard() {
       {/* Main content grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
         {/* Revenue Chart */}
-        <div className="card" style={{ gridColumn: window.innerWidth < 768 ? '1 / -1' : undefined }}>
+        <div className="card">
           <div className="card-header">
             <h3 className="card-title">{t('dashboard.revenueVsExpenses')}</h3>
             <div style={{ display: 'flex', gap: 'var(--space-4)', fontSize: 'var(--font-size-xs)' }}>
@@ -145,66 +183,60 @@ export default function Dashboard() {
             <AlertTriangle size={18} style={{ color: 'var(--color-warning)' }} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-            {mockWorkOrders
-              .filter((o) => o.estatus === 'espera_repuestos')
-              .map((order) => {
-                const customer = mockCustomers.find(c => c.id === order.cliente_id);
-                const vehicle = mockVehicles.find(v => v.id === order.vehiculo_id);
-                return (
-                  <div
-                    key={order.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 'var(--space-3)',
-                      padding: 'var(--space-3)',
-                      background: 'var(--color-warning-bg)',
-                      borderRadius: 'var(--radius-md)',
-                      border: '1px solid rgba(245, 158, 11, 0.15)',
-                    }}
-                  >
-                    <Clock size={16} style={{ color: 'var(--color-warning)', flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>
-                        {order.numero_orden}
-                      </div>
-                      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
-                        {customer?.nombre} — {vehicle?.marca} {vehicle?.modelo}
-                      </div>
-                    </div>
-                    <span className="badge badge-espera_repuestos">{t('workOrders.waitingParts')}</span>
+            {waitingOrders.length === 0 && laggingOrders.length === 0 && (
+              <p style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)' }}>
+                {t('common.noResults')}
+              </p>
+            )}
+            {waitingOrders.map((order) => (
+              <div
+                key={order.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-3)',
+                  padding: 'var(--space-3)',
+                  background: 'var(--color-warning-bg)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(245, 158, 11, 0.15)',
+                }}
+              >
+                <Clock size={16} style={{ color: 'var(--color-warning)', flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>
+                    {order.numero_orden}
                   </div>
-                );
-              })}
-            {mockWorkOrders
-              .filter((o) => o.estatus === 'en_proceso' && o.porcentaje_avance < 30)
-              .map((order) => {
-                const customer = mockCustomers.find(c => c.id === order.cliente_id);
-                return (
-                  <div
-                    key={order.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 'var(--space-3)',
-                      padding: 'var(--space-3)',
-                      background: 'var(--color-info-bg)',
-                      borderRadius: 'var(--radius-md)',
-                      border: '1px solid rgba(59, 130, 246, 0.15)',
-                    }}
-                  >
-                    <Gauge size={16} style={{ color: 'var(--color-info)', flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>
-                        {order.numero_orden} — {order.porcentaje_avance}%
-                      </div>
-                      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
-                        {customer?.nombre}
-                      </div>
-                    </div>
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+                    {order.cliente?.nombre} — {order.vehiculo?.marca} {order.vehiculo?.modelo}
                   </div>
-                );
-              })}
+                </div>
+                <span className="badge badge-espera_repuestos">{t('workOrders.waitingParts')}</span>
+              </div>
+            ))}
+            {laggingOrders.map((order) => (
+              <div
+                key={order.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-3)',
+                  padding: 'var(--space-3)',
+                  background: 'var(--color-info-bg)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(59, 130, 246, 0.15)',
+                }}
+              >
+                <Gauge size={16} style={{ color: 'var(--color-info)', flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>
+                    {order.numero_orden} — {order.porcentaje_avance}%
+                  </div>
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+                    {order.cliente?.nombre}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -228,56 +260,52 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {recentOrders.map((order) => {
-                const customer = mockCustomers.find((c) => c.id === order.cliente_id);
-                const vehicle = mockVehicles.find((v) => v.id === order.vehiculo_id);
-                return (
-                  <tr key={order.id}>
-                    <td>
-                      <span style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>
-                        {order.numero_orden}
-                      </span>
-                    </td>
-                    <td>{customer?.nombre}</td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                        <Car size={14} style={{ color: 'var(--color-text-tertiary)' }} />
-                        {vehicle?.anio} {vehicle?.marca} {vehicle?.modelo}
+              {recentOrders.map((order) => (
+                <tr key={order.id}>
+                  <td>
+                    <span style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>
+                      {order.numero_orden}
+                    </span>
+                  </td>
+                  <td>{order.cliente?.nombre}</td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                      <Car size={14} style={{ color: 'var(--color-text-tertiary)' }} />
+                      {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
+                    </div>
+                  </td>
+                  <td>
+                    <span className={`badge badge-${order.tipo_trabajo}`}>
+                      {order.tipo_trabajo === 'mecanica'
+                        ? t('workOrders.mechanical')
+                        : order.tipo_trabajo === 'pintura'
+                        ? t('workOrders.painting')
+                        : t('workOrders.combined')}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`badge badge-${order.estatus}`}>
+                      {statusLabels[order.estatus]}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: 120 }}>
+                      <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
+                        <div
+                          className={`progress-fill ${order.porcentaje_avance === 100 ? 'success' : ''}`}
+                          style={{ width: `${order.porcentaje_avance}%` }}
+                        ></div>
                       </div>
-                    </td>
-                    <td>
-                      <span className={`badge badge-${order.tipo_trabajo}`}>
-                        {order.tipo_trabajo === 'mecanica'
-                          ? t('workOrders.mechanical')
-                          : order.tipo_trabajo === 'pintura'
-                          ? t('workOrders.painting')
-                          : t('workOrders.combined')}
+                      <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', minWidth: 30 }}>
+                        {order.porcentaje_avance}%
                       </span>
-                    </td>
-                    <td>
-                      <span className={`badge badge-${order.estatus}`}>
-                        {statusLabels[order.estatus]}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: 120 }}>
-                        <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
-                          <div
-                            className={`progress-fill ${order.porcentaje_avance === 100 ? 'success' : ''}`}
-                            style={{ width: `${order.porcentaje_avance}%` }}
-                          ></div>
-                        </div>
-                        <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', minWidth: 30 }}>
-                          {order.porcentaje_avance}%
-                        </span>
-                      </div>
-                    </td>
-                    <td style={{ fontWeight: 600 }}>
-                      ${order.total_general.toLocaleString()}
-                    </td>
-                  </tr>
-                );
-              })}
+                    </div>
+                  </td>
+                  <td style={{ fontWeight: 600 }}>
+                    ${order.total_general.toLocaleString()}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

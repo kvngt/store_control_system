@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { mockWorkOrders, mockCustomers, mockVehicles, mockUsers, mockAssignments } from '../services/mockData';
+import { useAuth } from '../context/AuthContext';
+import { supabaseService } from '../services/supabaseService';
 import type { OrderStatus, WorkOrder } from '../types/database';
 import { Calendar, Gauge } from 'lucide-react';
 
@@ -12,10 +13,31 @@ const COLUMNS: { status: OrderStatus; emoji: string }[] = [
   { status: 'entregado', emoji: '🚗' },
 ];
 
+const CAPACITY = 10;
+
 export default function KanbanBoard() {
   const { t } = useLanguage();
-  const [orders, setOrders] = useState<WorkOrder[]>([...mockWorkOrders]);
+  const { user, currentSede } = useAuth();
+  const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
+
+  const [orders, setOrders] = useState<WorkOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [draggedOrder, setDraggedOrder] = useState<string | null>(null);
+
+  const loadOrders = useCallback(() => {
+    setLoading(true);
+    setError('');
+    supabaseService
+      .getWorkOrders(sedeId)
+      .then(setOrders)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [sedeId]);
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
 
   const statusLabels: Record<OrderStatus, string> = {
     recepcion: t('workOrders.intake'),
@@ -25,8 +47,7 @@ export default function KanbanBoard() {
     entregado: t('workOrders.delivered'),
   };
 
-  const getOrdersByStatus = (status: OrderStatus) =>
-    orders.filter((o) => o.estatus === status);
+  const getOrdersByStatus = (status: OrderStatus) => orders.filter((o) => o.estatus === status);
 
   const handleDragStart = (orderId: string) => {
     setDraggedOrder(orderId);
@@ -36,21 +57,28 @@ export default function KanbanBoard() {
     e.preventDefault();
   };
 
-  const handleDrop = (status: OrderStatus) => {
+  const handleDrop = async (status: OrderStatus) => {
     if (!draggedOrder) return;
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === draggedOrder ? { ...o, estatus: status } : o
-      )
-    );
+    const orderId = draggedOrder;
     setDraggedOrder(null);
+
+    const previous = orders;
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, estatus: status } : o)));
+
+    try {
+      await supabaseService.updateWorkOrderStatus(orderId, status);
+    } catch (err) {
+      setError((err as Error).message);
+      setOrders(previous);
+    }
   };
 
-  const totalActive = orders.filter(
-    (o) => !['finalizado', 'entregado'].includes(o.estatus)
-  ).length;
-  const capacity = 10;
-  const occupancy = Math.round((totalActive / capacity) * 100);
+  const totalActive = orders.filter((o) => !['finalizado', 'entregado'].includes(o.estatus)).length;
+  const occupancy = Math.min(100, Math.round((totalActive / CAPACITY) * 100));
+
+  if (loading) {
+    return <div className="loading-state"><div className="spinner" /></div>;
+  }
 
   return (
     <div>
@@ -58,25 +86,29 @@ export default function KanbanBoard() {
         <div>
           <h1 className="page-title">{t('kanban.title')}</h1>
           <p className="page-subtitle">
-            {t('kanban.occupancy')}: {totalActive}/{capacity} ({occupancy}%)
+            {t('kanban.occupancy')}: {totalActive}/{CAPACITY} ({occupancy}%)
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
           <Gauge size={18} style={{ color: occupancy > 80 ? 'var(--color-danger)' : 'var(--color-primary-light)' }} />
           <div className="progress-bar" style={{ width: 120, height: 8 }}>
             <div
-              className={`progress-fill ${occupancy > 80 ? '' : ''}`}
               style={{
                 width: `${occupancy}%`,
+                height: '100%',
+                borderRadius: 'inherit',
                 background: occupancy > 80
                   ? 'linear-gradient(90deg, #EF4444, #F87171)'
                   : undefined,
               }}
+              className={occupancy > 80 ? '' : 'progress-fill'}
             ></div>
           </div>
           <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>{occupancy}%</span>
         </div>
       </div>
+
+      {error && <div className="alert-error">{error}</div>}
 
       <div className="kanban-board">
         {COLUMNS.map(({ status, emoji }) => {
@@ -96,12 +128,7 @@ export default function KanbanBoard() {
                 onDrop={() => handleDrop(status)}
               >
                 {columnOrders.map((order) => {
-                  const customer = mockCustomers.find((c) => c.id === order.cliente_id);
-                  const vehicle = mockVehicles.find((v) => v.id === order.vehiculo_id);
-                  const assignments = mockAssignments.filter((a) => a.orden_id === order.id);
-                  const assignees = assignments
-                    .map((a) => mockUsers.find((u) => u.id === a.usuario_id))
-                    .filter(Boolean);
+                  const assignees = (order.asignaciones || []).map((a) => a.usuario).filter(Boolean);
 
                   return (
                     <div
@@ -124,9 +151,9 @@ export default function KanbanBoard() {
                         </span>
                       </div>
 
-                      <div className="kanban-card-customer">{customer?.nombre}</div>
+                      <div className="kanban-card-customer">{order.cliente?.nombre}</div>
                       <div className="kanban-card-vehicle">
-                        {vehicle?.anio} {vehicle?.marca} {vehicle?.modelo} · {vehicle?.color}
+                        {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo} · {order.vehiculo?.color}
                       </div>
 
                       {/* Progress */}

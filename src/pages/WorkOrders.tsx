@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { mockWorkOrders, mockCustomers, mockVehicles, mockUsers, mockAssignments, mockLaborItems, mockWorkOrderParts } from '../services/mockData';
-import type { WorkOrder } from '../types/database';
+import { useAuth } from '../context/AuthContext';
+import { supabaseService } from '../services/supabaseService';
+import type { WorkOrder, Customer, Vehicle, UserProfile, OrderStatus } from '../types/database';
 import {
   Plus,
   Search,
@@ -17,37 +18,63 @@ import {
   Camera,
   X,
   CheckCircle2,
+  Trash2,
 } from 'lucide-react';
 
-interface Photos360 {
-  front?: string;
-  rear?: string;
-  left?: string;
-  right?: string;
-  interior?: string;
-  fuel?: string;
+interface PhotoZone {
+  key: string;
+  label: string;
+  file: File;
+  preview: string;
 }
+
+const ZONES: { key: string; label: string }[] = [
+  { key: 'front', label: 'Frontal' },
+  { key: 'rear', label: 'Trasera' },
+  { key: 'left', label: 'Izquierda' },
+  { key: 'right', label: 'Derecha' },
+  { key: 'interior', label: 'Interior' },
+  { key: 'fuel', label: 'Tablero' },
+];
+
+interface LaborRow { descripcion: string; costo: string }
+interface PartRow { descripcion: string; cantidad: string; costo_unitario: string; precio_venta_unitario: string }
 
 export default function WorkOrders() {
   const { t } = useLanguage();
-  const [orders, setOrders] = useState<WorkOrder[]>([...mockWorkOrders]);
+  const { user, currentSede } = useAuth();
+  const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
+
+  const [orders, setOrders] = useState<WorkOrder[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [operators, setOperators] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [viewOrder, setViewOrder] = useState<WorkOrder | null>(null);
+  const [viewLoading, setViewLoading] = useState(false);
 
-  // Modal State
+  // Create modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState('');
   const [workType, setWorkType] = useState<'mecanica' | 'pintura' | 'combinado'>('mecanica');
   const [fuelLevel, setFuelLevel] = useState('1/2');
-  const [milesIn, setMilesIn] = useState('45000');
-  const [deposit, setDeposit] = useState('500');
+  const [milesIn, setMilesIn] = useState('');
+  const [deposit, setDeposit] = useState('0');
+  const [estimatedDate, setEstimatedDate] = useState('');
   const [inspectionNotes, setInspectionNotes] = useState('');
-  const [photos, setPhotos] = useState<Photos360>({});
+  const [photos, setPhotos] = useState<Record<string, PhotoZone>>({});
+  const [selectedOperators, setSelectedOperators] = useState<string[]>([]);
+  const [laborItems, setLaborItems] = useState<LaborRow[]>([]);
+  const [parts, setParts] = useState<PartRow[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [activeZone, setActiveZone] = useState<keyof Photos360 | null>(null);
+  const [activeZone, setActiveZone] = useState<string | null>(null);
 
   const statusLabels: Record<string, string> = {
     recepcion: t('workOrders.intake'),
@@ -57,83 +84,167 @@ export default function WorkOrders() {
     entregado: t('workOrders.delivered'),
   };
 
+  const loadOrders = useCallback(() => {
+    setLoading(true);
+    setError('');
+    supabaseService
+      .getWorkOrders(sedeId)
+      .then(setOrders)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [sedeId]);
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
+
+  useEffect(() => {
+    supabaseService.getCustomers(sedeId).then(setCustomers).catch(() => {});
+    supabaseService.getVehicles().then(setVehicles).catch(() => {});
+    supabaseService.getOperators(sedeId).then(setOperators).catch(() => {});
+  }, [sedeId]);
+
   const filtered = orders.filter((o) => {
-    const customer = mockCustomers.find((c) => c.id === o.cliente_id);
     const matchSearch =
       o.numero_orden.toLowerCase().includes(search.toLowerCase()) ||
-      customer?.nombre.toLowerCase().includes(search.toLowerCase());
+      (o.cliente?.nombre || '').toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === 'all' || o.estatus === filterStatus;
     return matchSearch && matchStatus;
   });
 
-  const handleZoneClick = (zoneKey: keyof Photos360) => {
+  const vehiclesForCustomer = vehicles.filter((v) => v.cliente_id === selectedCustomer);
+
+  const handleZoneClick = (zoneKey: string) => {
     setActiveZone(zoneKey);
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
+    fileInputRef.current?.click();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && activeZone) {
-      const imageUrl = URL.createObjectURL(file);
-      setPhotos((prev) => ({ ...prev, [activeZone]: imageUrl }));
+      const preview = URL.createObjectURL(file);
+      const label = ZONES.find((z) => z.key === activeZone)?.label || activeZone;
+      setPhotos((prev) => ({ ...prev, [activeZone]: { key: activeZone, label, file, preview } }));
+    }
+    e.target.value = '';
+  };
+
+  const resetForm = () => {
+    setSelectedCustomer('');
+    setSelectedVehicle('');
+    setWorkType('mecanica');
+    setFuelLevel('1/2');
+    setMilesIn('');
+    setDeposit('0');
+    setEstimatedDate('');
+    setInspectionNotes('');
+    setPhotos({});
+    setSelectedOperators([]);
+    setLaborItems([]);
+    setParts([]);
+  };
+
+  const toggleOperator = (id: string) => {
+    setSelectedOperators((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const handleCreateOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCustomer || !selectedVehicle || !user) return;
+    setSaving(true);
+    setError('');
+    try {
+      const asignaciones = selectedOperators.map((id) => {
+        const op = operators.find((o) => o.id === id);
+        return { usuario_id: id, tipo_tarea: (op?.rol === 'pintor' ? 'pintura' : 'mecanica') as 'mecanica' | 'pintura' };
+      });
+
+      const order = await supabaseService.createWorkOrder({
+        sede_id: sedeId || currentSede?.id || '',
+        cliente_id: selectedCustomer,
+        vehiculo_id: selectedVehicle,
+        tipo_trabajo: workType,
+        millas_ingreso: parseInt(milesIn, 10) || 0,
+        nivel_gasolina: fuelLevel,
+        deposito_inicial: parseFloat(deposit) || 0,
+        inspeccion_360_notas: inspectionNotes,
+        fecha_estimada_entrega: estimatedDate || new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
+        labor_items: laborItems
+          .filter((l) => l.descripcion.trim())
+          .map((l) => ({ descripcion: l.descripcion, costo: parseFloat(l.costo) || 0 })),
+        repuestos: parts
+          .filter((p) => p.descripcion.trim())
+          .map((p) => ({
+            descripcion: p.descripcion,
+            cantidad: parseInt(p.cantidad, 10) || 1,
+            costo_unitario: parseFloat(p.costo_unitario) || 0,
+            precio_venta_unitario: parseFloat(p.precio_venta_unitario) || 0,
+          })),
+        asignaciones,
+        creado_por: user.id,
+      });
+
+      const photoFiles = Object.values(photos).map((p) => ({ zone: p.key, file: p.file }));
+      if (photoFiles.length) {
+        await supabaseService.uploadOrderPhotos(order.id, photoFiles);
+      }
+
+      setShowCreateModal(false);
+      resetForm();
+      loadOrders();
+      openDetail(order.id);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleCreateOrder = (e: React.FormEvent) => {
-    e.preventDefault();
-    const customerObj = mockCustomers.find(c => c.id === selectedCustomer) || mockCustomers[0];
-    const vehicleObj = mockVehicles.find(v => v.id === selectedVehicle) || mockVehicles[0];
+  const openDetail = async (orderId: string) => {
+    setViewLoading(true);
+    setError('');
+    try {
+      const detail = await supabaseService.getWorkOrderDetail(orderId);
+      setViewOrder(detail);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setViewLoading(false);
+    }
+  };
 
-    const newOrder: WorkOrder = {
-      id: `ord-${Date.now()}`,
-      sede_id: 'sede-1',
-      numero_orden: `ORD-${new Date().getFullYear()}-00${orders.length + 1}`,
-      cliente_id: customerObj.id,
-      vehiculo_id: vehicleObj.id,
-      tipo_trabajo: workType,
-      estatus: 'recepcion',
-      porcentaje_avance: 0,
-      inspeccion_360_notas: inspectionNotes || 'Inspección de recepción realizada.',
-      inspeccion_360_fotos: Object.values(photos),
-      nivel_gasolina: fuelLevel,
-      millas_ingreso: parseInt(milesIn) || 0,
-      deposito_inicial: parseFloat(deposit) || 0,
-      total_labor: 0,
-      total_repuestos: 0,
-      total_general: parseFloat(deposit) || 0,
-      fecha_ingreso: new Date().toISOString(),
-      fecha_estimada_entrega: new Date(Date.now() + 864000000).toISOString().split('T')[0],
-      creado_por: 'admin',
-      creado_en: new Date().toISOString(),
-    };
+  const handleStatusChange = async (status: OrderStatus) => {
+    if (!viewOrder) return;
+    try {
+      await supabaseService.updateWorkOrderStatus(viewOrder.id, status);
+      openDetail(viewOrder.id);
+      loadOrders();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
 
-    setOrders([newOrder, ...orders]);
-    setShowCreateModal(false);
-    setViewOrder(newOrder); // Open detail of newly created order
-    setPhotos({});
-    setInspectionNotes('');
+  const handleProgressChange = async (value: number) => {
+    if (!viewOrder) return;
+    try {
+      await supabaseService.updateWorkOrderProgress(viewOrder.id, value);
+      setViewOrder({ ...viewOrder, porcentaje_avance: value });
+      loadOrders();
+    } catch (err) {
+      setError((err as Error).message);
+    }
   };
 
   // Order Detail View
   if (viewOrder) {
-    const customer = mockCustomers.find((c) => c.id === viewOrder.cliente_id);
-    const vehicle = mockVehicles.find((v) => v.id === viewOrder.vehiculo_id);
-    const assignments = mockAssignments.filter((a) => a.orden_id === viewOrder.id);
-    const laborItems = mockLaborItems.filter((l) => l.orden_id === viewOrder.id);
-    const parts = mockWorkOrderParts.filter((p) => p.orden_id === viewOrder.id);
-    const totalLabor = laborItems.reduce((sum, l) => sum + l.costo, 0);
-    const totalParts = parts.reduce((sum, p) => sum + p.subtotal, 0);
-
-    const zones: { key: keyof Photos360; label: string }[] = [
-      { key: 'front', label: 'Frontal / Front' },
-      { key: 'rear', label: 'Trasera / Rear' },
-      { key: 'left', label: 'Izquierda / Left' },
-      { key: 'right', label: 'Derecha / Right' },
-      { key: 'interior', label: 'Interior' },
-      { key: 'fuel', label: 'Tablero / Fuel' },
-    ];
+    const customer = viewOrder.cliente;
+    const vehicle = viewOrder.vehiculo;
+    const assignments = viewOrder.asignaciones || [];
+    const laborList = viewOrder.labor_items || [];
+    const partsList = viewOrder.repuestos || [];
+    const totalLabor = laborList.reduce((sum, l) => sum + l.costo, 0);
+    const totalParts = partsList.reduce((sum, p) => sum + p.subtotal, 0);
+    const photoUrls = (viewOrder.inspeccion_360_fotos || []).filter(Boolean) as string[];
 
     return (
       <div className="animate-fade-in">
@@ -141,15 +252,8 @@ export default function WorkOrders() {
           <ChevronLeft size={18} /> {t('common.back')}
         </button>
 
-        {/* Hidden File Input for Camera/File upload */}
-        <input
-          type="file"
-          ref={fileInputRef}
-          accept="image/*"
-          capture="environment"
-          style={{ display: 'none' }}
-          onChange={handleFileChange}
-        />
+        {error && <div className="alert-error">{error}</div>}
+        {viewLoading && <div className="loading-state"><div className="spinner" /></div>}
 
         {/* Order Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
@@ -162,9 +266,28 @@ export default function WorkOrders() {
             <p className="page-subtitle">{customer?.nombre} — {vehicle?.anio} {vehicle?.marca} {vehicle?.modelo}</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-            <div style={{ textAlign: 'right' }}>
+            <select
+              className="form-input form-select"
+              value={viewOrder.estatus}
+              onChange={(e) => handleStatusChange(e.target.value as OrderStatus)}
+              style={{ width: 'auto' }}
+            >
+              {Object.keys(statusLabels).map((s) => (
+                <option key={s} value={s}>{statusLabels[s]}</option>
+              ))}
+            </select>
+            <div style={{ textAlign: 'right', minWidth: 140 }}>
               <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>{t('workOrders.progress')}</div>
-              <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-primary-light)' }}>{viewOrder.porcentaje_avance}%</div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={viewOrder.porcentaje_avance}
+                onChange={(e) => handleProgressChange(parseInt(e.target.value, 10))}
+                style={{ width: '100%' }}
+              />
+              <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-primary-light)' }}>{viewOrder.porcentaje_avance}%</div>
             </div>
           </div>
         </div>
@@ -191,7 +314,6 @@ export default function WorkOrders() {
                 </div>
               ))}
             </div>
-            {/* Fuel + Deposit */}
             <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-4)', padding: 'var(--space-3)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                 <Fuel size={16} style={{ color: 'var(--color-warning)' }} />
@@ -212,74 +334,33 @@ export default function WorkOrders() {
 
           {/* Inspection 360 */}
           <div className="card">
-            <h3 className="card-title" style={{ marginBottom: 'var(--space-4)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>
-                <Camera size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
-                {t('workOrders.inspection360')}
-              </span>
-              <span style={{ fontSize: '11px', color: 'var(--color-primary-light)', fontWeight: 500 }}>
-                Haz clic en una zona para tomar/subir foto 📷
-              </span>
+            <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>
+              <Camera size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
+              {t('workOrders.inspection360')}
             </h3>
             <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-4)', lineHeight: 1.6 }}>
               {viewOrder.inspeccion_360_notas}
             </p>
 
-            {/* Photo Upload & Capture Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-3)' }}>
-              {zones.map(({ key, label }) => {
-                const imgUrl = photos[key];
-                return (
-                  <div
-                    key={key}
-                    onClick={() => handleZoneClick(key)}
-                    style={{
-                      height: 100,
-                      background: imgUrl ? `url(${imgUrl}) center/cover no-repeat` : 'var(--color-bg-tertiary)',
-                      border: imgUrl ? '2px solid var(--color-primary)' : '2px dashed var(--color-surface-border)',
-                      borderRadius: 'var(--radius-md)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 4,
-                      cursor: 'pointer',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      transition: 'all var(--transition-fast)',
-                    }}
+            {photoUrls.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-3)' }}>
+                {photoUrls.map((url, i) => (
+                  <a
+                    key={i}
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ display: 'block', height: 100, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-surface-border)' }}
                   >
-                    {!imgUrl ? (
-                      <>
-                        <Camera size={20} style={{ color: 'var(--color-primary-light)' }} />
-                        <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>{label}</span>
-                      </>
-                    ) : (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          background: 'rgba(10, 10, 15, 0.75)',
-                          padding: '4px',
-                          textAlign: 'center',
-                          fontSize: '10px',
-                          fontWeight: 600,
-                          color: 'var(--color-success)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 4,
-                        }}
-                      >
-                        <CheckCircle2 size={12} /> {label}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    <img src={url} alt={`foto-${i}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)' }}>
+                {t('common.noResults')}
+              </p>
+            )}
           </div>
 
           {/* Labor */}
@@ -297,7 +378,7 @@ export default function WorkOrders() {
                   </tr>
                 </thead>
                 <tbody>
-                  {laborItems.map((item) => (
+                  {laborList.map((item) => (
                     <tr key={item.id}>
                       <td>{item.descripcion}</td>
                       <td style={{ textAlign: 'right', fontWeight: 600 }}>${item.costo.toFixed(2)}</td>
@@ -331,7 +412,7 @@ export default function WorkOrders() {
                   </tr>
                 </thead>
                 <tbody>
-                  {parts.map((part) => (
+                  {partsList.map((part) => (
                     <tr key={part.id}>
                       <td>{part.descripcion}</td>
                       <td>{part.cantidad}</td>
@@ -383,39 +464,39 @@ export default function WorkOrders() {
             {t('workOrders.assignedTechnician')}
           </h3>
           <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
-            {assignments.map((a) => {
-              const user = mockUsers.find((u) => u.id === a.usuario_id);
-              return (
-                <div
-                  key={a.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 'var(--space-3)',
-                    padding: 'var(--space-3) var(--space-4)',
-                    background: 'var(--color-bg-tertiary)',
-                    borderRadius: 'var(--radius-lg)',
-                    border: '1px solid var(--color-surface-border)',
-                  }}
-                >
-                  <div style={{
-                    width: 36, height: 36, borderRadius: '50%',
-                    background: a.tipo_tarea === 'mecanica'
-                      ? 'var(--color-info-bg)' : 'rgba(236, 72, 153, 0.15)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: a.tipo_tarea === 'mecanica' ? 'var(--color-info)' : '#F472B6',
-                  }}>
-                    {a.tipo_tarea === 'mecanica' ? <Wrench size={16} /> : <Paintbrush size={16} />}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>{user?.nombre_completo}</div>
-                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
-                      {a.tipo_tarea === 'mecanica' ? t('workOrders.mechanical') : t('workOrders.painting')} · {a.estatus_tarea}
-                    </div>
+            {assignments.length === 0 && (
+              <p style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)' }}>{t('common.noResults')}</p>
+            )}
+            {assignments.map((a) => (
+              <div
+                key={a.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-3)',
+                  padding: 'var(--space-3) var(--space-4)',
+                  background: 'var(--color-bg-tertiary)',
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1px solid var(--color-surface-border)',
+                }}
+              >
+                <div style={{
+                  width: 36, height: 36, borderRadius: '50%',
+                  background: a.tipo_tarea === 'mecanica'
+                    ? 'var(--color-info-bg)' : 'rgba(236, 72, 153, 0.15)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: a.tipo_tarea === 'mecanica' ? 'var(--color-info)' : '#F472B6',
+                }}>
+                  {a.tipo_tarea === 'mecanica' ? <Wrench size={16} /> : <Paintbrush size={16} />}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>{a.usuario?.nombre_completo}</div>
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
+                    {a.tipo_tarea === 'mecanica' ? t('workOrders.mechanical') : t('workOrders.painting')} · {a.estatus_tarea}
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -425,29 +506,17 @@ export default function WorkOrders() {
   // List view
   return (
     <div>
-      {/* Hidden File Input for Camera/File upload */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        accept="image/*"
-        capture="environment"
-        style={{ display: 'none' }}
-        onChange={handleFileChange}
-      />
-
       <div className="page-header">
         <div>
           <h1 className="page-title">{t('workOrders.title')}</h1>
           <p className="page-subtitle">{filtered.length} {t('common.results')}</p>
         </div>
-        <button
-          className="btn btn-primary"
-          id="new-order-btn"
-          onClick={() => setShowCreateModal(true)}
-        >
+        <button className="btn btn-primary" id="new-order-btn" onClick={() => setShowCreateModal(true)}>
           <Plus size={18} /> {t('workOrders.newOrder')}
         </button>
       </div>
+
+      {error && <div className="alert-error">{error}</div>}
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>
@@ -469,34 +538,33 @@ export default function WorkOrders() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="table-container animate-fade-in">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>{t('workOrders.orderNumber')}</th>
-              <th>{t('common.name')}</th>
-              <th>{t('vehicles.title')}</th>
-              <th>{t('common.type')}</th>
-              <th>{t('common.status')}</th>
-              <th>{t('workOrders.progress')}</th>
-              <th>{t('workOrders.estimatedDelivery')}</th>
-              <th>{t('common.total')}</th>
-              <th>{t('common.actions')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((order) => {
-              const customer = mockCustomers.find((c) => c.id === order.cliente_id);
-              const vehicle = mockVehicles.find((v) => v.id === order.vehiculo_id);
-              return (
+      {loading ? (
+        <div className="loading-state"><div className="spinner" /></div>
+      ) : (
+        <div className="table-container animate-fade-in">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{t('workOrders.orderNumber')}</th>
+                <th>{t('common.name')}</th>
+                <th>{t('vehicles.title')}</th>
+                <th>{t('common.type')}</th>
+                <th>{t('common.status')}</th>
+                <th>{t('workOrders.progress')}</th>
+                <th>{t('workOrders.estimatedDelivery')}</th>
+                <th>{t('common.total')}</th>
+                <th>{t('common.actions')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((order) => (
                 <tr key={order.id}>
                   <td style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>{order.numero_orden}</td>
-                  <td>{customer?.nombre}</td>
+                  <td>{order.cliente?.nombre}</td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                       <Car size={14} style={{ color: 'var(--color-text-tertiary)' }} />
-                      {vehicle?.anio} {vehicle?.marca} {vehicle?.modelo}
+                      {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
                     </div>
                   </td>
                   <td><span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span></td>
@@ -515,21 +583,21 @@ export default function WorkOrders() {
                   </td>
                   <td style={{ fontWeight: 600 }}>${order.total_general.toLocaleString()}</td>
                   <td>
-                    <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setViewOrder(order)}>
+                    <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openDetail(order.id)}>
                       <Eye size={16} />
                     </button>
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* CREATE WORK ORDER MODAL */}
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal" style={{ maxWidth: '680px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal" style={{ maxWidth: '720px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">{t('workOrders.newOrder')}</h3>
               <button className="modal-close" onClick={() => setShowCreateModal(false)}>
@@ -538,6 +606,8 @@ export default function WorkOrders() {
             </div>
             <form onSubmit={handleCreateOrder}>
               <div className="modal-body">
+                <input type="file" ref={fileInputRef} accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileChange} />
+
                 {/* Customer & Vehicle Select */}
                 <div className="form-row">
                   <div className="form-group">
@@ -545,14 +615,12 @@ export default function WorkOrders() {
                     <select
                       className="form-input form-select"
                       value={selectedCustomer}
-                      onChange={(e) => setSelectedCustomer(e.target.value)}
+                      onChange={(e) => { setSelectedCustomer(e.target.value); setSelectedVehicle(''); }}
                       required
                     >
                       <option value="">-- Seleccionar Cliente --</option>
-                      {mockCustomers.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.nombre}
-                        </option>
+                      {customers.map((c) => (
+                        <option key={c.id} value={c.id}>{c.nombre}</option>
                       ))}
                     </select>
                   </div>
@@ -563,12 +631,11 @@ export default function WorkOrders() {
                       value={selectedVehicle}
                       onChange={(e) => setSelectedVehicle(e.target.value)}
                       required
+                      disabled={!selectedCustomer}
                     >
                       <option value="">-- Seleccionar Vehículo --</option>
-                      {mockVehicles.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.marca} {v.modelo} ({v.placa})
-                        </option>
+                      {vehiclesForCustomer.map((v) => (
+                        <option key={v.id} value={v.id}>{v.marca} {v.modelo} ({v.placa})</option>
                       ))}
                     </select>
                   </div>
@@ -578,11 +645,7 @@ export default function WorkOrders() {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">{t('common.type')}</label>
-                    <select
-                      className="form-input form-select"
-                      value={workType}
-                      onChange={(e) => setWorkType(e.target.value as any)}
-                    >
+                    <select className="form-input form-select" value={workType} onChange={(e) => setWorkType(e.target.value as typeof workType)}>
                       <option value="mecanica">{t('workOrders.mechanical')}</option>
                       <option value="pintura">{t('workOrders.painting')}</option>
                       <option value="combinado">{t('workOrders.combined')}</option>
@@ -590,11 +653,7 @@ export default function WorkOrders() {
                   </div>
                   <div className="form-group">
                     <label className="form-label">{t('workOrders.fuelLevel')}</label>
-                    <select
-                      className="form-input form-select"
-                      value={fuelLevel}
-                      onChange={(e) => setFuelLevel(e.target.value)}
-                    >
+                    <select className="form-input form-select" value={fuelLevel} onChange={(e) => setFuelLevel(e.target.value)}>
                       <option value="E (Vacio)">E (Vacío / Empty)</option>
                       <option value="1/4">1/4</option>
                       <option value="1/2">1/2</option>
@@ -607,50 +666,55 @@ export default function WorkOrders() {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">{t('workOrders.milesIn')}</label>
-                    <input
-                      className="form-input"
-                      type="number"
-                      value={milesIn}
-                      onChange={(e) => setMilesIn(e.target.value)}
-                    />
+                    <input className="form-input" type="number" value={milesIn} onChange={(e) => setMilesIn(e.target.value)} />
                   </div>
                   <div className="form-group">
                     <label className="form-label">{t('workOrders.deposit')} ($)</label>
-                    <input
-                      className="form-input"
-                      type="number"
-                      value={deposit}
-                      onChange={(e) => setDeposit(e.target.value)}
-                    />
+                    <input className="form-input" type="number" value={deposit} onChange={(e) => setDeposit(e.target.value)} />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">{t('workOrders.estimatedDelivery')}</label>
+                  <input className="form-input" type="date" value={estimatedDate} onChange={(e) => setEstimatedDate(e.target.value)} />
+                </div>
+
+                {/* Operators */}
+                <div className="form-group">
+                  <label className="form-label">{t('workOrders.assignedTechnician')}</label>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                    {operators.map((op) => (
+                      <label
+                        key={op.id}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '6px',
+                          padding: '6px 12px', borderRadius: 'var(--radius-full)',
+                          background: selectedOperators.includes(op.id) ? 'var(--color-primary)' : 'var(--color-bg-tertiary)',
+                          color: selectedOperators.includes(op.id) ? 'var(--color-text-inverse)' : 'var(--color-text-secondary)',
+                          fontSize: 'var(--font-size-sm)', cursor: 'pointer',
+                        }}
+                      >
+                        <input type="checkbox" checked={selectedOperators.includes(op.id)} onChange={() => toggleOperator(op.id)} style={{ display: 'none' }} />
+                        {op.nombre_completo} ({op.rol})
+                      </label>
+                    ))}
                   </div>
                 </div>
 
                 {/* 360 Photos upload */}
                 <div className="form-group" style={{ marginTop: 'var(--space-2)' }}>
-                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>{t('workOrders.inspection360')} (Fotos) 📷</span>
-                    <span style={{ fontSize: '11px', color: 'var(--color-primary-light)' }}>
-                      Toca un cuadro para tomar foto o seleccionar archivo
-                    </span>
-                  </label>
+                  <label className="form-label">{t('workOrders.inspection360')} (Fotos)</label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-2)' }}>
-                    {[
-                      { key: 'front', label: 'Frente' },
-                      { key: 'rear', label: 'Atrás' },
-                      { key: 'left', label: 'Izquierda' },
-                      { key: 'right', label: 'Derecha' },
-                      { key: 'interior', label: 'Interior' },
-                      { key: 'fuel', label: 'Tablero' },
-                    ].map(({ key, label }) => {
-                      const imgUrl = photos[key as keyof Photos360];
+                    {ZONES.map(({ key, label }) => {
+                      const photo = photos[key];
                       return (
                         <div
                           key={key}
-                          onClick={() => handleZoneClick(key as keyof Photos360)}
+                          onClick={() => handleZoneClick(key)}
                           style={{
                             height: 75,
-                            background: imgUrl ? `url(${imgUrl}) center/cover no-repeat` : 'var(--color-bg-tertiary)',
-                            border: imgUrl ? '2px solid var(--color-success)' : '1px dashed var(--color-surface-border)',
+                            background: photo ? `url(${photo.preview}) center/cover no-repeat` : 'var(--color-bg-tertiary)',
+                            border: photo ? '2px solid var(--color-success)' : '1px dashed var(--color-surface-border)',
                             borderRadius: 'var(--radius-md)',
                             display: 'flex',
                             flexDirection: 'column',
@@ -658,17 +722,16 @@ export default function WorkOrders() {
                             justifyContent: 'center',
                             gap: 2,
                             cursor: 'pointer',
-                            transition: 'all var(--transition-fast)',
                           }}
                         >
-                          {!imgUrl ? (
+                          {!photo ? (
                             <>
                               <Camera size={16} style={{ color: 'var(--color-text-tertiary)' }} />
                               <span style={{ fontSize: '11px', color: 'var(--color-text-tertiary)' }}>{label}</span>
                             </>
                           ) : (
-                            <div style={{ background: 'rgba(0,0,0,0.6)', padding: '2px 6px', borderRadius: 4, fontSize: '10px', color: '#fff' }}>
-                              ✓ {label}
+                            <div style={{ background: 'rgba(0,0,0,0.6)', padding: '2px 6px', borderRadius: 4, fontSize: '10px', color: '#fff', display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <CheckCircle2 size={10} /> {label}
                             </div>
                           )}
                         </div>
@@ -687,13 +750,91 @@ export default function WorkOrders() {
                     rows={2}
                   />
                 </div>
+
+                {/* Labor Items */}
+                <div className="form-group" style={{ marginTop: 'var(--space-3)' }}>
+                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>{t('workOrders.laborDescription')}</span>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setLaborItems((p) => [...p, { descripcion: '', costo: '' }])}>
+                      <Plus size={14} /> {t('common.add')}
+                    </button>
+                  </label>
+                  {laborItems.map((item, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                      <input
+                        className="form-input"
+                        placeholder={t('common.description')}
+                        value={item.descripcion}
+                        onChange={(e) => setLaborItems((p) => p.map((it, idx) => (idx === i ? { ...it, descripcion: e.target.value } : it)))}
+                      />
+                      <input
+                        className="form-input"
+                        type="number"
+                        placeholder="$"
+                        style={{ maxWidth: 110 }}
+                        value={item.costo}
+                        onChange={(e) => setLaborItems((p) => p.map((it, idx) => (idx === i ? { ...it, costo: e.target.value } : it)))}
+                      />
+                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => setLaborItems((p) => p.filter((_, idx) => idx !== i))}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Parts */}
+                <div className="form-group">
+                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>{t('workOrders.partsDescription')}</span>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setParts((p) => [...p, { descripcion: '', cantidad: '1', costo_unitario: '', precio_venta_unitario: '' }])}>
+                      <Plus size={14} /> {t('common.add')}
+                    </button>
+                  </label>
+                  {parts.map((part, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                      <input
+                        className="form-input"
+                        placeholder={t('common.description')}
+                        value={part.descripcion}
+                        onChange={(e) => setParts((p) => p.map((it, idx) => (idx === i ? { ...it, descripcion: e.target.value } : it)))}
+                      />
+                      <input
+                        className="form-input"
+                        type="number"
+                        placeholder={t('common.quantity')}
+                        style={{ maxWidth: 80 }}
+                        value={part.cantidad}
+                        onChange={(e) => setParts((p) => p.map((it, idx) => (idx === i ? { ...it, cantidad: e.target.value } : it)))}
+                      />
+                      <input
+                        className="form-input"
+                        type="number"
+                        placeholder="Costo"
+                        style={{ maxWidth: 100 }}
+                        value={part.costo_unitario}
+                        onChange={(e) => setParts((p) => p.map((it, idx) => (idx === i ? { ...it, costo_unitario: e.target.value } : it)))}
+                      />
+                      <input
+                        className="form-input"
+                        type="number"
+                        placeholder="Precio"
+                        style={{ maxWidth: 100 }}
+                        value={part.precio_venta_unitario}
+                        onChange={(e) => setParts((p) => p.map((it, idx) => (idx === i ? { ...it, precio_venta_unitario: e.target.value } : it)))}
+                      />
+                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => setParts((p) => p.filter((_, idx) => idx !== i))}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>
                   {t('common.cancel')}
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  {t('common.create')}
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? t('common.loading') : t('common.create')}
                 </button>
               </div>
             </form>
