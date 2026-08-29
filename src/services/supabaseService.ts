@@ -12,6 +12,8 @@ import type {
   PayrollEntry,
   DashboardStats,
   OrderStatus,
+  LaborItem,
+  WorkOrderPart,
 } from '../types/database';
 
 const DEFAULT_CAPACITY = 10;
@@ -261,6 +263,94 @@ export const supabaseService = {
   deleteWorkOrder: async (orderId: string) => {
     const { error } = await supabase.from('ordenes_trabajo').delete().eq('id', orderId);
     if (error) throw error;
+  },
+
+  // ===== Labor / Parts / Assignments on an existing order =====
+  // Totals (total_labor / total_repuestos / total_general) are recomputed
+  // automatically by database triggers whenever these rows change.
+  addLaborItem: async (orderId: string, item: { descripcion: string; costo: number }) => {
+    const { data, error } = await supabase
+      .from('orden_labor')
+      .insert({ ...item, orden_id: orderId })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as LaborItem;
+  },
+
+  removeLaborItem: async (id: string) => {
+    const { error } = await supabase.from('orden_labor').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  addPart: async (orderId: string, item: { descripcion: string; cantidad: number; costo_unitario: number; precio_venta_unitario: number }) => {
+    const { data, error } = await supabase
+      .from('orden_repuestos')
+      .insert({ ...item, orden_id: orderId, subtotal: item.cantidad * item.precio_venta_unitario })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as WorkOrderPart;
+  },
+
+  removePart: async (id: string) => {
+    const { error } = await supabase.from('orden_repuestos').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  addAssignment: async (orderId: string, usuarioId: string, tipoTarea: 'mecanica' | 'pintura') => {
+    const { error } = await supabase
+      .from('orden_asignaciones')
+      .insert({ orden_id: orderId, usuario_id: usuarioId, tipo_tarea: tipoTarea, estatus_tarea: 'pendiente' });
+    if (error) throw error;
+  },
+
+  removeAssignment: async (id: string) => {
+    const { error } = await supabase.from('orden_asignaciones').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  updateAssignmentStatus: async (id: string, estatus: 'pendiente' | 'en_curso' | 'completada') => {
+    const { error } = await supabase.from('orden_asignaciones').update({ estatus_tarea: estatus }).eq('id', id);
+    if (error) throw error;
+  },
+
+  // ===== Global search =====
+  globalSearch: async (query: string, sedeId?: string) => {
+    const q = query.trim();
+    if (q.length < 2) return { customers: [], vehicles: [], orders: [] };
+
+    let customerQuery = supabase
+      .from('clientes')
+      .select('id, nombre, telefono')
+      .or(`nombre.ilike.%${q}%,telefono.ilike.%${q}%`)
+      .limit(5);
+    if (sedeId) customerQuery = customerQuery.eq('sede_id', sedeId);
+
+    const vehicleQuery = supabase
+      .from('vehiculos')
+      .select('id, marca, modelo, placa, vin, cliente:clientes(nombre)')
+      .or(`placa.ilike.%${q}%,vin.ilike.%${q}%,marca.ilike.%${q}%,modelo.ilike.%${q}%`)
+      .limit(5);
+
+    let orderQuery = supabase
+      .from('ordenes_trabajo')
+      .select('id, numero_orden, estatus, cliente:clientes(nombre)')
+      .ilike('numero_orden', `%${q}%`)
+      .limit(5);
+    if (sedeId) orderQuery = orderQuery.eq('sede_id', sedeId);
+
+    const [{ data: customers }, { data: vehicles }, { data: orders }] = await Promise.all([
+      customerQuery,
+      vehicleQuery,
+      orderQuery,
+    ]);
+
+    return {
+      customers: (customers || []) as { id: string; nombre: string; telefono: string }[],
+      vehicles: (vehicles || []) as unknown as { id: string; marca: string; modelo: string; placa: string; vin: string; cliente?: { nombre: string } }[],
+      orders: (orders || []) as unknown as { id: string; numero_orden: string; estatus: OrderStatus; cliente?: { nombre: string } }[],
+    };
   },
 
   // ===== Storage (360 Photos) =====

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { supabaseService } from '../services/supabaseService';
@@ -22,6 +23,7 @@ import type { Customer, Vehicle, WorkOrder } from '../types/database';
 export default function Customers() {
   const { t } = useLanguage();
   const { user, currentSede } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -50,6 +52,22 @@ export default function Customers() {
   useEffect(() => {
     loadCustomers();
   }, [loadCustomers]);
+
+  // Deep link from the global header search: /customers?open=<id>
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (openId) {
+      supabaseService
+        .getCustomerDetail(openId)
+        .then((data) => {
+          setViewProfile(data.customer);
+          setProfileData({ vehicles: data.vehicles, orders: data.orders });
+        })
+        .catch((err) => setError(err.message));
+      setSearchParams({}, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   useEffect(() => {
     if (!viewProfile) {

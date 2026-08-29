@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { supabaseService } from '../services/supabaseService';
@@ -44,6 +45,7 @@ interface PartRow { descripcion: string; cantidad: string; costo_unitario: strin
 export default function WorkOrders() {
   const { t } = useLanguage();
   const { user, currentSede } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
 
   const [orders, setOrders] = useState<WorkOrder[]>([]);
@@ -59,6 +61,10 @@ export default function WorkOrders() {
   const [viewOrder, setViewOrder] = useState<WorkOrder | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [newLaborDraft, setNewLaborDraft] = useState({ descripcion: '', costo: '' });
+  const [newPartDraft, setNewPartDraft] = useState({ descripcion: '', cantidad: '1', costo_unitario: '', precio_venta_unitario: '' });
+  const [addingOperatorId, setAddingOperatorId] = useState('');
+  const [detailBusy, setDetailBusy] = useState(false);
 
   // Create modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -299,6 +305,16 @@ export default function WorkOrders() {
     }
   };
 
+  // Deep link from the global header search: /work-orders?open=<id>
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (openId) {
+      openDetail(openId);
+      setSearchParams({}, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const handleStatusChange = async (status: OrderStatus) => {
     if (!viewOrder) return;
     try {
@@ -316,6 +332,89 @@ export default function WorkOrders() {
       await supabaseService.updateWorkOrderProgress(viewOrder.id, value);
       setViewOrder({ ...viewOrder, porcentaje_avance: value });
       loadOrders();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const handleAddLabor = async () => {
+    if (!viewOrder || !newLaborDraft.descripcion.trim()) return;
+    setDetailBusy(true);
+    try {
+      await supabaseService.addLaborItem(viewOrder.id, {
+        descripcion: newLaborDraft.descripcion,
+        costo: parseFloat(newLaborDraft.costo) || 0,
+      });
+      setNewLaborDraft({ descripcion: '', costo: '' });
+      await openDetail(viewOrder.id);
+      loadOrders();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setDetailBusy(false);
+    }
+  };
+
+  const handleRemoveLabor = async (id: string) => {
+    if (!viewOrder) return;
+    try {
+      await supabaseService.removeLaborItem(id);
+      await openDetail(viewOrder.id);
+      loadOrders();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const handleAddPart = async () => {
+    if (!viewOrder || !newPartDraft.descripcion.trim()) return;
+    setDetailBusy(true);
+    try {
+      await supabaseService.addPart(viewOrder.id, {
+        descripcion: newPartDraft.descripcion,
+        cantidad: parseInt(newPartDraft.cantidad, 10) || 1,
+        costo_unitario: parseFloat(newPartDraft.costo_unitario) || 0,
+        precio_venta_unitario: parseFloat(newPartDraft.precio_venta_unitario) || 0,
+      });
+      setNewPartDraft({ descripcion: '', cantidad: '1', costo_unitario: '', precio_venta_unitario: '' });
+      await openDetail(viewOrder.id);
+      loadOrders();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setDetailBusy(false);
+    }
+  };
+
+  const handleRemovePart = async (id: string) => {
+    if (!viewOrder) return;
+    try {
+      await supabaseService.removePart(id);
+      await openDetail(viewOrder.id);
+      loadOrders();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const handleAddOperatorToOrder = async () => {
+    if (!viewOrder || !addingOperatorId) return;
+    const op = operators.find((o) => o.id === addingOperatorId);
+    if (!op) return;
+    try {
+      await supabaseService.addAssignment(viewOrder.id, op.id, op.rol === 'pintor' ? 'pintura' : 'mecanica');
+      setAddingOperatorId('');
+      await openDetail(viewOrder.id);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const handleRemoveAssignment = async (id: string) => {
+    if (!viewOrder) return;
+    try {
+      await supabaseService.removeAssignment(id);
+      await openDetail(viewOrder.id);
     } catch (err) {
       setError((err as Error).message);
     }
@@ -460,6 +559,7 @@ export default function WorkOrders() {
                   <tr>
                     <th>{t('common.description')}</th>
                     <th style={{ textAlign: 'right' }}>{t('common.total')}</th>
+                    <th style={{ width: 36 }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -467,6 +567,11 @@ export default function WorkOrders() {
                     <tr key={item.id}>
                       <td>{item.descripcion}</td>
                       <td style={{ textAlign: 'right', fontWeight: 600 }}>${item.costo.toFixed(2)}</td>
+                      <td>
+                        <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => handleRemoveLabor(item.id)}>
+                          <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                   <tr>
@@ -474,9 +579,29 @@ export default function WorkOrders() {
                     <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-light)' }}>
                       ${totalLabor.toFixed(2)}
                     </td>
+                    <td></td>
                   </tr>
                 </tbody>
               </table>
+            </div>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-3)' }}>
+              <input
+                className="form-input"
+                placeholder={t('common.description')}
+                value={newLaborDraft.descripcion}
+                onChange={(e) => setNewLaborDraft({ ...newLaborDraft, descripcion: e.target.value })}
+              />
+              <input
+                className="form-input"
+                type="number"
+                placeholder="$"
+                style={{ maxWidth: 100 }}
+                value={newLaborDraft.costo}
+                onChange={(e) => setNewLaborDraft({ ...newLaborDraft, costo: e.target.value })}
+              />
+              <button type="button" className="btn btn-secondary" onClick={handleAddLabor} disabled={detailBusy || !newLaborDraft.descripcion.trim()}>
+                <Plus size={16} />
+              </button>
             </div>
           </div>
 
@@ -494,6 +619,7 @@ export default function WorkOrders() {
                     <th>{t('common.quantity')}</th>
                     <th style={{ textAlign: 'right' }}>{t('common.price')}</th>
                     <th style={{ textAlign: 'right' }}>{t('common.subtotal')}</th>
+                    <th style={{ width: 36 }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -503,6 +629,11 @@ export default function WorkOrders() {
                       <td>{part.cantidad}</td>
                       <td style={{ textAlign: 'right' }}>${part.precio_venta_unitario.toFixed(2)}</td>
                       <td style={{ textAlign: 'right', fontWeight: 600 }}>${part.subtotal.toFixed(2)}</td>
+                      <td>
+                        <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => handleRemovePart(part.id)}>
+                          <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                   <tr>
@@ -510,9 +641,46 @@ export default function WorkOrders() {
                     <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-light)' }}>
                       ${totalParts.toFixed(2)}
                     </td>
+                    <td></td>
                   </tr>
                 </tbody>
               </table>
+            </div>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-3)', flexWrap: 'wrap' }}>
+              <input
+                className="form-input"
+                placeholder={t('common.description')}
+                style={{ flex: '2 1 140px' }}
+                value={newPartDraft.descripcion}
+                onChange={(e) => setNewPartDraft({ ...newPartDraft, descripcion: e.target.value })}
+              />
+              <input
+                className="form-input"
+                type="number"
+                placeholder={t('common.quantity')}
+                style={{ flex: '1 1 70px' }}
+                value={newPartDraft.cantidad}
+                onChange={(e) => setNewPartDraft({ ...newPartDraft, cantidad: e.target.value })}
+              />
+              <input
+                className="form-input"
+                type="number"
+                placeholder="Costo"
+                style={{ flex: '1 1 90px' }}
+                value={newPartDraft.costo_unitario}
+                onChange={(e) => setNewPartDraft({ ...newPartDraft, costo_unitario: e.target.value })}
+              />
+              <input
+                className="form-input"
+                type="number"
+                placeholder="Precio"
+                style={{ flex: '1 1 90px' }}
+                value={newPartDraft.precio_venta_unitario}
+                onChange={(e) => setNewPartDraft({ ...newPartDraft, precio_venta_unitario: e.target.value })}
+              />
+              <button type="button" className="btn btn-secondary" onClick={handleAddPart} disabled={detailBusy || !newPartDraft.descripcion.trim()}>
+                <Plus size={16} />
+              </button>
             </div>
           </div>
         </div>
@@ -580,8 +748,34 @@ export default function WorkOrders() {
                     {a.tipo_tarea === 'mecanica' ? t('workOrders.mechanical') : t('workOrders.painting')} · {a.estatus_tarea}
                   </div>
                 </div>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm btn-icon"
+                  onClick={() => handleRemoveAssignment(a.id)}
+                  style={{ marginLeft: 'var(--space-2)' }}
+                >
+                  <X size={14} style={{ color: 'var(--color-danger)' }} />
+                </button>
               </div>
             ))}
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
+            <select
+              className="form-input form-select"
+              style={{ maxWidth: 280 }}
+              value={addingOperatorId}
+              onChange={(e) => setAddingOperatorId(e.target.value)}
+            >
+              <option value="">-- {t('workOrders.assignedTechnician')} --</option>
+              {operators
+                .filter((op) => !assignments.some((a) => a.usuario_id === op.id))
+                .map((op) => (
+                  <option key={op.id} value={op.id}>{op.nombre_completo} ({op.rol})</option>
+                ))}
+            </select>
+            <button type="button" className="btn btn-secondary" onClick={handleAddOperatorToOrder} disabled={!addingOperatorId}>
+              <Plus size={16} /> {t('common.add')}
+            </button>
           </div>
         </div>
 
