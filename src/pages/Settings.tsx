@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { supabaseService } from '../services/supabaseService';
-import type { Sede, UserProfile } from '../types/database';
+import { getErrorMessage } from '../lib/errors';
+import type { Sede, UserProfile, UserRole } from '../types/database';
 import {
   Building2,
   Phone,
@@ -14,6 +15,8 @@ import {
   Shield,
   Sun,
   Moon,
+  UserPlus,
+  X,
 } from 'lucide-react';
 
 export default function Settings() {
@@ -27,7 +30,18 @@ export default function Settings() {
   const [capacityDrafts, setCapacityDrafts] = useState<Record<string, string>>({});
   const [savingSedeId, setSavingSedeId] = useState<string | null>(null);
 
-  const loadData = () => {
+  const [showEmployeeModal, setShowEmployeeModal] = useState(false);
+  const [savingEmployee, setSavingEmployee] = useState(false);
+  const [employeeForm, setEmployeeForm] = useState({
+    nombre_completo: '',
+    email: '',
+    password: '',
+    telefono: '',
+    rol: 'mecanico' as UserRole,
+    sede_id: '',
+  });
+
+  const loadData = useCallback(() => {
     setLoading(true);
     setError('');
     Promise.all([supabaseService.getSedes(), supabaseService.getUsers()])
@@ -36,13 +50,13 @@ export default function Settings() {
         setUsers(u);
         setCapacityDrafts(Object.fromEntries(s.map((sede) => [sede.id, String(sede.capacidad)])));
       })
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(getErrorMessage(err, language)))
       .finally(() => setLoading(false));
-  };
+  }, [language]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const handleSaveCapacity = async (sedeId: string) => {
     const value = parseInt(capacityDrafts[sedeId], 10);
@@ -52,9 +66,36 @@ export default function Settings() {
       await supabaseService.updateSede(sedeId, { capacidad: value });
       loadData();
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err, language));
     } finally {
       setSavingSedeId(null);
+    }
+  };
+
+  const openEmployeeModal = () => {
+    setEmployeeForm({ nombre_completo: '', email: '', password: '', telefono: '', rol: 'mecanico', sede_id: sedes[0]?.id || '' });
+    setError('');
+    setShowEmployeeModal(true);
+  };
+
+  const handleCreateEmployee = async () => {
+    const { nombre_completo, email, password, sede_id } = employeeForm;
+    if (!nombre_completo.trim() || !email.trim() || !password || !sede_id) return;
+    setSavingEmployee(true);
+    setError('');
+    try {
+      await supabaseService.createEmployee({
+        ...employeeForm,
+        nombre_completo: nombre_completo.trim(),
+        email: email.trim(),
+        telefono: employeeForm.telefono.trim() || undefined,
+      });
+      setShowEmployeeModal(false);
+      loadData();
+    } catch (err) {
+      setError(getErrorMessage(err, language));
+    } finally {
+      setSavingEmployee(false);
     }
   };
 
@@ -146,6 +187,11 @@ export default function Settings() {
             <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
               <Building2 size={18} /> {t('settings.workshops')}
             </h3>
+            {user?.rol === 'admin' && (
+              <button className="btn btn-primary btn-sm" onClick={openEmployeeModal}>
+                <UserPlus size={16} /> {t('settings.newEmployee')}
+              </button>
+            )}
           </div>
           {loading ? (
             <div className="loading-state"><div className="spinner" /></div>
@@ -224,6 +270,93 @@ export default function Settings() {
           )}
         </div>
       </div>
+
+      {showEmployeeModal && (
+        <div className="modal-overlay" onClick={() => setShowEmployeeModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">{t('settings.newEmployee')}</h3>
+              <button className="modal-close" onClick={() => setShowEmployeeModal(false)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">{t('common.name')}</label>
+                <input
+                  className="form-input"
+                  value={employeeForm.nombre_completo}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, nombre_completo: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">{t('common.email')}</label>
+                  <input
+                    className="form-input"
+                    type="email"
+                    value={employeeForm.email}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">{t('common.phone')}</label>
+                  <input
+                    className="form-input"
+                    value={employeeForm.telefono}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, telefono: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">{t('settings.temporaryPassword')}</label>
+                <input
+                  className="form-input"
+                  type="text"
+                  minLength={6}
+                  value={employeeForm.password}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, password: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">{t('settings.role')}</label>
+                  <select
+                    className="form-input form-select"
+                    value={employeeForm.rol}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, rol: e.target.value as UserRole })}
+                  >
+                    <option value="mecanico">{t('settings.roleMecanico')}</option>
+                    <option value="pintor">{t('settings.rolePintor')}</option>
+                    <option value="admin">{t('settings.roleAdmin')}</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">{t('settings.workshops')}</label>
+                  <select
+                    className="form-input form-select"
+                    value={employeeForm.sede_id}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, sede_id: e.target.value })}
+                    required
+                  >
+                    <option value="">-- {t('settings.workshops')} --</option>
+                    {sedes.map((sede) => (
+                      <option key={sede.id} value={sede.id}>{sede.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowEmployeeModal(false)}>{t('common.cancel')}</button>
+              <button className="btn btn-primary" onClick={handleCreateEmployee} disabled={savingEmployee}>
+                {savingEmployee ? t('common.loading') : t('common.create')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

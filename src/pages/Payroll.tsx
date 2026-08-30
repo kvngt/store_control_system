@@ -2,11 +2,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { supabaseService } from '../services/supabaseService';
+import { getErrorMessage } from '../lib/errors';
 import type { PayrollEntry, UserProfile } from '../types/database';
 import { Plus, Calendar, X } from 'lucide-react';
 
 export default function Payroll() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
   const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
 
@@ -38,9 +39,9 @@ export default function Payroll() {
         setEntries(payroll);
         setUsers(u);
       })
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(getErrorMessage(err, language)))
       .finally(() => setLoading(false));
-  }, [sedeId]);
+  }, [sedeId, language]);
 
   useEffect(() => {
     loadData();
@@ -64,7 +65,7 @@ export default function Payroll() {
       setForm({ usuario_id: '', periodo_inicio: '', periodo_fin: '', salario_base: '', bonos: '0', deducciones: '0', fecha_pago: new Date().toISOString().split('T')[0] });
       loadData();
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err, language));
     } finally {
       setSaving(false);
     }

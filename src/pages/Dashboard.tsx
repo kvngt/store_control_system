@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { supabaseService } from '../services/supabaseService';
+import { getErrorMessage } from '../lib/errors';
 import type { DashboardStats, WorkOrder } from '../types/database';
 import {
   ClipboardList,
@@ -25,7 +26,7 @@ const EMPTY_STATS: DashboardStats = {
 };
 
 export default function Dashboard() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
   const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
   const [recentOrders, setRecentOrders] = useState<WorkOrder[]>([]);
@@ -48,13 +49,13 @@ export default function Dashboard() {
         setStats(statsData);
         setRecentOrders(orders.slice(0, 5));
       })
-      .catch((err) => active && setError(err.message))
+      .catch((err) => active && setError(getErrorMessage(err, language)))
       .finally(() => active && setLoading(false));
 
     return () => {
       active = false;
     };
-  }, [user, currentSede]);
+  }, [user, currentSede, language]);
 
   const maxRevenue = Math.max(1, ...stats.ingresos_por_mes.map((m) => Math.max(m.ingresos, m.egresos)));
 

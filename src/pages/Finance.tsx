@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { supabaseService } from '../services/supabaseService';
+import { getErrorMessage } from '../lib/errors';
 import type { FinancialTransaction, TransactionType, TransactionCategory, DashboardStats } from '../types/database';
 import {
   DollarSign,
@@ -15,7 +16,7 @@ import {
 } from 'lucide-react';
 
 export default function Finance() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
   const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
 
@@ -46,9 +47,9 @@ export default function Finance() {
         setTransactions(txns);
         setStats(statsData);
       })
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(getErrorMessage(err, language)))
       .finally(() => setLoading(false));
-  }, [sedeId]);
+  }, [sedeId, language]);
 
   useEffect(() => {
     loadData();
@@ -85,7 +86,7 @@ export default function Finance() {
       setForm({ tipo: 'ingreso', categoria: 'pago_cliente', monto: '', fecha: new Date().toISOString().split('T')[0], descripcion: '' });
       loadData();
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err, language));
     } finally {
       setSaving(false);
     }

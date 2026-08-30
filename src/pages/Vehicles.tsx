@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { supabaseService } from '../services/supabaseService';
+import { getErrorMessage } from '../lib/errors';
 import { Search, Plus, Edit3, Trash2, X } from 'lucide-react';
 import type { Vehicle, Customer } from '../types/database';
 
 export default function Vehicles() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,9 +28,9 @@ export default function Vehicles() {
         setVehicles(v);
         setCustomers(c);
       })
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(getErrorMessage(err, language)))
       .finally(() => setLoading(false));
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     loadData();
@@ -77,7 +78,7 @@ export default function Vehicles() {
       setShowModal(false);
       loadData();
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err, language));
     } finally {
       setSaving(false);
     }
@@ -89,7 +90,7 @@ export default function Vehicles() {
       await supabaseService.deleteVehicle(v.id);
       loadData();
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err, language));
     }
   };
 

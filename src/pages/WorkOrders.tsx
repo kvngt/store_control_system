@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { supabaseService } from '../services/supabaseService';
+import { getErrorMessage } from '../lib/errors';
 import type { WorkOrder, Customer, Vehicle, UserProfile, OrderStatus } from '../types/database';
 import {
   Plus,
@@ -43,7 +44,7 @@ interface LaborRow { descripcion: string; costo: string }
 interface PartRow { descripcion: string; cantidad: string; costo_unitario: string; precio_venta_unitario: string }
 
 export default function WorkOrders() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
@@ -104,9 +105,9 @@ export default function WorkOrders() {
     supabaseService
       .getWorkOrders(sedeId)
       .then(setOrders)
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(getErrorMessage(err, language)))
       .finally(() => setLoading(false));
-  }, [sedeId]);
+  }, [sedeId, language]);
 
   useEffect(() => {
     loadOrders();
@@ -286,7 +287,7 @@ export default function WorkOrders() {
       }
       openDetail(order.id);
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err, language));
     } finally {
       setSaving(false);
     }
@@ -299,7 +300,7 @@ export default function WorkOrders() {
       const detail = await supabaseService.getWorkOrderDetail(orderId);
       setViewOrder(detail);
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err, language));
     } finally {
       setViewLoading(false);
     }
@@ -317,12 +318,15 @@ export default function WorkOrders() {
 
   const handleStatusChange = async (status: OrderStatus) => {
     if (!viewOrder) return;
+    if (status === 'entregado' && viewOrder.estatus !== 'entregado' && !confirm(t('workOrders.confirmDeliver'))) {
+      return;
+    }
     try {
       await supabaseService.updateWorkOrderStatus(viewOrder.id, status);
       openDetail(viewOrder.id);
       loadOrders();
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err, language));
     }
   };
 
@@ -333,7 +337,7 @@ export default function WorkOrders() {
       setViewOrder({ ...viewOrder, porcentaje_avance: value });
       loadOrders();
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err, language));
     }
   };
 
@@ -349,20 +353,21 @@ export default function WorkOrders() {
       await openDetail(viewOrder.id);
       loadOrders();
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err, language));
     } finally {
       setDetailBusy(false);
     }
   };
 
-  const handleRemoveLabor = async (id: string) => {
+  const handleRemoveLabor = async (id: string, descripcion: string) => {
     if (!viewOrder) return;
+    if (!confirm(`${t('common.delete')}: ${descripcion}?`)) return;
     try {
       await supabaseService.removeLaborItem(id);
       await openDetail(viewOrder.id);
       loadOrders();
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err, language));
     }
   };
 
@@ -380,20 +385,21 @@ export default function WorkOrders() {
       await openDetail(viewOrder.id);
       loadOrders();
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err, language));
     } finally {
       setDetailBusy(false);
     }
   };
 
-  const handleRemovePart = async (id: string) => {
+  const handleRemovePart = async (id: string, descripcion: string) => {
     if (!viewOrder) return;
+    if (!confirm(`${t('common.delete')}: ${descripcion}?`)) return;
     try {
       await supabaseService.removePart(id);
       await openDetail(viewOrder.id);
       loadOrders();
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err, language));
     }
   };
 
@@ -406,17 +412,18 @@ export default function WorkOrders() {
       setAddingOperatorId('');
       await openDetail(viewOrder.id);
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err, language));
     }
   };
 
-  const handleRemoveAssignment = async (id: string) => {
+  const handleRemoveAssignment = async (id: string, nombre: string) => {
     if (!viewOrder) return;
+    if (!confirm(`${t('common.delete')}: ${nombre}?`)) return;
     try {
       await supabaseService.removeAssignment(id);
       await openDetail(viewOrder.id);
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err, language));
     }
   };
 
@@ -568,7 +575,7 @@ export default function WorkOrders() {
                       <td>{item.descripcion}</td>
                       <td style={{ textAlign: 'right', fontWeight: 600 }}>${item.costo.toFixed(2)}</td>
                       <td>
-                        <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => handleRemoveLabor(item.id)}>
+                        <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => handleRemoveLabor(item.id, item.descripcion)}>
                           <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
                         </button>
                       </td>
@@ -630,7 +637,7 @@ export default function WorkOrders() {
                       <td style={{ textAlign: 'right' }}>${part.precio_venta_unitario.toFixed(2)}</td>
                       <td style={{ textAlign: 'right', fontWeight: 600 }}>${part.subtotal.toFixed(2)}</td>
                       <td>
-                        <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => handleRemovePart(part.id)}>
+                        <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => handleRemovePart(part.id, part.descripcion)}>
                           <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
                         </button>
                       </td>
@@ -751,7 +758,7 @@ export default function WorkOrders() {
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm btn-icon"
-                  onClick={() => handleRemoveAssignment(a.id)}
+                  onClick={() => handleRemoveAssignment(a.id, a.usuario?.nombre_completo || '')}
                   style={{ marginLeft: 'var(--space-2)' }}
                 >
                   <X size={14} style={{ color: 'var(--color-danger)' }} />

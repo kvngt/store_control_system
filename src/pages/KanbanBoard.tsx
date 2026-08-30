@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { supabaseService } from '../services/supabaseService';
+import { getErrorMessage } from '../lib/errors';
 import type { OrderStatus, WorkOrder } from '../types/database';
 import { Calendar, Gauge } from 'lucide-react';
 
@@ -14,7 +15,7 @@ const COLUMNS: { status: OrderStatus; emoji: string }[] = [
 ];
 
 export default function KanbanBoard() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
   const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
 
@@ -29,9 +30,9 @@ export default function KanbanBoard() {
     supabaseService
       .getWorkOrders(sedeId)
       .then(setOrders)
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(getErrorMessage(err, language)))
       .finally(() => setLoading(false));
-  }, [sedeId]);
+  }, [sedeId, language]);
 
   useEffect(() => {
     loadOrders();
@@ -58,7 +59,12 @@ export default function KanbanBoard() {
   const handleDrop = async (status: OrderStatus) => {
     if (!draggedOrder) return;
     const orderId = draggedOrder;
+    const order = orders.find((o) => o.id === orderId);
     setDraggedOrder(null);
+
+    if (status === 'entregado' && order?.estatus !== 'entregado' && !confirm(t('workOrders.confirmDeliver'))) {
+      return;
+    }
 
     const previous = orders;
     setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, estatus: status } : o)));
@@ -66,7 +72,7 @@ export default function KanbanBoard() {
     try {
       await supabaseService.updateWorkOrderStatus(orderId, status);
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err, language));
       setOrders(previous);
     }
   };

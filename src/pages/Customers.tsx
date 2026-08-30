@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { supabaseService } from '../services/supabaseService';
+import { getErrorMessage } from '../lib/errors';
 import {
   Plus,
   Search,
@@ -21,7 +22,7 @@ import {
 import type { Customer, Vehicle, WorkOrder } from '../types/database';
 
 export default function Customers() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -45,9 +46,9 @@ export default function Customers() {
     supabaseService
       .getCustomers(sedeId)
       .then(setCustomers)
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(getErrorMessage(err, language)))
       .finally(() => setLoading(false));
-  }, [sedeId]);
+  }, [sedeId, language]);
 
   useEffect(() => {
     loadCustomers();
@@ -63,7 +64,7 @@ export default function Customers() {
           setViewProfile(data.customer);
           setProfileData({ vehicles: data.vehicles, orders: data.orders });
         })
-        .catch((err) => setError(err.message));
+        .catch((err) => setError(getErrorMessage(err, language)));
       setSearchParams({}, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,8 +78,8 @@ export default function Customers() {
     supabaseService
       .getCustomerDetail(viewProfile.id)
       .then((data) => setProfileData({ vehicles: data.vehicles, orders: data.orders }))
-      .catch((err) => setError(err.message));
-  }, [viewProfile]);
+      .catch((err) => setError(getErrorMessage(err, language)));
+  }, [viewProfile, language]);
 
   const filtered = customers.filter(
     (c) =>

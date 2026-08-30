@@ -4,6 +4,7 @@ import type {
   Customer,
   Vehicle,
   UserProfile,
+  UserRole,
   Sede,
   CustomerInput,
   VehicleInput,
@@ -52,6 +53,20 @@ export const supabaseService = {
     return data as UserProfile[];
   },
 
+  createEmployee: async (input: {
+    email: string;
+    password: string;
+    nombre_completo: string;
+    rol: UserRole;
+    sede_id: string;
+    telefono?: string;
+  }) => {
+    const { data, error } = await supabase.functions.invoke('create-employee', { body: input });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data.profile as UserProfile;
+  },
+
   getOperators: async (sedeId?: string) => {
     let query = supabase.from('perfiles').select('*').in('rol', ['mecanico', 'pintor']);
     if (sedeId) query = query.eq('sede_id', sedeId);
@@ -67,8 +82,13 @@ export const supabaseService = {
     const { data: clientes, error } = await query;
     if (error) throw error;
 
-    const { data: vehiculos } = await supabase.from('vehiculos').select('id, cliente_id');
-    const { data: ordenes } = await supabase.from('ordenes_trabajo').select('id, cliente_id');
+    const clienteIds = (clientes || []).map((c) => c.id);
+    const [{ data: vehiculos }, { data: ordenes }] = clienteIds.length
+      ? await Promise.all([
+          supabase.from('vehiculos').select('id, cliente_id').in('cliente_id', clienteIds),
+          supabase.from('ordenes_trabajo').select('id, cliente_id').in('cliente_id', clienteIds),
+        ])
+      : [{ data: [] }, { data: [] }];
 
     return (clientes || []).map((c) => ({
       ...c,
@@ -172,27 +192,13 @@ export const supabaseService = {
     return data as WorkOrder;
   },
 
-  generateOrderNumber: async () => {
-    const year = new Date().getFullYear();
-    const { data, error } = await supabase
-      .from('ordenes_trabajo')
-      .select('numero_orden')
-      .ilike('numero_orden', `ORD-${year}-%`)
-      .order('numero_orden', { ascending: false })
-      .limit(1);
-    if (error) throw error;
-    const last = data?.[0]?.numero_orden as string | undefined;
-    const lastSeq = last ? parseInt(last.split('-').pop() || '0', 10) : 0;
-    return `ORD-${year}-${String(lastSeq + 1).padStart(3, '0')}`;
-  },
-
   createWorkOrder: async (input: WorkOrderInput & { creado_por: string }) => {
-    const numero_orden = await supabaseService.generateOrderNumber();
+    // numero_orden is generated atomically by a DB trigger (trg_numero_orden) to
+    // avoid duplicate order numbers when two orders are created concurrently.
     const totalLabor = input.labor_items.reduce((sum, l) => sum + l.costo, 0);
     const totalParts = input.repuestos.reduce((sum, p) => sum + p.cantidad * p.precio_venta_unitario, 0);
 
     const { data: order, error } = await supabase.from('ordenes_trabajo').insert({
-      numero_orden,
       sede_id: input.sede_id,
       cliente_id: input.cliente_id,
       vehiculo_id: input.vehiculo_id,
@@ -319,24 +325,28 @@ export const supabaseService = {
   globalSearch: async (query: string, sedeId?: string) => {
     const q = query.trim();
     if (q.length < 2) return { customers: [], vehicles: [], orders: [] };
+    // `,` and `(`/`)` are structural in PostgREST's .or() filter syntax (clause
+    // separator and grouping) — strip them so typed search text can't break out
+    // of the intended ilike clause into an unrelated column/operator.
+    const safeQ = q.replace(/[,()]/g, '');
 
     let customerQuery = supabase
       .from('clientes')
       .select('id, nombre, telefono')
-      .or(`nombre.ilike.%${q}%,telefono.ilike.%${q}%`)
+      .or(`nombre.ilike.%${safeQ}%,telefono.ilike.%${safeQ}%`)
       .limit(5);
     if (sedeId) customerQuery = customerQuery.eq('sede_id', sedeId);
 
     const vehicleQuery = supabase
       .from('vehiculos')
       .select('id, marca, modelo, placa, vin, cliente:clientes(nombre)')
-      .or(`placa.ilike.%${q}%,vin.ilike.%${q}%,marca.ilike.%${q}%,modelo.ilike.%${q}%`)
+      .or(`placa.ilike.%${safeQ}%,vin.ilike.%${safeQ}%,marca.ilike.%${safeQ}%,modelo.ilike.%${safeQ}%`)
       .limit(5);
 
     let orderQuery = supabase
       .from('ordenes_trabajo')
       .select('id, numero_orden, estatus, cliente:clientes(nombre)')
-      .ilike('numero_orden', `%${q}%`)
+      .ilike('numero_orden', `%${safeQ}%`)
       .limit(5);
     if (sedeId) orderQuery = orderQuery.eq('sede_id', sedeId);
 
