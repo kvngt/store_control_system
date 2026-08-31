@@ -300,6 +300,17 @@ export default function WorkOrders() {
     }
   };
 
+  const handleDeleteOrder = async (order: WorkOrder, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`${t('workOrders.confirmDelete')} ${order.numero_orden}?`)) return;
+    try {
+      await supabaseService.deleteWorkOrder(order.id);
+      loadOrders();
+    } catch (err) {
+      setError(getErrorMessage(err, language));
+    }
+  };
+
   const openDetail = async (orderId: string) => {
     setViewLoading(true);
     setError('');
@@ -887,9 +898,16 @@ export default function WorkOrders() {
                     </td>
                     <td style={{ fontWeight: 600 }}>${order.total_general.toLocaleString()}</td>
                     <td>
-                      <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openDetail(order.id)}>
-                        <Eye size={16} />
-                      </button>
+                      <div className="table-actions">
+                        <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openDetail(order.id)}>
+                          <Eye size={16} />
+                        </button>
+                        {user?.rol === 'admin' && (
+                          <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={(e) => handleDeleteOrder(order, e)}>
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -903,7 +921,14 @@ export default function WorkOrders() {
               <div key={order.id} className="workorder-card" onClick={() => openDetail(order.id)}>
                 <div className="workorder-card-top">
                   <span className="workorder-card-number">{order.numero_orden}</span>
-                  <ChevronRight size={18} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+                    {user?.rol === 'admin' && (
+                      <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={(e) => handleDeleteOrder(order, e)}>
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                    <ChevronRight size={18} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+                  </div>
                 </div>
                 <div className="workorder-card-meta">
                   {order.cliente?.nombre}

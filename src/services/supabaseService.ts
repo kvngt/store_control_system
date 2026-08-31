@@ -270,6 +270,16 @@ export const supabaseService = {
   },
 
   deleteWorkOrder: async (orderId: string) => {
+    // Remove the automatic finanzas_movimientos entries (deposit, final
+    // payment) the order-lifecycle triggers created for this order first —
+    // otherwise deleting the order just orphans them (referencia_orden_id
+    // set to null) instead of keeping the books consistent.
+    const { error: finanzasError } = await supabase
+      .from('finanzas_movimientos')
+      .delete()
+      .eq('referencia_orden_id', orderId);
+    if (finanzasError) throw finanzasError;
+
     const { error } = await supabase.from('ordenes_trabajo').delete().eq('id', orderId);
     if (error) throw error;
   },
