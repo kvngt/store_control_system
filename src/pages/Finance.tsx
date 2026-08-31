@@ -1,9 +1,13 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { supabaseService } from '../services/supabaseService';
 import { getErrorMessage } from '../lib/errors';
 import type { FinancialTransaction, TransactionType, TransactionCategory, DashboardStats } from '../types/database';
+
+// Lazy-loaded: pulls in pdfjs-dist (~1MB), which shouldn't ship in the main
+// bundle for users who never open the import dialog.
+const ImportStatementModal = lazy(() => import('./finance/ImportStatementModal'));
 import {
   DollarSign,
   TrendingUp,
@@ -12,6 +16,7 @@ import {
   ArrowDownRight,
   Plus,
   Download,
+  FileUp,
   X,
 } from 'lucide-react';
 
@@ -28,6 +33,7 @@ export default function Finance() {
 
   const [filterType, setFilterType] = useState<'all' | 'ingreso' | 'egreso'>('all');
   const [showModal, setShowModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [form, setForm] = useState({
     tipo: 'ingreso' as TransactionType,
     categoria: 'pago_cliente' as TransactionCategory,
@@ -125,6 +131,9 @@ export default function Finance() {
         <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
           <button className="btn btn-secondary" id="export-excel-btn" onClick={handleExportExcel}>
             <Download size={18} /> {t('finance.exportExcel')}
+          </button>
+          <button className="btn btn-secondary" id="import-statement-btn" onClick={() => setShowImportModal(true)}>
+            <FileUp size={18} /> {t('finance.importStatement')}
           </button>
           <button className="btn btn-primary" onClick={() => setShowModal(true)} id="new-transaction-btn">
             <Plus size={18} /> {t('finance.newTransaction')}
@@ -327,6 +336,18 @@ export default function Finance() {
             </div>
           </div>
         </div>
+      )}
+
+      {showImportModal && (
+        <Suspense fallback={null}>
+          <ImportStatementModal
+            onClose={() => setShowImportModal(false)}
+            onImported={() => {
+              setShowImportModal(false);
+              loadData();
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );
