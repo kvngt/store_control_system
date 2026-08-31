@@ -1,9 +1,12 @@
 import * as pdfjsLib from 'pdfjs-dist';
-// eslint-disable-next-line import/no-unresolved
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import type { ParsedStatementTransaction } from '../types/database';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+// Served from public/pdf.worker.min.js (kept in sync by
+// scripts/copy-pdf-worker.mjs), not imported as `pdf.worker.min.mjs?url`.
+// Some static hosts (Hostinger's CDN included) serve .mjs files as
+// `Content-Type: text/plain`, which browsers reject for ES module workers —
+// a plain .js extension avoids that entirely.
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
 export interface ParsedStatementResult {
   transactions: ParsedStatementTransaction[];

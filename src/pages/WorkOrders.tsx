@@ -227,6 +227,11 @@ export default function WorkOrders() {
           sede_id: targetSedeId,
         });
         customerId = created.id;
+        // Switch to "existing" immediately: if a later step in this same
+        // submission fails and the user retries, we must not create this
+        // customer a second time.
+        setCustomerMode('existing');
+        setSelectedCustomer(created.id);
       }
 
       let vehicleId = selectedVehicle;
@@ -241,6 +246,8 @@ export default function WorkOrders() {
           color: newVehicle.color,
         });
         vehicleId = createdVehicle.id;
+        setVehicleMode('existing');
+        setSelectedVehicle(createdVehicle.id);
       }
 
       const asignaciones = selectedOperators.map((id) => {
@@ -945,6 +952,7 @@ export default function WorkOrders() {
             </div>
             <form onSubmit={handleCreateOrder} style={{ display: 'contents' }}>
               <div className="modal-body">
+                {error && <div className="alert-error">{error}</div>}
                 <input type="file" ref={fileInputRef} accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileChange} />
 
                 {/* Customer & Vehicle Select */}

@@ -6,13 +6,15 @@
   "description": "Sistema de administración de talleres mecánicos y de pintura",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/copy-pdf-worker.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "postinstall": "node scripts/copy-pdf-worker.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.0",

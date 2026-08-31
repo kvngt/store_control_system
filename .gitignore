@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Generated at `npm install` by scripts/copy-pdf-worker.mjs — see that file.
+public/pdf.worker.min.js
+
 # Playwright
 /test-results/
 /playwright-report/
