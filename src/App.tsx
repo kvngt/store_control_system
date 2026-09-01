@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
+import { UnsavedChangesProvider } from './context/UnsavedChangesContext';
 import { isSupabaseConfigured } from './lib/supabase';
 import ErrorBoundary from './components/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
@@ -125,9 +127,13 @@ export default function App() {
       <BrowserRouter>
         <ThemeProvider>
           <LanguageProvider>
-            <AuthProvider>
-              <AppRoutes />
-            </AuthProvider>
+            <ToastProvider>
+              <UnsavedChangesProvider>
+                <AuthProvider>
+                  <AppRoutes />
+                </AuthProvider>
+              </UnsavedChangesProvider>
+            </ToastProvider>
           </LanguageProvider>
         </ThemeProvider>
       </BrowserRouter>

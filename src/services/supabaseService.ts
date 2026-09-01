@@ -15,6 +15,7 @@ import type {
   OrderStatus,
   LaborItem,
   WorkOrderPart,
+  OrderProgressUpdate,
   BankStatementImport,
   CategorizationRule,
   ParsedStatementTransaction,
@@ -192,7 +193,17 @@ export const supabaseService = {
       asignaciones:orden_asignaciones(*, usuario:perfiles(*))
     `).eq('id', orderId).single();
     if (error) throw error;
-    return data as WorkOrder;
+
+    // Progress updates are fetched separately and tolerantly: if the
+    // orden_avances migration hasn't been applied to this environment yet,
+    // the order detail must still load instead of erroring out entirely.
+    const { data: avances } = await supabase
+      .from('orden_avances')
+      .select('*, usuario:perfiles(*)')
+      .eq('orden_id', orderId)
+      .order('creado_en', { ascending: false });
+
+    return { ...data, avances: (avances || []) as OrderProgressUpdate[] } as WorkOrder;
   },
 
   createWorkOrder: async (input: WorkOrderInput & { creado_por: string }) => {
@@ -256,8 +267,6 @@ export const supabaseService = {
     const updates: Record<string, unknown> = { estatus };
     if (estatus === 'finalizado' || estatus === 'entregado') {
       updates.fecha_finalizacion = new Date().toISOString();
-    }
-    if (estatus === 'entregado') {
       updates.porcentaje_avance = 100;
     }
     const { error } = await supabase.from('ordenes_trabajo').update(updates).eq('id', orderId);
@@ -297,6 +306,17 @@ export const supabaseService = {
     return data as LaborItem;
   },
 
+  updateLaborItem: async (id: string, item: { descripcion: string; costo: number }) => {
+    const { data, error } = await supabase
+      .from('orden_labor')
+      .update(item)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as LaborItem;
+  },
+
   removeLaborItem: async (id: string) => {
     const { error } = await supabase.from('orden_labor').delete().eq('id', id);
     if (error) throw error;
@@ -306,6 +326,17 @@ export const supabaseService = {
     const { data, error } = await supabase
       .from('orden_repuestos')
       .insert({ ...item, orden_id: orderId, subtotal: item.cantidad * item.precio_venta_unitario })
+      .select()
+      .single();
+    if (error) throw error;
+    return data as WorkOrderPart;
+  },
+
+  updatePart: async (id: string, item: { descripcion: string; cantidad: number; costo_unitario: number; precio_venta_unitario: number }) => {
+    const { data, error } = await supabase
+      .from('orden_repuestos')
+      .update({ ...item, subtotal: item.cantidad * item.precio_venta_unitario })
+      .eq('id', id)
       .select()
       .single();
     if (error) throw error;
@@ -331,6 +362,30 @@ export const supabaseService = {
 
   updateAssignmentStatus: async (id: string, estatus: 'pendiente' | 'en_curso' | 'completada') => {
     const { error } = await supabase.from('orden_asignaciones').update({ estatus_tarea: estatus }).eq('id', id);
+    if (error) throw error;
+  },
+
+  // ===== Progress updates ("Agregar Avance") =====
+  // Lets the assigned mechanic/painter document progress over time with a
+  // note and optional photos, separate from the one-time 360° intake photos.
+  addProgressUpdate: async (orderId: string, usuarioId: string, descripcion: string, files: File[]) => {
+    const fotos: string[] = [];
+    for (const file of files) {
+      const path = `${orderId}/avance-${Date.now()}-${file.name}`;
+      const url = await supabaseService.uploadPhoto(file, path);
+      fotos.push(url);
+    }
+    const { data, error } = await supabase
+      .from('orden_avances')
+      .insert({ orden_id: orderId, usuario_id: usuarioId, descripcion, fotos })
+      .select('*, usuario:perfiles(*)')
+      .single();
+    if (error) throw error;
+    return data as OrderProgressUpdate;
+  },
+
+  removeProgressUpdate: async (id: string) => {
+    const { error } = await supabase.from('orden_avances').delete().eq('id', id);
     if (error) throw error;
   },
 

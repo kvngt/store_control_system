@@ -118,32 +118,42 @@
 
 /* ===== Light Theme ===== */
 :root[data-theme='light'] {
-  --color-bg-primary: #F7F7FA;
+  /* Enhanced Primary for better contrast on white */
+  --color-primary: #C59112;
+  --color-primary-light: #D4A017;
+  --color-primary-dark: #A3760B;
+
+  /* Premium White Backgrounds */
+  --color-bg-primary: #F9FAFB;
   --color-bg-secondary: #FFFFFF;
-  --color-bg-tertiary: #F0F0F5;
+  --color-bg-tertiary: #F3F4F6;
   --color-bg-elevated: #FFFFFF;
-  --color-bg-hover: #E8E8F0;
-  --color-bg-active: #DCDCE8;
+  --color-bg-hover: #F3F4F6;
+  --color-bg-active: #E5E7EB;
 
+  /* Surfaces with crisp borders */
   --color-surface: #FFFFFF;
-  --color-surface-hover: #F5F5FA;
-  --color-surface-border: rgba(10, 10, 15, 0.09);
-  --color-surface-glass: rgba(255, 255, 255, 0.75);
+  --color-surface-hover: #F9FAFB;
+  --color-surface-border: rgba(17, 24, 39, 0.08);
+  --color-surface-glass: rgba(255, 255, 255, 0.85);
 
-  --color-text-primary: #14141C;
-  --color-text-secondary: #55556B;
-  --color-text-tertiary: #8A8AA0;
-  --color-text-inverse: #0A0A0F;
+  /* High contrast text */
+  --color-text-primary: #111827;
+  --color-text-secondary: #4B5563;
+  --color-text-tertiary: #6B7280;
+  --color-text-inverse: #FFFFFF;
 
-  --color-success-bg: rgba(16, 185, 129, 0.12);
-  --color-warning-bg: rgba(245, 158, 11, 0.12);
-  --color-danger-bg: rgba(239, 68, 68, 0.12);
-  --color-info-bg: rgba(59, 130, 246, 0.12);
+  /* Status background slightly stronger */
+  --color-success-bg: rgba(16, 185, 129, 0.15);
+  --color-warning-bg: rgba(245, 158, 11, 0.15);
+  --color-danger-bg: rgba(239, 68, 68, 0.15);
+  --color-info-bg: rgba(59, 130, 246, 0.15);
 
-  --shadow-sm: 0 1px 2px rgba(20, 20, 28, 0.06);
-  --shadow-md: 0 4px 12px rgba(20, 20, 28, 0.08);
-  --shadow-lg: 0 8px 24px rgba(20, 20, 28, 0.1);
-  --shadow-xl: 0 12px 48px rgba(20, 20, 28, 0.14);
+  /* Cleaner shadows */
+  --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(17, 24, 39, 0.08), 0 2px 4px -2px rgba(17, 24, 39, 0.08);
+  --shadow-lg: 0 10px 15px -3px rgba(17, 24, 39, 0.1), 0 4px 6px -4px rgba(17, 24, 39, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(17, 24, 39, 0.1), 0 8px 10px -6px rgba(17, 24, 39, 0.1);
 }
 
 :root[data-theme='light'] .badge-recepcion { color: #7C3AED; }

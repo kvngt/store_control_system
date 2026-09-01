@@ -106,6 +106,18 @@ export interface WorkOrder {
   fotos?: InspectionPhoto[];
   repuestos?: WorkOrderPart[];
   labor_items?: LaborItem[];
+  avances?: OrderProgressUpdate[];
+}
+
+export interface OrderProgressUpdate {
+  id: string;
+  orden_id: string;
+  usuario_id: string;
+  descripcion: string;
+  fotos: string[];
+  creado_en: string;
+  // Virtual
+  usuario?: UserProfile;
 }
 
 export interface LaborItem {

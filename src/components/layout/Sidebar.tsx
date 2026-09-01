@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
+import { useUnsavedChanges } from '../../context/UnsavedChangesContext';
 import {
   LayoutDashboard,
   Users,
@@ -26,9 +27,23 @@ interface SidebarProps {
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
   const { t } = useLanguage();
   const { user, logout } = useAuth();
+  const { confirmNavigation } = useUnsavedChanges();
   const location = useLocation();
 
   const isAdmin = user?.rol === 'admin';
+
+  const handleNavClick = (e: React.MouseEvent) => {
+    if (!confirmNavigation()) {
+      e.preventDefault();
+      return;
+    }
+    onMobileClose();
+  };
+
+  const handleLogout = () => {
+    if (!confirmNavigation()) return;
+    logout();
+  };
 
   const mainLinks = [
     { to: '/', icon: LayoutDashboard, label: t('nav.dashboard') },
@@ -52,13 +67,10 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   return (
     <>
       {/* Mobile overlay */}
-      {mobileOpen && (
-        <div
-          className="modal-overlay"
-          style={{ zIndex: 'var(--z-overlay)' }}
-          onClick={onMobileClose}
-        />
-      )}
+      <div
+        className={`sidebar-overlay ${mobileOpen ? 'mobile-open' : ''}`}
+        onClick={onMobileClose}
+      />
 
       <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-logo">
@@ -90,7 +102,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                   `sidebar-link ${isActive && (link.to === '/' ? location.pathname === '/' : true) ? 'active' : ''}`
                 }
                 end={link.to === '/'}
-                onClick={onMobileClose}
+                onClick={handleNavClick}
               >
                 <link.icon className="sidebar-link-icon" size={20} />
                 <span className="sidebar-link-label">{link.label}</span>
@@ -108,7 +120,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                   key={link.to}
                   to={link.to}
                   className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                  onClick={onMobileClose}
+                  onClick={handleNavClick}
                 >
                   <link.icon className="sidebar-link-icon" size={20} />
                   <span className="sidebar-link-label">{link.label}</span>
@@ -127,7 +139,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                   key={link.to}
                   to={link.to}
                   className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                  onClick={onMobileClose}
+                  onClick={handleNavClick}
                 >
                   <link.icon className="sidebar-link-icon" size={20} />
                   <span className="sidebar-link-label">{link.label}</span>
@@ -138,7 +150,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
         </nav>
 
         <div className="sidebar-footer">
-          <button className="sidebar-link" onClick={logout} style={{ width: '100%' }}>
+          <button className="sidebar-link" onClick={handleLogout} style={{ width: '100%' }}>
             <LogOut className="sidebar-link-icon" size={20} />
             <span className="sidebar-link-label">{t('nav.logout')}</span>
           </button>

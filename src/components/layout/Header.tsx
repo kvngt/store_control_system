@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Bell, Menu, Building2, ClipboardList, Users, Car, Clock, AlertTriangle, X } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
+import { useUnsavedChanges } from '../../context/UnsavedChangesContext';
 import { supabaseService } from '../../services/supabaseService';
 import type { WorkOrder } from '../../types/database';
 
@@ -23,6 +24,7 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
   const { language, setLanguage, t } = useLanguage();
   const { user, currentSede, allSedes, setCurrentSede } = useAuth();
   const navigate = useNavigate();
+  const { confirmNavigation } = useUnsavedChanges();
   const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
 
   const [query, setQuery] = useState('');
@@ -99,16 +101,19 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
   };
 
   const goToOrder = (id: string) => {
+    if (!confirmNavigation()) return;
     navigate(`/work-orders?open=${id}`);
     closeSearch();
   };
 
   const goToCustomer = (id: string) => {
+    if (!confirmNavigation()) return;
     navigate(`/customers?open=${id}`);
     closeSearch();
   };
 
   const goToVehicles = () => {
+    if (!confirmNavigation()) return;
     navigate('/vehicles');
     closeSearch();
   };
@@ -245,7 +250,7 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
                 <div className="search-dropdown-empty">{t('common.noResults')}</div>
               ) : (
                 attentionOrders.map((o) => (
-                  <button key={o.id} className="notif-dropdown-item" onClick={() => { navigate(`/work-orders?open=${o.id}`); setNotifOpen(false); }}>
+                  <button key={o.id} className="notif-dropdown-item" onClick={() => { if (!confirmNavigation()) return; navigate(`/work-orders?open=${o.id}`); setNotifOpen(false); }}>
                     {o.estatus === 'espera_repuestos' ? (
                       <Clock size={16} style={{ color: 'var(--color-warning)', flexShrink: 0 }} />
                     ) : (

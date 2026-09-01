@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { useUnsavedChanges } from '../context/UnsavedChangesContext';
 import { supabaseService } from '../services/supabaseService';
 import { getErrorMessage } from '../lib/errors';
 import type { WorkOrder, Customer, Vehicle, UserProfile, OrderStatus } from '../types/database';
@@ -22,6 +24,10 @@ import {
   CheckCircle2,
   Trash2,
   ChevronRight,
+  Pencil,
+  Check,
+  FileDown,
+  MessageSquarePlus,
 } from 'lucide-react';
 
 interface PhotoZone {
@@ -46,6 +52,8 @@ interface PartRow { descripcion: string; cantidad: string; costo_unitario: strin
 export default function WorkOrders() {
   const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
+  const { showToast } = useToast();
+  const { setGuard } = useUnsavedChanges();
   const [searchParams, setSearchParams] = useSearchParams();
   const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
 
@@ -66,6 +74,15 @@ export default function WorkOrders() {
   const [newPartDraft, setNewPartDraft] = useState({ descripcion: '', cantidad: '1', costo_unitario: '', precio_venta_unitario: '' });
   const [addingOperatorId, setAddingOperatorId] = useState('');
   const [detailBusy, setDetailBusy] = useState(false);
+  const [editingLaborId, setEditingLaborId] = useState<string | null>(null);
+  const [editLaborDraft, setEditLaborDraft] = useState({ descripcion: '', costo: '' });
+  const [editingPartId, setEditingPartId] = useState<string | null>(null);
+  const [editPartDraft, setEditPartDraft] = useState({ descripcion: '', cantidad: '', costo_unitario: '', precio_venta_unitario: '' });
+  const [progressDraft, setProgressDraft] = useState<string>('0');
+  const [newProgressNote, setNewProgressNote] = useState('');
+  const [newProgressPhotos, setNewProgressPhotos] = useState<File[]>([]);
+  const progressFileInputRef = useRef<HTMLInputElement>(null);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   // Create modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -184,6 +201,45 @@ export default function WorkOrders() {
     setParts([]);
   };
 
+  // Is there anything typed in the create-order form worth protecting?
+  const isCreateFormDirty = () =>
+    !!selectedCustomer ||
+    !!selectedVehicle ||
+    newCustomer.nombre.trim() !== '' ||
+    newCustomer.telefono.trim() !== '' ||
+    newVehicle.marca.trim() !== '' ||
+    newVehicle.modelo.trim() !== '' ||
+    newVehicle.vin.trim() !== '' ||
+    milesIn.trim() !== '' ||
+    (deposit.trim() !== '' && deposit !== '0') ||
+    estimatedDate.trim() !== '' ||
+    inspectionNotes.trim() !== '' ||
+    Object.keys(photos).length > 0 ||
+    selectedOperators.length > 0 ||
+    laborItems.length > 0 ||
+    parts.length > 0;
+
+  const handleCloseCreateModal = () => {
+    if (isCreateFormDirty() && !confirm(t('workOrders.confirmDiscard'))) {
+      return;
+    }
+    setShowCreateModal(false);
+    resetForm();
+  };
+
+  // Register a navigation guard for as long as the create-order modal has
+  // unsaved data, so the sidebar/global search can't silently navigate away
+  // and lose it.
+  useEffect(() => {
+    if (showCreateModal) {
+      setGuard(() => !isCreateFormDirty() || confirm(t('workOrders.confirmDiscard')));
+    } else {
+      setGuard(null);
+    }
+    return () => setGuard(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCreateModal, selectedCustomer, selectedVehicle, newCustomer, newVehicle, milesIn, deposit, estimatedDate, inspectionNotes, photos, selectedOperators, laborItems, parts]);
+
   const removePhoto = (zoneKey: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setPhotos((prev) => {
@@ -293,8 +349,11 @@ export default function WorkOrders() {
         supabaseService.getVehicles().then(setVehicles).catch(() => {});
       }
       openDetail(order.id);
+      showToast('success', `${t('workOrders.orderCreatedSuccess')} (${order.numero_orden})`);
     } catch (err) {
-      setError(getErrorMessage(err, language));
+      const message = getErrorMessage(err, language);
+      setError(message);
+      showToast('error', t('workOrders.orderCreatedError'), message);
     } finally {
       setSaving(false);
     }
@@ -334,6 +393,15 @@ export default function WorkOrders() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
+  // Keep the manual progress input in sync with whichever order is open.
+  useEffect(() => {
+    if (viewOrder) {
+      setProgressDraft(String(viewOrder.porcentaje_avance));
+    }
+  }, [viewOrder?.id, viewOrder?.porcentaje_avance]);
+
+  const canEditProgress = viewOrder?.estatus === 'en_proceso';
+
   const handleStatusChange = async (status: OrderStatus) => {
     if (!viewOrder) return;
     if (status === 'entregado' && viewOrder.estatus !== 'entregado' && !confirm(t('workOrders.confirmDeliver'))) {
@@ -349,10 +417,12 @@ export default function WorkOrders() {
   };
 
   const handleProgressChange = async (value: number) => {
-    if (!viewOrder) return;
+    if (!viewOrder || !canEditProgress) return;
+    const clamped = Math.min(100, Math.max(0, value));
+    setProgressDraft(String(clamped));
     try {
-      await supabaseService.updateWorkOrderProgress(viewOrder.id, value);
-      setViewOrder({ ...viewOrder, porcentaje_avance: value });
+      await supabaseService.updateWorkOrderProgress(viewOrder.id, clamped);
+      setViewOrder({ ...viewOrder, porcentaje_avance: clamped });
       loadOrders();
     } catch (err) {
       setError(getErrorMessage(err, language));
@@ -389,6 +459,29 @@ export default function WorkOrders() {
     }
   };
 
+  const startEditLabor = (item: { id: string; descripcion: string; costo: number }) => {
+    setEditingLaborId(item.id);
+    setEditLaborDraft({ descripcion: item.descripcion, costo: String(item.costo) });
+  };
+
+  const handleSaveLaborEdit = async () => {
+    if (!viewOrder || !editingLaborId || !editLaborDraft.descripcion.trim()) return;
+    setDetailBusy(true);
+    try {
+      await supabaseService.updateLaborItem(editingLaborId, {
+        descripcion: editLaborDraft.descripcion,
+        costo: parseFloat(editLaborDraft.costo) || 0,
+      });
+      setEditingLaborId(null);
+      await openDetail(viewOrder.id);
+      loadOrders();
+    } catch (err) {
+      setError(getErrorMessage(err, language));
+    } finally {
+      setDetailBusy(false);
+    }
+  };
+
   const handleAddPart = async () => {
     if (!viewOrder || !newPartDraft.descripcion.trim()) return;
     setDetailBusy(true);
@@ -421,6 +514,36 @@ export default function WorkOrders() {
     }
   };
 
+  const startEditPart = (part: { id: string; descripcion: string; cantidad: number; costo_unitario: number; precio_venta_unitario: number }) => {
+    setEditingPartId(part.id);
+    setEditPartDraft({
+      descripcion: part.descripcion,
+      cantidad: String(part.cantidad),
+      costo_unitario: String(part.costo_unitario),
+      precio_venta_unitario: String(part.precio_venta_unitario),
+    });
+  };
+
+  const handleSavePartEdit = async () => {
+    if (!viewOrder || !editingPartId || !editPartDraft.descripcion.trim()) return;
+    setDetailBusy(true);
+    try {
+      await supabaseService.updatePart(editingPartId, {
+        descripcion: editPartDraft.descripcion,
+        cantidad: parseInt(editPartDraft.cantidad, 10) || 1,
+        costo_unitario: parseFloat(editPartDraft.costo_unitario) || 0,
+        precio_venta_unitario: parseFloat(editPartDraft.precio_venta_unitario) || 0,
+      });
+      setEditingPartId(null);
+      await openDetail(viewOrder.id);
+      loadOrders();
+    } catch (err) {
+      setError(getErrorMessage(err, language));
+    } finally {
+      setDetailBusy(false);
+    }
+  };
+
   const handleAddOperatorToOrder = async () => {
     if (!viewOrder || !addingOperatorId) return;
     const op = operators.find((o) => o.id === addingOperatorId);
@@ -442,6 +565,58 @@ export default function WorkOrders() {
       await openDetail(viewOrder.id);
     } catch (err) {
       setError(getErrorMessage(err, language));
+    }
+  };
+
+  const handleAddProgressPhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length) {
+      setNewProgressPhotos((prev) => [...prev, ...files]);
+    }
+    e.target.value = '';
+  };
+
+  const removeProgressPhotoDraft = (index: number) => {
+    setNewProgressPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddProgressUpdate = async () => {
+    if (!viewOrder || !user || !newProgressNote.trim()) return;
+    setDetailBusy(true);
+    try {
+      await supabaseService.addProgressUpdate(viewOrder.id, user.id, newProgressNote, newProgressPhotos);
+      setNewProgressNote('');
+      setNewProgressPhotos([]);
+      await openDetail(viewOrder.id);
+      showToast('success', t('workOrders.progressAdded'));
+    } catch (err) {
+      showToast('error', t('workOrders.progressAddError'), getErrorMessage(err, language));
+    } finally {
+      setDetailBusy(false);
+    }
+  };
+
+  const handleRemoveProgressUpdate = async (id: string) => {
+    if (!viewOrder) return;
+    if (!confirm(t('common.delete') + '?')) return;
+    try {
+      await supabaseService.removeProgressUpdate(id);
+      await openDetail(viewOrder.id);
+    } catch (err) {
+      setError(getErrorMessage(err, language));
+    }
+  };
+
+  const handleGeneratePdf = async () => {
+    if (!viewOrder) return;
+    setGeneratingPdf(true);
+    try {
+      const { generateWorkOrderPdf } = await import('../lib/workOrderPdf');
+      await generateWorkOrderPdf(viewOrder);
+    } catch (err) {
+      showToast('error', t('workOrders.pdfError'), getErrorMessage(err, language));
+    } finally {
+      setGeneratingPdf(false);
     }
   };
 
@@ -468,14 +643,25 @@ export default function WorkOrders() {
         {/* Order Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
           <div>
-            <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
               {viewOrder.numero_orden}
               <span className={`badge badge-${viewOrder.estatus}`}>{statusLabels[viewOrder.estatus]}</span>
               <span className={`badge badge-${viewOrder.tipo_trabajo}`}>{viewOrder.tipo_trabajo}</span>
+              {user?.rol === 'admin' && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleGeneratePdf}
+                  disabled={generatingPdf}
+                  title={t('workOrders.generatePdf')}
+                >
+                  <FileDown size={14} /> {generatingPdf ? t('common.loading') : t('workOrders.generatePdf')}
+                </button>
+              )}
             </h1>
             <p className="page-subtitle">{customer?.nombre} — {vehicle?.anio} {vehicle?.marca} {vehicle?.modelo}</p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap', width: '100%', maxWidth: 420 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap', width: '100%', maxWidth: 460 }}>
             <select
               className="form-input form-select"
               value={viewOrder.estatus}
@@ -486,8 +672,13 @@ export default function WorkOrders() {
                 <option key={s} value={s}>{statusLabels[s]}</option>
               ))}
             </select>
-            <div style={{ textAlign: 'right', flex: '1 1 140px' }}>
-              <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>{t('workOrders.progress')}</div>
+            <div style={{ textAlign: 'right', flex: '1 1 180px' }}>
+              <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+                {t('workOrders.progress')}
+                {!canEditProgress && (
+                  <span style={{ marginLeft: 6, color: 'var(--color-text-tertiary)' }}>({t('workOrders.progressLocked')})</span>
+                )}
+              </div>
               <input
                 type="range"
                 min={0}
@@ -495,9 +686,24 @@ export default function WorkOrders() {
                 step={5}
                 value={viewOrder.porcentaje_avance}
                 onChange={(e) => handleProgressChange(parseInt(e.target.value, 10))}
+                disabled={!canEditProgress}
                 style={{ width: '100%' }}
               />
-              <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-primary-light)' }}>{viewOrder.porcentaje_avance}%</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
+                <input
+                  className="form-input"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={progressDraft}
+                  disabled={!canEditProgress}
+                  onChange={(e) => setProgressDraft(e.target.value)}
+                  onBlur={() => handleProgressChange(parseInt(progressDraft, 10) || 0)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur(); } }}
+                  style={{ width: 70, textAlign: 'right', padding: 'var(--space-1) var(--space-2)' }}
+                />
+                <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-primary-light)' }}>%</span>
+              </div>
             </div>
           </div>
         </div>
@@ -584,21 +790,57 @@ export default function WorkOrders() {
                   <tr>
                     <th>{t('common.description')}</th>
                     <th style={{ textAlign: 'right' }}>{t('common.total')}</th>
-                    <th style={{ width: 36 }}></th>
+                    <th style={{ width: 64 }}></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {laborList.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.descripcion}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>${item.costo.toFixed(2)}</td>
-                      <td>
-                        <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => handleRemoveLabor(item.id, item.descripcion)}>
-                          <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {laborList.map((item) =>
+                    editingLaborId === item.id ? (
+                      <tr key={item.id}>
+                        <td>
+                          <input
+                            className="form-input"
+                            value={editLaborDraft.descripcion}
+                            onChange={(e) => setEditLaborDraft({ ...editLaborDraft, descripcion: e.target.value })}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            className="form-input"
+                            type="number"
+                            style={{ textAlign: 'right' }}
+                            value={editLaborDraft.costo}
+                            onChange={(e) => setEditLaborDraft({ ...editLaborDraft, costo: e.target.value })}
+                          />
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 2 }}>
+                            <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={handleSaveLaborEdit} disabled={detailBusy}>
+                              <Check size={14} style={{ color: 'var(--color-success)' }} />
+                            </button>
+                            <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => setEditingLaborId(null)}>
+                              <X size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      <tr key={item.id}>
+                        <td>{item.descripcion}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600 }}>${item.costo.toFixed(2)}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 2 }}>
+                            <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => startEditLabor(item)}>
+                              <Pencil size={14} />
+                            </button>
+                            <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => handleRemoveLabor(item.id, item.descripcion)}>
+                              <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  )}
                   <tr>
                     <td style={{ fontWeight: 700 }}>Total Labor</td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-light)' }}>
@@ -644,23 +886,71 @@ export default function WorkOrders() {
                     <th>{t('common.quantity')}</th>
                     <th style={{ textAlign: 'right' }}>{t('common.price')}</th>
                     <th style={{ textAlign: 'right' }}>{t('common.subtotal')}</th>
-                    <th style={{ width: 36 }}></th>
+                    <th style={{ width: 64 }}></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {partsList.map((part) => (
-                    <tr key={part.id}>
-                      <td>{part.descripcion}</td>
-                      <td>{part.cantidad}</td>
-                      <td style={{ textAlign: 'right' }}>${part.precio_venta_unitario.toFixed(2)}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>${part.subtotal.toFixed(2)}</td>
-                      <td>
-                        <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => handleRemovePart(part.id, part.descripcion)}>
-                          <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {partsList.map((part) =>
+                    editingPartId === part.id ? (
+                      <tr key={part.id}>
+                        <td>
+                          <input
+                            className="form-input"
+                            value={editPartDraft.descripcion}
+                            onChange={(e) => setEditPartDraft({ ...editPartDraft, descripcion: e.target.value })}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            className="form-input"
+                            type="number"
+                            style={{ width: 70 }}
+                            value={editPartDraft.cantidad}
+                            onChange={(e) => setEditPartDraft({ ...editPartDraft, cantidad: e.target.value })}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            className="form-input"
+                            type="number"
+                            style={{ width: 90, textAlign: 'right' }}
+                            value={editPartDraft.precio_venta_unitario}
+                            onChange={(e) => setEditPartDraft({ ...editPartDraft, precio_venta_unitario: e.target.value })}
+                          />
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                          ${((parseFloat(editPartDraft.cantidad) || 0) * (parseFloat(editPartDraft.precio_venta_unitario) || 0)).toFixed(2)}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 2 }}>
+                            <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={handleSavePartEdit} disabled={detailBusy}>
+                              <Check size={14} style={{ color: 'var(--color-success)' }} />
+                            </button>
+                            <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => setEditingPartId(null)}>
+                              <X size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      <tr key={part.id}>
+                        <td>{part.descripcion}</td>
+                        <td>{part.cantidad}</td>
+                        <td style={{ textAlign: 'right' }}>${part.precio_venta_unitario.toFixed(2)}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600 }}>${part.subtotal.toFixed(2)}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 2 }}>
+                            <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => startEditPart(part)}>
+                              <Pencil size={14} />
+                            </button>
+                            <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => handleRemovePart(part.id, part.descripcion)}>
+                              <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  )}
                   <tr>
                     <td colSpan={3} style={{ fontWeight: 700 }}>Total {t('workOrders.parts')}</td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-light)' }}>
@@ -802,6 +1092,99 @@ export default function WorkOrders() {
               <Plus size={16} /> {t('common.add')}
             </button>
           </div>
+        </div>
+
+        {/* Progress log — mechanics/painters document what they did, with photos */}
+        <div className="card" style={{ marginTop: 'var(--space-4)' }}>
+          <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>
+            <MessageSquarePlus size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
+            {t('workOrders.progressLog')}
+          </h3>
+
+          {/* New entry form */}
+          <div style={{ padding: 'var(--space-4)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-lg)', marginBottom: 'var(--space-4)' }}>
+            <textarea
+              className="form-input form-textarea"
+              placeholder={t('workOrders.progressPlaceholder')}
+              value={newProgressNote}
+              onChange={(e) => setNewProgressNote(e.target.value)}
+              rows={2}
+            />
+            <input
+              type="file"
+              ref={progressFileInputRef}
+              accept="image/*"
+              capture="environment"
+              multiple
+              style={{ display: 'none' }}
+              onChange={handleAddProgressPhotos}
+            />
+            {newProgressPhotos.length > 0 && (
+              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', marginTop: 'var(--space-3)' }}>
+                {newProgressPhotos.map((file, i) => (
+                  <div key={i} style={{ position: 'relative', width: 72, height: 72, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-surface-border)' }}>
+                    <img src={URL.createObjectURL(file)} alt={file.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <button type="button" className="photo-zone-remove" onClick={() => removeProgressPhotoDraft(i)}>
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-3)', flexWrap: 'wrap' }}>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => progressFileInputRef.current?.click()}>
+                <Camera size={16} /> {t('workOrders.addPhotos')}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={handleAddProgressUpdate}
+                disabled={detailBusy || !newProgressNote.trim()}
+              >
+                <Plus size={16} /> {detailBusy ? t('common.loading') : t('workOrders.addProgress')}
+              </button>
+            </div>
+          </div>
+
+          {/* Timeline */}
+          {(viewOrder.avances || []).length === 0 ? (
+            <p style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)' }}>{t('common.noResults')}</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+              {(viewOrder.avances || []).map((avance) => (
+                <div
+                  key={avance.id}
+                  style={{
+                    padding: 'var(--space-4)',
+                    borderLeft: '3px solid var(--color-primary)',
+                    background: 'var(--color-bg-tertiary)',
+                    borderRadius: 'var(--radius-md)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-2)' }}>
+                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
+                      {avance.usuario?.nombre_completo || '—'} · {new Date(avance.creado_en).toLocaleString(language === 'es' ? 'es' : 'en')}
+                    </div>
+                    {(user?.rol === 'admin' || user?.id === avance.usuario_id) && (
+                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => handleRemoveProgressUpdate(avance.id)}>
+                        <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
+                      </button>
+                    )}
+                  </div>
+                  <p style={{ marginTop: 'var(--space-2)', fontSize: 'var(--font-size-sm)', lineHeight: 1.6 }}>{avance.descripcion}</p>
+                  {avance.fotos && avance.fotos.length > 0 && (
+                    <div className="photo-gallery-grid" style={{ marginTop: 'var(--space-3)' }}>
+                      {avance.fotos.map((url, i) => (
+                        <button key={i} type="button" className="photo-gallery-thumb" onClick={() => setLightboxUrl(url)}>
+                          <img src={url} alt={`avance-${i}`} loading="lazy" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {lightboxUrl && (
@@ -967,11 +1350,11 @@ export default function WorkOrders() {
 
       {/* CREATE WORK ORDER MODAL */}
       {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+        <div className="modal-overlay" onClick={handleCloseCreateModal}>
           <div className="modal" style={{ maxWidth: '720px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">{t('workOrders.newOrder')}</h3>
-              <button className="modal-close" onClick={() => setShowCreateModal(false)}>
+              <button className="modal-close" onClick={handleCloseCreateModal}>
                 <X size={20} />
               </button>
             </div>
@@ -1324,7 +1707,7 @@ export default function WorkOrders() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>
+                <button type="button" className="btn btn-secondary" onClick={handleCloseCreateModal}>
                   {t('common.cancel')}
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={saving}>
