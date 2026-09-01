@@ -26,7 +26,7 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
   const { t } = useLanguage();
-  const { user, logout } = useAuth();
+  const { user, logout, currentSede } = useAuth();
   const { confirmNavigation } = useUnsavedChanges();
   const location = useLocation();
 
@@ -60,9 +60,9 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
       ]
     : [];
 
-  const settingsLinks = isAdmin
-    ? [{ to: '/settings', icon: Settings, label: t('nav.settings') }]
-    : [];
+  // Everyone gets Settings now — it holds their own profile, language and
+  // theme. The sede/staff management inside it stays admin-only.
+  const settingsLinks = [{ to: '/settings', icon: Settings, label: t('nav.settings') }];
 
   return (
     <>
@@ -74,21 +74,29 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
 
       <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-logo">
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))',
-              borderRadius: 'var(--radius-md)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Wrench size={20} color="#0A0A0F" />
-          </div>
-          <span className="logo-text">RESTORIFY</span>
+          {currentSede?.logo_url ? (
+            <img
+              src={currentSede.logo_url}
+              alt={currentSede.nombre}
+              className="sidebar-logo-img"
+            />
+          ) : (
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                background: 'var(--gradient-primary)',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Wrench size={20} color="#0A0A0F" />
+            </div>
+          )}
+          <span className="logo-text">{currentSede?.nombre || 'RESTORIFY'}</span>
         </div>
 
         <nav className="sidebar-nav">

@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { supabaseService } from '../services/supabaseService';
 import { getErrorMessage } from '../lib/errors';
 import type { Sede, UserProfile, UserRole } from '../types/database';
@@ -16,13 +17,89 @@ import {
   Sun,
   Moon,
   UserPlus,
+  Camera,
+  Palette,
+  Trash2,
+  Plus,
   X,
 } from 'lucide-react';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export default function Settings() {
   const { t, language, setLanguage } = useLanguage();
   const { theme, setTheme } = useTheme();
-  const { user } = useAuth();
+  const { showToast } = useToast();
+  const { user, refreshUser, refreshSedes } = useAuth();
+
+  // --- own profile ---
+  const [profileForm, setProfileForm] = useState({ nombre_completo: '', email: '' });
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const profileDirty =
+    !!user &&
+    (profileForm.nombre_completo.trim() !== user.nombre_completo ||
+      profileForm.email.trim().toLowerCase() !== (user.email || '').toLowerCase());
+
+  useEffect(() => {
+    if (user) {
+      setProfileForm({ nombre_completo: user.nombre_completo, email: user.email || '' });
+    }
+  }, [user]);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !user) return;
+    setUploadingAvatar(true);
+    try {
+      const url = await supabaseService.uploadAvatar(user.id, file);
+      await supabaseService.updateProfile(user.id, { avatar_url: url });
+      await refreshUser();
+      showToast('success', t('settings.photoUpdated'));
+    } catch (err) {
+      showToast('error', t('settings.photoError'), getErrorMessage(err, language));
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    const nombre = profileForm.nombre_completo.trim();
+    const email = profileForm.email.trim();
+    setProfileError('');
+
+    if (!nombre) {
+      setProfileError(t('settings.nameRequired'));
+      return;
+    }
+    if (!EMAIL_RE.test(email)) {
+      setProfileError(t('settings.invalidEmail'));
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      if (email.toLowerCase() !== (user.email || '').toLowerCase()) {
+        const taken = await supabaseService.isEmailTaken(email, user.id);
+        if (taken) {
+          setProfileError(t('settings.emailTaken'));
+          return;
+        }
+      }
+      await supabaseService.updateProfile(user.id, { nombre_completo: nombre, email });
+      await refreshUser();
+      showToast('success', t('settings.profileUpdated'));
+    } catch (err) {
+      setProfileError(getErrorMessage(err, language));
+    } finally {
+      setSavingProfile(false);
+    }
+  };
   const [sedes, setSedes] = useState<Sede[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +126,7 @@ export default function Settings() {
         setSedes(s);
         setUsers(u);
         setCapacityDrafts(Object.fromEntries(s.map((sede) => [sede.id, String(sede.capacidad)])));
+        seedBrandDrafts(s);
       })
       .catch((err) => setError(getErrorMessage(err, language)))
       .finally(() => setLoading(false));
@@ -57,6 +135,105 @@ export default function Settings() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // --- sede branding / CRUD (admin only) ---
+  const [brandDrafts, setBrandDrafts] = useState<Record<string, { nombre: string; direccion: string; color_tema: string }>>({});
+  const [uploadingLogoId, setUploadingLogoId] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [logoTargetSede, setLogoTargetSede] = useState<string | null>(null);
+  const [creatingSede, setCreatingSede] = useState(false);
+
+  const seedBrandDrafts = (list: Sede[]) =>
+    setBrandDrafts(
+      Object.fromEntries(
+        list.map((s) => [s.id, { nombre: s.nombre, direccion: s.direccion, color_tema: s.color_tema || '#D4A017' }])
+      )
+    );
+
+  const handleSaveBranding = async (sedeId: string) => {
+    const draft = brandDrafts[sedeId];
+    if (!draft || !draft.nombre.trim()) return;
+    setSavingSedeId(sedeId);
+    try {
+      await supabaseService.updateSede(sedeId, {
+        nombre: draft.nombre.trim(),
+        direccion: draft.direccion.trim(),
+        color_tema: draft.color_tema,
+      });
+      await refreshSedes();
+      loadData();
+      showToast('success', t('settings.sedeUpdated'));
+    } catch (err) {
+      showToast('error', t('settings.sedeError'), getErrorMessage(err, language));
+    } finally {
+      setSavingSedeId(null);
+    }
+  };
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !logoTargetSede) return;
+    setUploadingLogoId(logoTargetSede);
+    try {
+      const url = await supabaseService.uploadSedeLogo(logoTargetSede, file);
+      await supabaseService.updateSede(logoTargetSede, { logo_url: url });
+      await refreshSedes();
+      loadData();
+      showToast('success', t('settings.logoUpdated'));
+    } catch (err) {
+      showToast('error', t('settings.logoError'), getErrorMessage(err, language));
+    } finally {
+      setUploadingLogoId(null);
+      setLogoTargetSede(null);
+    }
+  };
+
+  const handleCreateSede = async () => {
+    const nombre = prompt(t('settings.newSedeName'));
+    if (!nombre?.trim()) return;
+    setCreatingSede(true);
+    try {
+      await supabaseService.createSede({
+        nombre: nombre.trim(),
+        direccion: '',
+        telefono: '',
+        capacidad: 10,
+        color_tema: null,
+        logo_url: null,
+      });
+      await refreshSedes();
+      loadData();
+      showToast('success', t('settings.sedeCreated'));
+    } catch (err) {
+      showToast('error', t('settings.sedeError'), getErrorMessage(err, language));
+    } finally {
+      setCreatingSede(false);
+    }
+  };
+
+  const handleDeleteSede = async (sede: Sede) => {
+    if (!confirm(`${t('settings.confirmDeleteSede')} "${sede.nombre}"?`)) return;
+    try {
+      await supabaseService.deleteSede(sede.id);
+      await refreshSedes();
+      loadData();
+      showToast('success', t('settings.sedeDeleted'));
+    } catch (err) {
+      showToast('error', t('settings.sedeError'), getErrorMessage(err, language));
+    }
+  };
+
+  const handleDeleteEmployee = async (employee: UserProfile) => {
+    if (!confirm(`${t('settings.confirmDeleteEmployee')} ${employee.nombre_completo}?`)) return;
+    try {
+      await supabaseService.deleteEmployee(employee.id);
+      loadData();
+      showToast('success', t('settings.employeeDeleted'));
+    } catch (err) {
+      showToast('error', t('settings.employeeError'), getErrorMessage(err, language));
+    }
+  };
 
   const handleSaveCapacity = async (sedeId: string) => {
     const value = parseInt(capacityDrafts[sedeId], 10);
@@ -110,29 +287,71 @@ export default function Settings() {
       {error && <div className="alert-error">{error}</div>}
 
       <div className="responsive-grid-2">
-        {/* Profile */}
+        {/* Profile — editable by the signed-in user, whatever their role */}
         <div className="card">
           <h3 className="card-title" style={{ marginBottom: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
             <User size={18} /> {t('settings.profile')}
           </h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
-            <div style={{
-              width: 64, height: 64, borderRadius: '50%',
-              background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-text-inverse)',
-            }}>
-              {user?.nombre_completo?.split(' ').map(n => n[0]).slice(0, 2).join('')}
-            </div>
+            <button
+              type="button"
+              className="profile-avatar"
+              onClick={() => avatarInputRef.current?.click()}
+              title={t('settings.changePhoto')}
+              disabled={uploadingAvatar}
+            >
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt={user.nombre_completo} />
+              ) : (
+                <span>{user?.nombre_completo?.split(' ').map((n) => n[0]).slice(0, 2).join('')}</span>
+              )}
+              <span className="profile-avatar-overlay">
+                {uploadingAvatar ? '…' : <Camera size={16} />}
+              </span>
+            </button>
+            <input
+              type="file"
+              ref={avatarInputRef}
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleAvatarChange}
+            />
             <div>
-              <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600 }}>{user?.nombre_completo}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                 <Shield size={14} style={{ color: 'var(--color-primary-light)' }} />
                 <span style={{ color: 'var(--color-primary-light)', fontWeight: 500, textTransform: 'capitalize' }}>{user?.rol}</span>
               </div>
-              <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginTop: 4 }}>{user?.email}</div>
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 4 }}>
+                {t('settings.changePhoto')}
+              </div>
             </div>
           </div>
+
+          <div className="form-group">
+            <label className="form-label">{t('common.name')}</label>
+            <input
+              className="form-input"
+              value={profileForm.nombre_completo}
+              onChange={(e) => setProfileForm({ ...profileForm, nombre_completo: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">{t('common.email')}</label>
+            <input
+              className="form-input"
+              type="email"
+              value={profileForm.email}
+              onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+            />
+          </div>
+          {profileError && <div className="alert-error">{profileError}</div>}
+          <button
+            className="btn btn-primary"
+            onClick={handleSaveProfile}
+            disabled={savingProfile || !profileDirty}
+          >
+            {savingProfile ? t('common.loading') : t('common.save')}
+          </button>
         </div>
 
         {/* Language */}
@@ -181,18 +400,32 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Workshops */}
+        {/* Workshops — sede and staff management is admin-only. Everyone else
+            still reaches /settings for their own profile, language and theme. */}
+        {user?.rol === 'admin' && (
         <div className="card" style={{ gridColumn: '1 / -1' }}>
           <div className="card-header">
             <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
               <Building2 size={18} /> {t('settings.workshops')}
             </h3>
-            {user?.rol === 'admin' && (
+            <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+              <button className="btn btn-secondary btn-sm" onClick={handleCreateSede} disabled={creatingSede}>
+                <Plus size={16} /> {t('settings.newWorkshop')}
+              </button>
               <button className="btn btn-primary btn-sm" onClick={openEmployeeModal}>
                 <UserPlus size={16} /> {t('settings.newEmployee')}
               </button>
-            )}
+            </div>
           </div>
+
+          {/* Shared hidden picker for sede logos */}
+          <input
+            type="file"
+            ref={logoInputRef}
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleLogoChange}
+          />
           {loading ? (
             <div className="loading-state"><div className="spinner" /></div>
           ) : (
@@ -209,18 +442,82 @@ export default function Settings() {
                       border: '1px solid var(--color-surface-border)',
                     }}
                   >
-                    <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>
-                      {sede.nombre}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                      <button
+                        type="button"
+                        className="sede-logo-btn"
+                        onClick={() => { setLogoTargetSede(sede.id); logoInputRef.current?.click(); }}
+                        title={t('settings.changeLogo')}
+                        disabled={uploadingLogoId === sede.id}
+                      >
+                        {sede.logo_url ? (
+                          <img src={sede.logo_url} alt={sede.nombre} />
+                        ) : (
+                          <Building2 size={20} style={{ color: 'var(--color-text-tertiary)' }} />
+                        )}
+                        <span className="sede-logo-overlay">
+                          {uploadingLogoId === sede.id ? '…' : <Camera size={14} />}
+                        </span>
+                      </button>
+                      <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, flex: 1, minWidth: 0 }}>
+                        {sede.nombre}
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm btn-icon"
+                        title={t('common.delete')}
+                        onClick={() => handleDeleteSede(sede)}
+                      >
+                        <Trash2 size={16} style={{ color: 'var(--color-danger)' }} />
+                      </button>
                     </div>
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                        <MapPin size={14} /> {sede.direccion}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                        <Phone size={14} /> {sede.telefono}
+                        <Phone size={14} /> {sede.telefono || '—'}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
                         <Users size={14} /> {sedeUsers.length} {language === 'es' ? 'empleados' : 'employees'}
+                      </div>
+                    </div>
+
+                    {/* Branding: name, address and accent colour */}
+                    <div style={{ marginTop: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                      <input
+                        className="form-input"
+                        placeholder={t('common.name')}
+                        value={brandDrafts[sede.id]?.nombre ?? ''}
+                        onChange={(e) => setBrandDrafts((p) => ({ ...p, [sede.id]: { ...p[sede.id], nombre: e.target.value } }))}
+                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                        <MapPin size={14} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+                        <input
+                          className="form-input"
+                          placeholder={t('common.address')}
+                          value={brandDrafts[sede.id]?.direccion ?? ''}
+                          onChange={(e) => setBrandDrafts((p) => ({ ...p, [sede.id]: { ...p[sede.id], direccion: e.target.value } }))}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                        <Palette size={14} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+                        <input
+                          type="color"
+                          className="color-input"
+                          value={brandDrafts[sede.id]?.color_tema ?? '#D4A017'}
+                          onChange={(e) => setBrandDrafts((p) => ({ ...p, [sede.id]: { ...p[sede.id], color_tema: e.target.value } }))}
+                          title={t('settings.themeColor')}
+                        />
+                        <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
+                          {brandDrafts[sede.id]?.color_tema}
+                        </span>
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          style={{ marginLeft: 'auto' }}
+                          onClick={() => handleSaveBranding(sede.id)}
+                          disabled={savingSedeId === sede.id}
+                        >
+                          {savingSedeId === sede.id ? t('common.loading') : t('common.save')}
+                        </button>
                       </div>
                     </div>
 
@@ -252,7 +549,10 @@ export default function Settings() {
                         <div
                           key={u.id}
                           style={{
-                            padding: '4px 10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            padding: '4px 6px 4px 10px',
                             background: 'var(--color-bg-hover)',
                             borderRadius: 'var(--radius-full)',
                             fontSize: 'var(--font-size-xs)',
@@ -260,6 +560,20 @@ export default function Settings() {
                           }}
                         >
                           {u.nombre_completo.split(' ')[0]} · <span style={{ textTransform: 'capitalize' }}>{u.rol}</span>
+                          {u.id !== user?.id && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteEmployee(u)}
+                              title={t('settings.removeEmployee')}
+                              style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: 18, height: 18, borderRadius: '50%',
+                                color: 'var(--color-text-tertiary)',
+                              }}
+                            >
+                              <X size={12} />
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -269,6 +583,7 @@ export default function Settings() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {showEmployeeModal && (

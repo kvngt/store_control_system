@@ -6,12 +6,20 @@
 
 /* ===== CSS Custom Properties / Design Tokens ===== */
 :root {
-  /* Brand Colors - extracted from logo */
+  /* Brand Colors - extracted from logo.
+     These five are overwritten at runtime when a sede defines its own
+     color_tema (see src/lib/branding.ts), so every surface that references
+     them re-themes automatically. */
   --color-primary: #D4A017;
   --color-primary-light: #F0C040;
   --color-primary-dark: #B8860B;
   --color-primary-glow: rgba(212, 160, 23, 0.25);
   --color-primary-subtle: rgba(212, 160, 23, 0.08);
+
+  /* Brand fills. On dark the gradient reads as premium metal; on light it
+     collapses to a solid colour because the dark stop turns muddy on white. */
+  --gradient-primary: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  --gradient-primary-hover: linear-gradient(135deg, var(--color-primary-light), var(--color-primary));
 
   /* Neutral Palette */
   --color-bg-primary: #0A0A0F;
@@ -118,10 +126,19 @@
 
 /* ===== Light Theme ===== */
 :root[data-theme='light'] {
-  /* Enhanced Primary for better contrast on white */
-  --color-primary: #C59112;
-  --color-primary-light: #D4A017;
-  --color-primary-dark: #A3760B;
+  /* Solid, accessible gold for white backgrounds — no gradient.
+     --color-primary       : fill colour for buttons/avatars (dark text on top)
+     --color-primary-light : accent *text* colour; must pass AA on white, so on
+                             light it is a deep gold (4.9:1), not a pale one
+     --color-primary-dark  : hover/pressed fill */
+  --color-primary: #C08A0E;
+  --color-primary-light: #A16207;
+  --color-primary-dark: #8A6410;
+  --color-primary-glow: rgba(192, 138, 14, 0.18);
+  --color-primary-subtle: rgba(192, 138, 14, 0.10);
+
+  --gradient-primary: var(--color-primary);
+  --gradient-primary-hover: var(--color-primary-dark);
 
   /* Premium White Backgrounds */
   --color-bg-primary: #F9FAFB;

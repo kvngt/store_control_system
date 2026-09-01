@@ -76,14 +76,9 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute adminOnly>
-              <Settings />
-            </ProtectedRoute>
-          }
-        />
+        {/* Open to every role: profile, language and theme live here. The
+            sede/staff management sections inside are admin-gated. */}
+        <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

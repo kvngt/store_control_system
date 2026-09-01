@@ -116,7 +116,7 @@ export default function Vehicles() {
       {loading ? (
         <div className="loading-state"><div className="spinner" /></div>
       ) : (
-        <div className="table-container animate-fade-in">
+        <div className="table-container cards-on-mobile animate-fade-in">
           <table className="table">
             <thead>
               <tr>
@@ -132,12 +132,12 @@ export default function Vehicles() {
             <tbody>
               {filtered.map((v) => (
                 <tr key={v.id}>
-                  <td style={{ fontWeight: 600 }}>{v.marca} {v.modelo}</td>
-                  <td>{v.anio}</td>
-                  <td style={{ fontFamily: 'monospace', fontSize: 'var(--font-size-xs)' }}>{v.vin}</td>
-                  <td><span className="badge badge-en_proceso">{v.placa}</span></td>
-                  <td>{v.color}</td>
-                  <td style={{ color: 'var(--color-text-secondary)' }}>{v.cliente_nombre}</td>
+                  <td data-label={t('vehicles.brand')} style={{ fontWeight: 600 }}>{v.marca} {v.modelo}</td>
+                  <td data-label={t('vehicles.year')}>{v.anio}</td>
+                  <td data-label={t('vehicles.vin')} style={{ fontFamily: 'monospace', fontSize: 'var(--font-size-xs)' }}>{v.vin}</td>
+                  <td data-label={t('vehicles.plate')}><span className="badge badge-en_proceso">{v.placa}</span></td>
+                  <td data-label={t('vehicles.color')}>{v.color}</td>
+                  <td data-label={t('vehicles.owner')} style={{ color: 'var(--color-text-secondary)' }}>{v.cliente_nombre}</td>
                   <td>
                     <div className="table-actions">
                       <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEditModal(v)}><Edit3 size={16} /></button>

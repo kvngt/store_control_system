@@ -269,10 +269,24 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
           )}
         </div>
 
-        {/* Avatar */}
-        <div className="header-avatar" title={user?.nombre_completo} id="user-avatar">
-          {initials}
-        </div>
+        {/* Avatar — opens the settings/profile screen */}
+        <button
+          type="button"
+          className="header-avatar"
+          title={`${user?.nombre_completo || ''} — ${t('nav.settings')}`}
+          aria-label={t('nav.settings')}
+          id="user-avatar"
+          onClick={() => {
+            if (!confirmNavigation()) return;
+            navigate('/settings');
+          }}
+        >
+          {user?.avatar_url ? (
+            <img src={user.avatar_url} alt={user.nombre_completo} className="header-avatar-img" />
+          ) : (
+            initials
+          )}
+        </button>
       </div>
     </header>
   );

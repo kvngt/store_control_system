@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { supabaseService } from '../services/supabaseService';
@@ -12,6 +13,7 @@ import {
   AlertTriangle,
   Clock,
   Car,
+  ChevronRight,
 } from 'lucide-react';
 
 const EMPTY_STATS: DashboardStats = {
@@ -28,6 +30,8 @@ const EMPTY_STATS: DashboardStats = {
 export default function Dashboard() {
   const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
+  const navigate = useNavigate();
+  const isAdmin = user?.rol === 'admin';
   const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
   const [recentOrders, setRecentOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,9 +92,14 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* KPI Stats */}
+      {/* KPI Stats — each card is a shortcut into the section it summarises.
+          Money-related KPIs are admin-only. */}
       <div className="stats-grid">
-        <div className="stat-card stagger-1 animate-fade-in-up">
+        <button
+          type="button"
+          className="stat-card stat-card-link stagger-1 animate-fade-in-up"
+          onClick={() => navigate('/work-orders')}
+        >
           <div className="stat-icon primary">
             <ClipboardList size={24} />
           </div>
@@ -101,19 +110,31 @@ export default function Dashboard() {
               +{stats.ordenes_finalizadas_mes} {t('dashboard.completedThisMonth')}
             </div>
           </div>
-        </div>
+          <ChevronRight size={18} className="stat-card-arrow" />
+        </button>
 
-        <div className="stat-card stagger-2 animate-fade-in-up">
-          <div className="stat-icon success">
-            <DollarSign size={24} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-label">{t('dashboard.monthlyRevenue')}</div>
-            <div className="stat-value">${stats.ingresos_mes.toLocaleString()}</div>
-          </div>
-        </div>
+        {isAdmin && (
+          <button
+            type="button"
+            className="stat-card stat-card-link stagger-2 animate-fade-in-up"
+            onClick={() => navigate('/finance')}
+          >
+            <div className="stat-icon success">
+              <DollarSign size={24} />
+            </div>
+            <div className="stat-content">
+              <div className="stat-label">{t('dashboard.monthlyRevenue')}</div>
+              <div className="stat-value">${stats.ingresos_mes.toLocaleString()}</div>
+            </div>
+            <ChevronRight size={18} className="stat-card-arrow" />
+          </button>
+        )}
 
-        <div className="stat-card stagger-3 animate-fade-in-up">
+        <button
+          type="button"
+          className="stat-card stat-card-link stagger-3 animate-fade-in-up"
+          onClick={() => navigate('/kanban')}
+        >
           <div className="stat-icon warning">
             <Gauge size={24} />
           </div>
@@ -125,24 +146,42 @@ export default function Dashboard() {
                 <div className="progress-fill" style={{ width: `${stats.tasa_ocupacion}%` }}></div>
               </div>
             </div>
+            <div className="stat-change" style={{ color: 'var(--color-text-tertiary)' }}>
+              {stats.ordenes_activas}/{currentSede?.capacidad ?? 10} {t('dashboard.spacesInUse')}
+            </div>
           </div>
-        </div>
+          <ChevronRight size={18} className="stat-card-arrow" />
+        </button>
 
-        <div className="stat-card stagger-4 animate-fade-in-up">
-          <div className="stat-icon info">
-            <UserPlus size={24} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-label">{t('dashboard.newCustomers')}</div>
-            <div className="stat-value">{stats.clientes_nuevos_mes}</div>
-          </div>
-        </div>
+        {isAdmin && (
+          <button
+            type="button"
+            className="stat-card stat-card-link stagger-4 animate-fade-in-up"
+            onClick={() => navigate('/customers')}
+          >
+            <div className="stat-icon info">
+              <UserPlus size={24} />
+            </div>
+            <div className="stat-content">
+              <div className="stat-label">{t('dashboard.newCustomers')}</div>
+              <div className="stat-value">{stats.clientes_nuevos_mes}</div>
+            </div>
+            <ChevronRight size={18} className="stat-card-arrow" />
+          </button>
+        )}
       </div>
 
-      {/* Main content grid */}
-      <div className="responsive-grid-2">
-        {/* Revenue Chart */}
-        <div className="card">
+      {/* Main content grid. Non-admins get alerts only — no revenue chart. */}
+      <div className={isAdmin ? 'responsive-grid-2' : ''}>
+        {/* Revenue Chart — admin only, taps through to Finanzas */}
+        {isAdmin && (
+        <div
+          className="card card-link"
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate('/finance')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/finance'); } }}
+        >
           <div className="card-header">
             <h3 className="card-title">{t('dashboard.revenueVsExpenses')}</h3>
             <div style={{ display: 'flex', gap: 'var(--space-4)', fontSize: 'var(--font-size-xs)' }}>
@@ -176,6 +215,7 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+        )}
 
         {/* Alerts */}
         <div className="card">
@@ -190,53 +230,53 @@ export default function Dashboard() {
               </p>
             )}
             {waitingOrders.map((order) => (
-              <div
+              <button
                 key={order.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-3)',
-                  padding: 'var(--space-3)',
-                  background: 'var(--color-warning-bg)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid rgba(245, 158, 11, 0.15)',
-                }}
+                type="button"
+                className="alert-row alert-row-warning"
+                onClick={() => navigate(`/work-orders?open=${order.id}`)}
               >
                 <Clock size={16} style={{ color: 'var(--color-warning)', flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, textAlign: 'left' }}>
                   <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>
-                    {order.numero_orden}
+                    {order.numero_orden} · {t('dashboard.alertWaitingParts')}
                   </div>
                   <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
-                    {order.cliente?.nombre} — {order.vehiculo?.marca} {order.vehiculo?.modelo}
+                    {order.cliente?.nombre} — {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
+                  </div>
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+                    {t('workOrders.estimatedDelivery')}: {order.fecha_estimada_entrega}
                   </div>
                 </div>
-                <span className="badge badge-espera_repuestos">{t('workOrders.waitingParts')}</span>
-              </div>
+                <ChevronRight size={16} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+              </button>
             ))}
             {laggingOrders.map((order) => (
-              <div
+              <button
                 key={order.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-3)',
-                  padding: 'var(--space-3)',
-                  background: 'var(--color-info-bg)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid rgba(59, 130, 246, 0.15)',
-                }}
+                type="button"
+                className="alert-row alert-row-info"
+                onClick={() => navigate(`/work-orders?open=${order.id}`)}
               >
                 <Gauge size={16} style={{ color: 'var(--color-info)', flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, textAlign: 'left' }}>
                   <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>
-                    {order.numero_orden} — {order.porcentaje_avance}%
+                    {order.numero_orden} · {t('dashboard.alertLowProgress')}
                   </div>
                   <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
-                    {order.cliente?.nombre}
+                    {order.cliente?.nombre} — {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 4 }}>
+                    <div className="progress-bar" style={{ flex: 1, height: '4px' }}>
+                      <div className="progress-fill" style={{ width: `${order.porcentaje_avance}%` }}></div>
+                    </div>
+                    <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
+                      {order.porcentaje_avance}%
+                    </span>
                   </div>
                 </div>
-              </div>
+                <ChevronRight size={16} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+              </button>
             ))}
           </div>
         </div>
@@ -258,6 +298,7 @@ export default function Dashboard() {
                 <th>{t('common.status')}</th>
                 <th>{t('workOrders.progress')}</th>
                 <th>{t('common.total')}</th>
+                <th>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -304,6 +345,16 @@ export default function Dashboard() {
                   </td>
                   <td style={{ fontWeight: 600 }}>
                     ${order.total_general.toLocaleString()}
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => navigate(`/work-orders?open=${order.id}`)}
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      {t('dashboard.viewOrder')}
+                    </button>
                   </td>
                 </tr>
               ))}

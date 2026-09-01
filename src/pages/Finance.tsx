@@ -128,7 +128,7 @@ export default function Finance() {
           <h1 className="page-title">{t('finance.title')}</h1>
           <p className="page-subtitle">{filtered.length} {t('finance.transactions').toLowerCase()}</p>
         </div>
-        <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
           <button className="btn btn-secondary" id="export-excel-btn" onClick={handleExportExcel}>
             <Download size={18} /> {t('finance.exportExcel')}
           </button>
@@ -144,7 +144,9 @@ export default function Finance() {
       {error && <div className="alert-error">{error}</div>}
 
       {/* Financial KPIs */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+      {/* No inline grid-template here: it would beat the responsive rules in
+          components.css and force 3 columns onto a 390px phone. */}
+      <div className="stats-grid">
         <div className="stat-card stagger-1 animate-fade-in-up">
           <div className="stat-icon success">
             <TrendingUp size={24} />
@@ -220,7 +222,7 @@ export default function Finance() {
       </div>
 
       {/* Transactions Table */}
-      <div className="table-container animate-fade-in">
+      <div className="table-container cards-on-mobile animate-fade-in">
         <table className="table">
           <thead>
             <tr>
@@ -234,8 +236,8 @@ export default function Finance() {
           <tbody>
             {[...filtered].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).map((txn) => (
               <tr key={txn.id}>
-                <td style={{ whiteSpace: 'nowrap' }}>{txn.fecha}</td>
-                <td>
+                <td data-label={t('common.date')} style={{ whiteSpace: 'nowrap' }}>{txn.fecha}</td>
+                <td data-label={t('common.type')}>
                   <span className={`badge badge-${txn.tipo}`}>
                     {txn.tipo === 'ingreso' ? (
                       <><ArrowUpRight size={12} /> {t('finance.income')}</>
@@ -244,11 +246,11 @@ export default function Finance() {
                     )}
                   </span>
                 </td>
-                <td style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+                <td data-label={t('common.category')} style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
                   {categoryLabels[txn.categoria]}
                 </td>
-                <td>{txn.descripcion}</td>
-                <td style={{
+                <td data-label={t('common.description')}>{txn.descripcion}</td>
+                <td data-label={t('common.amount')} style={{
                   textAlign: 'right',
                   fontWeight: 600,
                   color: txn.tipo === 'ingreso' ? 'var(--color-success)' : 'var(--color-danger)',

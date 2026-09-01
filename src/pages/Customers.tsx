@@ -168,7 +168,7 @@ export default function Customers() {
                   width: 80,
                   height: 80,
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))',
+                  background: 'var(--gradient-primary)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -323,7 +323,7 @@ export default function Customers() {
       {loading ? (
         <div className="loading-state"><div className="spinner" /></div>
       ) : (
-        <div className="table-container animate-fade-in">
+        <div className="table-container cards-on-mobile animate-fade-in">
           <table className="table">
             <thead>
               <tr>
@@ -338,7 +338,7 @@ export default function Customers() {
             <tbody>
               {filtered.map((customer) => (
                 <tr key={customer.id}>
-                  <td>
+                  <td data-label={t('common.name')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                       <div
                         style={{
@@ -360,8 +360,8 @@ export default function Customers() {
                       <span style={{ fontWeight: 500 }}>{customer.nombre}</span>
                     </div>
                   </td>
-                  <td>{customer.telefono}</td>
-                  <td style={{ color: 'var(--color-text-secondary)' }}>{customer.email}</td>
+                  <td data-label={t('common.phone')}>{customer.telefono}</td>
+                  <td data-label={t('common.email')} style={{ color: 'var(--color-text-secondary)' }}>{customer.email}</td>
                   <td>
                     <span className="badge badge-en_proceso">{customer.vehiculos_count || 0}</span>
                   </td>

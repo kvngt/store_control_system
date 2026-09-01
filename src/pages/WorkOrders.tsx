@@ -47,7 +47,7 @@ const ZONES: { key: string; label: string }[] = [
 ];
 
 interface LaborRow { descripcion: string; costo: string }
-interface PartRow { descripcion: string; cantidad: string; costo_unitario: string; precio_venta_unitario: string }
+interface PartRow { descripcion: string; cantidad: string; precio_venta_unitario: string }
 
 export default function WorkOrders() {
   const { t, language } = useLanguage();
@@ -55,7 +55,8 @@ export default function WorkOrders() {
   const { showToast } = useToast();
   const { setGuard } = useUnsavedChanges();
   const [searchParams, setSearchParams] = useSearchParams();
-  const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
+  const isAdmin = user?.rol === 'admin';
+  const sedeId = isAdmin ? currentSede?.id : user?.sede_id;
 
   const [orders, setOrders] = useState<WorkOrder[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -71,13 +72,13 @@ export default function WorkOrders() {
   const [viewLoading, setViewLoading] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [newLaborDraft, setNewLaborDraft] = useState({ descripcion: '', costo: '' });
-  const [newPartDraft, setNewPartDraft] = useState({ descripcion: '', cantidad: '1', costo_unitario: '', precio_venta_unitario: '' });
+  const [newPartDraft, setNewPartDraft] = useState({ descripcion: '', cantidad: '1', precio_venta_unitario: '' });
   const [addingOperatorId, setAddingOperatorId] = useState('');
   const [detailBusy, setDetailBusy] = useState(false);
   const [editingLaborId, setEditingLaborId] = useState<string | null>(null);
   const [editLaborDraft, setEditLaborDraft] = useState({ descripcion: '', costo: '' });
   const [editingPartId, setEditingPartId] = useState<string | null>(null);
-  const [editPartDraft, setEditPartDraft] = useState({ descripcion: '', cantidad: '', costo_unitario: '', precio_venta_unitario: '' });
+  const [editPartDraft, setEditPartDraft] = useState({ descripcion: '', cantidad: '', precio_venta_unitario: '' });
   const [progressDraft, setProgressDraft] = useState<string>('0');
   const [newProgressNote, setNewProgressNote] = useState('');
   const [newProgressPhotos, setNewProgressPhotos] = useState<File[]>([]);
@@ -306,10 +307,15 @@ export default function WorkOrders() {
         setSelectedVehicle(createdVehicle.id);
       }
 
-      const asignaciones = selectedOperators.map((id) => {
-        const op = operators.find((o) => o.id === id);
-        return { usuario_id: id, tipo_tarea: (op?.rol === 'pintor' ? 'pintura' : 'mecanica') as 'mecanica' | 'pintura' };
-      });
+      // Admins pick who works the order; a mechanic/painter creating one is
+      // always assigned to themselves (they can't assign colleagues — those
+      // join the order themselves from the order detail).
+      const asignaciones = isAdmin
+        ? selectedOperators.map((id) => {
+            const op = operators.find((o) => o.id === id);
+            return { usuario_id: id, tipo_tarea: (op?.rol === 'pintor' ? 'pintura' : 'mecanica') as 'mecanica' | 'pintura' };
+          })
+        : [{ usuario_id: user.id, tipo_tarea: (user.rol === 'pintor' ? 'pintura' : 'mecanica') as 'mecanica' | 'pintura' }];
 
       const order = await supabaseService.createWorkOrder({
         sede_id: targetSedeId,
@@ -329,7 +335,6 @@ export default function WorkOrders() {
           .map((p) => ({
             descripcion: p.descripcion,
             cantidad: parseInt(p.cantidad, 10) || 1,
-            costo_unitario: parseFloat(p.costo_unitario) || 0,
             precio_venta_unitario: parseFloat(p.precio_venta_unitario) || 0,
           })),
         asignaciones,
@@ -489,10 +494,9 @@ export default function WorkOrders() {
       await supabaseService.addPart(viewOrder.id, {
         descripcion: newPartDraft.descripcion,
         cantidad: parseInt(newPartDraft.cantidad, 10) || 1,
-        costo_unitario: parseFloat(newPartDraft.costo_unitario) || 0,
         precio_venta_unitario: parseFloat(newPartDraft.precio_venta_unitario) || 0,
       });
-      setNewPartDraft({ descripcion: '', cantidad: '1', costo_unitario: '', precio_venta_unitario: '' });
+      setNewPartDraft({ descripcion: '', cantidad: '1', precio_venta_unitario: '' });
       await openDetail(viewOrder.id);
       loadOrders();
     } catch (err) {
@@ -514,12 +518,11 @@ export default function WorkOrders() {
     }
   };
 
-  const startEditPart = (part: { id: string; descripcion: string; cantidad: number; costo_unitario: number; precio_venta_unitario: number }) => {
+  const startEditPart = (part: { id: string; descripcion: string; cantidad: number; precio_venta_unitario: number }) => {
     setEditingPartId(part.id);
     setEditPartDraft({
       descripcion: part.descripcion,
       cantidad: String(part.cantidad),
-      costo_unitario: String(part.costo_unitario),
       precio_venta_unitario: String(part.precio_venta_unitario),
     });
   };
@@ -531,7 +534,6 @@ export default function WorkOrders() {
       await supabaseService.updatePart(editingPartId, {
         descripcion: editPartDraft.descripcion,
         cantidad: parseInt(editPartDraft.cantidad, 10) || 1,
-        costo_unitario: parseFloat(editPartDraft.costo_unitario) || 0,
         precio_venta_unitario: parseFloat(editPartDraft.precio_venta_unitario) || 0,
       });
       setEditingPartId(null);
@@ -554,6 +556,25 @@ export default function WorkOrders() {
       await openDetail(viewOrder.id);
     } catch (err) {
       setError(getErrorMessage(err, language));
+    }
+  };
+
+  // A technician adds themselves to an order they didn't create.
+  const handleJoinOrder = async () => {
+    if (!viewOrder || !user) return;
+    setDetailBusy(true);
+    try {
+      await supabaseService.addAssignment(
+        viewOrder.id,
+        user.id,
+        user.rol === 'pintor' ? 'pintura' : 'mecanica'
+      );
+      await openDetail(viewOrder.id);
+      showToast('success', t('workOrders.joinedOrder'));
+    } catch (err) {
+      showToast('error', t('workOrders.joinError'), getErrorMessage(err, language));
+    } finally {
+      setDetailBusy(false);
     }
   };
 
@@ -980,14 +1001,6 @@ export default function WorkOrders() {
               <input
                 className="form-input"
                 type="number"
-                placeholder="Costo"
-                style={{ flex: '1 1 90px' }}
-                value={newPartDraft.costo_unitario}
-                onChange={(e) => setNewPartDraft({ ...newPartDraft, costo_unitario: e.target.value })}
-              />
-              <input
-                className="form-input"
-                type="number"
                 placeholder="Precio"
                 style={{ flex: '1 1 90px' }}
                 value={newPartDraft.precio_venta_unitario}
@@ -1074,24 +1087,34 @@ export default function WorkOrders() {
               </div>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
-            <select
-              className="form-input form-select"
-              style={{ maxWidth: 280 }}
-              value={addingOperatorId}
-              onChange={(e) => setAddingOperatorId(e.target.value)}
-            >
-              <option value="">-- {t('workOrders.assignedTechnician')} --</option>
-              {operators
-                .filter((op) => !assignments.some((a) => a.usuario_id === op.id))
-                .map((op) => (
-                  <option key={op.id} value={op.id}>{op.nombre_completo} ({op.rol})</option>
-                ))}
-            </select>
-            <button type="button" className="btn btn-secondary" onClick={handleAddOperatorToOrder} disabled={!addingOperatorId}>
-              <Plus size={16} /> {t('common.add')}
-            </button>
-          </div>
+          {isAdmin ? (
+            <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
+              <select
+                className="form-input form-select"
+                style={{ maxWidth: 280 }}
+                value={addingOperatorId}
+                onChange={(e) => setAddingOperatorId(e.target.value)}
+              >
+                <option value="">-- {t('workOrders.assignedTechnician')} --</option>
+                {operators
+                  .filter((op) => !assignments.some((a) => a.usuario_id === op.id))
+                  .map((op) => (
+                    <option key={op.id} value={op.id}>{op.nombre_completo} ({op.rol})</option>
+                  ))}
+              </select>
+              <button type="button" className="btn btn-secondary" onClick={handleAddOperatorToOrder} disabled={!addingOperatorId}>
+                <Plus size={16} /> {t('common.add')}
+              </button>
+            </div>
+          ) : (
+            !assignments.some((a) => a.usuario_id === user?.id) && (
+              <div style={{ marginTop: 'var(--space-4)' }}>
+                <button type="button" className="btn btn-primary" onClick={handleJoinOrder} disabled={detailBusy}>
+                  <Plus size={16} /> {t('workOrders.joinOrder')}
+                </button>
+              </div>
+            )
+          )}
         </div>
 
         {/* Progress log — mechanics/painters document what they did, with photos */}
@@ -1542,7 +1565,9 @@ export default function WorkOrders() {
                   <input className="form-input" type="date" value={estimatedDate} onChange={(e) => setEstimatedDate(e.target.value)} />
                 </div>
 
-                {/* Operators */}
+                {/* Operators — only admins choose who works the order. A
+                    technician creating one is auto-assigned to themselves. */}
+                {isAdmin ? (
                 <div className="form-group">
                   <label className="form-label">{t('workOrders.assignedTechnician')}</label>
                   <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
@@ -1563,6 +1588,14 @@ export default function WorkOrders() {
                     ))}
                   </div>
                 </div>
+                ) : (
+                  <div className="form-group">
+                    <label className="form-label">{t('workOrders.assignedTechnician')}</label>
+                    <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+                      {t('workOrders.autoAssigned')}
+                    </p>
+                  </div>
+                )}
 
                 {/* 360 Photos upload */}
                 <div className="form-group" style={{ marginTop: 'var(--space-2)' }}>
@@ -1663,7 +1696,7 @@ export default function WorkOrders() {
                 <div className="form-group">
                   <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span>{t('workOrders.partsDescription')}</span>
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setParts((p) => [...p, { descripcion: '', cantidad: '1', costo_unitario: '', precio_venta_unitario: '' }])}>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setParts((p) => [...p, { descripcion: '', cantidad: '1', precio_venta_unitario: '' }])}>
                       <Plus size={14} /> {t('common.add')}
                     </button>
                   </label>
@@ -1682,14 +1715,6 @@ export default function WorkOrders() {
                         style={{ maxWidth: 80 }}
                         value={part.cantidad}
                         onChange={(e) => setParts((p) => p.map((it, idx) => (idx === i ? { ...it, cantidad: e.target.value } : it)))}
-                      />
-                      <input
-                        className="form-input"
-                        type="number"
-                        placeholder="Costo"
-                        style={{ maxWidth: 100 }}
-                        value={part.costo_unitario}
-                        onChange={(e) => setParts((p) => p.map((it, idx) => (idx === i ? { ...it, costo_unitario: e.target.value } : it)))}
                       />
                       <input
                         className="form-input"

@@ -89,7 +89,7 @@ export default function Payroll() {
 
       {error && <div className="alert-error">{error}</div>}
 
-      <div className="table-container animate-fade-in">
+      <div className="table-container cards-on-mobile animate-fade-in">
         <table className="table">
           <thead>
             <tr>
@@ -106,7 +106,7 @@ export default function Payroll() {
           <tbody>
             {entries.map((entry) => (
               <tr key={entry.id}>
-                <td>
+                <td data-label={t('payroll.employee')}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                     <div style={{
                       width: 32, height: 32, borderRadius: '50%',
@@ -125,15 +125,15 @@ export default function Payroll() {
                     </div>
                   </div>
                 </td>
-                <td style={{ fontSize: 'var(--font-size-sm)' }}>{entry.periodo_inicio}</td>
-                <td style={{ fontSize: 'var(--font-size-sm)' }}>{entry.periodo_fin}</td>
-                <td style={{ textAlign: 'right' }}>${entry.salario_base.toLocaleString()}</td>
-                <td style={{ textAlign: 'right', color: 'var(--color-success)' }}>+${entry.bonos.toLocaleString()}</td>
-                <td style={{ textAlign: 'right', color: 'var(--color-danger)' }}>-${entry.deducciones.toLocaleString()}</td>
-                <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-light)' }}>
+                <td data-label={t('payroll.periodStart')} style={{ fontSize: 'var(--font-size-sm)' }}>{entry.periodo_inicio}</td>
+                <td data-label={t('payroll.periodEnd')} style={{ fontSize: 'var(--font-size-sm)' }}>{entry.periodo_fin}</td>
+                <td data-label={t('payroll.baseSalary')} style={{ textAlign: 'right' }}>${entry.salario_base.toLocaleString()}</td>
+                <td data-label={t('payroll.bonuses')} style={{ textAlign: 'right', color: 'var(--color-success)' }}>+${entry.bonos.toLocaleString()}</td>
+                <td data-label={t('payroll.deductions')} style={{ textAlign: 'right', color: 'var(--color-danger)' }}>-${entry.deducciones.toLocaleString()}</td>
+                <td data-label={t('payroll.totalPaid')} style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-light)' }}>
                   ${entry.total_pagado.toLocaleString()}
                 </td>
-                <td>
+                <td data-label={t('payroll.payDate')}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)' }}>
                     <Calendar size={12} style={{ color: 'var(--color-text-tertiary)' }} />
                     {entry.fecha_pago}

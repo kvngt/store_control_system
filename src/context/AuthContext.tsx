@@ -16,6 +16,11 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
   setCurrentSede: (sede: Sede | null) => void;
+  /** Re-reads sedes after an admin edits branding/capacity, so the injected
+   *  theme and logo update without a page reload. */
+  refreshSedes: () => Promise<void>;
+  /** Re-reads the signed-in profile after the user edits name/email/photo. */
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -51,6 +56,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const preferred = isAdmin ? sedesList.find((s) => s.id === savedSedeId) : undefined;
     const own = sedesList.find((s) => s.id === (perfil as UserProfile).sede_id);
     setCurrentSedeState(preferred || own || sedesList[0] || null);
+  }, []);
+
+  const refreshSedes = useCallback(async () => {
+    const { data: sedes } = await supabase.from('sedes').select('*').order('nombre');
+    const sedesList = (sedes || []) as Sede[];
+    setAllSedes(sedesList);
+    setCurrentSedeState((prev) =>
+      prev ? sedesList.find((s) => s.id === prev.id) || sedesList[0] || null : prev
+    );
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+    const { data: perfil } = await supabase
+      .from('perfiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+    if (perfil) setUser(perfil as UserProfile);
   }, []);
 
   useEffect(() => {
@@ -112,6 +137,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         setCurrentSede,
+        refreshSedes,
+        refreshUser,
       }}
     >
       {children}

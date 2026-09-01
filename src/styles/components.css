@@ -37,12 +37,26 @@
   border-radius: var(--radius-md);
 }
 
+.sidebar-logo-img {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  object-fit: contain;
+  background: var(--color-bg-tertiary);
+  flex-shrink: 0;
+}
+
 .sidebar-logo .logo-text {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
   color: var(--color-primary-light);
   letter-spacing: 1px;
   white-space: nowrap;
+  /* Sede names can be long ("El Arca Auto Body - Main"); ellipsise instead of
+     letting the sidebar's overflow slice a character in half. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .sidebar.collapsed .logo-text {
@@ -421,16 +435,25 @@
 .header-avatar {
   width: 36px;
   height: 36px;
+  flex-shrink: 0;
+  padding: 0;
+  overflow: hidden; /* clips an uploaded photo into the circle */
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  background: var(--gradient-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-text-inverse);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
+  font-family: inherit;
   cursor: pointer;
   transition: box-shadow var(--transition-fast);
+}
+
+.header-avatar:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .header-avatar:hover {
@@ -537,6 +560,167 @@
   box-shadow: var(--shadow-lg);
 }
 
+/* A KPI card rendered as a <button> that navigates into its section. */
+.stat-card-link {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.stat-card-link:hover {
+  border-color: var(--color-primary);
+}
+
+.stat-card-link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.stat-card-arrow {
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  align-self: center;
+  transition: transform var(--transition-fast), color var(--transition-fast);
+}
+
+.stat-card-link:hover .stat-card-arrow {
+  color: var(--color-primary);
+  transform: translateX(2px);
+}
+
+/* Whole-card link (e.g. the revenue chart tapping through to Finanzas). */
+.card-link {
+  cursor: pointer;
+}
+
+.card-link:hover {
+  border-color: var(--color-primary);
+}
+
+.card-link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Dashboard alert rows — clickable, open the offending order. */
+.alert-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--color-text-primary);
+  transition: all var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.alert-row-warning {
+  background: var(--color-warning-bg);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+}
+
+.alert-row-info {
+  background: var(--color-info-bg);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+.alert-row:hover {
+  filter: brightness(1.12);
+}
+
+.alert-row:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Settings: profile photo and sede logo pickers */
+.profile-avatar,
+.sede-logo-btn {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: inherit;
+  border: 1px solid var(--color-surface-border);
+}
+
+.profile-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  color: var(--color-text-inverse);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.sede-logo-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-hover);
+}
+
+.profile-avatar img,
+.sede-logo-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sede-logo-btn img {
+  object-fit: contain;
+}
+
+.profile-avatar-overlay,
+.sede-logo-overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  background: rgba(10, 10, 15, 0.65);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 0;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.profile-avatar:hover .profile-avatar-overlay,
+.profile-avatar:focus-visible .profile-avatar-overlay,
+.sede-logo-btn:hover .sede-logo-overlay,
+.sede-logo-btn:focus-visible .sede-logo-overlay {
+  opacity: 1;
+}
+
+.color-input {
+  width: 42px;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+  cursor: pointer;
+}
+
+/* Header avatar can now carry an uploaded profile photo. */
+.header-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-full);
+}
+
 .stat-icon {
   width: 48px;
   height: 48px;
@@ -615,13 +799,13 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  background: var(--gradient-primary);
   color: var(--color-text-inverse);
   border-color: var(--color-primary);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--color-primary-light), var(--color-primary));
+  background: var(--gradient-primary-hover);
   box-shadow: var(--shadow-glow);
   transform: translateY(-1px);
 }
@@ -1193,6 +1377,7 @@
 /* ===== Login Page ===== */
 .login-page {
   min-height: 100vh;
+  min-height: 100dvh; /* mobile browser chrome shouldn't force a scroll */
   display: flex;
   background: var(--color-bg-primary);
   position: relative;
@@ -1269,15 +1454,19 @@
   }
 }
 
-/* Mobile background image fallback when image-side is hidden */
+/* Mobile background image fallback when image-side is hidden.
+   `inset: -30px` deliberately bleeds the layer past the viewport: a blurred
+   element samples nothing outside its own box, so with inset:0 the blur eats
+   into the edges and the photo looks washed out and stretched at the borders. */
 @media (max-width: 1023px) {
   .login-page::before {
     content: '';
     position: absolute;
-    inset: 0;
+    inset: -30px;
     background-image: url('../assets/login-bg.jpg');
     background-size: cover;
     background-position: center;
+    background-repeat: no-repeat;
     filter: blur(10px) brightness(0.3);
     z-index: 0;
   }
@@ -1307,7 +1496,7 @@
   width: 64px;
   height: 64px;
   margin: 0 auto var(--space-4);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  background: var(--gradient-primary);
   border-radius: var(--radius-xl);
   display: flex;
   align-items: center;
@@ -1655,6 +1844,77 @@
 
 .lightbox-close:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* ===== Tables that become stacked cards on phones =====
+   Add `cards-on-mobile` to a .table-container and `data-label` to each <td>.
+   Below 768px the header row is dropped and every row turns into a card whose
+   cells read "Label ......... value", so nothing needs horizontal scrolling. */
+@media (max-width: 768px) {
+  .table-container.cards-on-mobile {
+    border: none;
+    overflow-x: visible;
+  }
+
+  .table-container.cards-on-mobile table,
+  .table-container.cards-on-mobile tbody,
+  .table-container.cards-on-mobile tr,
+  .table-container.cards-on-mobile td {
+    display: block;
+    width: 100%;
+  }
+
+  .table-container.cards-on-mobile thead {
+    display: none;
+  }
+
+  .table-container.cards-on-mobile tr {
+    background: var(--color-surface);
+    border: 1px solid var(--color-surface-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+
+  .table-container.cards-on-mobile tr:hover td {
+    background: transparent;
+  }
+
+  .table-container.cards-on-mobile td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--color-surface-border);
+    text-align: right;
+  }
+
+  .table-container.cards-on-mobile td:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .table-container.cards-on-mobile td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    text-align: left;
+  }
+
+  /* Cells with no label (action buttons) span the full width. */
+  .table-container.cards-on-mobile td:not([data-label])::before {
+    content: none;
+  }
+
+  .table-container.cards-on-mobile .table-actions {
+    justify-content: flex-end;
+    width: 100%;
+  }
 }
 
 /* ===== Work order mobile card list ===== */
