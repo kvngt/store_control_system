@@ -1779,6 +1779,8 @@
 
   .page-content {
     padding: var(--space-3);
+    /* Reserve room for the fixed bottom nav so the last card isn't covered. */
+    padding-bottom: calc(var(--space-3) + 72px);
   }
 
   .stats-grid {
@@ -1865,9 +1867,28 @@
   }
 }
 
-/* ===== Bottom Navigation (Disabled in favor of Drawer) ===== */
+/* ===== Bottom Navigation =====
+   Quick access to the main sections on phones. The drawer (hamburger) still
+   carries everything else (Kanban, Finanzas, Planilla, Configuración). */
 .bottom-nav {
-  display: none !important;
+  display: none; /* Hidden on desktop */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: var(--color-bg-secondary);
+  border-top: 1px solid var(--color-surface-border);
+  justify-content: space-around;
+  align-items: center;
+  z-index: var(--z-sticky);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (max-width: 768px) {
+  .bottom-nav {
+    display: flex;
+  }
 }
 
 .bottom-nav-item {

@@ -92,23 +92,21 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
         </div>
 
         <nav className="sidebar-nav">
-          <div className="desktop-only">
-            <div className="sidebar-section-label">MENU</div>
-            {mainLinks.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                className={({ isActive }) =>
-                  `sidebar-link ${isActive && (link.to === '/' ? location.pathname === '/' : true) ? 'active' : ''}`
-                }
-                end={link.to === '/'}
-                onClick={handleNavClick}
-              >
-                <link.icon className="sidebar-link-icon" size={20} />
-                <span className="sidebar-link-label">{link.label}</span>
-              </NavLink>
-            ))}
-          </div>
+          <div className="sidebar-section-label">MENU</div>
+          {mainLinks.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              className={({ isActive }) =>
+                `sidebar-link ${isActive && (link.to === '/' ? location.pathname === '/' : true) ? 'active' : ''}`
+              }
+              end={link.to === '/'}
+              onClick={handleNavClick}
+            >
+              <link.icon className="sidebar-link-icon" size={20} />
+              <span className="sidebar-link-label">{link.label}</span>
+            </NavLink>
+          ))}
 
           {financeLinks.length > 0 && (
             <>
