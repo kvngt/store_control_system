@@ -2265,3 +2265,269 @@
   border: 1px solid var(--color-surface-border);
   border-radius: var(--radius-md);
 }
+
+/* ===== Vehicle intake: combobox, owner picker, VIN panel ===== */
+
+/* Suggestion inputs (brand, model, colour) and the owner search share the
+   same popover shell so the whole form reads as one control family. */
+.combo {
+  position: relative;
+}
+
+.combo-input {
+  padding-right: var(--space-8);
+}
+
+.combo-adornment {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+  display: flex;
+}
+
+.combo-search {
+  position: relative;
+}
+
+.combo-search .form-input {
+  padding-left: var(--space-8);
+}
+
+.combo-search-icon {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+}
+
+.combo-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: var(--z-dropdown);
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-1);
+}
+
+.combo-option {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.combo-option:hover,
+.combo-option.is-active {
+  background: var(--color-bg-hover);
+}
+
+.combo-option-sub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.combo-empty {
+  padding: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.combo-footer-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-1);
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-surface-border);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary-light);
+  cursor: pointer;
+}
+
+.combo-footer-action:hover {
+  background: var(--color-bg-hover);
+}
+
+/* Owner, once chosen: a summary card instead of a dropdown, so the person
+   doing intake can confirm at a glance that it's the right customer. */
+.owner-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+}
+
+.owner-card.is-invalid {
+  border-color: var(--color-danger);
+}
+
+.owner-card-avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--color-bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-light);
+}
+
+.owner-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.owner-card-name {
+  font-weight: var(--font-weight-semibold);
+}
+
+.owner-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.owner-card-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Adding a customer without leaving the vehicle form: an inline panel rather
+   than a second modal, which would stack on top of this one. */
+.inline-create {
+  margin-top: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+}
+
+.inline-create-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.inline-create-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* Grouped step inside the vehicle form (owner, then VIN). */
+.form-section {
+  margin-bottom: var(--space-5);
+}
+
+.form-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.vin-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.vin-input {
+  font-family: monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.vin-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.vin-chip {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-surface-border);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.vin-chip strong {
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-medium);
+  margin-right: 4px;
+}
+
+/* Field-level feedback. Errors block the save; warnings (odd plate format,
+   failed VIN checksum) are advice the shop is allowed to overrule. */
+.field-hint {
+  margin-top: 4px;
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  color: var(--color-text-tertiary);
+}
+
+.field-hint-error { color: var(--color-danger); }
+.field-hint-warn { color: var(--color-warning); }
+.field-hint-ok { color: var(--color-success); }
+
+.field-hint-link {
+  display: block;
+  text-align: left;
+  color: var(--color-primary-light);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.form-input.is-invalid {
+  border-color: var(--color-danger);
+}
+
+.spin {
+  animation: spin 0.7s linear infinite;
+}
+
+@media (max-width: 640px) {
+  .vin-row {
+    flex-direction: column;
+  }
+}

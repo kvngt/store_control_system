@@ -76,6 +76,8 @@ export interface Vehicle {
   anio: number;
   vin: string;
   placa: string;
+  /** Two-letter US state that issued the plate; absent on older records. */
+  placa_estado?: string | null;
   color: string;
   creado_en: string;
   // Virtual
@@ -263,6 +265,7 @@ export interface VehicleInput {
   anio: number;
   vin: string;
   placa: string;
+  placa_estado?: string | null;
   color: string;
 }
 

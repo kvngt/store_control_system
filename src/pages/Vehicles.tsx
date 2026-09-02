@@ -1,11 +1,31 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { supabaseService } from '../services/supabaseService';
 import { getErrorMessage } from '../lib/errors';
-import { Search, Plus, Edit3, Trash2, X, Wand2 } from 'lucide-react';
-import { VEHICLE_BRANDS, decodeVin } from '../lib/vin';
+import { Search, Plus, Edit3, Trash2, X, Wand2, Loader2, ScanLine } from 'lucide-react';
+import {
+  VEHICLE_BRANDS,
+  VEHICLE_COLORS,
+  US_STATES,
+  checkUsPlate,
+  checkVin,
+  decodeVin,
+  fetchModelsForMake,
+  localModelsForMake,
+  normalizeVin,
+  vinModelYear,
+  yearOptions,
+} from '../lib/vin';
+import type { DecodedVin } from '../lib/vin';
+import Combobox from '../components/Combobox';
+import CustomerPicker from '../components/CustomerPicker';
+import type { NewCustomerDraft } from '../components/CustomerPicker';
 import type { Vehicle, Customer } from '../types/database';
+
+const EMPTY_FORM = {
+  cliente_id: '', marca: '', modelo: '', anio: '', vin: '', placa: '', placa_estado: '', color: '',
+};
 
 export default function Vehicles() {
   const { t, language } = useLanguage();
@@ -22,10 +42,16 @@ export default function Vehicles() {
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState<Vehicle | null>(null);
   const [decodingVin, setDecodingVin] = useState(false);
-  const [vinMessage, setVinMessage] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
-  const [form, setForm] = useState({
-    cliente_id: '', marca: '', modelo: '', anio: '', vin: '', placa: '', color: '',
-  });
+  const [vinMessage, setVinMessage] = useState<{ kind: 'ok' | 'warn' | 'err'; text: string } | null>(null);
+  const [decoded, setDecoded] = useState<DecodedVin | null>(null);
+  const [modelOptions, setModelOptions] = useState<string[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [touched, setTouched] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+
+  // VINs already looked up in this modal, so re-renders and edits of unrelated
+  // fields don't fire the same request again.
+  const decodedVinRef = useRef('');
 
   const loadData = useCallback(() => {
     setLoading(true);
@@ -52,9 +78,18 @@ export default function Vehicles() {
       (v.cliente_nombre || '').toLowerCase().includes(search.toLowerCase())
   );
 
+  const resetModalState = () => {
+    setVinMessage(null);
+    setDecoded(null);
+    setModelOptions([]);
+    setTouched(false);
+    decodedVinRef.current = '';
+  };
+
   const openCreateModal = () => {
     setSelected(null);
-    setForm({ cliente_id: '', marca: '', modelo: '', anio: '', vin: '', placa: '', color: '' });
+    setForm(EMPTY_FORM);
+    resetModalState();
     setShowModal(true);
   };
 
@@ -67,43 +102,162 @@ export default function Vehicles() {
       anio: String(v.anio),
       vin: v.vin,
       placa: v.placa,
+      placa_estado: v.placa_estado || '',
       color: v.color,
     });
+    resetModalState();
+    // The stored VIN is already decoded data — don't re-fetch and overwrite
+    // corrections the shop made by hand.
+    decodedVinRef.current = normalizeVin(v.vin);
     setShowModal(true);
   };
 
-  // Asks the NHTSA vPIC database what this VIN is and fills in year/make/model.
-  const handleDecodeVin = async () => {
-    setVinMessage(null);
+  // ===== VIN =====
+  const vinCheck = checkVin(form.vin);
+  const vinLooksComplete = vinCheck.level !== 'error';
+
+  const runDecode = useCallback(async (vin: string, signal?: AbortSignal) => {
     setDecodingVin(true);
+    setVinMessage(null);
     try {
-      const decoded = await decodeVin(form.vin);
-      if (!decoded) {
+      const result = await decodeVin(vin, signal);
+      if (signal?.aborted) return;
+      if (!result) {
+        setDecoded(null);
         setVinMessage({ kind: 'err', text: t('vehicles.vinNotFound') });
         return;
       }
+      setDecoded(result);
       setForm((prev) => ({
         ...prev,
-        marca: decoded.marca || prev.marca,
-        modelo: decoded.modelo || prev.modelo,
-        anio: decoded.anio || prev.anio,
+        marca: result.marca || prev.marca,
+        modelo: result.modelo || prev.modelo,
+        anio: result.anio || prev.anio,
       }));
-      setVinMessage({ kind: 'ok', text: decoded.detalle ? `${t('vehicles.vinDecoded')} — ${decoded.detalle}` : t('vehicles.vinDecoded') });
+      setVinMessage({ kind: 'ok', text: t('vehicles.vinDecoded') });
     } catch (err) {
+      if ((err as Error).name === 'AbortError') return;
+      const code = (err as Error).message;
+      setDecoded(null);
       setVinMessage({
         kind: 'err',
-        text: (err as Error).message === 'INVALID_LENGTH' ? t('vehicles.vinLength') : t('vehicles.vinError'),
+        text:
+          code === 'LENGTH' ? t('vehicles.vinLength')
+          : code === 'CHARSET' ? t('vehicles.vinCharset')
+          : t('vehicles.vinError'),
       });
     } finally {
+      // Always clear the spinner, even on an abort: a superseded lookup that
+      // is never replaced (the user deleted a character) would otherwise leave
+      // the button stuck on "looking up".
       setDecodingVin(false);
     }
+  }, [t]);
+
+  // Decode as soon as a full VIN is on screen — scanning or typing the VIN is
+  // the fastest path to a complete record, so it shouldn't need a second click.
+  useEffect(() => {
+    if (!showModal) return;
+    const clean = normalizeVin(form.vin);
+    if (clean.length !== 17 || checkVin(clean).level === 'error') return;
+    if (decodedVinRef.current === clean) return;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      decodedVinRef.current = clean;
+      runDecode(clean, controller.signal);
+    }, 400);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [form.vin, showModal, runDecode]);
+
+  // Year the VIN itself encodes; shown when it contradicts what's in the form.
+  const vinYear = useMemo(
+    () => (normalizeVin(form.vin).length === 17 ? vinModelYear(form.vin) : null),
+    [form.vin]
+  );
+
+  // ===== Model suggestions for the chosen brand =====
+  useEffect(() => {
+    const make = form.marca.trim();
+    if (!make) {
+      setModelOptions([]);
+      return;
+    }
+    // Show what we know offline immediately; the API only ever adds to it.
+    setModelOptions(localModelsForMake(make));
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      setLoadingModels(true);
+      fetchModelsForMake(make, controller.signal)
+        .then((models) => {
+          if (!controller.signal.aborted) setModelOptions(models);
+        })
+        .catch(() => { /* offline: the local list stands */ })
+        .finally(() => {
+          if (!controller.signal.aborted) setLoadingModels(false);
+        });
+    }, 350);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+      setLoadingModels(false);
+    };
+  }, [form.marca]);
+
+  // ===== Plate =====
+  const plateCheck = checkUsPlate(form.placa, form.placa_estado || undefined);
+  const plateMessage = form.placa.trim()
+    ? plateCheck.problem === 'CHARSET' ? { kind: 'err' as const, text: t('vehicles.plateCharset') }
+      : plateCheck.problem === 'LENGTH' ? { kind: 'err' as const, text: t('vehicles.plateLength') }
+      : plateCheck.problem === 'UNUSUAL' ? { kind: 'warn' as const, text: t('vehicles.plateUnusual') }
+      : { kind: 'ok' as const, text: t('vehicles.plateOk') }
+    : null;
+
+  const colorOptions = VEHICLE_COLORS[language] || VEHICLE_COLORS.en;
+
+  // ===== Save =====
+  const invalid = {
+    cliente_id: !form.cliente_id,
+    marca: !form.marca.trim(),
+    modelo: !form.modelo.trim(),
+    anio: !form.anio,
+    vin: vinCheck.level === 'error',
+    placa: !form.placa.trim() || plateCheck.level === 'error',
+  };
+  const hasErrors = Object.values(invalid).some(Boolean);
+
+  const handleCreateCustomer = async (draft: NewCustomerDraft): Promise<Customer> => {
+    const created = await supabaseService.createCustomer({
+      ...draft,
+      direccion: '',
+      notas_crm: '',
+      sede_id: sedeId || currentSede?.id || '',
+    });
+    // Make it selectable straight away instead of waiting for a full reload.
+    setCustomers((prev) => [created, ...prev]);
+    return created;
   };
 
   const handleSave = async () => {
-    if (!form.cliente_id || !form.marca.trim() || !form.vin.trim()) return;
+    setTouched(true);
+    if (hasErrors) return;
     setSaving(true);
     try {
-      const payload = { ...form, anio: parseInt(form.anio) || new Date().getFullYear() };
+      const payload = {
+        cliente_id: form.cliente_id,
+        marca: form.marca.trim(),
+        modelo: form.modelo.trim(),
+        anio: parseInt(form.anio, 10) || new Date().getFullYear(),
+        vin: vinCheck.normalized,
+        placa: plateCheck.normalized,
+        placa_estado: form.placa_estado || null,
+        color: form.color.trim(),
+      };
       if (selected) {
         await supabaseService.updateVehicle(selected.id, payload);
       } else {
@@ -169,7 +323,11 @@ export default function Vehicles() {
                   <td data-label={t('vehicles.brand')} style={{ fontWeight: 600 }}>{v.marca} {v.modelo}</td>
                   <td data-label={t('vehicles.year')}>{v.anio}</td>
                   <td data-label={t('vehicles.vin')} style={{ fontFamily: 'monospace', fontSize: 'var(--font-size-xs)' }}>{v.vin}</td>
-                  <td data-label={t('vehicles.plate')}><span className="badge badge-en_proceso">{v.placa}</span></td>
+                  <td data-label={t('vehicles.plate')}>
+                    <span className="badge badge-en_proceso">
+                      {v.placa_estado ? `${v.placa_estado} · ${v.placa}` : v.placa}
+                    </span>
+                  </td>
                   <td data-label={t('vehicles.color')}>{v.color}</td>
                   <td data-label={t('vehicles.owner')} style={{ color: 'var(--color-text-secondary)' }}>{v.cliente_nombre}</td>
                   <td>
@@ -189,95 +347,199 @@ export default function Vehicles() {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">{selected ? t('common.edit') : t('vehicles.newVehicle')}</h3>
+              <h3 className="modal-title">{selected ? t('vehicles.editVehicle') : t('vehicles.newVehicle')}</h3>
               <button className="modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
             <div className="modal-body">
-              <div className="form-group">
-                <label className="form-label">{t('vehicles.owner')}</label>
-                <select
-                  className="form-input form-select"
+              {/* 1 — Owner: pick from the customers on file, or add one here. */}
+              <div className="form-section">
+                <div className="form-section-title">{t('vehicles.owner')}</div>
+                <CustomerPicker
+                  customers={customers}
                   value={form.cliente_id}
-                  onChange={(e) => setForm({ ...form, cliente_id: e.target.value })}
-                >
-                  <option value="">-- {t('common.search')} --</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>{c.nombre}</option>
-                  ))}
-                </select>
+                  onChange={(id) => setForm((prev) => ({ ...prev, cliente_id: id }))}
+                  onCreate={handleCreateCustomer}
+                  invalid={touched && invalid.cliente_id}
+                />
+                {touched && invalid.cliente_id && (
+                  <p className="field-hint field-hint-error">{t('vehicles.ownerRequired')}</p>
+                )}
               </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">{t('vehicles.brand')}</label>
+
+              {/* 2 — VIN: fills in everything else it can. */}
+              <div className="form-section">
+                <div className="form-section-title">
+                  <ScanLine size={15} /> {t('vehicles.vin')}
+                </div>
+                <div className="vin-row">
                   <input
-                    className="form-input"
-                    list="vehicle-brands"
-                    placeholder="Toyota, Honda, Ford..."
-                    value={form.marca}
-                    onChange={(e) => setForm({ ...form, marca: e.target.value })}
+                    className={`form-input vin-input${touched && invalid.vin ? ' is-invalid' : ''}`}
+                    id="vehicle-vin"
+                    placeholder="1HGCM82633A004352"
+                    maxLength={17}
+                    autoComplete="off"
+                    value={form.vin}
+                    onChange={(e) => {
+                      setForm((prev) => ({ ...prev, vin: normalizeVin(e.target.value) }));
+                      setVinMessage(null);
+                    }}
                   />
-                  <datalist id="vehicle-brands">
-                    {VEHICLE_BRANDS.map((b) => (
-                      <option key={b} value={b} />
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => runDecode(vinCheck.normalized)}
+                    disabled={decodingVin || !vinLooksComplete}
+                    style={{ flexShrink: 0 }}
+                  >
+                    {decodingVin ? <Loader2 size={16} className="spin" /> : <Wand2 size={16} />}
+                    {decodingVin ? t('vehicles.vinDecoding') : t('vehicles.decodeVin')}
+                  </button>
+                </div>
+
+                {!form.vin.trim() && <p className="field-hint">{t('vehicles.vinHelp')}</p>}
+                {form.vin.trim() && vinCheck.problem === 'LENGTH' && (
+                  <p className={`field-hint${touched ? ' field-hint-error' : ''}`}>
+                    {t('vehicles.vinLength')} ({normalizeVin(form.vin).length}/17)
+                  </p>
+                )}
+                {vinCheck.problem === 'CHARSET' && (
+                  <p className="field-hint field-hint-error">{t('vehicles.vinCharset')}</p>
+                )}
+                {vinCheck.problem === 'CHECKSUM' && (
+                  <p className="field-hint field-hint-warn">{t('vehicles.vinChecksum')}</p>
+                )}
+                {vinMessage && (
+                  <p className={`field-hint field-hint-${vinMessage.kind === 'ok' ? 'ok' : vinMessage.kind === 'warn' ? 'warn' : 'error'}`}>
+                    {vinMessage.text}
+                  </p>
+                )}
+
+                {decoded && decoded.detalles.length > 0 && (
+                  <div className="vin-details">
+                    {decoded.detalles.map((d) => (
+                      <span className="vin-chip" key={d.etiqueta}>
+                        <strong>{t(`vehicles.vinFields.${d.etiqueta}`)}</strong> {d.valor}
+                      </span>
                     ))}
-                  </datalist>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">{t('vehicles.model')}</label>
-                  <input className="form-input" placeholder="Camry, Civic, F-150..." value={form.modelo} onChange={(e) => setForm({ ...form, modelo: e.target.value })} />
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">{t('vehicles.year')}</label>
-                  <input className="form-input" type="number" placeholder="2024" value={form.anio} onChange={(e) => setForm({ ...form, anio: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">{t('vehicles.color')}</label>
-                  <input className="form-input" placeholder="Blanco, Negro, Azul..." value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">{t('vehicles.vin')}</label>
-                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                    <input
-                      className="form-input"
-                      placeholder="17 caracteres"
-                      maxLength={17}
-                      value={form.vin}
-                      onChange={(e) => { setForm({ ...form, vin: e.target.value.toUpperCase() }); setVinMessage(null); }}
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={handleDecodeVin}
-                      disabled={decodingVin || form.vin.trim().length !== 17}
-                      title={t('vehicles.decodeVin')}
-                      style={{ flexShrink: 0 }}
-                    >
-                      <Wand2 size={16} /> {decodingVin ? t('common.loading') : t('vehicles.decodeVin')}
-                    </button>
                   </div>
-                  {vinMessage && (
-                    <p style={{
-                      marginTop: 4,
-                      fontSize: 'var(--font-size-xs)',
-                      color: vinMessage.kind === 'ok' ? 'var(--color-success)' : 'var(--color-danger)',
-                    }}>
-                      {vinMessage.text}
-                    </p>
+                )}
+              </div>
+
+              {/* 3 — What the VIN filled in, still editable by hand. */}
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label" htmlFor="vehicle-brand">{t('vehicles.brand')}</label>
+                  <Combobox
+                    inputId="vehicle-brand"
+                    value={form.marca}
+                    onChange={(marca) => setForm((prev) => ({ ...prev, marca }))}
+                    options={VEHICLE_BRANDS}
+                    placeholder="Toyota, Honda, Ford..."
+                    emptyLabel={t('vehicles.freeTextHint')}
+                  />
+                  {touched && invalid.marca && (
+                    <p className="field-hint field-hint-error">{t('vehicles.brandRequired')}</p>
                   )}
                 </div>
                 <div className="form-group">
-                  <label className="form-label">{t('vehicles.plate')}</label>
-                  <input className="form-input" placeholder="MD-XXX0000" value={form.placa} onChange={(e) => setForm({ ...form, placa: e.target.value })} />
+                  <label className="form-label" htmlFor="vehicle-model">{t('vehicles.model')}</label>
+                  <Combobox
+                    inputId="vehicle-model"
+                    value={form.modelo}
+                    onChange={(modelo) => setForm((prev) => ({ ...prev, modelo }))}
+                    options={modelOptions}
+                    loading={loadingModels}
+                    placeholder={form.marca ? t('vehicles.modelFor').replace('{brand}', form.marca) : 'Camry, Civic, F-150...'}
+                    emptyLabel={form.marca ? t('vehicles.freeTextHint') : t('vehicles.pickBrandFirst')}
+                  />
+                  {touched && invalid.modelo && (
+                    <p className="field-hint field-hint-error">{t('vehicles.modelRequired')}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label" htmlFor="vehicle-year">{t('vehicles.year')}</label>
+                  <select
+                    className={`form-input form-select${touched && invalid.anio ? ' is-invalid' : ''}`}
+                    id="vehicle-year"
+                    value={form.anio}
+                    onChange={(e) => setForm((prev) => ({ ...prev, anio: e.target.value }))}
+                  >
+                    <option value="">{t('vehicles.selectYear')}</option>
+                    {yearOptions().map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                  {vinYear && String(vinYear) !== form.anio && (
+                    <button
+                      type="button"
+                      className="field-hint field-hint-link"
+                      onClick={() => setForm((prev) => ({ ...prev, anio: String(vinYear) }))}
+                    >
+                      {t('vehicles.vinYearGuess').replace('{year}', String(vinYear))}
+                    </button>
+                  )}
+                  {touched && invalid.anio && (
+                    <p className="field-hint field-hint-error">{t('vehicles.yearRequired')}</p>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="vehicle-color">{t('vehicles.color')}</label>
+                  <Combobox
+                    inputId="vehicle-color"
+                    value={form.color}
+                    onChange={(color) => setForm((prev) => ({ ...prev, color }))}
+                    options={colorOptions}
+                    placeholder={colorOptions.slice(0, 3).join(', ')}
+                    emptyLabel={t('vehicles.freeTextHint')}
+                  />
+                  <p className="field-hint">{t('vehicles.colorNotInVin')}</p>
+                </div>
+              </div>
+
+              {/* 4 — Plate, checked against the issuing state. */}
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label" htmlFor="vehicle-plate-state">{t('vehicles.plateState')}</label>
+                  <select
+                    className="form-input form-select"
+                    id="vehicle-plate-state"
+                    value={form.placa_estado}
+                    onChange={(e) => setForm((prev) => ({ ...prev, placa_estado: e.target.value }))}
+                  >
+                    <option value="">{t('vehicles.plateStateAny')}</option>
+                    {US_STATES.map((s) => (
+                      <option key={s.code} value={s.code}>{s.code} — {s.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="vehicle-plate">{t('vehicles.plate')}</label>
+                  <input
+                    className={`form-input${touched && invalid.placa ? ' is-invalid' : ''}`}
+                    id="vehicle-plate"
+                    placeholder="ABC1234"
+                    maxLength={10}
+                    autoComplete="off"
+                    value={form.placa}
+                    onChange={(e) => setForm((prev) => ({ ...prev, placa: e.target.value.toUpperCase() }))}
+                  />
+                  {plateMessage && (
+                    <p className={`field-hint field-hint-${plateMessage.kind === 'ok' ? 'ok' : plateMessage.kind === 'warn' ? 'warn' : 'error'}`}>
+                      {plateMessage.text}
+                    </p>
+                  )}
+                  {touched && !form.placa.trim() && (
+                    <p className="field-hint field-hint-error">{t('vehicles.plateRequired')}</p>
+                  )}
                 </div>
               </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>{t('common.cancel')}</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+              <button className="btn btn-primary" onClick={handleSave} disabled={saving} id="vehicle-save">
                 {saving ? t('common.loading') : selected ? t('common.update') : t('common.create')}
               </button>
             </div>
