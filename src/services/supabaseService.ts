@@ -19,6 +19,7 @@ import type {
   BankStatementImport,
   CategorizationRule,
   ParsedStatementTransaction,
+  TransactionType,
 } from '../types/database';
 
 const DEFAULT_CAPACITY = 10;
@@ -84,6 +85,20 @@ export const supabaseService = {
     input: Partial<Pick<UserProfile, 'nombre_completo' | 'email' | 'telefono' | 'avatar_url'>>
   ) => {
     const { data, error } = await supabase.from('perfiles').update(input).eq('id', userId).select().single();
+    if (error) throw error;
+    return data as UserProfile;
+  },
+
+  // perfiles.sede_id is NOT NULL, so a user always belongs to exactly one
+  // workshop. An admin "leaving" a sede therefore means moving their membership
+  // to another one — which is what removes them from the first sede's roster.
+  moveUserToSede: async (userId: string, sedeId: string) => {
+    const { data, error } = await supabase
+      .from('perfiles')
+      .update({ sede_id: sedeId })
+      .eq('id', userId)
+      .select()
+      .single();
     if (error) throw error;
     return data as UserProfile;
   },
@@ -193,11 +208,15 @@ export const supabaseService = {
   },
 
   // ===== Vehicles =====
-  getVehicles: async () => {
-    const { data, error } = await supabase.from('vehiculos').select(`
+  // Always scoped to a sede: vehicles must never leak across workshops, not
+  // even for an admin (who simply switches sede to see the other one).
+  getVehicles: async (sedeId?: string) => {
+    let query = supabase.from('vehiculos').select(`
       *,
       cliente:clientes(nombre)
     `);
+    if (sedeId) query = query.eq('sede_id', sedeId);
+    const { data, error } = await query;
     if (error) throw error;
     return (data || []).map((v) => ({
       ...v,
@@ -211,6 +230,7 @@ export const supabaseService = {
     return data as Vehicle[];
   },
 
+  // sede_id is filled in by the trg_vehiculo_sede trigger from the customer.
   createVehicle: async (input: VehicleInput) => {
     const { data, error } = await supabase.from('vehiculos').insert(input).select().single();
     if (error) throw error;
@@ -473,11 +493,12 @@ export const supabaseService = {
       .limit(5);
     if (sedeId) customerQuery = customerQuery.eq('sede_id', sedeId);
 
-    const vehicleQuery = supabase
+    let vehicleQuery = supabase
       .from('vehiculos')
       .select('id, marca, modelo, placa, vin, cliente:clientes(nombre)')
       .or(`placa.ilike.%${safeQ}%,vin.ilike.%${safeQ}%,marca.ilike.%${safeQ}%,modelo.ilike.%${safeQ}%`)
       .limit(5);
+    if (sedeId) vehicleQuery = vehicleQuery.eq('sede_id', sedeId);
 
     let orderQuery = supabase
       .from('ordenes_trabajo')
@@ -529,6 +550,39 @@ export const supabaseService = {
     return urls;
   },
 
+  // ===== Customer signature =====
+  // The signature is drawn on a canvas and arrives as a PNG data URL. It's
+  // stored in the public `firmas` bucket and linked from the order so the PDF
+  // can reprint it long after the tablet that captured it is gone.
+  uploadSignature: async (orderId: string, dataUrl: string) => {
+    const blob = await (await fetch(dataUrl)).blob();
+    const path = `${orderId}/firma-${Date.now()}.png`;
+    const { error } = await supabase.storage
+      .from('firmas')
+      .upload(path, blob, { contentType: 'image/png', upsert: true });
+    if (error) throw error;
+
+    const { data } = supabase.storage.from('firmas').getPublicUrl(path);
+    const firmaFecha = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from('ordenes_trabajo')
+      .update({ firma_cliente_url: data.publicUrl, firma_fecha: firmaFecha })
+      .eq('id', orderId);
+    if (updateError) throw updateError;
+
+    return { url: data.publicUrl, fecha: firmaFecha };
+  },
+
+  // Unlinks the signature so it can be re-captured. The stored file is left in
+  // place on purpose: an order's signature history is worth keeping.
+  clearSignature: async (orderId: string) => {
+    const { error } = await supabase
+      .from('ordenes_trabajo')
+      .update({ firma_cliente_url: null, firma_fecha: null })
+      .eq('id', orderId);
+    if (error) throw error;
+  },
+
   // ===== Financial Transactions =====
   getTransactions: async (sedeId?: string) => {
     let query = supabase.from('finanzas_movimientos').select('*').order('fecha', { ascending: false });
@@ -557,7 +611,14 @@ export const supabaseService = {
       .eq('activo', true)
       .order('creado_en');
     if (error) throw error;
-    return data as CategorizationRule[];
+
+    // Most specific rule first. Priority is explicit because length alone gets
+    // it wrong: the memo keyword "tire" is shorter than "zelle to" but is the
+    // far better signal. Length only breaks ties within the same priority, so
+    // "zelle to dnd towing" still beats "zelle to".
+    return (data as CategorizationRule[]).sort(
+      (a, b) => (b.prioridad ?? 0) - (a.prioridad ?? 0) || b.patron.length - a.patron.length
+    );
   },
 
   uploadStatement: async (file: File, sedeId: string) => {
@@ -593,17 +654,26 @@ export const supabaseService = {
 
     const { data, error } = await supabase
       .from('finanzas_movimientos')
-      .select('monto, fecha, descripcion')
+      .select('tipo, monto, fecha, descripcion')
       .eq('sede_id', sedeId)
       .gte('fecha', rangeStart.toISOString().split('T')[0])
       .lte('fecha', rangeEnd.toISOString().split('T')[0]);
     if (error) throw error;
 
-    const existing = (data || []) as { monto: number; fecha: string; descripcion: string }[];
+    const existing = (data || []) as {
+      tipo: TransactionType;
+      monto: number;
+      fecha: string;
+      descripcion: string;
+    }[];
     const matches = new Map<number, string>();
     transactions.forEach((tx, idx) => {
       const txDate = new Date(tx.fecha).getTime();
       const match = existing.find((m) => {
+        // Direction has to agree. Matching on amount and date alone flagged a
+        // $600 check written on 6/30 as a duplicate of a $600 card deposit
+        // received on 7/1 — money going out is never a repeat of money coming in.
+        if (m.tipo !== tx.tipo) return false;
         if (Math.abs(Number(m.monto) - tx.monto) > 0.01) return false;
         const diffDays = Math.abs(new Date(m.fecha).getTime() - txDate) / 86400000;
         return diffDays <= 2;

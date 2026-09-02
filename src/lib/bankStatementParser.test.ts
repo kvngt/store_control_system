@@ -155,7 +155,7 @@ describe('extractPendingTransactionsFromLines', () => {
     expect(tx.depositAmount).toBeUndefined();
   });
 
-  it('recognizes the "<" ACH marker as a check-number-like token', () => {
+  it('strips the "<" ACH marker without treating it as a check number', () => {
     // Modeled on: "6/11 < Business to Business ACH Debit - Clover Fees ... 31.75"
     const lines = [
       HEADER,
@@ -167,7 +167,10 @@ describe('extractPendingTransactionsFromLines', () => {
     ];
 
     const [tx] = extractPendingTransactionsFromLines(lines, DEPOSIT_X, WITHDRAWAL_X, BALANCE_X);
-    expect(tx.checkNumber).toBe('<');
+    // The marker sits in the Check Number column but is a footnote, not a
+    // check: a real June statement wrote a literal "<" into numero_cheque.
+    expect(tx.checkNumber).toBeUndefined();
+    expect(tx.descriptionParts).not.toContain('<');
     expect(tx.withdrawalAmount).toBe(31.75);
   });
 

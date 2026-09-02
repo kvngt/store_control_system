@@ -18,12 +18,14 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.0",
+    "@types/react-signature-canvas": "^1.0.7",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.511.0",
     "pdfjs-dist": "^6.3.289",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.2"
+    "react-router-dom": "^7.18.2",
+    "react-signature-canvas": "^1.1.0-alpha.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

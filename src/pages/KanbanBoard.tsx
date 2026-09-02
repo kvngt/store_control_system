@@ -48,8 +48,18 @@ export default function KanbanBoard() {
 
   const getOrdersByStatus = (status: OrderStatus) => orders.filter((o) => o.estatus === status);
 
-  const handleDragStart = (orderId: string) => {
-    setDraggedOrder(orderId);
+  const isAdmin = user?.rol === 'admin';
+
+  // A technician can only move cards for orders they're assigned to.
+  const canMove = (order: WorkOrder) =>
+    isAdmin || (order.asignaciones || []).some((a) => a.usuario_id === user?.id);
+
+  const handleDragStart = (order: WorkOrder, e: React.DragEvent) => {
+    if (!canMove(order)) {
+      e.preventDefault();
+      return;
+    }
+    setDraggedOrder(order.id);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -138,9 +148,10 @@ export default function KanbanBoard() {
                   return (
                     <div
                       key={order.id}
-                      className="kanban-card"
-                      draggable
-                      onDragStart={() => handleDragStart(order.id)}
+                      className={`kanban-card ${canMove(order) ? '' : 'kanban-card-locked'}`}
+                      draggable={canMove(order)}
+                      title={canMove(order) ? undefined : t('workOrders.readOnlyNotice')}
+                      onDragStart={(e) => handleDragStart(order, e)}
                       style={{
                         opacity: draggedOrder === order.id ? 0.5 : 1,
                       }}
@@ -169,7 +180,11 @@ export default function KanbanBoard() {
                             style={{ width: `${order.porcentaje_avance}%` }}
                           ></div>
                         </div>
-                        <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+                        <span style={{
+                          fontSize: 'var(--font-size-xs)',
+                          fontWeight: order.porcentaje_avance === 100 ? 700 : 400,
+                          color: order.porcentaje_avance === 100 ? 'var(--color-success)' : 'var(--color-text-secondary)',
+                        }}>
                           {order.porcentaje_avance}%
                         </span>
                       </div>

@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import SignatureCanvas from 'react-signature-canvas';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useUnsavedChanges } from '../context/UnsavedChangesContext';
 import { supabaseService } from '../services/supabaseService';
 import { getErrorMessage } from '../lib/errors';
+import { trimmedSignatureDataUrl } from '../lib/signature';
 import type { WorkOrder, Customer, Vehicle, UserProfile, OrderStatus } from '../types/database';
 import {
   Plus,
@@ -28,6 +30,8 @@ import {
   Check,
   FileDown,
   MessageSquarePlus,
+  PenLine,
+  ImagePlus,
 } from 'lucide-react';
 
 interface PhotoZone {
@@ -108,6 +112,14 @@ export default function WorkOrders() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeZone, setActiveZone] = useState<string | null>(null);
+  const extraInputRef = useRef<HTMLInputElement>(null);
+  const sigPadRef = useRef<SignatureCanvas>(null);
+  const sigWrapRef = useRef<HTMLDivElement>(null);
+  const [sigWidth, setSigWidth] = useState(560);
+  const [savingSignature, setSavingSignature] = useState(false);
+
+  const extraPhotos = Object.values(photos).filter((ph) => !ZONES.some((z) => z.key === ph.key));
+  const zonesCovered = ZONES.filter((z) => photos[z.key]).length;
 
   const statusLabels: Record<string, string> = {
     recepcion: t('workOrders.intake'),
@@ -133,7 +145,7 @@ export default function WorkOrders() {
 
   useEffect(() => {
     supabaseService.getCustomers(sedeId).then(setCustomers).catch(() => {});
-    supabaseService.getVehicles().then(setVehicles).catch(() => {});
+    supabaseService.getVehicles(sedeId).then(setVehicles).catch(() => {});
     supabaseService.getOperators(sedeId).then(setOperators).catch(() => {});
   }, [sedeId]);
 
@@ -171,6 +183,26 @@ export default function WorkOrders() {
   const handleZoneClick = (zoneKey: string) => {
     setActiveZone(zoneKey);
     fileInputRef.current?.click();
+  };
+
+  // Photos beyond the six fixed zones: damage close-ups, paperwork, anything
+  // the six-tile grid can't anticipate. They're appended with generated keys
+  // so the fixed zones keep their meaning.
+  const handleExtraFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length) {
+      setPhotos((prev) => {
+        const next = { ...prev };
+        let n = Object.keys(prev).filter((k) => k.startsWith('extra-')).length;
+        files.forEach((file) => {
+          n += 1;
+          const key = `extra-${Date.now()}-${n}`;
+          next[key] = { key, label: `Extra ${n}`, file, preview: URL.createObjectURL(file) };
+        });
+        return next;
+      });
+    }
+    e.target.value = '';
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -351,7 +383,7 @@ export default function WorkOrders() {
       loadOrders();
       if (customerMode === 'new' || vehicleMode === 'new') {
         supabaseService.getCustomers(sedeId).then(setCustomers).catch(() => {});
-        supabaseService.getVehicles().then(setVehicles).catch(() => {});
+        supabaseService.getVehicles(sedeId).then(setVehicles).catch(() => {});
       }
       openDetail(order.id);
       showToast('success', `${t('workOrders.orderCreatedSuccess')} (${order.numero_orden})`);
@@ -405,7 +437,12 @@ export default function WorkOrders() {
     }
   }, [viewOrder?.id, viewOrder?.porcentaje_avance]);
 
-  const canEditProgress = viewOrder?.estatus === 'en_proceso';
+  // A technician may only touch an order they are actually assigned to.
+  // Admins can always edit. Joining an order is the way in.
+  const isAssignedToMe = (viewOrder?.asignaciones || []).some((a) => a.usuario_id === user?.id);
+  const canEditOrder = isAdmin || isAssignedToMe;
+  const canEditProgress = canEditOrder && viewOrder?.estatus === 'en_proceso';
+  const orderIsComplete = viewOrder?.estatus === 'finalizado' || viewOrder?.estatus === 'entregado';
 
   const handleStatusChange = async (status: OrderStatus) => {
     if (!viewOrder) return;
@@ -633,11 +670,56 @@ export default function WorkOrders() {
     setGeneratingPdf(true);
     try {
       const { generateWorkOrderPdf } = await import('../lib/workOrderPdf');
-      await generateWorkOrderPdf(viewOrder);
+      await generateWorkOrderPdf(viewOrder, currentSede);
     } catch (err) {
       showToast('error', t('workOrders.pdfError'), getErrorMessage(err, language));
     } finally {
       setGeneratingPdf(false);
+    }
+  };
+
+  // signature_pad draws in canvas pixels, so the canvas needs a real width in
+  // its width attribute — a CSS-stretched canvas would offset every stroke.
+  useEffect(() => {
+    const el = sigWrapRef.current;
+    if (!el) return;
+    const update = () => setSigWidth(el.clientWidth || 560);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [viewOrder?.id, viewOrder?.firma_cliente_url]);
+
+  const handleSaveSignature = async () => {
+    const pad = sigPadRef.current;
+    if (!viewOrder || !pad) return;
+    if (pad.isEmpty()) {
+      showToast('error', t('workOrders.signatureEmpty'));
+      return;
+    }
+    setSavingSignature(true);
+    try {
+      const dataUrl = trimmedSignatureDataUrl(pad.getCanvas());
+      const { url, fecha } = await supabaseService.uploadSignature(viewOrder.id, dataUrl);
+      setViewOrder((prev) => (prev ? { ...prev, firma_cliente_url: url, firma_fecha: fecha } : prev));
+      showToast('success', t('workOrders.signatureSaved'));
+    } catch (err) {
+      showToast('error', t('workOrders.signatureError'), getErrorMessage(err, language));
+    } finally {
+      setSavingSignature(false);
+    }
+  };
+
+  const handleClearStoredSignature = async () => {
+    if (!viewOrder) return;
+    setSavingSignature(true);
+    try {
+      await supabaseService.clearSignature(viewOrder.id);
+      setViewOrder((prev) => (prev ? { ...prev, firma_cliente_url: null, firma_fecha: null } : prev));
+    } catch (err) {
+      showToast('error', t('workOrders.signatureError'), getErrorMessage(err, language));
+    } finally {
+      setSavingSignature(false);
     }
   };
 
@@ -660,6 +742,9 @@ export default function WorkOrders() {
 
         {error && <div className="alert-error">{error}</div>}
         {viewLoading && <div className="loading-state"><div className="spinner" /></div>}
+        {!canEditOrder && (
+          <div className="alert-info">{t('workOrders.readOnlyNotice')}</div>
+        )}
 
         {/* Order Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
@@ -687,6 +772,7 @@ export default function WorkOrders() {
               className="form-input form-select"
               value={viewOrder.estatus}
               onChange={(e) => handleStatusChange(e.target.value as OrderStatus)}
+              disabled={!canEditOrder}
               style={{ flex: '1 1 160px' }}
             >
               {Object.keys(statusLabels).map((s) => (
@@ -718,12 +804,12 @@ export default function WorkOrders() {
                   max={100}
                   value={progressDraft}
                   disabled={!canEditProgress}
+                  style={{ width: 70, textAlign: 'right', padding: 'var(--space-1) var(--space-2)', color: orderIsComplete ? 'var(--color-success)' : undefined, fontWeight: orderIsComplete ? 700 : undefined }}
                   onChange={(e) => setProgressDraft(e.target.value)}
                   onBlur={() => handleProgressChange(parseInt(progressDraft, 10) || 0)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur(); } }}
-                  style={{ width: 70, textAlign: 'right', padding: 'var(--space-1) var(--space-2)' }}
                 />
-                <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-primary-light)' }}>%</span>
+                <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: orderIsComplete ? 'var(--color-success)' : 'var(--color-primary-light)' }}>%</span>
               </div>
             </div>
           </div>
@@ -799,6 +885,77 @@ export default function WorkOrders() {
             )}
           </div>
 
+          {/* Customer signature */}
+          <div className="card">
+            <h3 className="card-title" style={{ marginBottom: 'var(--space-3)' }}>
+              <PenLine size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
+              {t('workOrders.customerSignature')}
+            </h3>
+
+            {viewOrder.firma_cliente_url ? (
+              <div>
+                <img
+                  src={viewOrder.firma_cliente_url}
+                  alt={t('workOrders.customerSignature')}
+                  className="signature-preview"
+                />
+                <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 'var(--space-2)' }}>
+                  {customer?.nombre}
+                  {viewOrder.firma_fecha &&
+                    ` — ${t('workOrders.signedOn')} ${new Date(viewOrder.firma_fecha).toLocaleDateString(
+                      language === 'es' ? 'es' : 'en'
+                    )}`}
+                </p>
+                {canEditOrder && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={handleClearStoredSignature}
+                    disabled={savingSignature}
+                    style={{ marginTop: 'var(--space-2)' }}
+                  >
+                    <Pencil size={14} /> {t('workOrders.resign')}
+                  </button>
+                )}
+              </div>
+            ) : canEditOrder ? (
+              <>
+                <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-3)' }}>
+                  {t('workOrders.signatureHint')}
+                </p>
+                <div className="signature-wrap" ref={sigWrapRef}>
+                  <SignatureCanvas
+                    ref={sigPadRef}
+                    penColor="#111827"
+                    canvasProps={{ width: sigWidth, height: 170, className: 'signature-canvas' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-3)', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => sigPadRef.current?.clear()}
+                    disabled={savingSignature}
+                  >
+                    <X size={14} /> {t('workOrders.clearSignature')}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={handleSaveSignature}
+                    disabled={savingSignature}
+                  >
+                    <Check size={14} /> {savingSignature ? t('common.loading') : t('workOrders.saveSignature')}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)' }}>
+                {t('workOrders.noSignature')}
+              </p>
+            )}
+          </div>
+
           {/* Labor */}
           <div className="card">
             <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>
@@ -851,10 +1008,10 @@ export default function WorkOrders() {
                         <td style={{ textAlign: 'right', fontWeight: 600 }}>${item.costo.toFixed(2)}</td>
                         <td>
                           <div style={{ display: 'flex', gap: 2 }}>
-                            <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => startEditLabor(item)}>
+                            <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => startEditLabor(item)} disabled={!canEditOrder}>
                               <Pencil size={14} />
                             </button>
-                            <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => handleRemoveLabor(item.id, item.descripcion)}>
+                            <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => handleRemoveLabor(item.id, item.descripcion)} disabled={!canEditOrder}>
                               <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
                             </button>
                           </div>
@@ -887,7 +1044,7 @@ export default function WorkOrders() {
                 value={newLaborDraft.costo}
                 onChange={(e) => setNewLaborDraft({ ...newLaborDraft, costo: e.target.value })}
               />
-              <button type="button" className="btn btn-secondary" onClick={handleAddLabor} disabled={detailBusy || !newLaborDraft.descripcion.trim()}>
+              <button type="button" className="btn btn-secondary" onClick={handleAddLabor} disabled={!canEditOrder || detailBusy || !newLaborDraft.descripcion.trim()}>
                 <Plus size={16} />
               </button>
             </div>
@@ -961,10 +1118,10 @@ export default function WorkOrders() {
                         <td style={{ textAlign: 'right', fontWeight: 600 }}>${part.subtotal.toFixed(2)}</td>
                         <td>
                           <div style={{ display: 'flex', gap: 2 }}>
-                            <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => startEditPart(part)}>
+                            <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => startEditPart(part)} disabled={!canEditOrder}>
                               <Pencil size={14} />
                             </button>
-                            <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => handleRemovePart(part.id, part.descripcion)}>
+                            <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => handleRemovePart(part.id, part.descripcion)} disabled={!canEditOrder}>
                               <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
                             </button>
                           </div>
@@ -1006,7 +1163,7 @@ export default function WorkOrders() {
                 value={newPartDraft.precio_venta_unitario}
                 onChange={(e) => setNewPartDraft({ ...newPartDraft, precio_venta_unitario: e.target.value })}
               />
-              <button type="button" className="btn btn-secondary" onClick={handleAddPart} disabled={detailBusy || !newPartDraft.descripcion.trim()}>
+              <button type="button" className="btn btn-secondary" onClick={handleAddPart} disabled={!canEditOrder || detailBusy || !newPartDraft.descripcion.trim()}>
                 <Plus size={16} />
               </button>
             </div>
@@ -1076,14 +1233,17 @@ export default function WorkOrders() {
                     {a.tipo_tarea === 'mecanica' ? t('workOrders.mechanical') : t('workOrders.painting')} · {a.estatus_tarea}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm btn-icon"
-                  onClick={() => handleRemoveAssignment(a.id, a.usuario?.nombre_completo || '')}
-                  style={{ marginLeft: 'var(--space-2)' }}
-                >
-                  <X size={14} style={{ color: 'var(--color-danger)' }} />
-                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm btn-icon"
+                    onClick={() => handleRemoveAssignment(a.id, a.usuario?.nombre_completo || '')}
+                    style={{ marginLeft: 'var(--space-2)' }}
+                    title={t('common.delete')}
+                  >
+                    <X size={14} style={{ color: 'var(--color-danger)' }} />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -1162,7 +1322,7 @@ export default function WorkOrders() {
                 type="button"
                 className="btn btn-primary btn-sm"
                 onClick={handleAddProgressUpdate}
-                disabled={detailBusy || !newProgressNote.trim()}
+                disabled={!canEditOrder || detailBusy || !newProgressNote.trim()}
               >
                 <Plus size={16} /> {detailBusy ? t('common.loading') : t('workOrders.addProgress')}
               </button>
@@ -1385,6 +1545,8 @@ export default function WorkOrders() {
               <div className="modal-body">
                 {error && <div className="alert-error">{error}</div>}
                 <input type="file" ref={fileInputRef} accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileChange} />
+                {/* No `capture` here: extras are often picked from the gallery. */}
+                <input type="file" ref={extraInputRef} accept="image/*" multiple style={{ display: 'none' }} onChange={handleExtraFilesChange} />
 
                 {/* Customer & Vehicle Select */}
                 <div className="form-row">
@@ -1601,8 +1763,9 @@ export default function WorkOrders() {
                 <div className="form-group" style={{ marginTop: 'var(--space-2)' }}>
                   <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{t('workOrders.inspection360')}</span>
-                    <span style={{ fontSize: 'var(--font-size-xs)', color: Object.keys(photos).length === ZONES.length ? 'var(--color-success)' : 'var(--color-text-tertiary)', fontWeight: 600 }}>
-                      {Object.keys(photos).length}/{ZONES.length}
+                    <span style={{ fontSize: 'var(--font-size-xs)', color: zonesCovered === ZONES.length ? 'var(--color-success)' : 'var(--color-text-tertiary)', fontWeight: 600 }}>
+                      {zonesCovered}/{ZONES.length}
+                      {extraPhotos.length > 0 && ` +${extraPhotos.length}`}
                     </span>
                   </label>
                   <div className="photo-zone-grid">
@@ -1644,6 +1807,40 @@ export default function WorkOrders() {
                         </div>
                       );
                     })}
+
+                    {extraPhotos.map((photo) => (
+                      <div key={photo.key} className="photo-zone filled">
+                        <img
+                          src={photo.preview}
+                          alt={photo.label}
+                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                        <button
+                          type="button"
+                          className="photo-zone-remove"
+                          onClick={(e) => removePhoto(photo.key, e)}
+                          aria-label={`${t('common.delete')} ${photo.label}`}
+                        >
+                          <X size={14} />
+                        </button>
+                        <span className="photo-zone-caption">
+                          <CheckCircle2 size={12} /> {photo.label}
+                        </span>
+                      </div>
+                    ))}
+
+                    <div
+                      className="photo-zone photo-zone-add"
+                      onClick={() => extraInputRef.current?.click()}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') extraInputRef.current?.click();
+                      }}
+                    >
+                      <ImagePlus size={24} className="photo-zone-icon" />
+                      <span className="photo-zone-label">{t('workOrders.addExtraPhoto')}</span>
+                    </div>
                   </div>
                   <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 'var(--space-2)' }}>
                     {t('workOrders.tapToCapture')}

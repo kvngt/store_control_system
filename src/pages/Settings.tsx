@@ -22,6 +22,8 @@ import {
   Trash2,
   Plus,
   X,
+  LogIn,
+  Check,
 } from 'lucide-react';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -246,6 +248,26 @@ export default function Settings() {
       setError(getErrorMessage(err, language));
     } finally {
       setSavingSedeId(null);
+    }
+  };
+
+  const [joiningSedeId, setJoiningSedeId] = useState<string | null>(null);
+
+  // Moves the signed-in admin's own membership to this sede. Joining one sede
+  // is the same action as leaving the previous one, because a profile can only
+  // belong to a single workshop.
+  const handleJoinSede = async (sede: Sede) => {
+    if (!user || user.sede_id === sede.id) return;
+    setJoiningSedeId(sede.id);
+    try {
+      await supabaseService.moveUserToSede(user.id, sede.id);
+      await refreshUser();
+      loadData();
+      showToast('success', `${t('settings.joinedSede')} ${sede.nombre}`);
+    } catch (err) {
+      showToast('error', t('settings.joinSedeError'), getErrorMessage(err, language));
+    } finally {
+      setJoiningSedeId(null);
     }
   };
 
@@ -577,6 +599,31 @@ export default function Settings() {
                         </div>
                       ))}
                     </div>
+
+                    {/* The admin's own membership: which roster they appear on. */}
+                    {user?.sede_id === sede.id ? (
+                      <div
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          marginTop: 'var(--space-3)', fontSize: 'var(--font-size-xs)',
+                          color: 'var(--color-success)', fontWeight: 600,
+                        }}
+                      >
+                        <Check size={14} /> {t('settings.mySede')}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{ marginTop: 'var(--space-3)' }}
+                        onClick={() => handleJoinSede(sede)}
+                        disabled={joiningSedeId === sede.id}
+                        title={t('settings.joinSedeHint')}
+                      >
+                        <LogIn size={14} />
+                        {joiningSedeId === sede.id ? t('common.loading') : t('settings.joinSede')}
+                      </button>
+                    )}
                   </div>
                 );
               })}

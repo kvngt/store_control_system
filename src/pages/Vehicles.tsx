@@ -1,12 +1,17 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import { supabaseService } from '../services/supabaseService';
 import { getErrorMessage } from '../lib/errors';
-import { Search, Plus, Edit3, Trash2, X } from 'lucide-react';
+import { Search, Plus, Edit3, Trash2, X, Wand2 } from 'lucide-react';
+import { VEHICLE_BRANDS, decodeVin } from '../lib/vin';
 import type { Vehicle, Customer } from '../types/database';
 
 export default function Vehicles() {
   const { t, language } = useLanguage();
+  const { user, currentSede } = useAuth();
+  // Strict isolation: only ever the active sede's vehicles and customers.
+  const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,6 +21,8 @@ export default function Vehicles() {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState<Vehicle | null>(null);
+  const [decodingVin, setDecodingVin] = useState(false);
+  const [vinMessage, setVinMessage] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [form, setForm] = useState({
     cliente_id: '', marca: '', modelo: '', anio: '', vin: '', placa: '', color: '',
   });
@@ -23,14 +30,14 @@ export default function Vehicles() {
   const loadData = useCallback(() => {
     setLoading(true);
     setError('');
-    Promise.all([supabaseService.getVehicles(), supabaseService.getCustomers()])
+    Promise.all([supabaseService.getVehicles(sedeId), supabaseService.getCustomers(sedeId)])
       .then(([v, c]) => {
         setVehicles(v);
         setCustomers(c);
       })
       .catch((err) => setError(getErrorMessage(err, language)))
       .finally(() => setLoading(false));
-  }, [language]);
+  }, [language, sedeId]);
 
   useEffect(() => {
     loadData();
@@ -63,6 +70,33 @@ export default function Vehicles() {
       color: v.color,
     });
     setShowModal(true);
+  };
+
+  // Asks the NHTSA vPIC database what this VIN is and fills in year/make/model.
+  const handleDecodeVin = async () => {
+    setVinMessage(null);
+    setDecodingVin(true);
+    try {
+      const decoded = await decodeVin(form.vin);
+      if (!decoded) {
+        setVinMessage({ kind: 'err', text: t('vehicles.vinNotFound') });
+        return;
+      }
+      setForm((prev) => ({
+        ...prev,
+        marca: decoded.marca || prev.marca,
+        modelo: decoded.modelo || prev.modelo,
+        anio: decoded.anio || prev.anio,
+      }));
+      setVinMessage({ kind: 'ok', text: decoded.detalle ? `${t('vehicles.vinDecoded')} — ${decoded.detalle}` : t('vehicles.vinDecoded') });
+    } catch (err) {
+      setVinMessage({
+        kind: 'err',
+        text: (err as Error).message === 'INVALID_LENGTH' ? t('vehicles.vinLength') : t('vehicles.vinError'),
+      });
+    } finally {
+      setDecodingVin(false);
+    }
   };
 
   const handleSave = async () => {
@@ -175,7 +209,18 @@ export default function Vehicles() {
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">{t('vehicles.brand')}</label>
-                  <input className="form-input" placeholder="Toyota, Honda, Ford..." value={form.marca} onChange={(e) => setForm({ ...form, marca: e.target.value })} />
+                  <input
+                    className="form-input"
+                    list="vehicle-brands"
+                    placeholder="Toyota, Honda, Ford..."
+                    value={form.marca}
+                    onChange={(e) => setForm({ ...form, marca: e.target.value })}
+                  />
+                  <datalist id="vehicle-brands">
+                    {VEHICLE_BRANDS.map((b) => (
+                      <option key={b} value={b} />
+                    ))}
+                  </datalist>
                 </div>
                 <div className="form-group">
                   <label className="form-label">{t('vehicles.model')}</label>
@@ -195,7 +240,34 @@ export default function Vehicles() {
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">{t('vehicles.vin')}</label>
-                  <input className="form-input" placeholder="17 caracteres" maxLength={17} value={form.vin} onChange={(e) => setForm({ ...form, vin: e.target.value })} />
+                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    <input
+                      className="form-input"
+                      placeholder="17 caracteres"
+                      maxLength={17}
+                      value={form.vin}
+                      onChange={(e) => { setForm({ ...form, vin: e.target.value.toUpperCase() }); setVinMessage(null); }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={handleDecodeVin}
+                      disabled={decodingVin || form.vin.trim().length !== 17}
+                      title={t('vehicles.decodeVin')}
+                      style={{ flexShrink: 0 }}
+                    >
+                      <Wand2 size={16} /> {decodingVin ? t('common.loading') : t('vehicles.decodeVin')}
+                    </button>
+                  </div>
+                  {vinMessage && (
+                    <p style={{
+                      marginTop: 4,
+                      fontSize: 'var(--font-size-xs)',
+                      color: vinMessage.kind === 'ok' ? 'var(--color-success)' : 'var(--color-danger)',
+                    }}>
+                      {vinMessage.text}
+                    </p>
+                  )}
                 </div>
                 <div className="form-group">
                   <label className="form-label">{t('vehicles.plate')}</label>

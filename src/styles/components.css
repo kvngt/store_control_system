@@ -31,6 +31,32 @@
   min-height: var(--header-height);
 }
 
+.sidebar-logo {
+  text-decoration: none;
+  color: inherit;
+}
+
+.sidebar-sede-switcher {
+  display: none; /* .mobile-only turns it on under 768px */
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-surface-border);
+  color: var(--color-text-tertiary);
+}
+
+@media (max-width: 768px) {
+  .sidebar-sede-switcher.mobile-only {
+    display: flex;
+  }
+}
+
+.sidebar-sede-switcher select {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+}
+
 .sidebar-logo img {
   width: 36px;
   height: 36px;
@@ -1563,6 +1589,23 @@
   animation: fadeIn 0.3s ease-out;
 }
 
+.alert-info {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-info-bg);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: var(--radius-md);
+  color: var(--color-info);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-4);
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* A Kanban card the current user isn't allowed to move. */
+.kanban-card-locked {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
 .spinner {
   width: 32px;
   height: 32px;
@@ -2176,3 +2219,49 @@
   font-weight: var(--font-weight-medium);
 }
 
+
+/* ===== Extra intake photos & customer signature ===== */
+.photo-zone-add {
+  border-style: dashed;
+  cursor: pointer;
+}
+
+.signature-wrap {
+  width: 100%;
+  border: 1px dashed var(--color-surface-border);
+  border-radius: var(--radius-md);
+  /* The pad is always drawn on white: a signature has to read as ink on paper
+     in both themes, and it's re-printed on a white PDF page. */
+  background: #ffffff;
+  overflow: hidden;
+  line-height: 0;
+  /* Stops the browser from panning/zooming the page while the finger draws. */
+  touch-action: none;
+}
+
+.signature-canvas {
+  display: block;
+  touch-action: none;
+}
+
+.signature-preview {
+  max-width: 260px;
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+}
+
+/* Bulk categorisation bar in the bank-statement import review */
+.import-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  background: var(--color-warning-bg, var(--color-bg-tertiary));
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+}

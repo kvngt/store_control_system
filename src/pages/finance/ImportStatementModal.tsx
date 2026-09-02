@@ -33,6 +33,7 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
   const [error, setError] = useState('');
   const [warnings, setWarnings] = useState<string[]>([]);
   const [successCount, setSuccessCount] = useState<number | null>(null);
+  const [bulkCategory, setBulkCategory] = useState<TransactionCategory | ''>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -79,6 +80,22 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
   };
 
   const selectedRows = rows.filter((r) => r.incluir);
+  const allSelected = rows.length > 0 && rows.every((r) => r.incluir);
+  const someSelected = rows.some((r) => r.incluir);
+  const toggleAll = (checked: boolean) =>
+    setRows((prev) => prev.map((r) => ({ ...r, incluir: checked })));
+
+  // Plain "Check" lines carry no payee at all, so no keyword rule can ever
+  // classify them — on a real statement that's ~60 rows the reviewer would
+  // otherwise have to set one dropdown at a time before importing anything.
+  const uncategorized = rows.filter((r) => r.incluir && !r.categoria);
+  const applyBulkCategory = () => {
+    if (!bulkCategory) return;
+    setRows((prev) =>
+      prev.map((r) => (r.incluir && !r.categoria ? { ...r, categoria: bulkCategory } : r))
+    );
+    setBulkCategory('');
+  };
   const hasUnresolvedSelection = selectedRows.some((r) => !r.categoria);
   const totalIngresos = selectedRows.filter((r) => r.tipo === 'ingreso').reduce((s, r) => s + r.monto, 0);
   const totalEgresos = selectedRows.filter((r) => r.tipo === 'egreso').reduce((s, r) => s + r.monto, 0);
@@ -104,6 +121,7 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
           monto: r.monto,
           descripcion: `Importado: ${r.descripcion}`,
           fecha: r.fecha,
+          numero_cheque: r.numero_cheque?.trim() || null,
           registrado_por: user.id,
           importacion_id: batch.id,
         }))
@@ -173,12 +191,53 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
                   <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-2)' }}>
                     {t('finance.reviewImport')}
                   </p>
+
+                  {uncategorized.length > 0 && (
+                    <div className="import-bulk-bar">
+                      <AlertTriangle size={14} style={{ color: 'var(--color-warning)', flexShrink: 0 }} />
+                      <span style={{ fontSize: 'var(--font-size-sm)' }}>
+                        <strong>{uncategorized.length}</strong> {t('finance.uncategorizedCount')}
+                      </span>
+                      <select
+                        className="form-input form-select"
+                        style={{ minWidth: 170 }}
+                        value={bulkCategory}
+                        onChange={(e) => setBulkCategory(e.target.value as TransactionCategory)}
+                      >
+                        <option value="">{t('finance.selectCategory')}</option>
+                        {(Object.keys(CATEGORY_KEYS) as TransactionCategory[]).map((cat) => (
+                          <option key={cat} value={cat}>{t(CATEGORY_KEYS[cat])}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={applyBulkCategory}
+                        disabled={!bulkCategory}
+                      >
+                        {t('finance.applyToUncategorized')}
+                      </button>
+                    </div>
+                  )}
                   <div className="table-container" style={{ maxHeight: 420, overflowY: 'auto' }}>
                     <table className="table">
                       <thead>
                         <tr>
-                          <th style={{ width: 36 }}>{t('finance.includeColumn')}</th>
+                          <th style={{ width: 36 }}>
+                            <input
+                              type="checkbox"
+                              checked={allSelected}
+                              // Indeterminate can only be set imperatively, not via an attribute.
+                              ref={(el) => {
+                                if (el) el.indeterminate = someSelected && !allSelected;
+                              }}
+                              onChange={(e) => toggleAll(e.target.checked)}
+                              title={t('finance.selectAll')}
+                              aria-label={t('finance.selectAll')}
+                            />
+                          </th>
                           <th>{t('common.date')}</th>
+                          <th style={{ width: 110 }}>{t('finance.checkNumber')}</th>
                           <th>{t('common.description')}</th>
                           <th style={{ textAlign: 'right' }}>{t('common.amount')}</th>
                           <th>{t('common.category')}</th>
@@ -195,6 +254,17 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
                               />
                             </td>
                             <td style={{ whiteSpace: 'nowrap', fontSize: 'var(--font-size-sm)' }}>{row.fecha}</td>
+                            <td>
+                              <input
+                                className="form-input"
+                                style={{ width: 90, padding: '4px 8px', fontSize: 'var(--font-size-sm)' }}
+                                value={row.numero_cheque || ''}
+                                placeholder="—"
+                                inputMode="numeric"
+                                onChange={(e) => updateRow(row.rowId, { numero_cheque: e.target.value })}
+                                disabled={!row.incluir}
+                              />
+                            </td>
                             <td style={{ fontSize: 'var(--font-size-sm)' }}>
                               {row.descripcion}
                               {row.posibleDuplicado && (

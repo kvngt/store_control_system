@@ -69,6 +69,8 @@ export interface Customer {
 export interface Vehicle {
   id: string;
   cliente_id: string;
+  /** Derived from the owning customer by a DB trigger; never sent by the app. */
+  sede_id?: string;
   marca: string;
   modelo: string;
   anio: number;
@@ -96,6 +98,8 @@ export interface WorkOrder {
   fecha_ingreso: string;
   fecha_estimada_entrega: string;
   fecha_finalizacion?: string;
+  firma_cliente_url?: string | null;
+  firma_fecha?: string | null;
   porcentaje_avance: number;
   total_labor: number;
   total_repuestos: number;
@@ -169,6 +173,7 @@ export interface FinancialTransaction {
   monto: number;
   descripcion: string;
   fecha: string;
+  numero_cheque?: string | null;
   registrado_por?: string;
   creado_en: string;
 }
@@ -190,6 +195,8 @@ export interface CategorizationRule {
   patron: string;
   categoria: TransactionCategory;
   activo: boolean;
+  /** Higher wins when several patterns match; ties go to the longer one. */
+  prioridad?: number;
 }
 
 // A transaction line as reconstructed from the PDF, before it's reviewed and

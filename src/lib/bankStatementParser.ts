@@ -144,7 +144,13 @@ export function extractPendingTransactionsFromLines(
       const [, monthStr, dayStr] = dateMatch;
       let checkNumber: string | undefined;
       let descStart = 0;
-      if (descTokens[0] && (CHECK_NUMBER_RE.test(descTokens[0]) || descTokens[0] === '<')) {
+      if (descTokens[0] === '<') {
+        // Footnote marker in the Check Number column (Wells Fargo flags
+        // business-to-business ACH debits with it). Drop it from the
+        // description, but it is NOT a check number — storing it put a literal
+        // "<" in numero_cheque on a real statement.
+        descStart = 1;
+      } else if (descTokens[0] && CHECK_NUMBER_RE.test(descTokens[0])) {
         checkNumber = descTokens[0];
         descStart = 1;
       }

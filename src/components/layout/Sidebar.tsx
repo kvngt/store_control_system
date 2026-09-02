@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { useUnsavedChanges } from '../../context/UnsavedChangesContext';
@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Wrench,
+  Building2,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -26,7 +27,7 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
   const { t } = useLanguage();
-  const { user, logout, currentSede } = useAuth();
+  const { user, logout, currentSede, allSedes, setCurrentSede } = useAuth();
   const { confirmNavigation } = useUnsavedChanges();
   const location = useLocation();
 
@@ -73,7 +74,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
       />
 
       <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
-        <div className="sidebar-logo">
+        <Link to="/" className="sidebar-logo" onClick={handleNavClick} title={t('nav.dashboard')}>
           {currentSede?.logo_url ? (
             <img
               src={currentSede.logo_url}
@@ -97,7 +98,29 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
             </div>
           )}
           <span className="logo-text">{currentSede?.nombre || 'RESTORIFY'}</span>
-        </div>
+        </Link>
+
+        {/* Sede switcher for admins on mobile: the header version is hidden on
+            small screens, and an admin still has to be able to change workshop
+            from their phone. */}
+        {isAdmin && allSedes.length > 1 && (
+          <div className="sidebar-sede-switcher mobile-only">
+            <Building2 size={14} />
+            <select
+              className="form-input form-select"
+              value={currentSede?.id || ''}
+              onChange={(e) => {
+                const sede = allSedes.find((sd) => sd.id === e.target.value);
+                if (sede) setCurrentSede(sede);
+              }}
+              aria-label={t('settings.workshops')}
+            >
+              {allSedes.map((sede) => (
+                <option key={sede.id} value={sede.id}>{sede.nombre}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <nav className="sidebar-nav">
           <div className="sidebar-section-label">MENU</div>

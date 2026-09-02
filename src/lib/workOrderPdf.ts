@@ -1,10 +1,15 @@
 import { jsPDF } from 'jspdf';
-import type { WorkOrder } from '../types/database';
+import type { Sede, WorkOrder } from '../types/database';
 
 const MARGIN = 15;
 const LINE = 6;
 const BRAND: [number, number, number] = [212, 160, 23]; // --color-primary
 const MUTED: [number, number, number] = [110, 110, 130];
+
+// Keeps the minus sign in front of the currency symbol: "-$100.00", not
+// "$-100.00", which is how the shop's paperwork reads.
+const money = (value: number) =>
+  `${value < 0 ? '-' : ''}$${Math.abs(value).toFixed(2)}`;
 
 const STATUS_LABELS: Record<string, string> = {
   recepcion: 'Recepción',
@@ -48,7 +53,35 @@ async function toDataUrl(url: string): Promise<string | null> {
   }
 }
 
-export async function generateWorkOrderPdf(order: WorkOrder) {
+// Logos and signatures are small and often transparent, so they keep their
+// alpha channel as PNG instead of going through the JPEG path above (which
+// would flatten transparency to black). Returns the aspect ratio too, so the
+// caller can place them without distorting.
+async function toPngDataUrl(url: string, maxPx = 400) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const bitmap = await createImageBitmap(await res.blob());
+
+    const scale = Math.min(1, maxPx / Math.max(bitmap.width, bitmap.height));
+    const width = Math.round(bitmap.width * scale);
+    const height = Math.round(bitmap.height * scale);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+
+    return { dataUrl: canvas.toDataURL('image/png'), ratio: width / height };
+  } catch {
+    return null;
+  }
+}
+
+export async function generateWorkOrderPdf(order: WorkOrder, sede?: Sede | null) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -87,10 +120,34 @@ export async function generateWorkOrderPdf(order: WorkOrder) {
   };
 
   // ===== Header =====
+  // The workshop's own logo and name lead the report: the client receiving it
+  // should see their shop, not the platform.
+  let headerX = MARGIN;
+  if (sede?.logo_url) {
+    const logo = await toPngDataUrl(sede.logo_url, 300);
+    if (logo) {
+      const logoH = 14;
+      const logoW = Math.min(40, logoH * logo.ratio);
+      try {
+        doc.addImage(logo.dataUrl, 'PNG', MARGIN, y - 3, logoW, logoH);
+        headerX = MARGIN + logoW + 4;
+      } catch {
+        // Unsupported image — fall back to the text-only header.
+      }
+    }
+  }
+
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...BRAND);
-  doc.text('RESTORIFY', MARGIN, y + 2);
+  doc.text(sede?.nombre || 'RESTORIFY', headerX, y + 2);
+
+  if (sede?.direccion || sede?.telefono) {
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...MUTED);
+    doc.text([sede.direccion, sede.telefono].filter(Boolean).join('  ·  '), headerX, y + 7);
+  }
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -101,7 +158,7 @@ export async function generateWorkOrderPdf(order: WorkOrder) {
     y + 2,
     { align: 'right' }
   );
-  y += 10;
+  y += sede?.direccion || sede?.telefono ? 14 : 10;
 
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
@@ -146,13 +203,13 @@ export async function generateWorkOrderPdf(order: WorkOrder) {
       doc.setTextColor(20, 20, 30);
       const lines = doc.splitTextToSize(item.descripcion, contentWidth - 30);
       doc.text(lines, MARGIN, y);
-      doc.text(`$${Number(item.costo).toFixed(2)}`, pageWidth - MARGIN, y, { align: 'right' });
+      doc.text(money(Number(item.costo)), pageWidth - MARGIN, y, { align: 'right' });
       y += LINE * lines.length;
     });
     ensureSpace(LINE);
     doc.setFont('helvetica', 'bold');
     doc.text('Total mano de obra', MARGIN, y);
-    doc.text(`$${Number(order.total_labor).toFixed(2)}`, pageWidth - MARGIN, y, { align: 'right' });
+    doc.text(money(Number(order.total_labor)), pageWidth - MARGIN, y, { align: 'right' });
     y += LINE;
   }
 
@@ -167,13 +224,13 @@ export async function generateWorkOrderPdf(order: WorkOrder) {
       doc.setTextColor(20, 20, 30);
       const lines = doc.splitTextToSize(`${part.descripcion}  (x${part.cantidad})`, contentWidth - 30);
       doc.text(lines, MARGIN, y);
-      doc.text(`$${Number(part.subtotal).toFixed(2)}`, pageWidth - MARGIN, y, { align: 'right' });
+      doc.text(money(Number(part.subtotal)), pageWidth - MARGIN, y, { align: 'right' });
       y += LINE * lines.length;
     });
     ensureSpace(LINE);
     doc.setFont('helvetica', 'bold');
     doc.text('Total repuestos', MARGIN, y);
-    doc.text(`$${Number(order.total_repuestos).toFixed(2)}`, pageWidth - MARGIN, y, { align: 'right' });
+    doc.text(money(Number(order.total_repuestos)), pageWidth - MARGIN, y, { align: 'right' });
     y += LINE;
   }
 
@@ -182,9 +239,10 @@ export async function generateWorkOrderPdf(order: WorkOrder) {
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(20, 20, 30);
+  const balance = Number(order.total_general) - Number(order.deposito_inicial);
   const rows: [string, string][] = [
-    ['Subtotal', `$${(Number(order.total_labor) + Number(order.total_repuestos)).toFixed(2)}`],
-    ['Depósito recibido', `-$${Number(order.deposito_inicial).toFixed(2)}`],
+    ['Subtotal', money(Number(order.total_labor) + Number(order.total_repuestos))],
+    ['Depósito recibido', `-${money(Number(order.deposito_inicial))}`],
   ];
   rows.forEach(([k, v]) => {
     ensureSpace(LINE);
@@ -195,13 +253,10 @@ export async function generateWorkOrderPdf(order: WorkOrder) {
   ensureSpace(LINE + 2);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  doc.text('Saldo pendiente', MARGIN, y);
-  doc.text(
-    `$${(Number(order.total_general) - Number(order.deposito_inicial)).toFixed(2)}`,
-    pageWidth - MARGIN,
-    y,
-    { align: 'right' }
-  );
+  // A deposit larger than the job total isn't an error — it's money the shop
+  // owes back, and the report should say so rather than print a negative debt.
+  doc.text(balance < 0 ? 'Saldo a favor del cliente' : 'Saldo pendiente', MARGIN, y);
+  doc.text(money(Math.abs(balance)), pageWidth - MARGIN, y, { align: 'right' });
   y += LINE + 2;
 
   // ===== Technicians =====
@@ -276,7 +331,7 @@ export async function generateWorkOrderPdf(order: WorkOrder) {
   }
 
   // ===== Intake photos =====
-  const intakePhotos = (order.inspeccion_360_fotos || []).filter(Boolean).slice(0, 6) as string[];
+  const intakePhotos = (order.inspeccion_360_fotos || []).filter(Boolean).slice(0, 12) as string[];
   if (intakePhotos.length) {
     sectionTitle('Fotos de Recepción');
     const imgW = 55;
@@ -300,6 +355,39 @@ export async function generateWorkOrderPdf(order: WorkOrder) {
       x += imgW + 4;
     }
     y += imgH + 4;
+  }
+
+  // ===== Customer signature =====
+  if (order.firma_cliente_url) {
+    const firma = await toPngDataUrl(order.firma_cliente_url, 600);
+    if (firma) {
+      const sigH = 22;
+      const sigW = Math.min(70, sigH * firma.ratio);
+      // Reserve the whole block (title + rule + image + name line) up front so
+      // the heading never lands alone at the bottom of a page.
+      ensureSpace(sigH + 34);
+      sectionTitle('Conformidad del Cliente');
+      try {
+        doc.addImage(firma.dataUrl, 'PNG', MARGIN, y, sigW, sigH);
+      } catch {
+        // ignore unsupported image
+      }
+      y += sigH + 1;
+      doc.setDrawColor(...MUTED);
+      doc.setLineWidth(0.2);
+      doc.line(MARGIN, y, MARGIN + 70, y);
+      y += 4;
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...MUTED);
+      doc.text(order.cliente?.nombre || 'Cliente', MARGIN, y);
+      if (order.firma_fecha) {
+        doc.text(`Firmado: ${new Date(order.firma_fecha).toLocaleDateString('es')}`, MARGIN + 70, y, {
+          align: 'right',
+        });
+      }
+      y += LINE;
+    }
   }
 
   doc.save(`${order.numero_orden}.pdf`);
