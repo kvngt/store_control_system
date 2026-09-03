@@ -21,6 +21,7 @@ import {
   Download,
   FileUp,
   X,
+  Trash2,
 } from 'lucide-react';
 
 export default function Finance() {
@@ -119,6 +120,17 @@ export default function Finance() {
       showToast('error', t('finance.importRevertError'), getErrorMessage(err, language));
     } finally {
       setRevertingId(null);
+    }
+  };
+
+  const handleDeleteTransaction = async (txn: FinancialTransaction) => {
+    if (!confirm(`${t('common.deleteConfirm') || '¿Eliminar transacción de'} $${txn.monto}?`)) return;
+    try {
+      await supabaseService.deleteTransaction(txn.id);
+      showToast('success', t('finance.transactionDeleted') || 'Transacción eliminada');
+      loadData();
+    } catch (err) {
+      showToast('error', getErrorMessage(err, language));
     }
   };
 
@@ -326,6 +338,7 @@ export default function Finance() {
               <th>{t('common.description')}</th>
               <th>{t('finance.linkedOrder')}</th>
               <th style={{ textAlign: 'right' }}>{t('common.amount')}</th>
+              {user?.rol === 'admin' && <th style={{ textAlign: 'center', width: 60 }}>{t('common.actions')}</th>}
             </tr>
           </thead>
           <tbody>
@@ -366,6 +379,18 @@ export default function Finance() {
                 }}>
                   {txn.tipo === 'ingreso' ? '+' : '-'}${Number(txn.monto).toLocaleString()}
                 </td>
+                {user?.rol === 'admin' && (
+                  <td data-label={t('common.actions')} style={{ textAlign: 'center' }}>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm btn-icon"
+                      onClick={() => handleDeleteTransaction(txn)}
+                      title={t('common.delete')}
+                    >
+                      <Trash2 size={16} style={{ color: 'var(--color-danger)' }} />
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

@@ -789,7 +789,7 @@ export default function WorkOrders() {
               {viewOrder.numero_orden}
               <span className={`badge badge-${viewOrder.estatus}`}>{statusLabels[viewOrder.estatus]}</span>
               <span className={`badge badge-${viewOrder.tipo_trabajo}`}>{viewOrder.tipo_trabajo}</span>
-              {user?.rol === 'admin' && (
+              {canEditOrder && (
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
@@ -1056,7 +1056,7 @@ export default function WorkOrders() {
                     )
                   )}
                   <tr>
-                    <td style={{ fontWeight: 700 }}>Total Labor</td>
+                    <td style={{ fontWeight: 700 }}>{t('workOrders.totalLabor')}</td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-light)' }}>
                       ${totalLabor.toFixed(2)}
                     </td>
@@ -1294,9 +1294,9 @@ export default function WorkOrders() {
                 </div>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>{a.usuario?.nombre_completo}</div>
-                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
-                    {a.tipo_tarea === 'mecanica' ? t('workOrders.mechanical') : t('workOrders.painting')} · {a.estatus_tarea}
-                  </div>
+                  <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
+                    {a.tipo_tarea === 'mecanica' ? t('workOrders.mechanical') : t('workOrders.painting')} · {t(`workOrders.status.${a.estatus_tarea}`)}
+                  </span>
                 </div>
                 {isAdmin && (
                   <button

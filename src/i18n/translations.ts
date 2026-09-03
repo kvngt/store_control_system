@@ -251,6 +251,12 @@ const translations: Record<Language, Translations> = {
       otherOrdersHint: 'Órdenes de tus compañeros en esta sede. Puedes consultarlas y unirte a una si necesitas ayudar.',
       milesNegative: 'Las millas de ingreso no pueden ser negativas.',
       unitCostHint: 'Lo que el taller pagó por la pieza. Se registra como egreso en Finanzas al entregar la orden.',
+      totalLabor: 'Total Mano de Obra',
+      status: {
+        pendiente: 'Pendiente',
+        en_curso: 'En curso',
+        completada: 'Completada'
+      },
     },
     // Kanban
     kanban: {
@@ -651,6 +657,12 @@ const translations: Record<Language, Translations> = {
       otherOrdersHint: "Your teammates' orders at this shop. You can review them and join one if you need to help out.",
       milesNegative: 'Intake mileage cannot be negative.',
       unitCostHint: 'What the shop paid for the part. Booked as an expense in Finance when the order is delivered.',
+      totalLabor: 'Total Labor',
+      status: {
+        pendiente: 'Pending',
+        en_curso: 'In Progress',
+        completada: 'Completed'
+      },
     },
     kanban: {
       title: 'Kanban Board',

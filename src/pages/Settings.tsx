@@ -147,6 +147,8 @@ export default function Settings() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [logoTargetSede, setLogoTargetSede] = useState<string | null>(null);
   const [creatingSede, setCreatingSede] = useState(false);
+  const [showSedeModal, setShowSedeModal] = useState(false);
+  const [newSedeName, setNewSedeName] = useState('');
 
   const seedBrandDrafts = (list: Sede[]) =>
     setBrandDrafts(
@@ -195,12 +197,11 @@ export default function Settings() {
   };
 
   const handleCreateSede = async () => {
-    const nombre = prompt(t('settings.newSedeName'));
-    if (!nombre?.trim()) return;
+    if (!newSedeName.trim()) return;
     setCreatingSede(true);
     try {
       await supabaseService.createSede({
-        nombre: nombre.trim(),
+        nombre: newSedeName.trim(),
         direccion: '',
         telefono: '',
         capacidad: 10,
@@ -210,6 +211,8 @@ export default function Settings() {
       await refreshSedes();
       loadData();
       showToast('success', t('settings.sedeCreated'));
+      setShowSedeModal(false);
+      setNewSedeName('');
     } catch (err) {
       showToast('error', t('settings.sedeError'), getErrorMessage(err, language));
     } finally {
@@ -462,7 +465,7 @@ export default function Settings() {
               <Building2 size={18} /> {t('settings.workshops')}
             </h3>
             <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-              <button className="btn btn-secondary btn-sm" onClick={handleCreateSede} disabled={creatingSede}>
+              <button className="btn btn-secondary btn-sm" onClick={() => { setShowSedeModal(true); setNewSedeName(''); }} disabled={creatingSede}>
                 <Plus size={16} /> {t('settings.newWorkshop')}
               </button>
               <button className="btn btn-primary btn-sm" onClick={openEmployeeModal}>
@@ -754,6 +757,32 @@ export default function Settings() {
               <button className="btn btn-secondary" onClick={() => setShowEmployeeModal(false)}>{t('common.cancel')}</button>
               <button className="btn btn-primary" onClick={handleCreateEmployee} disabled={savingEmployee}>
                 {savingEmployee ? t('common.loading') : t('common.create')}
+              </button>
+            </div>
+          </div>
+        </div>
+      {showSedeModal && (
+        <div className="modal-overlay" onClick={() => setShowSedeModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">{t('settings.newWorkshop')}</h3>
+              <button className="modal-close" onClick={() => setShowSedeModal(false)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">{t('settings.newSedeName')}</label>
+                <input
+                  className="form-input"
+                  value={newSedeName}
+                  onChange={(e) => setNewSedeName(e.target.value)}
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowSedeModal(false)}>{t('common.cancel')}</button>
+              <button className="btn btn-primary" onClick={handleCreateSede} disabled={creatingSede || !newSedeName.trim()}>
+                {creatingSede ? t('common.loading') : t('common.create')}
               </button>
             </div>
           </div>
