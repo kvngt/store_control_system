@@ -7,9 +7,15 @@ export const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL;
 export const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD;
 export const MECHANIC_EMAIL = process.env.E2E_MECHANIC_EMAIL;
 export const MECHANIC_PASSWORD = process.env.E2E_MECHANIC_PASSWORD;
+export const BRANCH_ADMIN_EMAIL = process.env.E2E_BRANCH_ADMIN_EMAIL;
+export const BRANCH_ADMIN_PASSWORD = process.env.E2E_BRANCH_ADMIN_PASSWORD;
+export const PAINTER_EMAIL = process.env.E2E_PAINTER_EMAIL;
+export const PAINTER_PASSWORD = process.env.E2E_PAINTER_PASSWORD;
 
 export const hasAdminCredentials = Boolean(ADMIN_EMAIL && ADMIN_PASSWORD);
 export const hasMechanicCredentials = Boolean(MECHANIC_EMAIL && MECHANIC_PASSWORD);
+export const hasBranchAdminCredentials = Boolean(BRANCH_ADMIN_EMAIL && BRANCH_ADMIN_PASSWORD);
+export const hasPainterCredentials = Boolean(PAINTER_EMAIL && PAINTER_PASSWORD);
 
 // Data created by a test run against the real Wells Fargo... er, real
 // Supabase project (there's no separate staging project yet) should always
@@ -23,4 +29,10 @@ export async function login(page: Page, email: string, password: string) {
   await page.fill('#login-password', password);
   await page.click('#login-submit');
   await page.waitForURL('/');
+}
+
+/** Waits for the dashboard to fully load (spinner gone, page title present). */
+export async function waitForDashboard(page: Page) {
+  await page.waitForSelector('.spinner', { state: 'detached', timeout: 15000 }).catch(() => {});
+  await page.waitForSelector('.page-title, .dashboard-title, h1', { timeout: 10000 });
 }

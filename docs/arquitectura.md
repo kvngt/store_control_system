@@ -428,8 +428,7 @@ la primera línea; `src/test/renderWithProviders.tsx` monta los proveedores
 verdaderos de idioma, tema, avisos y ruteo, y se simulan `AuthContext` y
 `supabaseService`.
 
-**End-to-end** (`e2e/`) — Playwright contra la aplicación levantada. Las que
-necesitan sesión se saltan solas si no hay credenciales en `.env.test.local`.
+**End-to-end** (`e2e/`) — Playwright contra la aplicación levantada. Contamos con una suite completa de QA de **65 casos de prueba** divididos en 6 archivos (`qa-auth`, `qa-rbac`, `qa-workorders`, `qa-customers-vehicles`, `qa-finance-payroll`, `qa-settings`). Cubren flujos completos, permisos por roles (admin vs mecánico) y validaciones de formularios. Las pruebas que necesitan sesión se saltan si no hay credenciales en `.env.test.local`.
 
 > Las pruebas de componente existen sobre todo por una clase de error que se
 > repitió cuatro veces: **diálogos que fallan en silencio**. Si agregas un

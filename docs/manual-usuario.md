@@ -378,6 +378,7 @@ firmar.
 
 **Reporte PDF.** Genera un documento con todos los datos de la orden, las fotos
 de inspección, el desglose de mano de obra y repuestos, los totales y la firma.
+*(Nota: Actualmente, por configuración de seguridad, **solo los administradores** pueden ver el botón y generar el reporte PDF. Los mecánicos y pintores deben solicitarlo a un administrador).*
 Es lo que se le entrega al cliente.
 
 ### Eliminar una orden
@@ -439,6 +440,8 @@ movimientos con filtros por tipo.
 
 En la tabla, la columna **Orden vinculada** muestra el número de la orden y
 lleva directo a su detalle.
+
+> **Nota importante sobre eliminación:** Actualmente no existe un botón en la interfaz para eliminar transacciones manuales creadas por error. Si necesitas borrar una transacción manual, debes contactar a soporte técnico o a un administrador con acceso directo a la base de datos.
 
 <!-- IMAGEN: modal de nueva transacción con el selector "Orden vinculada"
      desplegado -->
