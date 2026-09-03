@@ -38,7 +38,8 @@ export default function Customers() {
 
   const [form, setForm] = useState({ nombre: '', telefono: '', email: '', direccion: '', notas_crm: '' });
 
-  const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
+  const isAdmin = user?.rol === 'admin';
+  const sedeId = isAdmin ? currentSede?.id : user?.sede_id;
 
   const loadCustomers = useCallback(() => {
     setLoading(true);
@@ -124,13 +125,20 @@ export default function Customers() {
     }
   };
 
+  // Admin-only: removing a customer cascades to every vehicle they own, so a
+  // single click can erase years of history. The `clientes_delete` RLS policy
+  // is what enforces it; this check keeps the UI from promising otherwise.
   const handleDelete = async (customer: Customer) => {
+    if (!isAdmin) {
+      setError(t('common.adminOnly'));
+      return;
+    }
     if (!confirm(`${t('common.delete')}: ${customer.nombre}?`)) return;
     try {
       await supabaseService.deleteCustomer(customer.id);
       loadCustomers();
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err, language));
     }
   };
 
@@ -376,9 +384,11 @@ export default function Customers() {
                       <button className="btn btn-ghost btn-sm btn-icon" title={t('common.edit')} onClick={() => openEditModal(customer)}>
                         <Edit3 size={16} />
                       </button>
-                      <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={() => handleDelete(customer)}>
-                        <Trash2 size={16} />
-                      </button>
+                      {isAdmin && (
+                        <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={() => handleDelete(customer)}>
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

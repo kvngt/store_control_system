@@ -221,6 +221,7 @@ export async function parseWellsFargoStatement(file: File): Promise<ParsedStatem
   const pendingTxs: PendingTx[] = [];
   let statementYear: number | null = null;
   let sawTransactionSection = false;
+  let sawAnyText = false;
 
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
@@ -232,6 +233,7 @@ export async function parseWellsFargoStatement(file: File): Promise<ParsedStatem
       .map((i: any) => ({ str: (i.str as string).trim(), x: i.transform[4], y: i.transform[5] }));
 
     if (items.length === 0) continue;
+    sawAnyText = true;
     const lines = groupIntoLines(items);
     const pageText = lines.map((l) => l.text).join('\n');
 
@@ -261,7 +263,15 @@ export async function parseWellsFargoStatement(file: File): Promise<ParsedStatem
     pendingTxs.push(...extractPendingTransactionsFromLines(lines, depositX, withdrawalX, balanceX));
   }
 
-  if (!sawTransactionSection) {
+  if (!sawAnyText) {
+    // A scan or a photo saved as PDF has no text layer at all, so there is
+    // nothing to parse. Saying "wrong bank" here sent people looking for the
+    // wrong problem — the fix is to download the statement from the bank's
+    // site rather than scan the paper copy.
+    warnings.push(
+      'Este PDF no contiene texto — parece un escaneo o una foto. Descarga el estado de cuenta directamente del banco en lugar de escanear el papel.'
+    );
+  } else if (!sawTransactionSection) {
     warnings.push('No se encontró una sección "Transaction History" en el PDF — ¿es un estado de cuenta de Wells Fargo?');
   }
 

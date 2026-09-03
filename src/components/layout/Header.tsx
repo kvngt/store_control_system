@@ -25,7 +25,9 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
   const { user, currentSede, allSedes, setCurrentSede } = useAuth();
   const navigate = useNavigate();
   const { confirmNavigation } = useUnsavedChanges();
-  const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
+  const isAdmin = user?.rol === 'admin';
+  const sedeId = isAdmin ? currentSede?.id : user?.sede_id;
+  const userId = user?.id;
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResults>(EMPTY_RESULTS);
@@ -61,18 +63,25 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
     return () => clearTimeout(handle);
   }, [query, sedeId]);
 
-  // Notifications: orders that need attention (waiting on parts or stalled)
+  // Notifications: orders that need attention (waiting on parts or stalled).
+  // A mechanic/painter is only alerted about orders they are actually assigned
+  // to — the rest of the sede's board is someone else's problem, and burying
+  // their own two alerts under twenty of their colleagues' makes the bell
+  // useless. Admins keep the whole-sede view, which is their job.
   const loadAttention = useCallback(() => {
     supabaseService
       .getWorkOrders(sedeId)
       .then((orders) => {
-        const flagged = orders.filter(
+        const mine = isAdmin
+          ? orders
+          : orders.filter((o) => (o.asignaciones || []).some((a) => a.usuario_id === userId));
+        const flagged = mine.filter(
           (o) => o.estatus === 'espera_repuestos' || (o.estatus === 'en_proceso' && o.porcentaje_avance < 20)
         );
         setAttentionOrders(flagged.slice(0, 8));
       })
       .catch(() => {});
-  }, [sedeId]);
+  }, [sedeId, isAdmin, userId]);
 
   useEffect(() => {
     loadAttention();

@@ -26,6 +26,7 @@ import {
   CheckCircle2,
   Trash2,
   ChevronRight,
+  ChevronDown,
   Pencil,
   Check,
   FileDown,
@@ -51,7 +52,11 @@ const ZONES: { key: string; label: string }[] = [
 ];
 
 interface LaborRow { descripcion: string; costo: string }
-interface PartRow { descripcion: string; cantidad: string; precio_venta_unitario: string }
+// `costo_unitario` is what the shop paid for the part; `precio_venta_unitario`
+// is what the customer is charged. The first one is what lands in Finanzas as
+// an expense when the order is delivered, so leaving it blank silently
+// overstates the shop's profit.
+interface PartRow { descripcion: string; cantidad: string; costo_unitario: string; precio_venta_unitario: string }
 
 export default function WorkOrders() {
   const { t, language } = useLanguage();
@@ -72,17 +77,18 @@ export default function WorkOrders() {
 
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [showOtherOrders, setShowOtherOrders] = useState(false);
   const [viewOrder, setViewOrder] = useState<WorkOrder | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [newLaborDraft, setNewLaborDraft] = useState({ descripcion: '', costo: '' });
-  const [newPartDraft, setNewPartDraft] = useState({ descripcion: '', cantidad: '1', precio_venta_unitario: '' });
+  const [newPartDraft, setNewPartDraft] = useState({ descripcion: '', cantidad: '1', costo_unitario: '', precio_venta_unitario: '' });
   const [addingOperatorId, setAddingOperatorId] = useState('');
   const [detailBusy, setDetailBusy] = useState(false);
   const [editingLaborId, setEditingLaborId] = useState<string | null>(null);
   const [editLaborDraft, setEditLaborDraft] = useState({ descripcion: '', costo: '' });
   const [editingPartId, setEditingPartId] = useState<string | null>(null);
-  const [editPartDraft, setEditPartDraft] = useState({ descripcion: '', cantidad: '', precio_venta_unitario: '' });
+  const [editPartDraft, setEditPartDraft] = useState({ descripcion: '', cantidad: '', costo_unitario: '', precio_venta_unitario: '' });
   const [progressDraft, setProgressDraft] = useState<string>('0');
   const [newProgressNote, setNewProgressNote] = useState('');
   const [newProgressPhotos, setNewProgressPhotos] = useState<File[]>([]);
@@ -102,6 +108,7 @@ export default function WorkOrders() {
   const [workType, setWorkType] = useState<'mecanica' | 'pintura' | 'combinado'>('mecanica');
   const [fuelLevel, setFuelLevel] = useState('1/2');
   const [milesIn, setMilesIn] = useState('');
+  const [milesError, setMilesError] = useState('');
   const [deposit, setDeposit] = useState('0');
   const [estimatedDate, setEstimatedDate] = useState('');
   const [inspectionNotes, setInspectionNotes] = useState('');
@@ -157,6 +164,13 @@ export default function WorkOrders() {
     return matchSearch && matchStatus;
   });
 
+  // A mechanic/painter opens this screen to work, not to browse: their own
+  // orders come first, and the rest of the sede's board is a second section
+  // they can expand when they need it. Admins keep the single combined list.
+  const isMine = (order: WorkOrder) => (order.asignaciones || []).some((a) => a.usuario_id === user?.id);
+  const myOrders = filtered.filter(isMine);
+  const otherOrders = filtered.filter((o) => !isMine(o));
+
   const vehiclesForCustomer = vehicles.filter((v) => v.cliente_id === selectedCustomer);
 
   const handleSelectCustomer = (value: string) => {
@@ -178,6 +192,20 @@ export default function WorkOrders() {
     } else {
       setSelectedVehicle(value);
     }
+  };
+
+  // An odometer never runs backwards, so the field only accepts digits: a typed
+  // or pasted minus sign is dropped rather than silently rounded to 0 later.
+  // `min={0}` alone wouldn't do it — the browser still lets "-5" be typed and
+  // only complains at submit time. The DB carries the same rule as a CHECK
+  // constraint, so a direct API call can't get around the form either.
+  const handleMilesChange = (raw: string) => {
+    const isNegative = raw.trim().startsWith('-');
+    // millas_ingreso is an INTEGER column, so decimals are truncated rather
+    // than having their point stripped (which would turn 12.5 into 125).
+    const cleaned = raw.replace(/[^0-9.]/g, '').split('.')[0];
+    setMilesError(isNegative ? t('workOrders.milesNegative') : '');
+    setMilesIn(cleaned);
   };
 
   const handleZoneClick = (zoneKey: string) => {
@@ -225,6 +253,7 @@ export default function WorkOrders() {
     setWorkType('mecanica');
     setFuelLevel('1/2');
     setMilesIn('');
+    setMilesError('');
     setDeposit('0');
     setEstimatedDate('');
     setInspectionNotes('');
@@ -354,7 +383,7 @@ export default function WorkOrders() {
         cliente_id: customerId,
         vehiculo_id: vehicleId,
         tipo_trabajo: workType,
-        millas_ingreso: parseInt(milesIn, 10) || 0,
+        millas_ingreso: Math.max(0, parseInt(milesIn, 10) || 0),
         nivel_gasolina: fuelLevel,
         deposito_inicial: parseFloat(deposit) || 0,
         inspeccion_360_notas: inspectionNotes,
@@ -367,6 +396,7 @@ export default function WorkOrders() {
           .map((p) => ({
             descripcion: p.descripcion,
             cantidad: parseInt(p.cantidad, 10) || 1,
+            costo_unitario: parseFloat(p.costo_unitario) || 0,
             precio_venta_unitario: parseFloat(p.precio_venta_unitario) || 0,
           })),
         asignaciones,
@@ -531,9 +561,10 @@ export default function WorkOrders() {
       await supabaseService.addPart(viewOrder.id, {
         descripcion: newPartDraft.descripcion,
         cantidad: parseInt(newPartDraft.cantidad, 10) || 1,
+        costo_unitario: parseFloat(newPartDraft.costo_unitario) || 0,
         precio_venta_unitario: parseFloat(newPartDraft.precio_venta_unitario) || 0,
       });
-      setNewPartDraft({ descripcion: '', cantidad: '1', precio_venta_unitario: '' });
+      setNewPartDraft({ descripcion: '', cantidad: '1', costo_unitario: '', precio_venta_unitario: '' });
       await openDetail(viewOrder.id);
       loadOrders();
     } catch (err) {
@@ -555,11 +586,12 @@ export default function WorkOrders() {
     }
   };
 
-  const startEditPart = (part: { id: string; descripcion: string; cantidad: number; precio_venta_unitario: number }) => {
+  const startEditPart = (part: { id: string; descripcion: string; cantidad: number; costo_unitario: number; precio_venta_unitario: number }) => {
     setEditingPartId(part.id);
     setEditPartDraft({
       descripcion: part.descripcion,
       cantidad: String(part.cantidad),
+      costo_unitario: String(part.costo_unitario ?? 0),
       precio_venta_unitario: String(part.precio_venta_unitario),
     });
   };
@@ -571,6 +603,7 @@ export default function WorkOrders() {
       await supabaseService.updatePart(editingPartId, {
         descripcion: editPartDraft.descripcion,
         cantidad: parseInt(editPartDraft.cantidad, 10) || 1,
+        costo_unitario: parseFloat(editPartDraft.costo_unitario) || 0,
         precio_venta_unitario: parseFloat(editPartDraft.precio_venta_unitario) || 0,
       });
       setEditingPartId(null);
@@ -732,6 +765,9 @@ export default function WorkOrders() {
     const partsList = viewOrder.repuestos || [];
     const totalLabor = laborList.reduce((sum, l) => sum + l.costo, 0);
     const totalParts = partsList.reduce((sum, p) => sum + p.subtotal, 0);
+    // What the shop paid, as opposed to what it charges. This is the figure
+    // that gets booked as an expense in Finanzas when the order is delivered.
+    const totalPartsCost = partsList.reduce((sum, p) => sum + p.cantidad * (p.costo_unitario ?? 0), 0);
     const photoUrls = (viewOrder.inspeccion_360_fotos || []).filter(Boolean) as string[];
 
     return (
@@ -1062,6 +1098,7 @@ export default function WorkOrders() {
                   <tr>
                     <th>{t('common.description')}</th>
                     <th>{t('common.quantity')}</th>
+                    <th style={{ textAlign: 'right' }}>{t('workOrders.unitCost')}</th>
                     <th style={{ textAlign: 'right' }}>{t('common.price')}</th>
                     <th style={{ textAlign: 'right' }}>{t('common.subtotal')}</th>
                     <th style={{ width: 64 }}></th>
@@ -1092,6 +1129,16 @@ export default function WorkOrders() {
                             className="form-input"
                             type="number"
                             style={{ width: 90, textAlign: 'right' }}
+                            value={editPartDraft.costo_unitario}
+                            onChange={(e) => setEditPartDraft({ ...editPartDraft, costo_unitario: e.target.value })}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            className="form-input"
+                            type="number"
+                            min={0}
+                            style={{ width: 90, textAlign: 'right' }}
                             value={editPartDraft.precio_venta_unitario}
                             onChange={(e) => setEditPartDraft({ ...editPartDraft, precio_venta_unitario: e.target.value })}
                           />
@@ -1114,6 +1161,9 @@ export default function WorkOrders() {
                       <tr key={part.id}>
                         <td>{part.descripcion}</td>
                         <td>{part.cantidad}</td>
+                        <td style={{ textAlign: 'right', color: 'var(--color-text-tertiary)' }}>
+                          ${(part.costo_unitario ?? 0).toFixed(2)}
+                        </td>
                         <td style={{ textAlign: 'right' }}>${part.precio_venta_unitario.toFixed(2)}</td>
                         <td style={{ textAlign: 'right', fontWeight: 600 }}>${part.subtotal.toFixed(2)}</td>
                         <td>
@@ -1130,7 +1180,11 @@ export default function WorkOrders() {
                     )
                   )}
                   <tr>
-                    <td colSpan={3} style={{ fontWeight: 700 }}>Total {t('workOrders.parts')}</td>
+                    <td colSpan={2} style={{ fontWeight: 700 }}>Total {t('workOrders.parts')}</td>
+                    <td style={{ textAlign: 'right', color: 'var(--color-text-tertiary)' }}>
+                      ${totalPartsCost.toFixed(2)}
+                    </td>
+                    <td></td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-light)' }}>
                       ${totalParts.toFixed(2)}
                     </td>
@@ -1158,7 +1212,18 @@ export default function WorkOrders() {
               <input
                 className="form-input"
                 type="number"
-                placeholder="Precio"
+                min={0}
+                placeholder={t('workOrders.unitCost')}
+                title={t('workOrders.unitCostHint')}
+                style={{ flex: '1 1 90px' }}
+                value={newPartDraft.costo_unitario}
+                onChange={(e) => setNewPartDraft({ ...newPartDraft, costo_unitario: e.target.value })}
+              />
+              <input
+                className="form-input"
+                type="number"
+                min={0}
+                placeholder={t('common.price')}
                 style={{ flex: '1 1 90px' }}
                 value={newPartDraft.precio_venta_unitario}
                 onChange={(e) => setNewPartDraft({ ...newPartDraft, precio_venta_unitario: e.target.value })}
@@ -1382,6 +1447,121 @@ export default function WorkOrders() {
     );
   }
 
+  // One list of orders, drawn as a table on desktop and as cards on mobile.
+  // Extracted so the technician view can render it twice — once for the
+  // orders assigned to them, once for the rest of the sede's board.
+  const renderOrderList = (list: WorkOrder[]) => (
+    <>
+      {/* Desktop table */}
+      <div className="table-container animate-fade-in desktop-only">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>{t('workOrders.orderNumber')}</th>
+              <th>{t('common.name')}</th>
+              <th>{t('vehicles.title')}</th>
+              <th>{t('common.type')}</th>
+              <th>{t('common.status')}</th>
+              <th>{t('workOrders.progress')}</th>
+              <th>{t('workOrders.estimatedDelivery')}</th>
+              <th>{t('common.total')}</th>
+              <th>{t('common.actions')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((order) => (
+              <tr key={order.id}>
+                <td style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>{order.numero_orden}</td>
+                <td>{order.cliente?.nombre}</td>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                    <Car size={14} style={{ color: 'var(--color-text-tertiary)' }} />
+                    {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
+                  </div>
+                </td>
+                <td><span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span></td>
+                <td><span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span></td>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: 100 }}>
+                    <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
+                      <div className={`progress-fill ${order.porcentaje_avance === 100 ? 'success' : ''}`} style={{ width: `${order.porcentaje_avance}%` }}></div>
+                    </div>
+                    <span style={{ fontSize: 'var(--font-size-xs)', minWidth: 28 }}>{order.porcentaje_avance}%</span>
+                  </div>
+                </td>
+                <td style={{ fontSize: 'var(--font-size-sm)' }}>
+                  <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle', color: 'var(--color-text-tertiary)' }} />
+                  {order.fecha_estimada_entrega}
+                </td>
+                <td style={{ fontWeight: 600 }}>${order.total_general.toLocaleString()}</td>
+                <td>
+                  <div className="table-actions">
+                    <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openDetail(order.id)}>
+                      <Eye size={16} />
+                    </button>
+                    {user?.rol === 'admin' && (
+                      <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={(e) => handleDeleteOrder(order, e)}>
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile card list — easier to tap through on a phone than a table */}
+      <div className="workorder-card-list mobile-only animate-fade-in">
+        {list.map((order) => (
+          <div key={order.id} className="workorder-card" onClick={() => openDetail(order.id)}>
+            <div className="workorder-card-top">
+              <span className="workorder-card-number">{order.numero_orden}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+                {user?.rol === 'admin' && (
+                  <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={(e) => handleDeleteOrder(order, e)}>
+                    <Trash2 size={16} />
+                  </button>
+                )}
+                <ChevronRight size={18} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+              </div>
+            </div>
+            <div className="workorder-card-meta">
+              {order.cliente?.nombre}
+            </div>
+            <div className="workorder-card-meta" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <Car size={14} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+              {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
+            </div>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+              <span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span>
+              <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
+            </div>
+            <div className="workorder-card-progress">
+              <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
+                <div className={`progress-fill ${order.porcentaje_avance === 100 ? 'success' : ''}`} style={{ width: `${order.porcentaje_avance}%` }}></div>
+              </div>
+              <span style={{ fontSize: 'var(--font-size-xs)', minWidth: 28 }}>{order.porcentaje_avance}%</span>
+            </div>
+            <div className="workorder-card-footer">
+              <span>
+                <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+                {order.fecha_estimada_entrega}
+              </span>
+              <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>${order.total_general.toLocaleString()}</span>
+            </div>
+          </div>
+        ))}
+        {list.length === 0 && (
+          <p style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
+            {t('common.noResults')}
+          </p>
+        )}
+      </div>
+    </>
+  );
+
   // List view
   return (
     <div>
@@ -1419,115 +1599,49 @@ export default function WorkOrders() {
 
       {loading ? (
         <div className="loading-state"><div className="spinner" /></div>
+      ) : isAdmin ? (
+        renderOrderList(filtered)
       ) : (
         <>
-          {/* Desktop table */}
-          <div className="table-container animate-fade-in desktop-only">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>{t('workOrders.orderNumber')}</th>
-                  <th>{t('common.name')}</th>
-                  <th>{t('vehicles.title')}</th>
-                  <th>{t('common.type')}</th>
-                  <th>{t('common.status')}</th>
-                  <th>{t('workOrders.progress')}</th>
-                  <th>{t('workOrders.estimatedDelivery')}</th>
-                  <th>{t('common.total')}</th>
-                  <th>{t('common.actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((order) => (
-                  <tr key={order.id}>
-                    <td style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>{order.numero_orden}</td>
-                    <td>{order.cliente?.nombre}</td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                        <Car size={14} style={{ color: 'var(--color-text-tertiary)' }} />
-                        {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
-                      </div>
-                    </td>
-                    <td><span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span></td>
-                    <td><span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span></td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: 100 }}>
-                        <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
-                          <div className={`progress-fill ${order.porcentaje_avance === 100 ? 'success' : ''}`} style={{ width: `${order.porcentaje_avance}%` }}></div>
-                        </div>
-                        <span style={{ fontSize: 'var(--font-size-xs)', minWidth: 28 }}>{order.porcentaje_avance}%</span>
-                      </div>
-                    </td>
-                    <td style={{ fontSize: 'var(--font-size-sm)' }}>
-                      <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle', color: 'var(--color-text-tertiary)' }} />
-                      {order.fecha_estimada_entrega}
-                    </td>
-                    <td style={{ fontWeight: 600 }}>${order.total_general.toLocaleString()}</td>
-                    <td>
-                      <div className="table-actions">
-                        <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openDetail(order.id)}>
-                          <Eye size={16} />
-                        </button>
-                        {user?.rol === 'admin' && (
-                          <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={(e) => handleDeleteOrder(order, e)}>
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile card list — easier to tap through on a phone than a table */}
-          <div className="workorder-card-list mobile-only animate-fade-in">
-            {filtered.map((order) => (
-              <div key={order.id} className="workorder-card" onClick={() => openDetail(order.id)}>
-                <div className="workorder-card-top">
-                  <span className="workorder-card-number">{order.numero_orden}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
-                    {user?.rol === 'admin' && (
-                      <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={(e) => handleDeleteOrder(order, e)}>
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                    <ChevronRight size={18} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
-                  </div>
-                </div>
-                <div className="workorder-card-meta">
-                  {order.cliente?.nombre}
-                </div>
-                <div className="workorder-card-meta" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                  <Car size={14} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
-                  {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
-                </div>
-                <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                  <span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span>
-                  <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
-                </div>
-                <div className="workorder-card-progress">
-                  <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
-                    <div className={`progress-fill ${order.porcentaje_avance === 100 ? 'success' : ''}`} style={{ width: `${order.porcentaje_avance}%` }}></div>
-                  </div>
-                  <span style={{ fontSize: 'var(--font-size-xs)', minWidth: 28 }}>{order.porcentaje_avance}%</span>
-                </div>
-                <div className="workorder-card-footer">
-                  <span>
-                    <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-                    {order.fecha_estimada_entrega}
-                  </span>
-                  <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>${order.total_general.toLocaleString()}</span>
-                </div>
-              </div>
-            ))}
-            {filtered.length === 0 && (
-              <p style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
-                {t('common.noResults')}
-              </p>
+          {/* A technician lands on their own work first. */}
+          <section className="orders-section">
+            <h2 className="orders-section-title">
+              <Wrench size={18} />
+              {t('workOrders.myOrders')}
+              <span className="orders-section-count">{myOrders.length}</span>
+            </h2>
+            {myOrders.length === 0 ? (
+              <p className="orders-section-empty">{t('workOrders.myOrdersEmpty')}</p>
+            ) : (
+              renderOrderList(myOrders)
             )}
-          </div>
+          </section>
+
+          {/* The rest of the board stays one click away, never in the way. */}
+          <section className="orders-section">
+            <button
+              type="button"
+              className="orders-section-toggle"
+              onClick={() => setShowOtherOrders((v) => !v)}
+              aria-expanded={showOtherOrders}
+            >
+              {showOtherOrders ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+              <span className="orders-section-title">
+                {t('workOrders.otherOrders')}
+                <span className="orders-section-count">{otherOrders.length}</span>
+              </span>
+            </button>
+            {showOtherOrders && (
+              <>
+                <p className="orders-section-hint">{t('workOrders.otherOrdersHint')}</p>
+                {otherOrders.length === 0 ? (
+                  <p className="orders-section-empty">{t('common.noResults')}</p>
+                ) : (
+                  renderOrderList(otherOrders)
+                )}
+              </>
+            )}
+          </section>
         </>
       )}
 
@@ -1714,7 +1828,21 @@ export default function WorkOrders() {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">{t('workOrders.milesIn')}</label>
-                    <input className="form-input" type="number" value={milesIn} onChange={(e) => setMilesIn(e.target.value)} />
+                    <input
+                      className="form-input"
+                      id="order-miles-in"
+                      type="number"
+                      min={0}
+                      step={1}
+                      inputMode="numeric"
+                      value={milesIn}
+                      onChange={(e) => handleMilesChange(e.target.value)}
+                    />
+                    {milesError && (
+                      <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-danger)' }}>
+                        {milesError}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group">
                     <label className="form-label">{t('workOrders.deposit')} ($)</label>
@@ -1893,7 +2021,7 @@ export default function WorkOrders() {
                 <div className="form-group">
                   <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span>{t('workOrders.partsDescription')}</span>
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setParts((p) => [...p, { descripcion: '', cantidad: '1', precio_venta_unitario: '' }])}>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setParts((p) => [...p, { descripcion: '', cantidad: '1', costo_unitario: '', precio_venta_unitario: '' }])}>
                       <Plus size={14} /> {t('common.add')}
                     </button>
                   </label>
@@ -1916,7 +2044,18 @@ export default function WorkOrders() {
                       <input
                         className="form-input"
                         type="number"
-                        placeholder="Precio"
+                        min={0}
+                        placeholder={t('workOrders.unitCost')}
+                        title={t('workOrders.unitCostHint')}
+                        style={{ maxWidth: 100 }}
+                        value={part.costo_unitario}
+                        onChange={(e) => setParts((p) => p.map((it, idx) => (idx === i ? { ...it, costo_unitario: e.target.value } : it)))}
+                      />
+                      <input
+                        className="form-input"
+                        type="number"
+                        min={0}
+                        placeholder={t('common.price')}
                         style={{ maxWidth: 100 }}
                         value={part.precio_venta_unitario}
                         onChange={(e) => setParts((p) => p.map((it, idx) => (idx === i ? { ...it, precio_venta_unitario: e.target.value } : it)))}

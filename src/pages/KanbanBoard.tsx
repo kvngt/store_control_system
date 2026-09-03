@@ -66,13 +66,13 @@ export default function KanbanBoard() {
     e.preventDefault();
   };
 
-  const handleDrop = async (status: OrderStatus) => {
-    if (!draggedOrder) return;
-    const orderId = draggedOrder;
+  // Shared by dragging (desktop) and by the per-card selector (touch), so both
+  // routes get the same delivery confirmation and the same optimistic update.
+  const moveOrder = async (orderId: string, status: OrderStatus) => {
     const order = orders.find((o) => o.id === orderId);
-    setDraggedOrder(null);
+    if (!order || order.estatus === status) return;
 
-    if (status === 'entregado' && order?.estatus !== 'entregado' && !confirm(t('workOrders.confirmDeliver'))) {
+    if (status === 'entregado' && !confirm(t('workOrders.confirmDeliver'))) {
       return;
     }
 
@@ -85,6 +85,13 @@ export default function KanbanBoard() {
       setError(getErrorMessage(err, language));
       setOrders(previous);
     }
+  };
+
+  const handleDrop = (status: OrderStatus) => {
+    if (!draggedOrder) return;
+    const orderId = draggedOrder;
+    setDraggedOrder(null);
+    moveOrder(orderId, status);
   };
 
   const capacity = currentSede?.capacidad ?? 10;
@@ -189,6 +196,28 @@ export default function KanbanBoard() {
                         </span>
                       </div>
 
+                      {/* Touch devices get no HTML5 drag events at all, so on a
+                          phone the board was read-only. This selector is the
+                          same action by another route; hidden on desktop, where
+                          dragging is the nicer gesture. */}
+                      {canMove(order) && (
+                        <label className="kanban-card-move mobile-only">
+                          <span className="kanban-card-move-label">{t('kanban.moveTo')}</span>
+                          <select
+                            className="form-input form-select"
+                            value={order.estatus}
+                            aria-label={`${t('kanban.moveTo')} — ${order.numero_orden}`}
+                            onChange={(e) => moveOrder(order.id, e.target.value as OrderStatus)}
+                          >
+                            {COLUMNS.map((c) => (
+                              <option key={c.status} value={c.status}>
+                                {statusLabels[c.status]}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+
                       <div className="kanban-card-footer">
                         <div className="kanban-card-assignee">
                           {assignees.length > 0 && (
@@ -231,7 +260,7 @@ export default function KanbanBoard() {
                       borderRadius: 'var(--radius-md)',
                     }}
                   >
-                    {t('kanban.dragToMove')}
+                    {t('kanban.emptyColumn')}
                   </div>
                 )}
               </div>

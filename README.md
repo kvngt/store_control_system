@@ -35,9 +35,27 @@ Hay tres roles (`perfiles.rol`): **admin**, **mecanico**, **pintor**. Todo usuar
 | Módulo | admin | mecánico / pintor |
 |---|:---:|:---:|
 | Dashboard, Clientes, Vehículos, Órdenes de Trabajo, Kanban | ✅ | ✅ |
-| Finanzas, Nómina, Configuración | ✅ | ❌ (redirigidos a `/`) |
+| Finanzas, Nómina | ✅ | ❌ (redirigidos a `/`) |
+| Configuración: perfil propio, idioma, tema | ✅ | ✅ |
+| Configuración: sedes, empleados, capacidad | ✅ | ❌ |
 
-La restricción de Finanzas/Nómina/Configuración está tanto en las rutas de React (`ProtectedRoute adminOnly` en `App.tsx`) como en las políticas RLS de la base de datos — un mecánico no puede ver esos datos ni aunque manipule la app.
+La restricción de Finanzas/Nómina está tanto en las rutas de React (`ProtectedRoute adminOnly` en `App.tsx`) como en las políticas RLS de la base de datos — un mecánico no puede ver esos datos ni aunque manipule la app.
+
+### Acciones destructivas (solo admin)
+
+Un colaborador con sesión activa puede llamar la API de Supabase directamente: la clave anónima y todos los endpoints viajan en el bundle del navegador, así que esconder un botón en React no protege nada. Lo único que realmente sostiene el límite son las políticas RLS. Estas operaciones están reservadas al rol admin **en la base de datos**, no solo en la interfaz:
+
+| Acción | Política |
+|---|---|
+| Eliminar un cliente (arrastra sus vehículos en cascada) | `clientes_delete` |
+| Eliminar un vehículo | `vehiculos_delete` |
+| Eliminar una orden de trabajo | `ordenes_trabajo_delete` |
+| Borrar o sobrescribir fotos de inspección y firmas | `vehiculos_fotos_admin_delete` / `..._admin_update`, `firmas_admin_update` |
+| Crear un perfil, o cambiar el rol o la sede de alguien | `perfiles_insert`, trigger `trg_perfil_privilegios` |
+
+Un mecánico/pintor sí puede borrar sus propios avances de trabajo (`orden_avances_delete`), pero no los de un compañero.
+
+Ver `supabase/migrations/20260908000000_destructive_action_hardening.sql`, que además documenta los dos caminos de escalada de privilegios que estaban abiertos (auto-ascenso a admin editando el propio perfil, y registro público creando un perfil admin) y cómo se cerraron.
 
 ## Módulos
 
@@ -53,8 +71,13 @@ Alta/edición/eliminación de clientes. Vista de perfil por cliente con sus veh�
 ### Vehículos (`/vehicles`)
 Alta/edición/eliminación de vehículos, ligados a un cliente. Igual que Clientes, eliminar pide confirmación.
 
+### Vehículos (`/vehicles`)
+Alta y edición de vehículos con decodificación de VIN y validación de placa por estado. Las unidades compradas en subasta suelen llegar **sin placa**: la casilla *Sin placa* desactiva los campos de placa y estado, y guarda `NULL` en la base de datos — nunca un texto de relleno como "SIN PLACA", que aparecería en las búsquedas y se imprimiría en la orden como si fuera una placa real.
+
 ### Órdenes de Trabajo (`/work-orders`)
-El módulo más grande. Crear una orden incluye: elegir cliente/vehículo (existente o nuevo, todo en el mismo formulario), tipo de trabajo (mecánica/pintura/combinado), nivel de gasolina, millas de ingreso, depósito inicial, fecha estimada de entrega, notas de inspección 360°, **hasta 6 fotos de inspección** (frontal, trasera, izquierda, derecha, interior, tablero), técnicos asignados, mano de obra y repuestos (con costo y precio de venta).
+Un mecánico/pintor abre esta pantalla en **Mis Órdenes de Trabajo** (las que tiene asignadas). Debajo hay una sección plegada, **Otras Órdenes de Trabajo**, con el resto del tablero de su sede: la puede abrir para consultar una orden de un compañero o unirse a ella, pero no es lo primero que ve. El admin sigue viendo una sola lista con todo.
+
+El módulo más grande. Crear una orden incluye: elegir cliente/vehículo (existente o nuevo, todo en el mismo formulario), tipo de trabajo (mecánica/pintura/combinado), nivel de gasolina, millas de ingreso (solo enteros ≥ 0, con un `CHECK` en la base de datos que respalda la validación del formulario), depósito inicial, fecha estimada de entrega, notas de inspección 360°, **hasta 6 fotos de inspección** (frontal, trasera, izquierda, derecha, interior, tablero), técnicos asignados, mano de obra y repuestos (con costo y precio de venta).
 
 En el detalle de una orden se puede: cambiar el estatus, mover el % de avance, agregar/quitar líneas de mano de obra y repuestos (piden confirmación al eliminar), y agregar/quitar técnicos asignados. Los totales (`total_labor`, `total_repuestos`, `total_general`) se recalculan solos en la base de datos cada vez que cambian las líneas — nunca se calculan a mano en el frontend.
 
@@ -64,6 +87,8 @@ En el detalle de una orden se puede: cambiar el estatus, mover el % de avance, a
 Las mismas órdenes que "Órdenes de Trabajo", en formato tablero: `Recepción → En Proceso → Espera de Repuestos → Finalizado → Entregado`. Arrastrar una tarjeta cambia el estatus (misma confirmación al soltar en "Entregado"). Muestra el % de ocupación del taller.
 
 ### Finanzas (`/finance`, solo admin)
+Cada movimiento manual puede vincularse opcionalmente a una orden de trabajo, para que un pago o una compra registrada por fuera del ciclo de la orden siga siendo rastreable hasta el trabajo al que pertenece. La columna *Orden vinculada* de la tabla lleva directo al detalle de esa orden.
+
 Ingresos/egresos manuales, KPIs (ingresos, egresos, balance), gráfico mensual, exportar a CSV, y **importar estado de cuenta bancario en PDF** (nuevo — ver abajo). Los pagos ligados a órdenes (depósito inicial, pago final) aparecen aquí automáticamente, generados por triggers — no hay que registrarlos a mano.
 
 **Importar Estado de Cuenta:** sube un PDF de Wells Fargo, se lee y estructura completamente en el navegador (nada se envía a ningún servicio externo de IA), se sugiere una categoría por palabras clave (editable en la tabla `finanzas_reglas_categorizacion`), se marca lo que parece transferencia interna o un posible duplicado de algo ya registrado, y el admin revisa/edita/excluye filas antes de confirmar la importación. Cada importación queda trazada (tabla `finanzas_importaciones`) y es reversible en bloque.
@@ -77,15 +102,20 @@ Perfil propio, idioma, tema (claro/oscuro), lista de sedes con su capacidad (usa
 ### Header (en todas las pantallas)
 Búsqueda global (clientes, vehículos, órdenes — mínimo 2 caracteres), selector de sede (solo admin), toggle de idioma, y notificaciones de "órdenes que necesitan atención" (esperando repuestos, o en proceso con menos del 20% de avance).
 
+Las notificaciones de un mecánico/pintor solo cubren las órdenes que tiene asignadas; el admin sigue viendo las de toda la sede. Lo mismo aplica al panel de Alertas y a "Órdenes Recientes" del Dashboard.
+
 ## Automatizaciones importantes (triggers)
 
 Estas corren en la base de datos, no en el frontend — pasan igual sin importar por cuál pantalla se dispare el cambio:
 
 - **Depósito inicial** → al crear una orden con depósito > 0, se registra como ingreso en Finanzas.
 - **Entrega de orden** → al pasar el estatus a "entregado", se calcula el saldo pendiente (total de la orden menos lo ya cobrado) y se registra como ingreso.
+- **Costo de repuestos** → al entregar la orden se registra además el **egreso** por lo que el taller pagó por las piezas (`cantidad × costo_unitario`, categoría `compra_repuesto`). Antes solo se registraba el ingreso, así que toda orden entregada sobrestimaba la ganancia por el costo completo de sus repuestos. Si después se agrega o edita un repuesto en una orden ya entregada, se registra únicamente la diferencia.
 - **Totales de orden** → cada vez que se agrega/edita/borra mano de obra o un repuesto, se recalculan `total_labor`, `total_repuestos` y `total_general` de la orden.
 - **Número de orden** → se genera de forma atómica (`ORD-2026-001`, `ORD-2026-002`, ...) para que dos órdenes creadas al mismo tiempo nunca choquen.
 - **Nómina → Finanzas** → cada pago de nómina genera su egreso correspondiente.
+
+El costo de cada repuesto se captura en la orden (columna *Costo Unitario*, junto al precio de venta). Es lo que el taller pagó, no lo que le cobra al cliente; si se deja en blanco, el egreso queda en cero y el margen de esa orden aparece inflado.
 
 ## Guía de pruebas manuales por módulo
 
@@ -159,6 +189,19 @@ npm run test:watch  # modo watch mientras desarrollas
 ```
 
 Cubre la lógica que no depende de la UI: `src/lib/bankStatementParser.test.ts` (reconstrucción de transacciones a partir de las coordenadas del PDF — incluye los casos reales que rompían el parser: encabezado de tabla partido en dos líneas, el "resumen de actividad" de la página 2 con las mismas palabras "Deposits"/"Withdrawals" en otra posición, montos con saldo diario pegado al lado, etc.), `src/lib/categorizationRules.test.ts` y `src/lib/errors.test.ts`.
+
+`src/lib/bankStatementParser.entry.test.ts` cubre aparte el punto de entrada, `parseWellsFargoStatement()` — la función que la pantalla llama de verdad. Simula pdfjs con una capa de texto fabricada, así que corre sin PDF ni worker, y fija los casos en los que el importador tiene que *explicarse* en vez de quedarse callado: un PDF de otro banco, un PDF escaneado (sin capa de texto), y una página cuyo encabezado de columnas cambió.
+
+### Vitest + jsdom (componentes de React)
+
+Los archivos `*.test.tsx` renderizan un componente de verdad con `@testing-library/react`, dentro de los proveedores reales de idioma/tema/toast (`src/test/renderWithProviders.tsx`); `AuthContext` y `supabaseService` se simulan. Cada archivo declara `// @vitest-environment jsdom` en la primera línea, de modo que los tests de `src/lib` siguen corriendo en el entorno `node`, que es más rápido.
+
+Estos existen sobre todo para atrapar una clase concreta de error que ya se presentó dos veces en producción: **un diálogo que falla en silencio**. El patrón era siempre el mismo — el handler hacía `return` sin decir nada, y los errores se escribían en el recuadro de error de la página, que queda *debajo* del overlay del modal (z-index 400). El resultado para quien lo usa es un botón muerto. Los toasts, en cambio, están en z-index 500 y sí se ven encima.
+
+- `src/pages/Settings.employee.test.tsx` — el diálogo "Nuevo Empleado" (el que no dejaba asignar sede).
+- `src/pages/Payroll.test.tsx` — "Nuevo Pago", que tenía el mismo defecto sin haber sido reportado.
+- `src/components/LazyModal.test.tsx` — que un modal con carga diferida muestre algo de inmediato y que, si su chunk no descarga, el error quede dentro del diálogo en vez de tumbar la app entera.
+- `src/pages/Finance.import.test.tsx` — que Finanzas efectivamente use ese envoltorio al abrir el importador.
 
 El parser también se validó por separado corriendo la lógica completa (sin navegador, con `pdfjs-dist/legacy/build/pdf.mjs`) contra los dos estados de cuenta reales que sirvieron de muestra: la suma de ingresos y egresos extraídos coincide exactamente ($0.00 de diferencia) con los totales que reporta cada PDF (259 transacciones en el de junio, 241 en el de julio). Ese script era temporal y no quedó en el repo — si se agregan más bancos/formatos, vale la pena rehacer esa verificación con estados de cuenta reales antes de confiar en el parser.
 

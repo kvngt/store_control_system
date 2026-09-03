@@ -8,6 +8,7 @@ import { isSupabaseConfigured } from './lib/supabase';
 import ErrorBoundary from './components/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
 import Vehicles from './pages/Vehicles';
@@ -32,7 +33,7 @@ function ProtectedRoute({ children, adminOnly = false }: { children: React.React
 }
 
 function AppRoutes() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, passwordRecovery } = useAuth();
 
   if (loading) {
     return (
@@ -40,6 +41,13 @@ function AppRoutes() {
         <div className="spinner" />
       </div>
     );
+  }
+
+  // A recovery link signs the user in before they've chosen a password, so this
+  // has to win over every route — otherwise they land on the dashboard and the
+  // password is never actually reset.
+  if (passwordRecovery) {
+    return <ResetPassword />;
   }
 
   return (

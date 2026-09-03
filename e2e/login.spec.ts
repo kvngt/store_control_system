@@ -47,4 +47,48 @@ test.describe('mechanic/painter session', () => {
     await page.goto('/finance');
     await expect(page).toHaveURL('/');
   });
+
+  test('work orders open on "my orders", with the rest of the board collapsed', async ({ page }) => {
+    await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
+    await page.goto('/work-orders');
+
+    // Their own orders come first; the colleagues' section is present but shut.
+    const sections = page.locator('.orders-section');
+    await expect(sections).toHaveCount(2);
+    await expect(sections.first()).toContainText(/Mis Órdenes de Trabajo|My Work Orders/);
+
+    const toggle = page.locator('.orders-section-toggle');
+    await expect(toggle).toContainText(/Otras Órdenes de Trabajo|Other Work Orders/);
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('.orders-section-hint')).toBeVisible();
+  });
+
+  test('mechanic gets no delete button on customers or vehicles', async ({ page }) => {
+    await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
+
+    await page.goto('/customers');
+    await expect(page.locator('#new-customer-btn, .page-title')).toBeVisible();
+    await expect(page.locator('.table-actions button[title="Eliminar"], .table-actions button[title="Delete"]')).toHaveCount(0);
+
+    await page.goto('/vehicles');
+    await expect(page.locator('#new-vehicle-btn')).toBeVisible();
+    await expect(page.locator('.table-actions button[title="Eliminar"], .table-actions button[title="Delete"]')).toHaveCount(0);
+  });
+
+  test('intake mileage rejects a negative value', async ({ page }) => {
+    await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
+    await page.goto('/work-orders');
+    await page.click('#new-order-btn');
+
+    const miles = page.locator('#order-miles-in');
+    await miles.fill('-250');
+    // The minus sign never lands in the field, and the reason is shown.
+    await expect(miles).toHaveValue('250');
+    await expect(page.locator('.modal')).toContainText(
+      /Las millas de ingreso no pueden ser negativas|Intake mileage cannot be negative/
+    );
+  });
 });

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { supabaseService } from '../services/supabaseService';
 import { getErrorMessage } from '../lib/errors';
 import type { PayrollEntry, UserProfile } from '../types/database';
@@ -9,6 +10,7 @@ import { Plus, Calendar, X } from 'lucide-react';
 export default function Payroll() {
   const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
+  const { showToast } = useToast();
   const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
 
   const [entries, setEntries] = useState<PayrollEntry[]>([]);
@@ -16,6 +18,9 @@ export default function Payroll() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // Scoped to the dialog: the page-level `error` above renders behind the
+  // modal overlay, so failures reported there are invisible while it is open.
+  const [modalError, setModalError] = useState('');
   const [showModal, setShowModal] = useState(false);
 
   const [form, setForm] = useState({
@@ -47,8 +52,23 @@ export default function Payroll() {
     loadData();
   }, [loadData]);
 
+  // Same rule as the Nuevo Empleado dialog: this modal covers the page-level
+  // error box, so a bare `return` on invalid input looks like a dead button.
   const handleSave = async () => {
-    if (!form.usuario_id || !form.periodo_inicio || !form.periodo_fin || !form.salario_base) return;
+    if (!form.usuario_id || !form.periodo_inicio || !form.periodo_fin || !form.salario_base) {
+      setModalError(t('payroll.missingFields'));
+      return;
+    }
+    const base = parseFloat(form.salario_base);
+    if (!Number.isFinite(base) || base <= 0) {
+      setModalError(t('payroll.invalidSalary'));
+      return;
+    }
+    if (form.periodo_fin < form.periodo_inicio) {
+      setModalError(t('payroll.periodBackwards'));
+      return;
+    }
+    setModalError('');
     setSaving(true);
     try {
       await supabaseService.createPayroll({
@@ -56,16 +76,17 @@ export default function Payroll() {
         usuario_id: form.usuario_id,
         periodo_inicio: form.periodo_inicio,
         periodo_fin: form.periodo_fin,
-        salario_base: parseFloat(form.salario_base) || 0,
+        salario_base: base,
         bonos: parseFloat(form.bonos) || 0,
         deducciones: parseFloat(form.deducciones) || 0,
         fecha_pago: form.fecha_pago,
       });
       setShowModal(false);
       setForm({ usuario_id: '', periodo_inicio: '', periodo_fin: '', salario_base: '', bonos: '0', deducciones: '0', fecha_pago: new Date().toISOString().split('T')[0] });
+      showToast('success', t('payroll.entryCreated'));
       loadData();
     } catch (err) {
-      setError(getErrorMessage(err, language));
+      setModalError(getErrorMessage(err, language));
     } finally {
       setSaving(false);
     }
@@ -82,7 +103,7 @@ export default function Payroll() {
           <h1 className="page-title">{t('payroll.title')}</h1>
           <p className="page-subtitle">{entries.length} {t('common.results')}</p>
         </div>
-        <button className="btn btn-primary" id="new-payroll-btn" onClick={() => setShowModal(true)}>
+        <button className="btn btn-primary" id="new-payroll-btn" onClick={() => { setModalError(''); setShowModal(true); }}>
           <Plus size={18} /> {t('payroll.newEntry')}
         </button>
       </div>
@@ -175,9 +196,10 @@ export default function Payroll() {
               <button className="modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
             <div className="modal-body">
+              {modalError && <div className="alert-error" role="alert">{modalError}</div>}
               <div className="form-group">
-                <label className="form-label">{t('payroll.employee')}</label>
-                <select className="form-input form-select" value={form.usuario_id} onChange={(e) => setForm({ ...form, usuario_id: e.target.value })}>
+                <label className="form-label" htmlFor="payroll-employee">{t('payroll.employee')}</label>
+                <select className="form-input form-select" id="payroll-employee" value={form.usuario_id} onChange={(e) => setForm({ ...form, usuario_id: e.target.value })}>
                   <option value="">-- {t('common.search')} --</option>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>{u.nombre_completo} ({u.rol})</option>

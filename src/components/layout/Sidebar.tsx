@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Wrench,
   Building2,
+  Hexagon,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -92,12 +93,15 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
+                boxShadow: 'var(--shadow-glow-sm)',
+                position: 'relative'
               }}
             >
-              <Wrench size={20} color="#0A0A0F" />
+              <Hexagon size={28} color="#0A0A0F" strokeWidth={1.5} style={{ position: 'absolute' }} />
+              <Wrench size={14} color="#0A0A0F" style={{ position: 'relative', zIndex: 1 }} />
             </div>
           )}
-          <span className="logo-text">{currentSede?.nombre || 'RESTORIFY'}</span>
+          <span className="logo-text" style={{ textShadow: '0 0 20px var(--color-primary-glow)' }}>{currentSede?.nombre || 'RESTORIFY'}</span>
         </Link>
 
         {/* Sede switcher for admins on mobile: the header version is hidden on

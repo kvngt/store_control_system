@@ -127,6 +127,7 @@
 .sidebar-link:hover {
   background: var(--color-bg-hover);
   color: var(--color-text-primary);
+  transform: translateX(4px);
 }
 
 .sidebar-link.active {
@@ -247,7 +248,7 @@
 
 .header-search input:focus {
   border-color: var(--color-primary);
-  box-shadow: var(--shadow-glow-sm);
+  box-shadow: var(--shadow-glow-sm), 0 0 0 1px var(--color-primary);
 }
 
 .header-search-icon {
@@ -529,13 +530,16 @@
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-surface-border);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-xl);
   padding: var(--space-6);
-  transition: all var(--transition-fast);
+  transition: all var(--transition-spring);
 }
 
 .card:hover {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
 .card-glass {
@@ -571,19 +575,20 @@
 .stat-card {
   background: var(--color-surface);
   border: 1px solid var(--color-surface-border);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-xl);
   padding: var(--space-5);
   display: flex;
   align-items: flex-start;
   gap: var(--space-4);
-  transition: all var(--transition-fast);
+  transition: all var(--transition-spring);
   animation: fadeInUp 0.5s ease-out both;
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
+  border-color: var(--color-primary-subtle);
+  box-shadow: 0 12px 24px -10px var(--color-primary-glow);
 }
 
 /* A KPI card rendered as a <button> that navigates into its section. */
@@ -818,10 +823,14 @@
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-spring);
   border: 1px solid transparent;
   white-space: nowrap;
   line-height: 1.5;
+}
+
+.btn:active {
+  transform: scale(0.97);
 }
 
 .btn-primary {
@@ -914,7 +923,7 @@
 
 .form-input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-subtle);
+  box-shadow: 0 0 0 3px var(--color-primary-subtle), 0 4px 12px var(--color-primary-glow);
 }
 
 .form-input:disabled {
@@ -951,6 +960,8 @@
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   line-height: 1.4;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 2px 8px -2px rgba(0,0,0,0.2);
 }
 
 .badge-recepcion {
@@ -1466,10 +1477,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-6);
+  padding: var(--space-4);
   position: relative;
   z-index: 2;
   max-width: 100%;
+}
+
+@media (min-width: 640px) {
+  .login-form-side {
+    padding: var(--space-6);
+  }
 }
 
 @media (min-width: 1024px) {
@@ -1503,7 +1520,7 @@
   z-index: 1;
   width: 100%;
   max-width: 420px;
-  padding: var(--space-10);
+  padding: var(--space-6);
   background: var(--color-surface-glass);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -1511,6 +1528,12 @@
   border-radius: var(--radius-2xl);
   animation: fadeInUp 0.6s ease-out;
   box-shadow: var(--shadow-2xl);
+}
+
+@media (min-width: 640px) {
+  .login-card {
+    padding: var(--space-10);
+  }
 }
 
 .login-logo {
@@ -2529,5 +2552,184 @@
 @media (max-width: 640px) {
   .vin-row {
     flex-direction: column;
+  }
+}
+
+/* ===== Work order sections (technician view: mine vs. the rest) ===== */
+.orders-section {
+  margin-bottom: var(--space-6);
+}
+
+.orders-section:last-child {
+  margin-bottom: 0;
+}
+
+.orders-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.orders-section-count {
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-surface-border);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+/* The "other orders" header is a disclosure control, so it has to be a button —
+   it keeps the heading's look and drops the default button chrome. */
+.orders-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: color var(--transition-fast);
+}
+
+.orders-section-toggle:hover {
+  color: var(--color-text-primary);
+}
+
+.orders-section-toggle .orders-section-title {
+  margin-bottom: 0;
+  color: inherit;
+}
+
+.orders-section-hint {
+  margin: var(--space-3) 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.orders-section-empty {
+  padding: var(--space-6);
+  border: 1px dashed var(--color-surface-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  color: var(--color-text-tertiary);
+}
+
+/* Checkbox with a label and a hint under it — used for switches that change
+   what the rest of a form asks for, like "this vehicle has no plate". */
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.checkbox-row input[type="checkbox"] {
+  margin-top: 2px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.checkbox-row .field-hint {
+  margin-top: 2px;
+}
+
+/* Secondary action under the login form (recover password / back to sign in).
+   A link, not a button: it must not compete with the primary action above it. */
+.login-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: var(--space-3);
+  padding: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color var(--transition-fast);
+}
+
+.login-link:hover {
+  color: var(--color-primary-light);
+}
+
+/* Confirmation counterpart of .login-error — same shape, different meaning. */
+.login-notice {
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-md);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+/* Kanban: move a card without dragging.
+   Touch devices fire no HTML5 drag events, so on a phone the board could only
+   be read. This is the same status change through a control a finger can use;
+   `.mobile-only` keeps it out of the way on desktop, where dragging is better. */
+.kanban-card-move {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-surface-border);
+}
+
+.kanban-card-move-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+.kanban-card-move select {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  font-size: var(--font-size-xs);
+}
+
+/* Five tabs instead of four: keep the labels on one line at 360px. */
+.bottom-nav-item {
+  min-width: 0;
+}
+
+.bottom-nav-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* On a phone the board is one column wide and swiped sideways; snapping makes
+   each column land square instead of stopping halfway between two. */
+@media (max-width: 768px) {
+  .kanban-board {
+    scroll-snap-type: x mandatory;
+  }
+
+  .kanban-column {
+    scroll-snap-align: start;
   }
 }

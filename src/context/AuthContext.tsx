@@ -4,7 +4,9 @@ import type { UserProfile, Sede } from '../types/database';
 
 interface LoginResult {
   success: boolean;
-  error?: string;
+  /** The raw Supabase error, so the caller can translate it. Passing the
+   *  message straight through is what put English text on the login screen. */
+  error?: { code?: string; message?: string };
 }
 
 interface AuthContextType {
@@ -21,6 +23,13 @@ interface AuthContextType {
   refreshSedes: () => Promise<void>;
   /** Re-reads the signed-in profile after the user edits name/email/photo. */
   refreshUser: () => Promise<void>;
+  /** True while the session came from a password-recovery link. The app shows
+   *  the "choose a new password" screen instead of the normal routes: the
+   *  recovery link does sign the user in, so without this flag they would land
+   *  on the dashboard and never be asked for a new password. */
+  passwordRecovery: boolean;
+  /** Leaves recovery mode — after setting the password, or on cancel. */
+  endPasswordRecovery: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [allSedes, setAllSedes] = useState<Sede[]>([]);
   const [currentSede, setCurrentSedeState] = useState<Sede | null>(null);
   const [loading, setLoading] = useState(true);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   const loadProfileAndSedes = useCallback(async (userId: string) => {
     const { data: perfil } = await supabase
@@ -90,7 +100,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecovery(true);
+      }
       if (session?.user) {
         loadProfileAndSedes(session.user.id);
       } else {
@@ -109,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: { code: (error as { code?: string }).code, message: error.message } };
     }
     return { success: true };
   }, []);
@@ -117,7 +130,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
     localStorage.removeItem('restorify_sede_id');
+    setPasswordRecovery(false);
   }, []);
+
+  const endPasswordRecovery = useCallback(() => setPasswordRecovery(false), []);
 
   const setCurrentSede = useCallback((sede: Sede | null) => {
     setCurrentSedeState(sede);
@@ -139,6 +155,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setCurrentSede,
         refreshSedes,
         refreshUser,
+        passwordRecovery,
+        endPasswordRecovery,
       }}
     >
       {children}

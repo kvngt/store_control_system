@@ -1,13 +1,16 @@
-import { useEffect, useState, useCallback, lazy, Suspense } from 'react';
+import { useEffect, useState, useCallback, lazy } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { supabaseService } from '../services/supabaseService';
 import { getErrorMessage } from '../lib/errors';
-import type { FinancialTransaction, TransactionType, TransactionCategory, DashboardStats } from '../types/database';
+import type { FinancialTransaction, TransactionType, TransactionCategory, DashboardStats, WorkOrder } from '../types/database';
 
 // Lazy-loaded: pulls in pdfjs-dist (~1MB), which shouldn't ship in the main
 // bundle for users who never open the import dialog.
 const ImportStatementModal = lazy(() => import('./finance/ImportStatementModal'));
+import LazyModal from '../components/LazyModal';
 import {
   DollarSign,
   TrendingUp,
@@ -23,6 +26,8 @@ import {
 export default function Finance() {
   const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
   const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
 
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
@@ -34,13 +39,29 @@ export default function Finance() {
   const [filterType, setFilterType] = useState<'all' | 'ingreso' | 'egreso'>('all');
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  // Scoped to the dialog: the page-level `error` renders above the table and
+  // therefore behind the modal overlay, where nobody can read it.
+  const [modalError, setModalError] = useState('');
+  // Orders the admin can attach a manual movement to, so a payment or a parts
+  // purchase entered by hand is traceable to the job it belongs to.
+  const [orders, setOrders] = useState<WorkOrder[]>([]);
   const [form, setForm] = useState({
     tipo: 'ingreso' as TransactionType,
     categoria: 'pago_cliente' as TransactionCategory,
     monto: '',
     fecha: new Date().toISOString().split('T')[0],
     descripcion: '',
+    referencia_orden_id: '',
   });
+
+  const EMPTY_FORM = {
+    tipo: 'ingreso' as TransactionType,
+    categoria: 'pago_cliente' as TransactionCategory,
+    monto: '',
+    fecha: new Date().toISOString().split('T')[0],
+    descripcion: '',
+    referencia_orden_id: '',
+  };
 
   const loadData = useCallback(() => {
     setLoading(true);
@@ -48,10 +69,12 @@ export default function Finance() {
     Promise.all([
       supabaseService.getTransactions(sedeId),
       supabaseService.getDashboardStats(sedeId),
+      supabaseService.getWorkOrders(sedeId),
     ])
-      .then(([txns, statsData]) => {
+      .then(([txns, statsData, orderList]) => {
         setTransactions(txns);
         setStats(statsData);
+        setOrders(orderList);
       })
       .catch((err) => setError(getErrorMessage(err, language)))
       .finally(() => setLoading(false));
@@ -74,9 +97,22 @@ export default function Finance() {
     gasto_operativo: t('finance.operatingExpense'),
   };
 
+  // Like the other dialogs in the app, every failed path has to say why: this
+  // modal covers the page-level error box, so a bare `return` reads as a dead
+  // button to whoever pressed it.
   const handleSave = async () => {
     const monto = parseFloat(form.monto);
-    if (!monto || monto <= 0 || !form.descripcion.trim() || !user) return;
+    if (!Number.isFinite(monto) || monto <= 0) {
+      setModalError(t('finance.amountRequired'));
+      return;
+    }
+    if (!form.descripcion.trim()) {
+      setModalError(t('finance.descriptionRequired'));
+      return;
+    }
+    if (!user) return;
+
+    setModalError('');
     setSaving(true);
     try {
       await supabaseService.createTransaction({
@@ -87,12 +123,15 @@ export default function Finance() {
         descripcion: form.descripcion,
         fecha: form.fecha,
         registrado_por: user.id,
+        // Empty select means "not tied to any order" — send null, not ''.
+        referencia_orden_id: form.referencia_orden_id || null,
       });
       setShowModal(false);
-      setForm({ tipo: 'ingreso', categoria: 'pago_cliente', monto: '', fecha: new Date().toISOString().split('T')[0], descripcion: '' });
+      setForm(EMPTY_FORM);
+      showToast('success', t('finance.transactionCreated'));
       loadData();
     } catch (err) {
-      setError(getErrorMessage(err, language));
+      setModalError(getErrorMessage(err, language));
     } finally {
       setSaving(false);
     }
@@ -135,7 +174,7 @@ export default function Finance() {
           <button className="btn btn-secondary" id="import-statement-btn" onClick={() => setShowImportModal(true)}>
             <FileUp size={18} /> {t('finance.importStatement')}
           </button>
-          <button className="btn btn-primary" onClick={() => setShowModal(true)} id="new-transaction-btn">
+          <button className="btn btn-primary" onClick={() => { setModalError(''); setForm(EMPTY_FORM); setShowModal(true); }} id="new-transaction-btn">
             <Plus size={18} /> {t('finance.newTransaction')}
           </button>
         </div>
@@ -230,6 +269,7 @@ export default function Finance() {
               <th>{t('common.type')}</th>
               <th>{t('common.category')}</th>
               <th>{t('common.description')}</th>
+              <th>{t('finance.linkedOrder')}</th>
               <th style={{ textAlign: 'right' }}>{t('common.amount')}</th>
             </tr>
           </thead>
@@ -250,6 +290,20 @@ export default function Finance() {
                   {categoryLabels[txn.categoria]}
                 </td>
                 <td data-label={t('common.description')}>{txn.descripcion}</td>
+                <td data-label={t('finance.linkedOrder')}>
+                  {txn.referencia_orden_id ? (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      style={{ padding: '2px 6px', color: 'var(--color-primary-light)' }}
+                      onClick={() => navigate(`/work-orders?open=${txn.referencia_orden_id}`)}
+                    >
+                      {orders.find((o) => o.id === txn.referencia_orden_id)?.numero_orden || t('common.view')}
+                    </button>
+                  ) : (
+                    <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+                  )}
+                </td>
                 <td data-label={t('common.amount')} style={{
                   textAlign: 'right',
                   fontWeight: 600,
@@ -272,6 +326,7 @@ export default function Finance() {
               <button className="modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
             <div className="modal-body">
+              {modalError && <div className="alert-error" role="alert">{modalError}</div>}
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">{t('common.type')}</label>
@@ -321,6 +376,23 @@ export default function Finance() {
                 </div>
               </div>
               <div className="form-group">
+                <label className="form-label" htmlFor="txn-order">{t('finance.linkedOrder')}</label>
+                <select
+                  className="form-input form-select"
+                  id="txn-order"
+                  value={form.referencia_orden_id}
+                  onChange={(e) => setForm({ ...form, referencia_orden_id: e.target.value })}
+                >
+                  <option value="">{t('finance.noLinkedOrder')}</option>
+                  {orders.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.numero_orden} — {o.cliente?.nombre || ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="field-hint">{t('finance.linkedOrderHint')}</p>
+              </div>
+              <div className="form-group">
                 <label className="form-label">{t('common.description')}</label>
                 <textarea
                   className="form-input form-textarea"
@@ -341,7 +413,7 @@ export default function Finance() {
       )}
 
       {showImportModal && (
-        <Suspense fallback={null}>
+        <LazyModal onClose={() => setShowImportModal(false)}>
           <ImportStatementModal
             onClose={() => setShowImportModal(false)}
             onImported={() => {
@@ -349,7 +421,7 @@ export default function Finance() {
               loadData();
             }}
           />
-        </Suspense>
+        </LazyModal>
       )}
     </div>
   );

@@ -51,7 +51,14 @@ export default function Dashboard() {
       .then(([statsData, orders]) => {
         if (!active) return;
         setStats(statsData);
-        setRecentOrders(orders.slice(0, 5));
+        // A mechanic/painter's dashboard is about their own bench: the recent
+        // list and the alerts derived from it only cover orders assigned to
+        // them, so the alert panel never nags about a colleague's job. Admins
+        // still see the whole sede.
+        const visible = isAdmin
+          ? orders
+          : orders.filter((o) => (o.asignaciones || []).some((a) => a.usuario_id === user?.id));
+        setRecentOrders(visible.slice(0, 5));
       })
       .catch((err) => active && setError(getErrorMessage(err, language)))
       .finally(() => active && setLoading(false));
@@ -59,7 +66,7 @@ export default function Dashboard() {
     return () => {
       active = false;
     };
-  }, [user, currentSede, language]);
+  }, [user, isAdmin, currentSede, language]);
 
   const maxRevenue = Math.max(1, ...stats.ingresos_por_mes.map((m) => Math.max(m.ingresos, m.egresos)));
 
@@ -282,12 +289,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Recent Orders */}
       <div className="card" style={{ marginTop: 'var(--space-4)' }}>
         <div className="card-header">
           <h3 className="card-title">{t('dashboard.recentOrders')}</h3>
         </div>
-        <div className="table-container" style={{ border: 'none' }}>
+        <div className="table-container cards-on-mobile" style={{ border: 'none' }}>
           <table className="table">
             <thead>
               <tr>
@@ -304,19 +310,19 @@ export default function Dashboard() {
             <tbody>
               {recentOrders.map((order) => (
                 <tr key={order.id}>
-                  <td>
+                  <td data-label={t('workOrders.orderNumber')}>
                     <span style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>
                       {order.numero_orden}
                     </span>
                   </td>
-                  <td>{order.cliente?.nombre}</td>
-                  <td>
+                  <td data-label={t('common.name')}>{order.cliente?.nombre}</td>
+                  <td data-label={t('vehicles.title')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                       <Car size={14} style={{ color: 'var(--color-text-tertiary)' }} />
                       {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
                     </div>
                   </td>
-                  <td>
+                  <td data-label={t('common.type')}>
                     <span className={`badge badge-${order.tipo_trabajo}`}>
                       {order.tipo_trabajo === 'mecanica'
                         ? t('workOrders.mechanical')
@@ -325,12 +331,12 @@ export default function Dashboard() {
                         : t('workOrders.combined')}
                     </span>
                   </td>
-                  <td>
+                  <td data-label={t('common.status')}>
                     <span className={`badge badge-${order.estatus}`}>
                       {statusLabels[order.estatus]}
                     </span>
                   </td>
-                  <td>
+                  <td data-label={t('workOrders.progress')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: 120 }}>
                       <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
                         <div
@@ -343,10 +349,10 @@ export default function Dashboard() {
                       </span>
                     </div>
                   </td>
-                  <td style={{ fontWeight: 600 }}>
+                  <td data-label={t('common.total')} style={{ fontWeight: 600 }}>
                     ${order.total_general.toLocaleString()}
                   </td>
-                  <td>
+                  <td data-label={t('common.actions')}>
                     <button
                       type="button"
                       className="btn btn-secondary btn-sm"

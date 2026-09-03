@@ -111,6 +111,9 @@ export default function Settings() {
 
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [savingEmployee, setSavingEmployee] = useState(false);
+  // Separate from the page-level `error`, which renders at the top of the page
+  // and is therefore hidden behind this dialog's full-screen overlay.
+  const [employeeError, setEmployeeError] = useState('');
   const [employeeForm, setEmployeeForm] = useState({
     nombre_completo: '',
     email: '',
@@ -274,14 +277,41 @@ export default function Settings() {
   const openEmployeeModal = () => {
     setEmployeeForm({ nombre_completo: '', email: '', password: '', telefono: '', rol: 'mecanico', sede_id: sedes[0]?.id || '' });
     setError('');
+    setEmployeeError('');
     setShowEmployeeModal(true);
   };
 
+  // Every exit from this function has to say something out loud. The inputs
+  // carry `required`, but they aren't wrapped in a <form> and the button is a
+  // plain onClick, so the browser never validates them — a bare `return` here
+  // reads to the admin as a dead button, which is exactly how this was
+  // reported from the shop.
   const handleCreateEmployee = async () => {
     const { nombre_completo, email, password, sede_id } = employeeForm;
-    if (!nombre_completo.trim() || !email.trim() || !password || !sede_id) return;
+
+    if (!nombre_completo.trim() || !email.trim() || !password) {
+      setEmployeeError(t('settings.employeeMissingFields'));
+      return;
+    }
+    if (!EMAIL_RE.test(email.trim())) {
+      setEmployeeError(t('settings.employeeInvalidEmail'));
+      return;
+    }
+    // Mirrors the check inside the create-employee edge function, so the admin
+    // finds out before the round trip instead of after it.
+    if (password.length < 6) {
+      setEmployeeError(t('settings.employeeShortPassword'));
+      return;
+    }
+    if (!sede_id) {
+      setEmployeeError(
+        sedes.length === 0 ? t('settings.employeeNoSede') : t('settings.employeeSedeRequired')
+      );
+      return;
+    }
+
     setSavingEmployee(true);
-    setError('');
+    setEmployeeError('');
     try {
       await supabaseService.createEmployee({
         ...employeeForm,
@@ -290,9 +320,10 @@ export default function Settings() {
         telefono: employeeForm.telefono.trim() || undefined,
       });
       setShowEmployeeModal(false);
+      showToast('success', t('settings.employeeCreated'));
       loadData();
     } catch (err) {
-      setError(getErrorMessage(err, language));
+      setEmployeeError(getErrorMessage(err, language));
     } finally {
       setSavingEmployee(false);
     }
@@ -641,10 +672,14 @@ export default function Settings() {
               <button className="modal-close" onClick={() => setShowEmployeeModal(false)}><X size={20} /></button>
             </div>
             <div className="modal-body">
+              {employeeError && (
+                <div className="alert-error" role="alert">{employeeError}</div>
+              )}
               <div className="form-group">
-                <label className="form-label">{t('common.name')}</label>
+                <label className="form-label" htmlFor="employee-name">{t('common.name')}</label>
                 <input
                   className="form-input"
+                  id="employee-name"
                   value={employeeForm.nombre_completo}
                   onChange={(e) => setEmployeeForm({ ...employeeForm, nombre_completo: e.target.value })}
                   required
@@ -652,9 +687,10 @@ export default function Settings() {
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">{t('common.email')}</label>
+                  <label className="form-label" htmlFor="employee-email">{t('common.email')}</label>
                   <input
                     className="form-input"
+                    id="employee-email"
                     type="email"
                     value={employeeForm.email}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
@@ -662,18 +698,20 @@ export default function Settings() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">{t('common.phone')}</label>
+                  <label className="form-label" htmlFor="employee-phone">{t('common.phone')}</label>
                   <input
                     className="form-input"
+                    id="employee-phone"
                     value={employeeForm.telefono}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, telefono: e.target.value })}
                   />
                 </div>
               </div>
               <div className="form-group">
-                <label className="form-label">{t('settings.temporaryPassword')}</label>
+                <label className="form-label" htmlFor="employee-password">{t('settings.temporaryPassword')}</label>
                 <input
                   className="form-input"
+                  id="employee-password"
                   type="text"
                   minLength={6}
                   value={employeeForm.password}
@@ -683,9 +721,10 @@ export default function Settings() {
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">{t('settings.role')}</label>
+                  <label className="form-label" htmlFor="employee-role">{t('settings.role')}</label>
                   <select
                     className="form-input form-select"
+                    id="employee-role"
                     value={employeeForm.rol}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, rol: e.target.value as UserRole })}
                   >
@@ -695,9 +734,10 @@ export default function Settings() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">{t('settings.workshops')}</label>
+                  <label className="form-label" htmlFor="employee-sede">{t('settings.workshops')}</label>
                   <select
                     className="form-input form-select"
+                    id="employee-sede"
                     value={employeeForm.sede_id}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, sede_id: e.target.value })}
                     required

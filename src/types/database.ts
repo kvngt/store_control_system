@@ -75,8 +75,10 @@ export interface Vehicle {
   modelo: string;
   anio: number;
   vin: string;
-  placa: string;
-  /** Two-letter US state that issued the plate; absent on older records. */
+  /** Null for units with no plate at all — auction buys, mostly. Never an
+   *  empty string or a placeholder like "SIN PLACA". */
+  placa: string | null;
+  /** Two-letter US state that issued the plate; null whenever `placa` is. */
   placa_estado?: string | null;
   color: string;
   creado_en: string;
@@ -168,7 +170,9 @@ export interface WorkOrderPart {
 export interface FinancialTransaction {
   id: string;
   sede_id: string;
-  referencia_orden_id?: string;
+  /** Set automatically for money the order lifecycle books, and settable by
+   *  hand from Finanzas so a manual movement can be traced to its order. */
+  referencia_orden_id?: string | null;
   importacion_id?: string;
   tipo: TransactionType;
   categoria: TransactionCategory;
@@ -264,7 +268,7 @@ export interface VehicleInput {
   modelo: string;
   anio: number;
   vin: string;
-  placa: string;
+  placa: string | null;
   placa_estado?: string | null;
   color: string;
 }

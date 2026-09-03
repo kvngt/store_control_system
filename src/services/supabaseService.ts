@@ -29,6 +29,20 @@ function isSameMonth(dateStr: string, ref: Date) {
   return d.getMonth() === ref.getMonth() && d.getFullYear() === ref.getFullYear();
 }
 
+// A DELETE the RLS policy refuses is not an error in PostgREST: the row simply
+// isn't visible to the statement, so it reports success having removed nothing.
+// Without this the UI would say "deleted" and then redraw the row still there.
+// `.select('id')` makes the affected rows observable, so a no-op can be turned
+// into the same 42501 the error mapper already renders as "no tienes permiso".
+function assertDeleted(rows: { id: string }[] | null, entity: string) {
+  if ((rows || []).length === 0) {
+    throw Object.assign(
+      new Error(`No se pudo eliminar ${entity}: permiso denegado o el registro ya no existe.`),
+      { code: '42501' }
+    );
+  }
+}
+
 export const supabaseService = {
   // ===== Sedes =====
   getSedes: async () => {
@@ -101,6 +115,20 @@ export const supabaseService = {
       .single();
     if (error) throw error;
     return data as UserProfile;
+  },
+
+  // ===== Password recovery =====
+  // Sends the "reset your password" email. `redirectTo` must be listed in the
+  // project's allowed redirect URLs, otherwise Supabase drops the link.
+  requestPasswordReset: async (email: string, redirectTo: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+    if (error) throw error;
+  },
+
+  /** Sets a new password for the session opened by the recovery link. */
+  updatePassword: async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw error;
   },
 
   /** True when another profile already uses this email (case-insensitive). */
@@ -202,9 +230,12 @@ export const supabaseService = {
     return data as Customer;
   },
 
+  // Admin-only, enforced by the `clientes_delete` RLS policy. Deleting a
+  // customer cascades to their vehicles, so a technician must never reach it.
   deleteCustomer: async (id: string) => {
-    const { error } = await supabase.from('clientes').delete().eq('id', id);
+    const { data, error } = await supabase.from('clientes').delete().eq('id', id).select('id');
     if (error) throw error;
+    assertDeleted(data, 'el cliente');
   },
 
   // ===== Vehicles =====
@@ -243,9 +274,11 @@ export const supabaseService = {
     return data as Vehicle;
   },
 
+  // Admin-only, enforced by the `vehiculos_delete` RLS policy.
   deleteVehicle: async (id: string) => {
-    const { error } = await supabase.from('vehiculos').delete().eq('id', id);
+    const { data, error } = await supabase.from('vehiculos').delete().eq('id', id).select('id');
     if (error) throw error;
+    assertDeleted(data, 'el vehículo');
   },
 
   // ===== Work Orders =====
@@ -370,8 +403,14 @@ export const supabaseService = {
       .eq('referencia_orden_id', orderId);
     if (finanzasError) throw finanzasError;
 
-    const { error } = await supabase.from('ordenes_trabajo').delete().eq('id', orderId);
+    // Admin-only, enforced by the `ordenes_trabajo_delete` RLS policy.
+    const { data, error } = await supabase
+      .from('ordenes_trabajo')
+      .delete()
+      .eq('id', orderId)
+      .select('id');
     if (error) throw error;
+    assertDeleted(data, 'la orden');
   },
 
   // ===== Labor / Parts / Assignments on an existing order =====

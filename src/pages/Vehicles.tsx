@@ -25,13 +25,18 @@ import type { Vehicle, Customer } from '../types/database';
 
 const EMPTY_FORM = {
   cliente_id: '', marca: '', modelo: '', anio: '', vin: '', placa: '', placa_estado: '', color: '',
+  // Auction units arrive with no plate at all. Kept as an explicit flag rather
+  // than inferred from an empty field, so "not filled in yet" and "this vehicle
+  // genuinely has no plate" stay distinguishable while the form is open.
+  sin_placa: false,
 };
 
 export default function Vehicles() {
   const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
+  const isAdmin = user?.rol === 'admin';
   // Strict isolation: only ever the active sede's vehicles and customers.
-  const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
+  const sedeId = isAdmin ? currentSede?.id : user?.sede_id;
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +79,7 @@ export default function Vehicles() {
       v.marca.toLowerCase().includes(search.toLowerCase()) ||
       v.modelo.toLowerCase().includes(search.toLowerCase()) ||
       v.vin.toLowerCase().includes(search.toLowerCase()) ||
-      v.placa.toLowerCase().includes(search.toLowerCase()) ||
+      (v.placa || '').toLowerCase().includes(search.toLowerCase()) ||
       (v.cliente_nombre || '').toLowerCase().includes(search.toLowerCase())
   );
 
@@ -101,9 +106,10 @@ export default function Vehicles() {
       modelo: v.modelo,
       anio: String(v.anio),
       vin: v.vin,
-      placa: v.placa,
+      placa: v.placa || '',
       placa_estado: v.placa_estado || '',
       color: v.color,
+      sin_placa: !v.placa,
     });
     resetModalState();
     // The stored VIN is already decoded data — don't re-fetch and overwrite
@@ -211,7 +217,7 @@ export default function Vehicles() {
 
   // ===== Plate =====
   const plateCheck = checkUsPlate(form.placa, form.placa_estado || undefined);
-  const plateMessage = form.placa.trim()
+  const plateMessage = form.sin_placa ? null : form.placa.trim()
     ? plateCheck.problem === 'CHARSET' ? { kind: 'err' as const, text: t('vehicles.plateCharset') }
       : plateCheck.problem === 'LENGTH' ? { kind: 'err' as const, text: t('vehicles.plateLength') }
       : plateCheck.problem === 'UNUSUAL' ? { kind: 'warn' as const, text: t('vehicles.plateUnusual') }
@@ -227,7 +233,7 @@ export default function Vehicles() {
     modelo: !form.modelo.trim(),
     anio: !form.anio,
     vin: vinCheck.level === 'error',
-    placa: !form.placa.trim() || plateCheck.level === 'error',
+    placa: !form.sin_placa && (!form.placa.trim() || plateCheck.level === 'error'),
   };
   const hasErrors = Object.values(invalid).some(Boolean);
 
@@ -254,8 +260,10 @@ export default function Vehicles() {
         modelo: form.modelo.trim(),
         anio: parseInt(form.anio, 10) || new Date().getFullYear(),
         vin: vinCheck.normalized,
-        placa: plateCheck.normalized,
-        placa_estado: form.placa_estado || null,
+        // NULL, never "SIN PLACA" or an empty string: a placeholder would show
+        // up in search and print on the work order as if it were a real plate.
+        placa: form.sin_placa ? null : plateCheck.normalized,
+        placa_estado: form.sin_placa ? null : form.placa_estado || null,
         color: form.color.trim(),
       };
       if (selected) {
@@ -272,7 +280,14 @@ export default function Vehicles() {
     }
   };
 
+  // Deleting a vehicle destroys its service history, so it is reserved for
+  // admins. The `vehiculos_delete` RLS policy is the boundary that actually
+  // holds; this check only keeps the UI honest about it.
   const handleDelete = async (v: Vehicle) => {
+    if (!isAdmin) {
+      setError(t('common.adminOnly'));
+      return;
+    }
     if (!confirm(`${t('common.delete')}: ${v.marca} ${v.modelo}?`)) return;
     try {
       await supabaseService.deleteVehicle(v.id);
@@ -324,16 +339,24 @@ export default function Vehicles() {
                   <td data-label={t('vehicles.year')}>{v.anio}</td>
                   <td data-label={t('vehicles.vin')} style={{ fontFamily: 'monospace', fontSize: 'var(--font-size-xs)' }}>{v.vin}</td>
                   <td data-label={t('vehicles.plate')}>
-                    <span className="badge badge-en_proceso">
-                      {v.placa_estado ? `${v.placa_estado} · ${v.placa}` : v.placa}
-                    </span>
+                    {v.placa ? (
+                      <span className="badge badge-en_proceso">
+                        {v.placa_estado ? `${v.placa_estado} · ${v.placa}` : v.placa}
+                      </span>
+                    ) : (
+                      <span className="badge" style={{ color: 'var(--color-text-tertiary)' }}>
+                        {t('vehicles.noPlate')}
+                      </span>
+                    )}
                   </td>
                   <td data-label={t('vehicles.color')}>{v.color}</td>
                   <td data-label={t('vehicles.owner')} style={{ color: 'var(--color-text-secondary)' }}>{v.cliente_nombre}</td>
                   <td>
                     <div className="table-actions">
                       <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEditModal(v)}><Edit3 size={16} /></button>
-                      <button className="btn btn-ghost btn-sm btn-icon" style={{ color: 'var(--color-danger)' }} onClick={() => handleDelete(v)}><Trash2 size={16} /></button>
+                      {isAdmin && (
+                        <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={() => handleDelete(v)}><Trash2 size={16} /></button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -499,13 +522,37 @@ export default function Vehicles() {
                 </div>
               </div>
 
-              {/* 4 — Plate, checked against the issuing state. */}
+              {/* 4 — Plate, checked against the issuing state. Auction units
+                     have none, so the whole block can be switched off. */}
+              <label className="checkbox-row" htmlFor="vehicle-no-plate">
+                <input
+                  type="checkbox"
+                  id="vehicle-no-plate"
+                  checked={form.sin_placa}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      sin_placa: e.target.checked,
+                      // Drop whatever was typed, so an unchecked-then-rechecked
+                      // box can't leave a stale plate behind on save.
+                      placa: e.target.checked ? '' : prev.placa,
+                      placa_estado: e.target.checked ? '' : prev.placa_estado,
+                    }))
+                  }
+                />
+                <span>
+                  {t('vehicles.noPlate')}
+                  <span className="field-hint" style={{ display: 'block' }}>{t('vehicles.noPlateHint')}</span>
+                </span>
+              </label>
+
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label" htmlFor="vehicle-plate-state">{t('vehicles.plateState')}</label>
                   <select
                     className="form-input form-select"
                     id="vehicle-plate-state"
+                    disabled={form.sin_placa}
                     value={form.placa_estado}
                     onChange={(e) => setForm((prev) => ({ ...prev, placa_estado: e.target.value }))}
                   >
@@ -520,9 +567,10 @@ export default function Vehicles() {
                   <input
                     className={`form-input${touched && invalid.placa ? ' is-invalid' : ''}`}
                     id="vehicle-plate"
-                    placeholder="ABC1234"
+                    placeholder={form.sin_placa ? t('vehicles.noPlate') : 'ABC1234'}
                     maxLength={10}
                     autoComplete="off"
+                    disabled={form.sin_placa}
                     value={form.placa}
                     onChange={(e) => setForm((prev) => ({ ...prev, placa: e.target.value.toUpperCase() }))}
                   />
@@ -531,7 +579,7 @@ export default function Vehicles() {
                       {plateMessage.text}
                     </p>
                   )}
-                  {touched && !form.placa.trim() && (
+                  {touched && !form.sin_placa && !form.placa.trim() && (
                     <p className="field-hint field-hint-error">{t('vehicles.plateRequired')}</p>
                   )}
                 </div>
