@@ -66,8 +66,10 @@ export const MECHANIC_USER: UserProfile = {
   email: 'luis@restorify.test',
 };
 
-/** The shape `useAuth()` returns, with test-friendly no-op callbacks. */
-export function authValue(user: UserProfile, currentSede: Sede = SEDE_CENTRO) {
+/** The shape `useAuth()` returns, with test-friendly no-op callbacks.
+ *  `currentSede` is nullable because the real context allows it — an admin
+ *  whose sede list failed to load has none, and screens have to cope. */
+export function authValue(user: UserProfile, currentSede: Sede | null = SEDE_CENTRO) {
   return {
     user,
     isAuthenticated: true,

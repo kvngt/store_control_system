@@ -458,9 +458,18 @@ teclearlos uno por uno.
 3. Aparece la lista de transacciones encontradas. Para cada una el sistema
    propone una categoría según palabras clave, marca las que parecen
    transferencias internas y avisa de posibles duplicados de algo ya registrado.
-4. Revisa, ajusta categorías, desmarca lo que no quieras importar. Si quedan
-   muchas sin categoría, puedes asignar una a todas de golpe.
+4. Revisa, ajusta categorías, desmarca lo que no quieras importar.
 5. **Importar seleccionadas**.
+
+> **Toda fila marcada necesita categoría.** El sistema propone una según
+> palabras clave, pero hay movimientos que ninguna regla reconoce —los cheques,
+> por ejemplo, no traen a quién se le pagó—. Mientras quede una fila marcada sin
+> categoría, el botón **Importar Seleccionadas** permanece apagado y arriba de
+> él aparece cuántas faltan.
+>
+> Para resolverlo rápido usa la barra **Asignar a las no clasificadas**: eliges
+> una categoría y se aplica de golpe a todas las que estén sin clasificar. La
+> otra salida es desmarcar las filas que no quieras importar.
 
 Cada importación queda registrada y se puede revertir en bloque.
 
@@ -605,6 +614,12 @@ Está en la sección **Otras Órdenes de Trabajo**, plegada debajo de las tuyas.
 **«No puedo mover la barra de avance.»**
 Solo se puede mover cuando la orden está **En Proceso**, y solo si estás asignado
 a ella.
+
+**«Presioné Importar Seleccionadas y no pasó nada.»**
+Casi siempre es que alguna fila marcada quedó sin categoría: el botón está
+apagado, no roto. Justo encima de él aparece el motivo y cuántas filas faltan.
+Asígnales una categoría con la barra **Asignar a las no clasificadas**, o
+desmárcalas.
 
 **«El importador dice que no encontró transacciones.»**
 Puede ser un estado de cuenta de otro banco (solo se admite Wells Fargo) o un PDF

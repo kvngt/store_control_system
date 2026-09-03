@@ -296,7 +296,9 @@ const translations: Record<Language, Translations> = {
       checkNumber: 'Cheque #',
       importSelected: 'Importar Seleccionadas',
       importSuccess: 'transacciones importadas correctamente.',
-      resolveCategoriesFirst: 'Asigna una categoría (o desmarca la fila) a todas las transacciones seleccionadas antes de importar.',
+      resolveCategoriesFirst: 'Asigna una categoría (o desmarca la fila) antes de importar.',
+      selectAtLeastOne: 'Marca al menos una transacción para importar.',
+      noSedeSelected: 'No hay una sede activa. Selecciona una en el encabezado antes de importar.',
     },
     // Payroll
     payroll: {
@@ -681,7 +683,9 @@ const translations: Record<Language, Translations> = {
       checkNumber: 'Check #',
       importSelected: 'Import Selected',
       importSuccess: 'transactions imported successfully.',
-      resolveCategoriesFirst: 'Assign a category (or uncheck the row) to every selected transaction before importing.',
+      resolveCategoriesFirst: 'Assign a category (or uncheck the row) before importing.',
+      selectAtLeastOne: 'Tick at least one transaction to import.',
+      noSedeSelected: 'No active workshop. Pick one in the header before importing.',
     },
     payroll: {
       title: 'Payroll Management',

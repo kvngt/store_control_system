@@ -2733,3 +2733,29 @@
     scroll-snap-align: start;
   }
 }
+
+/* Import dialog footer: the reason the import button is disabled sits beside
+   the button. Buried above a long scrolling table it was invisible from the
+   bottom of the dialog, which made a disabled button look like a broken one. */
+.modal-footer.import-footer {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.import-blocked {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 240px;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  color: var(--color-warning);
+}
+
+.import-footer-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}

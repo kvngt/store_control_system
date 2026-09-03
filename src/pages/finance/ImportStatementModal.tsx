@@ -97,11 +97,28 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
     setBulkCategory('');
   };
   const hasUnresolvedSelection = selectedRows.some((r) => !r.categoria);
+
+  // Why the import button is off, in the words of what to do about it.
+  const blockedReason =
+    rows.length === 0
+      ? ''
+      : selectedRows.length === 0
+      ? t('finance.selectAtLeastOne')
+      : hasUnresolvedSelection
+      ? `${uncategorized.length} ${t('finance.uncategorizedCount')}. ${t('finance.resolveCategoriesFirst')}`
+      : '';
   const totalIngresos = selectedRows.filter((r) => r.tipo === 'ingreso').reduce((s, r) => s + r.monto, 0);
   const totalEgresos = selectedRows.filter((r) => r.tipo === 'egreso').reduce((s, r) => s + r.monto, 0);
 
   const handleImport = async () => {
-    if (!file || !user || !sedeId || selectedRows.length === 0 || hasUnresolvedSelection) return;
+    if (!file || !user || selectedRows.length === 0 || hasUnresolvedSelection) return;
+    // The button's disabled state covers every other guard, but not this one:
+    // with no active sede the handler used to return without a word, which is
+    // indistinguishable from a dead button.
+    if (!sedeId) {
+      setError(t('finance.noSedeSelected'));
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -144,7 +161,7 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
           <button className="modal-close" onClick={onClose}><X size={20} /></button>
         </div>
         <div className="modal-body">
-          {error && <div className="alert-error">{error}</div>}
+          {error && <div className="alert-error" role="alert">{error}</div>}
 
           {successCount !== null ? (
             <div style={{
@@ -201,6 +218,7 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
                       <select
                         className="form-input form-select"
                         style={{ minWidth: 170 }}
+                        aria-label={t('finance.applyToUncategorized')}
                         value={bulkCategory}
                         onChange={(e) => setBulkCategory(e.target.value as TransactionCategory)}
                       >
@@ -321,17 +339,29 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
             </>
           )}
         </div>
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
-          {successCount === null && (
-            <button
-              className="btn btn-primary"
-              onClick={handleImport}
-              disabled={saving || parsing || selectedRows.length === 0 || hasUnresolvedSelection}
-            >
-              <Upload size={16} /> {saving ? t('common.loading') : t('finance.importSelected')}
-            </button>
+        {/* The reason the button is disabled has to live next to the button.
+            It used to be a line of small print above a long scrolling table, so
+            from the bottom of the dialog — where the button is — pressing it
+            looked like nothing happened at all. */}
+        <div className="modal-footer import-footer">
+          {successCount === null && blockedReason && (
+            <span className="import-blocked" role="status">
+              <AlertTriangle size={14} /> {blockedReason}
+            </span>
           )}
+          <div className="import-footer-actions">
+            <button className="btn btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
+            {successCount === null && (
+              <button
+                className="btn btn-primary"
+                onClick={handleImport}
+                disabled={saving || parsing || selectedRows.length === 0 || hasUnresolvedSelection}
+                title={blockedReason || undefined}
+              >
+                <Upload size={16} /> {saving ? t('common.loading') : t('finance.importSelected')}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
