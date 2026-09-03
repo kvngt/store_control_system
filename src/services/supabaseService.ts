@@ -667,12 +667,48 @@ export const supabaseService = {
     return path;
   },
 
+  // SHA-256 of the file, computed in the browser. Survives a rename, which
+  // filename matching does not — the same statement saved twice under
+  // different names is the case that slipped through.
+  fileFingerprint: async (file: File) => {
+    const buffer = await file.arrayBuffer();
+    const digest = await crypto.subtle.digest('SHA-256', buffer);
+    return Array.from(new Uint8Array(digest))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  },
+
+  /** Batches for this sede that were fed the exact same file, newest first. */
+  findImportsByFingerprint: async (sedeId: string, hash: string) => {
+    const { data, error } = await supabase
+      .from('finanzas_importaciones')
+      .select('*')
+      .eq('sede_id', sedeId)
+      .eq('hash_archivo', hash)
+      .order('fecha_importacion', { ascending: false });
+    if (error) throw error;
+    return (data || []) as BankStatementImport[];
+  },
+
+  /** Every import for a sede, so an admin can review and undo one. */
+  getImportBatches: async (sedeId?: string) => {
+    let query = supabase
+      .from('finanzas_importaciones')
+      .select('*')
+      .order('fecha_importacion', { ascending: false });
+    if (sedeId) query = query.eq('sede_id', sedeId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data || []) as BankStatementImport[];
+  },
+
   createImportBatch: async (input: {
     sede_id: string;
     nombre_archivo: string;
     ruta_archivo: string;
     importado_por: string;
     total_transacciones: number;
+    hash_archivo?: string;
   }) => {
     const { data, error } = await supabase.from('finanzas_importaciones').insert(input).select().single();
     if (error) throw error;

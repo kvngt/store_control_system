@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   getDashboardStats: vi.fn(),
   getWorkOrders: vi.fn(),
   createTransaction: vi.fn(),
+  getImportBatches: vi.fn(),
 }));
 
 vi.mock('../context/AuthContext', () => ({ useAuth: () => mocks.auth.current }));
@@ -29,6 +30,7 @@ vi.mock('../services/supabaseService', () => ({
     getTransactions: mocks.getTransactions,
     getDashboardStats: mocks.getDashboardStats,
     getWorkOrders: mocks.getWorkOrders,
+    getImportBatches: mocks.getImportBatches,
     createTransaction: mocks.createTransaction,
   },
 }));
@@ -69,6 +71,7 @@ beforeEach(() => {
   mocks.getTransactions.mockResolvedValue([]);
   mocks.getDashboardStats.mockResolvedValue(EMPTY_STATS);
   mocks.getWorkOrders.mockResolvedValue([ORDER]);
+  mocks.getImportBatches.mockResolvedValue([]);
   mocks.createTransaction.mockResolvedValue({ id: 'txn-1' });
 });
 

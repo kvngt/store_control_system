@@ -26,6 +26,8 @@ const mocks = vi.hoisted(() => ({
   uploadStatement: vi.fn(),
   createImportBatch: vi.fn(),
   bulkInsertTransactions: vi.fn(),
+  fileFingerprint: vi.fn(),
+  findImportsByFingerprint: vi.fn(),
 }));
 
 vi.mock('../../context/AuthContext', () => ({ useAuth: () => mocks.auth.current }));
@@ -41,6 +43,8 @@ vi.mock('../../services/supabaseService', () => ({
     uploadStatement: mocks.uploadStatement,
     createImportBatch: mocks.createImportBatch,
     bulkInsertTransactions: mocks.bulkInsertTransactions,
+    fileFingerprint: mocks.fileFingerprint,
+    findImportsByFingerprint: mocks.findImportsByFingerprint,
   },
 }));
 
@@ -56,7 +60,10 @@ async function loadStatement(user: ReturnType<typeof userEvent.setup>) {
   const input = document.querySelector('input[type="file"]') as HTMLInputElement;
   const file = new File([new Uint8Array([1, 2, 3])], 'estado.pdf', { type: 'application/pdf' });
   await user.upload(input, file);
-  await screen.findByText(/AUTOZONE PARTS 1234/);
+  // Wait on the review heading rather than a description: a row flagged as a
+  // duplicate repeats its description inside the warning note, so matching on
+  // that text is ambiguous in exactly the case these tests care about.
+  await screen.findByText(/Revisa las transacciones/i);
 }
 
 const importButton = () => screen.getByRole('button', { name: /Importar Seleccionadas/i });
@@ -78,6 +85,8 @@ beforeEach(() => {
   mocks.uploadStatement.mockResolvedValue('sede-centro/1234-estado.pdf');
   mocks.createImportBatch.mockResolvedValue({ id: 'imp-1' });
   mocks.bulkInsertTransactions.mockResolvedValue(undefined);
+  mocks.fileFingerprint.mockResolvedValue('abc123');
+  mocks.findImportsByFingerprint.mockResolvedValue([]);
 });
 
 describe('Importar Estado de Cuenta', () => {
@@ -161,6 +170,49 @@ describe('Importar Estado de Cuenta', () => {
     await waitFor(() => expect(importButton()).toBeEnabled());
     await user.click(importButton());
     await waitFor(() => expect(mocks.bulkInsertTransactions).toHaveBeenCalled());
+  });
+
+  it('warns when the exact same file was already imported', async () => {
+    // What actually happened: the same June statement went in three times and
+    // tripled every figure in Finanzas.
+    mocks.findImportsByFingerprint.mockResolvedValue([
+      {
+        id: 'imp-old',
+        sede_id: SEDE_CENTRO.id,
+        nombre_archivo: 'estado.pdf',
+        ruta_archivo: 'x',
+        fecha_importacion: '2026-09-02T06:20:36Z',
+        total_transacciones: 259,
+        creado_en: '2026-09-02T06:20:36Z',
+      },
+    ]);
+
+    const user = userEvent.setup();
+    renderWithProviders(<ImportStatementModal onClose={() => {}} onImported={() => {}} />);
+
+    await loadStatement(user);
+
+    const alerts = await screen.findAllByRole('alert');
+    expect(alerts.some((a) => /ya se importó/i.test(a.textContent || ''))).toBe(true);
+  });
+
+  it('does not let "select all" tick the rows flagged as duplicates', async () => {
+    // The gesture that caused the triple import: everything arrives unticked,
+    // and one click on the header box used to undo every exclusion.
+    mocks.findPossibleDuplicates.mockResolvedValue(new Map([[0, 'Importado: AUTOZONE PARTS 1234']]));
+
+    const user = userEvent.setup();
+    renderWithProviders(<ImportStatementModal onClose={() => {}} onImported={() => {}} />);
+
+    await loadStatement(user);
+    await user.click(screen.getByRole('checkbox', { name: /Seleccionar \/ deseleccionar todas/i }));
+    await user.click(importButton());
+
+    await waitFor(() => expect(mocks.bulkInsertTransactions).toHaveBeenCalled());
+    const inserted = mocks.bulkInsertTransactions.mock.calls[0][0];
+    // Only the non-duplicate row went in.
+    expect(inserted).toHaveLength(1);
+    expect(inserted[0].descripcion).toMatch(/DEPOSIT ACME BODY/);
   });
 
   it('does not go silent when there is no active sede', async () => {

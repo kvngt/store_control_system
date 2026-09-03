@@ -471,7 +471,35 @@ teclearlos uno por uno.
 > una categoría y se aplica de golpe a todas las que estén sin clasificar. La
 > otra salida es desmarcar las filas que no quieras importar.
 
-Cada importación queda registrada y se puede revertir en bloque.
+### Si importas el mismo estado de cuenta dos veces
+
+Es el error más caro que se puede cometer en esta pantalla, porque **duplica
+todos los ingresos y egresos del mes**. El sistema te protege en tres niveles:
+
+1. **Detecta el archivo repetido.** Al seleccionar el PDF, si ese mismo archivo
+   ya se importó antes en esta sede, aparece un aviso rojo con la fecha en que
+   se hizo. Reconoce el archivo por su contenido, así que cambiarle el nombre no
+   lo engaña.
+2. **Desmarca los movimientos que ya existen.** Cada transacción que coincide con
+   una ya registrada (mismo tipo, mismo monto, fecha con menos de dos días de
+   diferencia) llega desmarcada y con la etiqueta «Posible duplicado». Arriba de
+   la tabla se indica cuántas son.
+3. **«Seleccionar todas» no las incluye.** La casilla del encabezado marca todo
+   *excepto* lo señalado como duplicado. Si de verdad es un movimiento distinto
+   —dos compras iguales el mismo día, por ejemplo— márcalo tú a mano.
+
+<!-- IMAGEN: aviso rojo de "este mismo archivo ya se importó" con la fecha -->
+
+### Revertir una importación
+
+En Finanzas, arriba de la tabla, está la lista de **Importaciones** con el nombre
+del archivo, la fecha y cuántos movimientos trajo. El botón **Revertir
+importación** elimina de golpe todos los movimientos que entraron con ella.
+
+Es la salida cuando algo se importó de más o mal categorizado: revertir y volver
+a importar.
+
+<!-- IMAGEN: lista de importaciones con el botón de revertir -->
 
 <!-- IMAGEN: tabla de revisión de la importación, con categorías sugeridas y
      alguna fila marcada como posible duplicado -->
@@ -620,6 +648,10 @@ Casi siempre es que alguna fila marcada quedó sin categoría: el botón está
 apagado, no roto. Justo encima de él aparece el motivo y cuántas filas faltan.
 Asígnales una categoría con la barra **Asignar a las no clasificadas**, o
 desmárcalas.
+
+**«Importé el mismo estado de cuenta dos veces.»**
+Ve a Finanzas → Importaciones y presiona **Revertir importación** en la que
+sobra. Se eliminan solo los movimientos que entraron con esa importación.
 
 **«El importador dice que no encontró transacciones.»**
 Puede ser un estado de cuenta de otro banco (solo se admite Wells Fargo) o un PDF

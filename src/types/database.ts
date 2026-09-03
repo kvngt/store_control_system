@@ -190,6 +190,8 @@ export interface BankStatementImport {
   sede_id: string;
   nombre_archivo: string;
   ruta_archivo: string;
+  /** SHA-256 of the imported PDF; null on batches predating the column. */
+  hash_archivo?: string | null;
   fecha_importacion: string;
   importado_por?: string;
   total_transacciones: number;

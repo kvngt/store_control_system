@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { supabaseService } from '../services/supabaseService';
 import { getErrorMessage } from '../lib/errors';
-import type { FinancialTransaction, TransactionType, TransactionCategory, DashboardStats, WorkOrder } from '../types/database';
+import type { FinancialTransaction, TransactionType, TransactionCategory, DashboardStats, WorkOrder, BankStatementImport } from '../types/database';
 
 // Lazy-loaded: pulls in pdfjs-dist (~1MB), which shouldn't ship in the main
 // bundle for users who never open the import dialog.
@@ -45,6 +45,11 @@ export default function Finance() {
   // Orders the admin can attach a manual movement to, so a payment or a parts
   // purchase entered by hand is traceable to the job it belongs to.
   const [orders, setOrders] = useState<WorkOrder[]>([]);
+  // Imports are listed so a batch brought in by mistake can be undone. Without
+  // this, `deleteImportBatch` existed in the service but no screen called it,
+  // and a duplicated statement could only be cleaned up from the database.
+  const [imports, setImports] = useState<BankStatementImport[]>([]);
+  const [revertingId, setRevertingId] = useState<string | null>(null);
   const [form, setForm] = useState({
     tipo: 'ingreso' as TransactionType,
     categoria: 'pago_cliente' as TransactionCategory,
@@ -70,11 +75,13 @@ export default function Finance() {
       supabaseService.getTransactions(sedeId),
       supabaseService.getDashboardStats(sedeId),
       supabaseService.getWorkOrders(sedeId),
+      supabaseService.getImportBatches(sedeId),
     ])
-      .then(([txns, statsData, orderList]) => {
+      .then(([txns, statsData, orderList, importList]) => {
         setTransactions(txns);
         setStats(statsData);
         setOrders(orderList);
+        setImports(importList);
       })
       .catch((err) => setError(getErrorMessage(err, language)))
       .finally(() => setLoading(false));
@@ -100,6 +107,21 @@ export default function Finance() {
   // Like the other dialogs in the app, every failed path has to say why: this
   // modal covers the page-level error box, so a bare `return` reads as a dead
   // button to whoever pressed it.
+  const handleRevertImport = async (batch: BankStatementImport) => {
+    const when = new Date(batch.fecha_importacion).toLocaleString('es');
+    if (!confirm(`${t('finance.confirmRevertImport')} "${batch.nombre_archivo}" (${when})?`)) return;
+    setRevertingId(batch.id);
+    try {
+      await supabaseService.deleteImportBatch(batch.id);
+      showToast('success', t('finance.importReverted'));
+      loadData();
+    } catch (err) {
+      showToast('error', t('finance.importRevertError'), getErrorMessage(err, language));
+    } finally {
+      setRevertingId(null);
+    }
+  };
+
   const handleSave = async () => {
     const monto = parseFloat(form.monto);
     if (!Number.isFinite(monto) || monto <= 0) {
@@ -259,6 +281,39 @@ export default function Finance() {
           </button>
         ))}
       </div>
+
+      {/* Imports — listed so a duplicated statement can be undone in one click. */}
+      {imports.length > 0 && (
+        <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
+          <div className="card-header">
+            <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <FileUp size={18} /> {t('finance.imports')}
+            </h3>
+          </div>
+          <div className="import-list">
+            {imports.map((batch) => (
+              <div key={batch.id} className="import-list-row">
+                <div className="import-list-main">
+                  <span className="import-list-name">{batch.nombre_archivo}</span>
+                  <span className="import-list-meta">
+                    {t('finance.importedOn')} {new Date(batch.fecha_importacion).toLocaleString('es')}
+                    {' · '}
+                    {batch.total_transacciones} {t('finance.transactionsCount')}
+                  </span>
+                </div>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ color: 'var(--color-danger)' }}
+                  onClick={() => handleRevertImport(batch)}
+                  disabled={revertingId === batch.id}
+                >
+                  {revertingId === batch.id ? t('common.loading') : t('finance.revertImport')}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Transactions Table */}
       <div className="table-container cards-on-mobile animate-fade-in">

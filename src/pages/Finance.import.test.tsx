@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   getTransactions: vi.fn(),
   getDashboardStats: vi.fn(),
   getWorkOrders: vi.fn(),
+  getImportBatches: vi.fn(),
 }));
 
 vi.mock('../context/AuthContext', () => ({
@@ -29,6 +30,7 @@ vi.mock('../services/supabaseService', () => ({
     getTransactions: mocks.getTransactions,
     getDashboardStats: mocks.getDashboardStats,
     getWorkOrders: mocks.getWorkOrders,
+    getImportBatches: mocks.getImportBatches,
     createTransaction: vi.fn(),
   },
 }));
@@ -59,6 +61,7 @@ beforeEach(() => {
   mocks.getTransactions.mockResolvedValue([]);
   mocks.getDashboardStats.mockResolvedValue(EMPTY_STATS);
   mocks.getWorkOrders.mockResolvedValue([]);
+  mocks.getImportBatches.mockResolvedValue([]);
 });
 
 describe('Finance — Importar Estado de Cuenta', () => {

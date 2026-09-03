@@ -28,6 +28,11 @@ npm run test:e2e             # pruebas end-to-end (Playwright)
 
 El proyecto Supabase vive en `supabase/` (migraciones en `supabase/migrations/`, función edge en `supabase/functions/`). Para aplicar migraciones al proyecto vinculado: `npx supabase db push`. Para desplegar una función: `npx supabase functions deploy <nombre> --use-api`.
 
+## Documentación
+
+- **[docs/arquitectura.md](docs/arquitectura.md)** — cómo está construido el sistema: la decisión de no tener backend propio, el mapa del repositorio, dónde vive la lógica de negocio, el modelo de permisos y las trampas conocidas. Empieza por aquí si vas a tocar el código.
+- **[docs/manual-usuario.md](docs/manual-usuario.md)** — cómo se usa la aplicación, pantalla por pantalla. Base en texto para el manual con imágenes.
+
 ## Roles y permisos
 
 Hay tres roles (`perfiles.rol`): **admin**, **mecanico**, **pintor**. Todo usuario pertenece a una sola sede (`sede_id`), excepto el admin, que puede cambiar de sede activa desde el selector en el header y así ver los datos de cualquier sucursal.

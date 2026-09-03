@@ -5,7 +5,12 @@ import { supabaseService } from '../../services/supabaseService';
 import { getErrorMessage } from '../../lib/errors';
 import { parseWellsFargoStatement } from '../../lib/bankStatementParser';
 import { isLikelyInternalTransfer, suggestCategory } from '../../lib/categorizationRules';
-import type { CategorizationRule, ReviewableTransaction, TransactionCategory } from '../../types/database';
+import type {
+  BankStatementImport,
+  CategorizationRule,
+  ReviewableTransaction,
+  TransactionCategory,
+} from '../../types/database';
 import { X, Upload, AlertTriangle } from 'lucide-react';
 
 interface Props {
@@ -34,6 +39,9 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [successCount, setSuccessCount] = useState<number | null>(null);
   const [bulkCategory, setBulkCategory] = useState<TransactionCategory | ''>('');
+  // Set when this exact file (by content hash) was already imported here.
+  const [alreadyImported, setAlreadyImported] = useState<BankStatementImport[]>([]);
+  const [fingerprint, setFingerprint] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -46,8 +54,17 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
     setFile(selected);
     setError('');
     setSuccessCount(null);
+    setAlreadyImported([]);
     setParsing(true);
     try {
+      // Before anything else: has this exact file been through here already?
+      // Checked by content, so renaming the download doesn't hide it.
+      const hash = await supabaseService.fileFingerprint(selected);
+      setFingerprint(hash);
+      if (sedeId) {
+        setAlreadyImported(await supabaseService.findImportsByFingerprint(sedeId, hash));
+      }
+
       const { transactions, warnings: parseWarnings } = await parseWellsFargoStatement(selected);
       setWarnings(parseWarnings);
 
@@ -82,12 +99,19 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
   const selectedRows = rows.filter((r) => r.incluir);
   const allSelected = rows.length > 0 && rows.every((r) => r.incluir);
   const someSelected = rows.some((r) => r.incluir);
+  // Ticking the header box must not sweep flagged duplicates back in. That is
+  // the exact gesture that imported the same June statement three times: the
+  // dialog opens with every duplicate unticked, and "select all" undid it in
+  // one click. Duplicates stay out; each one can still be ticked by hand.
   const toggleAll = (checked: boolean) =>
-    setRows((prev) => prev.map((r) => ({ ...r, incluir: checked })));
+    setRows((prev) =>
+      prev.map((r) => ({ ...r, incluir: checked ? !r.posibleDuplicado : false }))
+    );
 
   // Plain "Check" lines carry no payee at all, so no keyword rule can ever
   // classify them — on a real statement that's ~60 rows the reviewer would
   // otherwise have to set one dropdown at a time before importing anything.
+  const duplicateCount = rows.filter((r) => r.posibleDuplicado).length;
   const uncategorized = rows.filter((r) => r.incluir && !r.categoria);
   const applyBulkCategory = () => {
     if (!bulkCategory) return;
@@ -129,6 +153,7 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
         ruta_archivo: path,
         importado_por: user.id,
         total_transacciones: selectedRows.length,
+        hash_archivo: fingerprint || undefined,
       });
       await supabaseService.bulkInsertTransactions(
         selectedRows.map((r) => ({
@@ -189,6 +214,19 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
                 <div className="loading-state"><div className="spinner" /> <span>{t('finance.parsingStatement')}</span></div>
               )}
 
+              {alreadyImported.length > 0 && (
+                <div className="alert-error" role="alert" style={{ display: 'flex', gap: 8 }}>
+                  <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <span>
+                    <strong>{t('finance.fileAlreadyImported')}</strong>{' '}
+                    {alreadyImported
+                      .map((b) => new Date(b.fecha_importacion).toLocaleString('es'))
+                      .join(' · ')}
+                    . {t('finance.fileAlreadyImportedHint')}
+                  </span>
+                </div>
+              )}
+
               {warnings.length > 0 && (
                 <div className="alert-error" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {warnings.map((w, i) => (
@@ -208,6 +246,15 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
                   <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-2)' }}>
                     {t('finance.reviewImport')}
                   </p>
+
+                  {duplicateCount > 0 && (
+                    <div className="import-bulk-bar" style={{ borderColor: 'var(--color-warning)' }}>
+                      <AlertTriangle size={14} style={{ color: 'var(--color-warning)', flexShrink: 0 }} />
+                      <span style={{ fontSize: 'var(--font-size-sm)' }}>
+                        <strong>{duplicateCount}</strong> {t('finance.duplicatesExcluded')}
+                      </span>
+                    </div>
+                  )}
 
                   {uncategorized.length > 0 && (
                     <div className="import-bulk-bar">
