@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -82,12 +82,15 @@ export default function Customers() {
       .catch((err) => setError(getErrorMessage(err, language)));
   }, [viewProfile, language]);
 
-  const filtered = customers.filter(
-    (c) =>
-      c.nombre.toLowerCase().includes(search.toLowerCase()) ||
-      c.telefono.includes(search) ||
-      c.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    const searchLower = search.toLowerCase();
+    return customers.filter(
+      (c) =>
+        c.nombre.toLowerCase().includes(searchLower) ||
+        c.telefono.includes(search) ||
+        c.email.toLowerCase().includes(searchLower)
+    );
+  }, [customers, search]);
 
   const openCreateModal = () => {
     setSelectedCustomer(null);

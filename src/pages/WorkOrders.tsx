@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import SignatureCanvas from 'react-signature-canvas';
 import { useLanguage } from '../context/LanguageContext';
@@ -156,22 +156,32 @@ export default function WorkOrders() {
     supabaseService.getOperators(sedeId).then(setOperators).catch(() => {});
   }, [sedeId]);
 
-  const filtered = orders.filter((o) => {
-    const matchSearch =
-      o.numero_orden.toLowerCase().includes(search.toLowerCase()) ||
-      (o.cliente?.nombre || '').toLowerCase().includes(search.toLowerCase());
-    const matchStatus = filterStatus === 'all' || o.estatus === filterStatus;
-    return matchSearch && matchStatus;
-  });
+  const filtered = useMemo(() => {
+    const searchLower = search.toLowerCase();
+    return orders.filter((o) => {
+      const matchSearch =
+        o.numero_orden.toLowerCase().includes(searchLower) ||
+        (o.cliente?.nombre || '').toLowerCase().includes(searchLower);
+      const matchStatus = filterStatus === 'all' || o.estatus === filterStatus;
+      return matchSearch && matchStatus;
+    });
+  }, [orders, search, filterStatus]);
 
   // A mechanic/painter opens this screen to work, not to browse: their own
   // orders come first, and the rest of the sede's board is a second section
   // they can expand when they need it. Admins keep the single combined list.
-  const isMine = (order: WorkOrder) => (order.asignaciones || []).some((a) => a.usuario_id === user?.id);
-  const myOrders = filtered.filter(isMine);
-  const otherOrders = filtered.filter((o) => !isMine(o));
+  const isMine = useCallback(
+    (order: WorkOrder) => (order.asignaciones || []).some((a) => a.usuario_id === user?.id),
+    [user?.id]
+  );
 
-  const vehiclesForCustomer = vehicles.filter((v) => v.cliente_id === selectedCustomer);
+  const myOrders = useMemo(() => filtered.filter(isMine), [filtered, isMine]);
+  const otherOrders = useMemo(() => filtered.filter((o) => !isMine(o)), [filtered, isMine]);
+
+  const vehiclesForCustomer = useMemo(
+    () => vehicles.filter((v) => v.cliente_id === selectedCustomer),
+    [vehicles, selectedCustomer]
+  );
 
   const handleSelectCustomer = (value: string) => {
     if (value === '__new__') {
