@@ -74,14 +74,17 @@ export default function Vehicles() {
     loadData();
   }, [loadData]);
 
-  const filtered = vehicles.filter(
-    (v) =>
-      v.marca.toLowerCase().includes(search.toLowerCase()) ||
-      v.modelo.toLowerCase().includes(search.toLowerCase()) ||
-      v.vin.toLowerCase().includes(search.toLowerCase()) ||
-      (v.placa || '').toLowerCase().includes(search.toLowerCase()) ||
-      (v.cliente_nombre || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    const searchLower = search.toLowerCase();
+    return vehicles.filter(
+      (v) =>
+        v.marca.toLowerCase().includes(searchLower) ||
+        v.modelo.toLowerCase().includes(searchLower) ||
+        v.vin.toLowerCase().includes(searchLower) ||
+        (v.placa || '').toLowerCase().includes(searchLower) ||
+        (v.cliente_nombre || '').toLowerCase().includes(searchLower)
+    );
+  }, [vehicles, search]);
 
   const resetModalState = () => {
     setVinMessage(null);

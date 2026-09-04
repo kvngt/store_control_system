@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, lazy } from 'react';
+import { useEffect, useState, useCallback, lazy, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -92,10 +92,21 @@ export default function Finance() {
     loadData();
   }, [loadData]);
 
-  const filtered = transactions.filter((txn) => filterType === 'all' || txn.tipo === filterType);
+  const filtered = useMemo(
+    () => transactions.filter((txn) => filterType === 'all' || txn.tipo === filterType),
+    [transactions, filterType]
+  );
 
-  const totalIncome = transactions.filter((t) => t.tipo === 'ingreso').reduce((sum, t) => sum + Number(t.monto), 0);
-  const totalExpense = transactions.filter((t) => t.tipo === 'egreso').reduce((sum, t) => sum + Number(t.monto), 0);
+  const { totalIncome, totalExpense } = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    for (const t of transactions) {
+      if (t.tipo === 'ingreso') income += Number(t.monto);
+      else if (t.tipo === 'egreso') expense += Number(t.monto);
+    }
+    return { totalIncome: income, totalExpense: expense };
+  }, [transactions]);
+
   const balance = totalIncome - totalExpense;
 
   const categoryLabels: Record<string, string> = {

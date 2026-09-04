@@ -761,6 +761,7 @@ export default function Settings() {
             </div>
           </div>
         </div>
+      )}
       {showSedeModal && (
         <div className="modal-overlay" onClick={() => setShowSedeModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
