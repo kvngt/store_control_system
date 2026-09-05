@@ -157,13 +157,20 @@ export default function WorkOrders() {
   }, [sedeId]);
 
   const filtered = useMemo(() => {
+    if (!search && filterStatus === 'all') return orders;
+
+    // Bolt: Skip expensive string checks if search is empty
     const searchLower = search.toLowerCase();
     return orders.filter((o) => {
-      const matchSearch =
-        o.numero_orden.toLowerCase().includes(searchLower) ||
-        (o.cliente?.nombre || '').toLowerCase().includes(searchLower);
       const matchStatus = filterStatus === 'all' || o.estatus === filterStatus;
-      return matchSearch && matchStatus;
+      if (!matchStatus) return false;
+
+      if (!searchLower) return true;
+
+      return (
+        o.numero_orden.toLowerCase().includes(searchLower) ||
+        (o.cliente?.nombre || '').toLowerCase().includes(searchLower)
+      );
     });
   }, [orders, search, filterStatus]);
 

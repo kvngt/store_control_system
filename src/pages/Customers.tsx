@@ -83,6 +83,9 @@ export default function Customers() {
   }, [viewProfile, language]);
 
   const filtered = useMemo(() => {
+    if (!search) return customers;
+
+    // Bolt: Skip expensive string checks if search is empty
     const searchLower = search.toLowerCase();
     return customers.filter(
       (c) =>
