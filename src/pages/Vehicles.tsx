@@ -1,7 +1,10 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { useLanguage } from '../context/LanguageContext';
-import { useAuth } from '../context/AuthContext';
-import { supabaseService } from '../services/supabaseService';
+import { useLanguage } from '../context/language.context';
+import { useAuth } from '../context/auth.context';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { customersService, vehiclesService } from '../services/supabaseService';
+import { queryKeys } from '../lib/queryClient';
+import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
 import { Search, Plus, Edit3, Trash2, X, Wand2, Loader2, ScanLine } from 'lucide-react';
 import {
@@ -37,11 +40,35 @@ export default function Vehicles() {
   const isAdmin = user?.rol === 'admin';
   // Strict isolation: only ever the active sede's vehicles and customers.
   const sedeId = isAdmin ? currentSede?.id : user?.sede_id;
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  // Separate queries: the customer list is the same cache entry Clientes and
+  // the order intake dialog already use, so opening this screen after one of
+  // those costs nothing.
+  const vehiclesQuery = useQuery({
+    queryKey: queryKeys.vehicles(sedeId),
+    queryFn: () => vehiclesService.getVehicles(sedeId),
+  });
+  const customersQuery = useQuery({
+    queryKey: queryKeys.customers(sedeId),
+    queryFn: () => customersService.getCustomers(sedeId),
+  });
+
+  const vehicles = vehiclesQuery.data ?? emptyList<Vehicle>();
+  const customers = customersQuery.data ?? emptyList<Customer>();
+  const loading = vehiclesQuery.isPending || customersQuery.isPending;
+  const loadError = vehiclesQuery.error ?? customersQuery.error;
+
+  const loadData = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.vehicles(sedeId) });
+    // A vehicle count hangs off each customer row.
+    queryClient.invalidateQueries({ queryKey: queryKeys.customers(sedeId) });
+  };
+
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
+  // Kept raw until render so toggling the UI language doesn't re-query the fleet.
+  const error = actionError || (loadError ? getErrorMessage(loadError, language) : '');
 
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -57,22 +84,6 @@ export default function Vehicles() {
   // VINs already looked up in this modal, so re-renders and edits of unrelated
   // fields don't fire the same request again.
   const decodedVinRef = useRef('');
-
-  const loadData = useCallback(() => {
-    setLoading(true);
-    setError('');
-    Promise.all([supabaseService.getVehicles(sedeId), supabaseService.getCustomers(sedeId)])
-      .then(([v, c]) => {
-        setVehicles(v);
-        setCustomers(c);
-      })
-      .catch((err) => setError(getErrorMessage(err, language)))
-      .finally(() => setLoading(false));
-  }, [language, sedeId]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
 
   const filtered = useMemo(() => {
     const searchLower = search.toLowerCase();
@@ -241,14 +252,14 @@ export default function Vehicles() {
   const hasErrors = Object.values(invalid).some(Boolean);
 
   const handleCreateCustomer = async (draft: NewCustomerDraft): Promise<Customer> => {
-    const created = await supabaseService.createCustomer({
+    const created = await customersService.createCustomer({
       ...draft,
       direccion: '',
       notas_crm: '',
       sede_id: sedeId || currentSede?.id || '',
     });
-    // Make it selectable straight away instead of waiting for a full reload.
-    setCustomers((prev) => [created, ...prev]);
+    // Make it selectable straight away instead of waiting for a refetch.
+    queryClient.setQueryData<Customer[]>(queryKeys.customers(sedeId), (prev) => [created, ...(prev ?? [])]);
     return created;
   };
 
@@ -270,14 +281,14 @@ export default function Vehicles() {
         color: form.color.trim(),
       };
       if (selected) {
-        await supabaseService.updateVehicle(selected.id, payload);
+        await vehiclesService.updateVehicle(selected.id, payload);
       } else {
-        await supabaseService.createVehicle(payload);
+        await vehiclesService.createVehicle(payload);
       }
       setShowModal(false);
       loadData();
     } catch (err) {
-      setError(getErrorMessage(err, language));
+      setActionError(getErrorMessage(err, language));
     } finally {
       setSaving(false);
     }
@@ -288,15 +299,15 @@ export default function Vehicles() {
   // holds; this check only keeps the UI honest about it.
   const handleDelete = async (v: Vehicle) => {
     if (!isAdmin) {
-      setError(t('common.adminOnly'));
+      setActionError(t('common.adminOnly'));
       return;
     }
     if (!confirm(`${t('common.delete')}: ${v.marca} ${v.modelo}?`)) return;
     try {
-      await supabaseService.deleteVehicle(v.id);
+      await vehiclesService.deleteVehicle(v.id);
       loadData();
     } catch (err) {
-      setError(getErrorMessage(err, language));
+      setActionError(getErrorMessage(err, language));
     }
   };
 

@@ -3,8 +3,8 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import BottomNav from './BottomNav';
-import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/auth.context';
+import { useTheme } from '../../context/theme.context';
 import { applySedeBranding, clearSedeBranding } from '../../lib/branding';
 
 export default function AppLayout() {

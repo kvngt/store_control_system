@@ -1,13 +1,5 @@
-import React, { createContext, useContext, useRef, useCallback, useEffect } from 'react';
-
-type Guard = () => boolean; // return true = OK to leave, false = user cancelled
-
-interface UnsavedChangesContextType {
-  setGuard: (guard: Guard | null) => void;
-  confirmNavigation: () => boolean;
-}
-
-const UnsavedChangesContext = createContext<UnsavedChangesContextType | undefined>(undefined);
+import React, { useRef, useCallback, useEffect } from 'react';
+import { UnsavedChangesContext, type Guard } from './unsavedChanges.context';
 
 export function UnsavedChangesProvider({ children }: { children: React.ReactNode }) {
   const guardRef = useRef<Guard | null>(null);
@@ -39,12 +31,4 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
       {children}
     </UnsavedChangesContext.Provider>
   );
-}
-
-export function useUnsavedChanges() {
-  const context = useContext(UnsavedChangesContext);
-  if (!context) {
-    throw new Error('useUnsavedChanges must be used within an UnsavedChangesProvider');
-  }
-  return context;
 }

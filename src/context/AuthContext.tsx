@@ -1,38 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import type { UserProfile, Sede } from '../types/database';
-
-interface LoginResult {
-  success: boolean;
-  /** The raw Supabase error, so the caller can translate it. Passing the
-   *  message straight through is what put English text on the login screen. */
-  error?: { code?: string; message?: string };
-}
-
-interface AuthContextType {
-  user: UserProfile | null;
-  isAuthenticated: boolean;
-  loading: boolean;
-  currentSede: Sede | null;
-  allSedes: Sede[];
-  login: (email: string, password: string) => Promise<LoginResult>;
-  logout: () => Promise<void>;
-  setCurrentSede: (sede: Sede | null) => void;
-  /** Re-reads sedes after an admin edits branding/capacity, so the injected
-   *  theme and logo update without a page reload. */
-  refreshSedes: () => Promise<void>;
-  /** Re-reads the signed-in profile after the user edits name/email/photo. */
-  refreshUser: () => Promise<void>;
-  /** True while the session came from a password-recovery link. The app shows
-   *  the "choose a new password" screen instead of the normal routes: the
-   *  recovery link does sign the user in, so without this flag they would land
-   *  on the dashboard and never be asked for a new password. */
-  passwordRecovery: boolean;
-  /** Leaves recovery mode — after setting the password, or on cancel. */
-  endPasswordRecovery: () => void;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { AuthContext, type LoginResult } from './auth.context';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -142,32 +111,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Every screen consumes this context, and an object literal rebuilt on each
+  // render made all of them re-render whenever anything in the provider
+  // changed — a keystroke in an unrelated child included. The callbacks are
+  // already stable, so the value only changes when the session actually does.
+  const value = useMemo(
+    () => ({
+      user,
+      isAuthenticated: !!user,
+      loading,
+      currentSede,
+      allSedes,
+      login,
+      logout,
+      setCurrentSede,
+      refreshSedes,
+      refreshUser,
+      passwordRecovery,
+      endPasswordRecovery,
+    }),
+    [
+      user,
+      loading,
+      currentSede,
+      allSedes,
+      login,
+      logout,
+      setCurrentSede,
+      refreshSedes,
+      refreshUser,
+      passwordRecovery,
+      endPasswordRecovery,
+    ]
+  );
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        loading,
-        currentSede,
-        allSedes,
-        login,
-        logout,
-        setCurrentSede,
-        refreshSedes,
-        refreshUser,
-        passwordRecovery,
-        endPasswordRecovery,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 }

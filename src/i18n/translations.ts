@@ -250,6 +250,25 @@ const translations: Record<Language, Translations> = {
       myOrdersEmpty: 'Todavía no tienes órdenes asignadas.',
       otherOrdersHint: 'Órdenes de tus compañeros en esta sede. Puedes consultarlas y unirte a una si necesitas ayudar.',
       milesNegative: 'Las millas de ingreso no pueden ser negativas.',
+      // Validación del formulario de alta. Las claves son lo que devuelve el
+      // esquema Zod, para que el mensaje se traduzca al pintarlo y no al
+      // validarlo — así cambiar de idioma no exige revalidar el formulario.
+      validation: {
+        customerRequired: 'Selecciona un cliente.',
+        customerName: 'El nombre del cliente es obligatorio.',
+        customerPhone: 'El teléfono del cliente es obligatorio.',
+        vehicleRequired: 'Selecciona un vehículo.',
+        vehicleBrand: 'La marca es obligatoria.',
+        vehicleModel: 'El modelo es obligatorio.',
+        vehicleVin: 'El VIN es obligatorio.',
+        vinLength: 'El VIN tiene 17 caracteres.',
+        milesNegative: 'Las millas de ingreso no pueden ser negativas.',
+        depositNegative: 'El depósito no puede ser negativo.',
+        laborDescription: 'Describe el trabajo o elimina la fila.',
+        partDescription: 'Describe el repuesto o elimina la fila.',
+        quantityMin: 'La cantidad debe ser al menos 1.',
+        priceNegative: 'El precio no puede ser negativo.',
+      },
       unitCostHint: 'Lo que el taller pagó por la pieza. Se registra como egreso en Finanzas al entregar la orden.',
       totalLabor: 'Total Mano de Obra',
       status: {
@@ -656,6 +675,25 @@ const translations: Record<Language, Translations> = {
       myOrdersEmpty: 'You have no assigned orders yet.',
       otherOrdersHint: "Your teammates' orders at this shop. You can review them and join one if you need to help out.",
       milesNegative: 'Intake mileage cannot be negative.',
+      // Intake form validation. The keys are what the Zod schema returns, so
+      // the message is translated when it is rendered rather than when it is
+      // produced — switching language never means revalidating the form.
+      validation: {
+        customerRequired: 'Pick a customer.',
+        customerName: "The customer's name is required.",
+        customerPhone: "The customer's phone is required.",
+        vehicleRequired: 'Pick a vehicle.',
+        vehicleBrand: 'Make is required.',
+        vehicleModel: 'Model is required.',
+        vehicleVin: 'VIN is required.',
+        vinLength: 'A VIN is 17 characters.',
+        milesNegative: 'Intake mileage cannot be negative.',
+        depositNegative: 'The deposit cannot be negative.',
+        laborDescription: 'Describe the work, or remove the row.',
+        partDescription: 'Describe the part, or remove the row.',
+        quantityMin: 'Quantity must be at least 1.',
+        priceNegative: 'Price cannot be negative.',
+      },
       unitCostHint: 'What the shop paid for the part. Booked as an expense in Finance when the order is delivered.',
       totalLabor: 'Total Labor',
       status: {

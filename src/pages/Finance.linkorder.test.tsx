@@ -23,17 +23,23 @@ const mocks = vi.hoisted(() => ({
   getImportBatches: vi.fn(),
 }));
 
-vi.mock('../context/AuthContext', () => ({ useAuth: () => mocks.auth.current }));
+vi.mock('../context/auth.context', () => ({ useAuth: () => mocks.auth.current }));
 
-vi.mock('../services/supabaseService', () => ({
-  supabaseService: {
+vi.mock('../services/supabaseService', () => {
+  const finance = {
     getTransactions: mocks.getTransactions,
-    getDashboardStats: mocks.getDashboardStats,
-    getWorkOrders: mocks.getWorkOrders,
     getImportBatches: mocks.getImportBatches,
     createTransaction: mocks.createTransaction,
-  },
-}));
+  };
+  const dashboard = { getDashboardStats: mocks.getDashboardStats };
+  const workOrders = { getWorkOrders: mocks.getWorkOrders };
+  return {
+    financeService: finance,
+    dashboardService: dashboard,
+    workOrdersService: workOrders,
+    supabaseService: { ...finance, ...dashboard, ...workOrders },
+  };
+});
 
 const { default: Finance } = await import('./Finance');
 

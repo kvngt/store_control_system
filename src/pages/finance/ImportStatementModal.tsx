@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { useLanguage } from '../../context/LanguageContext';
-import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/language.context';
+import { useAuth } from '../../context/auth.context';
 import { supabaseService } from '../../services/supabaseService';
 import { getErrorMessage } from '../../lib/errors';
 import { parseWellsFargoStatement } from '../../lib/bankStatementParser';

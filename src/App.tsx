@@ -1,7 +1,11 @@
+import { Suspense, lazy, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createQueryClient } from './lib/queryClient';
 import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/auth.context';
 import { ToastProvider } from './context/ToastContext';
 import { UnsavedChangesProvider } from './context/UnsavedChangesContext';
 import { isSupabaseConfigured } from './lib/supabase';
@@ -10,13 +14,19 @@ import AppLayout from './components/layout/AppLayout';
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
-import Customers from './pages/Customers';
-import Vehicles from './pages/Vehicles';
-import WorkOrders from './pages/WorkOrders';
-import KanbanBoard from './pages/KanbanBoard';
-import Finance from './pages/Finance';
-import Payroll from './pages/Payroll';
-import Settings from './pages/Settings';
+
+// Split per route. Login, the dashboard and the shell stay in the entry chunk
+// because they are what the first paint after sign-in needs; everything else is
+// fetched when its route is first visited. A painter who only ever opens
+// Órdenes and Kanban never downloads Finanzas, Nómina or Configuración — which
+// on a phone over shop wifi is the difference the shop actually feels.
+const Customers = lazy(() => import('./pages/Customers'));
+const Vehicles = lazy(() => import('./pages/Vehicles'));
+const WorkOrders = lazy(() => import('./pages/WorkOrders'));
+const KanbanBoard = lazy(() => import('./pages/KanbanBoard'));
+const Finance = lazy(() => import('./pages/Finance'));
+const Payroll = lazy(() => import('./pages/Payroll'));
+const Settings = lazy(() => import('./pages/Settings'));
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { isAuthenticated, user } = useAuth();
@@ -51,7 +61,8 @@ function AppRoutes() {
   }
 
   return (
-    <Routes>
+    <Suspense fallback={<div className="loading-state"><div className="spinner" /></div>}>
+      <Routes>
       <Route
         path="/login"
         element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
@@ -89,7 +100,8 @@ function AppRoutes() {
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }
 
@@ -121,25 +133,32 @@ function MissingConfigScreen() {
 }
 
 export default function App() {
+  // One client for the life of the app. Held in state rather than built at
+  // module scope so a remount (a test, or React 19's StrictMode double-invoke)
+  // never shares a cache it did not create.
+  const [queryClient] = useState(createQueryClient);
+
   if (!isSupabaseConfigured) {
     return <MissingConfigScreen />;
   }
 
   return (
     <ErrorBoundary>
-      <BrowserRouter>
-        <ThemeProvider>
-          <LanguageProvider>
-            <ToastProvider>
-              <UnsavedChangesProvider>
-                <AuthProvider>
-                  <AppRoutes />
-                </AuthProvider>
-              </UnsavedChangesProvider>
-            </ToastProvider>
-          </LanguageProvider>
-        </ThemeProvider>
-      </BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <ThemeProvider>
+            <LanguageProvider>
+              <ToastProvider>
+                <UnsavedChangesProvider>
+                  <AuthProvider>
+                    <AppRoutes />
+                  </AuthProvider>
+                </UnsavedChangesProvider>
+              </ToastProvider>
+            </LanguageProvider>
+          </ThemeProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }

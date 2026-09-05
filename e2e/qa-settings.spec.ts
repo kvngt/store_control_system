@@ -9,7 +9,7 @@
  * - Admin: modal de nuevo empleado abre y valida campos
  * - Admin: no puede borrar empleado con órdenes (validación del sistema)
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import {
   login,
   ADMIN_EMAIL, ADMIN_PASSWORD, hasAdminCredentials,
@@ -77,7 +77,6 @@ test.describe('CFG-03 | Cambio de tema claro/oscuro', () => {
     // Theme buttons use t('settings.themeDark') = 'Oscuro' / 'Dark'
     // and t('settings.themeLight') = 'Claro' / 'Light'
     const targetTheme = initialTheme === 'dark' ? 'light' : 'dark';
-    const targetBtnText = targetTheme === 'light' ? /Claro|Light/i : /Oscuro|Dark/i;
     const themeBtn = page.locator(`button:has-text("${ targetTheme === 'light' ? 'Claro' : 'Oscuro' }"), button:has-text("${ targetTheme === 'light' ? 'Light' : 'Dark' }")`).first();
     await expect(themeBtn).toBeVisible({ timeout: 8000 });
     await themeBtn.click();
@@ -113,7 +112,7 @@ test.describe('CFG-11 | Modal de nuevo empleado: abre y valida', () => {
   test.skip(!hasAdminCredentials, 'Requiere credenciales de admin');
 
   // Helper to open the employee modal
-  async function openEmployeeModal(page) {
+  async function openEmployeeModal(page: Page) {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
     await page.goto('/settings');
     // The button uses t('settings.newEmployee') = 'Nuevo Empleado' or 'New Employee'

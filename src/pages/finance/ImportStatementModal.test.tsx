@@ -30,7 +30,7 @@ const mocks = vi.hoisted(() => ({
   findImportsByFingerprint: vi.fn(),
 }));
 
-vi.mock('../../context/AuthContext', () => ({ useAuth: () => mocks.auth.current }));
+vi.mock('../../context/auth.context', () => ({ useAuth: () => mocks.auth.current }));
 
 vi.mock('../../lib/bankStatementParser', () => ({
   parseWellsFargoStatement: mocks.parse,

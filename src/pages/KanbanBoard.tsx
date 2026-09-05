@@ -1,7 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useLanguage } from '../context/LanguageContext';
-import { useAuth } from '../context/AuthContext';
-import { supabaseService } from '../services/supabaseService';
+import { useState } from 'react';
+import { useLanguage } from '../context/language.context';
+import { useAuth } from '../context/auth.context';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { workOrdersService } from '../services/supabaseService';
+import { queryKeys } from '../lib/queryClient';
+import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
 import type { OrderStatus, WorkOrder } from '../types/database';
 import { Calendar, Gauge } from 'lucide-react';
@@ -19,24 +22,46 @@ export default function KanbanBoard() {
   const { user, currentSede } = useAuth();
   const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
 
-  const [orders, setOrders] = useState<WorkOrder[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
+  const boardKey = queryKeys.workOrders(sedeId);
+
+  const { data: orders = emptyList<WorkOrder>(), isPending: loading, error: loadError } = useQuery({
+    queryKey: boardKey,
+    queryFn: () => workOrdersService.getWorkOrders(sedeId),
+  });
+
+  // The card moves the moment it is dropped and snaps back if the server
+  // refuses, so a drag on shop wifi feels immediate. React Query holds the
+  // pre-move list in `context` for exactly that rollback.
+  const move = useMutation({
+    mutationFn: ({ orderId, status }: { orderId: string; status: OrderStatus }) =>
+      workOrdersService.updateWorkOrderStatus(orderId, status),
+    onMutate: async ({ orderId, status }) => {
+      // Stop an in-flight refetch from landing on top of the optimistic write.
+      await queryClient.cancelQueries({ queryKey: boardKey });
+      const previous = queryClient.getQueryData<WorkOrder[]>(boardKey);
+      queryClient.setQueryData<WorkOrder[]>(boardKey, (prev) =>
+        (prev || []).map((o) => (o.id === orderId ? { ...o, estatus: status } : o))
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(boardKey, context.previous);
+    },
+    onSettled: () => {
+      // Delivering an order books money and stamps a completion date by
+      // trigger, so the row the board shows is not what the client guessed.
+      queryClient.invalidateQueries({ queryKey: boardKey });
+    },
+  });
+
   const [draggedOrder, setDraggedOrder] = useState<string | null>(null);
 
-  const loadOrders = useCallback(() => {
-    setLoading(true);
-    setError('');
-    supabaseService
-      .getWorkOrders(sedeId)
-      .then(setOrders)
-      .catch((err) => setError(getErrorMessage(err, language)))
-      .finally(() => setLoading(false));
-  }, [sedeId, language]);
-
-  useEffect(() => {
-    loadOrders();
-  }, [loadOrders]);
+  // Both errors are held raw and translated here, never at fetch time: that is
+  // what keeps switching the UI language from re-querying the whole board.
+  const error =
+    (move.error ? getErrorMessage(move.error, language) : '') ||
+    (loadError ? getErrorMessage(loadError, language) : '');
 
   const statusLabels: Record<OrderStatus, string> = {
     recepcion: t('workOrders.intake'),
@@ -68,7 +93,7 @@ export default function KanbanBoard() {
 
   // Shared by dragging (desktop) and by the per-card selector (touch), so both
   // routes get the same delivery confirmation and the same optimistic update.
-  const moveOrder = async (orderId: string, status: OrderStatus) => {
+  const moveOrder = (orderId: string, status: OrderStatus) => {
     const order = orders.find((o) => o.id === orderId);
     if (!order || order.estatus === status) return;
 
@@ -76,15 +101,7 @@ export default function KanbanBoard() {
       return;
     }
 
-    const previous = orders;
-    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, estatus: status } : o)));
-
-    try {
-      await supabaseService.updateWorkOrderStatus(orderId, status);
-    } catch (err) {
-      setError(getErrorMessage(err, language));
-      setOrders(previous);
-    }
+    move.mutate({ orderId, status });
   };
 
   const handleDrop = (status: OrderStatus) => {

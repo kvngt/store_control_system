@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Bell, Menu, Building2, ClipboardList, Users, Car, Clock, AlertTriangle, X } from 'lucide-react';
-import { useLanguage } from '../../context/LanguageContext';
-import { useAuth } from '../../context/AuthContext';
-import { useUnsavedChanges } from '../../context/UnsavedChangesContext';
+import { useLanguage } from '../../context/language.context';
+import { useAuth } from '../../context/auth.context';
+import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import { supabaseService } from '../../services/supabaseService';
 import type { WorkOrder } from '../../types/database';
 

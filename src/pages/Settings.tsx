@@ -1,9 +1,12 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { useLanguage } from '../context/LanguageContext';
-import { useTheme } from '../context/ThemeContext';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
-import { supabaseService } from '../services/supabaseService';
+import { useEffect, useState, useRef } from 'react';
+import { useLanguage } from '../context/language.context';
+import { useTheme } from '../context/theme.context';
+import { useAuth } from '../context/auth.context';
+import { useToast } from '../context/toast.context';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { sedesService, usersService } from '../services/supabaseService';
+import { queryKeys } from '../lib/queryClient';
+import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
 import type { Sede, UserProfile, UserRole } from '../types/database';
 import {
@@ -58,8 +61,8 @@ export default function Settings() {
     if (!file || !user) return;
     setUploadingAvatar(true);
     try {
-      const url = await supabaseService.uploadAvatar(user.id, file);
-      await supabaseService.updateProfile(user.id, { avatar_url: url });
+      const url = await usersService.uploadAvatar(user.id, file);
+      await usersService.updateProfile(user.id, { avatar_url: url });
       await refreshUser();
       showToast('success', t('settings.photoUpdated'));
     } catch (err) {
@@ -87,13 +90,13 @@ export default function Settings() {
     setSavingProfile(true);
     try {
       if (email.toLowerCase() !== (user.email || '').toLowerCase()) {
-        const taken = await supabaseService.isEmailTaken(email, user.id);
+        const taken = await usersService.isEmailTaken(email, user.id);
         if (taken) {
           setProfileError(t('settings.emailTaken'));
           return;
         }
       }
-      await supabaseService.updateProfile(user.id, { nombre_completo: nombre, email });
+      await usersService.updateProfile(user.id, { nombre_completo: nombre, email });
       await refreshUser();
       showToast('success', t('settings.profileUpdated'));
     } catch (err) {
@@ -102,10 +105,30 @@ export default function Settings() {
       setSavingProfile(false);
     }
   };
-  const [sedes, setSedes] = useState<Sede[]>([]);
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
+
+  // Not sede-scoped: this screen manages every workshop and everyone in them.
+  const sedesQuery = useQuery({ queryKey: queryKeys.sedes(), queryFn: () => sedesService.getSedes() });
+  const usersQuery = useQuery({
+    queryKey: queryKeys.users(undefined),
+    queryFn: () => usersService.getUsers(),
+  });
+
+  const sedes = sedesQuery.data ?? emptyList<Sede>();
+  const users = usersQuery.data ?? emptyList<UserProfile>();
+  const loading = sedesQuery.isPending || usersQuery.isPending;
+  const loadError = sedesQuery.error ?? usersQuery.error;
+
+  const loadData = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.sedes() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.users(undefined) });
+  };
+
+  const [actionError, setActionError] = useState('');
+  // Translated here rather than at fetch time, so switching the UI language
+  // no longer re-reads every sede and every staff profile.
+  const error = actionError || (loadError ? getErrorMessage(loadError, language) : '');
+
   const [capacityDrafts, setCapacityDrafts] = useState<Record<string, string>>({});
   const [savingSedeId, setSavingSedeId] = useState<string | null>(null);
 
@@ -123,23 +146,14 @@ export default function Settings() {
     sede_id: '',
   });
 
-  const loadData = useCallback(() => {
-    setLoading(true);
-    setError('');
-    Promise.all([supabaseService.getSedes(), supabaseService.getUsers()])
-      .then(([s, u]) => {
-        setSedes(s);
-        setUsers(u);
-        setCapacityDrafts(Object.fromEntries(s.map((sede) => [sede.id, String(sede.capacidad)])));
-        seedBrandDrafts(s);
-      })
-      .catch((err) => setError(getErrorMessage(err, language)))
-      .finally(() => setLoading(false));
-  }, [language]);
-
+  // The capacity and branding inputs are drafts seeded from whatever the last
+  // load returned — including the reload that follows each save, so a saved
+  // value becomes the new baseline.
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    setCapacityDrafts(Object.fromEntries(sedes.map((sede) => [sede.id, String(sede.capacidad)])));
+    seedBrandDrafts(sedes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sedes]);
 
   // --- sede branding / CRUD (admin only) ---
   const [brandDrafts, setBrandDrafts] = useState<Record<string, { nombre: string; direccion: string; color_tema: string }>>({});
@@ -162,7 +176,7 @@ export default function Settings() {
     if (!draft || !draft.nombre.trim()) return;
     setSavingSedeId(sedeId);
     try {
-      await supabaseService.updateSede(sedeId, {
+      await sedesService.updateSede(sedeId, {
         nombre: draft.nombre.trim(),
         direccion: draft.direccion.trim(),
         color_tema: draft.color_tema,
@@ -183,8 +197,8 @@ export default function Settings() {
     if (!file || !logoTargetSede) return;
     setUploadingLogoId(logoTargetSede);
     try {
-      const url = await supabaseService.uploadSedeLogo(logoTargetSede, file);
-      await supabaseService.updateSede(logoTargetSede, { logo_url: url });
+      const url = await sedesService.uploadSedeLogo(logoTargetSede, file);
+      await sedesService.updateSede(logoTargetSede, { logo_url: url });
       await refreshSedes();
       loadData();
       showToast('success', t('settings.logoUpdated'));
@@ -200,7 +214,7 @@ export default function Settings() {
     if (!newSedeName.trim()) return;
     setCreatingSede(true);
     try {
-      await supabaseService.createSede({
+      await sedesService.createSede({
         nombre: newSedeName.trim(),
         direccion: '',
         telefono: '',
@@ -223,7 +237,7 @@ export default function Settings() {
   const handleDeleteSede = async (sede: Sede) => {
     if (!confirm(`${t('settings.confirmDeleteSede')} "${sede.nombre}"?`)) return;
     try {
-      await supabaseService.deleteSede(sede.id);
+      await sedesService.deleteSede(sede.id);
       await refreshSedes();
       loadData();
       showToast('success', t('settings.sedeDeleted'));
@@ -235,7 +249,7 @@ export default function Settings() {
   const handleDeleteEmployee = async (employee: UserProfile) => {
     if (!confirm(`${t('settings.confirmDeleteEmployee')} ${employee.nombre_completo}?`)) return;
     try {
-      await supabaseService.deleteEmployee(employee.id);
+      await usersService.deleteEmployee(employee.id);
       loadData();
       showToast('success', t('settings.employeeDeleted'));
     } catch (err) {
@@ -248,10 +262,10 @@ export default function Settings() {
     if (!value || value <= 0) return;
     setSavingSedeId(sedeId);
     try {
-      await supabaseService.updateSede(sedeId, { capacidad: value });
+      await sedesService.updateSede(sedeId, { capacidad: value });
       loadData();
     } catch (err) {
-      setError(getErrorMessage(err, language));
+      setActionError(getErrorMessage(err, language));
     } finally {
       setSavingSedeId(null);
     }
@@ -266,7 +280,7 @@ export default function Settings() {
     if (!user || user.sede_id === sede.id) return;
     setJoiningSedeId(sede.id);
     try {
-      await supabaseService.moveUserToSede(user.id, sede.id);
+      await usersService.moveUserToSede(user.id, sede.id);
       await refreshUser();
       loadData();
       showToast('success', `${t('settings.joinedSede')} ${sede.nombre}`);
@@ -279,7 +293,7 @@ export default function Settings() {
 
   const openEmployeeModal = () => {
     setEmployeeForm({ nombre_completo: '', email: '', password: '', telefono: '', rol: 'mecanico', sede_id: sedes[0]?.id || '' });
-    setError('');
+    setActionError('');
     setEmployeeError('');
     setShowEmployeeModal(true);
   };
@@ -316,7 +330,7 @@ export default function Settings() {
     setSavingEmployee(true);
     setEmployeeError('');
     try {
-      await supabaseService.createEmployee({
+      await usersService.createEmployee({
         ...employeeForm,
         nombre_completo: nombre_completo.trim(),
         email: email.trim(),

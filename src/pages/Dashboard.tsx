@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '../context/LanguageContext';
-import { useAuth } from '../context/AuthContext';
-import { supabaseService } from '../services/supabaseService';
+import { useLanguage } from '../context/language.context';
+import { useAuth } from '../context/auth.context';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { dashboardService, workOrdersService } from '../services/supabaseService';
+import { queryKeys } from '../lib/queryClient';
+import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
 import type { DashboardStats, WorkOrder } from '../types/database';
 import {
@@ -32,41 +35,40 @@ export default function Dashboard() {
   const { user, currentSede } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.rol === 'admin';
-  const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
-  const [recentOrders, setRecentOrders] = useState<WorkOrder[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const sedeId = isAdmin ? currentSede?.id : user?.sede_id;
+  const capacity = currentSede?.capacidad;
+  const userId = user?.id;
 
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError('');
+  const statsQuery = useQuery({
+    queryKey: queryKeys.dashboardStats(sedeId, capacity),
+    queryFn: () => dashboardService.getDashboardStats(sedeId, capacity),
+  });
+  const ordersQuery = useQuery({
+    queryKey: queryKeys.workOrders(sedeId),
+    queryFn: () => workOrdersService.getWorkOrders(sedeId),
+  });
 
-    const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
+  const stats = statsQuery.data ?? EMPTY_STATS;
+  const loading = statsQuery.isPending || ordersQuery.isPending;
+  const loadError = statsQuery.error ?? ordersQuery.error;
 
-    Promise.all([
-      supabaseService.getDashboardStats(sedeId, currentSede?.capacidad),
-      supabaseService.getWorkOrders(sedeId),
-    ])
-      .then(([statsData, orders]) => {
-        if (!active) return;
-        setStats(statsData);
-        // A mechanic/painter's dashboard is about their own bench: the recent
-        // list and the alerts derived from it only cover orders assigned to
-        // them, so the alert panel never nags about a colleague's job. Admins
-        // still see the whole sede.
-        const visible = isAdmin
-          ? orders
-          : orders.filter((o) => (o.asignaciones || []).some((a) => a.usuario_id === user?.id));
-        setRecentOrders(visible.slice(0, 5));
-      })
-      .catch((err) => active && setError(getErrorMessage(err, language)))
-      .finally(() => active && setLoading(false));
+  // A mechanic/painter's dashboard is about their own bench: the recent list
+  // and the alerts derived from it only cover orders assigned to them, so the
+  // alert panel never nags about a colleague's job. Admins still see the whole
+  // sede. Filtering here rather than in the query keeps the cached order list
+  // identical to the one Órdenes and Kanban read.
+  const recentOrders: WorkOrder[] = useMemo(() => {
+    const orders = ordersQuery.data ?? emptyList<WorkOrder>();
+    const visible = isAdmin
+      ? orders
+      : orders.filter((o) => (o.asignaciones || []).some((a) => a.usuario_id === userId));
+    return visible.slice(0, 5);
+  }, [ordersQuery.data, isAdmin, userId]);
 
-    return () => {
-      active = false;
-    };
-  }, [user, isAdmin, currentSede, language]);
+  // Keying on the scalars above rather than the `user`/`currentSede` objects
+  // keeps an unrelated auth-context update from re-running both queries, and
+  // holding the error raw until here keeps a language toggle from doing the same.
+  const error = loadError ? getErrorMessage(loadError, language) : '';
 
   const maxRevenue = Math.max(1, ...stats.ingresos_por_mes.map((m) => Math.max(m.ingresos, m.egresos)));
 

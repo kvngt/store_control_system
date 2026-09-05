@@ -23,17 +23,15 @@ const mocks = vi.hoisted(() => ({
   createPayroll: vi.fn(),
 }));
 
-vi.mock('../context/AuthContext', () => ({
+vi.mock('../context/auth.context', () => ({
   useAuth: () => mocks.auth.current,
 }));
 
-vi.mock('../services/supabaseService', () => ({
-  supabaseService: {
-    getPayroll: mocks.getPayroll,
-    getUsers: mocks.getUsers,
-    createPayroll: mocks.createPayroll,
-  },
-}));
+vi.mock('../services/supabaseService', () => {
+  const payroll = { getPayroll: mocks.getPayroll, createPayroll: mocks.createPayroll };
+  const users = { getUsers: mocks.getUsers };
+  return { payrollService: payroll, usersService: users, supabaseService: { ...payroll, ...users } };
+});
 
 const { default: Payroll } = await import('./Payroll');
 

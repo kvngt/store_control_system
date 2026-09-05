@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Hexagon, Wrench } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
-import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/language.context';
+import { useAuth } from '../context/auth.context';
 import { supabaseService } from '../services/supabaseService';
 import { getAuthErrorMessage } from '../lib/errors';
-import loginBg from '../assets/login-bg.jpg';
+import loginBg from '../assets/login-bg.webp';
 
 /**
  * Shown when the session came from a password-recovery email link.

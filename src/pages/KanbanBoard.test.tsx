@@ -27,14 +27,17 @@ const mocks = vi.hoisted(() => ({
   updateWorkOrderStatus: vi.fn(),
 }));
 
-vi.mock('../context/AuthContext', () => ({ useAuth: () => mocks.auth.current }));
+vi.mock('../context/auth.context', () => ({ useAuth: () => mocks.auth.current }));
 
-vi.mock('../services/supabaseService', () => ({
-  supabaseService: {
+// The page imports the narrow `workOrdersService`; `supabaseService` stays
+// mocked too so the module's shape still matches what other callers expect.
+vi.mock('../services/supabaseService', () => {
+  const workOrders = {
     getWorkOrders: mocks.getWorkOrders,
     updateWorkOrderStatus: mocks.updateWorkOrderStatus,
-  },
-}));
+  };
+  return { workOrdersService: workOrders, supabaseService: workOrders };
+});
 
 const { default: KanbanBoard } = await import('./KanbanBoard');
 

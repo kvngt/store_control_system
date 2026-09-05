@@ -1,7 +1,7 @@
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import { useLanguage } from '../../context/LanguageContext';
-import { useAuth } from '../../context/AuthContext';
-import { useUnsavedChanges } from '../../context/UnsavedChangesContext';
+import { useLanguage } from '../../context/language.context';
+import { useAuth } from '../../context/auth.context';
+import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import {
   LayoutDashboard,
   Users,

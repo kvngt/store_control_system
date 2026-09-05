@@ -1,8 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useLanguage } from '../context/LanguageContext';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
-import { supabaseService } from '../services/supabaseService';
+import { useState } from 'react';
+import { useLanguage } from '../context/language.context';
+import { useAuth } from '../context/auth.context';
+import { useToast } from '../context/toast.context';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { payrollService, usersService } from '../services/supabaseService';
+import { queryKeys } from '../lib/queryClient';
+import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
 import type { PayrollEntry, UserProfile } from '../types/database';
 import { Plus, Calendar, X } from 'lucide-react';
@@ -13,11 +16,31 @@ export default function Payroll() {
   const { showToast } = useToast();
   const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
 
-  const [entries, setEntries] = useState<PayrollEntry[]>([]);
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  // Two queries rather than one combined fetch, so the staff list is the same
+  // cache entry Configuración already filled.
+  const payrollQuery = useQuery({
+    queryKey: queryKeys.payroll(sedeId),
+    queryFn: () => payrollService.getPayroll(sedeId),
+  });
+  const usersQuery = useQuery({
+    queryKey: queryKeys.users(sedeId),
+    queryFn: () => usersService.getUsers(sedeId),
+  });
+
+  const entries = payrollQuery.data ?? emptyList<PayrollEntry>();
+  const users = usersQuery.data ?? emptyList<UserProfile>();
+  const loading = payrollQuery.isPending || usersQuery.isPending;
+  const loadError = payrollQuery.error ?? usersQuery.error;
+
+  const loadData = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.payroll(sedeId) });
+  };
+
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  // Translated at render so switching language never re-queries payroll.
+  const error = loadError ? getErrorMessage(loadError, language) : '';
   // Scoped to the dialog: the page-level `error` above renders behind the
   // modal overlay, so failures reported there are invisible while it is open.
   const [modalError, setModalError] = useState('');
@@ -32,25 +55,6 @@ export default function Payroll() {
     deducciones: '0',
     fecha_pago: new Date().toISOString().split('T')[0],
   });
-
-  const loadData = useCallback(() => {
-    setLoading(true);
-    setError('');
-    Promise.all([
-      supabaseService.getPayroll(sedeId),
-      supabaseService.getUsers(sedeId),
-    ])
-      .then(([payroll, u]) => {
-        setEntries(payroll);
-        setUsers(u);
-      })
-      .catch((err) => setError(getErrorMessage(err, language)))
-      .finally(() => setLoading(false));
-  }, [sedeId, language]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
 
   // Same rule as the Nuevo Empleado dialog: this modal covers the page-level
   // error box, so a bare `return` on invalid input looks like a dead button.
@@ -71,7 +75,7 @@ export default function Payroll() {
     setModalError('');
     setSaving(true);
     try {
-      await supabaseService.createPayroll({
+      await payrollService.createPayroll({
         sede_id: sedeId || currentSede?.id || '',
         usuario_id: form.usuario_id,
         periodo_inicio: form.periodo_inicio,

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, UserPlus, X, Check, Phone, Mail } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../context/language.context';
 import type { Customer } from '../types/database';
 
 export interface NewCustomerDraft {

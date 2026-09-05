@@ -35,27 +35,30 @@ const mocks = vi.hoisted(() => ({
   createEmployee: vi.fn(),
 }));
 
-vi.mock('../context/AuthContext', () => ({
+vi.mock('../context/auth.context', () => ({
   useAuth: () => mocks.auth.current,
 }));
 
-vi.mock('../services/supabaseService', () => ({
-  supabaseService: {
+vi.mock('../services/supabaseService', () => {
+  const sedes = {
     getSedes: mocks.getSedes,
-    getUsers: mocks.getUsers,
-    createEmployee: mocks.createEmployee,
     // Unused by these tests, but Settings holds references to them.
     createSede: vi.fn(),
     updateSede: vi.fn(),
     deleteSede: vi.fn(),
+    uploadSedeLogo: vi.fn(),
+  };
+  const users = {
+    getUsers: mocks.getUsers,
+    createEmployee: mocks.createEmployee,
     deleteEmployee: vi.fn(),
     moveUserToSede: vi.fn(),
     updateProfile: vi.fn(),
     uploadAvatar: vi.fn(),
-    uploadSedeLogo: vi.fn(),
     isEmailTaken: vi.fn().mockResolvedValue(false),
-  },
-}));
+  };
+  return { sedesService: sedes, usersService: users, supabaseService: { ...sedes, ...users } };
+});
 
 const { default: Settings } = await import('./Settings');
 

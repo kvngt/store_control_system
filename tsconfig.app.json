@@ -16,6 +16,10 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Type-safety. The codebase was already strict-clean when this was turned
+       on, so it costs nothing today and stops the next `any` from creeping in. */
+    "strict": true,
+
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,

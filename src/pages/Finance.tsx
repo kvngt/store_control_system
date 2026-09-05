@@ -1,9 +1,12 @@
-import { useEffect, useState, useCallback, lazy, useMemo } from 'react';
+import { useState, lazy, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '../context/LanguageContext';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
-import { supabaseService } from '../services/supabaseService';
+import { useLanguage } from '../context/language.context';
+import { useAuth } from '../context/auth.context';
+import { useToast } from '../context/toast.context';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { dashboardService, financeService, workOrdersService } from '../services/supabaseService';
+import { queryKeys } from '../lib/queryClient';
+import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
 import type { FinancialTransaction, TransactionType, TransactionCategory, DashboardStats, WorkOrder, BankStatementImport } from '../types/database';
 
@@ -31,11 +34,59 @@ export default function Finance() {
   const navigate = useNavigate();
   const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
 
-  const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  // Four independent queries instead of one combined fetch. Two of them are
+  // shared cache entries: `getDashboardStats` is the same one the Dashboard
+  // reads, and `getWorkOrders` the one Órdenes and Kanban read — so arriving
+  // here from any of those screens costs one request instead of four.
+  const transactionsQuery = useQuery({
+    queryKey: queryKeys.transactions(sedeId),
+    queryFn: () => financeService.getTransactions(sedeId),
+  });
+  // The same key and the same argument the Dashboard uses, so the two screens
+  // share one cached answer. This screen only reads `ingresos_por_mes`, but
+  // passing a different capacity would compute a different `tasa_ocupacion`
+  // and therefore be a different cache entry — which would quietly defeat the
+  // sharing and fetch twice.
+  const statsQuery = useQuery({
+    queryKey: queryKeys.dashboardStats(sedeId, currentSede?.capacidad),
+    queryFn: () => dashboardService.getDashboardStats(sedeId, currentSede?.capacidad),
+  });
+  // Orders are here so a manual movement can be attached to the job it
+  // belongs to; imports so a batch brought in by mistake can be undone.
+  const ordersQuery = useQuery({
+    queryKey: queryKeys.workOrders(sedeId),
+    queryFn: () => workOrdersService.getWorkOrders(sedeId),
+  });
+  const importsQuery = useQuery({
+    queryKey: queryKeys.importBatches(sedeId),
+    queryFn: () => financeService.getImportBatches(sedeId),
+  });
+
+  const transactions = transactionsQuery.data ?? emptyList<FinancialTransaction>();
+  const stats: DashboardStats | null = statsQuery.data ?? null;
+  const orders = ordersQuery.data ?? emptyList<WorkOrder>();
+  const imports = importsQuery.data ?? emptyList<BankStatementImport>();
+  const loading =
+    transactionsQuery.isPending ||
+    statsQuery.isPending ||
+    ordersQuery.isPending ||
+    importsQuery.isPending;
+  const loadError =
+    transactionsQuery.error ?? statsQuery.error ?? ordersQuery.error ?? importsQuery.error;
+
+  // Money moving changes the KPI cards and the import list, but not the orders.
+  const loadData = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.transactions(sedeId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats(sedeId, currentSede?.capacidad) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.importBatches(sedeId) });
+  };
+
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  // Held raw by the query and translated here, so switching the UI language
+  // never re-runs any of them.
+  const error = loadError ? getErrorMessage(loadError, language) : '';
 
   const [filterType, setFilterType] = useState<'all' | 'ingreso' | 'egreso'>('all');
   const [showModal, setShowModal] = useState(false);
@@ -43,13 +94,6 @@ export default function Finance() {
   // Scoped to the dialog: the page-level `error` renders above the table and
   // therefore behind the modal overlay, where nobody can read it.
   const [modalError, setModalError] = useState('');
-  // Orders the admin can attach a manual movement to, so a payment or a parts
-  // purchase entered by hand is traceable to the job it belongs to.
-  const [orders, setOrders] = useState<WorkOrder[]>([]);
-  // Imports are listed so a batch brought in by mistake can be undone. Without
-  // this, `deleteImportBatch` existed in the service but no screen called it,
-  // and a duplicated statement could only be cleaned up from the database.
-  const [imports, setImports] = useState<BankStatementImport[]>([]);
   const [revertingId, setRevertingId] = useState<string | null>(null);
   const [form, setForm] = useState({
     tipo: 'ingreso' as TransactionType,
@@ -68,29 +112,6 @@ export default function Finance() {
     descripcion: '',
     referencia_orden_id: '',
   };
-
-  const loadData = useCallback(() => {
-    setLoading(true);
-    setError('');
-    Promise.all([
-      supabaseService.getTransactions(sedeId),
-      supabaseService.getDashboardStats(sedeId),
-      supabaseService.getWorkOrders(sedeId),
-      supabaseService.getImportBatches(sedeId),
-    ])
-      .then(([txns, statsData, orderList, importList]) => {
-        setTransactions(txns);
-        setStats(statsData);
-        setOrders(orderList);
-        setImports(importList);
-      })
-      .catch((err) => setError(getErrorMessage(err, language)))
-      .finally(() => setLoading(false));
-  }, [sedeId, language]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
 
   const filtered = useMemo(
     () => transactions.filter((txn) => filterType === 'all' || txn.tipo === filterType),
@@ -124,7 +145,7 @@ export default function Finance() {
     if (!confirm(`${t('finance.confirmRevertImport')} "${batch.nombre_archivo}" (${when})?`)) return;
     setRevertingId(batch.id);
     try {
-      await supabaseService.deleteImportBatch(batch.id);
+      await financeService.deleteImportBatch(batch.id);
       showToast('success', t('finance.importReverted'));
       loadData();
     } catch (err) {
@@ -137,7 +158,7 @@ export default function Finance() {
   const handleDeleteTransaction = async (txn: FinancialTransaction) => {
     if (!confirm(`${t('common.deleteConfirm') || '¿Eliminar transacción de'} $${txn.monto}?`)) return;
     try {
-      await supabaseService.deleteTransaction(txn.id);
+      await financeService.deleteTransaction(txn.id);
       showToast('success', t('finance.transactionDeleted') || 'Transacción eliminada');
       loadData();
     } catch (err) {
@@ -160,7 +181,7 @@ export default function Finance() {
     setModalError('');
     setSaving(true);
     try {
-      await supabaseService.createTransaction({
+      await financeService.createTransaction({
         sede_id: sedeId || currentSede?.id || '',
         tipo: form.tipo,
         categoria: form.categoria,

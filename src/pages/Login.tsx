@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '../context/LanguageContext';
-import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/language.context';
+import { useAuth } from '../context/auth.context';
 import { supabaseService } from '../services/supabaseService';
 import { getAuthErrorMessage } from '../lib/errors';
 import { Hexagon, Wrench, ArrowLeft } from 'lucide-react';
-import loginBg from '../assets/login-bg.jpg';
+import loginBg from '../assets/login-bg.webp';
 
 export default function Login() {
   const { t, language, setLanguage } = useLanguage();

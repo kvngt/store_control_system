@@ -1,14 +1,7 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import type { Language } from '../i18n/translations';
 import { getTranslation } from '../i18n/translations';
-
-interface LanguageContextType {
-  language: Language;
-  setLanguage: (lang: Language) => void;
-  t: (key: string) => string;
-}
-
-const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+import { LanguageContext } from './language.context';
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
@@ -26,17 +19,13 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     [language]
   );
 
+  // Memoised: without it every consumer of `t()` re-renders on any provider
+  // render, and this provider sits above the whole app.
+  const value = useMemo(() => ({ language, setLanguage, t }), [language, setLanguage, t]);
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   );
-}
-
-export function useLanguage() {
-  const context = useContext(LanguageContext);
-  if (!context) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
-  }
-  return context;
 }

@@ -1,6 +1,6 @@
 import { Component, Suspense, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../context/language.context';
 
 // Wrapper for modals that are code-split with React.lazy().
 //

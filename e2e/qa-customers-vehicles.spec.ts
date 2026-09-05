@@ -14,7 +14,6 @@ import { test, expect } from '@playwright/test';
 import {
   login,
   ADMIN_EMAIL, ADMIN_PASSWORD, hasAdminCredentials,
-  MECHANIC_EMAIL, MECHANIC_PASSWORD, hasMechanicCredentials,
   TEST_DATA_PREFIX,
 } from './fixtures.js';
 
@@ -178,8 +177,6 @@ test.describe('VEH-02 | Casilla Sin placa', () => {
     await noPlateCheck.check();
 
     // Plate input must be disabled when sin_placa is true
-    const plateField = modal.locator('input[id="vehicle-placa"], input[placeholder="ABC1234"], input:disabled').first();
-    // Just verify the checkbox is checked
     await expect(noPlateCheck).toBeChecked();
     // And that the plate field (which uses disabled={form.sin_placa}) is disabled
     const disabledFields = await modal.locator('input[disabled]').count();

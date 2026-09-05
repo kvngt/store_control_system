@@ -1,8 +1,11 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useLanguage } from '../context/LanguageContext';
-import { useAuth } from '../context/AuthContext';
-import { supabaseService } from '../services/supabaseService';
+import { useLanguage } from '../context/language.context';
+import { useAuth } from '../context/auth.context';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { customersService } from '../services/supabaseService';
+import { queryKeys } from '../lib/queryClient';
+import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
 import {
   Plus,
@@ -25,9 +28,7 @@ export default function Customers() {
   const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
   const [saving, setSaving] = useState(false);
 
   const [search, setSearch] = useState('');
@@ -41,46 +42,62 @@ export default function Customers() {
   const isAdmin = user?.rol === 'admin';
   const sedeId = isAdmin ? currentSede?.id : user?.sede_id;
 
-  const loadCustomers = useCallback(() => {
-    setLoading(true);
-    setError('');
-    supabaseService
-      .getCustomers(sedeId)
-      .then(setCustomers)
-      .catch((err) => setError(getErrorMessage(err, language)))
-      .finally(() => setLoading(false));
-  }, [sedeId, language]);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    loadCustomers();
-  }, [loadCustomers]);
+  const { data: customers = emptyList<Customer>(), isPending: loading, error: loadError } = useQuery({
+    queryKey: queryKeys.customers(sedeId),
+    queryFn: () => customersService.getCustomers(sedeId),
+  });
+
+  const loadCustomers = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.customers(sedeId) });
+    // The counts on each row come from vehicles and orders, so a customer
+    // going away changes what those screens show too.
+    queryClient.invalidateQueries({ queryKey: queryKeys.vehicles(sedeId) });
+  };
 
   // Deep link from the global header search: /customers?open=<id>
   useEffect(() => {
     const openId = searchParams.get('open');
     if (openId) {
-      supabaseService
+      customersService
         .getCustomerDetail(openId)
         .then((data) => {
           setViewProfile(data.customer);
           setProfileData({ vehicles: data.vehicles, orders: data.orders });
         })
-        .catch((err) => setError(getErrorMessage(err, language)));
+        .catch((err) => setActionError(getErrorMessage(err, language)));
       setSearchParams({}, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
+  // Keyed on the id rather than the object: `viewProfile` is replaced by a new
+  // object on every list reload, and keying on it re-fetched the profile each
+  // time. `enabled` keeps the query idle while no profile is open.
+  const viewProfileId = viewProfile?.id;
+  const profileQuery = useQuery({
+    queryKey: queryKeys.customerDetail(viewProfileId ?? ''),
+    queryFn: () => customersService.getCustomerDetail(viewProfileId as string),
+    enabled: !!viewProfileId,
+  });
+
   useEffect(() => {
-    if (!viewProfile) {
+    if (!viewProfileId) {
       setProfileData(null);
       return;
     }
-    supabaseService
-      .getCustomerDetail(viewProfile.id)
-      .then((data) => setProfileData({ vehicles: data.vehicles, orders: data.orders }))
-      .catch((err) => setError(getErrorMessage(err, language)));
-  }, [viewProfile, language]);
+    if (profileQuery.data) {
+      setProfileData({ vehicles: profileQuery.data.vehicles, orders: profileQuery.data.orders });
+    }
+  }, [viewProfileId, profileQuery.data]);
+
+  // Both failure sources rendered through one box, translated at render time —
+  // holding the load error raw is what stops a language toggle from re-querying.
+  const error =
+    actionError ||
+    (loadError ? getErrorMessage(loadError, language) : '') ||
+    (profileQuery.error ? getErrorMessage(profileQuery.error, language) : '');
 
   const filtered = useMemo(() => {
     const searchLower = search.toLowerCase();
@@ -115,14 +132,14 @@ export default function Customers() {
     setSaving(true);
     try {
       if (selectedCustomer) {
-        await supabaseService.updateCustomer(selectedCustomer.id, form);
+        await customersService.updateCustomer(selectedCustomer.id, form);
       } else {
-        await supabaseService.createCustomer({ ...form, sede_id: sedeId || currentSede?.id || '' });
+        await customersService.createCustomer({ ...form, sede_id: sedeId || currentSede?.id || '' });
       }
       setShowModal(false);
       loadCustomers();
     } catch (err) {
-      setError((err as Error).message);
+      setActionError(getErrorMessage(err, language));
     } finally {
       setSaving(false);
     }
@@ -133,15 +150,15 @@ export default function Customers() {
   // is what enforces it; this check keeps the UI from promising otherwise.
   const handleDelete = async (customer: Customer) => {
     if (!isAdmin) {
-      setError(t('common.adminOnly'));
+      setActionError(t('common.adminOnly'));
       return;
     }
     if (!confirm(`${t('common.delete')}: ${customer.nombre}?`)) return;
     try {
-      await supabaseService.deleteCustomer(customer.id);
+      await customersService.deleteCustomer(customer.id);
       loadCustomers();
     } catch (err) {
-      setError(getErrorMessage(err, language));
+      setActionError(getErrorMessage(err, language));
     }
   };
 

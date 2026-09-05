@@ -1,4 +1,4 @@
-import type { Theme } from '../context/ThemeContext';
+import type { Theme } from '../context/theme.context';
 
 // The five brand custom properties every surface in the app resolves against.
 // Overwriting them on <html> re-themes the whole UI without touching a single

@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../context/LanguageContext';
 import { ThemeProvider } from '../context/ThemeContext';
 import { ToastProvider } from '../context/ToastContext';
@@ -13,7 +14,15 @@ import type { Sede, UserProfile } from '../types/database';
 // The router is included because pages reach for useNavigate() to deep-link
 // into each other, and without one they throw on render.
 export function renderWithProviders(ui: ReactElement) {
+  // A fresh client per render: a cache shared between tests would let one
+  // test's fixtures answer the next test's query. Retries are off so a test
+  // that asserts an error sees it immediately instead of after a backoff.
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: 0 } },
+  });
+
   return render(
+    <QueryClientProvider client={queryClient}>
     <MemoryRouter>
       <ThemeProvider>
         <LanguageProvider>
@@ -23,6 +32,7 @@ export function renderWithProviders(ui: ReactElement) {
         </LanguageProvider>
       </ThemeProvider>
     </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
