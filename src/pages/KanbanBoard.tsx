@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { supabaseService } from '../services/supabaseService';
@@ -46,7 +46,22 @@ export default function KanbanBoard() {
     entregado: t('workOrders.delivered'),
   };
 
-  const getOrdersByStatus = (status: OrderStatus) => orders.filter((o) => o.estatus === status);
+  // Bolt: group orders by status in O(N) rather than filtering O(5N)
+  const ordersByStatus = useMemo(() => {
+    const grouped = {
+      recepcion: [] as WorkOrder[],
+      en_proceso: [] as WorkOrder[],
+      espera_repuestos: [] as WorkOrder[],
+      finalizado: [] as WorkOrder[],
+      entregado: [] as WorkOrder[],
+    };
+    for (const order of orders) {
+      if (grouped[order.estatus]) {
+        grouped[order.estatus].push(order);
+      }
+    }
+    return grouped;
+  }, [orders]);
 
   const isAdmin = user?.rol === 'admin';
 
@@ -134,7 +149,7 @@ export default function KanbanBoard() {
 
       <div className="kanban-board">
         {COLUMNS.map(({ status, emoji }) => {
-          const columnOrders = getOrdersByStatus(status);
+          const columnOrders = ordersByStatus[status];
           return (
             <div key={status} className="kanban-column">
               <div className={`kanban-column-header ${status}`}>

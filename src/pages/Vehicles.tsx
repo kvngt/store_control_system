@@ -75,6 +75,9 @@ export default function Vehicles() {
   }, [loadData]);
 
   const filtered = useMemo(() => {
+    if (!search) return vehicles;
+
+    // Bolt: Skip expensive string checks if search is empty
     const searchLower = search.toLowerCase();
     return vehicles.filter(
       (v) =>
