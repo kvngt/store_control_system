@@ -91,16 +91,24 @@ export default function WorkOrders() {
     entregado: t('workOrders.delivered'),
   };
 
+  // Pre-compute lowercased strings to avoid recalculating them on every search keystroke
+  const ordersWithSearchCache = useMemo(() => {
+    return orders.map((o) => ({
+      original: o,
+      searchStr: `${o.numero_orden} ${o.cliente?.nombre || ''}`.toLowerCase(),
+    }));
+  }, [orders]);
+
   const filtered = useMemo(() => {
     const searchLower = search.toLowerCase();
-    return orders.filter((o) => {
-      const matchSearch =
-        o.numero_orden.toLowerCase().includes(searchLower) ||
-        (o.cliente?.nombre || '').toLowerCase().includes(searchLower);
-      const matchStatus = filterStatus === 'all' || o.estatus === filterStatus;
-      return matchSearch && matchStatus;
-    });
-  }, [orders, search, filterStatus]);
+    return ordersWithSearchCache
+      .filter((o) => {
+        const matchSearch = o.searchStr.includes(searchLower);
+        const matchStatus = filterStatus === 'all' || o.original.estatus === filterStatus;
+        return matchSearch && matchStatus;
+      })
+      .map((o) => o.original);
+  }, [ordersWithSearchCache, search, filterStatus]);
 
   // A mechanic/painter opens this screen to work, not to browse: their own
   // orders come first, and the rest of the sede's board is a second section
