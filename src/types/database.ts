@@ -38,5 +38,5 @@ export type {
   ParsedStatementTransaction,
   ReviewableTransaction,
 } from './domain/finance.types';
-export type { PayrollEntry } from './domain/payroll.types';
+export type { Commission, CommissionPayment, CommissionBalance } from './domain/payroll.types';
 export type { DashboardStats } from './domain/dashboard.types';

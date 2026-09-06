@@ -8,7 +8,9 @@ import { sedesService, usersService } from '../services/supabaseService';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
-import type { Sede, UserProfile, UserRole } from '../types/database';
+import type { SedeDeleteImpact } from '../services/sedes.service';
+import UsersCard from '../features/settings/UsersCard';
+import type { Sede, UserProfile } from '../types/database';
 import {
   Building2,
   Phone,
@@ -19,14 +21,15 @@ import {
   Shield,
   Sun,
   Moon,
-  UserPlus,
   Camera,
   Palette,
+  Percent,
   Trash2,
   Plus,
   X,
   LogIn,
   Check,
+  AlertTriangle,
 } from 'lucide-react';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -130,27 +133,18 @@ export default function Settings() {
   const error = actionError || (loadError ? getErrorMessage(loadError, language) : '');
 
   const [capacityDrafts, setCapacityDrafts] = useState<Record<string, string>>({});
+  const [rateDrafts, setRateDrafts] = useState<Record<string, string>>({});
   const [savingSedeId, setSavingSedeId] = useState<string | null>(null);
 
-  const [showEmployeeModal, setShowEmployeeModal] = useState(false);
-  const [savingEmployee, setSavingEmployee] = useState(false);
-  // Separate from the page-level `error`, which renders at the top of the page
-  // and is therefore hidden behind this dialog's full-screen overlay.
-  const [employeeError, setEmployeeError] = useState('');
-  const [employeeForm, setEmployeeForm] = useState({
-    nombre_completo: '',
-    email: '',
-    password: '',
-    telefono: '',
-    rol: 'mecanico' as UserRole,
-    sede_id: '',
-  });
 
   // The capacity and branding inputs are drafts seeded from whatever the last
   // load returned — including the reload that follows each save, so a saved
   // value becomes the new baseline.
   useEffect(() => {
     setCapacityDrafts(Object.fromEntries(sedes.map((sede) => [sede.id, String(sede.capacidad)])));
+    setRateDrafts(
+      Object.fromEntries(sedes.map((sede) => [sede.id, String(sede.comision_porcentaje ?? 35)]))
+    );
     seedBrandDrafts(sedes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sedes]);
@@ -234,36 +228,66 @@ export default function Settings() {
     }
   };
 
-  const handleDeleteSede = async (sede: Sede) => {
-    if (!confirm(`${t('settings.confirmDeleteSede')} "${sede.nombre}"?`)) return;
+  // Deleting a workshop takes its whole history with it, so it is a two-step
+  // dialog rather than a browser confirm: the admin is shown exactly what will
+  // be destroyed, and then has to type the sede's name to say they meant it.
+  // Reported from the shop as an outright bug — the plain delete always failed
+  // with "this record is linked to other data" and there was no way through.
+  const [deleteTarget, setDeleteTarget] = useState<Sede | null>(null);
+  const [deleteImpact, setDeleteImpact] = useState<SedeDeleteImpact | null>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deletingSede, setDeletingSede] = useState(false);
+
+  const openDeleteSede = async (sede: Sede) => {
+    setDeleteTarget(sede);
+    setDeleteImpact(null);
+    setDeleteConfirmName('');
+    setDeleteError('');
     try {
-      await sedesService.deleteSede(sede.id);
+      setDeleteImpact(await sedesService.getDeleteImpact(sede.id));
+    } catch (err) {
+      setDeleteError(getErrorMessage(err, language));
+    }
+  };
+
+  const confirmDeleteSede = async () => {
+    if (!deleteTarget) return;
+    setDeletingSede(true);
+    setDeleteError('');
+    try {
+      await sedesService.deleteSedeCascade(deleteTarget.id);
       await refreshSedes();
       loadData();
+      setDeleteTarget(null);
       showToast('success', t('settings.sedeDeleted'));
     } catch (err) {
-      showToast('error', t('settings.sedeError'), getErrorMessage(err, language));
+      setDeleteError(getErrorMessage(err, language));
+    } finally {
+      setDeletingSede(false);
     }
   };
 
-  const handleDeleteEmployee = async (employee: UserProfile) => {
-    if (!confirm(`${t('settings.confirmDeleteEmployee')} ${employee.nombre_completo}?`)) return;
-    try {
-      await usersService.deleteEmployee(employee.id);
-      loadData();
-      showToast('success', t('settings.employeeDeleted'));
-    } catch (err) {
-      showToast('error', t('settings.employeeError'), getErrorMessage(err, language));
+  const handleSaveOperations = async (sedeId: string) => {
+    const capacity = parseInt(capacityDrafts[sedeId], 10);
+    const rate = parseFloat(rateDrafts[sedeId]);
+    if (!capacity || capacity <= 0) {
+      setActionError(t('settings.capacityInvalid'));
+      return;
     }
-  };
-
-  const handleSaveCapacity = async (sedeId: string) => {
-    const value = parseInt(capacityDrafts[sedeId], 10);
-    if (!value || value <= 0) return;
+    if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+      setActionError(t('payroll.rateInvalid'));
+      return;
+    }
     setSavingSedeId(sedeId);
+    setActionError('');
     try {
-      await sedesService.updateSede(sedeId, { capacidad: value });
+      // One update for both: they sit in the same row of the card, and saving
+      // them separately meant two round trips and two chances to forget one.
+      await sedesService.updateSede(sedeId, { capacidad: capacity, comision_porcentaje: rate });
+      await refreshSedes();
       loadData();
+      showToast('success', t('settings.sedeUpdated'));
     } catch (err) {
       setActionError(getErrorMessage(err, language));
     } finally {
@@ -288,61 +312,6 @@ export default function Settings() {
       showToast('error', t('settings.joinSedeError'), getErrorMessage(err, language));
     } finally {
       setJoiningSedeId(null);
-    }
-  };
-
-  const openEmployeeModal = () => {
-    setEmployeeForm({ nombre_completo: '', email: '', password: '', telefono: '', rol: 'mecanico', sede_id: sedes[0]?.id || '' });
-    setActionError('');
-    setEmployeeError('');
-    setShowEmployeeModal(true);
-  };
-
-  // Every exit from this function has to say something out loud. The inputs
-  // carry `required`, but they aren't wrapped in a <form> and the button is a
-  // plain onClick, so the browser never validates them — a bare `return` here
-  // reads to the admin as a dead button, which is exactly how this was
-  // reported from the shop.
-  const handleCreateEmployee = async () => {
-    const { nombre_completo, email, password, sede_id } = employeeForm;
-
-    if (!nombre_completo.trim() || !email.trim() || !password) {
-      setEmployeeError(t('settings.employeeMissingFields'));
-      return;
-    }
-    if (!EMAIL_RE.test(email.trim())) {
-      setEmployeeError(t('settings.employeeInvalidEmail'));
-      return;
-    }
-    // Mirrors the check inside the create-employee edge function, so the admin
-    // finds out before the round trip instead of after it.
-    if (password.length < 6) {
-      setEmployeeError(t('settings.employeeShortPassword'));
-      return;
-    }
-    if (!sede_id) {
-      setEmployeeError(
-        sedes.length === 0 ? t('settings.employeeNoSede') : t('settings.employeeSedeRequired')
-      );
-      return;
-    }
-
-    setSavingEmployee(true);
-    setEmployeeError('');
-    try {
-      await usersService.createEmployee({
-        ...employeeForm,
-        nombre_completo: nombre_completo.trim(),
-        email: email.trim(),
-        telefono: employeeForm.telefono.trim() || undefined,
-      });
-      setShowEmployeeModal(false);
-      showToast('success', t('settings.employeeCreated'));
-      loadData();
-    } catch (err) {
-      setEmployeeError(getErrorMessage(err, language));
-    } finally {
-      setSavingEmployee(false);
     }
   };
 
@@ -478,14 +447,9 @@ export default function Settings() {
             <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
               <Building2 size={18} /> {t('settings.workshops')}
             </h3>
-            <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-              <button className="btn btn-secondary btn-sm" onClick={() => { setShowSedeModal(true); setNewSedeName(''); }} disabled={creatingSede}>
-                <Plus size={16} /> {t('settings.newWorkshop')}
-              </button>
-              <button className="btn btn-primary btn-sm" onClick={openEmployeeModal}>
-                <UserPlus size={16} /> {t('settings.newEmployee')}
-              </button>
-            </div>
+            <button className="btn btn-secondary btn-sm" onClick={() => { setShowSedeModal(true); setNewSedeName(''); }} disabled={creatingSede}>
+              <Plus size={16} /> {t('settings.newWorkshop')}
+            </button>
           </div>
 
           {/* Shared hidden picker for sede logos */}
@@ -536,7 +500,7 @@ export default function Settings() {
                         type="button"
                         className="btn btn-ghost btn-sm btn-icon"
                         title={t('common.delete')}
-                        onClick={() => handleDeleteSede(sede)}
+                        onClick={() => openDeleteSede(sede)}
                       >
                         <Trash2 size={16} style={{ color: 'var(--color-danger)' }} />
                       </button>
@@ -592,22 +556,46 @@ export default function Settings() {
                     </div>
 
                     {user?.rol === 'admin' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
-                        <label style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                          {t('settings.capacity')}
-                        </label>
-                        <input
-                          className="form-input"
-                          type="number"
-                          min={1}
-                          style={{ width: 80 }}
-                          value={capacityDrafts[sede.id] ?? ''}
-                          onChange={(e) => setCapacityDrafts((prev) => ({ ...prev, [sede.id]: e.target.value }))}
-                        />
+                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-4)', flexWrap: 'wrap' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
+                            {t('settings.capacity')}
+                          </label>
+                          <input
+                            className="form-input"
+                            type="number"
+                            min={1}
+                            style={{ width: 80 }}
+                            value={capacityDrafts[sede.id] ?? ''}
+                            onChange={(e) => setCapacityDrafts((prev) => ({ ...prev, [sede.id]: e.target.value }))}
+                          />
+                        </div>
+                        {/* The commission rate decides what every technician in
+                            this workshop is paid, so it lives with the other
+                            things only an admin can set. */}
+                        <div>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
+                            <Percent size={12} /> {t('payroll.commissionRate')}
+                          </label>
+                          <input
+                            className="form-input"
+                            type="number"
+                            min={0}
+                            max={100}
+                            step="0.5"
+                            style={{ width: 90 }}
+                            value={rateDrafts[sede.id] ?? ''}
+                            onChange={(e) => setRateDrafts((prev) => ({ ...prev, [sede.id]: e.target.value }))}
+                          />
+                        </div>
                         <button
                           className="btn btn-secondary btn-sm"
-                          onClick={() => handleSaveCapacity(sede.id)}
-                          disabled={savingSedeId === sede.id || capacityDrafts[sede.id] === String(sede.capacidad)}
+                          onClick={() => handleSaveOperations(sede.id)}
+                          disabled={
+                            savingSedeId === sede.id ||
+                            (capacityDrafts[sede.id] === String(sede.capacidad) &&
+                              rateDrafts[sede.id] === String(sede.comision_porcentaje ?? 35))
+                          }
                         >
                           {savingSedeId === sede.id ? t('common.loading') : t('common.update')}
                         </button>
@@ -622,7 +610,7 @@ export default function Settings() {
                             display: 'flex',
                             alignItems: 'center',
                             gap: 4,
-                            padding: '4px 6px 4px 10px',
+                            padding: '4px 10px',
                             background: 'var(--color-bg-hover)',
                             borderRadius: 'var(--radius-full)',
                             fontSize: 'var(--font-size-xs)',
@@ -630,20 +618,6 @@ export default function Settings() {
                           }}
                         >
                           {u.nombre_completo.split(' ')[0]} · <span style={{ textTransform: 'capitalize' }}>{u.rol}</span>
-                          {u.id !== user?.id && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteEmployee(u)}
-                              title={t('settings.removeEmployee')}
-                              style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                width: 18, height: 18, borderRadius: '50%',
-                                color: 'var(--color-text-tertiary)',
-                              }}
-                            >
-                              <X size={12} />
-                            </button>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -679,103 +653,109 @@ export default function Settings() {
           )}
         </div>
         )}
+
+        {/* Staff. Its own section rather than a button inside the Talleres
+            card: that is where it used to live, and it read as part of editing
+            a workshop — the admin never found it and assumed accounts had to be
+            created straight in the database. */}
+        {user?.rol === 'admin' && (
+          <UsersCard
+            users={users}
+            sedes={sedes}
+            currentUserId={user?.id}
+            loading={loading}
+            onChanged={loadData}
+          />
+        )}
       </div>
 
-      {showEmployeeModal && (
-        <div className="modal-overlay" onClick={() => setShowEmployeeModal(false)}>
+      {deleteTarget && (
+        <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">{t('settings.newEmployee')}</h3>
-              <button className="modal-close" onClick={() => setShowEmployeeModal(false)}><X size={20} /></button>
+              <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                <AlertTriangle size={18} style={{ color: 'var(--color-danger)' }} />
+                {t('settings.deleteSedeTitle')}
+              </h3>
+              <button className="modal-close" onClick={() => setDeleteTarget(null)}><X size={20} /></button>
             </div>
             <div className="modal-body">
-              {employeeError && (
-                <div className="alert-error" role="alert">{employeeError}</div>
+              {deleteError && <div className="alert-error" role="alert">{deleteError}</div>}
+
+              <p style={{ marginBottom: 'var(--space-3)' }}>
+                {t('settings.deleteSedeWarning').replace('{sede}', deleteTarget.nombre)}
+              </p>
+
+              {deleteImpact ? (
+                <>
+                  <div className="table-container" style={{ border: 'none' }}>
+                    <table className="table">
+                      <tbody>
+                        {([
+                          [t('workOrders.title'), deleteImpact.ordenes],
+                          [t('customers.title'), deleteImpact.clientes],
+                          [t('vehicles.title'), deleteImpact.vehiculos],
+                          [t('finance.title'), deleteImpact.movimientos],
+                        ] as [string, number][]).map(([labelText, count]) => (
+                          <tr key={labelText}>
+                            <td>{labelText}</td>
+                            <td style={{ textAlign: 'right', fontWeight: 700, color: count > 0 ? 'var(--color-danger)' : undefined }}>
+                              {count}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {/* People are moved, not deleted — a profile is somebody's
+                      login, and wiping a workshop should not close accounts. */}
+                  {deleteImpact.empleados > 0 && (
+                    <p className="field-hint" style={{ marginTop: 'var(--space-2)' }}>
+                      {t('settings.deleteSedeStaff').replace('{count}', String(deleteImpact.empleados))}
+                    </p>
+                  )}
+                  {deleteImpact.otras_sedes === 0 && (
+                    <div className="alert-error" style={{ marginTop: 'var(--space-3)' }}>
+                      {t('settings.deleteSedeLastOne')}
+                    </div>
+                  )}
+                </>
+              ) : (
+                !deleteError && <div className="loading-state"><div className="spinner" /></div>
               )}
-              <div className="form-group">
-                <label className="form-label" htmlFor="employee-name">{t('common.name')}</label>
+
+              <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
+                <label className="form-label" htmlFor="delete-sede-confirm">
+                  {t('settings.deleteSedeConfirmLabel').replace('{sede}', deleteTarget.nombre)}
+                </label>
                 <input
                   className="form-input"
-                  id="employee-name"
-                  value={employeeForm.nombre_completo}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, nombre_completo: e.target.value })}
-                  required
+                  id="delete-sede-confirm"
+                  autoComplete="off"
+                  value={deleteConfirmName}
+                  onChange={(e) => setDeleteConfirmName(e.target.value)}
+                  placeholder={deleteTarget.nombre}
                 />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="employee-email">{t('common.email')}</label>
-                  <input
-                    className="form-input"
-                    id="employee-email"
-                    type="email"
-                    value={employeeForm.email}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="employee-phone">{t('common.phone')}</label>
-                  <input
-                    className="form-input"
-                    id="employee-phone"
-                    value={employeeForm.telefono}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, telefono: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="employee-password">{t('settings.temporaryPassword')}</label>
-                <input
-                  className="form-input"
-                  id="employee-password"
-                  type="text"
-                  minLength={6}
-                  value={employeeForm.password}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, password: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="employee-role">{t('settings.role')}</label>
-                  <select
-                    className="form-input form-select"
-                    id="employee-role"
-                    value={employeeForm.rol}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, rol: e.target.value as UserRole })}
-                  >
-                    <option value="mecanico">{t('settings.roleMecanico')}</option>
-                    <option value="pintor">{t('settings.rolePintor')}</option>
-                    <option value="admin">{t('settings.roleAdmin')}</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="employee-sede">{t('settings.workshops')}</label>
-                  <select
-                    className="form-input form-select"
-                    id="employee-sede"
-                    value={employeeForm.sede_id}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, sede_id: e.target.value })}
-                    required
-                  >
-                    <option value="">-- {t('settings.workshops')} --</option>
-                    {sedes.map((sede) => (
-                      <option key={sede.id} value={sede.id}>{sede.nombre}</option>
-                    ))}
-                  </select>
-                </div>
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowEmployeeModal(false)}>{t('common.cancel')}</button>
-              <button className="btn btn-primary" onClick={handleCreateEmployee} disabled={savingEmployee}>
-                {savingEmployee ? t('common.loading') : t('common.create')}
+              <button className="btn btn-secondary" onClick={() => setDeleteTarget(null)}>{t('common.cancel')}</button>
+              <button
+                className="btn btn-danger"
+                onClick={confirmDeleteSede}
+                disabled={
+                  deletingSede ||
+                  deleteConfirmName.trim().toLowerCase() !== deleteTarget.nombre.trim().toLowerCase() ||
+                  deleteImpact?.otras_sedes === 0
+                }
+              >
+                {deletingSede ? t('common.loading') : t('settings.deleteSedeConfirm')}
               </button>
             </div>
           </div>
         </div>
       )}
+
       {showSedeModal && (
         <div className="modal-overlay" onClick={() => setShowSedeModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>

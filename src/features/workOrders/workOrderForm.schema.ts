@@ -22,10 +22,13 @@ const laborRow = z.object({
   costo: stringField,
 });
 
+// One money column, not two. A part is billed on at what it cost the shop, so
+// the separate "costo unitario" field was a box nobody filled in that still had
+// to be tabbed past on every line. The database keeps the two in step; see the
+// 20260913000000 migration.
 const partRow = z.object({
   descripcion: stringField,
   cantidad: stringField,
-  costo_unitario: stringField,
   precio_venta_unitario: stringField,
 });
 
@@ -51,7 +54,9 @@ const baseShape = z.object({
     anio: stringField,
     vin: stringField,
     placa: stringField,
+    placa_estado: stringField,
     color: stringField,
+    sin_placa: z.boolean(),
   }),
   workType: z.enum(['mecanica', 'pintura', 'combinado']),
   fuelLevel: stringField,
@@ -94,11 +99,18 @@ export const workOrderFormSchema = baseShape.check((ctx) => {
       // A VIN is fixed-length; a shorter one is a typo, not a short VIN.
       reject(['newVehicle', 'vin'], 'workOrders.validation.vinLength');
     }
+    // The plate is deliberately not required here. A car already on the lift is
+    // worth registering before anyone has walked out to read its plate, and the
+    // column is nullable precisely so "no plate" can be recorded honestly.
   }
 
   // An odometer never runs backwards, and the column carries the same rule as
   // a CHECK constraint, so a direct API call cannot get around the form.
-  if (form.milesIn.trim().startsWith('-')) {
+  // Checked on the parsed number rather than the leading character: "1e-3" and
+  // a pasted "  -5" both read as negative but neither starts with a minus, and
+  // the field is a spinner the user can click straight down past zero.
+  const miles = parseFloat(form.milesIn);
+  if (form.milesIn.trim().startsWith('-') || (Number.isFinite(miles) && miles < 0)) {
     reject(['milesIn'], 'workOrders.validation.milesNegative');
   }
   if (parseFloat(form.deposit) < 0) {
@@ -124,7 +136,7 @@ export const workOrderFormSchema = baseShape.check((ctx) => {
   });
 });
 
-/** A blank intake. `anio` defaults to this year, which is right far more often than not. */
+/** A blank intake. */
 export function emptyWorkOrderForm(): WorkOrderFormValues {
   return {
     customerMode: 'existing',
@@ -135,10 +147,14 @@ export function emptyWorkOrderForm(): WorkOrderFormValues {
     newVehicle: {
       marca: '',
       modelo: '',
-      anio: String(new Date().getFullYear()),
+      // Blank rather than the current year: the VIN decode fills it in, and a
+      // pre-filled year is a wrong answer the user has to notice to correct.
+      anio: '',
       vin: '',
       placa: '',
+      placa_estado: '',
       color: '',
+      sin_placa: false,
     },
     workType: 'mecanica',
     fuelLevel: '1/2',

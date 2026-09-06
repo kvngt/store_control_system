@@ -3,6 +3,8 @@ import type { Sede, WorkOrder } from '../types/database';
 
 const MARGIN = 15;
 const LINE = 6;
+/** Clear space between the workshop's header block and the report title. */
+const HEADER_GAP = 8;
 const BRAND: [number, number, number] = [212, 160, 23]; // --color-primary
 const MUTED: [number, number, number] = [110, 110, 130];
 
@@ -81,7 +83,14 @@ async function toPngDataUrl(url: string, maxPx = 400) {
   }
 }
 
-export async function generateWorkOrderPdf(order: WorkOrder, sede?: Sede | null) {
+/**
+ * Renders the report and hands back the raw document.
+ *
+ * Kept separate from saving it so the same pages can be downloaded, uploaded
+ * for sharing, or both — building the PDF twice for one order would mean
+ * re-fetching and re-encoding every intake photo.
+ */
+async function buildWorkOrderPdf(order: WorkOrder, sede?: Sede | null) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -123,14 +132,22 @@ export async function generateWorkOrderPdf(order: WorkOrder, sede?: Sede | null)
   // The workshop's own logo and name lead the report: the client receiving it
   // should see their shop, not the platform.
   let headerX = MARGIN;
+  // How far down the logo actually reaches. The title is placed below this
+  // rather than at a fixed offset: the logo was 14mm tall starting 3mm above
+  // the cursor, so it ran to y+11 while the advance was only 10-14mm — leaving
+  // "Orden de Trabajo" printed across the bottom of the shop's own logo, which
+  // is exactly how this was reported. A shorter logo plus a real gap fixes both
+  // halves of that.
+  let headerBottom = y;
   if (sede?.logo_url) {
     const logo = await toPngDataUrl(sede.logo_url, 300);
     if (logo) {
-      const logoH = 14;
-      const logoW = Math.min(40, logoH * logo.ratio);
+      const logoH = 11;
+      const logoW = Math.min(32, logoH * logo.ratio);
       try {
-        doc.addImage(logo.dataUrl, 'PNG', MARGIN, y - 3, logoW, logoH);
-        headerX = MARGIN + logoW + 4;
+        doc.addImage(logo.dataUrl, 'PNG', MARGIN, y - 2, logoW, logoH);
+        headerX = MARGIN + logoW + 5;
+        headerBottom = Math.max(headerBottom, y - 2 + logoH);
       } catch {
         // Unsupported image — fall back to the text-only header.
       }
@@ -158,7 +175,11 @@ export async function generateWorkOrderPdf(order: WorkOrder, sede?: Sede | null)
     y + 2,
     { align: 'right' }
   );
-  y += sede?.direccion || sede?.telefono ? 14 : 10;
+  // The header block ends below whichever is taller: the text column or the
+  // logo. HEADER_GAP is then real white space between the two, not the slack
+  // left over from a font metric.
+  const textBottom = y + (sede?.direccion || sede?.telefono ? 9 : 4);
+  y = Math.max(textBottom, headerBottom) + HEADER_GAP;
 
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
@@ -390,5 +411,22 @@ export async function generateWorkOrderPdf(order: WorkOrder, sede?: Sede | null)
     }
   }
 
-  doc.save(`${order.numero_orden}.pdf`);
+  return doc;
+}
+
+/** The file name the shop expects to see in their downloads folder. */
+export function workOrderPdfName(order: WorkOrder) {
+  return `${order.numero_orden}.pdf`;
+}
+
+/** Renders the report and downloads it. */
+export async function generateWorkOrderPdf(order: WorkOrder, sede?: Sede | null) {
+  const doc = await buildWorkOrderPdf(order, sede);
+  doc.save(workOrderPdfName(order));
+}
+
+/** Renders the report as a Blob, for uploading or attaching. */
+export async function renderWorkOrderPdfBlob(order: WorkOrder, sede?: Sede | null): Promise<Blob> {
+  const doc = await buildWorkOrderPdf(order, sede);
+  return doc.output('blob');
 }

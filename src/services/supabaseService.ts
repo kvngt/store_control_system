@@ -11,10 +11,10 @@
 // dependencies honest and makes the module graph say who talks to what.
 // ===================================================
 
+import { commissionsService } from './commissions.service';
 import { customersService } from './customers.service';
 import { dashboardService } from './dashboard.service';
 import { financeService } from './finance.service';
-import { payrollService } from './payroll.service';
 import { searchService } from './search.service';
 import { sedesService } from './sedes.service';
 import { storageService } from './storage.service';
@@ -23,10 +23,10 @@ import { vehiclesService } from './vehicles.service';
 import { workOrdersService } from './workOrders.service';
 
 export {
+  commissionsService,
   customersService,
   dashboardService,
   financeService,
-  payrollService,
   searchService,
   sedesService,
   storageService,
@@ -44,6 +44,6 @@ export const supabaseService = {
   ...storageService,
   ...searchService,
   ...financeService,
-  ...payrollService,
+  ...commissionsService,
   ...dashboardService,
 };

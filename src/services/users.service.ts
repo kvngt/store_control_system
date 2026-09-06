@@ -86,6 +86,31 @@ export const usersService = {
     return data.profile as UserProfile;
   },
 
+  /**
+   * Admin edit of somebody else's account.
+   *
+   * Goes through an edge function rather than a plain `perfiles` update
+   * because the name, phone, role and sede live in `perfiles` but the email
+   * and password live in `auth.users`, which only the service-role key can
+   * touch. Sending just the fields that changed keeps a dialog that edits the
+   * phone number from blanking out the role.
+   */
+  updateEmployee: async (input: {
+    usuario_id: string;
+    nombre_completo?: string;
+    email?: string;
+    telefono?: string;
+    rol?: UserRole;
+    sede_id?: string;
+    /** Only when the admin is setting a new one; omit to leave it alone. */
+    password?: string;
+  }) => {
+    const { data, error } = await supabase.functions.invoke('update-employee', { body: input });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data.profile as UserProfile;
+  },
+
   deleteEmployee: async (usuarioId: string) => {
     const { data, error } = await supabase.functions.invoke('delete-employee', {
       body: { usuario_id: usuarioId },

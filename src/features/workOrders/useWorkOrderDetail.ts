@@ -4,6 +4,9 @@ import { useAuth } from '../../context/auth.context';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { workOrdersService } from '../../services/supabaseService';
+// Statically imported, unlike the PDF renderer below: ShareReportModal already
+// pulls it into this chunk, so a dynamic import here only defeats itself.
+import { reportsService } from '../../services/reports.service';
 import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';
 import type { OrderStatus, UserProfile, WorkOrder } from '../../types/database';
@@ -42,6 +45,9 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   const [mutationError, setMutationError] = useState('');
   const [savingSignature, setSavingSignature] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  // The signed link + message for the report the user just generated. Non-null
+  // is what opens the share dialog.
+  const [share, setShare] = useState<{ link: string; message: string } | null>(null);
   const [progressDraft, setProgressDraft] = useState('0');
 
   const isAdmin = user?.rol === 'admin';
@@ -176,7 +182,6 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   type PartInput = {
     descripcion: string;
     cantidad: number;
-    costo_unitario?: number;
     precio_venta_unitario: number;
   };
 
@@ -330,7 +335,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     if (!order) return;
     setGeneratingPdf(true);
     try {
-      // ~400 kB of jsPDF + html2canvas, fetched only when someone prints.
+      // ~400 kB of jsPDF, fetched only when someone prints.
       const { generateWorkOrderPdf } = await import('../../lib/workOrderPdf');
       await generateWorkOrderPdf(order, currentSede);
     } catch (err) {
@@ -339,6 +344,30 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
       setGeneratingPdf(false);
     }
   };
+
+  /**
+   * Renders the report, uploads it, and opens the share dialog.
+   *
+   * One render for both: the PDF embeds every intake photo, so building it
+   * twice — once to download and once to send — would mean fetching and
+   * re-encoding all of them again.
+   */
+  const shareReport = async () => {
+    if (!order) return;
+    setGeneratingPdf(true);
+    try {
+      const { renderWorkOrderPdfBlob } = await import('../../lib/workOrderPdf');
+      const blob = await renderWorkOrderPdfBlob(order, currentSede);
+      const { url } = await reportsService.uploadReport(order, blob);
+      setShare({ link: url, message: reportsService.buildMessage(order, url, currentSede?.nombre) });
+    } catch (err) {
+      showToast('error', t('workOrders.shareReportError'), getErrorMessage(err, language));
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+  const closeShare = useCallback(() => setShare(null), []);
 
   return {
     order,
@@ -370,6 +399,9 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     saveSignature,
     clearSignature,
     generatePdf,
+    share,
+    shareReport,
+    closeShare,
   };
 }
 

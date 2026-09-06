@@ -67,6 +67,13 @@ function AppRoutes() {
         path="/login"
         element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
       />
+      {/* The address recovery emails point at. Supabase puts the session in the
+          URL fragment and the client picks it up, which fires PASSWORD_RECOVERY
+          and the branch above — but only if it has finished doing so. Landing
+          on a named route means the person sees the "choose a password" screen
+          rather than the login form for the moment in between, and it gives the
+          Redirect URLs allow-list something specific to hold. */}
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         element={
           <ProtectedRoute>

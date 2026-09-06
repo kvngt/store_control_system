@@ -9,6 +9,12 @@ export interface Sede {
   /** Accent colour as #rrggbb. Null = use the default Restorify gold. */
   color_tema?: string | null;
   logo_url?: string | null;
+  /**
+   * Share of an order's profit paid out as commission, 0-100. Per sede rather
+   * than global: the split is a local arrangement with the crew of one
+   * workshop, not a company-wide constant. Defaults to 35 in the database.
+   */
+  comision_porcentaje?: number;
   fecha_creacion: string;
 }
 

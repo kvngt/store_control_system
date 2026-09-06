@@ -94,7 +94,7 @@ describe('work order intake schema', () => {
   it('flags a part with no description, no quantity or a negative price', () => {
     const found = issues(
       form({
-        parts: [{ descripcion: '', cantidad: '0', costo_unitario: '5', precio_venta_unitario: '-1' }],
+        parts: [{ descripcion: '', cantidad: '0', precio_venta_unitario: '-1' }],
       })
     );
     expect(found['parts.0.descripcion']).toBe('workOrders.validation.partDescription');

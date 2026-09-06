@@ -7,7 +7,7 @@
 // loaded, and a field typed in the dialog reaches the form state.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   renderWithProviders,
@@ -265,17 +265,33 @@ describe('WorkOrders — intake validation', () => {
     expect(mocks.createWorkOrder).not.toHaveBeenCalled();
   });
 
-  it('rejects a negative odometer reading on the odometer field', async () => {
+  it('will not let a minus sign into the odometer field at all', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await screen.findAllByText('OT-2026-0042');
+    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
+    await screen.findByText('Nueva Orden', { selector: '.modal-title' });
+
+    // The first line of defence is the keyboard: `min={0}` does nothing on a
+    // noValidate form, and complaining on submit still means the operator got
+    // to type the wrong thing first.
+    const miles = document.getElementById('order-miles-in') as HTMLInputElement;
+    await user.type(miles, '-500');
+    expect(miles.value).toBe('500');
+  });
+
+  it('still rejects a negative odometer reading that got past the keyboard', async () => {
     const user = userEvent.setup();
     renderWithProviders(<WorkOrders />);
     await screen.findAllByText('OT-2026-0042');
     await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
     const dialog = (await screen.findByText('Nueva Orden', { selector: '.modal-title' })).closest('.modal') as HTMLElement;
 
-    // A number input reports '' for a lone '-', so the sign is typed with the
-    // digits behind it — which is how it actually reaches the field on paste.
+    // A paste or an autofill never fires the keydown guard, so the schema has
+    // to catch it and say so — rather than the value being silently rewritten,
+    // which would hide a wrong reading instead of correcting it.
     const miles = document.getElementById('order-miles-in') as HTMLInputElement;
-    await user.type(miles, '-500');
+    fireEvent.change(miles, { target: { value: '-500' } });
     await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
 
     expect(await within(dialog).findByText(/no pueden ser negativas/i)).toBeInTheDocument();
@@ -312,10 +328,11 @@ describe('WorkOrders — order detail', () => {
     expect(mocks.getWorkOrderDetail).toHaveBeenCalledWith(ORDER.id);
     expect(screen.getByText('Cambio de aceite')).toBeInTheDocument();
     expect(screen.getByText('Filtro de aceite')).toBeInTheDocument();
-    // 2 × $15 sale price (the row subtotal and the column total), and the $8
-    // unit cost shown beside it.
+    // 2 × $15 sale price: the row subtotal and the column total. There is no
+    // separate unit-cost column any more — a part is billed on at what it cost,
+    // so the price is the only money figure the shop enters.
     expect(screen.getAllByText('$30.00').length).toBeGreaterThan(0);
-    expect(screen.getByText('$8.00')).toBeInTheDocument();
+    expect(screen.queryByText('$8.00')).not.toBeInTheDocument();
   });
 
   it('re-reads the order after adding a labor line, because the DB recomputes totals', async () => {

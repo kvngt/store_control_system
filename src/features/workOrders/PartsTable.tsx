@@ -6,7 +6,6 @@ import type { WorkOrderPart } from '../../types/database';
 export interface PartInput {
   descripcion: string;
   cantidad: number;
-  costo_unitario?: number;
   precio_venta_unitario: number;
 }
 
@@ -19,16 +18,18 @@ interface PartsTableProps {
   onRemove: (id: string, descripcion: string) => Promise<void>;
 }
 
-const EMPTY_DRAFT = { descripcion: '', cantidad: '1', costo_unitario: '', precio_venta_unitario: '' };
+const EMPTY_DRAFT = { descripcion: '', cantidad: '1', precio_venta_unitario: '' };
 
 /**
  * The parts of an order, editable in place.
  *
- * Two money columns on purpose: `costo_unitario` is what the shop paid and is
- * what gets booked as an expense in Finanzas when the order is delivered;
- * `precio_venta_unitario` is what the customer is charged. Leaving the cost
- * blank silently overstates the shop's profit, which is why it is a visible
- * column here rather than a hidden default.
+ * One money column. This used to show both "costo unitario" (what the shop
+ * paid) and "precio" (what the customer is charged), and in practice the shop
+ * bills a part on at what it cost — so the first column was a second money
+ * field nobody filled in that still had to be tabbed past on every line, on a
+ * tablet, on the busiest screen in the building. The database now mirrors the
+ * price into `costo_unitario`, so Finanzas still books the parts expense and
+ * the commission base still subtracts it, without anybody typing it twice.
  */
 export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRemove }: PartsTableProps) {
   const { t } = useLanguage();
@@ -37,14 +38,11 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
   const [editDraft, setEditDraft] = useState(EMPTY_DRAFT);
 
   const totalSale = items.reduce((sum, p) => sum + p.subtotal, 0);
-  // What the shop paid, as opposed to what it charges.
-  const totalCost = items.reduce((sum, p) => sum + p.cantidad * (p.costo_unitario ?? 0), 0);
 
   const toInput = (draft: typeof EMPTY_DRAFT): PartInput => ({
     descripcion: draft.descripcion,
-    cantidad: parseInt(draft.cantidad, 10) || 1,
-    costo_unitario: parseFloat(draft.costo_unitario) || 0,
-    precio_venta_unitario: parseFloat(draft.precio_venta_unitario) || 0,
+    cantidad: Math.max(1, parseInt(draft.cantidad, 10) || 1),
+    precio_venta_unitario: Math.max(0, parseFloat(draft.precio_venta_unitario) || 0),
   });
 
   const startEdit = (part: WorkOrderPart) => {
@@ -52,7 +50,6 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
     setEditDraft({
       descripcion: part.descripcion,
       cantidad: String(part.cantidad),
-      costo_unitario: String(part.costo_unitario ?? 0),
       precio_venta_unitario: String(part.precio_venta_unitario),
     });
   };
@@ -81,7 +78,6 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
             <tr>
               <th>{t('common.description')}</th>
               <th>{t('common.quantity')}</th>
-              <th style={{ textAlign: 'right' }}>{t('workOrders.unitCost')}</th>
               <th style={{ textAlign: 'right' }}>{t('common.price')}</th>
               <th style={{ textAlign: 'right' }}>{t('common.subtotal')}</th>
               <th style={{ width: 64 }}></th>
@@ -111,17 +107,9 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                     <input
                       className="form-input"
                       type="number"
-                      style={{ width: 90, textAlign: 'right' }}
-                      value={editDraft.costo_unitario}
-                      onChange={(e) => setEditDraft({ ...editDraft, costo_unitario: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="form-input"
-                      type="number"
                       min={0}
-                      style={{ width: 90, textAlign: 'right' }}
+                      step="0.01"
+                      style={{ width: 110, textAlign: 'right' }}
                       value={editDraft.precio_venta_unitario}
                       onChange={(e) => setEditDraft({ ...editDraft, precio_venta_unitario: e.target.value })}
                     />
@@ -144,9 +132,6 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                 <tr key={part.id}>
                   <td>{part.descripcion}</td>
                   <td>{part.cantidad}</td>
-                  <td style={{ textAlign: 'right', color: 'var(--color-text-tertiary)' }}>
-                    ${(part.costo_unitario ?? 0).toFixed(2)}
-                  </td>
                   <td style={{ textAlign: 'right' }}>${part.precio_venta_unitario.toFixed(2)}</td>
                   <td style={{ textAlign: 'right', fontWeight: 600 }}>${part.subtotal.toFixed(2)}</td>
                   <td>
@@ -163,11 +148,7 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
               )
             )}
             <tr>
-              <td colSpan={2} style={{ fontWeight: 700 }}>Total {t('workOrders.parts')}</td>
-              <td style={{ textAlign: 'right', color: 'var(--color-text-tertiary)' }}>
-                ${totalCost.toFixed(2)}
-              </td>
-              <td></td>
+              <td colSpan={3} style={{ fontWeight: 700 }}>Total {t('workOrders.parts')}</td>
               <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-light)' }}>
                 ${totalSale.toFixed(2)}
               </td>
@@ -187,6 +168,7 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
         <input
           className="form-input"
           type="number"
+          min={1}
           placeholder={t('common.quantity')}
           style={{ flex: '1 1 70px' }}
           value={newDraft.cantidad}
@@ -196,18 +178,9 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
           className="form-input"
           type="number"
           min={0}
-          placeholder={t('workOrders.unitCost')}
-          title={t('workOrders.unitCostHint')}
-          style={{ flex: '1 1 90px' }}
-          value={newDraft.costo_unitario}
-          onChange={(e) => setNewDraft({ ...newDraft, costo_unitario: e.target.value })}
-        />
-        <input
-          className="form-input"
-          type="number"
-          min={0}
+          step="0.01"
           placeholder={t('common.price')}
-          style={{ flex: '1 1 90px' }}
+          style={{ flex: '1 1 110px' }}
           value={newDraft.precio_venta_unitario}
           onChange={(e) => setNewDraft({ ...newDraft, precio_venta_unitario: e.target.value })}
         />

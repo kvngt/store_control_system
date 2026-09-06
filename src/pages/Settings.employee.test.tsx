@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 //
-// Regression tests for the "Nuevo Empleado" dialog.
+// Regression tests for the user-administration dialog.
 //
 // Reported from the shop: adding an employee did nothing — the Create button
 // wouldn't assign them to any sede and gave no explanation. The dialog had two
@@ -16,6 +16,11 @@
 //
 // Note the contrast with the rest of Settings, which reports through
 // showToast() at z-index 500 and therefore does surface above the modal.
+//
+// Since then the dialog has moved out of the Talleres card into its own
+// Usuarios section (nobody could find it where it was), and grown an edit mode.
+// The failure modes above are properties of the dialog, not of where it lives,
+// so the tests move with it.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
@@ -27,12 +32,24 @@ import {
   SEDE_CENTRO,
   SEDE_NORTE,
 } from '../test/renderWithProviders';
+import type { UserProfile } from '../types/database';
+
+const MECHANIC: UserProfile = {
+  id: 'user-mecanico',
+  nombre_completo: 'Luis Mejia',
+  rol: 'mecanico',
+  sede_id: SEDE_CENTRO.id,
+  telefono: '555-0100',
+  email: 'luis@restorify.test',
+  creado_en: '2026-01-01T00:00:00Z',
+};
 
 const mocks = vi.hoisted(() => ({
   auth: { current: null as ReturnType<typeof import('../test/renderWithProviders').authValue> | null },
   getSedes: vi.fn(),
   getUsers: vi.fn(),
   createEmployee: vi.fn(),
+  updateEmployee: vi.fn(),
 }));
 
 vi.mock('../context/auth.context', () => ({
@@ -51,6 +68,7 @@ vi.mock('../services/supabaseService', () => {
   const users = {
     getUsers: mocks.getUsers,
     createEmployee: mocks.createEmployee,
+    updateEmployee: mocks.updateEmployee,
     deleteEmployee: vi.fn(),
     moveUserToSede: vi.fn(),
     updateProfile: vi.fn(),
@@ -62,19 +80,19 @@ vi.mock('../services/supabaseService', () => {
 
 const { default: Settings } = await import('./Settings');
 
-/** Opens Settings as an admin and clicks through to the employee dialog. */
-async function openEmployeeDialog(sedes = [SEDE_CENTRO, SEDE_NORTE]) {
+/** Opens Settings as an admin and clicks through to the new-user dialog. */
+async function openEmployeeDialog(sedes = [SEDE_CENTRO, SEDE_NORTE], users = [ADMIN_USER]) {
   mocks.auth.current = authValue(ADMIN_USER);
   mocks.getSedes.mockResolvedValue(sedes);
-  mocks.getUsers.mockResolvedValue([ADMIN_USER]);
+  mocks.getUsers.mockResolvedValue(users);
 
   const user = userEvent.setup();
   renderWithProviders(<Settings />);
 
-  const openButton = await screen.findByRole('button', { name: /Nuevo Empleado/i });
+  const openButton = await screen.findByRole('button', { name: /Nuevo Usuario/i });
   await user.click(openButton);
 
-  const dialog = await screen.findByText('Nuevo Empleado', { selector: '.modal-title' });
+  const dialog = await screen.findByText('Nuevo Usuario', { selector: '.modal-title' });
   return { user, modal: dialog.closest('.modal') as HTMLElement };
 }
 
@@ -83,7 +101,7 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-describe('Nuevo Empleado dialog', () => {
+describe('User administration dialog', () => {
   it('explains what is missing instead of doing nothing when a field is blank', async () => {
     const { user, modal } = await openEmployeeDialog();
 
@@ -180,5 +198,56 @@ describe('Nuevo Empleado dialog', () => {
     // Toasts sit at z-index 500, above the modal overlay — unlike the
     // page-level error box this dialog used to write into.
     expect(await screen.findByText(/Empleado creado correctamente/i)).toBeVisible();
+  });
+  // ----- editing, which did not exist at all before -------------------------
+  // Reported from the shop: once a user had been created there was no way to
+  // change anything about them. A mistyped email meant deleting the person and
+  // starting over — which the delete path refuses anyway once they have work
+  // assigned, so the account was simply stuck wrong.
+  it('opens an existing user with their current details filled in', async () => {
+    mocks.auth.current = authValue(ADMIN_USER);
+    mocks.getSedes.mockResolvedValue([SEDE_CENTRO, SEDE_NORTE]);
+    mocks.getUsers.mockResolvedValue([ADMIN_USER, MECHANIC]);
+
+    const user = userEvent.setup();
+    renderWithProviders(<Settings />);
+
+    await screen.findByText(MECHANIC.nombre_completo);
+    const row = screen.getByText(MECHANIC.nombre_completo).closest('tr') as HTMLElement;
+    await user.click(within(row).getByRole('button', { name: /Editar usuario/i }));
+
+    const dialog = (await screen.findByText('Editar usuario', { selector: '.modal-title' }))
+      .closest('.modal') as HTMLElement;
+
+    expect(within(dialog).getByLabelText(/^Nombre$/i)).toHaveValue(MECHANIC.nombre_completo);
+    expect(within(dialog).getByLabelText(/Correo Electrónico/i)).toHaveValue(MECHANIC.email);
+  });
+
+  it('leaves the password alone when the field is left blank', async () => {
+    mocks.auth.current = authValue(ADMIN_USER);
+    mocks.getSedes.mockResolvedValue([SEDE_CENTRO, SEDE_NORTE]);
+    mocks.getUsers.mockResolvedValue([ADMIN_USER, MECHANIC]);
+    mocks.updateEmployee.mockResolvedValue({ ...MECHANIC, nombre_completo: 'Luis Mejía' });
+
+    const user = userEvent.setup();
+    renderWithProviders(<Settings />);
+
+    await screen.findByText(MECHANIC.nombre_completo);
+    const row = screen.getByText(MECHANIC.nombre_completo).closest('tr') as HTMLElement;
+    await user.click(within(row).getByRole('button', { name: /Editar usuario/i }));
+    const dialog = (await screen.findByText('Editar usuario', { selector: '.modal-title' }))
+      .closest('.modal') as HTMLElement;
+
+    const nameInput = within(dialog).getByLabelText(/^Nombre$/i);
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Luis Mejía');
+    await user.click(within(dialog).getByRole('button', { name: /^Guardar$/i }));
+
+    await waitFor(() => expect(mocks.updateEmployee).toHaveBeenCalled());
+    const payload = mocks.updateEmployee.mock.calls[0][0];
+    expect(payload.nombre_completo).toBe('Luis Mejía');
+    // The key must be absent, not empty: saving a name change has to not reset
+    // somebody's password as a side effect.
+    expect(payload).not.toHaveProperty('password');
   });
 });

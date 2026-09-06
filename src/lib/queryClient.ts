@@ -19,7 +19,8 @@ export const queryKeys = {
   users: (sedeId?: string) => ['users', sedeId] as const,
   transactions: (sedeId?: string) => ['transactions', sedeId] as const,
   importBatches: (sedeId?: string) => ['import-batches', sedeId] as const,
-  payroll: (sedeId?: string) => ['payroll', sedeId] as const,
+  commissions: (sedeId?: string) => ['commissions', sedeId] as const,
+  commissionPayments: (sedeId?: string) => ['commission-payments', sedeId] as const,
   sedes: () => ['sedes'] as const,
   /**
    * The dashboard KPIs. `capacity` is part of the key because the occupancy

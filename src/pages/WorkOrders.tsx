@@ -18,6 +18,7 @@ import { useWorkOrderDetail } from '../features/workOrders/useWorkOrderDetail';
 import WorkOrderCreateModal from '../features/workOrders/WorkOrderCreateModal';
 import WorkOrderDetail from '../features/workOrders/WorkOrderDetail';
 import { getErrorMessage } from '../lib/errors';
+import { checkUsPlate, checkVin } from '../lib/vin';
 import type { WorkOrder, Customer, Vehicle, UserProfile } from '../types/database';
 import { Plus, Search, Eye, Car, Calendar, Trash2, ChevronRight, ChevronDown, Wrench } from 'lucide-react';
 
@@ -163,26 +164,42 @@ export default function WorkOrders() {
         });
         customerId = created.id;
         form.markCustomerCreated(created.id);
+        // Put it in the picker straight away. `markCustomerCreated` switches
+        // the form to "existing" so a retry cannot create the customer twice —
+        // but the dropdown is fed from the query cache, which does not know
+        // about them yet. If a later step then failed, the admin was looking at
+        // a customer select that had gone blank, with no way to tell whether
+        // their customer had been saved.
+        queryClient.setQueryData<Customer[]>(queryKeys.customers(sedeId), (prev) =>
+          prev ? [created, ...prev] : [created]
+        );
       }
 
       let vehicleId = values.selectedVehicle;
       if (values.vehicleMode === 'new') {
-        const plate = values.newVehicle.placa.trim().toUpperCase();
+        const v = values.newVehicle;
+        // NULL, never an empty string: `placa` is nullable precisely so a unit
+        // with no plate reads as "no plate" everywhere. Quick-create used to
+        // write '' here, which is neither a plate nor the absence of one, and
+        // which the Vehículos screen is careful never to store.
+        const plate = v.sin_placa ? null : checkUsPlate(v.placa, v.placa_estado || undefined).normalized || null;
         const createdVehicle = await vehiclesService.createVehicle({
           cliente_id: customerId,
-          marca: values.newVehicle.marca,
-          modelo: values.newVehicle.modelo,
-          anio: parseInt(values.newVehicle.anio, 10) || new Date().getFullYear(),
-          vin: values.newVehicle.vin,
-          // NULL, never an empty string: `placa` is nullable precisely so a
-          // unit with no plate reads as "no plate" everywhere. Quick-create
-          // used to write '' here, which is neither a plate nor the absence
-          // of one, and which the Vehículos screen is careful never to store.
-          placa: plate || null,
-          color: values.newVehicle.color,
+          marca: v.marca.trim(),
+          modelo: v.modelo.trim(),
+          anio: parseInt(v.anio, 10) || new Date().getFullYear(),
+          vin: checkVin(v.vin).normalized,
+          placa: plate,
+          // A plate state with no plate is meaningless, and the column carries
+          // a CHECK constraint saying so.
+          placa_estado: plate ? v.placa_estado || null : null,
+          color: v.color.trim(),
         });
         vehicleId = createdVehicle.id;
         form.markVehicleCreated(createdVehicle.id);
+        queryClient.setQueryData<Vehicle[]>(queryKeys.vehicles(sedeId), (prev) =>
+          prev ? [createdVehicle, ...prev] : [createdVehicle]
+        );
       }
 
       // Admins pick who works the order; a mechanic/painter creating one is
@@ -209,11 +226,13 @@ export default function WorkOrders() {
           descripcion: l.descripcion,
           costo: parseFloat(l.costo) || 0,
         })),
+        // No separate cost: a part is billed on at what it cost the shop, and
+        // the database mirrors the price into `costo_unitario` so Finanzas
+        // books the expense and the commission base subtracts it.
         repuestos: values.parts.map((p) => ({
           descripcion: p.descripcion,
-          cantidad: parseInt(p.cantidad, 10) || 1,
-          costo_unitario: parseFloat(p.costo_unitario) || 0,
-          precio_venta_unitario: parseFloat(p.precio_venta_unitario) || 0,
+          cantidad: Math.max(1, parseInt(p.cantidad, 10) || 1),
+          precio_venta_unitario: Math.max(0, parseFloat(p.precio_venta_unitario) || 0),
         })),
         asignaciones,
         creado_por: user.id,
@@ -297,8 +316,20 @@ export default function WorkOrders() {
           </thead>
           <tbody>
             {list.map((order) => (
-              <tr key={order.id}>
-                <td style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>{order.numero_orden}</td>
+              <tr key={order.id} className="row-clickable" onClick={() => detail.open(order.id)}>
+                <td>
+                  {/* The order number is the thing people point at, so it is
+                      the link. The eye icon stays, but it is no longer the only
+                      way in — which is how this was reported from the shop. */}
+                  <button
+                    type="button"
+                    className="link-button"
+                    onClick={(e) => { e.stopPropagation(); detail.open(order.id); }}
+                    title={t('workOrders.openOrder')}
+                  >
+                    {order.numero_orden}
+                  </button>
+                </td>
                 <td>{order.cliente?.nombre}</td>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
@@ -323,7 +354,11 @@ export default function WorkOrders() {
                 <td style={{ fontWeight: 600 }}>${order.total_general.toLocaleString()}</td>
                 <td>
                   <div className="table-actions">
-                    <button className="btn btn-ghost btn-sm btn-icon" onClick={() => detail.open(order.id)}>
+                    <button
+                      className="btn btn-ghost btn-sm btn-icon"
+                      title={t('workOrders.openOrder')}
+                      onClick={(e) => { e.stopPropagation(); detail.open(order.id); }}
+                    >
                       <Eye size={16} />
                     </button>
                     {user?.rol === 'admin' && (

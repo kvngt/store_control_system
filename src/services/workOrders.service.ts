@@ -53,7 +53,6 @@ async function createWorkOrderWithoutRpc(
         .insert(input.repuestos.map((p) => ({
           ...p,
           orden_id: order.id,
-          costo_unitario: p.costo_unitario ?? 0,
           subtotal: p.cantidad * p.precio_venta_unitario,
         })));
       if (partsError) throw partsError;
@@ -139,7 +138,7 @@ export const workOrdersService = {
     const { data, error } = await supabase.rpc('create_work_order', {
       p_order: orderPayload,
       p_labor: input.labor_items,
-      p_parts: input.repuestos.map((p) => ({ ...p, costo_unitario: p.costo_unitario ?? 0 })),
+      p_parts: input.repuestos,
       p_assignments: input.asignaciones,
     });
 
@@ -220,15 +219,16 @@ export const workOrdersService = {
     if (error) throw error;
   },
 
-  // costo_unitario is optional: the shop only captures the sale price, so it
-  // defaults to 0 (the column is NOT NULL and also carries a DB default).
-  addPart: async (orderId: string, item: { descripcion: string; cantidad: number; costo_unitario?: number; precio_venta_unitario: number }) => {
+  // Only the sale price is captured. `costo_unitario` is filled in by the
+  // trg_part_cost_passthrough trigger, which mirrors the price into it: a part
+  // is billed on at what it cost the shop, so keeping the two in step is the
+  // database's job rather than a rule every caller has to remember.
+  addPart: async (orderId: string, item: { descripcion: string; cantidad: number; precio_venta_unitario: number }) => {
     const { data, error } = await supabase
       .from('orden_repuestos')
       .insert({
         ...item,
         orden_id: orderId,
-        costo_unitario: item.costo_unitario ?? 0,
         subtotal: item.cantidad * item.precio_venta_unitario,
       })
       .select()
@@ -237,7 +237,7 @@ export const workOrdersService = {
     return data as WorkOrderPart;
   },
 
-  updatePart: async (id: string, item: { descripcion: string; cantidad: number; costo_unitario?: number; precio_venta_unitario: number }) => {
+  updatePart: async (id: string, item: { descripcion: string; cantidad: number; precio_venta_unitario: number }) => {
     const { data, error } = await supabase
       .from('orden_repuestos')
       .update({ ...item, subtotal: item.cantidad * item.precio_venta_unitario })

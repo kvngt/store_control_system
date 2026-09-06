@@ -95,6 +95,7 @@ export interface WorkOrderInput {
   inspeccion_360_notas: string;
   fecha_estimada_entrega: string;
   labor_items: Omit<LaborItem, 'id' | 'orden_id'>[];
-  repuestos: (Omit<WorkOrderPart, 'id' | 'orden_id' | 'subtotal' | 'costo_unitario'> & { costo_unitario?: number })[];
+  /** Only the price; `costo_unitario` is mirrored from it by the database. */
+  repuestos: Omit<WorkOrderPart, 'id' | 'orden_id' | 'subtotal' | 'costo_unitario'>[];
   asignaciones: { usuario_id: string; tipo_tarea: 'mecanica' | 'pintura' }[];
 }

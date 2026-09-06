@@ -39,6 +39,11 @@ export function useWorkOrderForm() {
   const vehicleMode = form.watch('vehicleMode');
   const selectedCustomer = form.watch('selectedCustomer');
   const selectedOperators = form.watch('selectedOperators');
+  // `VehicleFields` is a controlled component over the whole sub-object rather
+  // than a set of registered inputs: the VIN decode writes three fields at once
+  // and the "no plate" checkbox clears two more, which `register` cannot
+  // express without the dialog reaching into RHF for each of them.
+  const newVehicle = form.watch('newVehicle');
 
   const selectCustomer = useCallback(
     (value: string) => {
@@ -75,6 +80,12 @@ export function useWorkOrderForm() {
   }, [form]);
 
   const backToExistingVehicle = useCallback(() => form.setValue('vehicleMode', 'existing'), [form]);
+
+  const setNewVehicle = useCallback(
+    (next: WorkOrderFormValues['newVehicle']) =>
+      form.setValue('newVehicle', next, { shouldDirty: true, shouldValidate: form.formState.isSubmitted }),
+    [form]
+  );
 
   const toggleOperator = useCallback(
     (id: string) => {
@@ -127,6 +138,7 @@ export function useWorkOrderForm() {
     vehicleMode,
     selectedCustomer,
     selectedOperators,
+    newVehicle,
     errors: form.formState.errors,
     isDirty,
     // actions
@@ -134,6 +146,7 @@ export function useWorkOrderForm() {
     selectVehicle,
     backToExistingCustomer,
     backToExistingVehicle,
+    setNewVehicle,
     toggleOperator,
     markCustomerCreated,
     markVehicleCreated,

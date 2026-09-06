@@ -122,7 +122,7 @@ describe('useWorkOrderForm', () => {
       { descripcion: 'Alineación', costo: '80' },
     ]);
 
-    act(() => result.current.parts.append({ descripcion: 'Filtro', cantidad: '1', costo_unitario: '8', precio_venta_unitario: '15' }));
+    act(() => result.current.parts.append({ descripcion: 'Filtro', cantidad: '1', precio_venta_unitario: '15' }));
     expect(result.current.form.getValues('parts')[0].precio_venta_unitario).toBe('15');
   });
 

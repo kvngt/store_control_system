@@ -2,8 +2,24 @@ import { useRef, useState } from 'react';
 import { Camera, CheckCircle2, ChevronLeft, ImagePlus, Plus, Trash2, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import type { Customer, UserProfile, Vehicle } from '../../types/database';
+import VehicleFields from '../vehicles/VehicleFields';
 import { ZONES } from './useIntakePhotos';
 import type { WorkOrderFormApi } from './useWorkOrderForm';
+
+/**
+ * Refuses the keys that put a minus sign into a `type="number"` box.
+ *
+ * `min={0}` is inert here: the form is `noValidate`, so the browser never runs
+ * its own constraint check, and the schema only speaks up on submit — by which
+ * point the user has already typed the number and been told off for it. This
+ * stops the common case at the keyboard instead. It deliberately does not clamp
+ * the value: a paste or an autofill still has to reach the schema and be
+ * reported, because silently rewriting somebody's -500 to 0 is worse than
+ * telling them it is wrong.
+ */
+const blockNegativeKeys = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault();
+};
 
 interface WorkOrderCreateModalProps {
   form: WorkOrderFormApi;
@@ -45,6 +61,7 @@ export default function WorkOrderCreateModal({
   const { register, formState, watch } = form.form;
   const { errors } = formState;
   const photos = form.photos;
+  const newVehicle = form.newVehicle;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const extraInputRef = useRef<HTMLInputElement>(null);
@@ -178,44 +195,22 @@ export default function WorkOrderCreateModal({
                     <FieldError messageKey={errors.selectedVehicle?.message} />
                   </>
                 ) : (
+                  /* The same VIN-first form the Vehiculos screen uses. This was
+                     four bare text boxes — no VIN lookup, no plate check, no
+                     brand/model suggestions — which made registering a car at
+                     intake, with the customer standing there, strictly worse
+                     than registering it later from the fleet screen. */
                   <div style={{ padding: 'var(--space-3)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-surface-border)' }}>
-                    <div className="form-row">
-                      <div style={{ flex: 1 }}>
-                        <input
-                          className="form-input"
-                          placeholder={t('vehicles.brand')}
-                          aria-invalid={!!errors.newVehicle?.marca}
-                          {...register('newVehicle.marca')}
-                        />
-                        <FieldError messageKey={errors.newVehicle?.marca?.message} />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <input
-                          className="form-input"
-                          placeholder={t('vehicles.model')}
-                          aria-invalid={!!errors.newVehicle?.modelo}
-                          {...register('newVehicle.modelo')}
-                        />
-                        <FieldError messageKey={errors.newVehicle?.modelo?.message} />
-                      </div>
-                    </div>
-                    <div className="form-row" style={{ marginTop: 'var(--space-2)' }}>
-                      <input className="form-input" type="number" placeholder={t('vehicles.year')} {...register('newVehicle.anio')} />
-                      <input className="form-input" placeholder={t('vehicles.color')} {...register('newVehicle.color')} />
-                    </div>
-                    <div className="form-row" style={{ marginTop: 'var(--space-2)' }}>
-                      <div style={{ flex: 1 }}>
-                        <input
-                          className="form-input"
-                          placeholder={t('vehicles.vin')}
-                          maxLength={17}
-                          aria-invalid={!!errors.newVehicle?.vin}
-                          {...register('newVehicle.vin')}
-                        />
-                        <FieldError messageKey={errors.newVehicle?.vin?.message} />
-                      </div>
-                      <input className="form-input" placeholder={t('vehicles.plate')} {...register('newVehicle.placa')} />
-                    </div>
+                    <VehicleFields
+                      value={newVehicle}
+                      onChange={form.setNewVehicle}
+                      touched={formState.isSubmitted}
+                      requirePlate={false}
+                      disabled={saving}
+                    />
+                    <FieldError messageKey={errors.newVehicle?.vin?.message} />
+                    <FieldError messageKey={errors.newVehicle?.marca?.message} />
+                    <FieldError messageKey={errors.newVehicle?.modelo?.message} />
                     {form.customerMode === 'existing' && (
                       <button
                         type="button"
@@ -256,6 +251,10 @@ export default function WorkOrderCreateModal({
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">{t('workOrders.milesIn')}</label>
+                {/* An odometer reading below zero is meaningless and it
+                    corrupts the printed report, so the minus key is refused
+                    outright rather than accepted and then complained about on
+                    submit. */}
                 <input
                   className="form-input"
                   id="order-miles-in"
@@ -264,13 +263,22 @@ export default function WorkOrderCreateModal({
                   step={1}
                   inputMode="numeric"
                   aria-invalid={!!errors.milesIn}
+                  onKeyDown={blockNegativeKeys}
                   {...register('milesIn')}
                 />
                 <FieldError messageKey={errors.milesIn?.message} />
               </div>
               <div className="form-group">
                 <label className="form-label">{t('workOrders.deposit')} ($)</label>
-                <input className="form-input" type="number" aria-invalid={!!errors.deposit} {...register('deposit')} />
+                <input
+                  className="form-input"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  aria-invalid={!!errors.deposit}
+                  onKeyDown={blockNegativeKeys}
+                  {...register('deposit')}
+                />
                 <FieldError messageKey={errors.deposit?.message} />
               </div>
             </div>
@@ -443,7 +451,7 @@ export default function WorkOrderCreateModal({
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm"
-                  onClick={() => form.parts.append({ descripcion: '', cantidad: '1', costo_unitario: '', precio_venta_unitario: '' })}
+                  onClick={() => form.parts.append({ descripcion: '', cantidad: '1', precio_venta_unitario: '' })}
                 >
                   <Plus size={14} /> {t('common.add')}
                 </button>
@@ -457,22 +465,26 @@ export default function WorkOrderCreateModal({
                       aria-invalid={!!errors.parts?.[i]?.descripcion}
                       {...register(`parts.${i}.descripcion`)}
                     />
-                    <input className="form-input" type="number" placeholder={t('common.quantity')} style={{ maxWidth: 80 }} {...register(`parts.${i}.cantidad`)} />
                     <input
                       className="form-input"
                       type="number"
-                      min={0}
-                      placeholder={t('workOrders.unitCost')}
-                      title={t('workOrders.unitCostHint')}
-                      style={{ maxWidth: 100 }}
-                      {...register(`parts.${i}.costo_unitario`)}
+                      min={1}
+                      placeholder={t('common.quantity')}
+                      style={{ maxWidth: 80 }}
+                      onKeyDown={blockNegativeKeys}
+                      {...register(`parts.${i}.cantidad`)}
                     />
+                    {/* Price only. A part is billed on at what it cost, so the
+                        separate unit-cost box was a second money field nobody
+                        filled in; the database keeps cost in step with price. */}
                     <input
                       className="form-input"
                       type="number"
                       min={0}
+                      step="0.01"
                       placeholder={t('common.price')}
-                      style={{ maxWidth: 100 }}
+                      style={{ maxWidth: 120 }}
+                      onKeyDown={blockNegativeKeys}
                       {...register(`parts.${i}.precio_venta_unitario`)}
                     />
                     <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => form.parts.remove(i)}>

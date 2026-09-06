@@ -6,6 +6,7 @@ import {
   DollarSign,
   FileDown,
   Fuel,
+  Send,
   Paintbrush,
   Plus,
   User,
@@ -18,6 +19,7 @@ import type { OrderStatus, UserProfile } from '../../types/database';
 import LaborTable from './LaborTable';
 import PartsTable from './PartsTable';
 import ProgressLog from './ProgressLog';
+import ShareReportModal from './ShareReportModal';
 import SignatureCard from './SignatureCard';
 import type { WorkOrderDetailApi } from './useWorkOrderDetail';
 
@@ -82,15 +84,28 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
             <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
             <span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span>
             {detail.canEdit && (
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={detail.generatePdf}
-                disabled={detail.generatingPdf}
-                title={t('workOrders.generatePdf')}
-              >
-                <FileDown size={14} /> {detail.generatingPdf ? t('common.loading') : t('workOrders.generatePdf')}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={detail.generatePdf}
+                  disabled={detail.generatingPdf}
+                  title={t('workOrders.generatePdf')}
+                >
+                  <FileDown size={14} /> {detail.generatingPdf ? t('common.loading') : t('workOrders.generatePdf')}
+                </button>
+                {/* Generate and send: the report goes to the phone number and
+                    email the customer left on the order. */}
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={detail.shareReport}
+                  disabled={detail.generatingPdf}
+                  title={t('workOrders.shareReport')}
+                >
+                  <Send size={14} /> {detail.generatingPdf ? t('common.loading') : t('workOrders.shareReport')}
+                </button>
+              </>
             )}
           </h1>
           <p className="page-subtitle">{customer?.nombre} — {vehicle?.anio} {vehicle?.marca} {vehicle?.modelo}</p>
@@ -352,6 +367,17 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
         onRemove={detail.removeProgressUpdate}
         onOpenPhoto={setLightboxUrl}
       />
+
+      {detail.share && (
+        <ShareReportModal
+          order={order}
+          link={detail.share.link}
+          message={detail.share.message}
+          downloading={detail.generatingPdf}
+          onDownload={detail.generatePdf}
+          onClose={detail.closeShare}
+        />
+      )}
 
       {lightboxUrl && (
         <div className="lightbox-overlay" onClick={() => setLightboxUrl(null)}>
