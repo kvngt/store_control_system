@@ -85,17 +85,20 @@ export default function Vehicles() {
   // fields don't fire the same request again.
   const decodedVinRef = useRef('');
 
+  // Pre-compute lowercased strings to avoid recalculating them on every search keystroke
+  const vehiclesWithSearchCache = useMemo(() => {
+    return vehicles.map((v) => ({
+      original: v,
+      searchStr: `${v.marca} ${v.modelo} ${v.vin} ${v.placa || ''} ${v.cliente_nombre || ''}`.toLowerCase(),
+    }));
+  }, [vehicles]);
+
   const filtered = useMemo(() => {
     const searchLower = search.toLowerCase();
-    return vehicles.filter(
-      (v) =>
-        v.marca.toLowerCase().includes(searchLower) ||
-        v.modelo.toLowerCase().includes(searchLower) ||
-        v.vin.toLowerCase().includes(searchLower) ||
-        (v.placa || '').toLowerCase().includes(searchLower) ||
-        (v.cliente_nombre || '').toLowerCase().includes(searchLower)
-    );
-  }, [vehicles, search]);
+    return vehiclesWithSearchCache
+      .filter((v) => v.searchStr.includes(searchLower))
+      .map((v) => v.original);
+  }, [vehiclesWithSearchCache, search]);
 
   const resetModalState = () => {
     setVinMessage(null);

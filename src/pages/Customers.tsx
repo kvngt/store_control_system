@@ -99,15 +99,20 @@ export default function Customers() {
     (loadError ? getErrorMessage(loadError, language) : '') ||
     (profileQuery.error ? getErrorMessage(profileQuery.error, language) : '');
 
+  // Pre-compute lowercased strings to avoid recalculating them on every search keystroke
+  const customersWithSearchCache = useMemo(() => {
+    return customers.map((c) => ({
+      original: c,
+      searchStr: `${c.nombre} ${c.email}`.toLowerCase(),
+    }));
+  }, [customers]);
+
   const filtered = useMemo(() => {
     const searchLower = search.toLowerCase();
-    return customers.filter(
-      (c) =>
-        c.nombre.toLowerCase().includes(searchLower) ||
-        c.telefono.includes(search) ||
-        c.email.toLowerCase().includes(searchLower)
-    );
-  }, [customers, search]);
+    return customersWithSearchCache
+      .filter((c) => c.searchStr.includes(searchLower) || c.original.telefono.includes(search))
+      .map((c) => c.original);
+  }, [customersWithSearchCache, search]);
 
   const openCreateModal = () => {
     setSelectedCustomer(null);
