@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -71,7 +71,31 @@ export default function KanbanBoard() {
     entregado: t('workOrders.delivered'),
   };
 
-  const getOrdersByStatus = (status: OrderStatus) => orders.filter((o) => o.estatus === status);
+  // ⚡ Bolt Optimization: Group orders by status and count active orders in a single O(N) pass,
+  // preventing 6 separate O(N) filters on every render (one for capacity, five for columns).
+  // The result is memoized so that drag-and-drop (which frequently updates local state)
+  // doesn't trigger array allocations until the data actually changes.
+  const { ordersByStatus, totalActive } = useMemo(() => {
+    const grouped = {
+      recepcion: [] as WorkOrder[],
+      en_proceso: [] as WorkOrder[],
+      espera_repuestos: [] as WorkOrder[],
+      finalizado: [] as WorkOrder[],
+      entregado: [] as WorkOrder[],
+    };
+    let active = 0;
+
+    for (const order of orders) {
+      if (order.estatus in grouped) {
+        grouped[order.estatus].push(order);
+      }
+      if (order.estatus !== 'finalizado' && order.estatus !== 'entregado') {
+        active++;
+      }
+    }
+
+    return { ordersByStatus: grouped, totalActive: active };
+  }, [orders]);
 
   const isAdmin = user?.rol === 'admin';
 
@@ -112,7 +136,6 @@ export default function KanbanBoard() {
   };
 
   const capacity = currentSede?.capacidad ?? 10;
-  const totalActive = orders.filter((o) => !['finalizado', 'entregado'].includes(o.estatus)).length;
   const occupancy = Math.min(100, Math.round((totalActive / capacity) * 100));
 
   if (loading) {
@@ -151,7 +174,7 @@ export default function KanbanBoard() {
 
       <div className="kanban-board">
         {COLUMNS.map(({ status, emoji }) => {
-          const columnOrders = getOrdersByStatus(status);
+          const columnOrders = ordersByStatus[status] || [];
           return (
             <div key={status} className="kanban-column">
               <div className={`kanban-column-header ${status}`}>
