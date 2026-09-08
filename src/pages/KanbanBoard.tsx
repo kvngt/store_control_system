@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -71,7 +71,24 @@ export default function KanbanBoard() {
     entregado: t('workOrders.delivered'),
   };
 
-  const getOrdersByStatus = (status: OrderStatus) => orders.filter((o) => o.estatus === status);
+  // ⚡ Bolt Performance Optimization
+  // Replaced O(6N) array filtering across multiple renders with a single O(N) pass memoized grouping.
+  // This reduces re-render CPU cycles, especially during drag-and-drop operations on large boards.
+  const ordersByStatus = useMemo(() => {
+    const grouped: Record<OrderStatus, WorkOrder[]> = {
+      recepcion: [],
+      en_proceso: [],
+      espera_repuestos: [],
+      finalizado: [],
+      entregado: [],
+    };
+    for (const order of orders) {
+      if (grouped[order.estatus]) {
+        grouped[order.estatus].push(order);
+      }
+    }
+    return grouped;
+  }, [orders]);
 
   const isAdmin = user?.rol === 'admin';
 
@@ -112,7 +129,7 @@ export default function KanbanBoard() {
   };
 
   const capacity = currentSede?.capacidad ?? 10;
-  const totalActive = orders.filter((o) => !['finalizado', 'entregado'].includes(o.estatus)).length;
+  const totalActive = ordersByStatus.recepcion.length + ordersByStatus.en_proceso.length + ordersByStatus.espera_repuestos.length;
   const occupancy = Math.min(100, Math.round((totalActive / capacity) * 100));
 
   if (loading) {
@@ -151,7 +168,7 @@ export default function KanbanBoard() {
 
       <div className="kanban-board">
         {COLUMNS.map(({ status, emoji }) => {
-          const columnOrders = getOrdersByStatus(status);
+          const columnOrders = ordersByStatus[status];
           return (
             <div key={status} className="kanban-column">
               <div className={`kanban-column-header ${status}`}>
