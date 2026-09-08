@@ -2856,3 +2856,105 @@
   text-align: right;
   word-break: break-word;
 }
+
+/* ==========================================================================
+   Password field with reveal toggle
+   ========================================================================== */
+/* The eye sits inside the field rather than beside it, so the input keeps the
+   full width of the form row and the control reads as part of it. */
+.password-field {
+  position: relative;
+  display: block;
+}
+
+.password-field input {
+  width: 100%;
+  /* Room for the button, so a long password never runs underneath it. */
+  padding-right: 2.75rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-tertiary);
+  border-radius: var(--radius-md);
+}
+
+.password-toggle:hover:not(:disabled) {
+  color: var(--color-text-secondary);
+}
+
+.password-toggle:disabled {
+  cursor: default;
+  opacity: .5;
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+/* ==========================================================================
+   Schema drift banner
+   ========================================================================== */
+/* Shown when the running build and the database are on different migrations.
+   Deliberately loud: the alternative is a pile of unrelated "not found" errors
+   scattered across whichever screens the missing migration happened to touch. */
+.schema-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-warning);
+  background: var(--color-warning-bg, rgba(212, 160, 23, .12));
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.schema-banner-error {
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg, rgba(200, 40, 40, .1));
+}
+
+.schema-banner > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--color-warning);
+}
+
+.schema-banner-error > svg {
+  color: var(--color-danger);
+}
+
+.schema-banner > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.schema-banner p {
+  margin: 2px 0 0;
+  color: var(--color-text-secondary);
+}
+
+.schema-banner-versions {
+  font-size: var(--font-size-xs);
+  margin-top: var(--space-2) !important;
+}
+
+.schema-banner-versions code {
+  font-family: monospace;
+  background: var(--color-bg-tertiary);
+  padding: 1px 5px;
+  border-radius: 3px;
+}

@@ -9,6 +9,7 @@
     "prebuild": "node scripts/copy-pdf-worker.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "db:check": "node scripts/check-migrations.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

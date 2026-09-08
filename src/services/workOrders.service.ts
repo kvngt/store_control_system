@@ -53,6 +53,7 @@ async function createWorkOrderWithoutRpc(
         .insert(input.repuestos.map((p) => ({
           ...p,
           orden_id: order.id,
+          costo_unitario: p.precio_venta_unitario,
           subtotal: p.cantidad * p.precio_venta_unitario,
         })));
       if (partsError) throw partsError;
@@ -138,7 +139,7 @@ export const workOrdersService = {
     const { data, error } = await supabase.rpc('create_work_order', {
       p_order: orderPayload,
       p_labor: input.labor_items,
-      p_parts: input.repuestos,
+      p_parts: input.repuestos.map((p) => ({ ...p, costo_unitario: p.precio_venta_unitario })),
       p_assignments: input.asignaciones,
     });
 
@@ -219,16 +220,26 @@ export const workOrdersService = {
     if (error) throw error;
   },
 
-  // Only the sale price is captured. `costo_unitario` is filled in by the
-  // trg_part_cost_passthrough trigger, which mirrors the price into it: a part
-  // is billed on at what it cost the shop, so keeping the two in step is the
-  // database's job rather than a rule every caller has to remember.
+  // Only the sale price is captured in the UI. `costo_unitario` is still
+  // written explicitly here rather than left to the database, and that is
+  // deliberate: the column is NOT NULL, and omitting it makes the insert depend
+  // on a DEFAULT and a trigger both being present on whichever environment this
+  // is talking to. Adding a part to an existing order broke in production for
+  // exactly that reason — the write reached a database where the pass-through
+  // trigger had not been applied yet, and came back as "falta completar un
+  // campo obligatorio", which reads to the user as a broken form.
+  //
+  // A part is billed on at what it cost the shop, so cost and price carry the
+  // same number. The trg_part_cost_passthrough trigger enforces that rule for
+  // every other writer; sending it here too costs nothing and makes this path
+  // work with or without the migration.
   addPart: async (orderId: string, item: { descripcion: string; cantidad: number; precio_venta_unitario: number }) => {
     const { data, error } = await supabase
       .from('orden_repuestos')
       .insert({
         ...item,
         orden_id: orderId,
+        costo_unitario: item.precio_venta_unitario,
         subtotal: item.cantidad * item.precio_venta_unitario,
       })
       .select()
@@ -240,7 +251,11 @@ export const workOrdersService = {
   updatePart: async (id: string, item: { descripcion: string; cantidad: number; precio_venta_unitario: number }) => {
     const { data, error } = await supabase
       .from('orden_repuestos')
-      .update({ ...item, subtotal: item.cantidad * item.precio_venta_unitario })
+      .update({
+        ...item,
+        costo_unitario: item.precio_venta_unitario,
+        subtotal: item.cantidad * item.precio_venta_unitario,
+      })
       .eq('id', id)
       .select()
       .single();

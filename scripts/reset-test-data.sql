@@ -4,7 +4,9 @@
 -- Deja la base limpia para una tanda nueva de pruebas, SIN perder el acceso:
 -- las sedes, los usuarios y las reglas de categorización se conservan.
 --
--- Cómo ejecutarlo: panel de Supabase → SQL Editor → pegar todo → Run.
+-- Cómo ejecutarlo, de cualquiera de las dos formas:
+--   npx supabase db query --linked -f scripts/reset-test-data.sql
+--   panel de Supabase → SQL Editor → pegar todo → Run.
 --
 -- ⚠️  Esto borra datos de forma irreversible. Está pensado para el entorno de
 --     pruebas. NO lo ejecutes contra la base del taller en operación.
@@ -13,7 +15,7 @@
 -- Qué se borra
 --   clientes, vehículos, órdenes de trabajo (con su mano de obra, repuestos,
 --   asignaciones y avances), movimientos financieros, importaciones de estados
---   de cuenta y pagos de nómina.
+--   de cuenta, comisiones acumuladas y sus pagos.
 --
 -- Qué se conserva y por qué
 --   sedes ............................ sin ellas nadie puede entrar ni crear nada
@@ -26,7 +28,11 @@ BEGIN;
 -- El orden importa: las órdenes de trabajo referencian clientes y vehículos con
 -- ON DELETE RESTRICT, así que las órdenes se van primero.
 
-DELETE FROM nomina_pagos;
+-- Los pagos de comisión van primero: su trigger de borrado elimina el egreso
+-- que crearon en Finanzas, y referencian perfiles con ON DELETE RESTRICT, así
+-- que ninguna cascada los recoge.
+DELETE FROM comision_pagos;
+DELETE FROM comisiones;
 
 -- Los movimientos apuntan a las importaciones, así que van antes que ellas.
 DELETE FROM finanzas_movimientos;
@@ -63,7 +69,8 @@ SELECT
   (SELECT count(*) FROM orden_avances)                  AS avances,
   (SELECT count(*) FROM finanzas_movimientos)           AS movimientos,
   (SELECT count(*) FROM finanzas_importaciones)         AS importaciones,
-  (SELECT count(*) FROM nomina_pagos)                   AS nomina,
+  (SELECT count(*) FROM comisiones)                     AS comisiones,
+  (SELECT count(*) FROM comision_pagos)                 AS pagos_comision,
   -- Estas tres se conservan a propósito:
   (SELECT count(*) FROM sedes)                          AS sedes_conservadas,
   (SELECT count(*) FROM perfiles)                       AS usuarios_conservados,

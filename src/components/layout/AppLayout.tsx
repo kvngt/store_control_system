@@ -6,6 +6,7 @@ import BottomNav from './BottomNav';
 import { useAuth } from '../../context/auth.context';
 import { useTheme } from '../../context/theme.context';
 import { applySedeBranding, clearSedeBranding } from '../../lib/branding';
+import SchemaDriftBanner from '../SchemaDriftBanner';
 
 export default function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -35,6 +36,9 @@ export default function AppLayout() {
           onMobileMenuToggle={() => setMobileOpen(!mobileOpen)}
         />
         <main className="page-content">
+          {/* Above the routed page, so it is the first thing seen on whichever
+              screen the drift happens to break. */}
+          <SchemaDriftBanner />
           <Outlet />
         </main>
         <BottomNav />

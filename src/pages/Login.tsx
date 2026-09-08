@@ -6,6 +6,7 @@ import { supabaseService } from '../services/supabaseService';
 import { getAuthErrorMessage } from '../lib/errors';
 import { getPasswordResetRedirect } from '../lib/siteUrl';
 import { Hexagon, Wrench, ArrowLeft } from 'lucide-react';
+import PasswordInput from '../components/PasswordInput';
 import loginBg from '../assets/login-bg.webp';
 
 export default function Login() {
@@ -111,13 +112,12 @@ export default function Login() {
                 <label className="form-label" htmlFor="login-password">
                   {t('auth.password')}
                 </label>
-                <input
+                <PasswordInput
                   id="login-password"
-                  type="password"
                   className="form-input login-input"
-                  placeholder="••••••••"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={setPassword}
+                  autoComplete="current-password"
                   required
                 />
               </div>
