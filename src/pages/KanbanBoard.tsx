@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { useToast } from '../context/toast.context';
@@ -80,7 +80,24 @@ export default function KanbanBoard() {
     entregado: t('workOrders.delivered'),
   };
 
-  const getOrdersByStatus = (status: OrderStatus) => orders.filter((o) => o.estatus === status);
+  // ⚡ Bolt: Grouping orders by status in a single pass (O(n)) rather than
+  // filtering the entire array for each column on every render (O(n * columns)).
+  // This prevents redundant calculations, especially during drag operations.
+  const ordersByStatus = useMemo(() => {
+    const grouped: Record<OrderStatus, WorkOrder[]> = {
+      recepcion: [],
+      en_proceso: [],
+      espera_repuestos: [],
+      finalizado: [],
+      entregado: [],
+    };
+    for (const order of orders) {
+      if (grouped[order.estatus]) {
+        grouped[order.estatus].push(order);
+      }
+    }
+    return grouped;
+  }, [orders]);
 
   const isAdmin = user?.rol === 'admin';
 
@@ -178,7 +195,7 @@ export default function KanbanBoard() {
 
       <div className="kanban-board">
         {COLUMNS.map(({ status, emoji }) => {
-          const columnOrders = getOrdersByStatus(status);
+          const columnOrders = ordersByStatus[status] || [];
           return (
             <div key={status} className="kanban-column">
               <div className={`kanban-column-header ${status}`}>
