@@ -121,6 +121,14 @@ export const workOrderFormSchema = baseShape.check((ctx) => {
     if (!item.descripcion.trim()) {
       reject(['laborItems', i, 'descripcion'], 'workOrders.validation.laborDescription');
     }
+    // Los repuestos ya se saneaban en tres capas y la labor en ninguna, y no es
+    // una asimetría inocente: una línea de labor negativa baja `total_general`,
+    // y sobre una orden ya entregada `handle_delivered_order_adjustment` lo
+    // interpreta como un reembolso al cliente y lo asienta en Finanzas. Era una
+    // forma de emitir un reembolso desde la tabla de mano de obra.
+    if (parseFloat(item.costo) < 0) {
+      reject(['laborItems', i, 'costo'], 'workOrders.validation.laborCostNegative');
+    }
   });
 
   form.parts.forEach((part, i) => {

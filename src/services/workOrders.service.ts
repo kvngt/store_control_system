@@ -155,12 +155,20 @@ export const workOrdersService = {
     return createWorkOrderWithoutRpc(input, orderPayload);
   },
 
+  // Cerrar una orden la marca al 100% y le estampa la fecha de finalización.
+  // Reabrirla no deshacía ninguna de las dos: una orden devuelta a `en_proceso`
+  // seguía cargando una fecha de cierre que ya no era cierta, y la fecha es lo
+  // que el panel usa para contar los trabajos cerrados del mes.
+  //
+  // El porcentaje no se reescribe: elegir un número por el técnico sería
+  // inventarlo. Se deja como está y `canEditProgress` (ver useWorkOrderDetail)
+  // se abrió a cualquier estatus no cerrado para que pueda corregirlo él.
   updateWorkOrderStatus: async (orderId: string, estatus: OrderStatus) => {
-    const updates: Record<string, unknown> = { estatus };
-    if (estatus === 'finalizado' || estatus === 'entregado') {
-      updates.fecha_finalizacion = new Date().toISOString();
-      updates.porcentaje_avance = 100;
-    }
+    const isClosed = estatus === 'finalizado' || estatus === 'entregado';
+    const updates: Record<string, unknown> = isClosed
+      ? { estatus, fecha_finalizacion: new Date().toISOString(), porcentaje_avance: 100 }
+      : { estatus, fecha_finalizacion: null };
+
     const { error } = await supabase.from('ordenes_trabajo').update(updates).eq('id', orderId);
     if (error) throw error;
   },
@@ -175,10 +183,19 @@ export const workOrdersService = {
     // payment) the order-lifecycle triggers created for this order first —
     // otherwise deleting the order just orphans them (referencia_orden_id
     // set to null) instead of keeping the books consistent.
+    //
+    // `importacion_id IS NULL` es la misma línea que traza el trigger
+    // `cleanup_order_finance`: un movimiento conciliado contra un estado de
+    // cuenta describe dinero que sí pasó por el banco, y borrarlo porque se
+    // borró la orden a la que estaba atado deja el saldo del sistema sin
+    // cuadrar contra el saldo real. Este cliente lo borraba todo, contradiciendo
+    // a la base — hoy es inalcanzable porque el importador nunca escribe
+    // `referencia_orden_id`, pero las dos reglas no podían seguir en desacuerdo.
     const { error: finanzasError } = await supabase
       .from('finanzas_movimientos')
       .delete()
-      .eq('referencia_orden_id', orderId);
+      .eq('referencia_orden_id', orderId)
+      .is('importacion_id', null);
     if (finanzasError) throw finanzasError;
 
     // Admin-only, enforced by the `ordenes_trabajo_delete` RLS policy.

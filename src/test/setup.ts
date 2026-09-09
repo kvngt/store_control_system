@@ -20,4 +20,15 @@ if (typeof document !== 'undefined') {
       disconnect() {}
     } as unknown as typeof ResizeObserver;
   }
+
+  // jsdom tampoco trae `matchMedia`, y la pantalla de Órdenes ya decide en
+  // JavaScript si monta la tabla o las tarjetas. Arranca en escritorio y se
+  // reinicia entre pruebas, para que una que simule un teléfono no filtre ese
+  // ancho a la siguiente.
+  const { installMatchMedia, resetViewport } = await import('./viewport');
+  installMatchMedia();
+  afterEach(() => {
+    resetViewport();
+    installMatchMedia();
+  });
 }

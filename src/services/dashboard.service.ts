@@ -1,7 +1,7 @@
 // Aggregated KPIs for the dashboard and the finance summary cards.
 import { supabase } from '../lib/supabase';
 import type { DashboardStats, OrderStatus } from '../types/database';
-import { isSameMonth } from './support';
+import { isSameMonth } from '../lib/dates';
 
 const DEFAULT_CAPACITY = 10;
 
@@ -25,8 +25,14 @@ export const dashboardService = {
 
     const now = new Date();
     const activeOrders = orders.filter((o) => !['finalizado', 'entregado'].includes(o.estatus));
+    // `entregado` cuenta igual que `finalizado`: el trabajo se terminó. Filtrar
+    // sólo por `finalizado` hacía que el KPI **bajara** al entregar la orden —
+    // cerrar un trabajo restaba uno del conteo de trabajos cerrados del mes.
     const finishedThisMonth = orders.filter(
-      (o) => o.estatus === 'finalizado' && o.fecha_finalizacion && isSameMonth(o.fecha_finalizacion, now)
+      (o) =>
+        (o.estatus === 'finalizado' || o.estatus === 'entregado') &&
+        o.fecha_finalizacion &&
+        isSameMonth(o.fecha_finalizacion, now)
     );
 
     const incomeMonth = transactions

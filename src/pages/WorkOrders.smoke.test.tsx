@@ -9,6 +9,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { setViewportMatches } from '../test/viewport';
 import {
   renderWithProviders,
   authValue,
@@ -159,8 +160,8 @@ async function openDetail(user: ReturnType<typeof userEvent.setup>) {
   if (others) await user.click(others);
 
   await screen.findAllByText('OT-2026-0042');
-  // The board draws the same order as a desktop row and a mobile card; the
-  // row's eye button is the one this reaches for.
+  // A este ancho (escritorio, el que fija el stub de matchMedia) el tablero
+  // monta la tabla, así que el botón del ojo de la fila es el camino de entrada.
   await user.click(document.querySelector('.table-actions button') as HTMLElement);
   return screen.findByText(/Cambio de aceite/);
 }
@@ -169,11 +170,26 @@ describe('WorkOrders', () => {
   it('lists the sede orders', async () => {
     renderWithProviders(<WorkOrders />);
 
-    // The board renders each order twice — a desktop table row and a mobile
-    // card — so both layouts are expected to carry it.
-    expect(await screen.findAllByText('OT-2026-0042')).toHaveLength(2);
+    // Una sola vez. El tablero emitía la fila de escritorio **y** la tarjeta
+    // móvil y escondía una con CSS, así que esta aserción esperaba dos; ahora
+    // `useMediaQuery` elige cuál se monta y sólo hay una en el DOM.
+    expect(await screen.findAllByText('OT-2026-0042')).toHaveLength(1);
+    expect(document.querySelector('.table-container')).toBeTruthy();
+    expect(document.querySelector('.workorder-card-list')).toBeNull();
     expect(screen.getAllByText('Marta Ruiz').length).toBeGreaterThan(0);
     expect(mocks.getWorkOrders).toHaveBeenCalledWith(SEDE_CENTRO.id);
+  });
+
+  // La otra mitad de lo mismo: en un teléfono se monta la lista de tarjetas y
+  // la tabla no llega al DOM. Antes no se podía comprobar, porque las dos
+  // versiones estaban siempre presentes.
+  it('draws cards instead of a table on a phone', async () => {
+    setViewportMatches(true);
+    renderWithProviders(<WorkOrders />);
+
+    expect(await screen.findAllByText('OT-2026-0042')).toHaveLength(1);
+    expect(document.querySelector('.workorder-card-list')).toBeTruthy();
+    expect(document.querySelector('.table-container')).toBeNull();
   });
 
   it('opens the intake dialog with the customers and operators it loaded', async () => {

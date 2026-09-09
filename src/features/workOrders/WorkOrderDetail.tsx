@@ -74,7 +74,11 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
 
       {detail.error && <div className="alert-error">{detail.error}</div>}
       {detail.loading && <div className="loading-state"><div className="spinner" /></div>}
-      {!detail.canEdit && <div className="alert-info">{t('workOrders.readOnlyNotice')}</div>}
+      {!detail.canEdit && (
+        <div className="alert-info">
+          {detail.isDelivered ? t('workOrders.deliveredNotice') : t('workOrders.readOnlyNotice')}
+        </div>
+      )}
 
       {/* Order Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
@@ -111,16 +115,26 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
           <p className="page-subtitle">{customer?.nombre} — {vehicle?.anio} {vehicle?.marca} {vehicle?.modelo}</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap', width: '100%', maxWidth: 460 }}>
+          {/* `key` con `statusEpoch`: al cancelar el confirm no cambia ningún
+              estado, así que React no re-renderiza y el <select> se quedaba
+              mostrando la opción elegida sobre una orden que no se movió.
+              Remontarlo es lo único que lo devuelve al valor real. */}
           <select
+            key={detail.statusEpoch}
             className="form-input form-select"
             value={order.estatus}
             onChange={(e) => detail.changeStatus(e.target.value as OrderStatus)}
             disabled={!detail.canEdit}
             style={{ flex: '1 1 160px' }}
           >
-            {Object.keys(statusLabels).map((s) => (
-              <option key={s} value={s}>{statusLabels[s]}</option>
-            ))}
+            {Object.keys(statusLabels)
+              // Entregar asienta el ingreso y devenga las comisiones: no es un
+              // paso del taller. Si la orden ya está entregada la opción se deja
+              // visible, o el <select> no podría mostrar su propio valor.
+              .filter((s) => s !== 'entregado' || detail.canDeliver || order.estatus === 'entregado')
+              .map((s) => (
+                <option key={s} value={s}>{statusLabels[s]}</option>
+              ))}
           </select>
           <div style={{ textAlign: 'right', flex: '1 1 180px' }}>
             <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
@@ -143,6 +157,7 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
               <input
                 className="form-input"
                 type="number"
+                inputMode="numeric"
                 min={0}
                 max={100}
                 value={detail.progressDraft}
@@ -349,7 +364,9 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
             </button>
           </div>
         ) : (
-          !assignments.some((a) => a.usuario_id === user?.id) && (
+          // `canJoin` ya excluye estar asignado y la orden entregada: unirse
+          // después de la entrega re-reparte una bolsa de comisión ya calculada.
+          detail.canJoin && (
             <div style={{ marginTop: 'var(--space-4)' }}>
               <button type="button" className="btn btn-primary" onClick={detail.joinOrder} disabled={detail.busy}>
                 <Plus size={16} /> {t('workOrders.joinOrder')}

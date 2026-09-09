@@ -49,6 +49,13 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // is what opens the share dialog.
   const [share, setShare] = useState<{ link: string; message: string } | null>(null);
   const [progressDraft, setProgressDraft] = useState('0');
+  // Se incrementa cuando un cambio de estatus se descarta sin llegar al
+  // servidor. La pantalla lo usa como `key` del <select>, que es lo único que
+  // vuelve a montarlo: al cancelar el confirm no cambia ningún estado, así que
+  // React no re-renderiza y el DOM se queda mostrando la opción que el usuario
+  // eligió — "Entregado" en una orden que no se entregó. Y esa lista es
+  // justamente la ruta táctil, porque en un teléfono no hay arrastre.
+  const [statusEpoch, setStatusEpoch] = useState(0);
 
   const isAdmin = user?.rol === 'admin';
 
@@ -106,21 +113,63 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // A technician may only touch an order they are actually assigned to.
   // Admins can always edit. Joining an order is the way in.
   const isAssignedToMe = (order?.asignaciones || []).some((a) => a.usuario_id === user?.id);
-  const canEdit = isAdmin || isAssignedToMe;
-  const canEditProgress = canEdit && order?.estatus === 'en_proceso';
-  const isComplete = order?.estatus === 'finalizado' || order?.estatus === 'entregado';
+  const isDelivered = order?.estatus === 'entregado';
+  const isComplete = order?.estatus === 'finalizado' || isDelivered;
+
+  // Una orden entregada está cerrada para el taller. Sus líneas mueven dinero ya
+  // asentado — los totales disparan un ajuste en Finanzas y las asignaciones
+  // re-reparten la bolsa de comisión — así que editarla es corregir la
+  // contabilidad, y eso es trabajo de administración. La base lo impone con
+  // `trg_guard_delivered_order_children`; esto es para que el técnico vea los
+  // controles deshabilitados en vez de un error al apretarlos.
+  const canEdit = isAdmin || (isAssignedToMe && !isDelivered);
+
+  // Antes exigía `en_proceso`, lo que dejaba trabada una orden reabierta desde
+  // `finalizado`: llegaba con el avance en 100 y el control bloqueado en todo
+  // estatus que no fuera `en_proceso`, así que nadie podía bajarlo.
+  const canEditProgress = canEdit && !isComplete;
+
+  // Entregar asienta el ingreso del trabajo y devenga las comisiones. Es una
+  // decisión de administración, no un paso del taller: un técnico asignado podía
+  // mover la orden a "entregado" y con eso acreditarse su propia comisión.
+  const canDeliver = isAdmin;
+
+  // Unirse a una orden ya entregada re-reparte la bolsa: quien se auto-asigna
+  // después del hecho se lleva una tajada y le baja la de quienes hicieron el
+  // trabajo.
+  const canJoin = !!order && !isDelivered && !isAssignedToMe;
 
   // ----- status & progress ---------------------------------------------------
 
   const changeStatus = async (status: OrderStatus) => {
-    if (!order) return;
-    if (status === 'entregado' && order.estatus !== 'entregado' && !confirm(t('workOrders.confirmDeliver'))) {
+    if (!order || status === order.estatus) return;
+
+    // Cada salida temprana tiene que reponer el <select>, o queda mostrando un
+    // estatus que la orden no tiene.
+    const discard = () => setStatusEpoch((n) => n + 1);
+
+    if (status === 'entregado' && !canDeliver) {
+      discard();
+      showToast('error', t('workOrders.deliverAdminOnly'));
       return;
     }
+    if (status === 'entregado' && !confirm(t('workOrders.confirmDeliver'))) {
+      discard();
+      return;
+    }
+    // Sacar una orden de "entregado" revierte en Finanzas el pago final y el
+    // costo de repuestos, y borra las comisiones que aún no se han pagado. Vale
+    // decirlo antes y no después.
+    if (order.estatus === 'entregado' && !confirm(t('workOrders.confirmUndeliver'))) {
+      discard();
+      return;
+    }
+
     try {
       await workOrdersService.updateWorkOrderStatus(order.id, status);
       await refresh();
     } catch (err) {
+      discard();
       fail(err);
     }
   };
@@ -242,6 +291,10 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   /** A technician adds themselves to an order they didn't create. */
   const joinOrder = async () => {
     if (!order || !user) return;
+    if (!canJoin) {
+      showToast('error', t('workOrders.joinDeliveredBlocked'));
+      return;
+    }
     setBusy(true);
     try {
       await workOrdersService.addAssignment(
@@ -376,7 +429,11 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     error,
     canEdit,
     canEditProgress,
+    canDeliver,
+    canJoin,
     isComplete,
+    isDelivered,
+    statusEpoch,
     progressDraft,
     setProgressDraft,
     savingSignature,

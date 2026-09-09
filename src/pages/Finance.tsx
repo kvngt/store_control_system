@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { dashboardService, financeService, workOrdersService } from '../services/supabaseService';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
+import { todayLocal } from '../lib/dates';
 import { getErrorMessage } from '../lib/errors';
 import type { FinancialTransaction, TransactionType, TransactionCategory, DashboardStats, WorkOrder, BankStatementImport } from '../types/database';
 
@@ -99,7 +100,7 @@ export default function Finance() {
     tipo: 'ingreso' as TransactionType,
     categoria: 'pago_cliente' as TransactionCategory,
     monto: '',
-    fecha: new Date().toISOString().split('T')[0],
+    fecha: todayLocal(),
     descripcion: '',
     referencia_orden_id: '',
   });
@@ -108,7 +109,7 @@ export default function Finance() {
     tipo: 'ingreso' as TransactionType,
     categoria: 'pago_cliente' as TransactionCategory,
     monto: '',
-    fecha: new Date().toISOString().split('T')[0],
+    fecha: todayLocal(),
     descripcion: '',
     referencia_orden_id: '',
   };
@@ -217,7 +218,7 @@ export default function Finance() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `restorify-finanzas-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `restorify-finanzas-${todayLocal()}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };

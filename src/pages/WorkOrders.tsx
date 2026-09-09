@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
@@ -13,6 +13,7 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
+import { useIsMobile } from '../lib/useMediaQuery';
 import { useWorkOrderForm } from '../features/workOrders/useWorkOrderForm';
 import { useWorkOrderDetail } from '../features/workOrders/useWorkOrderDetail';
 import WorkOrderCreateModal from '../features/workOrders/WorkOrderCreateModal';
@@ -30,6 +31,12 @@ export default function WorkOrders() {
   const [searchParams, setSearchParams] = useSearchParams();
   const isAdmin = user?.rol === 'admin';
   const sedeId = isAdmin ? currentSede?.id : user?.sede_id;
+
+  // Se renderiza una sola versión de la lista, no las dos escondiéndose con
+  // CSS: para un técnico `renderOrderList` corre dos veces (mis órdenes y el
+  // resto del tablero), así que el teléfono cargaba cuatro copias del marcado
+  // para mostrar dos.
+  const isMobile = useIsMobile();
 
   const form = useWorkOrderForm();
   const detail = useWorkOrderDetail({ onBoardChanged: () => loadOrders() });
@@ -68,6 +75,16 @@ export default function WorkOrders() {
     queryClient.invalidateQueries({ queryKey: queryKeys.customers(sedeId) });
     queryClient.invalidateQueries({ queryKey: queryKeys.vehicles(sedeId) });
   };
+
+  // La orden que ya se creó en este intento de envío.
+  //
+  // `createWorkOrder` es transaccional, pero la subida de fotos que va después
+  // no está dentro de ella. Si fallaba — y con ocho fotos de teléfono sobre el
+  // wifi del taller es el paso que falla — el usuario veía "error al crear la
+  // orden" con la orden ya creada, y al reintentar creaba una segunda. El
+  // cliente y el vehículo sí estaban protegidos contra eso
+  // (`markCustomerCreated` / `markVehicleCreated`); la orden no.
+  const createdOrderRef = useRef<WorkOrder | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState('');
@@ -123,6 +140,7 @@ export default function WorkOrders() {
     if (form.isDirty && !confirm(t('workOrders.confirmDiscard'))) {
       return;
     }
+    createdOrderRef.current = null;
     setShowCreateModal(false);
     form.reset();
   };
@@ -212,7 +230,7 @@ export default function WorkOrders() {
           })
         : [{ usuario_id: user.id, tipo_tarea: (user.rol === 'pintor' ? 'pintura' : 'mecanica') as 'mecanica' | 'pintura' }];
 
-      const order = await workOrdersService.createWorkOrder({
+      const order = createdOrderRef.current ?? await workOrdersService.createWorkOrder({
         sede_id: targetSedeId,
         cliente_id: customerId,
         vehiculo_id: vehicleId,
@@ -222,9 +240,12 @@ export default function WorkOrders() {
         deposito_inicial: parseFloat(values.deposit) || 0,
         inspeccion_360_notas: values.inspectionNotes,
         fecha_estimada_entrega: values.estimatedDate || new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
+        // `Math.max(0, ...)` igual que en los repuestos. La labor era la única
+        // cifra de dinero que aceptaba un negativo, y sobre una orden entregada
+        // un total que baja lo asienta Finanzas como reembolso al cliente.
         labor_items: values.laborItems.map((l) => ({
           descripcion: l.descripcion,
-          costo: parseFloat(l.costo) || 0,
+          costo: Math.max(0, parseFloat(l.costo) || 0),
         })),
         // No separate cost: a part is billed on at what it cost the shop, and
         // the database mirrors the price into `costo_unitario` so Finanzas
@@ -238,12 +259,17 @@ export default function WorkOrders() {
         creado_por: user.id,
       });
 
+      // Antes de las fotos: de aquí en adelante un fallo no debe volver a crear
+      // la orden, sólo reintentar lo que quedó pendiente.
+      createdOrderRef.current = order;
+
       const photoFiles = form.photos.toUploads();
       if (photoFiles.length) {
         await workOrdersService.uploadOrderPhotos(order.id, photoFiles);
       }
 
       const createdNewRecords = values.customerMode === 'new' || values.vehicleMode === 'new';
+      createdOrderRef.current = null;
       setShowCreateModal(false);
       form.reset();
       loadOrders();
@@ -296,140 +322,142 @@ export default function WorkOrders() {
   // One list of orders, drawn as a table on desktop and as cards on mobile.
   // Extracted so the technician view can render it twice — once for the
   // orders assigned to them, once for the rest of the sede's board.
-  const renderOrderList = (list: WorkOrder[]) => (
-    <>
-      {/* Desktop table */}
-      <div className="table-container animate-fade-in desktop-only">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>{t('workOrders.orderNumber')}</th>
-              <th>{t('common.name')}</th>
-              <th>{t('vehicles.title')}</th>
-              <th>{t('common.type')}</th>
-              <th>{t('common.status')}</th>
-              <th>{t('workOrders.progress')}</th>
-              <th>{t('workOrders.estimatedDelivery')}</th>
-              <th>{t('common.total')}</th>
-              <th>{t('common.actions')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {list.map((order) => (
-              <tr key={order.id} className="row-clickable" onClick={() => detail.open(order.id)}>
-                <td>
-                  {/* The order number is the thing people point at, so it is
-                      the link. The eye icon stays, but it is no longer the only
-                      way in — which is how this was reported from the shop. */}
-                  <button
-                    type="button"
-                    className="link-button"
-                    onClick={(e) => { e.stopPropagation(); detail.open(order.id); }}
-                    title={t('workOrders.openOrder')}
-                  >
-                    {order.numero_orden}
-                  </button>
-                </td>
-                <td>{order.cliente?.nombre}</td>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                    <Car size={14} style={{ color: 'var(--color-text-tertiary)' }} />
-                    {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
-                  </div>
-                </td>
-                <td><span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span></td>
-                <td><span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span></td>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: 100 }}>
-                    <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
-                      <div className={`progress-fill ${order.porcentaje_avance === 100 ? 'success' : ''}`} style={{ width: `${order.porcentaje_avance}%` }}></div>
-                    </div>
-                    <span style={{ fontSize: 'var(--font-size-xs)', minWidth: 28 }}>{order.porcentaje_avance}%</span>
-                  </div>
-                </td>
-                <td style={{ fontSize: 'var(--font-size-sm)' }}>
-                  <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle', color: 'var(--color-text-tertiary)' }} />
-                  {order.fecha_estimada_entrega}
-                </td>
-                <td style={{ fontWeight: 600 }}>${order.total_general.toLocaleString()}</td>
-                <td>
-                  <div className="table-actions">
-                    <button
-                      className="btn btn-ghost btn-sm btn-icon"
-                      title={t('workOrders.openOrder')}
-                      onClick={(e) => { e.stopPropagation(); detail.open(order.id); }}
-                    >
-                      <Eye size={16} />
+  //
+  // `isMobile` elige cuál de las dos se monta. Antes se emitían ambas y el CSS
+  // escondía una, lo que para un técnico significaba cuatro copias del marcado
+  // en el DOM del teléfono — con sus iconos y sus barras de avance — para
+  // mostrar dos.
+  const renderOrderList = (list: WorkOrder[]) =>
+    isMobile ? (
+        <div className="workorder-card-list animate-fade-in">
+          {list.map((order) => (
+            <div key={order.id} className="workorder-card" onClick={() => detail.open(order.id)}>
+              <div className="workorder-card-top">
+                <span className="workorder-card-number">{order.numero_orden}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+                  {user?.rol === 'admin' && (
+                    <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={(e) => handleDeleteOrder(order, e)}>
+                      <Trash2 size={16} />
                     </button>
-                    {user?.rol === 'admin' && (
-                      <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={(e) => handleDeleteOrder(order, e)}>
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                </td>
+                  )}
+                  <ChevronRight size={18} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+                </div>
+              </div>
+              <div className="workorder-card-meta">
+                {order.cliente?.nombre}
+              </div>
+              <div className="workorder-card-meta" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                <Car size={14} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+                {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                <span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span>
+                <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
+              </div>
+              <div className="workorder-card-progress">
+                <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
+                  <div className={`progress-fill ${order.porcentaje_avance === 100 ? 'success' : ''}`} style={{ width: `${order.porcentaje_avance}%` }}></div>
+                </div>
+                <span style={{ fontSize: 'var(--font-size-xs)', minWidth: 28 }}>{order.porcentaje_avance}%</span>
+              </div>
+              <div className="workorder-card-footer">
+                <span>
+                  <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+                  {order.fecha_estimada_entrega}
+                </span>
+                <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>${order.total_general.toLocaleString()}</span>
+              </div>
+            </div>
+          ))}
+          {list.length === 0 && (
+            <p style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
+              {t('common.noResults')}
+            </p>
+          )}
+        </div>
+    ) : (
+        <div className="table-container animate-fade-in">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{t('workOrders.orderNumber')}</th>
+                <th>{t('common.name')}</th>
+                <th>{t('vehicles.title')}</th>
+                <th>{t('common.type')}</th>
+                <th>{t('common.status')}</th>
+                <th>{t('workOrders.progress')}</th>
+                <th>{t('workOrders.estimatedDelivery')}</th>
+                <th>{t('common.total')}</th>
+                <th>{t('common.actions')}</th>
               </tr>
-            ))}
-              {list.length === 0 && (
-                <tr>
-                  <td colSpan={9} style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
-                    {t('common.noResults')}
+            </thead>
+            <tbody>
+              {list.map((order) => (
+                <tr key={order.id} className="row-clickable" onClick={() => detail.open(order.id)}>
+                  <td>
+                    {/* The order number is the thing people point at, so it is
+                        the link. The eye icon stays, but it is no longer the only
+                        way in — which is how this was reported from the shop. */}
+                    <button
+                      type="button"
+                      className="link-button"
+                      onClick={(e) => { e.stopPropagation(); detail.open(order.id); }}
+                      title={t('workOrders.openOrder')}
+                    >
+                      {order.numero_orden}
+                    </button>
+                  </td>
+                  <td>{order.cliente?.nombre}</td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                      <Car size={14} style={{ color: 'var(--color-text-tertiary)' }} />
+                      {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
+                    </div>
+                  </td>
+                  <td><span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span></td>
+                  <td><span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span></td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: 100 }}>
+                      <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
+                        <div className={`progress-fill ${order.porcentaje_avance === 100 ? 'success' : ''}`} style={{ width: `${order.porcentaje_avance}%` }}></div>
+                      </div>
+                      <span style={{ fontSize: 'var(--font-size-xs)', minWidth: 28 }}>{order.porcentaje_avance}%</span>
+                    </div>
+                  </td>
+                  <td style={{ fontSize: 'var(--font-size-sm)' }}>
+                    <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle', color: 'var(--color-text-tertiary)' }} />
+                    {order.fecha_estimada_entrega}
+                  </td>
+                  <td style={{ fontWeight: 600 }}>${order.total_general.toLocaleString()}</td>
+                  <td>
+                    <div className="table-actions">
+                      <button
+                        className="btn btn-ghost btn-sm btn-icon"
+                        title={t('workOrders.openOrder')}
+                        onClick={(e) => { e.stopPropagation(); detail.open(order.id); }}
+                      >
+                        <Eye size={16} />
+                      </button>
+                      {user?.rol === 'admin' && (
+                        <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={(e) => handleDeleteOrder(order, e)}>
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
-              )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile card list — easier to tap through on a phone than a table */}
-      <div className="workorder-card-list mobile-only animate-fade-in">
-        {list.map((order) => (
-          <div key={order.id} className="workorder-card" onClick={() => detail.open(order.id)}>
-            <div className="workorder-card-top">
-              <span className="workorder-card-number">{order.numero_orden}</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
-                {user?.rol === 'admin' && (
-                  <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={(e) => handleDeleteOrder(order, e)}>
-                    <Trash2 size={16} />
-                  </button>
+              ))}
+                {list.length === 0 && (
+                  <tr>
+                    <td colSpan={9} style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
+                      {t('common.noResults')}
+                    </td>
+                  </tr>
                 )}
-                <ChevronRight size={18} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
-              </div>
-            </div>
-            <div className="workorder-card-meta">
-              {order.cliente?.nombre}
-            </div>
-            <div className="workorder-card-meta" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-              <Car size={14} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
-              {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
-            </div>
-            <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-              <span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span>
-              <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
-            </div>
-            <div className="workorder-card-progress">
-              <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
-                <div className={`progress-fill ${order.porcentaje_avance === 100 ? 'success' : ''}`} style={{ width: `${order.porcentaje_avance}%` }}></div>
-              </div>
-              <span style={{ fontSize: 'var(--font-size-xs)', minWidth: 28 }}>{order.porcentaje_avance}%</span>
-            </div>
-            <div className="workorder-card-footer">
-              <span>
-                <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-                {order.fecha_estimada_entrega}
-              </span>
-              <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>${order.total_general.toLocaleString()}</span>
-            </div>
-          </div>
-        ))}
-        {list.length === 0 && (
-          <p style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
-            {t('common.noResults')}
-          </p>
-        )}
-      </div>
-    </>
-  );
+            </tbody>
+          </table>
+        </div>
+    );
 
   // List view
   return (

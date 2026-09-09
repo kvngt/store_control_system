@@ -3,7 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- `viewport-fit=cover` es lo que hace que `env(safe-area-inset-*)` resuelva
+         a algo distinto de 0. Sin él, el padding de área segura de la barra de
+         navegación inferior era código muerto y la barra quedaba pegada al
+         indicador de inicio del iPhone. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="Restorify — Sistema de administración de talleres mecánicos y de pintura. Gestiona clientes, órdenes de trabajo y finanzas desde cualquier dispositivo." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

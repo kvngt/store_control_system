@@ -26,6 +26,12 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
 
   const total = items.reduce((sum, l) => sum + l.costo, 0);
 
+  // Se recorta a cero igual que en la tabla de repuestos. La labor era la única
+  // cifra de dinero de la app que aceptaba un negativo, y sobre una orden ya
+  // entregada un total que baja se asienta en Finanzas como un reembolso al
+  // cliente — un reembolso emitido desde aquí, sin decir que lo era.
+  const toCost = (raw: string) => Math.max(0, parseFloat(raw) || 0);
+
   const startEdit = (item: LaborItem) => {
     setEditingId(item.id);
     setEditDraft({ descripcion: item.descripcion, costo: String(item.costo) });
@@ -35,14 +41,14 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
     if (!editingId || !editDraft.descripcion.trim()) return;
     await onUpdate(editingId, {
       descripcion: editDraft.descripcion,
-      costo: parseFloat(editDraft.costo) || 0,
+      costo: toCost(editDraft.costo),
     });
     setEditingId(null);
   };
 
   const add = async () => {
     if (!newDraft.descripcion.trim()) return;
-    await onAdd({ descripcion: newDraft.descripcion, costo: parseFloat(newDraft.costo) || 0 });
+    await onAdd({ descripcion: newDraft.descripcion, costo: toCost(newDraft.costo) });
     setNewDraft({ descripcion: '', costo: '' });
   };
 
@@ -52,7 +58,10 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
         <Wrench size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
         {t('workOrders.laborDescription')}
       </h3>
-      <div className="table-container" style={{ border: 'none' }}>
+      {/* `cards-on-mobile`: en el teléfono la tabla se apila en tarjetas en vez
+          de hacer scroll horizontal. Es la tabla que un mecánico edita de pie
+          junto al carro, y los inputs de ancho fijo no caben de otra forma. */}
+      <div className="table-container cards-on-mobile" style={{ border: 'none' }}>
         <table className="table">
           <thead>
             <tr>
@@ -76,6 +85,9 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                     <input
                       className="form-input"
                       type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="0.01"
                       style={{ textAlign: 'right' }}
                       value={editDraft.costo}
                       onChange={(e) => setEditDraft({ ...editDraft, costo: e.target.value })}
@@ -94,8 +106,8 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                 </tr>
               ) : (
                 <tr key={item.id}>
-                  <td>{item.descripcion}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>${item.costo.toFixed(2)}</td>
+                  <td data-label={t('common.description')}>{item.descripcion}</td>
+                  <td data-label={t('common.total')} style={{ textAlign: 'right', fontWeight: 600 }}>${item.costo.toFixed(2)}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 2 }}>
                       <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => startEdit(item)} disabled={!canEdit}>
@@ -110,25 +122,35 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
               )
             )}
             <tr>
-              <td style={{ fontWeight: 700 }}>{t('workOrders.totalLabor')}</td>
-              <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-light)' }}>
+              {/* En tarjetas el rótulo lo pone `data-label` de la celda del
+                  monto, así que la celda del rótulo sólo estorbaría: se queda
+                  para la tabla de escritorio. */}
+              <td className="desktop-only" style={{ fontWeight: 700 }}>{t('workOrders.totalLabor')}</td>
+              <td
+                data-label={t('workOrders.totalLabor')}
+                style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-light)' }}
+              >
                 ${total.toFixed(2)}
               </td>
-              <td></td>
+              <td className="desktop-only"></td>
             </tr>
           </tbody>
         </table>
       </div>
-      <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-3)' }}>
+      <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-3)', flexWrap: 'wrap' }}>
         <input
           className="form-input"
           placeholder={t('common.description')}
+          style={{ flex: '2 1 140px' }}
           value={newDraft.descripcion}
           onChange={(e) => setNewDraft({ ...newDraft, descripcion: e.target.value })}
         />
         <input
           className="form-input"
           type="number"
+          inputMode="decimal"
+          min={0}
+          step="0.01"
           placeholder="$"
           style={{ maxWidth: 100 }}
           value={newDraft.costo}

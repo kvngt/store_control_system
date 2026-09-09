@@ -72,7 +72,9 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
         <Paintbrush size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
         {t('workOrders.partsDescription')}
       </h3>
-      <div className="table-container" style={{ border: 'none' }}>
+      {/* `cards-on-mobile`: mismo motivo que en la tabla de labor — es la tabla
+          que se edita junto al carro, y con cinco columnas de inputs no cabe. */}
+      <div className="table-container cards-on-mobile" style={{ border: 'none' }}>
         <table className="table">
           <thead>
             <tr>
@@ -87,26 +89,30 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
             {items.map((part) =>
               editingId === part.id ? (
                 <tr key={part.id}>
-                  <td>
+                  <td data-label={t('common.description')}>
                     <input
                       className="form-input"
                       value={editDraft.descripcion}
                       onChange={(e) => setEditDraft({ ...editDraft, descripcion: e.target.value })}
                     />
                   </td>
-                  <td>
+                  <td data-label={t('common.quantity')}>
                     <input
                       className="form-input"
                       type="number"
+                      inputMode="numeric"
+                      min={1}
+                      step="1"
                       style={{ width: 70 }}
                       value={editDraft.cantidad}
                       onChange={(e) => setEditDraft({ ...editDraft, cantidad: e.target.value })}
                     />
                   </td>
-                  <td>
+                  <td data-label={t('common.price')}>
                     <input
                       className="form-input"
                       type="number"
+                      inputMode="decimal"
                       min={0}
                       step="0.01"
                       style={{ width: 110, textAlign: 'right' }}
@@ -114,8 +120,15 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                       onChange={(e) => setEditDraft({ ...editDraft, precio_venta_unitario: e.target.value })}
                     />
                   </td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                    ${((parseFloat(editDraft.cantidad) || 0) * (parseFloat(editDraft.precio_venta_unitario) || 0)).toFixed(2)}
+                  {/* La vista previa se calcula con el mismo `toInput` que se
+                      guarda. Antes usaba `parseFloat(cantidad)` mientras el
+                      guardado usaba `Math.max(1, parseInt(...))`, así que
+                      escribir cantidad 0 mostraba $0.00 y grababa 1. */}
+                  <td data-label={t('common.subtotal')} style={{ textAlign: 'right', fontWeight: 600 }}>
+                    ${(() => {
+                      const draft = toInput(editDraft);
+                      return (draft.cantidad * draft.precio_venta_unitario).toFixed(2);
+                    })()}
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: 2 }}>
@@ -130,10 +143,10 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                 </tr>
               ) : (
                 <tr key={part.id}>
-                  <td>{part.descripcion}</td>
-                  <td>{part.cantidad}</td>
-                  <td style={{ textAlign: 'right' }}>${part.precio_venta_unitario.toFixed(2)}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>${part.subtotal.toFixed(2)}</td>
+                  <td data-label={t('common.description')}>{part.descripcion}</td>
+                  <td data-label={t('common.quantity')}>{part.cantidad}</td>
+                  <td data-label={t('common.price')} style={{ textAlign: 'right' }}>${part.precio_venta_unitario.toFixed(2)}</td>
+                  <td data-label={t('common.subtotal')} style={{ textAlign: 'right', fontWeight: 600 }}>${part.subtotal.toFixed(2)}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 2 }}>
                       <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => startEdit(part)} disabled={!canEdit}>
@@ -148,11 +161,16 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
               )
             )}
             <tr>
-              <td colSpan={3} style={{ fontWeight: 700 }}>Total {t('workOrders.parts')}</td>
-              <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-light)' }}>
+              <td className="desktop-only" colSpan={3} style={{ fontWeight: 700 }}>
+                Total {t('workOrders.parts')}
+              </td>
+              <td
+                data-label={`Total ${t('workOrders.parts')}`}
+                style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-light)' }}
+              >
                 ${totalSale.toFixed(2)}
               </td>
-              <td></td>
+              <td className="desktop-only"></td>
             </tr>
           </tbody>
         </table>
@@ -168,7 +186,9 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
         <input
           className="form-input"
           type="number"
+          inputMode="numeric"
           min={1}
+          step="1"
           placeholder={t('common.quantity')}
           style={{ flex: '1 1 70px' }}
           value={newDraft.cantidad}
@@ -177,6 +197,7 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
         <input
           className="form-input"
           type="number"
+          inputMode="decimal"
           min={0}
           step="0.01"
           placeholder={t('common.price')}

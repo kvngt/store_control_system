@@ -17,13 +17,14 @@ import { useToast } from '../context/toast.context';
 import { commissionsService, sedesService } from '../services/supabaseService';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
+import { todayLocal } from '../lib/dates';
 import { getErrorMessage } from '../lib/errors';
 import type { Commission, CommissionBalance, CommissionPayment } from '../types/database';
 
 const money = (value: number) =>
   `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-const today = () => new Date().toISOString().split('T')[0];
+
 
 type Tab = 'pending' | 'history' | 'payments';
 
@@ -111,7 +112,7 @@ export default function Payroll() {
   // ----- settling a balance --------------------------------------------------
   const [payTarget, setPayTarget] = useState<CommissionBalance | null>(null);
   const [payForm, setPayForm] = useState({
-    fecha_pago: today(),
+    fecha_pago: todayLocal(),
     metodo: 'cheque',
     numero_cheque: '',
     notas: '',
@@ -122,7 +123,7 @@ export default function Payroll() {
 
   const openPayModal = (balance: CommissionBalance) => {
     setPayTarget(balance);
-    setPayForm({ fecha_pago: today(), metodo: 'cheque', numero_cheque: '', notas: '' });
+    setPayForm({ fecha_pago: todayLocal(), metodo: 'cheque', numero_cheque: '', notas: '' });
     setChequeFile(null);
     setPayError('');
   };
@@ -318,7 +319,7 @@ export default function Payroll() {
                   </div>
 
                   {open && (
-                    <div className="table-container" style={{ border: 'none', marginTop: 'var(--space-3)' }}>
+                    <div className="table-container cards-on-mobile" style={{ border: 'none', marginTop: 'var(--space-3)' }}>
                       <table className="table">
                         <thead>
                           <tr>
@@ -332,13 +333,13 @@ export default function Payroll() {
                         <tbody>
                           {balance.items.map((c) => (
                             <tr key={c.id}>
-                              <td style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>
+                              <td data-label={t('workOrders.orderNumber')} style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>
                                 {c.orden?.numero_orden || '—'}
                               </td>
-                              <td style={{ textAlign: 'right' }}>{money(Number(c.base_ganancia))}</td>
-                              <td style={{ textAlign: 'right' }}>{Number(c.porcentaje)}%</td>
-                              <td style={{ textAlign: 'right' }}>{c.tecnicos}</td>
-                              <td style={{ textAlign: 'right', fontWeight: 700 }}>{money(Number(c.monto))}</td>
+                              <td data-label={t('payroll.profitBase')} style={{ textAlign: 'right' }}>{money(Number(c.base_ganancia))}</td>
+                              <td data-label={t('payroll.rate')} style={{ textAlign: 'right' }}>{Number(c.porcentaje)}%</td>
+                              <td data-label={t('payroll.technicians')} style={{ textAlign: 'right' }}>{c.tecnicos}</td>
+                              <td data-label={t('payroll.share')} style={{ textAlign: 'right', fontWeight: 700 }}>{money(Number(c.monto))}</td>
                             </tr>
                           ))}
                         </tbody>

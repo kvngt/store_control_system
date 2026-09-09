@@ -35,6 +35,14 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
   const [searching, setSearching] = useState(false);
   const searchBoxRef = useRef<HTMLDivElement>(null);
 
+  // M5 — en el teléfono la caja de búsqueda del encabezado estaba en
+  // `display: none`, así que la única forma de encontrar una orden o una placa
+  // desde cualquier pantalla desaparecía justo en el dispositivo donde se
+  // pregunta "¿de quién es este carro?". Ahora colapsa a un botón de lupa que
+  // abre la búsqueda a pantalla completa.
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   const [notifOpen, setNotifOpen] = useState(false);
   const [attentionOrders, setAttentionOrders] = useState<WorkOrder[]>([]);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -94,6 +102,7 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
     const handleClick = (e: MouseEvent) => {
       if (searchBoxRef.current && !searchBoxRef.current.contains(e.target as Node)) {
         setSearchOpen(false);
+        setMobileSearchOpen(false);
       }
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
         setNotifOpen(false);
@@ -103,11 +112,32 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const closeSearch = () => {
+  const closeSearch = useCallback(() => {
     setSearchOpen(false);
+    setMobileSearchOpen(false);
     setQuery('');
     setResults(EMPTY_RESULTS);
+  }, []);
+
+  const openMobileSearch = () => {
+    setMobileSearchOpen(true);
+    setSearchOpen(true);
+    // El foco va después del repintado: el campo está en `display: none` hasta
+    // que la clase entra, y un elemento oculto no puede recibir foco.
+    requestAnimationFrame(() => searchInputRef.current?.focus());
   };
+
+  // Escape cierra la búsqueda a pantalla completa. Sin esto la única salida en
+  // el teléfono era el botón de cerrar, y en un navegador de escritorio angosto
+  // no había ninguna.
+  useEffect(() => {
+    if (!mobileSearchOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeSearch();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [mobileSearchOpen, closeSearch]);
 
   const goToOrder = (id: string) => {
     if (!confirmNavigation()) return;
@@ -140,9 +170,20 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
         >
           <Menu size={20} />
         </button>
-        <div className="header-search" ref={searchBoxRef}>
+        <button
+          className="btn btn-ghost btn-icon mobile-search-btn"
+          onClick={openMobileSearch}
+          aria-label={t('common.search')}
+        >
+          <Search size={20} />
+        </button>
+        <div
+          className={`header-search ${mobileSearchOpen ? 'mobile-search-open' : ''}`}
+          ref={searchBoxRef}
+        >
           <Search className="header-search-icon" size={16} />
           <input
+            ref={searchInputRef}
             type="text"
             placeholder={t('common.search')}
             id="global-search"
@@ -150,6 +191,16 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
             onChange={(e) => { setQuery(e.target.value); setSearchOpen(true); }}
             onFocus={() => setSearchOpen(true)}
           />
+          {mobileSearchOpen && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-icon header-search-close"
+              onClick={closeSearch}
+              aria-label={t('common.close')}
+            >
+              <X size={18} />
+            </button>
+          )}
           {searchOpen && query.trim().length >= 2 && (
             <div className="search-dropdown">
               {searching && <div className="search-dropdown-empty">{t('common.loading')}</div>}

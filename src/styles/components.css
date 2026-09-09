@@ -8,7 +8,12 @@
   top: 0;
   left: 0;
   width: var(--sidebar-width);
+  /* El par vh/dvh: en Safari móvil `100vh` cuenta la franja de la barra de URL,
+     y el pie del cajón (Cerrar sesión) caía debajo del pliegue. `dvh` sigue al
+     viewport real; el `vh` de arriba queda como respaldo para navegadores que
+     no lo entiendan. */
   height: 100vh;
+  height: 100dvh;
   background: var(--color-bg-secondary);
   border-right: 1px solid var(--color-surface-border);
   display: flex;
@@ -37,18 +42,14 @@
 }
 
 .sidebar-sede-switcher {
-  display: none; /* .mobile-only turns it on under 768px */
+  /* `.mobile-flex` lo enciende bajo 768px. Antes esto tenía su propio media
+     query con `display: flex`, que perdía contra el `!important` de
+     `.mobile-only` y dejaba el ícono apilado sobre el campo. */
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--color-surface-border);
   color: var(--color-text-tertiary);
-}
-
-@media (max-width: 768px) {
-  .sidebar-sede-switcher.mobile-only {
-    display: flex;
-  }
 }
 
 .sidebar-sede-switcher select {
@@ -211,8 +212,16 @@
   gap: var(--space-4);
 }
 
-.mobile-menu-btn {
+.mobile-menu-btn,
+.mobile-search-btn {
   display: none;
+}
+
+/* Mientras el cajón lateral está abierto, el `position: fixed` del overlay no
+   impide que la página de detrás siga desplazándose con el dedo. Esta clase la
+   pone AppLayout en <body> para congelarla. */
+body.drawer-open {
+  overflow: hidden;
 }
 
 .header-breadcrumb {
@@ -1276,6 +1285,7 @@
   overflow-x: auto;
   padding-bottom: var(--space-4);
   min-height: calc(100vh - 200px);
+  min-height: calc(100dvh - 200px);
 }
 
 .kanban-column {
@@ -1760,7 +1770,19 @@
   gap: var(--space-4);
 }
 
-.mobile-only {
+/* Utilidades de visibilidad por ancho.
+   Van en dos sabores a propósito. Cuando había sólo `.mobile-only` con
+   `display: block !important`, el `!important` vencía a la especificidad de
+   cualquier regla propia del elemento, así que todo lo que llevara las dos
+   clases perdía su `display: flex` — y con él `gap`, `flex-direction` y
+   `flex: 1` de los hijos. Se caían tres cosas a la vez: la lista de órdenes en
+   el teléfono quedaba sin separación entre tarjetas, el selector "Mover a" del
+   Kanban partía el rótulo del desplegable, y el selector de sede del cajón
+   apilaba el ícono sobre el campo.
+   Regla: `.mobile-only` para lo que es un bloque, `.mobile-flex` para lo que
+   necesita seguir siendo un contenedor flex. */
+.mobile-only,
+.mobile-flex {
   display: none !important;
 }
 
@@ -2105,8 +2127,10 @@
 
   .page-content {
     padding: var(--space-3);
-    /* Reserve room for the fixed bottom nav so the last card isn't covered. */
-    padding-bottom: calc(var(--space-3) + 72px);
+    /* Reserva sitio para la barra inferior fija, que mide 64px más el área
+       segura. Antes eran 72px fijos, un número que no correspondía a la altura
+       real de nada y que dejaba la última tarjeta parcialmente tapada. */
+    padding-bottom: calc(var(--space-3) + 64px + env(safe-area-inset-bottom, 0px));
   }
 
   .stats-grid {
@@ -2142,10 +2166,18 @@
     display: block !important;
   }
 
+  .mobile-flex {
+    display: flex !important;
+  }
+
   /* Full-screen modal on phones/small tablets â€” easier to fill out a long
      work order form without losing the header/footer to page scroll. */
   .modal-overlay {
     padding: 0;
+    /* Igual que el cajón: con `100vh` implícito el pie del modal — donde están
+       Guardar y Cancelar — podía quedar por debajo del viewport visible
+       mientras la barra de URL de Safari está desplegada. */
+    height: 100dvh;
   }
 
   .modal {
@@ -2169,8 +2201,82 @@
     min-height: 38px;
   }
 
+  /* 16px, no `--font-size-base` (14px).
+     Safari en iOS hace zoom automático al enfocar cualquier campo por debajo de
+     16px, y no lo deshace al salir: la pantalla queda ampliada y corrida. En una
+     app que se llena de formularios — ingreso de orden, labor, repuestos, todo
+     desde el teléfono — eso pasaba en cada campo. El `min-height` ya estaba
+     ajustado para el dedo; faltaba lo único que apaga el zoom. */
+  .form-input,
+  .form-select,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Los tres campos que se pasan su propio tamaño más específico y que la regla
+     de arriba no alcanza: un selector de un elemento (0,0,1) pierde contra uno
+     con clase (0,1,1) por especificidad, no por orden. Son justamente los tres
+     que más se usan con el pulgar — la búsqueda del encabezado, el selector de
+     sede del cajón y el "Mover a" de cada tarjeta del Kanban, que en un teléfono
+     es la única forma de mover una orden. */
+  .header-search input,
+  .sidebar-sede-switcher select,
+  .kanban-card-move select {
+    font-size: 16px;
+  }
+
   .form-input {
     min-height: 46px;
+  }
+
+  /* La búsqueda global se abre a pantalla completa desde el botón de lupa del
+     encabezado (ver Header.tsx): antes `display: none` la hacía desaparecer
+     entera en el teléfono, que es justo donde se busca una placa. */
+  .header-search.mobile-search-open {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: auto;
+    padding: var(--space-3);
+    background: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-surface-border);
+    z-index: calc(var(--z-overlay) + 20);
+  }
+
+  /* El ícono y el botón de cerrar se posicionan contra el panel, que en este
+     modo es el contenedor fijo y no la caja de 320px del encabezado. */
+  .header-search.mobile-search-open .header-search-icon {
+    left: calc(var(--space-3) + var(--space-3));
+  }
+
+  .header-search.mobile-search-open input {
+    padding-right: var(--space-10);
+  }
+
+  .header-search.mobile-search-open .header-search-close {
+    position: absolute;
+    right: calc(var(--space-3) + 2px);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .header-search.mobile-search-open .search-dropdown {
+    left: var(--space-3);
+    right: var(--space-3);
+    width: auto;
+    /* El `min-width: 320px` de la regla base desborda una pantalla de 360px una
+       vez descontado el padding. */
+    min-width: 0;
+    max-height: calc(100dvh - 96px);
+    overflow-y: auto;
+  }
+
+  .mobile-search-btn {
+    display: inline-flex;
   }
 
   .photo-zone-grid {
@@ -2202,7 +2308,11 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 64px;
+  /* `box-sizing: border-box` es global, así que un `padding-bottom` para el área
+     segura del iPhone se comía la altura de los iconos en vez de sumarse. La
+     altura crece con el inset; en un dispositivo sin notch `env()` es 0 y esto
+     son los 64px de siempre. */
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
   background: var(--color-bg-secondary);
   border-top: 1px solid var(--color-surface-border);
   justify-content: space-around;

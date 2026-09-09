@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
+import { useToast } from '../context/toast.context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { workOrdersService } from '../services/supabaseService';
 import { queryKeys } from '../lib/queryClient';
@@ -20,6 +21,7 @@ const COLUMNS: { status: OrderStatus; emoji: string }[] = [
 export default function KanbanBoard() {
   const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
+  const { showToast } = useToast();
   const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
 
   const queryClient = useQueryClient();
@@ -56,6 +58,13 @@ export default function KanbanBoard() {
   });
 
   const [draggedOrder, setDraggedOrder] = useState<string | null>(null);
+  // Se incrementa cuando un movimiento se descarta sin llegar al servidor, y se
+  // usa como `key` del <select> de cada tarjeta. Cancelar el confirm no cambiaba
+  // ningún estado, así que React no re-renderizaba y el desplegable se quedaba
+  // mostrando "Entregado" sobre una orden que seguía en su columna. En un
+  // teléfono ese desplegable es la única forma de mover una tarjeta — el
+  // arrastre de HTML5 no existe en táctil — así que era la ruta normal.
+  const [moveEpoch, setMoveEpoch] = useState(0);
 
   // Both errors are held raw and translated here, never at fetch time: that is
   // what keeps switching the UI language from re-querying the whole board.
@@ -91,13 +100,31 @@ export default function KanbanBoard() {
     e.preventDefault();
   };
 
+  // Entregar asienta el ingreso del trabajo y devenga las comisiones: es una
+  // decisión de administración, no un paso del taller. Un técnico asignado podía
+  // arrastrar su propia orden a "Entregado" y con eso acreditarse su comisión.
+  const canDeliver = isAdmin;
+
   // Shared by dragging (desktop) and by the per-card selector (touch), so both
   // routes get the same delivery confirmation and the same optimistic update.
   const moveOrder = (orderId: string, status: OrderStatus) => {
     const order = orders.find((o) => o.id === orderId);
     if (!order || order.estatus === status) return;
 
+    // Cada salida temprana repone el <select>, o queda desincronizado del tablero.
+    const discard = () => setMoveEpoch((n) => n + 1);
+
+    if (status === 'entregado' && !canDeliver) {
+      discard();
+      showToast('error', t('workOrders.deliverAdminOnly'));
+      return;
+    }
     if (status === 'entregado' && !confirm(t('workOrders.confirmDeliver'))) {
+      discard();
+      return;
+    }
+    if (order.estatus === 'entregado' && !confirm(t('workOrders.confirmUndeliver'))) {
+      discard();
       return;
     }
 
@@ -218,19 +245,24 @@ export default function KanbanBoard() {
                           same action by another route; hidden on desktop, where
                           dragging is the nicer gesture. */}
                       {canMove(order) && (
-                        <label className="kanban-card-move mobile-only">
+                        <label className="kanban-card-move mobile-flex">
                           <span className="kanban-card-move-label">{t('kanban.moveTo')}</span>
                           <select
+                            key={moveEpoch}
                             className="form-input form-select"
                             value={order.estatus}
                             aria-label={`${t('kanban.moveTo')} — ${order.numero_orden}`}
                             onChange={(e) => moveOrder(order.id, e.target.value as OrderStatus)}
                           >
-                            {COLUMNS.map((c) => (
-                              <option key={c.status} value={c.status}>
-                                {statusLabels[c.status]}
-                              </option>
-                            ))}
+                            {COLUMNS
+                              // Si la orden ya está entregada la opción se deja,
+                              // o el <select> no podría mostrar su propio valor.
+                              .filter((c) => c.status !== 'entregado' || canDeliver || order.estatus === 'entregado')
+                              .map((c) => (
+                                <option key={c.status} value={c.status}>
+                                  {statusLabels[c.status]}
+                                </option>
+                              ))}
                           </select>
                         </label>
                       )}

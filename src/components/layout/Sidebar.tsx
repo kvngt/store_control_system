@@ -106,9 +106,13 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
 
         {/* Sede switcher for admins on mobile: the header version is hidden on
             small screens, and an admin still has to be able to change workshop
-            from their phone. */}
+            from their phone.
+
+            `mobile-flex` y no `mobile-only`: es un contenedor flex (ícono +
+            campo en una fila), y `.mobile-only` lo forzaba a `display: block`
+            con `!important`, dejando el ícono apilado encima del selector. */}
         {isAdmin && allSedes.length > 1 && (
-          <div className="sidebar-sede-switcher mobile-only">
+          <div className="sidebar-sede-switcher mobile-flex">
             <Building2 size={14} />
             <select
               className="form-input form-select"

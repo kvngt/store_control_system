@@ -1,11 +1,5 @@
 // Cross-cutting helpers shared by the domain services.
 
-/** True when `dateStr` falls in the same calendar month/year as `ref`. */
-export function isSameMonth(dateStr: string, ref: Date) {
-  const d = new Date(dateStr);
-  return d.getMonth() === ref.getMonth() && d.getFullYear() === ref.getFullYear();
-}
-
 // A DELETE the RLS policy refuses is not an error in PostgREST: the row simply
 // isn't visible to the statement, so it reports success having removed nothing.
 // Without this the UI would say "deleted" and then redraw the row still there.

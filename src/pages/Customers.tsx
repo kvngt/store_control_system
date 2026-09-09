@@ -291,7 +291,7 @@ export default function Customers() {
                   {t('customers.serviceHistory')} ({orders.length})
                 </h3>
               </div>
-              <div className="table-container" style={{ border: 'none' }}>
+              <div className="table-container cards-on-mobile" style={{ border: 'none' }}>
                 <table className="table">
                   <thead>
                     <tr>
@@ -304,10 +304,10 @@ export default function Customers() {
                   <tbody>
                     {orders.map((o) => (
                       <tr key={o.id}>
-                        <td style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>{o.numero_orden}</td>
-                        <td><span className={`badge badge-${o.tipo_trabajo}`}>{o.tipo_trabajo}</span></td>
-                        <td><span className={`badge badge-${o.estatus}`}>{statusLabels[o.estatus]}</span></td>
-                        <td style={{ fontWeight: 600 }}>${o.total_general.toLocaleString()}</td>
+                        <td data-label={t('workOrders.orderNumber')} style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>{o.numero_orden}</td>
+                        <td data-label={t('common.type')}><span className={`badge badge-${o.tipo_trabajo}`}>{o.tipo_trabajo}</span></td>
+                        <td data-label={t('common.status')}><span className={`badge badge-${o.estatus}`}>{statusLabels[o.estatus]}</span></td>
+                        <td data-label={t('common.total')} style={{ fontWeight: 600 }}>${o.total_general.toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
