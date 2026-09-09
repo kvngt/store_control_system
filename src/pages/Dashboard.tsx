@@ -366,6 +366,15 @@ export default function Dashboard() {
                   </td>
                 </tr>
               ))}
+              {/* A table of column headings over nothing reads as a screen that
+                  failed to load. Say that there is nothing yet instead. */}
+              {recentOrders.length === 0 && (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
+                    {t('dashboard.noRecentOrders')}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

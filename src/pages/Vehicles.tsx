@@ -227,6 +227,13 @@ export default function Vehicles() {
                   </td>
                 </tr>
               ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
+                    {t('common.noResults')}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

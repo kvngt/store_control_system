@@ -370,6 +370,13 @@ export default function WorkOrders() {
                 </td>
               </tr>
             ))}
+              {list.length === 0 && (
+                <tr>
+                  <td colSpan={9} style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
+                    {t('common.noResults')}
+                  </td>
+                </tr>
+              )}
           </tbody>
         </table>
       </div>

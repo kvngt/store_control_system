@@ -62,6 +62,8 @@ export default function WorkOrderCreateModal({
   const { errors } = formState;
   const photos = form.photos;
   const newVehicle = form.newVehicle;
+  // Either side switching to "new" turns the pair into a tall form.
+  const stacked = form.customerMode === 'new' || form.vehicleMode === 'new';
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const extraInputRef = useRef<HTMLInputElement>(null);
@@ -120,8 +122,12 @@ export default function WorkOrderCreateModal({
             {/* No `capture` here: extras are often picked from the gallery. */}
             <input type="file" ref={extraInputRef} accept="image/*" multiple style={{ display: 'none' }} onChange={handleExtraFilesChange} />
 
-            {/* Customer & Vehicle Select */}
-            <div className="form-row">
+            {/* Customer & Vehicle.
+                Side by side while both are plain dropdowns, stacked as soon as
+                either becomes a full form: the vehicle panel is a whole VIN
+                intake, and squeezing that into half a modal left its fields in
+                a narrow column with the plate section pushed off the bottom. */}
+            <div className={stacked ? '' : 'form-row'}>
               <div className="form-group">
                 <label className="form-label">{t('customers.customerProfile')}</label>
                 {form.customerMode === 'existing' ? (
