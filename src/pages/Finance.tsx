@@ -131,6 +131,12 @@ export default function Finance() {
 
   const balance = totalIncome - totalExpense;
 
+  // Bolt ⚡: Extract sorting into useMemo to avoid O(N log N) sort and Date parsing on every re-render.
+  // Impact: Prevents recalculating the sorted transactions array during input changes or modal toggles, saving CPU cycles.
+  const sortedAndFiltered = useMemo(() => {
+    return [...filtered].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+  }, [filtered]);
+
   const categoryLabels: Record<string, string> = {
     pago_cliente: t('finance.clientPayment'),
     compra_repuesto: t('finance.partsPurchase'),
@@ -375,7 +381,7 @@ export default function Finance() {
             </tr>
           </thead>
           <tbody>
-            {[...filtered].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).map((txn) => (
+            {sortedAndFiltered.map((txn) => (
               <tr key={txn.id}>
                 <td data-label={t('common.date')} style={{ whiteSpace: 'nowrap' }}>{txn.fecha}</td>
                 <td data-label={t('common.type')}>
