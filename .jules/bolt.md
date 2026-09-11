@@ -1,3 +1,3 @@
-## 2024-05-30 - useMemo optimization for O(N) array filtering
-**Learning:** Found several top-level React components (`WorkOrders.tsx`, `Customers.tsx`, `Vehicles.tsx`, `Finance.tsx`) performing extensive array filtering (`.filter()`) mapping over `.toLowerCase()` string comparisons during each re-render. Given that these components have many states controlling modals or input values, these recalculations caused unneeded CPU cycles.
-**Action:** When filtering array items derived from search inputs in complex React components with multiple state variables, always wrap the resulting array in a `useMemo` hook with proper dependency tracking to avoid computing them synchronously on each re-render, and extract expensive operations (like `.toLowerCase()`) to outside the loop.
+## 2024-03-20 - Kanban Board O(N) Array Re-filtering
+**Learning:** Found multiple `O(N)` `Array.filter` loops over the same un-memoized array occurring on every render in the `KanbanBoard` for categorizing tickets into columns and calculating capacity.
+**Action:** Always look for duplicate linear searches/filters over the same array that could be batched into a single `useMemo` reduced grouping object instead.

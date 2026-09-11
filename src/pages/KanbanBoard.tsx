@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { useToast } from '../context/toast.context';
@@ -31,6 +31,25 @@ export default function KanbanBoard() {
     queryKey: boardKey,
     queryFn: () => workOrdersService.getWorkOrders(sedeId),
   });
+
+  // ⚡ Bolt Performance Optimization:
+  // Prevents re-filtering the entire list 5 times for the columns and 1 time for the total capacity calculation on every render.
+  // We use `useMemo` to iterate over the `orders` array exactly once (O(N) instead of O(N * 6)) and group them by status.
+  const ordersByStatus = React.useMemo(() => {
+    const grouped: Record<OrderStatus, WorkOrder[]> = {
+      recepcion: [],
+      en_proceso: [],
+      espera_repuestos: [],
+      finalizado: [],
+      entregado: [],
+    };
+    for (const order of orders) {
+      if (grouped[order.estatus]) {
+        grouped[order.estatus].push(order);
+      }
+    }
+    return grouped;
+  }, [orders]);
 
   // The card moves the moment it is dropped and snaps back if the server
   // refuses, so a drag on shop wifi feels immediate. React Query holds the
@@ -79,8 +98,6 @@ export default function KanbanBoard() {
     finalizado: t('workOrders.completed'),
     entregado: t('workOrders.delivered'),
   };
-
-  const getOrdersByStatus = (status: OrderStatus) => orders.filter((o) => o.estatus === status);
 
   const isAdmin = user?.rol === 'admin';
 
@@ -139,7 +156,10 @@ export default function KanbanBoard() {
   };
 
   const capacity = currentSede?.capacidad ?? 10;
-  const totalActive = orders.filter((o) => !['finalizado', 'entregado'].includes(o.estatus)).length;
+  const totalActive =
+    ordersByStatus.recepcion.length +
+    ordersByStatus.en_proceso.length +
+    ordersByStatus.espera_repuestos.length;
   const occupancy = Math.min(100, Math.round((totalActive / capacity) * 100));
 
   if (loading) {
@@ -178,7 +198,7 @@ export default function KanbanBoard() {
 
       <div className="kanban-board">
         {COLUMNS.map(({ status, emoji }) => {
-          const columnOrders = getOrdersByStatus(status);
+          const columnOrders = ordersByStatus[status];
           return (
             <div key={status} className="kanban-column">
               <div className={`kanban-column-header ${status}`}>
