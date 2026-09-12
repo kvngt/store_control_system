@@ -14,7 +14,7 @@ export interface Commission {
   orden_id: string;
   usuario_id: string;
   sede_id: string;
-  /** total_general − total_repuestos: the shop's own margin on the job. */
+  /** total_general − total_repuestos (de `orden_montos`): el margen propio del taller, es decir, la mano de obra. */
   base_ganancia: number;
   /** The sede's commission rate at the time this was computed. */
   porcentaje: number;
@@ -30,8 +30,7 @@ export interface Commission {
     id: string;
     numero_orden: string;
     fecha_finalizacion?: string | null;
-    total_general: number;
-    total_repuestos: number;
+    total_labor: number;
   };
 }
 

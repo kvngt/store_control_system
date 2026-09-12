@@ -298,7 +298,7 @@ export default function Customers() {
                       <th>{t('workOrders.orderNumber')}</th>
                       <th>{t('common.type')}</th>
                       <th>{t('common.status')}</th>
-                      <th>{t('common.total')}</th>
+                      {isAdmin && <th>{t('common.total')}</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -307,7 +307,11 @@ export default function Customers() {
                         <td data-label={t('workOrders.orderNumber')} style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>{o.numero_orden}</td>
                         <td data-label={t('common.type')}><span className={`badge badge-${o.tipo_trabajo}`}>{o.tipo_trabajo}</span></td>
                         <td data-label={t('common.status')}><span className={`badge badge-${o.estatus}`}>{statusLabels[o.estatus]}</span></td>
-                        <td data-label={t('common.total')} style={{ fontWeight: 600 }}>${o.total_general.toLocaleString()}</td>
+                        {isAdmin && (
+                          <td data-label={t('common.total')} style={{ fontWeight: 600 }}>
+                            ${Number(o.montos?.total_general ?? 0).toLocaleString()}
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>

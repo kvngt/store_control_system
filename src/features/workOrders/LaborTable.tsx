@@ -67,7 +67,7 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
             <tr>
               <th>{t('common.description')}</th>
               <th style={{ textAlign: 'right' }}>{t('common.total')}</th>
-              <th style={{ width: 64 }}></th>
+              {canEdit && <th style={{ width: 64 }}></th>}
             </tr>
           </thead>
           <tbody>
@@ -108,16 +108,18 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                 <tr key={item.id}>
                   <td data-label={t('common.description')}>{item.descripcion}</td>
                   <td data-label={t('common.total')} style={{ textAlign: 'right', fontWeight: 600 }}>${item.costo.toFixed(2)}</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: 2 }}>
-                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => startEdit(item)} disabled={!canEdit}>
-                        <Pencil size={14} />
-                      </button>
-                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => onRemove(item.id, item.descripcion)} disabled={!canEdit}>
-                        <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
-                      </button>
-                    </div>
-                  </td>
+                  {canEdit && (
+                    <td>
+                      <div style={{ display: 'flex', gap: 2 }}>
+                        <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => startEdit(item)}>
+                          <Pencil size={14} />
+                        </button>
+                        <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => onRemove(item.id, item.descripcion)}>
+                          <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               )
             )}
@@ -132,11 +134,15 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
               >
                 ${total.toFixed(2)}
               </td>
-              <td className="desktop-only"></td>
+              {canEdit && <td className="desktop-only"></td>}
             </tr>
           </tbody>
         </table>
       </div>
+      {/* Cotizar es de administración. Para un técnico la fila de alta no
+          existe, en vez de estar ahí deshabilitada sin explicar por qué. */}
+      {!canEdit && <p className="field-hint" style={{ marginTop: 'var(--space-2)' }}>{t('workOrders.laborReadOnlyHint')}</p>}
+      {canEdit && (
       <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-3)', flexWrap: 'wrap' }}>
         <input
           className="form-input"
@@ -160,11 +166,12 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
           type="button"
           className="btn btn-secondary"
           onClick={add}
-          disabled={!canEdit || busy || !newDraft.descripcion.trim()}
+          disabled={busy || !newDraft.descripcion.trim()}
         >
           <Plus size={16} />
         </button>
       </div>
+      )}
     </div>
   );
 }

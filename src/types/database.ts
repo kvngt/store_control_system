@@ -24,6 +24,8 @@ export type { Customer, CustomerInput } from './domain/customer.types';
 export type { Vehicle, VehicleInput } from './domain/vehicle.types';
 export type {
   WorkOrder,
+  OrderAmounts,
+  PartSummary,
   OrderProgressUpdate,
   LaborItem,
   OrderAssignment,

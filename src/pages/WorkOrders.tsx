@@ -237,20 +237,23 @@ export default function WorkOrders() {
         tipo_trabajo: values.workType,
         millas_ingreso: Math.max(0, parseInt(values.milesIn, 10) || 0),
         nivel_gasolina: values.fuelLevel,
-        deposito_inicial: parseFloat(values.deposit) || 0,
+        // Depósito, labor y repuestos solo los registra un admin. El formulario
+        // ya no se los muestra a un técnico y `create_work_order` los ignora si
+        // llegan de uno; mandarlos vacíos deja las dos capas diciendo lo mismo.
+        deposito_inicial: isAdmin ? parseFloat(values.deposit) || 0 : 0,
         inspeccion_360_notas: values.inspectionNotes,
         fecha_estimada_entrega: values.estimatedDate || new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
         // `Math.max(0, ...)` igual que en los repuestos. La labor era la única
         // cifra de dinero que aceptaba un negativo, y sobre una orden entregada
         // un total que baja lo asienta Finanzas como reembolso al cliente.
-        labor_items: values.laborItems.map((l) => ({
+        labor_items: (isAdmin ? values.laborItems : []).map((l) => ({
           descripcion: l.descripcion,
           costo: Math.max(0, parseFloat(l.costo) || 0),
         })),
         // No separate cost: a part is billed on at what it cost the shop, and
         // the database mirrors the price into `costo_unitario` so Finanzas
         // books the expense and the commission base subtracts it.
-        repuestos: values.parts.map((p) => ({
+        repuestos: (isAdmin ? values.parts : []).map((p) => ({
           descripcion: p.descripcion,
           cantidad: Math.max(1, parseInt(p.cantidad, 10) || 1),
           precio_venta_unitario: Math.max(0, parseFloat(p.precio_venta_unitario) || 0),
@@ -365,7 +368,12 @@ export default function WorkOrders() {
                   <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
                   {order.fecha_estimada_entrega}
                 </span>
-                <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>${order.total_general.toLocaleString()}</span>
+                {/* `montos` es null para un técnico: la base no se lo devuelve. */}
+                {order.montos && (
+                  <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                    ${Number(order.montos.total_general).toLocaleString()}
+                  </span>
+                )}
               </div>
             </div>
           ))}
@@ -387,7 +395,7 @@ export default function WorkOrders() {
                 <th>{t('common.status')}</th>
                 <th>{t('workOrders.progress')}</th>
                 <th>{t('workOrders.estimatedDelivery')}</th>
-                <th>{t('common.total')}</th>
+                {isAdmin && <th>{t('common.total')}</th>}
                 <th>{t('common.actions')}</th>
               </tr>
             </thead>
@@ -428,7 +436,9 @@ export default function WorkOrders() {
                     <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle', color: 'var(--color-text-tertiary)' }} />
                     {order.fecha_estimada_entrega}
                   </td>
-                  <td style={{ fontWeight: 600 }}>${order.total_general.toLocaleString()}</td>
+                  {isAdmin && (
+                    <td style={{ fontWeight: 600 }}>${Number(order.montos?.total_general ?? 0).toLocaleString()}</td>
+                  )}
                   <td>
                     <div className="table-actions">
                       <button
@@ -449,7 +459,7 @@ export default function WorkOrders() {
               ))}
                 {list.length === 0 && (
                   <tr>
-                    <td colSpan={9} style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
+                    <td colSpan={isAdmin ? 9 : 8} style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
                       {t('common.noResults')}
                     </td>
                   </tr>

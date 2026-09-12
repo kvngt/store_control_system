@@ -18,6 +18,8 @@ import { useLanguage } from '../../context/language.context';
 import type { OrderStatus, UserProfile } from '../../types/database';
 import LaborTable from './LaborTable';
 import PartsTable from './PartsTable';
+import PartsSummaryCard from './PartsSummaryCard';
+import CommissionEstimateCard from './CommissionEstimateCard';
 import ProgressLog from './ProgressLog';
 import ShareReportModal from './ShareReportModal';
 import SignatureCard from './SignatureCard';
@@ -58,6 +60,8 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
   const totalLabor = laborList.reduce((sum, l) => sum + l.costo, 0);
   const totalParts = partsList.reduce((sum, p) => sum + p.subtotal, 0);
   const photoUrls = (order.inspeccion_360_fotos || []).filter(Boolean) as string[];
+  // Null para mecánicos y pintores: `orden_montos` es solo admin.
+  const amounts = order.montos ?? null;
 
   const addOperator = async () => {
     const op = operators.find((o) => o.id === addingOperatorId);
@@ -87,7 +91,9 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
             {order.numero_orden}
             <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
             <span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span>
-            {detail.canEdit && (
+            {/* Solo administración: el reporte lleva precios y totales, y el
+                cliente pidió que los técnicos no lo manden desde su perfil. */}
+            {detail.canSendReport && (
               <>
                 <button
                   type="button"
@@ -203,13 +209,15 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
                 <div style={{ fontWeight: 600 }}>{order.nivel_gasolina}</div>
               </div>
             </div>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-              <DollarSign size={16} style={{ color: 'var(--color-success)' }} />
-              <div>
-                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>{t('workOrders.deposit')}</div>
-                <div style={{ fontWeight: 600 }}>${order.deposito_inicial.toLocaleString()}</div>
+            {amounts && (
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                <DollarSign size={16} style={{ color: 'var(--color-success)' }} />
+                <div>
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>{t('workOrders.deposit')}</div>
+                  <div style={{ fontWeight: 600 }}>${Number(amounts.deposito_inicial).toLocaleString()}</div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -250,31 +258,48 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
 
         <LaborTable
           items={laborList}
-          canEdit={detail.canEdit}
+          canEdit={detail.canEditLines}
           busy={detail.busy}
           onAdd={detail.addLabor}
           onUpdate={detail.updateLabor}
           onRemove={detail.removeLabor}
         />
 
-        <PartsTable
-          items={partsList}
-          canEdit={detail.canEdit}
-          busy={detail.busy}
-          onAdd={detail.addPart}
-          onUpdate={detail.updatePart}
-          onRemove={detail.removePart}
-        />
+        {/* Un técnico no ve precios de repuestos: la tabla con montos es solo
+            admin (y la base no se la devuelve). Ve qué piezas lleva la orden,
+            que es lo que necesita para hacer el trabajo. */}
+        {isAdmin ? (
+          <PartsTable
+            items={partsList}
+            canEdit={detail.canEditLines}
+            busy={detail.busy}
+            onAdd={detail.addPart}
+            onUpdate={detail.updatePart}
+            onRemove={detail.removePart}
+          />
+        ) : (
+          <PartsSummaryCard items={order.repuestos_resumen || []} />
+        )}
       </div>
 
-      {/* Totals Summary */}
+      {detail.estimatedCommission !== null && (
+        <CommissionEstimateCard
+          laborTotal={order.total_labor}
+          rate={detail.commissionRate}
+          crew={detail.crew}
+          amount={detail.estimatedCommission}
+        />
+      )}
+
+      {/* Totals Summary — solo cuando la base devolvió los montos (admin). */}
+      {amounts && (
       <div className="card" style={{ marginTop: 'var(--space-4)' }}>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-8)', flexWrap: 'wrap' }}>
           {[
             [t('workOrders.parts'), totalParts],
             [t('workOrders.labor'), totalLabor],
             [t('common.subtotal'), totalParts + totalLabor],
-            [t('workOrders.deposit'), -order.deposito_inicial],
+            [t('workOrders.deposit'), -Number(amounts.deposito_inicial)],
           ].map(([label, value], i) => (
             <div key={i} style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>{label as string}</div>
@@ -286,11 +311,12 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
           <div style={{ textAlign: 'right', borderLeft: '2px solid var(--color-primary)', paddingLeft: 'var(--space-4)' }}>
             <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>{t('common.total')}</div>
             <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-primary-light)' }}>
-              ${(totalParts + totalLabor - order.deposito_inicial).toFixed(2)}
+              ${(totalParts + totalLabor - Number(amounts.deposito_inicial)).toFixed(2)}
             </div>
           </div>
         </div>
       </div>
+      )}
 
       {/* Assigned Technicians */}
       <div className="card" style={{ marginTop: 'var(--space-4)' }}>

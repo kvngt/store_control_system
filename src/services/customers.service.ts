@@ -29,7 +29,12 @@ export const customersService = {
     const [{ data: customer, error }, { data: vehicles }, { data: orders }] = await Promise.all([
       supabase.from('clientes').select('*').eq('id', customerId).single(),
       supabase.from('vehiculos').select('*').eq('cliente_id', customerId),
-      supabase.from('ordenes_trabajo').select('*').eq('cliente_id', customerId).order('creado_en', { ascending: false }),
+      // `montos` es solo admin (RLS): para un técnico llega en null.
+      supabase
+        .from('ordenes_trabajo')
+        .select('*, montos:orden_montos(total_general)')
+        .eq('cliente_id', customerId)
+        .order('creado_en', { ascending: false }),
     ]);
     if (error) throw error;
     return {

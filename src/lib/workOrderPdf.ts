@@ -235,7 +235,15 @@ async function buildWorkOrderPdf(order: WorkOrder, sede?: Sede | null) {
   }
 
   // ===== Parts =====
+  // Los montos viven en `orden_montos`, que solo lee un admin — y solo un admin
+  // genera reportes. Si faltaran (una orden cargada sin el embed), se derivan de
+  // las líneas en vez de imprimir "$NaN" en un documento para el cliente.
   const parts = order.repuestos || [];
+  const totalRepuestos = Number(
+    order.montos?.total_repuestos ?? parts.reduce((sum, p) => sum + Number(p.subtotal), 0)
+  );
+  const totalGeneral = Number(order.montos?.total_general ?? Number(order.total_labor) + totalRepuestos);
+  const deposito = Number(order.montos?.deposito_inicial ?? 0);
   if (parts.length) {
     sectionTitle('Repuestos');
     doc.setFontSize(9);
@@ -251,7 +259,7 @@ async function buildWorkOrderPdf(order: WorkOrder, sede?: Sede | null) {
     ensureSpace(LINE);
     doc.setFont('helvetica', 'bold');
     doc.text('Total repuestos', MARGIN, y);
-    doc.text(money(Number(order.total_repuestos)), pageWidth - MARGIN, y, { align: 'right' });
+    doc.text(money(totalRepuestos), pageWidth - MARGIN, y, { align: 'right' });
     y += LINE;
   }
 
@@ -260,10 +268,10 @@ async function buildWorkOrderPdf(order: WorkOrder, sede?: Sede | null) {
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(20, 20, 30);
-  const balance = Number(order.total_general) - Number(order.deposito_inicial);
+  const balance = totalGeneral - deposito;
   const rows: [string, string][] = [
-    ['Subtotal', money(Number(order.total_labor) + Number(order.total_repuestos))],
-    ['Depósito recibido', `-${money(Number(order.deposito_inicial))}`],
+    ['Subtotal', money(Number(order.total_labor) + totalRepuestos)],
+    ['Depósito recibido', `-${money(deposito)}`],
   ];
   rows.forEach(([k, v]) => {
     ensureSpace(LINE);

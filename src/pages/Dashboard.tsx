@@ -305,7 +305,7 @@ export default function Dashboard() {
                 <th>{t('common.type')}</th>
                 <th>{t('common.status')}</th>
                 <th>{t('workOrders.progress')}</th>
-                <th>{t('common.total')}</th>
+                {isAdmin && <th>{t('common.total')}</th>}
                 <th>{t('common.actions')}</th>
               </tr>
             </thead>
@@ -351,9 +351,11 @@ export default function Dashboard() {
                       </span>
                     </div>
                   </td>
-                  <td data-label={t('common.total')} style={{ fontWeight: 600 }}>
-                    ${order.total_general.toLocaleString()}
-                  </td>
+                  {isAdmin && (
+                    <td data-label={t('common.total')} style={{ fontWeight: 600 }}>
+                      ${Number(order.montos?.total_general ?? 0).toLocaleString()}
+                    </td>
+                  )}
                   <td data-label={t('common.actions')}>
                     <button
                       type="button"
@@ -370,7 +372,7 @@ export default function Dashboard() {
                   failed to load. Say that there is nothing yet instead. */}
               {recentOrders.length === 0 && (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
+                  <td colSpan={isAdmin ? 8 : 7} style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
                     {t('dashboard.noRecentOrders')}
                   </td>
                 </tr>

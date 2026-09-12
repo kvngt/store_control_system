@@ -97,14 +97,13 @@ const ORDER: WorkOrder = {
   estatus: 'en_proceso',
   millas_ingreso: 45000,
   nivel_gasolina: '1/2',
-  deposito_inicial: 0,
   inspeccion_360_notas: '',
   fecha_ingreso: '2026-09-01T00:00:00Z',
   fecha_estimada_entrega: '2026-09-10',
   porcentaje_avance: 40,
   total_labor: 0,
-  total_repuestos: 0,
-  total_general: 0,
+  // El dinero viene del embed de `orden_montos`, que solo recibe un admin.
+  montos: { total_repuestos: 0, total_general: 0, deposito_inicial: 0 },
   creado_por: ADMIN_USER.id,
   creado_en: '2026-09-01T00:00:00Z',
   cliente: CUSTOMER,
@@ -130,6 +129,20 @@ const DETAIL: WorkOrder = {
       subtotal: 30,
     },
   ],
+  avances: [],
+};
+
+// Lo que la base le devuelve a un técnico por la misma consulta: `montos` y
+// `repuestos` vienen vacíos por RLS, y las piezas llegan sin precio por
+// `repuestos_de_orden`. El fixture refleja eso y no la vista de admin con
+// columnas escondidas, que es justo lo que la migración evita.
+const TECH_DETAIL: WorkOrder = {
+  ...ORDER,
+  total_labor: 120,
+  montos: null,
+  labor_items: [{ id: 'lab-1', orden_id: ORDER.id, descripcion: 'Cambio de aceite', costo: 120 }],
+  repuestos: [],
+  repuestos_resumen: [{ id: 'par-1', descripcion: 'Filtro de aceite', cantidad: 2 }],
   avances: [],
 };
 
@@ -265,6 +278,24 @@ describe('WorkOrders', () => {
 // Submitting the intake dialog used to run a string of `if`s that built one
 // message out of field labels, so a form with several problems reported the
 // first one and never said which box it meant.
+describe('WorkOrders — intake by a technician', () => {
+  it('leaves deposit, labor and parts out of the form', async () => {
+    mocks.auth.current = authValue(MECHANIC_USER);
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    // Un técnico no asignado ve la orden en la sección colapsada "Otras", así
+    // que se espera al tablero y no a la orden.
+    await screen.findByRole('button', { name: /Otras/i });
+
+    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
+    const dialog = (await screen.findByText('Nueva Orden', { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+
+    expect(within(dialog).queryByText(/Depósito/)).not.toBeInTheDocument();
+    expect(within(dialog).queryByText('Descripción de Labor')).not.toBeInTheDocument();
+    expect(within(dialog).queryByText('Descripción de Repuestos')).not.toBeInTheDocument();
+  });
+});
+
 describe('WorkOrders — intake validation', () => {
   it('reports every missing field on the field itself, and sends nothing', async () => {
     const user = userEvent.setup();
@@ -373,14 +404,68 @@ describe('WorkOrders — order detail', () => {
 
   it('tells a technician who is not assigned that the order is read-only', async () => {
     mocks.auth.current = authValue(MECHANIC_USER);
+    mocks.getWorkOrderDetail.mockResolvedValue(TECH_DETAIL);
     const user = userEvent.setup();
     renderWithProviders(<WorkOrders />);
     await openDetail(user);
 
     expect(screen.getByText(/Solo puedes consultar esta orden/i)).toBeInTheDocument();
-    // Editing controls are present but disabled rather than hidden.
+    // Cotizar es de administración: la fila de alta de labor no existe para un
+    // técnico, y la tarjeta dice por qué en vez de mostrar un botón muerto.
     const laborCard = screen.getByText('Cambio de aceite').closest('.card') as HTMLElement;
-    expect(laborCard.querySelector('.btn-secondary')).toBeDisabled();
+    expect(laborCard.querySelector('.btn-secondary')).toBeNull();
+    expect(within(laborCard).getByText(/la cotiza administración/i)).toBeInTheDocument();
+  });
+
+  it('shows an admin the totals and the report buttons', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+
+    // $120 de labor + $30 de repuestos, sin depósito.
+    expect(screen.getAllByText('$150.00').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /Reporte PDF/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Generar y enviar/i })).toBeInTheDocument();
+  });
+
+  it('shows a technician which parts the order needs, without a single price', async () => {
+    mocks.auth.current = authValue(MECHANIC_USER);
+    mocks.getWorkOrderDetail.mockResolvedValue({
+      ...TECH_DETAIL,
+      asignaciones: [{ id: 'asg-1', orden_id: ORDER.id, usuario_id: MECHANIC_USER.id, tipo_tarea: 'mecanica', estatus_tarea: 'pendiente' }],
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+
+    const partsCard = screen.getByText('Filtro de aceite').closest('.card') as HTMLElement;
+    expect(within(partsCard).getByText('× 2')).toBeInTheDocument();
+    expect(within(partsCard).queryByText(/\$/)).toBeNull();
+    // Ni totales, ni depósito, ni forma de mandar el reporte.
+    expect(screen.queryByText('$150.00')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Depósito$/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Reporte PDF/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Generar y enviar/i })).not.toBeInTheDocument();
+  });
+
+  it('shows an assigned technician the commission the labor would pay them, and how', async () => {
+    mocks.auth.current = authValue(MECHANIC_USER, { ...SEDE_CENTRO, comision_porcentaje: 35 });
+    mocks.getWorkOrderDetail.mockResolvedValue({
+      ...TECH_DETAIL,
+      total_labor: 1000,
+      asignaciones: [
+        { id: 'asg-1', orden_id: ORDER.id, usuario_id: MECHANIC_USER.id, tipo_tarea: 'mecanica', estatus_tarea: 'pendiente' },
+        { id: 'asg-2', orden_id: ORDER.id, usuario_id: PAINTER.id, tipo_tarea: 'pintura', estatus_tarea: 'pendiente' },
+      ],
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+
+    // El ejemplo de docs/comisiones.md: $1,000 de labor al 35 % entre 2.
+    const card = (await screen.findByText(/Tu comisión estimada/i)).closest('.card') as HTMLElement;
+    expect(within(card).getByText('$175.00')).toBeInTheDocument();
+    expect(within(card).getByText(/\$1,000\.00 × 35% ÷ 2/)).toBeInTheDocument();
   });
 
   it('confirms before marking an order delivered', async () => {

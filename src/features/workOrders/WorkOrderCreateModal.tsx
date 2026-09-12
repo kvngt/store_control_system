@@ -274,19 +274,25 @@ export default function WorkOrderCreateModal({
                 />
                 <FieldError messageKey={errors.milesIn?.message} />
               </div>
-              <div className="form-group">
-                <label className="form-label">{t('workOrders.deposit')} ($)</label>
-                <input
-                  className="form-input"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  aria-invalid={!!errors.deposit}
-                  onKeyDown={blockNegativeKeys}
-                  {...register('deposit')}
-                />
-                <FieldError messageKey={errors.deposit?.message} />
-              </div>
+              {/* Cobrar es de administración: un técnico registra la recepción
+                  y el depósito lo anota un admin. `create_work_order` ignora
+                  este campo si no lo manda un admin. */}
+              {isAdmin && (
+                <div className="form-group">
+                  <label className="form-label">{t('workOrders.deposit')} ($)</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="0.01"
+                    aria-invalid={!!errors.deposit}
+                    onKeyDown={blockNegativeKeys}
+                    {...register('deposit')}
+                  />
+                  <FieldError messageKey={errors.deposit?.message} />
+                </div>
+              )}
             </div>
 
             <div className="form-group">
@@ -423,6 +429,9 @@ export default function WorkOrderCreateModal({
               />
             </div>
 
+            {/* Mano de obra y repuestos: solo administración cotiza. */}
+            {isAdmin && (
+            <>
             {/* Labor Items */}
             <div className="form-group" style={{ marginTop: 'var(--space-3)' }}>
               <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -507,6 +516,8 @@ export default function WorkOrderCreateModal({
                 </div>
               ))}
             </div>
+            </>
+            )}
           </div>
           <div className="modal-footer">
             <button type="button" className="btn btn-secondary" onClick={onClose}>

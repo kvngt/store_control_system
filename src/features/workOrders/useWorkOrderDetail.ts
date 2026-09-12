@@ -139,6 +139,27 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // trabajo.
   const canJoin = !!order && !isDelivered && !isAssignedToMe;
 
+  // Cotizar es de administración: mano de obra y repuestos solo los agrega o
+  // cambia un admin. La base lo impone (RLS de `orden_labor` / `orden_repuestos`);
+  // esto solo decide qué controles se dibujan.
+  const canEditLines = isAdmin;
+
+  // El reporte lleva precios, totales y depósito, y el cliente pidió que solo
+  // administración lo mande. El bucket `reportes` también es solo admin.
+  const canSendReport = isAdmin;
+
+  // Lo que el técnico ve de dinero, y la razón por la que lo ve: su parte de la
+  // mano de obra. Es la misma cuenta que `sync_order_commissions` hace al
+  // entregar (base × porcentaje de la sede ÷ técnicos asignados), así que es una
+  // estimación que cambia si cambia la labor o el equipo, no una promesa.
+  // Un admin no la necesita — ve la bolsa entera en Comisiones.
+  const crew = new Set((order?.asignaciones || []).map((a) => a.usuario_id)).size;
+  const commissionRate = currentSede?.comision_porcentaje ?? 0;
+  const estimatedCommission =
+    !isAdmin && isAssignedToMe && crew > 0
+      ? Math.round(((order?.total_labor || 0) * commissionRate) / crew) / 100
+      : null;
+
   // ----- status & progress ---------------------------------------------------
 
   const changeStatus = async (status: OrderStatus) => {
@@ -385,7 +406,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // ----- PDF -----------------------------------------------------------------
 
   const generatePdf = async () => {
-    if (!order) return;
+    if (!order || !canSendReport) return;
     setGeneratingPdf(true);
     try {
       // ~400 kB of jsPDF, fetched only when someone prints.
@@ -406,7 +427,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
    * re-encoding all of them again.
    */
   const shareReport = async () => {
-    if (!order) return;
+    if (!order || !canSendReport) return;
     setGeneratingPdf(true);
     try {
       const { renderWorkOrderPdfBlob } = await import('../../lib/workOrderPdf');
@@ -431,6 +452,11 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     canEditProgress,
     canDeliver,
     canJoin,
+    canEditLines,
+    canSendReport,
+    estimatedCommission,
+    commissionRate,
+    crew,
     isComplete,
     isDelivered,
     statusEpoch,

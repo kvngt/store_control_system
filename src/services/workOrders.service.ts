@@ -5,6 +5,7 @@ import type {
   LaborItem,
   OrderProgressUpdate,
   OrderStatus,
+  PartSummary,
   WorkOrder,
   WorkOrderInput,
   WorkOrderPart,
@@ -12,77 +13,14 @@ import type {
 import { assertDeleted } from './support';
 import { storageService } from './storage.service';
 
-// Fallback for environments where the `create_work_order` function has not
-// been applied yet. PostgREST gives no transaction across these four inserts,
-// so a failure on any child row is compensated by deleting the order it
-// belongs to before the error is re-thrown — otherwise a failed create leaves
-// a half-built order on the board that nobody knows about. The row's own
-// children cascade with it.
-async function createWorkOrderWithoutRpc(
-  input: WorkOrderInput & { creado_por: string },
-  orderPayload: Record<string, unknown>
-): Promise<WorkOrder> {
-  const totalLabor = input.labor_items.reduce((sum, l) => sum + l.costo, 0);
-  const totalParts = input.repuestos.reduce((sum, p) => sum + p.cantidad * p.precio_venta_unitario, 0);
-
-  const { data: order, error } = await supabase
-    .from('ordenes_trabajo')
-    .insert({
-      ...orderPayload,
-      estatus: 'recepcion',
-      porcentaje_avance: 0,
-      total_labor: totalLabor,
-      total_repuestos: totalParts,
-      total_general: totalLabor + totalParts,
-    })
-    .select()
-    .single();
-  if (error) throw error;
-
-  try {
-    if (input.labor_items.length) {
-      const { error: laborError } = await supabase
-        .from('orden_labor')
-        .insert(input.labor_items.map((l) => ({ ...l, orden_id: order.id })));
-      if (laborError) throw laborError;
-    }
-
-    if (input.repuestos.length) {
-      const { error: partsError } = await supabase
-        .from('orden_repuestos')
-        .insert(input.repuestos.map((p) => ({
-          ...p,
-          orden_id: order.id,
-          costo_unitario: p.precio_venta_unitario,
-          subtotal: p.cantidad * p.precio_venta_unitario,
-        })));
-      if (partsError) throw partsError;
-    }
-
-    if (input.asignaciones.length) {
-      const { error: assignError } = await supabase
-        .from('orden_asignaciones')
-        .insert(input.asignaciones.map((a) => ({
-          ...a,
-          orden_id: order.id,
-          estatus_tarea: 'pendiente',
-        })));
-      if (assignError) throw assignError;
-    }
-  } catch (childError) {
-    // Best-effort: if the rollback itself fails (offline, RLS) the original
-    // error is still what the user needs to see, so it's the one re-thrown.
-    await supabase.from('ordenes_trabajo').delete().eq('id', order.id);
-    throw childError;
-  }
-
-  return order as WorkOrder;
-}
-
 export const workOrdersService = {
   getWorkOrders: async (sedeId?: string) => {
+    // `montos` llega en null para mecánicos y pintores: `orden_montos` es solo
+    // admin por RLS, y PostgREST resuelve un embed bloqueado como vacío en vez de
+    // fallar. Una sola consulta sirve a los dos roles.
     let query = supabase.from('ordenes_trabajo').select(`
       *,
+      montos:orden_montos(total_repuestos, total_general, deposito_inicial),
       cliente:clientes(*),
       vehiculo:vehiculos(*),
       asignaciones:orden_asignaciones(*, usuario:perfiles(*))
@@ -95,14 +33,20 @@ export const workOrdersService = {
   },
 
   getWorkOrderDetail: async (orderId: string) => {
-    const { data, error } = await supabase.from('ordenes_trabajo').select(`
-      *,
-      cliente:clientes(*),
-      vehiculo:vehiculos(*),
-      labor_items:orden_labor(*),
-      repuestos:orden_repuestos(*),
-      asignaciones:orden_asignaciones(*, usuario:perfiles(*))
-    `).eq('id', orderId).single();
+    // `montos` y `repuestos` vienen vacíos para un técnico (RLS solo admin);
+    // `repuestos_resumen` es lo que él sí puede ver: qué piezas, sin precio.
+    const [{ data, error }, { data: resumen }] = await Promise.all([
+      supabase.from('ordenes_trabajo').select(`
+        *,
+        montos:orden_montos(total_repuestos, total_general, deposito_inicial),
+        cliente:clientes(*),
+        vehiculo:vehiculos(*),
+        labor_items:orden_labor(*),
+        repuestos:orden_repuestos(*),
+        asignaciones:orden_asignaciones(*, usuario:perfiles(*))
+      `).eq('id', orderId).single(),
+      supabase.rpc('repuestos_de_orden', { p_orden_id: orderId }),
+    ]);
     if (error) throw error;
 
     // Progress updates are fetched separately and tolerantly: if the
@@ -114,7 +58,11 @@ export const workOrdersService = {
       .eq('orden_id', orderId)
       .order('creado_en', { ascending: false });
 
-    return { ...data, avances: (avances || []) as OrderProgressUpdate[] } as WorkOrder;
+    return {
+      ...data,
+      avances: (avances || []) as OrderProgressUpdate[],
+      repuestos_resumen: (resumen || []) as PartSummary[],
+    } as WorkOrder;
   },
 
   createWorkOrder: async (input: WorkOrderInput & { creado_por: string }) => {
@@ -133,36 +81,24 @@ export const workOrdersService = {
       creado_por: input.creado_por,
     };
 
-    // One transaction on the database side: the order and its labor, parts and
-    // assignments either all land or none do. See the
-    // 20260911000000_create_work_order_rpc migration for why.
+    // Una transacción del lado de la base: la orden y su labor, repuestos y
+    // asignaciones entran juntas o no entra nada (ver 20260911000000).
+    //
+    // Ya no hay camino alternativo sin RPC. Aquel fallback insertaba los montos
+    // directamente en `ordenes_trabajo`, que desde 20260918000000 no los tiene,
+    // y la función también decide qué puede registrar quien llama: un técnico
+    // crea la recepción y queda asignado, pero depósito, labor y repuestos solo
+    // los toma de un administrador.
     const { data, error } = await supabase.rpc('create_work_order', {
       p_order: orderPayload,
       p_labor: input.labor_items,
       p_parts: input.repuestos.map((p) => ({ ...p, costo_unitario: p.precio_venta_unitario })),
       p_assignments: input.asignaciones,
     });
-
-    if (!error) return data as WorkOrder;
-
-    // An environment that hasn't had the migration applied yet reports the
-    // function as missing (PGRST202 from PostgREST's schema cache, 42883 from
-    // Postgres). Anything else is a real failure — a violated constraint, an
-    // RLS refusal — and has to reach the user unchanged.
-    const code = (error as { code?: string }).code;
-    if (code !== 'PGRST202' && code !== '42883') throw error;
-
-    return createWorkOrderWithoutRpc(input, orderPayload);
+    if (error) throw error;
+    return data as WorkOrder;
   },
 
-  // Cerrar una orden la marca al 100% y le estampa la fecha de finalización.
-  // Reabrirla no deshacía ninguna de las dos: una orden devuelta a `en_proceso`
-  // seguía cargando una fecha de cierre que ya no era cierta, y la fecha es lo
-  // que el panel usa para contar los trabajos cerrados del mes.
-  //
-  // El porcentaje no se reescribe: elegir un número por el técnico sería
-  // inventarlo. Se deja como está y `canEditProgress` (ver useWorkOrderDetail)
-  // se abrió a cualquier estatus no cerrado para que pueda corregirlo él.
   updateWorkOrderStatus: async (orderId: string, estatus: OrderStatus) => {
     const isClosed = estatus === 'finalizado' || estatus === 'entregado';
     const updates: Record<string, unknown> = isClosed
@@ -209,8 +145,9 @@ export const workOrdersService = {
   },
 
   // ===== Labor / Parts / Assignments on an existing order =====
-  // Totals (total_labor / total_repuestos / total_general) are recomputed
-  // automatically by database triggers whenever these rows change.
+  // Totals are recomputed by database triggers whenever these rows change:
+  // `total_labor` on the order, `total_repuestos` / `total_general` on
+  // `orden_montos`. All four writers below are admin-only by RLS.
   addLaborItem: async (orderId: string, item: { descripcion: string; costo: number }) => {
     const { data, error } = await supabase
       .from('orden_labor')

@@ -10,7 +10,7 @@ import type { Commission, CommissionBalance, CommissionPayment } from '../types/
 const COMMISSION_SELECT = `
   *,
   usuario:perfiles!usuario_id(*),
-  orden:ordenes_trabajo!orden_id(id, numero_orden, fecha_finalizacion, total_general, total_repuestos)
+  orden:ordenes_trabajo!orden_id(id, numero_orden, fecha_finalizacion, total_labor)
 `;
 
 export const commissionsService = {
