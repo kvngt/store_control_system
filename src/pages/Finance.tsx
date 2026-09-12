@@ -69,6 +69,13 @@ export default function Finance() {
   const stats: DashboardStats | null = statsQuery.data ?? null;
   const orders = ordersQuery.data ?? emptyList<WorkOrder>();
   const imports = importsQuery.data ?? emptyList<BankStatementImport>();
+
+  // Optimization: Calculate maxVal once outside the loop instead of O(N²) on every iteration.
+  // This prevents redundant computation of max values across all months for every rendered bar.
+  const maxRevenue = useMemo(() => {
+    if (!stats || !stats.ingresos_por_mes || stats.ingresos_por_mes.length === 0) return 1;
+    return Math.max(1, ...stats.ingresos_por_mes.map((m) => Math.max(m.ingresos, m.egresos)));
+  }, [stats]);
   const loading =
     transactionsQuery.isPending ||
     statsQuery.isPending ||
@@ -297,18 +304,15 @@ export default function Finance() {
             <h3 className="card-title">{t('finance.monthlySummary')}</h3>
           </div>
           <div className="chart-bars" style={{ height: 180 }}>
-            {stats.ingresos_por_mes.map((month, i) => {
-              const maxVal = Math.max(1, ...stats.ingresos_por_mes.map((m) => Math.max(m.ingresos, m.egresos)));
-              return (
-                <div key={i} className="chart-bar-group">
-                  <div className="chart-bar-pair">
-                    <div className="chart-bar income" style={{ height: `${(month.ingresos / maxVal) * 140}px` }} title={`${t('finance.income')}: $${month.ingresos.toLocaleString()}`}></div>
-                    <div className="chart-bar expense" style={{ height: `${(month.egresos / maxVal) * 140}px` }} title={`${t('finance.expense')}: $${month.egresos.toLocaleString()}`}></div>
-                  </div>
-                  <span className="chart-bar-label">{month.mes}</span>
+            {stats.ingresos_por_mes.map((month, i) => (
+              <div key={i} className="chart-bar-group">
+                <div className="chart-bar-pair">
+                  <div className="chart-bar income" style={{ height: `${(month.ingresos / maxRevenue) * 140}px` }} title={`${t('finance.income')}: $${month.ingresos.toLocaleString()}`}></div>
+                  <div className="chart-bar expense" style={{ height: `${(month.egresos / maxRevenue) * 140}px` }} title={`${t('finance.expense')}: $${month.egresos.toLocaleString()}`}></div>
                 </div>
-              );
-            })}
+                <span className="chart-bar-label">{month.mes}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
