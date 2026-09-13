@@ -6,13 +6,17 @@
  * - Formulario de nueva transacción: validación de campos
  * - Los filtros ingreso/egreso funcionan
  * - Lista de importaciones presente
- * - Nómina carga y muestra lista de pagos
- * - Formulario de nuevo pago: validación
+ * - Comisiones (antes "Nómina"): pestañas, porcentaje de la sede, vista del técnico
+ *
+ * PAY-01/PAY-02 probaban la nómina por salario (salario base, período, "Nuevo
+ * Pago"), que se eliminó en la migración 20260912000000. Se reemplazaron por
+ * pruebas de la pantalla de comisiones que la sustituyó.
  */
 import { test, expect } from '@playwright/test';
 import {
   login,
   ADMIN_EMAIL, ADMIN_PASSWORD, hasAdminCredentials,
+  MECHANIC_EMAIL, MECHANIC_PASSWORD, hasMechanicCredentials,
 } from './fixtures.js';
 
 // ---------------------------------------------------------------------------
@@ -143,112 +147,68 @@ test.describe('FIN-04 | Lista de importaciones bancarias (si existen)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// PAY-01: Nómina carga y muestra la lista
+// PAY-01: Comisiones carga con sus tres vistas
 // ---------------------------------------------------------------------------
-test.describe('PAY-01 | Carga de Nómina', () => {
+test.describe('PAY-01 | Pantalla de comisiones', () => {
   test.skip(!hasAdminCredentials, 'Requiere credenciales de admin');
 
-  test('la pantalla de nómina carga sin error', async ({ page }) => {
+  test('carga sin error y muestra saldos pendientes, historial y pagos', async ({ page }) => {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
     await page.goto('/payroll');
     await expect(page).toHaveURL(/\/payroll/);
-    await page.waitForSelector('.page-title, h1, .spinner', { timeout: 12000 });
+    await page.waitForSelector('.page-title', { timeout: 12000 });
     await expect(page.locator('.spinner')).not.toBeVisible({ timeout: 15000 }).catch(() => {});
-    // No debe haber mensaje de error
-    await expect(page.locator('.error-message, .alert-error').first()).not.toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(page.locator('.alert-error').first()).not.toBeVisible({ timeout: 5000 }).catch(() => {});
+
+    await expect(page.getByRole('button', { name: /Saldos pendientes|Outstanding balances/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Historial de comisiones|Commission history/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Pagos realizados|Payments made/ })).toBeVisible();
   });
 
-  test('el botón de nuevo pago existe', async ({ page }) => {
+  test('cambiar de pestaña no rompe la pantalla', async ({ page }) => {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
     await page.goto('/payroll');
-    await page.waitForSelector('.page-title, h1', { timeout: 12000 });
-    await expect(
-      page.locator('#new-payroll-btn, button:has-text("Nuevo Pago"), button:has-text("New Payment")').first()
-    ).toBeVisible({ timeout: 8000 });
+    await page.waitForSelector('.page-title', { timeout: 12000 });
+
+    for (const name of [/Historial de comisiones|Commission history/, /Pagos realizados|Payments made/, /Saldos pendientes|Outstanding balances/]) {
+      await page.getByRole('button', { name }).click();
+      await expect(page.locator('.alert-error').first()).not.toBeVisible({ timeout: 3000 }).catch(() => {});
+    }
   });
 });
 
 // ---------------------------------------------------------------------------
-// PAY-02: Nuevo pago de nómina - validación
+// PAY-02: Porcentaje de comisión de la sede
 // ---------------------------------------------------------------------------
-test.describe('PAY-02 | Nuevo pago: validación de campos', () => {
+test.describe('PAY-02 | Porcentaje de comisión', () => {
   test.skip(!hasAdminCredentials, 'Requiere credenciales de admin');
 
-  test('no puede guardar sin empleado seleccionado', async ({ page }) => {
+  test('el admin ve el porcentaje editable y rechaza un valor fuera de 0-100', async ({ page }) => {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
     await page.goto('/payroll');
-    await page.waitForSelector('#new-payroll-btn, button:has-text("Nuevo Pago")', { timeout: 12000 });
-    await page.locator('#new-payroll-btn, button:has-text("Nuevo Pago"), button:has-text("New Payment")').first().click();
+    await page.waitForSelector('.page-title', { timeout: 12000 });
 
-    const modal = page.locator('.modal');
-    await expect(modal).toBeVisible({ timeout: 5000 });
+    const rateCard = page.locator('.card', { hasText: /Porcentaje de comisión|Commission rate/ }).first();
+    await expect(rateCard).toBeVisible({ timeout: 8000 });
+    const input = rateCard.locator('input[type="number"]');
+    await expect(input).toBeVisible();
 
-    // Sin llenar nada, intentar guardar
-    const saveBtn = modal.locator('button:has-text("Crear"), button:has-text("Create"), button:has-text("Guardar"), button:has-text("Save")').first();
-    await saveBtn.click();
-
-    // El modal debe seguir abierto con mensaje de error
-    await expect(modal).toBeVisible();
-    await expect(modal).toContainText(
-      /empleado|employee|campo|field|requerido|required|obligatorio/i,
-      { timeout: 5000 }
-    );
+    // No se guarda: el valor inválido se rechaza antes de llegar a la base.
+    await input.fill('150');
+    await rateCard.getByRole('button', { name: /Guardar|Save/ }).click();
+    await expect(page.locator('.toast-stack')).toContainText(/entre 0 y 100|between 0 and 100/i, { timeout: 5000 });
   });
+});
 
-  test('no puede guardar con salario base en cero', async ({ page }) => {
-    await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
+// ---------------------------------------------------------------------------
+// PAY-03: Un mecánico no entra a Comisiones
+// ---------------------------------------------------------------------------
+test.describe('PAY-03 | Comisiones es solo para administradores', () => {
+  test.skip(!hasMechanicCredentials, 'Requiere credenciales de mecánico');
+
+  test('un mecánico que va a /payroll vuelve al panel', async ({ page }) => {
+    await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
     await page.goto('/payroll');
-    await page.waitForSelector('#new-payroll-btn, button:has-text("Nuevo Pago")', { timeout: 12000 });
-    await page.locator('#new-payroll-btn, button:has-text("Nuevo Pago"), button:has-text("New Payment")').first().click();
-
-    const modal = page.locator('.modal');
-    await expect(modal).toBeVisible();
-
-    // Seleccionar primer empleado si existe
-    const employeeSelect = modal.locator('select[id*="usuario"], select[id*="employee"]').first();
-    if ((await employeeSelect.count()) > 0) {
-      const options = await employeeSelect.locator('option').count();
-      if (options > 1) {
-        await employeeSelect.selectOption({ index: 1 });
-      }
-    }
-
-    // Período
-    const startDate = modal.locator('input[type="date"]').first();
-    const endDate = modal.locator('input[type="date"]').nth(1);
-    if ((await startDate.count()) > 0) await startDate.fill('2026-09-01');
-    if ((await endDate.count()) > 0) await endDate.fill('2026-09-30');
-
-    // Salario en 0
-    const salaryField = modal.locator('input[id*="salario"], input[id*="salary"], input[type="number"]').first();
-    if ((await salaryField.count()) > 0) await salaryField.fill('0');
-
-    const saveBtn = modal.locator('button:has-text("Crear"), button:has-text("Create")').first();
-    await saveBtn.click();
-
-    // Debe mostrar error de salario inválido
-    await expect(modal).toBeVisible();
-    await expect(modal).toContainText(/salario|salary|inválido|invalid|mayor|greater|positivo|positive/i, { timeout: 5000 });
-  });
-
-  test('la fecha fin no puede ser anterior a la fecha inicio', async ({ page }) => {
-    await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
-    await page.goto('/payroll');
-    await page.waitForSelector('#new-payroll-btn, button:has-text("Nuevo Pago")', { timeout: 12000 });
-    await page.locator('#new-payroll-btn, button:has-text("Nuevo Pago"), button:has-text("New Payment")').first().click();
-
-    const modal = page.locator('.modal');
-    await expect(modal).toBeVisible();
-
-    const startDate = modal.locator('input[type="date"]').first();
-    const endDate = modal.locator('input[type="date"]').nth(1);
-    if ((await startDate.count()) > 0) await startDate.fill('2026-09-30');
-    if ((await endDate.count()) > 0) await endDate.fill('2026-09-01'); // antes del inicio
-
-    const saveBtn = modal.locator('button:has-text("Crear"), button:has-text("Create")').first();
-    await saveBtn.click();
-
-    await expect(modal).toBeVisible();
-    await expect(modal).toContainText(/período|period|fecha|date|incorrecto|incorrect|inválido|invalid/i, { timeout: 5000 });
+    await expect(page).toHaveURL(/\/$/, { timeout: 10000 });
   });
 });

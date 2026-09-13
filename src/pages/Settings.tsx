@@ -10,6 +10,7 @@ import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
 import type { SedeDeleteImpact } from '../services/sedes.service';
 import UsersCard from '../features/settings/UsersCard';
+import PushSettingsCard from '../features/notifications/PushSettingsCard';
 import type { Sede, UserProfile } from '../types/database';
 import {
   Building2,
@@ -438,6 +439,9 @@ export default function Settings() {
             </button>
           </div>
         </div>
+
+        {/* Push en este dispositivo — para todos: el mecánico es quien más lo necesita. */}
+        <PushSettingsCard />
 
         {/* Workshops — sede and staff management is admin-only. Everyone else
             still reaches /settings for their own profile, language and theme. */}

@@ -2,7 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+    <!-- App instalable (PWA). En iPhone, las notificaciones push solo existen
+         para una app agregada a la pantalla de inicio, y eso requiere el
+         manifiesto y el ícono táctil. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0A0A0F" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="Restorify" />
     <!-- `viewport-fit=cover` es lo que hace que `env(safe-area-inset-*)` resuelva
          a algo distinto de 0. Sin él, el padding de área segura de la barra de
          navegación inferior era código muerto y la barra quedaba pegada al

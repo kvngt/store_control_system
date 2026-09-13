@@ -78,6 +78,23 @@ quedaba asentado, así que el taller reportaba el cobro completo de un carro que
 seguía en el taller y sin el pasivo de comisión que lo acompaña. Lo conciliado
 contra un estado de cuenta no se toca: ese dinero sí pasó por el banco.
 
+## Lo que ve el técnico
+
+Desde la fase 1, mecánicos y pintores **no ven** totales, precios de repuestos ni
+depósitos (tabla `orden_montos`, solo admin). Sí ven la mano de obra, porque es
+la base de su pago:
+
+- En el detalle de cada orden asignada, la tarjeta **Tu comisión estimada**
+  muestra la cuenta: mano de obra × porcentaje de la sede ÷ técnicos asignados.
+  Es una estimación en el navegador; el monto real lo calcula la base al entregar.
+- Al entregarse la orden, cada técnico recibe el aviso **Comisión generada** con
+  su monto (trigger `trg_commission_notify`).
+- La pantalla **Comisiones** es solo para administradores.
+
+La estimación usa la mano de obra, y la comisión real usa total − repuestos.
+Coinciden porque el total es mano de obra + repuestos y los repuestos son de
+traspaso.
+
 ## Pagar un saldo
 
 Pantalla **Comisiones → Saldos pendientes → Pagar saldo**.

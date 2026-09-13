@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './styles/index.css'
 import './styles/components.css'
 import App from './App'
+import { registerServiceWorker } from './lib/push'
 import * as Sentry from '@sentry/react'
 
 if (import.meta.env.VITE_SENTRY_DSN) {
@@ -17,6 +18,9 @@ if (import.meta.env.VITE_SENTRY_DSN) {
     replaysOnErrorSampleRate: 1.0,
   })
 }
+
+// Solo para push (ver public/sw.js): no cachea la app.
+registerServiceWorker()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

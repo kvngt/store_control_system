@@ -427,3 +427,12 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# Funciones internas: las llaman la base (pg_net) y pg_cron, que no tienen JWT de
+# ningún usuario. Se protegen con el secreto compartido RESTORIFY_FUNCTIONS_SECRET
+# (ver supabase/functions/_shared/internal.ts y docs/deployment.md).
+[functions.process-outbox]
+verify_jwt = false
+
+[functions.cleanup-storage]
+verify_jwt = false

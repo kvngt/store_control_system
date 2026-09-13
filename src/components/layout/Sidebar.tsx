@@ -2,6 +2,7 @@ import { NavLink, Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../context/language.context';
 import { useAuth } from '../../context/auth.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
+import { detachThisDevice } from '../../features/notifications/pushDevice';
 import {
   LayoutDashboard,
   Users,
@@ -42,8 +43,11 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
     onMobileClose();
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (!confirmNavigation()) return;
+    // Primero se suelta el teléfono (con la sesión todavía válida para hacerlo):
+    // después de cerrar sesión ya no habría permiso para borrar la suscripción.
+    await detachThisDevice();
     logout();
   };
 

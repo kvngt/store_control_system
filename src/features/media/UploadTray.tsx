@@ -68,6 +68,14 @@ export default function UploadTray() {
                     {item.numeroOrden || t('workOrders.title')} · {t(`media.kind.${item.tipo}`)}
                   </div>
                   <div className="upload-tray-item-state">{stateLabel(item)}</div>
+                  {/* El motivo técnico, recortado: es lo que alguien de soporte
+                      necesita para saber si es la red, un permiso o el límite
+                      de tamaño (ver docs/multimedia-y-notificaciones.md). */}
+                  {item.error && (item.estado === 'error' || item.intentos > 0) && (
+                    <div className="upload-tray-item-error" title={item.error}>
+                      {item.error.length > 90 ? `${item.error.slice(0, 90)}…` : item.error}
+                    </div>
+                  )}
                   {item.estado !== 'error' && item.estado !== 'listo' && (
                     <div className="progress-bar" style={{ height: 4 }}>
                       <div className="progress-fill" style={{ width: `${Math.round(item.progreso * 100)}%` }} />

@@ -62,7 +62,7 @@ Notas:
 - Agrega el puerto real del servidor de desarrollo. Vite usa `5173` por defecto;
   si en esa máquina corre en `3000`, hay que listar ese.
 
-## Personalizar el mensaje del correo — sí es posible en el plan gratuito
+## Personalizar el mensaje del correo
 
 **Authentication → Emails → Templates → "Reset Password"**
 
@@ -86,21 +86,39 @@ Ejemplo con la identidad del taller:
 <p>— Taller Reinventa</p>
 ```
 
-### Lo que sí está limitado en el plan gratuito
+### Lo que sí está limitado sin SMTP propio
 
 No es la plantilla, sino el **envío**:
 
 - El servicio de correo integrado de Supabase está pensado para pruebas y tiene
-  un límite bajo (del orden de unos pocos correos por hora, por proyecto). Con
-  varios empleados pidiendo restablecer la contraseña el mismo día, se alcanza.
+  un límite muy bajo (unos 2 correos por hora, por proyecto). Con varios
+  empleados pidiendo restablecer la contraseña el mismo día, se alcanza.
 - Los correos salen desde una dirección de Supabase, no desde el dominio del
   taller, así que es más probable que caigan en spam.
 
-Ambas cosas se resuelven configurando **SMTP propio** en
-*Project Settings → Authentication → SMTP Settings*, lo cual **no requiere el
-plan Pro** — funciona con cualquier proveedor (Resend, SendGrid, Amazon SES,
-Mailgun, o incluso el correo del propio dominio). Es el paso pendiente
-recomendado antes de que el taller dependa de esta función a diario.
+Ambas cosas se resuelven con **SMTP propio**. El dominio `reinventa.shop` ya está
+verificado en **Resend** (registros DNS en Hostinger), que es también el
+proveedor elegido para los correos al cliente de la fase 4.
+
+**Authentication → Emails → SMTP Settings:**
+
+| Campo | Valor |
+| --- | --- |
+| Host | `smtp.resend.com` |
+| Puerto | `465` |
+| Usuario | `resend` |
+| Contraseña | Una API key de Resend **de solo envío** para `reinventa.shop` |
+| Remitente | `notificaciones@reinventa.shop`, nombre `Restorify` |
+
+Crea en Resend una llave nueva con permiso *Sending access* limitada al dominio;
+no uses una llave de acceso completo. La llave vive solo en el panel de Supabase
+(y como secreto `RESEND_API_KEY` cuando existan los correos de la fase 4), nunca
+en el repositorio. Después de configurar SMTP, sube el límite en
+*Authentication → Rate Limits* si hace falta.
+
+No se usa el correo de Hostinger para enviar: no informa si un correo rebotó y
+Hostinger puede bloquear un buzón que envía de forma automatizada. Los buzones
+de Hostinger sirven para **recibir** (por ejemplo, como dirección de respuesta).
 
 ## Cómo probarlo
 

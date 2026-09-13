@@ -9,11 +9,12 @@ import { applySedeBranding, clearSedeBranding } from '../../lib/branding';
 import SchemaDriftBanner from '../SchemaDriftBanner';
 import MediaUploadsProvider from '../../features/media/MediaUploadsProvider';
 import UploadTray from '../../features/media/UploadTray';
+import { syncThisDevice } from '../../features/notifications/pushDevice';
 
 export default function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { currentSede } = useAuth();
+  const { currentSede, user } = useAuth();
   const { theme } = useTheme();
 
   // Re-theme the whole app whenever the active sede (or the light/dark mode)
@@ -23,6 +24,12 @@ export default function AppLayout() {
     applySedeBranding(currentSede?.color_tema, theme);
     return () => clearSedeBranding();
   }, [currentSede?.color_tema, theme]);
+
+  // Si este teléfono ya tenía push, pasa a ser de quien acaba de entrar (una
+  // tablet compartida no debe seguir recibiendo los avisos de otra persona).
+  useEffect(() => {
+    if (user?.id) void syncThisDevice().catch(() => {});
+  }, [user?.id]);
 
   // Con el cajón abierto, el overlay `position: fixed` tapa la página pero no la
   // inmoviliza: un dedo sobre él seguía desplazando el contenido de atrás, así

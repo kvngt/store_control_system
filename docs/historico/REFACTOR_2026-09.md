@@ -293,7 +293,7 @@ Estado final: **140 pruebas en verde**, `tsc -b` limpio, `oxlint` sin avisos y
 mismo (cancelación de respuestas superadas, error crudo) y además lo que el
 hook casero no podía dar, que es caché compartida entre pantallas.
 
-- [`src/lib/queryClient.ts`](../src/lib/queryClient.ts) concentra las claves en
+- [`src/lib/queryClient.ts`](../../src/lib/queryClient.ts) concentra las claves en
   un solo sitio, para que una invalidación y la consulta que pretende invalidar
   no puedan separarse. Toda clave de datos de taller lleva la sede: la
   aplicación es multi-inquilino y dos talleres no pueden responderse preguntas
@@ -313,7 +313,7 @@ hook casero no podía dar, que es caché compartida entre pantallas.
 Claves distintas, dos peticiones — justo el ahorro que justificaba la migración,
 y no ocurría. Finanzas sólo lee `ingresos_por_mes`, así que ahora pasa la misma
 capacidad. Está fijado por prueba en
-[`queryClient.test.tsx`](../src/lib/queryClient.test.tsx), porque el ahorro no es
+[`queryClient.test.tsx`](../../src/lib/queryClient.test.tsx), porque el ahorro no es
 una propiedad de la librería: sólo existe si las dos pantallas coinciden en la
 clave, argumento por argumento.
 
@@ -321,7 +321,7 @@ Un detalle que costó encontrar y merece quedar escrito: escribir
 `query.data ?? []` asigna un array nuevo en **cada render**, así que todo
 `useMemo` río abajo ve una dependencia cambiada y se recalcula siempre. Las
 listas filtradas de Vehículos y Finanzas se recalculaban con cada tecla. De ahí
-[`emptyList()`](../src/lib/emptyList.ts): una única lista vacía congelada.
+[`emptyList()`](../../src/lib/emptyList.ts): una única lista vacía congelada.
 
 ### 4.2 React Hook Form + Zod
 
@@ -332,9 +332,9 @@ casilla. Ahora:
 
 | Archivo | Responsabilidad |
 | --- | --- |
-| [`workOrderForm.schema.ts`](../src/features/workOrders/workOrderForm.schema.ts) | Las reglas, incluidas las dos ramas o/o (cliente y vehículo existentes vs. creados en línea) |
-| [`useIntakePhotos.ts`](../src/features/workOrders/useIntakePhotos.ts) | Las fotos y la propiedad de sus `blob:` URL |
-| [`useWorkOrderForm.ts`](../src/features/workOrders/useWorkOrderForm.ts) | Compone RHF + esquema + fotos |
+| [`workOrderForm.schema.ts`](../../src/features/workOrders/workOrderForm.schema.ts) | Las reglas, incluidas las dos ramas o/o (cliente y vehículo existentes vs. creados en línea) |
+| [`useIntakePhotos.ts`](../../src/features/workOrders/useIntakePhotos.ts) | Las fotos y la propiedad de sus `blob:` URL |
+| [`useWorkOrderForm.ts`](../../src/features/workOrders/useWorkOrderForm.ts) | Compone RHF + esquema + fotos |
 
 Dos decisiones que conviene no deshacer:
 

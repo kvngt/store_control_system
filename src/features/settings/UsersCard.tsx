@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import { KeyRound, Pencil, Search, Shield, Trash2, UserPlus, Users, X } from 'lucide-react';
+import { BellRing, KeyRound, Pencil, Search, Shield, Trash2, UserPlus, Users, X } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { notificationsService } from '../../services/notifications.service';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { usersService } from '../../services/supabaseService';
@@ -53,6 +55,16 @@ const emptyDraft = (sedeId = ''): Draft => ({
 export default function UsersCard({ users, sedes, currentUserId, loading, onChanged }: UsersCardProps) {
   const { t, language } = useLanguage();
   const { showToast } = useToast();
+
+  // Quién tiene push activo. Esta tarjeta solo la ve un admin y la RPC también lo
+  // exige; si falla (migración sin aplicar), la lista se ve igual, sin la insignia.
+  const pushQuery = useQuery({
+    queryKey: ['users-with-push'],
+    queryFn: notificationsService.usersWithPush,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const pushDevices: Record<string, number> = pushQuery.data ?? {};
 
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
@@ -249,6 +261,16 @@ export default function UsersCard({ users, sedes, currentUserId, loading, onChan
                   <td data-label={t('common.name')} style={{ fontWeight: 600 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                       {u.nombre_completo}
+                      {/* Quién recibe avisos en el teléfono: si un mecánico dice
+                          que no le llegan las órdenes, lo primero es mirar aquí. */}
+                      {pushDevices[u.id] ? (
+                        <span
+                          className="badge badge-push"
+                          title={t('notifications.push.devicesTitle').replace('{count}', String(pushDevices[u.id]))}
+                        >
+                          <BellRing size={11} /> {pushDevices[u.id]}
+                        </span>
+                      ) : null}
                       {u.id === currentUserId && (
                         <span className="badge" style={{ fontSize: 'var(--font-size-xs)' }}>{t('settings.you')}</span>
                       )}

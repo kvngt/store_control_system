@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Bell, Menu, Building2, ClipboardList, Users, Car, Clock, AlertTriangle, X } from 'lucide-react';
+import { Search, Menu, Building2, ClipboardList, Users, Car, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useAuth } from '../../context/auth.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import { supabaseService } from '../../services/supabaseService';
-import type { WorkOrder } from '../../types/database';
+import NotificationBell from '../../features/notifications/NotificationBell';
 
 interface HeaderProps {
   sidebarCollapsed: boolean;
@@ -27,7 +27,6 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
   const { confirmNavigation } = useUnsavedChanges();
   const isAdmin = user?.rol === 'admin';
   const sedeId = isAdmin ? currentSede?.id : user?.sede_id;
-  const userId = user?.id;
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResults>(EMPTY_RESULTS);
@@ -43,9 +42,6 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [attentionOrders, setAttentionOrders] = useState<WorkOrder[]>([]);
-  const notifRef = useRef<HTMLDivElement>(null);
 
   const initials = user?.nombre_completo
     ?.split(' ')
@@ -71,41 +67,12 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
     return () => clearTimeout(handle);
   }, [query, sedeId]);
 
-  // Notifications: orders that need attention (waiting on parts or stalled).
-  // A mechanic/painter is only alerted about orders they are actually assigned
-  // to — the rest of the sede's board is someone else's problem, and burying
-  // their own two alerts under twenty of their colleagues' makes the bell
-  // useless. Admins keep the whole-sede view, which is their job.
-  const loadAttention = useCallback(() => {
-    supabaseService
-      .getWorkOrders(sedeId)
-      .then((orders) => {
-        const mine = isAdmin
-          ? orders
-          : orders.filter((o) => (o.asignaciones || []).some((a) => a.usuario_id === userId));
-        const flagged = mine.filter(
-          (o) => o.estatus === 'espera_repuestos' || (o.estatus === 'en_proceso' && o.porcentaje_avance < 20)
-        );
-        setAttentionOrders(flagged.slice(0, 8));
-      })
-      .catch(() => {});
-  }, [sedeId, isAdmin, userId]);
-
-  useEffect(() => {
-    loadAttention();
-    const interval = setInterval(loadAttention, 60000);
-    return () => clearInterval(interval);
-  }, [loadAttention]);
-
   // Close dropdowns on outside click
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (searchBoxRef.current && !searchBoxRef.current.contains(e.target as Node)) {
         setSearchOpen(false);
         setMobileSearchOpen(false);
-      }
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
-        setNotifOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClick);
@@ -294,40 +261,10 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
           </button>
         </div>
 
-        {/* Notifications */}
-        <div style={{ position: 'relative' }} ref={notifRef}>
-          <button className="header-notification" id="notifications-btn" onClick={() => setNotifOpen((v) => !v)}>
-            <Bell size={20} />
-            {attentionOrders.length > 0 && <span className="header-notification-badge"></span>}
-          </button>
-          {notifOpen && (
-            <div className="notif-dropdown">
-              <div className="notif-dropdown-header">
-                <span>{t('dashboard.alerts')}</span>
-                <button className="modal-close" onClick={() => setNotifOpen(false)}><X size={16} /></button>
-              </div>
-              {attentionOrders.length === 0 ? (
-                <div className="search-dropdown-empty">{t('common.noResults')}</div>
-              ) : (
-                attentionOrders.map((o) => (
-                  <button key={o.id} className="notif-dropdown-item" onClick={() => { if (!confirmNavigation()) return; navigate(`/work-orders?open=${o.id}`); setNotifOpen(false); }}>
-                    {o.estatus === 'espera_repuestos' ? (
-                      <Clock size={16} style={{ color: 'var(--color-warning)', flexShrink: 0 }} />
-                    ) : (
-                      <AlertTriangle size={16} style={{ color: 'var(--color-info)', flexShrink: 0 }} />
-                    )}
-                    <div>
-                      <div className="notif-dropdown-item-title">{o.numero_orden}</div>
-                      <div className="notif-dropdown-item-sub">
-                        {o.estatus === 'espera_repuestos' ? t('workOrders.waitingParts') : `${t('workOrders.progress')}: ${o.porcentaje_avance}%`}
-                      </div>
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-          )}
-        </div>
+        {/* Avisos reales, guardados y en tiempo real (ver NotificationBell). La
+            campana anterior re-descargaba todas las órdenes cada 60 s por
+            pestaña para deducir alertas que no se guardaban en ningún lado. */}
+        <NotificationBell />
 
         {/* Avatar — opens the settings/profile screen */}
         <button

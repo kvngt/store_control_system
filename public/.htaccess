@@ -4,3 +4,14 @@ RewriteRule ^index\.html$ - [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule . /index.html [L]
+
+# PWA: tipo correcto para el manifiesto, y el service worker nunca en caché —
+# si el navegador guardara una copia vieja de sw.js, una corrección del push
+# tardaría días en llegar a los teléfonos.
+AddType application/manifest+json .webmanifest
+<IfModule mod_headers.c>
+  <Files "sw.js">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Service-Worker-Allowed "/"
+  </Files>
+</IfModule>

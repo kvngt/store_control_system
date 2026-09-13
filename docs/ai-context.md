@@ -1,29 +1,104 @@
-# AI Context & Guidelines (Restorify)
+# Contexto para agentes de IA
 
-This document contains the foundational architecture, conventions, and context for Restorify. Any AI agent joining this project should read this document to understand the codebase context before making modifications.
+Léelo antes de modificar Restorify. Es corto a propósito: dice qué no romper y
+dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md) y
+[reglas-de-negocio.md](reglas-de-negocio.md).
 
-## 1. Golden Rules
-1. **Nunca modifiques la lógica de RLS (Row Level Security) directamente desde el Frontend.** Toda regla de seguridad pertenece a Supabase (`supabase/migrations`).
-2. **Estilado Puro:** El proyecto no utiliza TailwindCSS ni bibliotecas de componentes (MUI/Ant). Todo se estiliza usando CSS puro en `src/styles/components.css` y variables de tema (Dark/Light).
-3. **Roles Estrictos:** El proyecto se basa en una arquitectura Multi-tenant por sede. Los usuarios están aislados por `sede_id`. Los roles son `admin`, `mecanico`, y `pintor`.
+---
 
-## 2. Architecture Overview
-- **Frontend Framework:** React + Vite + TypeScript.
-- **Backend/Database:** Supabase (PostgreSQL).
-- **State Management:** React Context (`LanguageContext`, `ThemeContext`, `AuthContext`, `ToastContext`, `UnsavedChangesContext`).
-- **Data Fetching:** Se centraliza en `src/services/supabaseService.ts`. Ningún componente debe realizar queries de Supabase directamente; deben pasar por los métodos del servicio.
-- **Internationalization (i18n):** Se maneja mediante un objeto en memoria en `src/i18n/translations.ts`. Se usa el hook `useLanguage().t(key)`.
+## 1. Lo que tienes que saber antes de tocar nada
 
-## 3. UI/UX Patterns
-- **Modales:** Se prefiere el uso de modales controlados en React (con `modal-overlay` y `modal`) sobre diálogos del navegador (`prompt`, `alert`).
-- **Feedback:** Todas las operaciones asíncronas deben proveer feedback usando `showToast('success' | 'error', title, message)`.
-- **Carga (Loading states):** El estado de la UI debe bloquear o deshabilitar botones (`disabled={loading}`) mientras ocurre una mutación en base de datos.
+- **No hay backend propio.** El navegador habla directo con Supabase con la clave
+  anónima. Cualquier usuario con sesión puede llamar a la API sin la interfaz.
+  **La seguridad vive en RLS, triggers y RPCs** (`supabase/migrations/`). Ocultar
+  un botón en React nunca es una regla de permisos.
+- **El dinero lo calcula la base.** Totales, depósitos, cobros al entregar, costo
+  de repuestos, ajustes, reversiones y comisiones los asientan triggers
+  idempotentes con signo. El frontend nunca calcula ni escribe un total.
+- **Los montos están separados.** `orden_montos` (total, repuestos, depósito) y
+  `orden_repuestos` son solo admin. `ordenes_trabajo.total_labor` y `orden_labor`
+  los ve la sede, porque la comisión del técnico sale de la mano de obra. Un
+  técnico lee repuestos por la RPC `repuestos_de_orden` (sin precios).
+- **Multi-sede.** Casi toda tabla tiene `sede_id`. Un técnico ve solo su sede; un
+  admin, todas. Helpers SQL: `is_admin()`, `current_user_sede_id()`.
+- **Roles:** `admin`, `mecanico`, `pintor`. Mecánico y pintor tienen los mismos
+  permisos.
+- **Fases 1–3 hechas; 4–6 (portal del cliente, correos, presupuestos, reporte web)
+  pendientes.** Plan y estado en [README.md](README.md#estado-del-proyecto-septiembre-2026).
 
-## 4. End-to-End Testing (QA)
-- Las pruebas se encuentran en `e2e/`. Usamos **Playwright**.
-- Para que las pruebas corran de forma aislada, es necesario configurar las variables de entorno para pruebas en `.env.test.local` y usar credenciales de prueba con el rol adecuado.
-- Nunca correr las pruebas mutativas (crear/borrar órdenes o sedes) apuntando a la base de datos de Producción sin un prefijo seguro en la data.
+## 2. Reglas de oro
 
-## 5. Deployment & Error Tracking
-- El proyecto usa Sentry (`@sentry/react` y `@sentry/vite-plugin`) para el rastreo de errores en frontend.
-- Se asume un despliegue sin servidor (Serverless) a través de Vercel, Netlify o GitHub Pages.
+1. **Todo cambio de esquema o permisos es una migración nueva** en
+   `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca edites una migración
+   ya aplicada ni cambies tablas desde el panel.
+2. **Una función nueva en `public` es una RPC pública.** Revócala:
+   `REVOKE ALL ON FUNCTION ... FROM PUBLIC, anon, authenticated;` y concede solo lo
+   necesario. Las `SECURITY DEFINER` llevan `SET search_path = public` y verifican
+   rol/sede por dentro.
+3. **Prueba con pgTAP** (`supabase/tests/database/`) todo lo que toque dinero o
+   permisos. Un cuerpo plpgsql roto se aplica sin error y falla en producción.
+4. **Si una migración elimina o renombra columnas**, la base y el `dist` se
+   despliegan juntos. Nunca ejecutes `supabase db push` ni despliegues funciones
+   sin que la persona responsable lo pida.
+5. **Nunca pongas secretos en el repositorio ni en la documentación.** Viven en
+   archivos `*.local` (ignorados por git), en `supabase secrets` y en Vault. Solo
+   la llave **pública** VAPID va en el frontend.
+6. **Sin framework de UI ni Tailwind.** CSS plano: variables en
+   `src/styles/index.css`, componentes en `src/styles/components.css`. Nunca un
+   color literal.
+7. **Todo texto visible pasa por i18n** (`src/i18n/translations.ts`, español e
+   inglés, `useLanguage().t(key)`). Los errores se guardan crudos y se traducen al
+   pintar con `lib/errors.ts`; nunca muestres el mensaje del backend.
+8. **Fechas locales** con `lib/dates.ts` (`todayLocal`, `isSameMonth`). Nunca
+   `toISOString().split('T')[0]` ni `new Date('AAAA-MM-DD')` para comparar meses.
+9. **Commits solo cuando se piden.**
+
+## 3. Dónde está cada cosa
+
+| Necesitas | Ve a |
+|---|---|
+| Consultas a Supabase | `src/services/<dominio>.service.ts`. Ningún componente llama `supabase.from` directo. `supabaseService.ts` es una fachada heredada; en código nuevo importa el servicio del dominio |
+| Lecturas y caché | TanStack Query; claves en `src/lib/queryClient.ts`. Tras mutar, **invalida** (la base cambia cosas que el cliente no predice) |
+| Formularios | react-hook-form + `zod/mini`; ejemplo en `src/features/workOrders/workOrderForm.schema.ts` |
+| Detalle de orden | `src/features/workOrders/useWorkOrderDetail.ts` (permisos derivados: `canEditLines`, `canSendReport`, `canDeliver`, `canJoin`…) y `WorkOrderDetail.tsx` |
+| Multimedia | `src/lib/media/` (compresión, grabación, conversión, cola TUS en IndexedDB) y `src/features/media/`. Detalle en [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md) |
+| Notificaciones | Triggers `trg_*_notify` → `notificar()` → `notificaciones` + `cola_envios`; edge function `process-outbox`; frontend en `src/features/notifications/`, `src/lib/push.ts`, `public/sw.js` |
+| Edge functions | `supabase/functions/` (Deno). Internas verifican `x-restorify-secret` con `_shared/internal.ts` |
+| Contextos | `src/context/` (Auth, Language, Theme, Toast, UnsavedChanges) |
+| Tipos de dominio | `src/types/domain/` |
+
+## 4. Patrones de interfaz
+
+- **Modales** controlados (`modal-overlay` + `modal`); los pesados con
+  `LazyModal`. No uses `prompt` ni `alert`. `confirm` solo para confirmaciones
+  destructivas, como hace el resto del código.
+- **Un error dentro de un diálogo se muestra dentro del diálogo** o con toast: el
+  modal (z-index 400) tapa el recuadro de error de la página. Un `return` mudo
+  parece un botón roto.
+- **Feedback** de toda operación asíncrona con `showToast`; botones deshabilitados
+  mientras corre.
+- **Móvil primero.** Tablas con `cards-on-mobile` y `data-label`; inputs de 16 px;
+  `useIsMobile()` para renderizar una sola versión; respeta `env(safe-area-inset-*)`.
+- **Un `<select>` controlado que se cancela con `confirm`** se remonta con una `key`
+  (`statusEpoch`).
+- **Un `DELETE` rechazado por RLS devuelve éxito sin filas**: usa `.select('id')` y
+  `assertDeleted` (`src/services/support.ts`).
+
+## 5. Verificar un cambio
+
+```bash
+npx tsc -b && npm run lint && npm test && npm run build
+npm run test:db     # si tocaste SQL (requiere Docker + npx supabase start)
+```
+
+Qué probar a mano y en qué dispositivos: [pruebas.md](pruebas.md). Las pruebas
+e2e corren contra el proyecto de `.env.local`: no agregues pruebas que entreguen
+órdenes o paguen comisiones mientras no exista staging.
+
+## 6. Observabilidad y despliegue
+
+- Errores del frontend en Sentry (`@sentry/react`), si `VITE_SENTRY_DSN` está
+  definida.
+- Producción: `dist/` en Hostinger (Apache, `public/.htaccess` reescribe a
+  `index.html`), dominio `reinventa.shop`; Supabase Pro. Pasos en
+  [deployment.md](deployment.md).
