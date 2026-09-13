@@ -16,7 +16,6 @@ export type OrderStatus =
 
 export type TaskStatus = 'pendiente' | 'en_curso' | 'completada';
 
-export type PhotoType = 'exterior_360' | 'interior' | 'combustible' | 'dano_previo';
 
 export type TransactionType = 'ingreso' | 'egreso';
 

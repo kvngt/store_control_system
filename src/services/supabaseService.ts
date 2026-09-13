@@ -17,7 +17,7 @@ import { dashboardService } from './dashboard.service';
 import { financeService } from './finance.service';
 import { searchService } from './search.service';
 import { sedesService } from './sedes.service';
-import { storageService } from './storage.service';
+import { mediaService } from './media.service';
 import { usersService } from './users.service';
 import { vehiclesService } from './vehicles.service';
 import { workOrdersService } from './workOrders.service';
@@ -29,7 +29,7 @@ export {
   financeService,
   searchService,
   sedesService,
-  storageService,
+  mediaService,
   usersService,
   vehiclesService,
   workOrdersService,
@@ -41,7 +41,6 @@ export const supabaseService = {
   ...customersService,
   ...vehiclesService,
   ...workOrdersService,
-  ...storageService,
   ...searchService,
   ...financeService,
   ...commissionsService,

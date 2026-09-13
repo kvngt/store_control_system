@@ -4,10 +4,11 @@ import { Check, Pencil, PenLine, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { trimmedSignatureDataUrl } from '../../lib/signature';
+import { useSignedUrls } from '../media/useSignedUrls';
 
 interface SignatureCardProps {
-  /** Stored signature URL, or null while none has been captured. */
-  signatureUrl?: string | null;
+  /** Ruta de la firma en el bucket privado, o null mientras no se ha capturado. */
+  signaturePath?: string | null;
   signedAt?: string | null;
   customerName?: string;
   canEdit: boolean;
@@ -25,7 +26,7 @@ interface SignatureCardProps {
  * the pen.
  */
 export default function SignatureCard({
-  signatureUrl,
+  signaturePath,
   signedAt,
   customerName,
   canEdit,
@@ -38,6 +39,9 @@ export default function SignatureCard({
   const padRef = useRef<SignatureCanvas>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(560);
+  // Bucket privado: la firma se ve con una URL firmada, no con una pública.
+  const { urls } = useSignedUrls([signaturePath]);
+  const signatureUrl = signaturePath ? urls[signaturePath] : undefined;
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -47,7 +51,7 @@ export default function SignatureCard({
     const observer = new ResizeObserver(update);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [signatureUrl]);
+  }, [signaturePath]);
 
   const save = async () => {
     const pad = padRef.current;
@@ -66,9 +70,15 @@ export default function SignatureCard({
         {t('workOrders.customerSignature')}
       </h3>
 
-      {signatureUrl ? (
+      {signaturePath ? (
         <div>
-          <img src={signatureUrl} alt={t('workOrders.customerSignature')} className="signature-preview" />
+          {signatureUrl ? (
+            <img src={signatureUrl} alt={t('workOrders.customerSignature')} className="signature-preview" />
+          ) : (
+            <div className="signature-preview signature-loading">
+              <span className="spinner-small" />
+            </div>
+          )}
           <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 'var(--space-2)' }}>
             {customerName}
             {signedAt &&

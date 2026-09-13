@@ -1,4 +1,5 @@
-import type { OrderStatus, PhotoType, TaskStatus, WorkType } from './enums';
+import type { OrderStatus, TaskStatus, WorkType } from './enums';
+import type { OrderMedia } from './media.types';
 import type { Customer } from './customer.types';
 import type { UserProfile } from './auth.types';
 import type { Vehicle } from './vehicle.types';
@@ -14,11 +15,11 @@ export interface WorkOrder {
   millas_ingreso: number;
   nivel_gasolina: string;
   inspeccion_360_notas: string;
-  inspeccion_360_fotos?: (string | undefined)[];
   fecha_ingreso: string;
   fecha_estimada_entrega: string;
   fecha_finalizacion?: string;
-  firma_cliente_url?: string | null;
+  /** Ruta de la firma en el bucket privado `orden_media`. No es una URL: se firma para verla. */
+  firma_ruta?: string | null;
   firma_fecha?: string | null;
   porcentaje_avance: number;
   /** Visible para toda la sede: la comisión del técnico sale de aquí. */
@@ -35,7 +36,8 @@ export interface WorkOrder {
   cliente?: Customer;
   vehiculo?: Vehicle;
   asignaciones?: OrderAssignment[];
-  fotos?: InspectionPhoto[];
+  /** Fotos, videos y notas de voz de la recepción y de los avances. */
+  media?: OrderMedia[];
   /** Solo administradores (RLS). Para un técnico llega vacío. */
   repuestos?: WorkOrderPart[];
   /** Qué piezas lleva la orden, sin precios. Lo que ve un técnico. */
@@ -66,7 +68,6 @@ export interface OrderProgressUpdate {
   orden_id: string;
   usuario_id: string;
   descripcion: string;
-  fotos: string[];
   creado_en: string;
   // Virtual
   usuario?: UserProfile;
@@ -87,15 +88,6 @@ export interface OrderAssignment {
   estatus_tarea: TaskStatus;
   // Virtual
   usuario?: UserProfile;
-}
-
-export interface InspectionPhoto {
-  id: string;
-  orden_id: string;
-  url_imagen: string;
-  tipo_foto: PhotoType;
-  zona?: string;
-  fecha_carga: string;
 }
 
 export interface WorkOrderPart {

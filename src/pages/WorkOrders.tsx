@@ -14,6 +14,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { useIsMobile } from '../lib/useMediaQuery';
+import { useMediaUploads } from '../features/media/mediaUploads.context';
 import { useWorkOrderForm } from '../features/workOrders/useWorkOrderForm';
 import { useWorkOrderDetail } from '../features/workOrders/useWorkOrderDetail';
 import WorkOrderCreateModal from '../features/workOrders/WorkOrderCreateModal';
@@ -39,6 +40,7 @@ export default function WorkOrders() {
   const isMobile = useIsMobile();
 
   const form = useWorkOrderForm();
+  const mediaUploads = useMediaUploads();
   const detail = useWorkOrderDetail({ onBoardChanged: () => loadOrders() });
 
   const queryClient = useQueryClient();
@@ -262,13 +264,25 @@ export default function WorkOrders() {
         creado_por: user.id,
       });
 
-      // Antes de las fotos: de aquí en adelante un fallo no debe volver a crear
-      // la orden, sólo reintentar lo que quedó pendiente.
+      // De aquí en adelante un fallo no debe volver a crear la orden.
       createdOrderRef.current = order;
 
-      const photoFiles = form.photos.toUploads();
-      if (photoFiles.length) {
-        await workOrdersService.uploadOrderPhotos(order.id, photoFiles);
+      // Las fotos ya están comprimidas desde que se eligieron: entran a la cola y
+      // suben en segundo plano. Crear la orden ya no espera a la red — que era el
+      // paso que fallaba con ocho fotos sobre el wifi del taller — y la cola
+      // reintenta sola y sobrevive a una recarga.
+      const photoUploads = form.photos.toUploads();
+      if (photoUploads.length) {
+        mediaUploads.enqueue(
+          photoUploads.map(({ zone, media }) => ({
+            ...media,
+            ordenId: order.id,
+            sedeId: order.sede_id,
+            numeroOrden: order.numero_orden,
+            origen: 'recepcion' as const,
+            zona: zone,
+          }))
+        );
       }
 
       const createdNewRecords = values.customerMode === 'new' || values.vehicleMode === 'new';

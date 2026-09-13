@@ -23,6 +23,8 @@ import CommissionEstimateCard from './CommissionEstimateCard';
 import ProgressLog from './ProgressLog';
 import ShareReportModal from './ShareReportModal';
 import SignatureCard from './SignatureCard';
+import MediaCaptureBar from '../media/MediaCaptureBar';
+import MediaGallery from '../media/MediaGallery';
 import type { WorkOrderDetailApi } from './useWorkOrderDetail';
 
 interface WorkOrderDetailProps {
@@ -45,7 +47,6 @@ interface WorkOrderDetailProps {
 export default function WorkOrderDetail({ detail, operators, statusLabels, onBack }: WorkOrderDetailProps) {
   const { t } = useLanguage();
   const { user } = useAuth();
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [addingOperatorId, setAddingOperatorId] = useState('');
 
   const order = detail.order;
@@ -59,7 +60,8 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
   const partsList = order.repuestos || [];
   const totalLabor = laborList.reduce((sum, l) => sum + l.costo, 0);
   const totalParts = partsList.reduce((sum, p) => sum + p.subtotal, 0);
-  const photoUrls = (order.inspeccion_360_fotos || []).filter(Boolean) as string[];
+  const receptionMedia = (order.media || []).filter((m) => m.origen === 'recepcion');
+  const receptionPending = detail.pendingUploads.filter((p) => p.origen === 'recepcion');
   // Null para mecánicos y pintores: `orden_montos` es solo admin.
   const amounts = order.montos ?? null;
 
@@ -231,23 +233,28 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
             {order.inspeccion_360_notas}
           </p>
 
-          {photoUrls.length > 0 ? (
-            <div className="photo-gallery-grid">
-              {photoUrls.map((url, i) => (
-                <button key={i} type="button" className="photo-gallery-thumb" onClick={() => setLightboxUrl(url)}>
-                  <img src={url} alt={`foto-${i}`} loading="lazy" />
-                </button>
-              ))}
+          {/* La recepción es lo que el cliente firma: nace visible para él. Aquí
+              también se puede sumar un video de recorrido o una nota de voz
+              sobre el estado en que llegó el vehículo. */}
+          <MediaGallery
+            media={receptionMedia}
+            pending={receptionPending}
+            canManage={detail.isAdmin}
+            canDeleteOwn={detail.canEdit}
+            currentUserId={detail.userId}
+            onToggleVisibility={detail.toggleMediaVisibility}
+            onDelete={detail.deleteMedia}
+            emptyLabel={t('media.empty')}
+          />
+          {detail.canEdit && (
+            <div style={{ marginTop: 'var(--space-3)' }}>
+              <MediaCaptureBar onAdd={detail.addReceptionMedia} disabled={detail.busy} />
             </div>
-          ) : (
-            <p style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)' }}>
-              {t('common.noResults')}
-            </p>
           )}
         </div>
 
         <SignatureCard
-          signatureUrl={order.firma_cliente_url}
+          signaturePath={order.firma_ruta}
           signedAt={order.firma_fecha}
           customerName={customer?.nombre}
           canEdit={detail.canEdit}
@@ -404,11 +411,16 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
 
       <ProgressLog
         entries={order.avances || []}
+        media={order.media || []}
+        pending={detail.pendingUploads}
         canEdit={detail.canEdit}
         busy={detail.busy}
+        isAdmin={detail.isAdmin}
+        userId={detail.userId}
         onAdd={detail.addProgressUpdate}
         onRemove={detail.removeProgressUpdate}
-        onOpenPhoto={setLightboxUrl}
+        onToggleVisibility={detail.toggleMediaVisibility}
+        onDeleteMedia={detail.deleteMedia}
       />
 
       {detail.share && (
@@ -422,14 +434,6 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
         />
       )}
 
-      {lightboxUrl && (
-        <div className="lightbox-overlay" onClick={() => setLightboxUrl(null)}>
-          <button className="lightbox-close" onClick={() => setLightboxUrl(null)} aria-label={t('common.close')}>
-            <X size={20} />
-          </button>
-          <img src={lightboxUrl} alt="Foto de inspección" onClick={(e) => e.stopPropagation()} />
-        </div>
-      )}
     </div>
   );
 }

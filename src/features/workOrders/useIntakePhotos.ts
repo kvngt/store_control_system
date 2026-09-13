@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { compressImage } from '../../lib/media/image';
+import type { PreparedMedia } from '../../types/database';
 
 /** One intake photo held in the browser before the order exists to attach it to. */
 export interface PhotoZone {
   key: string;
   label: string;
-  file: File;
+  /** Ya comprimida: 1920 px, JPEG, sin EXIF, con miniatura. */
+  media: PreparedMedia;
   /** `blob:` URL for the thumbnail. Owned by this hook, which also revokes it. */
   preview: string;
 }
@@ -29,15 +32,25 @@ export const ZONES: { key: string; label: string }[] = [
  * full-resolution image in memory for the life of the tab, all day on a shop
  * tablet that shoots six photos an order. Every URL created here is revoked
  * when its photo goes away, on reset, and on unmount.
+ *
+ * Cada foto se comprime en cuanto se elige, no al guardar la orden. Dos razones:
+ * la vista previa ya es la versión liviana (seis fotos de 12 MP ocupaban más de
+ * 200 MB decodificadas en un teléfono), y al crear la orden las fotos solo
+ * entran a la cola de subida, sin trabajo pendiente que haga esperar al técnico.
  */
 export function useIntakePhotos() {
   const [photos, setPhotos] = useState<Record<string, PhotoZone>>({});
+  const [processing, setProcessing] = useState(0);
 
   // Every object URL handed out, so none is left behind when the tab moves on.
   const objectUrls = useRef(new Set<string>());
+  // Una compresión que termina después de descartar el borrador (o de cerrar el
+  // diálogo) no debe resucitar la foto. Cada reset abre una generación nueva.
+  const generation = useRef(0);
+  const mounted = useRef(true);
 
-  const trackUrl = useCallback((file: File) => {
-    const url = URL.createObjectURL(file);
+  const trackUrl = useCallback((blob: Blob) => {
+    const url = URL.createObjectURL(blob);
     objectUrls.current.add(url);
     return url;
   }, []);
@@ -49,44 +62,71 @@ export function useIntakePhotos() {
   }, []);
 
   useEffect(() => {
+    mounted.current = true;
     const urls = objectUrls.current;
     return () => {
+      mounted.current = false;
       urls.forEach((url) => URL.revokeObjectURL(url));
       urls.clear();
     };
   }, []);
 
+  /** Comprime y devuelve null si el borrador cambió de generación entretanto. */
+  const prepare = useCallback(async (file: Blob) => {
+    const started = generation.current;
+    setProcessing((n) => n + 1);
+    try {
+      const media = await compressImage(file);
+      return mounted.current && started === generation.current ? media : null;
+    } finally {
+      if (mounted.current) setProcessing((n) => Math.max(0, n - 1));
+    }
+  }, []);
+
   const setZonePhoto = useCallback(
-    (zoneKey: string, file: File) => {
+    async (zoneKey: string, file: File) => {
+      const media = await prepare(file);
+      if (!media) return;
       const label = ZONES.find((z) => z.key === zoneKey)?.label || zoneKey;
-      const preview = trackUrl(file);
+      const preview = trackUrl(media.thumb ?? media.blob);
       setPhotos((prev) => {
         releaseUrl(prev[zoneKey]?.preview);
-        return { ...prev, [zoneKey]: { key: zoneKey, label, file, preview } };
+        return { ...prev, [zoneKey]: { key: zoneKey, label, media, preview } };
       });
     },
-    [releaseUrl, trackUrl]
+    [prepare, releaseUrl, trackUrl]
   );
 
   // Photos beyond the six fixed zones: damage close-ups, paperwork, anything
   // the six-tile grid can't anticipate. They're appended with generated keys
   // so the fixed zones keep their meaning.
+  //
+  // Una foto ilegible no descarta las demás: se agregan las que sí se pudieron
+  // comprimir y después se reporta el primer error.
   const addExtraPhotos = useCallback(
-    (files: File[]) => {
+    async (files: File[]) => {
       if (!files.length) return;
-      const created = files.map((file) => ({ file, preview: trackUrl(file) }));
-      setPhotos((prev) => {
-        const next = { ...prev };
-        let n = Object.keys(prev).filter((k) => k.startsWith('extra-')).length;
-        created.forEach(({ file, preview }) => {
-          n += 1;
-          const key = `extra-${Date.now()}-${n}`;
-          next[key] = { key, label: `Extra ${n}`, file, preview };
+      const results = await Promise.allSettled(files.map((file) => prepare(file)));
+      const ready = results.flatMap((r) => (r.status === 'fulfilled' && r.value ? [r.value] : []));
+
+      if (ready.length) {
+        const created = ready.map((media) => ({ media, preview: trackUrl(media.thumb ?? media.blob) }));
+        setPhotos((prev) => {
+          const next = { ...prev };
+          let n = Object.keys(prev).filter((k) => k.startsWith('extra-')).length;
+          created.forEach(({ media, preview }) => {
+            n += 1;
+            const key = `extra-${Date.now()}-${n}`;
+            next[key] = { key, label: `Extra ${n}`, media, preview };
+          });
+          return next;
         });
-        return next;
-      });
+      }
+
+      const failure = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+      if (failure) throw failure.reason;
     },
-    [trackUrl]
+    [prepare, trackUrl]
   );
 
   const removePhoto = useCallback(
@@ -102,6 +142,7 @@ export function useIntakePhotos() {
   );
 
   const reset = useCallback(() => {
+    generation.current += 1;
     setPhotos((prev) => {
       Object.values(prev).forEach((photo) => releaseUrl(photo.preview));
       return {};
@@ -114,9 +155,14 @@ export function useIntakePhotos() {
   );
   const zonesCovered = useMemo(() => ZONES.filter((z) => photos[z.key]).length, [photos]);
 
-  /** What the service needs to upload once the order exists. */
+  /** Lo que entra a la cola de subida una vez que la orden existe. */
   const toUploads = useCallback(
-    () => Object.values(photos).map((p) => ({ zone: p.key, file: p.file })),
+    () =>
+      Object.values(photos).map((p) => ({
+        // Las fotos extra no tienen zona: su clave generada no significa nada fuera de este diálogo.
+        zone: ZONES.some((z) => z.key === p.key) ? p.key : null,
+        media: p.media,
+      })),
     [photos]
   );
 
@@ -125,6 +171,8 @@ export function useIntakePhotos() {
     extraPhotos,
     zonesCovered,
     hasPhotos: Object.keys(photos).length > 0,
+    /** Fotos comprimiéndose ahora mismo. Crear la orden espera a que llegue a 0. */
+    processing,
     setZonePhoto,
     addExtraPhotos,
     removePhoto,

@@ -1,61 +1,62 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, MessageSquarePlus, Plus, Trash2, X } from 'lucide-react';
-import { useAuth } from '../../context/auth.context';
+import { useState } from 'react';
+import { MessageSquarePlus, Plus, Trash2 } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
-import type { OrderProgressUpdate } from '../../types/database';
-
-/**
- * Thumbnail for a progress photo still waiting to be uploaded.
- *
- * The object URL used to be minted inline in the render — `<img
- * src={URL.createObjectURL(file)} />` — which handed out a fresh one on every
- * keystroke in the note field and revoked none of them. Owning the URL in a
- * component ties its lifetime to the thumbnail's.
- */
-function DraftPhotoThumb({ file, onRemove }: { file: File; onRemove: () => void }) {
-  const url = useMemo(() => URL.createObjectURL(file), [file]);
-  useEffect(() => () => URL.revokeObjectURL(url), [url]);
-
-  return (
-    <div style={{ position: 'relative', width: 72, height: 72, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-surface-border)' }}>
-      <img src={url} alt={file.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-      <button type="button" className="photo-zone-remove" onClick={onRemove}>
-        <X size={12} />
-      </button>
-    </div>
-  );
-}
+import type { UploadItem } from '../../lib/media/uploadQueue';
+import type { OrderMedia, OrderProgressUpdate, PreparedMedia } from '../../types/database';
+import DraftMediaStrip from '../media/DraftMediaStrip';
+import MediaCaptureBar from '../media/MediaCaptureBar';
+import MediaGallery from '../media/MediaGallery';
 
 interface ProgressLogProps {
   entries: OrderProgressUpdate[];
+  /** Toda la multimedia de la orden; cada avance toma la suya. */
+  media: OrderMedia[];
+  /** Lo que todavía sube de esta orden. */
+  pending: UploadItem[];
   canEdit: boolean;
   busy: boolean;
+  isAdmin: boolean;
+  userId?: string;
   /** Resolves true when the entry was stored, so the draft can be cleared. */
-  onAdd: (note: string, files: File[]) => Promise<boolean>;
+  onAdd: (note: string, media: PreparedMedia[]) => Promise<boolean>;
   onRemove: (id: string) => Promise<void>;
-  onOpenPhoto: (url: string) => void;
+  onToggleVisibility: (media: OrderMedia) => void;
+  onDeleteMedia: (media: OrderMedia) => void;
 }
 
-/** Where mechanics and painters document what they did, with photos. */
-export default function ProgressLog({ entries, canEdit, busy, onAdd, onRemove, onOpenPhoto }: ProgressLogProps) {
+/**
+ * Donde mecánicos y pintores documentan lo que hicieron: una nota, fotos, videos
+ * cortos y notas de voz.
+ *
+ * Un avance puede ser solo un video o solo una nota de voz: para explicar una
+ * falla, grabarla es más rápido y más claro que escribirla con los guantes
+ * puestos. Lo que se sube aquí es interno hasta que un admin lo publica al cliente.
+ */
+export default function ProgressLog({
+  entries,
+  media,
+  pending,
+  canEdit,
+  busy,
+  isAdmin,
+  userId,
+  onAdd,
+  onRemove,
+  onToggleVisibility,
+  onDeleteMedia,
+}: ProgressLogProps) {
   const { t, language } = useLanguage();
-  const { user } = useAuth();
   const [note, setNote] = useState('');
-  const [photos, setPhotos] = useState<File[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const addPhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length) setPhotos((prev) => [...prev, ...files]);
-    e.target.value = '';
-  };
+  const [drafts, setDrafts] = useState<PreparedMedia[]>([]);
 
   const submit = async () => {
-    if (await onAdd(note, photos)) {
+    if (await onAdd(note, drafts)) {
       setNote('');
-      setPhotos([]);
+      setDrafts([]);
     }
   };
+
+  const canSubmit = canEdit && !busy && (note.trim().length > 0 || drafts.length > 0);
 
   return (
     <div className="card" style={{ marginTop: 'var(--space-4)' }}>
@@ -64,85 +65,57 @@ export default function ProgressLog({ entries, canEdit, busy, onAdd, onRemove, o
         {t('workOrders.progressLog')}
       </h3>
 
-      {/* New entry form */}
-      <div style={{ padding: 'var(--space-4)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-lg)', marginBottom: 'var(--space-4)' }}>
-        <textarea
-          className="form-input form-textarea"
-          placeholder={t('workOrders.progressPlaceholder')}
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          rows={2}
-        />
-        <input
-          type="file"
-          ref={fileInputRef}
-          accept="image/*"
-          capture="environment"
-          multiple
-          style={{ display: 'none' }}
-          onChange={addPhotos}
-        />
-        {photos.length > 0 && (
-          <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', marginTop: 'var(--space-3)' }}>
-            {photos.map((file, i) => (
-              <DraftPhotoThumb
-                key={`${file.name}-${i}`}
-                file={file}
-                onRemove={() => setPhotos((prev) => prev.filter((_, idx) => idx !== i))}
-              />
-            ))}
+      {canEdit && (
+        <div className="progress-entry-form">
+          <textarea
+            className="form-input form-textarea"
+            placeholder={t('workOrders.progressPlaceholder')}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={2}
+          />
+          <DraftMediaStrip items={drafts} onRemove={(index) => setDrafts((prev) => prev.filter((_, i) => i !== index))} />
+          <MediaCaptureBar onAdd={(items) => setDrafts((prev) => [...prev, ...items])} disabled={busy} />
+          <div className="progress-entry-submit">
+            <p className="field-hint">{t('media.internalUntilPublished')}</p>
+            <button type="button" className="btn btn-primary btn-sm" onClick={submit} disabled={!canSubmit}>
+              <Plus size={16} /> {busy ? t('common.loading') : t('workOrders.addProgress')}
+            </button>
           </div>
-        )}
-        <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-3)', flexWrap: 'wrap' }}>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => fileInputRef.current?.click()}>
-            <Camera size={16} /> {t('workOrders.addPhotos')}
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={submit}
-            disabled={!canEdit || busy || !note.trim()}
-          >
-            <Plus size={16} /> {busy ? t('common.loading') : t('workOrders.addProgress')}
-          </button>
         </div>
-      </div>
+      )}
 
-      {/* Timeline */}
       {entries.length === 0 ? (
         <p style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)' }}>{t('common.noResults')}</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           {entries.map((avance) => (
-            <div
-              key={avance.id}
-              style={{
-                padding: 'var(--space-4)',
-                borderLeft: '3px solid var(--color-primary)',
-                background: 'var(--color-bg-tertiary)',
-                borderRadius: 'var(--radius-md)',
-              }}
-            >
+            <div key={avance.id} className="progress-entry">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-2)' }}>
                 <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
-                  {avance.usuario?.nombre_completo || '—'} · {new Date(avance.creado_en).toLocaleString(language === 'es' ? 'es' : 'en')}
+                  {avance.usuario?.nombre_completo || '—'} ·{' '}
+                  {new Date(avance.creado_en).toLocaleString(language === 'es' ? 'es' : 'en')}
                 </div>
-                {(user?.rol === 'admin' || user?.id === avance.usuario_id) && (
-                  <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => onRemove(avance.id)}>
+                {(isAdmin || userId === avance.usuario_id) && (
+                  <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => onRemove(avance.id)} aria-label={t('common.delete')}>
                     <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
                   </button>
                 )}
               </div>
-              <p style={{ marginTop: 'var(--space-2)', fontSize: 'var(--font-size-sm)', lineHeight: 1.6 }}>{avance.descripcion}</p>
-              {avance.fotos && avance.fotos.length > 0 && (
-                <div className="photo-gallery-grid" style={{ marginTop: 'var(--space-3)' }}>
-                  {avance.fotos.map((url, i) => (
-                    <button key={i} type="button" className="photo-gallery-thumb" onClick={() => onOpenPhoto(url)}>
-                      <img src={url} alt={`avance-${i}`} loading="lazy" />
-                    </button>
-                  ))}
-                </div>
+              {avance.descripcion && (
+                <p style={{ marginTop: 'var(--space-2)', fontSize: 'var(--font-size-sm)', lineHeight: 1.6 }}>{avance.descripcion}</p>
               )}
+              <div style={{ marginTop: 'var(--space-3)' }}>
+                <MediaGallery
+                  media={media.filter((m) => m.avance_id === avance.id)}
+                  pending={pending.filter((p) => p.avanceId === avance.id)}
+                  canManage={isAdmin}
+                  canDeleteOwn={canEdit}
+                  currentUserId={userId}
+                  onToggleVisibility={onToggleVisibility}
+                  onDelete={onDeleteMedia}
+                />
+              </div>
             </div>
           ))}
         </div>

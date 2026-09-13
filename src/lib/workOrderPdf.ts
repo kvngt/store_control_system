@@ -90,7 +90,20 @@ async function toPngDataUrl(url: string, maxPx = 400) {
  * for sharing, or both — building the PDF twice for one order would mean
  * re-fetching and re-encoding every intake photo.
  */
-async function buildWorkOrderPdf(order: WorkOrder, sede?: Sede | null) {
+/**
+ * `urls`: ruta del bucket privado → URL firmada, para las fotos y la firma. Desde
+ * que la multimedia vive en un bucket privado el generador no puede leerla por
+ * una URL pública; quien lo llama firma lo necesario (ver `useWorkOrderDetail`).
+ */
+async function buildWorkOrderPdf(order: WorkOrder, sede?: Sede | null, urls: Record<string, string> = {}) {
+  const media = order.media || [];
+  const photoUrlsFor = (filter: (m: (typeof media)[number]) => boolean, limit: number) =>
+    media
+      .filter((m) => m.tipo === 'foto' && filter(m))
+      .map((m) => urls[m.ruta])
+      .filter((u): u is string => !!u)
+      .slice(0, limit);
+
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -336,7 +349,7 @@ async function buildWorkOrderPdf(order: WorkOrder, sede?: Sede | null) {
       y += LINE * lines.length;
 
       // Up to 3 photos per entry, laid out in a row.
-      const photos = (avance.fotos || []).slice(0, 3);
+      const photos = photoUrlsFor((m) => m.avance_id === avance.id, 3);
       if (photos.length) {
         const imgW = 45;
         const imgH = 34;
@@ -360,7 +373,7 @@ async function buildWorkOrderPdf(order: WorkOrder, sede?: Sede | null) {
   }
 
   // ===== Intake photos =====
-  const intakePhotos = (order.inspeccion_360_fotos || []).filter(Boolean).slice(0, 12) as string[];
+  const intakePhotos = photoUrlsFor((m) => m.origen === 'recepcion', 12);
   if (intakePhotos.length) {
     sectionTitle('Fotos de Recepción');
     const imgW = 55;
@@ -387,8 +400,9 @@ async function buildWorkOrderPdf(order: WorkOrder, sede?: Sede | null) {
   }
 
   // ===== Customer signature =====
-  if (order.firma_cliente_url) {
-    const firma = await toPngDataUrl(order.firma_cliente_url, 600);
+  const firmaUrl = order.firma_ruta ? urls[order.firma_ruta] : undefined;
+  if (firmaUrl) {
+    const firma = await toPngDataUrl(firmaUrl, 600);
     if (firma) {
       const sigH = 22;
       const sigW = Math.min(70, sigH * firma.ratio);
@@ -428,13 +442,17 @@ export function workOrderPdfName(order: WorkOrder) {
 }
 
 /** Renders the report and downloads it. */
-export async function generateWorkOrderPdf(order: WorkOrder, sede?: Sede | null) {
-  const doc = await buildWorkOrderPdf(order, sede);
+export async function generateWorkOrderPdf(order: WorkOrder, sede?: Sede | null, urls: Record<string, string> = {}) {
+  const doc = await buildWorkOrderPdf(order, sede, urls);
   doc.save(workOrderPdfName(order));
 }
 
 /** Renders the report as a Blob, for uploading or attaching. */
-export async function renderWorkOrderPdfBlob(order: WorkOrder, sede?: Sede | null): Promise<Blob> {
-  const doc = await buildWorkOrderPdf(order, sede);
+export async function renderWorkOrderPdfBlob(
+  order: WorkOrder,
+  sede?: Sede | null,
+  urls: Record<string, string> = {}
+): Promise<Blob> {
+  const doc = await buildWorkOrderPdf(order, sede, urls);
   return doc.output('blob');
 }

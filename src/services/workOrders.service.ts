@@ -3,6 +3,7 @@
 import { supabase } from '../lib/supabase';
 import type {
   LaborItem,
+  OrderMedia,
   OrderProgressUpdate,
   OrderStatus,
   PartSummary,
@@ -10,8 +11,9 @@ import type {
   WorkOrderInput,
   WorkOrderPart,
 } from '../types/database';
+import { mediaPath } from '../lib/media/mime';
 import { assertDeleted } from './support';
-import { storageService } from './storage.service';
+import { mediaService } from './media.service';
 
 export const workOrdersService = {
   getWorkOrders: async (sedeId?: string) => {
@@ -35,7 +37,7 @@ export const workOrdersService = {
   getWorkOrderDetail: async (orderId: string) => {
     // `montos` y `repuestos` vienen vacíos para un técnico (RLS solo admin);
     // `repuestos_resumen` es lo que él sí puede ver: qué piezas, sin precio.
-    const [{ data, error }, { data: resumen }] = await Promise.all([
+    const [{ data, error }, { data: resumen }, media] = await Promise.all([
       supabase.from('ordenes_trabajo').select(`
         *,
         montos:orden_montos(total_repuestos, total_general, deposito_inicial),
@@ -46,6 +48,9 @@ export const workOrdersService = {
         asignaciones:orden_asignaciones(*, usuario:perfiles(*))
       `).eq('id', orderId).single(),
       supabase.rpc('repuestos_de_orden', { p_orden_id: orderId }),
+      // Fotos, videos y notas de voz de la recepción y de cada avance. Tolerante
+      // como los avances: una falla aquí no debe impedir abrir la orden.
+      mediaService.listOrderMedia(orderId).catch(() => [] as OrderMedia[]),
     ]);
     if (error) throw error;
 
@@ -62,6 +67,7 @@ export const workOrdersService = {
       ...data,
       avances: (avances || []) as OrderProgressUpdate[],
       repuestos_resumen: (resumen || []) as PartSummary[],
+      media,
     } as WorkOrder;
   },
 
@@ -134,6 +140,15 @@ export const workOrdersService = {
       .is('importacion_id', null);
     if (finanzasError) throw finanzasError;
 
+    // Las filas de `orden_media` se van en cascada con la orden, pero la base no
+    // puede borrar objetos de Storage: sin esto, cada orden borrada dejaría sus
+    // videos ocupando la cuota del plan para siempre. Se leen antes de borrar la
+    // orden, porque después ya no hay filas que digan qué archivos eran.
+    const [media, { data: firma }] = await Promise.all([
+      mediaService.listOrderMedia(orderId).catch(() => [] as OrderMedia[]),
+      supabase.from('ordenes_trabajo').select('firma_ruta').eq('id', orderId).maybeSingle(),
+    ]);
+
     // Admin-only, enforced by the `ordenes_trabajo_delete` RLS policy.
     const { data, error } = await supabase
       .from('ordenes_trabajo')
@@ -142,6 +157,15 @@ export const workOrdersService = {
       .select('id');
     if (error) throw error;
     assertDeleted(data, 'la orden');
+
+    // Mejor esfuerzo: la orden ya no existe, y un archivo que no se pudo borrar
+    // no es motivo para decirle al admin que el borrado falló.
+    await mediaService
+      .removeStoragePaths([
+        ...media.flatMap((m) => [m.ruta, m.ruta_miniatura]),
+        (firma as { firma_ruta?: string | null } | null)?.firma_ruta,
+      ])
+      .catch(() => {});
   },
 
   // ===== Labor / Parts / Assignments on an existing order =====
@@ -240,73 +264,54 @@ export const workOrdersService = {
   },
 
   // ===== Progress updates ("Agregar Avance") =====
-  // Lets the assigned mechanic/painter document progress over time with a
-  // note and optional photos, separate from the one-time 360° intake photos.
-  addProgressUpdate: async (orderId: string, usuarioId: string, descripcion: string, files: File[]) => {
-    const fotos: string[] = [];
-    for (const file of files) {
-      const path = `${orderId}/avance-${Date.now()}-${file.name}`;
-      const url = await storageService.uploadPhoto(file, path);
-      fotos.push(url);
-    }
+  // Una nota del técnico. Sus fotos, videos y notas de voz ya no viajan aquí:
+  // entran a la cola de subida con el id de este avance y suben en segundo
+  // plano (ver `MediaUploadQueue`), así que crear el avance es instantáneo aunque
+  // lleve un video de 25 MB.
+  addProgressUpdate: async (orderId: string, usuarioId: string, descripcion: string) => {
     const { data, error } = await supabase
       .from('orden_avances')
-      .insert({ orden_id: orderId, usuario_id: usuarioId, descripcion, fotos })
+      .insert({ orden_id: orderId, usuario_id: usuarioId, descripcion })
       .select('*, usuario:perfiles(*)')
       .single();
     if (error) throw error;
     return data as OrderProgressUpdate;
   },
 
-  removeProgressUpdate: async (id: string) => {
-    const { error } = await supabase.from('orden_avances').delete().eq('id', id);
+  /** Borra el avance y, después, los archivos que colgaban de él. */
+  removeProgressUpdate: async (id: string, media: Pick<OrderMedia, 'ruta' | 'ruta_miniatura'>[] = []) => {
+    const { data, error } = await supabase.from('orden_avances').delete().eq('id', id).select('id');
     if (error) throw error;
-  },
-
-  uploadOrderPhotos: async (orderId: string, files: { zone: string; file: File }[]) => {
-    const urls: string[] = [];
-    for (const { zone, file } of files) {
-      const path = `${orderId}/${zone}-${Date.now()}-${file.name}`;
-      const url = await storageService.uploadPhoto(file, path);
-      urls.push(url);
-    }
-    const { error } = await supabase
-      .from('ordenes_trabajo')
-      .update({ inspeccion_360_fotos: urls })
-      .eq('id', orderId);
-    if (error) throw error;
-    return urls;
+    assertDeleted(data, 'el avance');
+    await mediaService.removeStoragePaths(media.flatMap((m) => [m.ruta, m.ruta_miniatura])).catch(() => {});
   },
 
   // ===== Customer signature =====
-  // The signature is drawn on a canvas and arrives as a PNG data URL. It's
-  // stored in the public `firmas` bucket and linked from the order so the PDF
-  // can reprint it long after the tablet that captured it is gone.
-  uploadSignature: async (orderId: string, dataUrl: string) => {
+  // La firma se dibuja en un canvas y llega como data URL PNG. Va al bucket
+  // privado de la orden — junto a sus fotos — y la orden guarda la ruta, no una
+  // URL pública: una firma no debería estar a una URL adivinable. Se lee con una
+  // URL firmada, igual que el resto de la multimedia.
+  uploadSignature: async (order: Pick<WorkOrder, 'id' | 'sede_id'>, dataUrl: string) => {
     const blob = await (await fetch(dataUrl)).blob();
-    const path = `${orderId}/firma-${Date.now()}.png`;
-    const { error } = await supabase.storage
-      .from('firmas')
-      .upload(path, blob, { contentType: 'image/png', upsert: true });
-    if (error) throw error;
+    const path = mediaPath(order.sede_id, order.id, `firma-${Date.now()}.png`);
+    await mediaService.uploadSmallFile(path, blob, 'image/png');
 
-    const { data } = supabase.storage.from('firmas').getPublicUrl(path);
     const firmaFecha = new Date().toISOString();
     const { error: updateError } = await supabase
       .from('ordenes_trabajo')
-      .update({ firma_cliente_url: data.publicUrl, firma_fecha: firmaFecha })
-      .eq('id', orderId);
+      .update({ firma_ruta: path, firma_fecha: firmaFecha })
+      .eq('id', order.id);
     if (updateError) throw updateError;
 
-    return { url: data.publicUrl, fecha: firmaFecha };
+    return { ruta: path, fecha: firmaFecha };
   },
 
-  // Unlinks the signature so it can be re-captured. The stored file is left in
-  // place on purpose: an order's signature history is worth keeping.
+  // Desvincula la firma para poder volver a capturarla. El archivo se deja a
+  // propósito: el historial de firmas de una orden vale la pena conservarlo.
   clearSignature: async (orderId: string) => {
     const { error } = await supabase
       .from('ordenes_trabajo')
-      .update({ firma_cliente_url: null, firma_fecha: null })
+      .update({ firma_ruta: null, firma_fecha: null })
       .eq('id', orderId);
     if (error) throw error;
   },

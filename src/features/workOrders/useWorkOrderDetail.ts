@@ -4,12 +4,14 @@ import { useAuth } from '../../context/auth.context';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { workOrdersService } from '../../services/supabaseService';
+import { mediaService } from '../../services/media.service';
+import { useMediaUploads } from '../media/mediaUploads.context';
 // Statically imported, unlike the PDF renderer below: ShareReportModal already
 // pulls it into this chunk, so a dynamic import here only defeats itself.
 import { reportsService } from '../../services/reports.service';
 import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';
-import type { OrderStatus, UserProfile, WorkOrder } from '../../types/database';
+import type { OrderMedia, OrderStatus, PreparedMedia, UserProfile, WorkOrder } from '../../types/database';
 
 interface UseWorkOrderDetailOptions {
   /**
@@ -34,6 +36,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
   const { showToast } = useToast();
+  const mediaUploads = useMediaUploads();
 
   const queryClient = useQueryClient();
 
@@ -345,13 +348,69 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     }
   };
 
+  // ----- media ---------------------------------------------------------------
+
+  /** Mete archivos ya procesados en la cola de subida, atados a esta orden. */
+  const enqueueMedia = (
+    items: PreparedMedia[],
+    target: { origen: 'recepcion' | 'avance'; avanceId?: string | null; zona?: string | null }
+  ) => {
+    if (!order || !items.length) return;
+    mediaUploads.enqueue(
+      items.map((media) => ({
+        ...media,
+        ordenId: order.id,
+        sedeId: order.sede_id,
+        numeroOrden: order.numero_orden,
+        origen: target.origen,
+        avanceId: target.avanceId ?? null,
+        zona: target.zona ?? null,
+      }))
+    );
+  };
+
+  /** Más fotos, un video de recorrido o una nota de voz sobre la recepción. */
+  const addReceptionMedia = (items: PreparedMedia[]) => enqueueMedia(items, { origen: 'recepcion' });
+
+  const toggleMediaVisibility = async (media: OrderMedia) => {
+    if (!order || !isAdmin) return;
+    const next = !media.visible_cliente;
+    // Se refleja al instante; si el servidor lo rechaza, la relectura lo corrige.
+    patchOrder({
+      media: (order.media || []).map((m) => (m.id === media.id ? { ...m, visible_cliente: next } : m)),
+    });
+    try {
+      await mediaService.setVisibility(media.id, next);
+    } catch (err) {
+      showToast('error', t('media.visibilityError'), getErrorMessage(err, language));
+      await refresh(false);
+    }
+  };
+
+  const deleteMedia = async (media: OrderMedia) => {
+    if (!order) return;
+    if (!confirm(t('media.deleteConfirm'))) return;
+    try {
+      await mediaService.deleteMedia(media);
+      await refresh(false);
+    } catch (err) {
+      showToast('error', t('media.deleteError'), getErrorMessage(err, language));
+    }
+  };
+
   // ----- progress log --------------------------------------------------------
 
-  const addProgressUpdate = async (note: string, files: File[]) => {
-    if (!order || !user || !note.trim()) return false;
+  /**
+   * Un avance: la nota se guarda y sus archivos entran a la cola con el id del
+   * avance recién creado. El técnico ve el avance de inmediato, con sus videos
+   * "subiendo", en vez de esperar a que terminen.
+   */
+  const addProgressUpdate = async (note: string, media: PreparedMedia[]) => {
+    if (!order || !user || (!note.trim() && media.length === 0)) return false;
     setBusy(true);
     try {
-      await workOrdersService.addProgressUpdate(order.id, user.id, note, files);
+      const avance = await workOrdersService.addProgressUpdate(order.id, user.id, note.trim());
+      enqueueMedia(media, { origen: 'avance', avanceId: avance.id });
       await refresh(false);
       showToast('success', t('workOrders.progressAdded'));
       return true;
@@ -367,7 +426,8 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     if (!order) return;
     if (!confirm(t('common.delete') + '?')) return;
     try {
-      await workOrdersService.removeProgressUpdate(id);
+      const attached = (order.media || []).filter((m) => m.avance_id === id);
+      await workOrdersService.removeProgressUpdate(id, attached);
       await refresh(false);
     } catch (err) {
       fail(err);
@@ -380,8 +440,8 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     if (!order) return;
     setSavingSignature(true);
     try {
-      const { url, fecha } = await workOrdersService.uploadSignature(order.id, dataUrl);
-      patchOrder({ firma_cliente_url: url, firma_fecha: fecha });
+      const { ruta, fecha } = await workOrdersService.uploadSignature(order, dataUrl);
+      patchOrder({ firma_ruta: ruta, firma_fecha: fecha });
       showToast('success', t('workOrders.signatureSaved'));
     } catch (err) {
       showToast('error', t('workOrders.signatureError'), getErrorMessage(err, language));
@@ -395,7 +455,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     setSavingSignature(true);
     try {
       await workOrdersService.clearSignature(order.id);
-      patchOrder({ firma_cliente_url: null, firma_fecha: null });
+      patchOrder({ firma_ruta: null, firma_fecha: null });
     } catch (err) {
       showToast('error', t('workOrders.signatureError'), getErrorMessage(err, language));
     } finally {
@@ -405,13 +465,26 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
 
   // ----- PDF -----------------------------------------------------------------
 
+  /**
+   * URLs firmadas para lo que el PDF incrusta: las fotos (no los videos ni el
+   * audio, que un PDF no puede reproducir) y la firma. Todo vive en un bucket
+   * privado, así que el generador ya no puede leerlo por URL pública.
+   */
+  const signPdfAssets = async (target: WorkOrder) => {
+    const photos = (target.media || []).filter((m) => m.tipo === 'foto').map((m) => m.ruta);
+    return mediaService.signUrls([...photos, target.firma_ruta ?? ''].filter(Boolean), 10 * 60);
+  };
+
   const generatePdf = async () => {
     if (!order || !canSendReport) return;
     setGeneratingPdf(true);
     try {
       // ~400 kB of jsPDF, fetched only when someone prints.
-      const { generateWorkOrderPdf } = await import('../../lib/workOrderPdf');
-      await generateWorkOrderPdf(order, currentSede);
+      const [{ generateWorkOrderPdf }, urls] = await Promise.all([
+        import('../../lib/workOrderPdf'),
+        signPdfAssets(order),
+      ]);
+      await generateWorkOrderPdf(order, currentSede, urls);
     } catch (err) {
       showToast('error', t('workOrders.pdfError'), getErrorMessage(err, language));
     } finally {
@@ -430,8 +503,11 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     if (!order || !canSendReport) return;
     setGeneratingPdf(true);
     try {
-      const { renderWorkOrderPdfBlob } = await import('../../lib/workOrderPdf');
-      const blob = await renderWorkOrderPdfBlob(order, currentSede);
+      const [{ renderWorkOrderPdfBlob }, urls] = await Promise.all([
+        import('../../lib/workOrderPdf'),
+        signPdfAssets(order),
+      ]);
+      const blob = await renderWorkOrderPdfBlob(order, currentSede, urls);
       const { url } = await reportsService.uploadReport(order, blob);
       setShare({ link: url, message: reportsService.buildMessage(order, url, currentSede?.nombre) });
     } catch (err) {
@@ -479,6 +555,12 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     removeAssignment,
     addProgressUpdate,
     removeProgressUpdate,
+    addReceptionMedia,
+    toggleMediaVisibility,
+    deleteMedia,
+    pendingUploads: mediaUploads.items.filter((item) => item.ordenId === order?.id && item.estado !== 'listo'),
+    isAdmin,
+    userId: user?.id,
     saveSignature,
     clearSignature,
     generatePdf,

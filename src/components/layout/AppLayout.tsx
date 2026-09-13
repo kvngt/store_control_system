@@ -7,6 +7,8 @@ import { useAuth } from '../../context/auth.context';
 import { useTheme } from '../../context/theme.context';
 import { applySedeBranding, clearSedeBranding } from '../../lib/branding';
 import SchemaDriftBanner from '../SchemaDriftBanner';
+import MediaUploadsProvider from '../../features/media/MediaUploadsProvider';
+import UploadTray from '../../features/media/UploadTray';
 
 export default function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -42,7 +44,10 @@ export default function AppLayout() {
     };
   }, [mobileOpen]);
 
+  // La cola de subida vive aquí y no en una pantalla: un técnico que graba un
+  // video y se va al Kanban no debe cortar la subida.
   return (
+    <MediaUploadsProvider>
     <div className="app-layout">
       <Sidebar
         collapsed={sidebarCollapsed}
@@ -63,6 +68,8 @@ export default function AppLayout() {
         </main>
         <BottomNav />
       </div>
+      <UploadTray />
     </div>
+    </MediaUploadsProvider>
   );
 }

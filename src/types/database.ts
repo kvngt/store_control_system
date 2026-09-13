@@ -14,7 +14,6 @@ export type {
   WorkType,
   OrderStatus,
   TaskStatus,
-  PhotoType,
   TransactionType,
   TransactionCategory,
 } from './domain/enums';
@@ -29,7 +28,6 @@ export type {
   OrderProgressUpdate,
   LaborItem,
   OrderAssignment,
-  InspectionPhoto,
   WorkOrderPart,
   WorkOrderInput,
 } from './domain/workOrder.types';
@@ -42,3 +40,5 @@ export type {
 } from './domain/finance.types';
 export type { Commission, CommissionPayment, CommissionBalance } from './domain/payroll.types';
 export type { DashboardStats } from './domain/dashboard.types';
+
+export type { MediaKind, MediaOrigin, OrderMedia, PreparedMedia } from './domain/media.types';

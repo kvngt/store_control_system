@@ -7,7 +7,22 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { useWorkOrderForm } from './useWorkOrderForm';
+
+// Las fotos se comprimen al elegirlas, en un canvas que jsdom no tiene. Lo que
+// importa aquí es que cuenten como trabajo sin guardar, no cómo se comprimen.
+vi.mock('../../lib/media/image', () => ({
+  compressImage: vi.fn(async (file: Blob) => ({
+    tipo: 'foto',
+    blob: file,
+    mime: 'image/jpeg',
+    thumb: null,
+    duracionSeg: null,
+    ancho: 1920,
+    alto: 1440,
+  })),
+}));
+
+const { useWorkOrderForm } = await import('./useWorkOrderForm');
 
 beforeEach(() => {
   vi.stubGlobal('URL', {
@@ -33,11 +48,11 @@ describe('useWorkOrderForm', () => {
   // The photos are not form fields, so RHF's own `isDirty` cannot see them —
   // and a draft that is nothing but six intake photos is exactly the one worth
   // protecting from a stray click.
-  it('counts photos as unsaved work even with every field untouched', () => {
+  it('counts photos as unsaved work even with every field untouched', async () => {
     const { result } = renderHook(() => useWorkOrderForm());
     expect(result.current.isDirty).toBe(false);
 
-    act(() => result.current.photos.setZonePhoto('front', new File(['x'], 'front.jpg')));
+    await act(() => result.current.photos.setZonePhoto('front', new File(['x'], 'front.jpg')));
     expect(result.current.isDirty).toBe(true);
 
     act(() => result.current.reset());
@@ -126,14 +141,15 @@ describe('useWorkOrderForm', () => {
     expect(result.current.form.getValues('parts')[0].precio_venta_unitario).toBe('15');
   });
 
-  it('drops every row and every photo on reset', () => {
+  it('drops every row and every photo on reset', async () => {
     const { result } = renderHook(() => useWorkOrderForm());
 
-    act(() => {
+    await act(async () => {
       result.current.labor.append({ descripcion: 'Alineación', costo: '80' });
-      result.current.photos.addExtraPhotos([new File(['x'], 'dent.jpg')]);
       result.current.toggleOperator('op-1');
+      await result.current.photos.addExtraPhotos([new File(['x'], 'dent.jpg')]);
     });
+    expect(result.current.photos.hasPhotos).toBe(true);
 
     act(() => result.current.reset());
 

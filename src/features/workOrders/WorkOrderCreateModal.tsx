@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import { Camera, CheckCircle2, ChevronLeft, ImagePlus, Plus, Trash2, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { useToast } from '../../context/toast.context';
+import { isMediaError } from '../../lib/media/errors';
 import type { Customer, UserProfile, Vehicle } from '../../types/database';
 import VehicleFields from '../vehicles/VehicleFields';
 import { ZONES } from './useIntakePhotos';
@@ -58,6 +60,7 @@ export default function WorkOrderCreateModal({
   onClose,
 }: WorkOrderCreateModalProps) {
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const { register, formState, watch } = form.form;
   const { errors } = formState;
   const photos = form.photos;
@@ -81,14 +84,21 @@ export default function WorkOrderCreateModal({
     fileInputRef.current?.click();
   };
 
+  // Una foto que no se pudo leer (un HEIC en un navegador que no lo decodifica)
+  // se dice en el momento, en vez de desaparecer sin rastro.
+  const reportPhotoError = (err: unknown) => {
+    const detail = isMediaError(err) ? t('media.errors.' + err.code) : t('media.errors.unsupported-image');
+    showToast('error', t('media.addError'), detail);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && activeZone) photos.setZonePhoto(activeZone, file);
+    if (file && activeZone) photos.setZonePhoto(activeZone, file).catch(reportPhotoError);
     e.target.value = '';
   };
 
   const handleExtraFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    photos.addExtraPhotos(Array.from(e.target.files || []));
+    photos.addExtraPhotos(Array.from(e.target.files || [])).catch(reportPhotoError);
     e.target.value = '';
   };
 
@@ -415,7 +425,13 @@ export default function WorkOrderCreateModal({
                 </div>
               </div>
               <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 'var(--space-2)' }}>
-                {t('workOrders.tapToCapture')}
+                {photos.processing > 0 ? (
+                  <>
+                    <span className="spinner-small media-capture-spinner" /> {t('media.processing')}
+                  </>
+                ) : (
+                  t('workOrders.tapToCapture')
+                )}
               </p>
             </div>
 
@@ -523,8 +539,9 @@ export default function WorkOrderCreateModal({
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               {t('common.cancel')}
             </button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? t('common.loading') : t('common.create')}
+            {/* Mientras una foto se comprime, crear la orden la dejaría afuera. */}
+            <button type="submit" className="btn btn-primary" disabled={saving || photos.processing > 0}>
+              {saving ? t('common.loading') : photos.processing > 0 ? t('media.processing') : t('common.create')}
             </button>
           </div>
         </form>

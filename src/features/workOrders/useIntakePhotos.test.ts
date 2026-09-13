@@ -8,7 +8,24 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { useIntakePhotos, ZONES } from './useIntakePhotos';
+import type { PreparedMedia } from '../../types/database';
+
+// jsdom no tiene canvas. La compresión se prueba por su cuenta; aquí importa lo
+// que el hook hace con el resultado: vistas previas, zonas y su ciclo de vida.
+const compress = vi.hoisted(() => ({
+  fn: vi.fn(async (file: Blob): Promise<PreparedMedia> => ({
+    tipo: 'foto',
+    blob: file,
+    mime: 'image/jpeg',
+    thumb: new Blob(['thumb'], { type: 'image/jpeg' }),
+    duracionSeg: null,
+    ancho: 1920,
+    alto: 1440,
+  })),
+}));
+vi.mock('../../lib/media/image', () => ({ compressImage: compress.fn }));
+
+const { useIntakePhotos, ZONES } = await import('./useIntakePhotos');
 
 const created: string[] = [];
 const revoked: string[] = [];
@@ -41,35 +58,37 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('useIntakePhotos', () => {
-  it('revokes a zone photo when it is replaced', () => {
+  it('revokes a zone photo when it is replaced', async () => {
     const { result } = renderHook(() => useIntakePhotos());
 
-    act(() => result.current.setZonePhoto('front', photo('a.jpg')));
+    await act(() => result.current.setZonePhoto('front', photo('a.jpg')));
     const first = created[0];
 
-    act(() => result.current.setZonePhoto('front', photo('b.jpg')));
+    await act(() => result.current.setZonePhoto('front', photo('b.jpg')));
 
     expect(revoked).toContain(first);
     expect(leaked()).toHaveLength(1);
-    expect(result.current.photos['front']?.file.name).toBe('b.jpg');
+    const front = result.current.photos['front'];
+    expect(front).toBeDefined();
+    expect((front!.media.blob as File).name).toBe('b.jpg');
   });
 
-  it('revokes a photo when the tile is cleared', () => {
+  it('revokes a photo when the tile is cleared', async () => {
     const { result } = renderHook(() => useIntakePhotos());
 
-    act(() => result.current.setZonePhoto('rear', photo('a.jpg')));
+    await act(() => result.current.setZonePhoto('rear', photo('a.jpg')));
     act(() => result.current.removePhoto('rear'));
 
     expect(leaked()).toHaveLength(0);
     expect(result.current.photos['rear']).toBeUndefined();
   });
 
-  it('revokes every photo when the draft is discarded', () => {
+  it('revokes every photo when the draft is discarded', async () => {
     const { result } = renderHook(() => useIntakePhotos());
 
-    act(() => {
-      result.current.setZonePhoto('front', photo('a.jpg'));
-      result.current.addExtraPhotos([photo('b.jpg'), photo('c.jpg')]);
+    await act(async () => {
+      await result.current.setZonePhoto('front', photo('a.jpg'));
+      await result.current.addExtraPhotos([photo('b.jpg'), photo('c.jpg')]);
     });
     expect(leaked()).toHaveLength(3);
 
@@ -79,10 +98,10 @@ describe('useIntakePhotos', () => {
     expect(Object.keys(result.current.photos)).toHaveLength(0);
   });
 
-  it('revokes everything still held when the dialog unmounts', () => {
+  it('revokes everything still held when the dialog unmounts', async () => {
     const { result, unmount } = renderHook(() => useIntakePhotos());
 
-    act(() => result.current.addExtraPhotos([photo('a.jpg'), photo('b.jpg')]));
+    await act(() => result.current.addExtraPhotos([photo('a.jpg'), photo('b.jpg')]));
     expect(leaked()).toHaveLength(2);
 
     unmount();
@@ -90,12 +109,47 @@ describe('useIntakePhotos', () => {
     expect(leaked()).toHaveLength(0);
   });
 
-  it('keeps extra photos out of the six fixed zones', () => {
+  it('adds the photos that compressed and reports the one that did not', async () => {
+    compress.fn.mockImplementationOnce(async () => {
+      throw new Error('unsupported-image');
+    });
     const { result } = renderHook(() => useIntakePhotos());
 
+    let error: unknown;
+    await act(async () => {
+      await result.current.addExtraPhotos([photo('bad.heic'), photo('good.jpg')]).catch((e) => (error = e));
+    });
+
+    expect(error).toBeInstanceOf(Error);
+    expect(result.current.extraPhotos).toHaveLength(1);
+    expect(result.current.processing).toBe(0);
+  });
+
+  it('drops a photo that finishes compressing after the draft was discarded', async () => {
+    let finish: (m: PreparedMedia) => void = () => {};
+    compress.fn.mockImplementationOnce(() => new Promise<PreparedMedia>((resolve) => (finish = resolve)));
+    const { result } = renderHook(() => useIntakePhotos());
+
+    let pending: Promise<void> = Promise.resolve();
     act(() => {
-      result.current.setZonePhoto('front', photo('front.jpg'));
-      result.current.addExtraPhotos([photo('dent.jpg')]);
+      pending = result.current.setZonePhoto('front', photo('slow.jpg'));
+    });
+    act(() => result.current.reset());
+    await act(async () => {
+      finish({ tipo: 'foto', blob: photo('slow.jpg'), mime: 'image/jpeg', thumb: null, duracionSeg: null, ancho: 1, alto: 1 });
+      await pending;
+    });
+
+    expect(result.current.photos['front']).toBeUndefined();
+    expect(leaked()).toHaveLength(0);
+  });
+
+  it('keeps extra photos out of the six fixed zones', async () => {
+    const { result } = renderHook(() => useIntakePhotos());
+
+    await act(async () => {
+      await result.current.setZonePhoto('front', photo('front.jpg'));
+      await result.current.addExtraPhotos([photo('dent.jpg')]);
     });
 
     expect(result.current.zonesCovered).toBe(1);
