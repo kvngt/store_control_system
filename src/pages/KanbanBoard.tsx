@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { useToast } from '../context/toast.context';
@@ -80,7 +80,32 @@ export default function KanbanBoard() {
     entregado: t('workOrders.delivered'),
   };
 
-  const getOrdersByStatus = (status: OrderStatus) => orders.filter((o) => o.estatus === status);
+  // ⚡ Optimization: Group orders by status and count active ones in a single O(N) pass.
+  // Instead of re-filtering the entire `orders` array 6 times on every re-render
+  // (once for `totalActive` and once for each column in the kanban board), we
+  // build an index (dictionary) mapping status -> WorkOrder[] and an active count.
+  // This behaves similarly to building an index mapping in Python, and we memoize
+  // it so it only recalculates when the `orders` array actually changes.
+  const { ordersByStatus, totalActive } = useMemo(() => {
+    const grouped: Record<OrderStatus, WorkOrder[]> = {
+      recepcion: [],
+      en_proceso: [],
+      espera_repuestos: [],
+      finalizado: [],
+      entregado: [],
+    };
+    let activeCount = 0;
+
+    for (const order of orders) {
+      if (grouped[order.estatus]) {
+        grouped[order.estatus].push(order);
+      }
+      if (order.estatus !== 'finalizado' && order.estatus !== 'entregado') {
+        activeCount++;
+      }
+    }
+    return { ordersByStatus: grouped, totalActive: activeCount };
+  }, [orders]);
 
   const isAdmin = user?.rol === 'admin';
 
@@ -139,7 +164,6 @@ export default function KanbanBoard() {
   };
 
   const capacity = currentSede?.capacidad ?? 10;
-  const totalActive = orders.filter((o) => !['finalizado', 'entregado'].includes(o.estatus)).length;
   const occupancy = Math.min(100, Math.round((totalActive / capacity) * 100));
 
   if (loading) {
@@ -178,7 +202,7 @@ export default function KanbanBoard() {
 
       <div className="kanban-board">
         {COLUMNS.map(({ status, emoji }) => {
-          const columnOrders = getOrdersByStatus(status);
+          const columnOrders = ordersByStatus[status];
           return (
             <div key={status} className="kanban-column">
               <div className={`kanban-column-header ${status}`}>

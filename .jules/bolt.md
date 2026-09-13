@@ -1,3 +1,7 @@
 ## 2024-05-30 - useMemo optimization for O(N) array filtering
 **Learning:** Found several top-level React components (`WorkOrders.tsx`, `Customers.tsx`, `Vehicles.tsx`, `Finance.tsx`) performing extensive array filtering (`.filter()`) mapping over `.toLowerCase()` string comparisons during each re-render. Given that these components have many states controlling modals or input values, these recalculations caused unneeded CPU cycles.
 **Action:** When filtering array items derived from search inputs in complex React components with multiple state variables, always wrap the resulting array in a `useMemo` hook with proper dependency tracking to avoid computing them synchronously on each re-render, and extract expensive operations (like `.toLowerCase()`) to outside the loop.
+
+## 2024-05-31 - Memoizing grouped map generation for drag-and-drop state updates
+**Learning:** Found that `KanbanBoard.tsx` was running `orders.filter` 6 times per render cycle to group orders by status and calculate total active orders. Because Kanban boards trigger frequent local re-renders (like updating drag drop state values for touch devices using `.select` changes, or rapid drops), performing O(N * 6) array iteration on every render degrades performance.
+**Action:** Consolidate multiple list-wide `.filter` calls into a single `useMemo` block that iterates through the list once. Build a hash map / dictionary-like index of the items and aggregate counts simultaneously, ensuring the grouping calculation only re-runs when the source array changes.
