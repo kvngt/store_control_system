@@ -13,9 +13,13 @@
 --
 -- ------------------------------------------------------------------------------------
 -- Qué se borra
---   clientes, vehículos, órdenes de trabajo (con su mano de obra, repuestos,
---   asignaciones y avances), movimientos financieros, importaciones de estados
---   de cuenta, comisiones acumuladas y sus pagos.
+--   clientes, vehículos, órdenes de trabajo (con sus montos, mano de obra,
+--   repuestos, asignaciones, avances y filas de multimedia), movimientos
+--   financieros, importaciones de estados de cuenta, comisiones acumuladas y sus
+--   pagos, avisos de la campana y la cola de envíos.
+--
+-- Las suscripciones push se conservan: son de cada dispositivo, no datos de
+-- prueba, y borrarlas obligaría a todos a reactivar las notificaciones.
 --
 -- Qué se conserva y por qué
 --   sedes ............................ sin ellas nadie puede entrar ni crear nada
@@ -38,10 +42,15 @@ DELETE FROM comisiones;
 DELETE FROM finanzas_movimientos;
 DELETE FROM finanzas_importaciones;
 
+-- Avisos y cola de envíos: los avisos caerían en cascada con las órdenes, pero
+-- los que no llevan orden (una prueba de push) y la cola no.
+DELETE FROM notificaciones;
+DELETE FROM cola_envios;
+
 DELETE FROM orden_avances;
 
--- Al borrar la orden se van en cascada orden_labor, orden_repuestos y
--- orden_asignaciones.
+-- Al borrar la orden se van en cascada orden_montos, orden_labor,
+-- orden_repuestos, orden_asignaciones y orden_media.
 DELETE FROM ordenes_trabajo;
 
 -- Segunda pasada: los triggers del ciclo de vida de la orden (ajustes de pago,
@@ -71,6 +80,9 @@ SELECT
   (SELECT count(*) FROM finanzas_importaciones)         AS importaciones,
   (SELECT count(*) FROM comisiones)                     AS comisiones,
   (SELECT count(*) FROM comision_pagos)                 AS pagos_comision,
+  (SELECT count(*) FROM orden_media)                    AS multimedia,
+  (SELECT count(*) FROM notificaciones)                 AS avisos,
+  (SELECT count(*) FROM cola_envios)                    AS cola,
   -- Estas tres se conservan a propósito:
   (SELECT count(*) FROM sedes)                          AS sedes_conservadas,
   (SELECT count(*) FROM perfiles)                       AS usuarios_conservados,
@@ -79,11 +91,11 @@ SELECT
 -- ------------------------------------------------------------------------------------
 -- Nota sobre los archivos subidos
 -- ------------------------------------------------------------------------------------
--- Las fotos de inspección, las firmas y los PDF de estados de cuenta viven en
--- Storage, no en estas tablas, así que este script no los toca. Quedan
--- huérfanos (nada los referencia) y son inofensivos. Para vaciarlos también:
--- panel de Supabase → Storage → seleccionar los archivos de cada bucket
--- (vehiculos_fotos, firmas, estados_cuenta_bancarios) → eliminar.
+-- Las fotos, videos, notas de voz, firmas, comprobantes y PDF viven en Storage,
+-- no en estas tablas, así que este script no los toca. Quedan huérfanos (nada
+-- los referencia) y son inofensivos; la limpieza nocturna (`cleanup-storage`)
+-- borra los del bucket orden_media cuando cumplen 7 días. Para vaciarlos ya:
+-- panel de Supabase → Storage → seleccionar los archivos de cada bucket → eliminar.
 --
 -- Conviene hacerlo desde el panel y no por SQL: borrar filas de storage.objects
 -- deja el archivo físico ocupando espacio sin forma de recuperarlo ni verlo.

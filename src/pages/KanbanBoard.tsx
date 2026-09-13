@@ -84,9 +84,12 @@ export default function KanbanBoard() {
 
   const isAdmin = user?.rol === 'admin';
 
-  // A technician can only move cards for orders they're assigned to.
+  // Misma regla que `canEdit` en el detalle y que `trg_order_technician_guard` en
+  // la base: un técnico mueve solo sus órdenes, y nunca una ya entregada — sacarla
+  // de Entregado revierte el cobro y borra comisiones, y eso es de administración.
   const canMove = (order: WorkOrder) =>
-    isAdmin || (order.asignaciones || []).some((a) => a.usuario_id === user?.id);
+    isAdmin ||
+    (order.estatus !== 'entregado' && (order.asignaciones || []).some((a) => a.usuario_id === user?.id));
 
   const handleDragStart = (order: WorkOrder, e: React.DragEvent) => {
     if (!canMove(order)) {

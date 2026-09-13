@@ -67,7 +67,9 @@ avance se conserva y el técnico puede corregirlo.
 ### Orden entregada
 
 Una orden entregada queda **cerrada para los técnicos**: no pueden modificar su
-mano de obra, repuestos ni asignaciones, ni subir archivos, ni cambiar su estado.
+mano de obra, repuestos ni asignaciones, ni subir archivos, ni cambiar su estado
+(tampoco sacarla de Entregado, que revertiría el cobro y sus comisiones), ni
+agregar o borrar avances.
 Un admin sí puede corregirla; cada corrección de dinero se asienta como un ajuste
 (sección 2), no reescribiendo lo anterior.
 
@@ -160,25 +162,31 @@ mismos permisos ("técnico"); cambia el tipo de tarea.
 | Ver **su comisión estimada** | — | ✅ | ❌ |
 | Agregar / editar mano de obra o repuestos | ✅ | ❌ | ❌ |
 | Registrar depósito | ✅ | ❌ | ❌ |
-| Cambiar estado (excepto Entregado) | ✅ | ✅ | ❌ ¹ |
+| Cambiar estado (excepto a o desde Entregado) | ✅ | ✅ | ❌ |
 | Marcar **Entregado** | ✅ | ❌ | ❌ |
-| Mover el avance | ✅ | ✅ (orden no cerrada) | ❌ ¹ |
-| Capturar la firma del cliente | ✅ | ✅ | ❌ ¹ |
+| Mover el avance | ✅ | ✅ (orden no cerrada ¹) | ❌ |
+| Capturar la firma del cliente | ✅ | ✅ (orden no entregada) | ❌ |
 | Subir fotos, videos y notas de voz | ✅ | ✅ (orden no entregada) | ❌ |
 | **Publicar** multimedia al cliente | ✅ | ❌ | ❌ |
 | Borrar un archivo | ✅ cualquiera | ✅ los suyos, orden no entregada | ❌ |
-| Agregar avances | ✅ | ✅ | ❌ ¹ |
-| Borrar avances | ✅ cualquiera | ✅ los suyos | ❌ |
+| Agregar avances | ✅ | ✅ (orden no entregada) | ❌ |
+| Borrar avances | ✅ cualquiera | ✅ los suyos, orden no entregada | ❌ |
 | Asignar a otras personas | ✅ | ❌ | ❌ |
 | Unirse a la orden | — | — | ✅ si no está entregada |
 | Generar y compartir el reporte | ✅ | ❌ | ❌ |
-| Mover su tarjeta en el Kanban | ✅ todas | ✅ (excepto a Entregado) | ❌ ¹ |
+| Mover su tarjeta en el Kanban | ✅ todas | ✅ (excepto a o desde Entregado) | ❌ |
 
-¹ **Restricción solo de la interfaz.** La base de datos permite a cualquier persona
-de la sede cambiar el estado (excepto Entregado), el avance y la firma de una
-orden de su sede, y agregar avances con su propio nombre, aunque no esté
-asignada. Todo lo demás de esta tabla lo impone la base. Ver
-[riesgo 7](#8-riesgos-conocidos-y-decisiones-abiertas).
+**Toda esta tabla la impone la base de datos** (migración `20260922000000`), con
+una sola diferencia: ¹ en una orden **Finalizada** la interfaz bloquea el avance
+(queda en 100 %), pero la base lo permite mientras la orden no esté entregada.
+
+De una orden, un técnico asignado solo puede cambiar **estado, fecha de
+finalización, avance y firma**. Cliente, vehículo, millas, gasolina, notas de
+recepción, fechas y creador solo los cambia un admin. La regla se comprueba
+contra la fila completa, así que una columna nueva queda protegida sin tocar el
+trigger (`trg_order_technician_guard`). Ni un avance ni una asignación pueden
+moverse a otra orden o a otra persona, ni siquiera por un admin: se borran y se
+crean de nuevo.
 
 > **Por qué el técnico ve la mano de obra y nada más:** su comisión es un
 > porcentaje de la mano de obra. Ver ese número y la cuenta de su comisión le
@@ -212,7 +220,7 @@ por técnico = bolsa ÷ técnicos asignados, en centavos, residuo a los primeros
 | Foto | — | JPEG, 1920 px en el lado largo, sin datos de ubicación, con miniatura de 480 px |
 | Video | **2 minutos** | MP4 H.264 720p ~1.5 Mbps (WebM en navegadores que no graban MP4) |
 | Nota de voz | **2 minutos** | AAC/MP4 (u Opus/WebM) ~48 kbps |
-| Cualquier archivo | 100 MB | — |
+| Cualquier archivo | 50 MB | — |
 
 ### Visibilidad para el cliente
 
@@ -294,16 +302,9 @@ resolverlas con el cliente.
    agrega un técnico a una orden entregada después de pagarle a uno, los
    pendientes se recalculan sobre la bolsa completa. Es el efecto de "lo pagado es
    historia"; la suma pagada puede superar la bolsa.
-4. **Un técnico puede agregar avances de texto a una orden entregada**, pero no
-   archivos.
-5. **Videos WebM** (grabados en Chrome antiguo o Firefox) pueden no reproducirse en
+4. **Videos WebM** (grabados en Chrome antiguo o Firefox) pueden no reproducirse en
    un iPhone antiguo.
-6. **La hora de las notificaciones push depende de la entrega del navegador**
+5. **La hora de las notificaciones push depende de la entrega del navegador**
    (Apple/Google). Normalmente segundos; no está garantizada.
-7. **Algunos permisos del técnico no asignado son solo de interfaz** (tabla de la
-   sección 3, marca ¹): por la API podría cambiar estado, avance o firma de una
-   orden de su sede. No toca dinero —entregar sigue siendo solo admin— pero sí el
-   seguimiento. *Propuesta:* exigir asignación en la política de actualización de
-   `ordenes_trabajo` y de inserción de `orden_avances`.
-8. **Fases 4–6 pendientes**: no hay todavía portal del cliente, correos
+6. **Fases 4–6 pendientes**: no hay todavía portal del cliente, correos
    automáticos, presupuestos con autorización ni reporte web.

@@ -20,7 +20,12 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
   los ve la sede, porque la comisión del técnico sale de la mano de obra. Un
   técnico lee repuestos por la RPC `repuestos_de_orden` (sin precios).
 - **Multi-sede.** Casi toda tabla tiene `sede_id`. Un técnico ve solo su sede; un
-  admin, todas. Helpers SQL: `is_admin()`, `current_user_sede_id()`.
+  admin, todas. Helpers SQL: `is_admin()`, `current_user_sede_id()`,
+  `is_assigned_to_order(orden_id)`.
+- **Un técnico modifica una orden solo si está asignado y no está entregada**, y
+  solo estado, avance y firma (`trg_order_technician_guard`). Si agregas una
+  acción de técnico que cambie otra columna de `ordenes_trabajo`, añádela a la
+  lista permitida de ese trigger en una migración nueva.
 - **Roles:** `admin`, `mecanico`, `pintor`. Mecánico y pintor tienen los mismos
   permisos.
 - **Fases 1–3 hechas; 4–6 (portal del cliente, correos, presupuestos, reporte web)
@@ -100,5 +105,6 @@ e2e corren contra el proyecto de `.env.local`: no agregues pruebas que entreguen
 - Errores del frontend en Sentry (`@sentry/react`), si `VITE_SENTRY_DSN` está
   definida.
 - Producción: `dist/` en Hostinger (Apache, `public/.htaccess` reescribe a
-  `index.html`), dominio `reinventa.shop`; Supabase Pro. Pasos en
+  `index.html`), dominio `reinventa.shop`; Supabase (hoy en plan Free: 50 MB por archivo; pasar a
+  Pro antes de atender clientes reales). Pasos en
   [deployment.md](deployment.md).

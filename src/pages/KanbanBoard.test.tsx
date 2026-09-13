@@ -122,6 +122,20 @@ describe('Kanban board without dragging', () => {
     expect(moveSelectFor('ORD-2026-001')).toBeTruthy();
   });
 
+  it('offers no move control on the technician’s own delivered order', async () => {
+    // Sacar una orden de Entregado revierte el cobro y borra comisiones: la base
+    // se lo niega al técnico, así que la tarjeta no debe ofrecerlo.
+    mocks.auth.current = authValue(MECHANIC_USER);
+    mocks.getWorkOrders.mockResolvedValue([
+      order({ ...MINE, id: 'ord-delivered', numero_orden: 'ORD-2026-003', estatus: 'entregado' }),
+    ]);
+
+    renderWithProviders(<KanbanBoard />);
+
+    await screen.findByText('ORD-2026-003');
+    expect(moveSelectFor('ORD-2026-003')).toBeNull();
+  });
+
   it('lets an admin move any order', async () => {
     mocks.auth.current = authValue(ADMIN_USER);
     mocks.getWorkOrders.mockResolvedValue([SOMEONE_ELSES]);

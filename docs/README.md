@@ -84,7 +84,7 @@ Hay un plan de cambios pedido por el cliente en seis fases. Estado:
 Donde un documento menciona algo de las fases 4–6, lo marca como pendiente.
 
 > **Antes de desplegar las fases 1–3** hay configuración que no está en el código
-> (límite de Storage, secretos, Vault, llaves VAPID). Está paso a paso en
+> (secretos, Vault, llaves VAPID). Está paso a paso en
 > [deployment.md](deployment.md#4-configuración-única-de-supabase).
 
 ---

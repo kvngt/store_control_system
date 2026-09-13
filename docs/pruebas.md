@@ -29,8 +29,8 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 210 pruebas, 28 archivos | ~20 s | Nada |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos contra un Postgres real | 48 aserciones, 2 archivos | ~1 min | Docker |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 211 pruebas, 28 archivos | ~20 s | Nada |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos y permisos del técnico contra un Postgres real | 71 aserciones, 3 archivos | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, ~73 casos | 2–5 min | Credenciales de prueba |
 | **Manual** | Personas y dispositivos | Cámara, micrófono, push, subidas reales, iPhone, diseño móvil | Secciones 4–6 | 2–3 h completo | Teléfonos Android e iPhone |
 
@@ -116,8 +116,19 @@ PostgREST en cada petición.
 - Multimedia: recepción nace visible, avance nace interno aunque lo pida; una fila
   no apunta a otra orden; un técnico no asignado no sube.
 
+**`supabase/tests/database/03_permisos_tecnico.test.sql`** (23)
+
+- Técnico no asignado: ve la orden, pero no cambia estado, avance ni firma, ni
+  agrega avances.
+- Técnico asignado: cambia estado, avance y firma; la firma no apunta a otra
+  orden; no cambia cliente ni millas; no mueve un avance ni pasa su asignación a
+  otra persona.
+- Orden entregada: el técnico no la saca de Entregado (la orden y su comisión
+  siguen intactas) y no agrega ni borra avances; el admin sí puede sacarla.
+- Los buckets viejos `vehiculos_fotos` y `firmas` ya no son públicos.
+
 > **Estado:** escritas y validadas con el parser de Postgres, pero **todavía no
-> ejecutadas** contra una base (la máquina de desarrollo no tiene Docker). La
+> ejecutadas** con pgTAP (la máquina de desarrollo no tiene Docker). La
 > primera corrida puede requerir ajustes de sintaxis de pgTAP. Córrelas antes de
 > confiar en ellas.
 
@@ -337,7 +348,8 @@ Ver la matriz de dispositivos (sección 6) para repetir en cada teléfono.
 
 **Límite de Storage**
 
-- [ ] Subir un archivo de ~80 MB (video de galería que no se pueda convertir) → sube. Si falla con "too large", falta subir el límite global (deployment §4.3).
+- [ ] Un video de 2 minutos grabado con el botón **Video** → sube completo (pesa ~24 MB).
+- [ ] Elegir de la galería un video de más de 50 MB que el teléfono no pueda convertir → mensaje "pesa más de 50 MB", no se intenta subir.
 
 ### 4.8 Notificaciones y push
 
@@ -451,6 +463,10 @@ H=(-H "apikey: $ANON" -H "Authorization: Bearer $TOKEN" -H "Content-Type: applic
 | 13 | `curl "$SB/rest/v1/ordenes_trabajo?select=id&sede_id=neq.<su sede>" "${H[@]}"` | `[]` |
 | 14 | Con la clave anónima **sin** token: `curl "$SB/rest/v1/clientes?select=*" -H "apikey: $ANON"` | `[]` |
 | 15 | `curl -X POST "$SB/functions/v1/process-outbox"` sin cabecera secreta | `401` |
+| 16 | Token de un técnico **no asignado** a `$ORDEN`: `curl -X PATCH "$SB/rest/v1/ordenes_trabajo?id=eq.$ORDEN" "${H[@]}" -d '{"porcentaje_avance":50}'` | Error `42501` "Solo el personal asignado…" |
+| 17 | Orden **entregada**, token del técnico asignado: `curl -X PATCH "$SB/rest/v1/ordenes_trabajo?id=eq.$ORDEN" "${H[@]}" -d '{"estatus":"finalizado"}'` | Error `42501` "La orden ya fue entregada…" |
+| 18 | Técnico asignado: `curl -X PATCH "$SB/rest/v1/ordenes_trabajo?id=eq.$ORDEN" "${H[@]}" -d '{"millas_ingreso":1}'` | Error `42501` "Solo un administrador puede cambiar los datos de recepción…" |
+| 19 | Sin sesión: `curl -o /dev/null -w '%{http_code}' "$SB/storage/v1/object/public/firmas/<archivo>"` | `400` (el bucket ya no es público) |
 
 Cualquier resultado distinto es un problema de seguridad: repórtalo como prioridad.
 
@@ -489,6 +505,9 @@ Cada uno se corrigió en septiembre de 2026. Si alguno reaparece, es una regresi
 | Re-entregar no volvía a cobrar el saldo | 4.5 paso 5 |
 | Deshacer un pago de comisiones borraba el egreso de otro técnico | 4.6 (y pgTAP 01) |
 | Un técnico podía entregar, cotizar o escribir totales | Sección 5, peticiones 4–6 |
+| Un técnico podía sacar una orden de Entregado por la API (revertía cobro y comisiones) | Sección 5, petición 17 (y pgTAP 03) |
+| Un técnico no asignado podía cambiar estado, avance y firma por la API | Sección 5, petición 16 (y pgTAP 03) |
+| Las firmas y fotos viejas se descargaban sin sesión | Sección 5, petición 19 |
 | Tres técnicos cobraban $0.01 de más | 4.6 |
 | Mano de obra negativa aceptada | Alta de orden con costo −100 → rechazado |
 | Fallar la subida de fotos duplicaba la orden al reintentar | Crear orden con fotos en modo avión: una sola orden |

@@ -94,8 +94,10 @@ Se hace una vez por entorno. Si cambias de proyecto, repite todo.
 
 ### 4.3 Storage
 
-- **Settings → Global file size limit: 100 MB.** Obligatorio para videos: el límite
-  global manda sobre el del bucket y viene en 50 MB.
+- **No hace falta cambiar el límite global de archivo.** La app y el bucket
+  `orden_media` usan 50 MB por archivo, que es también el máximo del plan Free
+  (migración `20260921000000`). Si algún día se sube el tope de la app, el límite
+  global (Storage → Settings) tiene que ser igual o mayor, y en Free no pasa de 50 MB.
 - Los buckets y sus políticas los crean las migraciones; no se crean a mano.
 
 ### 4.4 Extensiones

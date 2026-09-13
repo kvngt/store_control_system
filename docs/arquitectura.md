@@ -249,6 +249,7 @@ técnico.
 | `ordenes_trabajo` | `trg_numero_orden` | Genera `ORD-AAAA-###` de forma atómica |
 | | `trg_orden_sede_coherente` | Rechaza órdenes que mezclan sedes |
 | | `trg_order_money_guard` | Técnico: no entrega, no cambia sede/número, no escribe `total_labor` |
+| | `trg_order_technician_guard` | Técnico: solo asignado, orden sin entregar, y solo estado, avance y firma. Firma en la carpeta de su orden (para todos) |
 | | `trg_order_montos_create` | Crea la fila de `orden_montos` |
 | | `trg_progress_on_status` | Avance a 100 % al finalizar o entregar |
 | | `trg_order_delivery_payment` | Al entregar: cobra el saldo pendiente |
@@ -265,8 +266,10 @@ técnico.
 | `orden_repuestos` | `trg_parts_subtotal`, `trg_part_cost_passthrough` | Subtotal y costo = precio |
 | | `trg_parts_totals`, `trg_parts_expense_sync` | Totales y ajuste de egreso en orden entregada |
 | `orden_asignaciones` | `trg_assignment_commissions` | Re-reparte la bolsa |
+| | `trg_assignment_owner_immutable` | Una asignación no cambia de orden ni de persona |
 | | `trg_assignment_notify` | Aviso al técnico asignado / quitado |
 | `orden_avances` | `trg_progress_notify` | Aviso a admins cuando un técnico documenta |
+| | `trg_avance_owner_immutable` | Un avance no cambia de orden ni de autor |
 | `orden_media` | `trg_orden_media_prepare`, `trg_orden_media_guard` | Sede, ruta válida, visibilidad inicial; inmutable salvo visibilidad |
 | `comisiones` | `trg_commission_notify` | Aviso "comisión generada" |
 | `comision_pagos` | `trg_commission_payment_finance` | Egreso en Finanzas ligado al pago |
@@ -310,7 +313,9 @@ permiten cambiar totales con esa bandera: un `PATCH` directo a la API no la tien
 
 RLS está activo en todas las tablas. Las políticas se apoyan en funciones
 `SECURITY DEFINER` que evitan recursión al consultar `perfiles`:
-`is_admin()`, `current_user_role()`, `current_user_sede_id()`.
+`is_admin()`, `current_user_role()`, `current_user_sede_id()` e
+`is_assigned_to_order(orden_id)` (esta última evita la recursión entre las
+políticas de `ordenes_trabajo` y `orden_asignaciones`).
 
 El patrón general es `is_admin() OR sede_id = current_user_sede_id()`. Sobre él:
 
@@ -319,8 +324,11 @@ El patrón general es `is_admin() OR sede_id = current_user_sede_id()`. Sobre é
   clientes, vehículos y órdenes, publicar multimedia al cliente.
 - **Propio:** `notificaciones` y `push_suscripciones` (cada quien las suyas);
   `comisiones` las lee el técnico dueño; avances y archivos se borran por su autor.
-- **Asignado:** subir multimedia a una orden exige estar asignado y que no esté
-  entregada. Un técnico solo se asigna a sí mismo.
+- **Asignado:** modificar una orden (estado, avance, firma), escribir avances y
+  subir multimedia exige estar asignado y que la orden no esté entregada. Un
+  técnico solo se asigna a sí mismo. La regla de la orden vive en un trigger y no
+  en la política de UPDATE, para responder con un 42501 y un motivo en vez de un
+  "0 filas" silencioso.
 
 La matriz completa por rol, en lenguaje de negocio, está en
 [reglas-de-negocio.md](reglas-de-negocio.md#3-qué-puede-hacer-cada-rol).
@@ -333,12 +341,12 @@ para convertir ese silencio en un error visible.
 
 | Bucket | Público | Contenido | Escritura |
 |---|---|---|---|
-| `orden_media` | **no** | fotos, videos, audio y firmas de órdenes | sede/orden válida; borrar: admin o dueño |
+| `orden_media` | **no** | fotos, videos, audio y firmas de órdenes | admin, o asignado a la orden sin entregar; borrar: admin o dueño |
 | `comprobantes` | **no** | fotos de cheques | admin |
 | `reportes` | **no** | PDF compartidos | admin |
 | `estados_cuenta_bancarios` | no | PDF del banco | admin |
 | `sede_logos`, `avatares` | sí | logos e imágenes de perfil | admin / cada usuario |
-| `vehiculos_fotos`, `firmas` | sí | **en desuso** desde la fase 2 | — |
+| `vehiculos_fotos`, `firmas` | **no** (cerrados en septiembre de 2026) | **en desuso** desde la fase 2; lectura solo admin | nadie |
 
 Lo privado se ve con URLs firmadas (1 hora para galerías, 10 minutos para el PDF).
 

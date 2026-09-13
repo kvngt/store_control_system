@@ -64,7 +64,7 @@ WebM.
 codificador por hardware del teléfono: segundos en vez de minutos, sin descargar
 30 MB. La librería (~410 kB) solo se descarga cuando alguien elige un video. Si el
 navegador no puede convertir, se sube el original solo si ya es MP4/WebM y pesa
-menos de 100 MB; si no, se pide grabarlo desde la app.
+menos de 50 MB; si no, se pide grabarlo desde la app.
 
 **Subidas reanudables (TUS) para lo que pasa de 6 MB.** Un corte de red retoma
 desde el último bloque confirmado. Supabase exige bloques de exactamente 6 MB. Se
@@ -112,15 +112,16 @@ Settings → Usage después del primer mes.
 
 ### Configuración requerida
 
-- **Límite global de archivo de Storage a 100 MB** (Storage → Settings). El
-  global manda sobre el del bucket; viene en 50 MB.
-- Nada más: el bucket y sus políticas los crea la migración.
+- Ninguna en el panel. El bucket, su tope de 50 MB y sus políticas los crean las
+  migraciones. 50 MB coincide con el máximo por archivo del plan Free: si algún
+  día se sube el tope, el límite global de Storage (Storage → Settings) manda
+  sobre el del bucket y tiene que acompañarlo.
 
 ### Diagnóstico
 
 | Síntoma | Dónde mirar |
 |---|---|
-| "No se pudo subir" en la bandeja | Expande la bandeja: debajo de cada archivo aparece el motivo. 413/"too large" → límite global de Storage. 42501 → la persona no está asignada o la orden está entregada |
+| "No se pudo subir" en la bandeja | Expande la bandeja: debajo de cada archivo aparece el motivo. 413/"too large" → el archivo pasa de 50 MB (o el límite global de Storage quedó por debajo del bucket). 42501 → la persona no está asignada o la orden está entregada |
 | El video no pasa de 0 % | Red del dispositivo; ¿está en modo sin conexión? La bandeja lo dice. Probar con wifi |
 | "Este teléfono no puede convertir ese video" | Navegador sin WebCodecs y archivo `.mov`/HEVC. Grabar con el botón **Video** |
 | "El video dura más de 2 minutos" | Esperado. Recortarlo en el teléfono o grabarlo desde la app |

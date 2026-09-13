@@ -24,8 +24,14 @@ export const PHOTO_QUALITY = 0.82;
 export const THUMB_MAX_EDGE = 480;
 export const THUMB_QUALITY = 0.72;
 
-/** Mismo tope que el bucket `orden_media`. */
-export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+/**
+ * Mismo tope que el bucket `orden_media`. 50 MB es además el máximo por archivo
+ * del plan Free de Supabase, así que no depende de ningún ajuste del panel. Lo
+ * que genera la app queda muy por debajo (un video de 2 minutos a 720p pesa
+ * ~24 MB); solo un video de galería que el teléfono no pudo convertir llega a
+ * este tope, y para ese caso el mensaje pide grabarlo desde la app.
+ */
+export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
 /**
  * Por encima de esto se sube por TUS (reanudable). Supabase exige bloques de

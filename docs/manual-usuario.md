@@ -444,7 +444,7 @@ orden y desde **Avance del trabajo** después.
 | **Foto** | Abre la cámara. La foto se reduce antes de subir | — |
 | **Video** | Graba dentro de la app, en calidad adecuada para el teléfono. En los últimos 15 segundos el contador se pone rojo y **a los 2 minutos se detiene solo**. Puedes cambiar de cámara antes de grabar, repetir o usar el video | 2 min |
 | **Nota de voz** | Graba audio. Puedes escucharla antes de usarla | 2 min |
-| **Galería** | Elige una foto o un video ya grabado. Los videos se convierten a un tamaño manejable («Convirtiendo video N %») | 2 min, 100 MB |
+| **Galería** | Elige una foto o un video ya grabado. Los videos se convierten a un tamaño manejable («Convirtiendo video N %») | 2 min, 50 MB |
 
 > **Graba con el botón Video de la app**, no con la cámara del teléfono. Un minuto
 > de video del iPhone pesa cientos de megas; grabado desde la app pesa unos 11 y
@@ -795,10 +795,8 @@ actualizarla.
 | Cambiar de sede | ✅ | ❌ |
 | Notificaciones | Recepciones, avances, órdenes finalizadas | Asignaciones, comisiones |
 
-Lo relacionado con dinero, permisos y archivos lo aplica la base de datos, así que
-se cumple aunque alguien intente saltarse la interfaz. (Algunos detalles de
-seguimiento, como que un técnico no asignado no mueva el avance, hoy solo los
-aplica la pantalla; ver [reglas-de-negocio.md](reglas-de-negocio.md#3-qué-puede-hacer-cada-rol).)
+Todas estas reglas las aplica la base de datos, así que se cumplen aunque alguien
+intente saltarse la interfaz.
 
 ---
 
@@ -869,7 +867,7 @@ La orden está Finalizada o Entregada, o no estás asignado a ella.
 
 **«Un video no sube / la bandeja dice que falló.»**
 Expande la bandeja y lee el motivo. Si es la señal, presiona **Reintentar** con
-mejor conexión. Si dice que el video dura más de 2 minutos o pesa más de 100 MB,
+mejor conexión. Si dice que el video dura más de 2 minutos o pesa más de 50 MB,
 grábalo desde el botón **Video** de la app. Si no ves la bandeja pero el archivo
 no aparece, vuelve a entrar con la misma cuenta en el mismo teléfono: las
 subidas pendientes continúan.
