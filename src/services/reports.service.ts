@@ -9,31 +9,16 @@
 // what the customer expects to receive it from.
 import { supabase } from '../lib/supabase';
 import type { Customer, WorkOrder } from '../types/database';
+import { whatsAppUrl } from '../lib/phone';
 
 const BUCKET = 'reportes';
 
 /** How long a shared report link stays valid. */
 export const REPORT_LINK_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
-/**
- * Strips a phone number down to digits and puts it in the form wa.me expects:
- * country code first, no +, no spaces, no punctuation.
- *
- * Numbers in this shop's records are written every way a person can write one
- * ("(504) 9876-5432", "+504 9876 5432", "98765432"). A local number with no
- * country code is prefixed with `defaultCountryCode`, because wa.me silently
- * fails on one without.
- */
-export function toWhatsAppNumber(phone: string, defaultCountryCode = '1'): string | null {
-  const digits = (phone || '').replace(/\D/g, '');
-  if (!digits) return null;
-  // Already international: a leading 00 is the other way of writing '+'.
-  if (digits.startsWith('00')) return digits.slice(2);
-  // 10 digits is a bare North-American number; 7-9 is a local one elsewhere.
-  // Either way it needs a country code in front of it.
-  if (digits.length <= 10) return `${defaultCountryCode}${digits}`;
-  return digits;
-}
+// Movido a lib/phone para que el portal del cliente lo use sin el cliente de
+// Supabase. Se reexporta aquí porque es parte de lo que este servicio ofrece.
+export { toWhatsAppNumber } from '../lib/phone';
 
 export const reportsService = {
   /**
@@ -81,13 +66,9 @@ export const reportsService = {
       .trim();
   },
 
-  whatsAppLink: (customer: Customer | undefined, message: string) => {
-    const number = toWhatsAppNumber(customer?.telefono || '');
-    const text = encodeURIComponent(message);
-    // Without a number wa.me still opens, with a contact picker — better than
-    // a dead button when the customer record has no phone on it.
-    return number ? `https://wa.me/${number}?text=${text}` : `https://wa.me/?text=${text}`;
-  },
+  // Without a number wa.me still opens, with a contact picker — better than a
+  // dead button when the customer record has no phone on it.
+  whatsAppLink: (customer: Customer | undefined, message: string) => whatsAppUrl(customer?.telefono, message),
 
   mailtoLink: (customer: Customer | undefined, subject: string, message: string) =>
     `mailto:${encodeURIComponent(customer?.email || '')}` +

@@ -1,29 +1,19 @@
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles/index.css'
 import './styles/components.css'
-import App from './App'
-import { registerServiceWorker } from './lib/push'
-import * as Sentry from '@sentry/react'
+import { isCustomerPortalPath } from './portal/path'
 
-if (import.meta.env.VITE_SENTRY_DSN) {
-  Sentry.init({
-    dsn: import.meta.env.VITE_SENTRY_DSN,
-    integrations: [
-      Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration(),
-    ],
-    tracesSampleRate: 1.0,
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
-  })
+// Dos aplicaciones en el mismo sitio, cada una en su propio paquete:
+//
+// - /r/<token> es el reporte del cliente. Lo abre alguien que no es del taller,
+//   casi siempre desde el teléfono y con datos móviles. No descarga la app del
+//   taller, ni el cliente de Supabase, ni Sentry (que grabaría la sesión de una
+//   persona ajena), ni registra el service worker de push.
+// - Todo lo demás es la app del taller.
+const root = createRoot(document.getElementById('root')!)
+
+if (isCustomerPortalPath(window.location.pathname)) {
+  void import('./portal/start').then((m) => m.start(root))
+} else {
+  void import('./appStart').then((m) => m.start(root))
 }
-
-// Solo para push (ver public/sw.js): no cachea la app.
-registerServiceWorker()
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)

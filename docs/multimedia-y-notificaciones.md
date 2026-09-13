@@ -134,6 +134,10 @@ Settings → Usage después del primer mes.
 
 ## Parte 2 — Notificaciones
 
+> Esta parte cubre los avisos **al equipo del taller** (campana y push). Los correos
+> **al cliente** usan la misma cola (`cola_envios`, canal `email`) y el mismo
+> procesador: ver [portal-y-correos.md](portal-y-correos.md).
+
 ### El recorrido de un aviso
 
 ```

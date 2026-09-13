@@ -7,6 +7,7 @@ import { customersService } from '../services/supabaseService';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
+import { isOptionalEmailValid } from '../lib/email';
 import {
   Plus,
   Search,
@@ -37,7 +38,8 @@ export default function Customers() {
   const [viewProfile, setViewProfile] = useState<Customer | null>(null);
   const [profileData, setProfileData] = useState<{ vehicles: Vehicle[]; orders: WorkOrder[] } | null>(null);
 
-  const [form, setForm] = useState({ nombre: '', telefono: '', email: '', direccion: '', notas_crm: '' });
+  const [form, setForm] = useState({ nombre: '', telefono: '', email: '', direccion: '', notas_crm: '', acepta_correos: true });
+  const [formError, setFormError] = useState<string | null>(null);
 
   const isAdmin = user?.rol === 'admin';
   const sedeId = isAdmin ? currentSede?.id : user?.sede_id;
@@ -111,7 +113,8 @@ export default function Customers() {
 
   const openCreateModal = () => {
     setSelectedCustomer(null);
-    setForm({ nombre: '', telefono: '', email: '', direccion: '', notas_crm: '' });
+    setForm({ nombre: '', telefono: '', email: '', direccion: '', notas_crm: '', acepta_correos: true });
+    setFormError(null);
     setShowModal(true);
   };
 
@@ -123,23 +126,34 @@ export default function Customers() {
       email: customer.email,
       direccion: customer.direccion,
       notas_crm: customer.notas_crm || '',
+      acepta_correos: customer.acepta_correos !== false,
     });
+    setFormError(null);
     setShowModal(true);
   };
 
   const handleSave = async () => {
     if (!form.nombre.trim() || !form.telefono.trim()) return;
+    // Un correo mal escrito no avisa nada: los correos automáticos se pierden sin
+    // que nadie se entere. Mejor atraparlo aquí que en la base.
+    if (!isOptionalEmailValid(form.email)) {
+      setFormError(t('customers.invalidEmail'));
+      return;
+    }
+    setFormError(null);
     setSaving(true);
+    const payload = { ...form, email: form.email.trim() };
     try {
       if (selectedCustomer) {
-        await customersService.updateCustomer(selectedCustomer.id, form);
+        await customersService.updateCustomer(selectedCustomer.id, payload);
       } else {
-        await customersService.createCustomer({ ...form, sede_id: sedeId || currentSede?.id || '' });
+        await customersService.createCustomer({ ...payload, sede_id: sedeId || currentSede?.id || '' });
       }
       setShowModal(false);
       loadCustomers();
     } catch (err) {
-      setActionError(getErrorMessage(err, language));
+      // Dentro del diálogo: el recuadro de la página queda tapado por el modal.
+      setFormError(getErrorMessage(err, language));
     } finally {
       setSaving(false);
     }
@@ -435,6 +449,7 @@ export default function Customers() {
               </button>
             </div>
             <div className="modal-body">
+              {formError && <div className="alert-error" role="alert">{formError}</div>}
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">{t('common.name')}</label>
@@ -451,6 +466,20 @@ export default function Customers() {
                   <input className="form-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} id="customer-email" />
                 </div>
               </div>
+              {form.email.trim() && (
+                <div className="form-group">
+                  <label className="checkbox-row" htmlFor="customer-accepts-emails">
+                    <input
+                      id="customer-accepts-emails"
+                      type="checkbox"
+                      checked={form.acepta_correos}
+                      onChange={(e) => setForm({ ...form, acepta_correos: e.target.checked })}
+                    />
+                    {t('customers.acceptsEmails')}
+                  </label>
+                  <p className="field-hint">{t('customers.acceptsEmailsHint')}</p>
+                </div>
+              )}
               <div className="form-group">
                 <label className="form-label">{t('common.address')}</label>
                 <input className="form-input" value={form.direccion} onChange={(e) => setForm({ ...form, direccion: e.target.value })} id="customer-address" />

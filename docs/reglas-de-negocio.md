@@ -18,8 +18,9 @@ solo en la interfaz, se dice.
 4. [Comisiones](#4-comisiones)
 5. [Multimedia de la orden](#5-multimedia-de-la-orden)
 6. [Notificaciones](#6-notificaciones)
-7. [Retención y limpieza](#7-retención-y-limpieza)
-8. [Riesgos conocidos y decisiones abiertas](#8-riesgos-conocidos-y-decisiones-abiertas)
+7. [Portal del cliente y correos](#7-portal-del-cliente-y-correos)
+8. [Retención y limpieza](#8-retención-y-limpieza)
+9. [Riesgos conocidos y decisiones abiertas](#9-riesgos-conocidos-y-decisiones-abiertas)
 
 ---
 
@@ -150,6 +151,7 @@ mismos permisos ("técnico"); cambia el tipo de tarea.
 | Configuración: perfil, idioma, tema, push | ✅ | ✅ |
 | Configuración: sedes y personal | ✅ | ❌ |
 | Cambiar el rol o la sede de una persona | ✅ (de cualquiera) | ❌ (ni el propio) |
+| Editar correo y WhatsApp de contacto de la sede | ✅ | ❌ |
 
 ### En una orden
 
@@ -174,6 +176,8 @@ mismos permisos ("técnico"); cambia el tipo de tarea.
 | Asignar a otras personas | ✅ | ❌ | ❌ |
 | Unirse a la orden | — | — | ✅ si no está entregada |
 | Generar y compartir el reporte | ✅ | ❌ | ❌ |
+| Ver, crear, cambiar o desactivar el **enlace del cliente** | ✅ | ❌ | ❌ |
+| **Avisar novedades** al cliente por correo | ✅ | ❌ | ❌ |
 | Mover su tarjeta en el Kanban | ✅ todas | ✅ (excepto a o desde Entregado) | ❌ |
 
 **Toda esta tabla la impone la base de datos** (migración `20260922000000`), con
@@ -228,7 +232,7 @@ por técnico = bolsa ÷ técnicos asignados, en centavos, residuo a los primeros
   firma al dejar el vehículo.
 - Lo de un **avance** nace **interno**, aunque quien lo sube pida lo contrario.
 - **Solo un admin** cambia la visibilidad de un archivo.
-- (Fase 4) El reporte web del cliente mostrará solo lo visible.
+- El portal del cliente muestra **solo lo visible** (sección 7).
 
 ### Dónde se puede subir
 
@@ -270,7 +274,62 @@ por técnico = bolsa ÷ técnicos asignados, en centavos, residuo a los primeros
 
 ---
 
-## 7. Retención y limpieza
+## 7. Portal del cliente y correos
+
+Detalle técnico: [portal-y-correos.md](portal-y-correos.md).
+
+### El enlace
+
+- Cada orden tiene **un enlace personal activo** (`reinventa.shop/r/<token>`). El
+  cliente no crea cuenta.
+- **Nace al firmar la recepción.** Un admin también puede crearlo antes.
+- Solo un **admin** lo ve, lo copia, lo manda por WhatsApp, lo cambia (el anterior
+  deja de abrir) o lo desactiva.
+- **Vence 90 días después de entregar** la orden. Mientras el vehículo está en el
+  taller no vence. Sacar la orden de Entregado quita el vencimiento.
+- Un enlace vencido o desactivado muestra el teléfono del taller.
+
+### Qué ve el cliente
+
+| Ve | No ve |
+|---|---|
+| Estado, avance y fecha estimada | Técnicos asignados, comisiones |
+| Vehículo (placa, color, últimos 6 del VIN) | VIN completo |
+| Recepción: fecha, millaje, gasolina, observaciones, fotos visibles, firma | Archivos internos (no publicados) |
+| Fotos, videos y notas de voz de avances **publicados** | El texto de los avances (notas del técnico) |
+| Mano de obra y repuestos a precio de venta, total, depósito, pagado, saldo | Costo de repuestos para el taller |
+| Contacto del taller | Datos de otras órdenes o clientes |
+
+Lo **pagado** es la suma con signo de los movimientos "pago de cliente" de la orden
+(depósito, pago final, ajustes y reversiones); el **saldo** es total − pagado.
+
+### Correos automáticos
+
+| Aviso | Cuándo | Espera |
+|---|---|---|
+| **Recepción** | La primera vez que se firma la recepción | 2 minutos |
+| **Cambio de estado** | Pasa a en proceso, espera de repuestos, finalizado ("listo para recoger") o entregado | 3 minutos |
+| **Novedades** | Un admin pulsa "Avisar novedades" (después de publicar fotos o videos) | 1 minuto |
+
+- Solo si el cliente tiene un **correo válido** y **no se dio de baja**.
+- Cambios de estado dentro de la espera se **agrupan** en un solo correo con el
+  último estado. Un estado que el cliente ya recibió **no se repite**.
+- Volver a firmar **no** reenvía el aviso de recepción.
+- Si el cliente corrige su correo o se da de baja mientras un aviso espera, se
+  respeta lo nuevo.
+- Remitente: el nombre del taller. Si la sede tiene correo de contacto, las
+  respuestas del cliente llegan ahí.
+
+### Baja
+
+- Desde su enlace, con un **botón**. El enlace "No quiero recibir estos correos"
+  del pie abre la página y pide confirmar: nunca da de baja solo.
+- La baja cancela los correos pendientes. El cliente puede volver a activarlos.
+- En la ficha del cliente, el taller ve y puede cambiar "Recibe avisos por correo".
+
+---
+
+## 8. Retención y limpieza
 
 Tareas automáticas diarias (09:00 UTC):
 
@@ -278,7 +337,8 @@ Tareas automáticas diarias (09:00 UTC):
 |---|---|
 | Avisos leídos | a los 60 días |
 | Cualquier aviso | a los 180 días |
-| Envíos terminados (push enviados u omitidos) | a los 90 días |
+| Envíos terminados (push y correos enviados u omitidos) | a los 90 días |
+| Enlaces del cliente | con su orden |
 | Archivos de Storage de órdenes que ya no existen | a partir de 7 días |
 | Archivos sin fila en `orden_media` (subidas a medias) | a partir de 7 días, excepto firmas |
 
@@ -287,7 +347,7 @@ firmar.
 
 ---
 
-## 8. Riesgos conocidos y decisiones abiertas
+## 9. Riesgos conocidos y decisiones abiertas
 
 Cosas que hoy funcionan así a propósito o por falta de decisión. Conviene
 resolverlas con el cliente.
@@ -306,5 +366,12 @@ resolverlas con el cliente.
    un iPhone antiguo.
 5. **La hora de las notificaciones push depende de la entrega del navegador**
    (Apple/Google). Normalmente segundos; no está garantizada.
-6. **Fases 4–6 pendientes**: no hay todavía portal del cliente, correos
-   automáticos, presupuestos con autorización ni reporte web.
+6. **Un enlace reenviado lo abre cualquiera.** Quien tenga el enlace ve la cuenta y
+   las fotos de esa orden. El taller puede cambiarlo y el anterior deja de abrir.
+   Es el estándar para este flujo.
+7. **Los correos salen solo en español.** El portal tiene inglés; los correos no.
+8. **Límite diario de Resend (plan gratuito): 100 correos.** Con el volumen actual
+   (~30 al día) sobra; si se supera, los envíos se reintentan y los que no alcancen
+   quedan en error en el historial de la orden.
+9. **Fases 5 y 6 pendientes**: presupuestos con autorización por línea (hoy el
+   portal muestra todas las líneas cotizadas) y reporte web en lugar del PDF.

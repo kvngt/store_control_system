@@ -99,6 +99,10 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     async (alsoBoard = true) => {
       if (!openOrderId) return;
       await queryClient.invalidateQueries({ queryKey: queryKeys.workOrderDetail(openOrderId) });
+      // Un cambio de estatus programa un correo al cliente y entregar fija el
+      // vencimiento del enlace: la tarjeta del enlace (solo admin) se entera aquí.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.customerLink(openOrderId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.customerEmails(openOrderId) });
       if (alsoBoard) onBoardChanged();
     },
     [onBoardChanged, openOrderId, queryClient]
@@ -442,6 +446,9 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     try {
       const { ruta, fecha } = await workOrdersService.uploadSignature(order, dataUrl);
       patchOrder({ firma_ruta: ruta, firma_fecha: fecha });
+      // Firmar crea el enlace del cliente y programa el correo de recepción.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.customerLink(order.id) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.customerEmails(order.id) });
       showToast('success', t('workOrders.signatureSaved'));
     } catch (err) {
       showToast('error', t('workOrders.signatureError'), getErrorMessage(err, language));

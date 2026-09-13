@@ -31,7 +31,15 @@ export const sedesService = {
     input: Partial<
       Pick<
         Sede,
-        'nombre' | 'direccion' | 'telefono' | 'capacidad' | 'color_tema' | 'logo_url' | 'comision_porcentaje'
+        | 'nombre'
+        | 'direccion'
+        | 'telefono'
+        | 'capacidad'
+        | 'color_tema'
+        | 'logo_url'
+        | 'comision_porcentaje'
+        | 'email_contacto'
+        | 'whatsapp'
       >
     >
   ) => {

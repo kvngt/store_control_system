@@ -22,6 +22,7 @@ import PartsSummaryCard from './PartsSummaryCard';
 import CommissionEstimateCard from './CommissionEstimateCard';
 import ProgressLog from './ProgressLog';
 import ShareReportModal from './ShareReportModal';
+import CustomerLinkCard from './CustomerLinkCard';
 import SignatureCard from './SignatureCard';
 import MediaCaptureBar from '../media/MediaCaptureBar';
 import MediaGallery from '../media/MediaGallery';
@@ -324,6 +325,9 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
         </div>
       </div>
       )}
+
+      {/* El enlace abre precios y totales: solo administración lo comparte. */}
+      {isAdmin && <CustomerLinkCard order={order} statusLabels={statusLabels} />}
 
       {/* Assigned Technicians */}
       <div className="card" style={{ marginTop: 'var(--space-4)' }}>

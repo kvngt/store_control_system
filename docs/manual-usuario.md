@@ -205,9 +205,14 @@ cuántos vehículos tienen y cuántas órdenes han generado.
 2. Llena nombre y teléfono (obligatorios), y correo, dirección y notas si los tienes.
 3. **Crear**.
 
-> Captura el **correo** siempre que el cliente lo tenga: las próximas versiones
-> del sistema le enviarán ahí el aviso de ingreso, los presupuestos para autorizar
-> y el enlace a su reporte.
+> Captura el **correo** siempre que el cliente lo tenga: ahí le llegan solos el
+> aviso de ingreso y los cambios de estado de su vehículo, con el enlace a su
+> reporte (sección 8, *Enlace del cliente*). Si lo escribes mal, el formulario te
+> avisa antes de guardar.
+
+Cuando el cliente tiene correo aparece la casilla **Recibe avisos por correo**.
+Desmárcala si el cliente no quiere correos. El cliente también puede darse de baja
+él mismo desde su enlace; en ese caso verás la casilla desmarcada.
 
 ### Ver el perfil de un cliente
 
@@ -408,6 +413,8 @@ avances, pero no los de un compañero.
 guardada con fecha y se imprime en el reporte PDF. Se puede limpiar y volver a
 firmar; las firmas anteriores quedan como historial.
 
+**Enlace del cliente** *(solo administradores)*. Ver la sección siguiente.
+
 **Reporte PDF y Generar y enviar** *(solo administradores)*. El PDF lleva los
 datos de la orden, las fotos de inspección, el desglose, los totales y la firma.
 **Generar y enviar** crea el PDF y abre WhatsApp o el correo con el mensaje y el
@@ -415,6 +422,62 @@ enlace listos. El enlace deja de funcionar a los 30 días.
 
 > Los técnicos no envían reportes al cliente: lo que sale del taller hacia el
 > cliente lo decide administración.
+
+### Enlace del cliente y avisos por correo
+
+Cada orden tiene un **enlace personal** para el cliente, por ejemplo
+`reinventa.shop/r/3f9a…`. Al abrirlo, el cliente ve **sin crear una cuenta**:
+
+- En qué va su vehículo (recibido, en proceso, listo, entregado), el avance y la
+  fecha estimada.
+- La recepción: millaje, gasolina, observaciones, las fotos de ingreso y su firma.
+- Las fotos, videos y notas de voz de los avances que **tú publicaste**.
+- Su cuenta: mano de obra, repuestos, total, depósito, pagado y saldo.
+- Botones para llamar al taller y, si la sede lo tiene, escribir por WhatsApp.
+
+**Nunca** ve los nombres de los técnicos, las comisiones, lo que escribieron en
+los avances ni los archivos internos.
+
+<!-- IMAGEN: el reporte del cliente abierto en un teléfono -->
+
+**Cuándo se crea.** Solo, cuando el cliente **firma la recepción**. Si necesitas
+compartirlo antes, usa **Crear enlace**.
+
+**La tarjeta Enlace del cliente** (en el detalle de la orden):
+
+<!-- IMAGEN: tarjeta "Enlace del cliente" con el enlace, los botones y el historial de correos -->
+
+- **Copiar** y **Abrir** el enlace.
+- **Enviar por WhatsApp**: abre WhatsApp al teléfono del cliente con el mensaje y
+  el enlace listos. Úsalo con clientes que no tienen correo.
+- **Cambiar enlace**: si el enlace llegó a quien no debía. El anterior deja de
+  abrir.
+- **Desactivar**: nadie puede abrirlo hasta que crees uno nuevo.
+- Cuántas veces lo abrió el cliente y cuándo fue la última.
+- Hasta cuándo está disponible: **90 días después de entregar**.
+
+**Correos automáticos.** Si el cliente tiene correo, el sistema le escribe solo:
+
+| Correo | Cuándo llega |
+|---|---|
+| "Recibimos su vehículo" | ~2 minutos después de firmar la recepción |
+| "Estamos trabajando en su vehículo" | ~3 minutos después de pasar a En Proceso |
+| "Su vehículo espera repuestos" | ~3 minutos después de pasar a Espera Repuestos |
+| "Su vehículo está listo" | ~3 minutos después de pasar a Finalizado |
+| "Gracias por su visita" | ~3 minutos después de entregar |
+
+Si mueves la orden varias veces seguidas, el cliente recibe **un solo** correo con
+el último estado, y nunca dos veces el mismo estado. Los correos salen con el
+nombre del taller; si el cliente responde, la respuesta llega al correo de contacto
+de la sede (sección 14).
+
+**Avisar novedades.** Después de publicar fotos o videos de un avance (botón
+**Mostrar en el reporte del cliente**), pulsa **Avisar novedades** en la tarjeta:
+al minuto le llega un correo al cliente con el enlace.
+
+**Historial.** Debajo, la tarjeta lista cada correo con su estado: **Programado**,
+**Enviado**, **No enviado** (con el motivo, por ejemplo "ya recibió el aviso de
+este estado") o **Error**.
 
 ### Orden entregada
 
@@ -478,7 +541,8 @@ Cada archivo muestra una etiqueta:
 
 Solo un **administrador** cambia la visibilidad, con el botón **Mostrar en el
 reporte del cliente** / **Ocultar del reporte del cliente**. Así el técnico
-puede documentar todo con libertad y administración decide qué ve el cliente.
+puede documentar todo con libertad y administración decide qué ve el cliente en
+su enlace (sección 8, *Enlace del cliente*).
 
 ### Ver y borrar
 
@@ -721,6 +785,15 @@ según el rol.
 teléfono, **logotipo**, **color de acento**, **capacidad** (espacios de trabajo,
 para la tasa de ocupación) y **porcentaje de comisión**.
 
+Dos datos que usan los correos y el enlace del cliente:
+
+- **Correo de contacto**: a dónde llegan las respuestas de los clientes a los
+  correos automáticos. Conviene un buzón que alguien revise.
+- **WhatsApp del taller**: el número del botón de WhatsApp en el enlace del cliente.
+  Si lo dejas vacío, el cliente solo ve el botón para llamar.
+
+El logo y el color de la sede también se usan en el enlace y en los correos.
+
 Un administrador también puede **unirse a una sede** para formar parte de su
 personal. Al borrar una sede, el sistema muestra antes todo lo que se va a borrar.
 
@@ -787,6 +860,7 @@ actualizarla.
 | Publicar archivos al cliente | ✅ | ❌ |
 | Asignar técnicos | ✅ | Solo unirse él mismo |
 | Reporte PDF y enviar al cliente | ✅ | ❌ |
+| Enlace del cliente: ver, compartir, cambiar, avisar novedades | ✅ | ❌ |
 | Órdenes: **eliminar** | ✅ | ❌ |
 | Kanban: mover tarjetas | Todas | Solo las suyas, excepto a Entregado |
 | Finanzas y Comisiones | ✅ | ❌ |
@@ -825,6 +899,14 @@ se registra de nuevo.
 
 **Al finalizar una orden**, el avance pasa a 100 % y se avisa a administración.
 
+**Al firmar la recepción**, se crea el enlace del cliente y, si tiene correo, le
+llega el aviso de ingreso.
+
+**Al cambiar el estado de una orden**, si el cliente tiene correo, le llega el aviso
+unos minutos después (uno solo aunque la muevas varias veces).
+
+**Al entregar una orden**, el enlace del cliente queda disponible 90 días más.
+
 **Al eliminar una orden**, se eliminan sus archivos, comisiones y movimientos
 automáticos. Los importados del banco se conservan.
 
@@ -838,6 +920,24 @@ nunca reciban el mismo número.
 ---
 
 ## 18. Problemas comunes
+
+**«El cliente no recibió el correo.»**
+Abre la orden y mira el historial de la tarjeta **Enlace del cliente**:
+- *Programado*: todavía está en su espera de 2–3 minutos.
+- *No enviado*: el motivo lo dice (sin correo, se dio de baja, ya había recibido ese
+  estado).
+- *Enviado*: pídele que revise el correo no deseado o las pestañas de Promociones.
+- *Error*: avisa a quien administra el sistema.
+Mientras tanto, mándale el enlace con **Enviar por WhatsApp**.
+
+**«El cliente dice que el enlace no abre.»**
+Si dice "ya no está activo" o "venció", usa **Crear enlace** o **Cambiar enlace** y
+mándale el nuevo. Si dice "no válido", el enlace se cortó al copiarlo: vuelve a
+mandarlo.
+
+**«El cliente no ve las fotos del avance.»**
+Los archivos de los avances son internos hasta que un administrador toca **Mostrar
+en el reporte del cliente** en cada uno.
 
 **«No me llegó el correo para recuperar la contraseña.»**
 Revisa el correo no deseado. Si aun así no llega, pídele a un administrador que

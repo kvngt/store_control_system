@@ -9,6 +9,10 @@ export interface Sede {
   /** Accent colour as #rrggbb. Null = use the default Restorify gold. */
   color_tema?: string | null;
   logo_url?: string | null;
+  /** Reply-To de los correos al cliente: sus respuestas llegan aquí. */
+  email_contacto?: string | null;
+  /** Número del botón de WhatsApp en el reporte del cliente. */
+  whatsapp?: string | null;
   /**
    * Share of an order's profit paid out as commission, 0-100. Per sede rather
    * than global: the split is a local arrangement with the crew of one

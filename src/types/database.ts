@@ -43,3 +43,9 @@ export type { DashboardStats } from './domain/dashboard.types';
 
 export type { MediaKind, MediaOrigin, OrderMedia, PreparedMedia } from './domain/media.types';
 export type { AppNotification } from './domain/notification.types';
+export type {
+  CustomerLink,
+  CustomerEmail,
+  CustomerEmailTemplate,
+  OutboxState,
+} from './domain/customerPortal.types';

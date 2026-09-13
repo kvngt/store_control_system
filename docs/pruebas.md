@@ -29,8 +29,8 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 211 pruebas, 28 archivos | ~20 s | Nada |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos y permisos del técnico contra un Postgres real | 71 aserciones, 3 archivos | ~1 min | Docker |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 241 pruebas, 32 archivos | ~20 s | Nada |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal y correos contra un Postgres real | 95 aserciones, 4 archivos | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, ~73 casos | 2–5 min | Credenciales de prueba |
 | **Manual** | Personas y dispositivos | Cámara, micrófono, push, subidas reales, iPhone, diseño móvil | Secciones 4–6 | 2–3 h completo | Teléfonos Android e iPhone |
 
@@ -73,6 +73,8 @@ declaran `// @vitest-environment jsdom` y renderizan con los proveedores reales
 | Kanban | `pages/KanbanBoard` | Mover tarjetas, confirmación al entregar |
 | Notificaciones | `features/notifications/*`, `lib/push` | Campana: conteo, marcar leído, navegar, aviso en tiempo real con toast; traducción de avisos; detección de iPhone sin instalar; tarjeta de push: activar, permiso negado, prueba, desactivar |
 | Configuración | `pages/Settings.employee` | Alta de empleado: errores visibles |
+| Portal del cliente | `portal/CustomerPortal`, `lib/emailTemplates`, `lib/phone` | Estado, vehículo, multimedia publicada y cuenta; visor de video; WhatsApp y llamar; "pagado en su totalidad"; enlace vencido con teléfono; ruta sin token no consulta; reintento; **la baja se confirma con botón, nunca al abrir**; inglés. Plantillas: asunto por estado, fecha DATE sin correrse un día, **HTML escapado**, logo solo https y color solo hexadecimal, Reply-To solo si hay correo de contacto |
+| Enlace del cliente (admin) | `features/workOrders/CustomerLinkCard` | Crear enlace; visitas; WhatsApp con el enlace; cambiar enlace pide confirmación; historial de correos con estado y motivo; avisar novedades; sin correo o con baja no ofrece avisar |
 | Layout | `components/layout/BottomNav`, `components/LazyModal` | Barra inferior; modales diferidos |
 | Datos remotos | `lib/queryClient` | Reintentos y claves de caché |
 
@@ -127,8 +129,24 @@ PostgREST en cada petición.
   siguen intactas) y no agrega ni borra avances; el admin sí puede sacarla.
 - Los buckets viejos `vehiculos_fotos` y `firmas` ya no son públicos.
 
+**`supabase/tests/database/04_portal_y_correos.test.sql`** (24)
+
+- Firmar crea el enlace (64 hexadecimales) y **un** correo de recepción con 2 min de
+  espera; volver a firmar no programa otro.
+- Un técnico no lee enlaces, no crea enlaces ni llama `datos_portal`.
+- Dos cambios de estatus seguidos quedan en un aviso con el último estado y 3 min.
+- Un cliente sin correo no genera correos.
+- `datos_correo` lee correo, estatus, enlace y vehículo actuales.
+- El portal: solo multimedia visible; total $400, pagado $100, saldo $300; sin
+  costos, comisiones, técnicos ni VIN completo; cuenta el acceso.
+- La baja cancela lo pendiente y evita correos nuevos.
+- Cambiar el enlace deja el anterior como `revocado`; entregar fija 90 días y
+  sacar de Entregado lo quita.
+
 > **Estado:** escritas y validadas con el parser de Postgres, pero **todavía no
-> ejecutadas** con pgTAP (la máquina de desarrollo no tiene Docker). La
+> ejecutadas** con pgTAP (la máquina de desarrollo no tiene Docker). Las reglas de
+> la fase 4 sí se probaron de punta a punta contra el proyecto enlazado (correo real
+> a `delivered@resend.dev`, portal, agrupación, baja) con datos que luego se borraron. La
 > primera corrida puede requerir ajustes de sintaxis de pgTAP. Córrelas antes de
 > confiar en ellas.
 
@@ -198,6 +216,8 @@ Crea en Configuración → Personal, **en un entorno de prueba** si existe:
   nativa del iPhone (HEVC).
 - Un estado de cuenta real de Wells Fargo en PDF (para Finanzas).
 - Todo lo que crees, con el prefijo `PRUEBA` en el nombre, para limpiarlo después.
+- Para correos: un cliente con **tu** correo (para ver el correo de verdad) y otro
+  con `delivered@resend.dev` (Resend lo acepta y no lo entrega a nadie).
 
 ### Mientras pruebas
 
@@ -427,6 +447,51 @@ Ver la matriz de dispositivos (sección 6) para repetir en cada teléfono.
 - [ ] iPhone: "Agregar a inicio" usa el ícono y el nombre "Restorify"; el encabezado no queda bajo la barra de estado.
 - [ ] Tras publicar una versión nueva, la app instalada muestra la versión nueva al reabrir (no hay caché).
 
+### 4.13 Portal del cliente y correos
+
+Detalle de reglas en [portal-y-correos.md](portal-y-correos.md). Cliente de prueba
+con **tu correo**.
+
+**Enlace**
+
+- [ ] Orden sin firma: la tarjeta **Enlace del cliente** (admin) dice que se crea al firmar y ofrece **Crear enlace**.
+- [ ] **M** firma la recepción → la tarjeta muestra el enlace sin recargar.
+- [ ] **M** no ve la tarjeta.
+- [ ] **Copiar** → pegar en otro navegador (sin sesión) abre el reporte.
+- [ ] **Enviar por WhatsApp** abre WhatsApp al teléfono del cliente con el mensaje y el enlace.
+- [ ] Tras abrirlo, la tarjeta dice "Abierto 1 veces · última vez hace …".
+- [ ] **Cambiar enlace** → confirmar → el enlace viejo muestra "Este enlace ya no está activo" con botón para llamar.
+- [ ] **Desactivar** → el enlace muestra lo mismo; **Crear enlace** vuelve a generar uno.
+- [ ] Entregar la orden → la tarjeta dice "Disponible hasta el …" (90 días).
+
+**Correos**
+
+- [ ] ~2 minutos después de firmar llega "Recibimos su …" con el nombre del taller como remitente; el botón abre el reporte.
+- [ ] En la tarjeta, el correo pasa de **Programado** a **Enviado**.
+- [ ] Mover la orden a En proceso → a los ~3 min llega "Estamos trabajando en su …".
+- [ ] Mover a Espera de repuestos y de vuelta a En proceso en menos de 3 min → no llega nada nuevo; la tarjeta dice **No enviado** "ya recibió el aviso de este estado".
+- [ ] Finalizado → "Su … está listo"; Entregado → "Gracias por su visita".
+- [ ] Publicar una foto de avance y **Avisar novedades** → al minuto llega "Novedades de su …".
+- [ ] Responder el correo → llega al correo de contacto de la sede (si está configurado); sin él, el pie no ofrece responder.
+- [ ] Cliente sin correo: la tarjeta sugiere WhatsApp y no hay botón de avisar; no se generan correos.
+- [ ] Correo mal escrito en el formulario de cliente (`marta@`) → mensaje dentro del diálogo, no se guarda.
+- [ ] El correo se ve bien en Gmail (teléfono y web) y en Outlook; no cae en spam.
+
+**Portal (en un teléfono, sin sesión)**
+
+- [ ] Carga rápido con datos móviles; DevTools → Network: no se descargan `appStart-*.js` ni Sentry.
+- [ ] Muestra estado con los cuatro pasos, avance, fecha estimada, vehículo con últimos 6 del VIN.
+- [ ] Solo aparecen las fotos y videos **publicados**; un archivo interno no aparece. Publicarlo y recargar → aparece.
+- [ ] Un video se reproduce en el visor; una nota de voz se reproduce.
+- [ ] La cuenta coincide con la orden: mano de obra, repuestos a precio de venta, depósito, pagado, saldo.
+- [ ] No aparecen nombres de técnicos, comisiones ni el texto de los avances.
+- [ ] **Llamar** marca al taller; **WhatsApp** aparece solo si la sede tiene WhatsApp.
+- [ ] Botón de idioma → inglés; al recargar sigue en inglés.
+- [ ] Pie del correo "No quiero recibir estos correos" → la página resalta la sección y **no** da de baja hasta tocar el botón.
+- [ ] **Dejar de recibir correos** → la ficha del cliente muestra la casilla desmarcada; un cambio de estado ya no genera correo. **Volver a recibir** lo reactiva.
+- [ ] `/r/abc` → "Enlace no válido".
+- [ ] Ver el código fuente de la página: `<meta name="robots" content="noindex, nofollow">` y `referrer` en `no-referrer`.
+
 ---
 
 ## 5. Pruebas de seguridad contra la API
@@ -467,6 +532,11 @@ H=(-H "apikey: $ANON" -H "Authorization: Bearer $TOKEN" -H "Content-Type: applic
 | 17 | Orden **entregada**, token del técnico asignado: `curl -X PATCH "$SB/rest/v1/ordenes_trabajo?id=eq.$ORDEN" "${H[@]}" -d '{"estatus":"finalizado"}'` | Error `42501` "La orden ya fue entregada…" |
 | 18 | Técnico asignado: `curl -X PATCH "$SB/rest/v1/ordenes_trabajo?id=eq.$ORDEN" "${H[@]}" -d '{"millas_ingreso":1}'` | Error `42501` "Solo un administrador puede cambiar los datos de recepción…" |
 | 19 | Sin sesión: `curl -o /dev/null -w '%{http_code}' "$SB/storage/v1/object/public/firmas/<archivo>"` | `400` (el bucket ya no es público) |
+| 20 | Técnico: `curl "$SB/rest/v1/orden_enlaces?select=token" "${H[@]}"` | `[]` |
+| 21 | Técnico: `curl -X POST "$SB/rest/v1/rpc/crear_enlace_cliente" "${H[@]}" -d "{\"p_orden_id\":\"$ORDEN\"}"` | Error `42501` |
+| 22 | Técnico o sin sesión: `curl -X POST "$SB/rest/v1/rpc/datos_portal" -H "apikey: $ANON" -H "Content-Type: application/json" -d '{"p_token":"x"}'` | Error de permiso |
+| 23 | `curl "$SB/rest/v1/cola_envios?select=destinatario" "${H[@]}"` (técnico) | `[]` |
+| 24 | Sin sesión: `curl "$SB/functions/v1/portal?token=$(printf '0%.0s' {1..64})"` | `404` `{"estado_enlace":"no_encontrado"}` |
 
 Cualquier resultado distinto es un problema de seguridad: repórtalo como prioridad.
 
@@ -489,6 +559,8 @@ Marca ✅ / ❌ y anota versión de sistema y navegador.
 | Campana en tiempo real | | | | | |
 | Push con app cerrada | | ❌ esperado | | | |
 | Instalar como app | | n/a | | | |
+| Portal del cliente: abre, reproduce video, llamar/WhatsApp | | | n/a | | |
+| Correo de recepción se ve bien (app de correo del teléfono) | | | n/a | | |
 | Campos sin zoom al tocar | | | | n/a | n/a |
 
 ---
@@ -531,6 +603,7 @@ Mínimo, siempre:
 - [ ] `npm run db:check`: sabes qué migraciones se van a aplicar.
 - [ ] Si la versión toca órdenes, dinero o permisos: secciones 4.4, 4.5 y 5.
 - [ ] Si toca multimedia o notificaciones: 4.7, 4.8 y al menos Android + iPhone de la matriz.
+- [ ] Si toca el portal, los correos o `datos_portal`: 4.13 y peticiones 20–24 de la sección 5.
 - [ ] Si toca estilos: 4.11 en un teléfono real.
 - [ ] Después de publicar: [deployment.md §6](deployment.md#6-verificación-después-de-publicar).
 

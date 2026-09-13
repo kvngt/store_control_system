@@ -35,11 +35,12 @@ avisos), el complemento es [reglas-de-negocio.md](reglas-de-negocio.md).
 | **Estilos** | CSS plano con variables, sin framework de UI |
 | **Multimedia** | MediaRecorder, WebCodecs vía Mediabunny, subidas reanudables TUS |
 | **Push** | Web Push (VAPID) con service worker; app instalable (PWA) |
-| **Correo** | Resend (dominio `reinventa.shop` verificado) — se usa desde la fase 4 |
+| **Correo** | Resend (dominio `reinventa.shop` verificado): avisos automáticos al cliente |
+| **Portal del cliente** | Paquete aparte en `/r/<token>`, sin cuenta; datos por una edge function pública |
 | **Pruebas** | Vitest (unitarias y componentes), pgTAP (base de datos), Playwright (e2e) |
 | **Hosting** | Sitio estático en Hostinger (Apache), dominio `reinventa.shop` |
 
-Unas 18 000 líneas de TypeScript, 4 300 de CSS, 28 migraciones y 20 tablas.
+Unas 24 000 líneas de TypeScript (con pruebas), 4 800 de CSS, 32 migraciones y 21 tablas.
 
 ---
 
@@ -94,8 +95,13 @@ de red, a un clic de las herramientas del navegador.
 
 ```
 src/
-  main.tsx                       entrada; Sentry; registra el service worker
+  main.tsx                       entrada: /r/... carga portal/, lo demás appStart
+  appStart.tsx                   app del taller: Sentry, service worker, <App />
   App.tsx                        proveedores + rutas + guardias de acceso
+
+  portal/                        reporte web del cliente (paquete aparte, sin Supabase JS)
+    start.tsx                    metas de privacidad, tema claro, render
+    CustomerPortal.tsx           la página; strings.ts (es/en), portal.api.ts, portal.css
 
   pages/                         una pantalla por archivo
     Login.tsx, ResetPassword.tsx acceso y recuperación de contraseña
@@ -110,7 +116,8 @@ src/
 
   features/                      módulos con estado propio, extraídos de las páginas
     workOrders/                  detalle de orden, alta, tablas de labor y repuestos,
-                                 firma, bitácora de avances, reporte, comisión estimada
+                                 firma, bitácora de avances, reporte, comisión estimada,
+                                 enlace del cliente (CustomerLinkCard)
     media/                       captura, grabadores, galería, cola de subida, bandeja
     notifications/               campana, push del dispositivo
     vehicles/                    formulario de vehículo con VIN
@@ -129,7 +136,7 @@ src/
 
   services/                      TODAS las consultas a Supabase, un módulo por dominio
     workOrders, customers, vehicles, finance, commissions, dashboard,
-    media, notifications, reports, search, sedes, users
+    media, notifications, customerPortal, reports, search, sedes, users
     supabaseService.ts           fachada que re-exporta los anteriores (compatibilidad)
 
   lib/                           lógica sin React
@@ -138,7 +145,8 @@ src/
     dates.ts                     fechas del taller (zona horaria local)
     errors.ts                    traduce errores de Postgres y Auth
     vin.ts, bankStatementParser.ts, categorizationRules.ts, workOrderPdf.ts,
-    signature.ts, branding.ts, schemaVersion.ts, queryClient.ts, siteUrl.ts
+    signature.ts, branding.ts, schemaVersion.ts, queryClient.ts, siteUrl.ts,
+    phone.ts (WhatsApp y tel:), email.ts (formato de correo)
 
   types/                         database.ts reexporta domain/*.types.ts
   i18n/translations.ts           español e inglés
@@ -151,11 +159,13 @@ public/
   .htaccess                      reescritura SPA + tipos PWA para Apache
 
 supabase/
-  migrations/                    28 migraciones, en orden cronológico
+  migrations/                    32 migraciones, en orden cronológico
   functions/                     edge functions (Deno)
     create-employee, update-employee, delete-employee   con clave de servicio
     process-outbox, cleanup-storage                     internas, llamadas por la base
+    portal                                              pública: el reporte del cliente
     _shared/internal.ts                                 autenticación de las internas
+    _shared/email/templates.ts                          plantillas de correo (TS puro)
   tests/database/                pruebas pgTAP
   config.toml
 
@@ -182,7 +192,7 @@ viven en `features/workOrders/` con sus propios hooks.
 
 ## 4. Modelo de datos
 
-20 tablas. El eje es la **sede**: casi todo cuelga de ella y no se mezcla entre
+21 tablas. El eje es la **sede**: casi todo cuelga de ella y no se mezcla entre
 talleres.
 
 ```
@@ -194,6 +204,7 @@ sedes ──┬── perfiles                  usuarios; rol: admin | mecanico 
         │                    ├── orden_asignaciones ── perfiles
         │                    ├── orden_avances ─┐      bitácora del técnico
         │                    ├── orden_media ◄──┘      fotos, videos, audio (bucket privado)
+        │                    ├── orden_enlaces         enlace del cliente (token) · SOLO ADMIN
         │                    └── comisiones ── comision_pagos
         ├── finanzas_movimientos ──┬── ordenes_trabajo      referencia_orden_id
         │                          ├── finanzas_importaciones
@@ -201,7 +212,7 @@ sedes ──┬── perfiles                  usuarios; rol: admin | mecanico 
         └── notificaciones ── perfiles
 
 push_suscripciones ── perfiles       teléfonos con push
-cola_envios                          outbox de push (y correo desde la fase 4)
+cola_envios                          outbox de push y de correos al cliente
 finanzas_reglas_categorizacion       configuración global
 numero_orden_contadores              folios; solo lo tocan triggers
 ```
@@ -226,6 +237,11 @@ envía. **`vehiculos.placa` acepta NULL**: las unidades de subasta no tienen pla
 privado `orden_media` (`{sede}/{orden}/{uuid}.{ext}`), tipo, duración, tamaño y
 si es visible para el cliente. La firma también es una ruta (`firma_ruta`). Para
 ver cualquier archivo se pide una URL firmada de vida corta.
+
+**El enlace del cliente guarda el token tal cual.** El admin tiene que poder copiarlo
+de nuevo; lo protege RLS (solo admin). Uno activo por orden (índice único parcial).
+`clientes.acepta_correos` guarda la baja del cliente; `sedes.email_contacto` y
+`sedes.whatsapp`, el contacto que usan los correos y el portal.
 
 **Las eliminaciones tienen intenciones distintas.** Borrar un cliente se lleva
 sus vehículos (`CASCADE`); una orden bloquea el borrado del cliente y del vehículo
@@ -300,6 +316,8 @@ permiten cambiar totales con esa bandera: un `PATCH` directo a la API no la tien
 | `registrar_push`, `eliminar_push`, `probar_push` | todos | Push del dispositivo |
 | `usuarios_con_push` | admin | Quién tiene push activo |
 | `app_schema_version` | todos | Detección de desfase entre build y base |
+| `crear_enlace_cliente`, `regenerar_enlace_cliente`, `revocar_enlace_cliente` | admin | Tarjeta del enlace del cliente |
+| `notificar_cliente_avance` | admin | "Avisar novedades" por correo |
 
 > **Antes de calcular algo en el frontend, revisa si un trigger ya lo hace.** Los
 > totales de una orden no se calculan a mano en React: se releen de la base
@@ -356,6 +374,9 @@ Lo privado se ve con URLs firmadas (1 hora para galerías, 10 minutos para el PD
   administración de Auth; verifican que quien llama sea admin.
 - `process-outbox`, `cleanup-storage` — **internas**: se despliegan sin
   verificación de JWT y exigen el secreto compartido `x-restorify-secret`.
+- `portal` — **pública** (sin JWT): la protege el token de 64 hexadecimales. Solo
+  llama `datos_portal` y `preferencia_correos_portal`, que están concedidas
+  únicamente a `service_role` y arman la respuesta campo por campo.
 
 Todas corren con la clave de servicio y **saltan RLS**: cada una valida permisos
 por su cuenta.
@@ -367,13 +388,14 @@ por su cuenta.
 ```
 trigger ─► notificar() ─► notificaciones        (la campana lo ve por Realtime)
                      └─► cola_envios (push) ─► invoke_edge_function() ─pg_net─► process-outbox ─► Web Push
+trg_order_portal ─► encolar_correo_cliente() ─► cola_envios (email, con espera) ────────┘      └─► Resend
                                                      ▲
 pg_cron "restorify-outbox" (cada minuto) ────────────┘  reintento si quedó algo pendiente
 pg_cron "restorify-maintenance" (09:00 UTC) ─► purge_old_notifications() + cleanup-storage
 ```
 
-- **La cola (`cola_envios`) es el único camino de salida.** Hoy lleva push; en la
-  fase 4, correos al cliente. Deja registro de cada envío y reintenta con espera
+- **La cola (`cola_envios`) es el único camino de salida.** Lleva push al equipo y
+  correos al cliente. Deja registro de cada envío y reintenta con espera
   creciente (1, 4, 16, 64 minutos; error al quinto intento).
 - `claim_outbox` toma filas con `FOR UPDATE SKIP LOCKED`: el aviso inmediato y el
   cron no envían dos veces lo mismo.
@@ -381,7 +403,8 @@ pg_cron "restorify-maintenance" (09:00 UTC) ─► purge_old_notifications() + c
   ellos los avisos se guardan igual y la cola espera.
 
 Detalle completo y diagnóstico en
-[multimedia-y-notificaciones.md](multimedia-y-notificaciones.md).
+[multimedia-y-notificaciones.md](multimedia-y-notificaciones.md) (push) y
+[portal-y-correos.md](portal-y-correos.md) (correos y portal).
 
 ---
 
@@ -557,4 +580,4 @@ reproducir. Chrome ≥ 126 y Safari graban MP4.
 
 ---
 
-*Última revisión: septiembre de 2026 (fases 1–3).*
+*Última revisión: septiembre de 2026 (fases 1–4).*

@@ -8,6 +8,7 @@ import { sedesService, usersService } from '../services/supabaseService';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
+import { isOptionalEmailValid } from '../lib/email';
 import type { SedeDeleteImpact } from '../services/sedes.service';
 import UsersCard from '../features/settings/UsersCard';
 import PushSettingsCard from '../features/notifications/PushSettingsCard';
@@ -31,6 +32,8 @@ import {
   LogIn,
   Check,
   AlertTriangle,
+  Mail,
+  MessageCircle,
 } from 'lucide-react';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -151,7 +154,9 @@ export default function Settings() {
   }, [sedes]);
 
   // --- sede branding / CRUD (admin only) ---
-  const [brandDrafts, setBrandDrafts] = useState<Record<string, { nombre: string; direccion: string; color_tema: string }>>({});
+  const [brandDrafts, setBrandDrafts] = useState<
+    Record<string, { nombre: string; direccion: string; color_tema: string; email_contacto: string; whatsapp: string }>
+  >({});
   const [uploadingLogoId, setUploadingLogoId] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [logoTargetSede, setLogoTargetSede] = useState<string | null>(null);
@@ -162,19 +167,35 @@ export default function Settings() {
   const seedBrandDrafts = (list: Sede[]) =>
     setBrandDrafts(
       Object.fromEntries(
-        list.map((s) => [s.id, { nombre: s.nombre, direccion: s.direccion, color_tema: s.color_tema || '#D4A017' }])
+        list.map((s) => [
+          s.id,
+          {
+            nombre: s.nombre,
+            direccion: s.direccion,
+            color_tema: s.color_tema || '#D4A017',
+            email_contacto: s.email_contacto || '',
+            whatsapp: s.whatsapp || '',
+          },
+        ])
       )
     );
 
   const handleSaveBranding = async (sedeId: string) => {
     const draft = brandDrafts[sedeId];
     if (!draft || !draft.nombre.trim()) return;
+    // Es el Reply-To de los correos al cliente: mal escrito, sus respuestas se pierden.
+    if (!isOptionalEmailValid(draft.email_contacto)) {
+      showToast('error', t('settings.invalidContactEmail'));
+      return;
+    }
     setSavingSedeId(sedeId);
     try {
       await sedesService.updateSede(sedeId, {
         nombre: draft.nombre.trim(),
         direccion: draft.direccion.trim(),
         color_tema: draft.color_tema,
+        email_contacto: draft.email_contacto.trim() || null,
+        whatsapp: draft.whatsapp.trim() || null,
       });
       await refreshSedes();
       loadData();
@@ -534,6 +555,30 @@ export default function Settings() {
                           placeholder={t('common.address')}
                           value={brandDrafts[sede.id]?.direccion ?? ''}
                           onChange={(e) => setBrandDrafts((p) => ({ ...p, [sede.id]: { ...p[sede.id], direccion: e.target.value } }))}
+                        />
+                      </div>
+                      {/* Contacto que usan los correos y el reporte del cliente. */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                        <Mail size={14} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+                        <input
+                          className="form-input"
+                          type="email"
+                          placeholder={t('settings.contactEmail')}
+                          aria-label={t('settings.contactEmail')}
+                          value={brandDrafts[sede.id]?.email_contacto ?? ''}
+                          onChange={(e) => setBrandDrafts((p) => ({ ...p, [sede.id]: { ...p[sede.id], email_contacto: e.target.value } }))}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                        <MessageCircle size={14} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
+                        <input
+                          className="form-input"
+                          type="tel"
+                          inputMode="tel"
+                          placeholder={t('settings.whatsapp')}
+                          aria-label={t('settings.whatsapp')}
+                          value={brandDrafts[sede.id]?.whatsapp ?? ''}
+                          onChange={(e) => setBrandDrafts((p) => ({ ...p, [sede.id]: { ...p[sede.id], whatsapp: e.target.value } }))}
                         />
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>

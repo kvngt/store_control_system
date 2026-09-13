@@ -3874,3 +3874,99 @@ body.drawer-open {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ---- Enlace del cliente (detalle de orden, solo admin) ---- */
+.customer-link-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.customer-link-url {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.customer-link-url .form-input {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: var(--font-size-sm);
+}
+
+.customer-link-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.customer-link-emails {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-surface-border);
+}
+
+.customer-link-emails-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-2);
+}
+
+.customer-link-emails-head h4 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-base);
+}
+
+.customer-link-email-list {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.customer-link-email-list li {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+}
+
+.customer-link-email-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.customer-link-email-meta {
+  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  overflow-wrap: anywhere;
+}
+
+.badge-danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+@media (max-width: 768px) {
+  .customer-link-actions .btn {
+    flex: 1 1 45%;
+    justify-content: center;
+    min-height: 40px;
+  }
+}

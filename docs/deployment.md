@@ -132,9 +132,19 @@ npx web-push generate-vapid-keys --json            # par VAPID
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"   # secreto
 ```
 
-**Fase 4 (pendiente):** `RESEND_API_KEY` con una llave de Resend de solo envío
-restringida a `reinventa.shop`. La llave de acceso total que se usó para verificar
-el dominio debe borrarse de Resend.
+**Correos al cliente (fase 4)** — se cargan aparte, nunca en un archivo:
+
+```bash
+npx supabase secrets set RESEND_API_KEY=<llave de Resend de solo envío> \
+  PUBLIC_SITE_URL=https://reinventa.shop \
+  EMAIL_FROM_ADDRESS=notificaciones@reinventa.shop
+# opcional; por defecto America/Chicago
+npx supabase secrets set SHOP_TIMEZONE=America/Chicago
+```
+
+La llave de Resend debe ser de **solo envío** y restringida a `reinventa.shop`. La
+de acceso total que se usó para verificar el dominio debe borrarse de Resend.
+Detalle en [portal-y-correos.md](portal-y-correos.md#7-configuración).
 
 ### 4.6 Vault (secretos que usa la base)
 
@@ -165,10 +175,13 @@ npx supabase functions deploy delete-employee
 # Internas: las llama la base, sin JWT; se protegen con el secreto compartido
 npx supabase functions deploy process-outbox --no-verify-jwt
 npx supabase functions deploy cleanup-storage --no-verify-jwt
+
+# Pública: el reporte del cliente; la protege el token
+npx supabase functions deploy portal --no-verify-jwt
 ```
 
-`supabase/config.toml` ya declara `verify_jwt = false` para las internas; el flag
-lo hace explícito.
+`supabase/config.toml` ya declara `verify_jwt = false` para las tres; el flag lo
+hace explícito.
 
 ### 4.8 Correo (Resend)
 
@@ -184,8 +197,10 @@ lo hace explícito.
 
 - Si se activa el correo de Hostinger en el mismo dominio, sus registros van en la
   raíz (MX, SPF) y no chocan con estos. El único que no puede duplicarse es `_dmarc`.
-- Remitente previsto: `"Nombre del taller" <notificaciones@reinventa.shop>`, con
-  *Reply-To* al buzón del taller (fase 4).
+- Remitente: `"Nombre del taller" <notificaciones@reinventa.shop>`, con *Reply-To*
+  al correo de contacto de la sede (Configuración → Sedes).
+- Llave de solo envío cargada como `RESEND_API_KEY` (septiembre 2026). Plan gratuito:
+  3.000 correos al mes, 100 por día.
 
 ---
 
@@ -238,6 +253,11 @@ Diez minutos. Si algo falla, [pruebas.md](pruebas.md) tiene el detalle de cada c
 - [ ] Grabar un video corto en un avance desde el teléfono; se reproduce.
 - [ ] Configuración → Notificaciones → **Enviar prueba** llega al teléfono.
 - [ ] Asignar un técnico a la orden: le llega "Nueva orden asignada" (campana y push).
+- [ ] Con un cliente de prueba con tu correo: firmar la recepción → en ~2 minutos
+      llega "Recibimos su…"; el botón abre `reinventa.shop/r/…` con la orden.
+- [ ] La tarjeta **Enlace del cliente** muestra el correo como **Enviado**.
+- [ ] `curl -s "https://<ref>.supabase.co/functions/v1/portal?token=$(printf '0%.0s' {1..64})"`
+      responde `{"estado_enlace":"no_encontrado"}` con HTTP 404.
 - [ ] `https://reinventa.shop/sw.js` responde con `Cache-Control: no-cache` (DevTools → Network).
 - [ ] Tareas programadas activas:
   ```sql
