@@ -28,8 +28,12 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
   lista permitida de ese trigger en una migración nueva.
 - **Roles:** `admin`, `mecanico`, `pintor`. Mecánico y pintor tienen los mismos
   permisos.
-- **Fases 1–5 hechas (restricciones de técnicos, multimedia, notificaciones, portal
-  del cliente y correos, presupuestos); 6 (reporte web) pendiente.** Plan y estado en
+- **Las seis fases del cliente están hechas** (restricciones de técnicos, multimedia,
+  notificaciones, portal del cliente y correos, presupuestos, reporte web). **El
+  reporte es el enlace del portal:** no subas PDFs a Storage (el bucket `reportes`
+  ya no acepta archivos); el PDF solo se descarga y muestra lo mismo que ve el
+  cliente (fotos publicadas, líneas aprobadas, sin notas internas ni nombres de
+  técnicos; filtros en `src/lib/reportMedia.ts`). Plan y estado en
   [README.md](README.md#estado-del-proyecto-septiembre-2026); historia y decisiones en
   [evolucion.md](evolucion.md).
 - **Solo lo autorizado se cobra.** `orden_labor` y `orden_repuestos` tienen `estado`

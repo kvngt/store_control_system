@@ -424,8 +424,8 @@ describe('WorkOrders — order detail', () => {
 
     // $120 de labor + $30 de repuestos, sin depósito.
     expect(screen.getAllByText('$150.00').length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: /Reporte PDF/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Generar y enviar/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Descargar PDF/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Enviar reporte/i })).toBeInTheDocument();
   });
 
   it('shows a technician which parts the order needs, without a single price', async () => {
@@ -444,8 +444,8 @@ describe('WorkOrders — order detail', () => {
     // Ni totales, ni depósito, ni forma de mandar el reporte.
     expect(screen.queryByText('$150.00')).not.toBeInTheDocument();
     expect(screen.queryByText(/^Depósito$/)).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Reporte PDF/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Generar y enviar/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Descargar PDF/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Enviar reporte/i })).not.toBeInTheDocument();
   });
 
   it('shows an assigned technician the commission the labor would pay them, and how', async () => {

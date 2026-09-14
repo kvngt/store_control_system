@@ -1,5 +1,11 @@
 import { jsPDF } from 'jspdf';
 import type { Sede, WorkOrder } from '../types/database';
+import { customerReportPhotos, groupByDay, reportImagePath } from './reportMedia';
+
+export interface WorkOrderPdfOptions {
+  /** El enlace personal del cliente, si la orden tiene: la versión web con videos. */
+  portalUrl?: string;
+}
 
 const MARGIN = 15;
 const LINE = 6;
@@ -27,9 +33,8 @@ const STATUS_LABELS: Record<string, string> = {
 const MAX_PHOTO_PX = 900;
 const JPEG_QUALITY = 0.72;
 
-// Supabase Storage URLs are public, so a plain fetch works. Any image that
-// fails (network, CORS, deleted file) is skipped rather than failing the
-// whole report.
+// URLs firmadas del bucket privado, así que un fetch simple funciona. Una imagen
+// que falla (red, CORS, archivo borrado) se omite en vez de romper el reporte.
 async function toDataUrl(url: string): Promise<string | null> {
   try {
     const res = await fetch(url);
@@ -84,23 +89,26 @@ async function toPngDataUrl(url: string, maxPx = 400) {
 }
 
 /**
- * Renders the report and hands back the raw document.
+ * El reporte impreso de la orden, para el cliente o el archivo.
  *
- * Kept separate from saving it so the same pages can be downloaded, uploaded
- * for sharing, or both — building the PDF twice for one order would mean
- * re-fetching and re-encoding every intake photo.
+ * Desde la fase 6 es la versión en papel del reporte web y sigue sus mismas reglas
+ * (`datos_portal`): solo las fotos que administración publicó, sin las notas
+ * internas de los avances ni los nombres de los técnicos, y solo los trabajos
+ * autorizados. Ya no se sube a ningún lado: se descarga.
+ *
+ * `urls`: ruta del bucket privado → URL firmada (miniaturas visibles y la firma);
+ * quien lo llama firma lo necesario (ver `useWorkOrderDetail`).
  */
-/**
- * `urls`: ruta del bucket privado → URL firmada, para las fotos y la firma. Desde
- * que la multimedia vive en un bucket privado el generador no puede leerla por
- * una URL pública; quien lo llama firma lo necesario (ver `useWorkOrderDetail`).
- */
-async function buildWorkOrderPdf(order: WorkOrder, sede?: Sede | null, urls: Record<string, string> = {}) {
-  const media = order.media || [];
-  const photoUrlsFor = (filter: (m: (typeof media)[number]) => boolean, limit: number) =>
-    media
-      .filter((m) => m.tipo === 'foto' && filter(m))
-      .map((m) => urls[m.ruta])
+async function buildWorkOrderPdf(
+  order: WorkOrder,
+  sede?: Sede | null,
+  urls: Record<string, string> = {},
+  options: WorkOrderPdfOptions = {}
+) {
+  const photos = customerReportPhotos(order);
+  const urlsOf = (list: typeof photos.reception, limit: number) =>
+    list
+      .map((m) => urls[reportImagePath(m)])
       .filter((u): u is string => !!u)
       .slice(0, limit);
 
@@ -210,6 +218,17 @@ async function buildWorkOrderPdf(order: WorkOrder, sede?: Sede | null, urls: Rec
   );
   y += LINE;
 
+  // La versión web lleva los videos, las notas de voz y el estado al día.
+  if (options.portalUrl) {
+    doc.setFontSize(9);
+    doc.setTextColor(...MUTED);
+    doc.text('Vea este reporte en línea, con videos y el estado actualizado:', MARGIN, y);
+    y += 4.5;
+    doc.setTextColor(...BRAND);
+    doc.textWithLink(options.portalUrl, MARGIN, y, { url: options.portalUrl });
+    y += LINE;
+  }
+
   // ===== Customer & vehicle =====
   sectionTitle('Cliente y Vehículo');
   const half = contentWidth / 2;
@@ -282,10 +301,16 @@ async function buildWorkOrderPdf(order: WorkOrder, sede?: Sede | null, urls: Rec
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(20, 20, 30);
-  const balance = totalGeneral - deposito;
+  // Una orden entregada ya cobró su saldo (lo asienta la base al entregar): el
+  // papel no debe decir que el cliente todavía debe.
+  const delivered = order.estatus === 'entregado';
+  const balance = delivered ? 0 : totalGeneral - deposito;
   const rows: [string, string][] = [
     ['Subtotal', money(Number(order.total_labor) + totalRepuestos)],
     ['Depósito recibido', `-${money(deposito)}`],
+    ...(delivered && totalGeneral - deposito > 0.009
+      ? ([['Pagado al entregar', `-${money(totalGeneral - deposito)}`]] as [string, string][])
+      : []),
   ];
   rows.forEach(([k, v]) => {
     ensureSpace(LINE);
@@ -302,20 +327,6 @@ async function buildWorkOrderPdf(order: WorkOrder, sede?: Sede | null, urls: Rec
   doc.text(money(Math.abs(balance)), pageWidth - MARGIN, y, { align: 'right' });
   y += LINE + 2;
 
-  // ===== Technicians =====
-  const assignments = order.asignaciones || [];
-  if (assignments.length) {
-    sectionTitle('Técnicos Asignados');
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    assignments.forEach((a) => {
-      ensureSpace(LINE);
-      doc.setTextColor(20, 20, 30);
-      doc.text(`${a.usuario?.nombre_completo || '—'} — ${a.tipo_tarea} (${a.estatus_tarea})`, MARGIN, y);
-      y += LINE;
-    });
-  }
-
   // ===== Intake notes =====
   if (order.inspeccion_360_notas) {
     sectionTitle('Notas de Inspección 360°');
@@ -328,53 +339,46 @@ async function buildWorkOrderPdf(order: WorkOrder, sede?: Sede | null, urls: Rec
     y += LINE * notes.length;
   }
 
-  // ===== Progress log =====
-  const avances = order.avances || [];
-  if (avances.length) {
-    sectionTitle('Avance del Trabajo');
-    for (const avance of avances) {
-      ensureSpace(LINE * 2);
+  // ===== Avances publicados =====
+  // Solo las fotos que administración publicó, por día. Las notas de los avances
+  // son internas del taller y no salen en un documento para el cliente.
+  const progressDays = groupByDay(photos.progress)
+    .map(({ day, items }) => ({ day, urls: urlsOf(items, 6) }))
+    .filter((g) => g.urls.length > 0);
+  if (progressDays.length) {
+    sectionTitle('Avances del Trabajo');
+    const imgW = 45;
+    const imgH = 34;
+    for (const group of progressDays) {
+      ensureSpace(LINE + imgH + 4);
       doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
       doc.setTextColor(...MUTED);
-      doc.text(
-        `${new Date(avance.creado_en).toLocaleDateString('es')} — ${avance.usuario?.nombre_completo || ''}`,
-        MARGIN,
-        y
-      );
-      y += 4;
-      doc.setFontSize(10);
-      doc.setTextColor(20, 20, 30);
-      const lines = doc.splitTextToSize(avance.descripcion, contentWidth);
-      ensureSpace(LINE * lines.length);
-      doc.text(lines, MARGIN, y);
-      y += LINE * lines.length;
-
-      // Up to 3 photos per entry, laid out in a row.
-      const photos = photoUrlsFor((m) => m.avance_id === avance.id, 3);
-      if (photos.length) {
-        const imgW = 45;
-        const imgH = 34;
-        ensureSpace(imgH + 4);
-        let x = MARGIN;
-        for (const url of photos) {
-          const dataUrl = await toDataUrl(url);
-          if (dataUrl) {
-            try {
-              doc.addImage(dataUrl, 'JPEG', x, y, imgW, imgH);
-            } catch {
-              // Unsupported image format — skip it rather than break the report.
-            }
-          }
-          x += imgW + 4;
+      doc.text(new Date(`${group.day}T12:00:00`).toLocaleDateString('es'), MARGIN, y);
+      y += 3;
+      let x = MARGIN;
+      for (const url of group.urls) {
+        if (x + imgW > pageWidth - MARGIN) {
+          x = MARGIN;
+          y += imgH + 4;
+          ensureSpace(imgH + 4);
         }
-        y += imgH + 4;
+        const dataUrl = await toDataUrl(url);
+        if (dataUrl) {
+          try {
+            doc.addImage(dataUrl, 'JPEG', x, y, imgW, imgH);
+          } catch {
+            // Formato no soportado: se omite en vez de romper el reporte.
+          }
+        }
+        x += imgW + 4;
       }
-      y += 2;
+      y += imgH + 6;
     }
   }
 
   // ===== Intake photos =====
-  const intakePhotos = photoUrlsFor((m) => m.origen === 'recepcion', 12);
+  const intakePhotos = urlsOf(photos.reception, 12);
   if (intakePhotos.length) {
     sectionTitle('Fotos de Recepción');
     const imgW = 55;
@@ -442,18 +446,13 @@ export function workOrderPdfName(order: WorkOrder) {
   return `${order.numero_orden}.pdf`;
 }
 
-/** Renders the report and downloads it. */
-export async function generateWorkOrderPdf(order: WorkOrder, sede?: Sede | null, urls: Record<string, string> = {}) {
-  const doc = await buildWorkOrderPdf(order, sede, urls);
-  doc.save(workOrderPdfName(order));
-}
-
-/** Renders the report as a Blob, for uploading or attaching. */
-export async function renderWorkOrderPdfBlob(
+/** Genera el reporte y lo descarga. */
+export async function generateWorkOrderPdf(
   order: WorkOrder,
   sede?: Sede | null,
-  urls: Record<string, string> = {}
-): Promise<Blob> {
-  const doc = await buildWorkOrderPdf(order, sede, urls);
-  return doc.output('blob');
+  urls: Record<string, string> = {},
+  options: WorkOrderPdfOptions = {}
+) {
+  const doc = await buildWorkOrderPdf(order, sede, urls, options);
+  doc.save(workOrderPdfName(order));
 }

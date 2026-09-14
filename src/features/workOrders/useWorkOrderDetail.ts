@@ -9,6 +9,8 @@ import { useMediaUploads } from '../media/mediaUploads.context';
 // Statically imported, unlike the PDF renderer below: ShareReportModal already
 // pulls it into this chunk, so a dynamic import here only defeats itself.
 import { reportsService } from '../../services/reports.service';
+import { customerPortalService } from '../../services/customerPortal.service';
+import { reportAssetPaths } from '../../lib/reportMedia';
 import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';
 import type { OrderMedia, OrderStatus, PreparedMedia, UserProfile, WorkOrder } from '../../types/database';
@@ -48,6 +50,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   const [mutationError, setMutationError] = useState('');
   const [savingSignature, setSavingSignature] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [preparingShare, setPreparingShare] = useState(false);
   // The signed link + message for the report the user just generated. Non-null
   // is what opens the share dialog.
   const [share, setShare] = useState<{ link: string; message: string } | null>(null);
@@ -473,25 +476,26 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // ----- PDF -----------------------------------------------------------------
 
   /**
-   * URLs firmadas para lo que el PDF incrusta: las fotos (no los videos ni el
-   * audio, que un PDF no puede reproducir) y la firma. Todo vive en un bucket
-   * privado, así que el generador ya no puede leerlo por URL pública.
+   * URLs firmadas para lo que el PDF incrusta: las fotos visibles para el cliente
+   * (en miniatura; ni videos ni audio, que un PDF no reproduce) y la firma. Todo
+   * vive en un bucket privado, así que el generador no puede leerlo por URL pública.
    */
-  const signPdfAssets = async (target: WorkOrder) => {
-    const photos = (target.media || []).filter((m) => m.tipo === 'foto').map((m) => m.ruta);
-    return mediaService.signUrls([...photos, target.firma_ruta ?? ''].filter(Boolean), 10 * 60);
-  };
+  const signPdfAssets = async (target: WorkOrder) => mediaService.signUrls(reportAssetPaths(target), 10 * 60);
 
   const generatePdf = async () => {
     if (!order || !canSendReport) return;
     setGeneratingPdf(true);
     try {
       // ~400 kB of jsPDF, fetched only when someone prints.
-      const [{ generateWorkOrderPdf }, urls] = await Promise.all([
+      const [{ generateWorkOrderPdf }, urls, link] = await Promise.all([
         import('../../lib/workOrderPdf'),
         signPdfAssets(order),
+        // Si la orden ya tiene enlace, el PDF lo lleva: la versión con videos.
+        customerPortalService.getActiveLink(order.id).catch(() => null),
       ]);
-      await generateWorkOrderPdf(order, currentSede, urls);
+      await generateWorkOrderPdf(order, currentSede, urls, {
+        portalUrl: link ? customerPortalService.portalUrl(link.token) : undefined,
+      });
     } catch (err) {
       showToast('error', t('workOrders.pdfError'), getErrorMessage(err, language));
     } finally {
@@ -500,27 +504,24 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   };
 
   /**
-   * Renders the report, uploads it, and opens the share dialog.
+   * Abre "Enviar reporte" con el enlace web del cliente (fase 6).
    *
-   * One render for both: the PDF embeds every intake photo, so building it
-   * twice — once to download and once to send — would mean fetching and
-   * re-encoding all of them again.
+   * Ya no genera ni sube un PDF: el reporte es la página del cliente, que muestra
+   * los videos y se mantiene al día sola. Si la orden no tenía enlace (sin firma
+   * todavía), se crea aquí.
    */
   const shareReport = async () => {
     if (!order || !canSendReport) return;
-    setGeneratingPdf(true);
+    setPreparingShare(true);
     try {
-      const [{ renderWorkOrderPdfBlob }, urls] = await Promise.all([
-        import('../../lib/workOrderPdf'),
-        signPdfAssets(order),
-      ]);
-      const blob = await renderWorkOrderPdfBlob(order, currentSede, urls);
-      const { url } = await reportsService.uploadReport(order, blob);
+      const link = await customerPortalService.createLink(order.id);
+      const url = customerPortalService.portalUrl(link.token);
       setShare({ link: url, message: reportsService.buildMessage(order, url, currentSede?.nombre) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.customerLink(order.id) });
     } catch (err) {
       showToast('error', t('workOrders.shareReportError'), getErrorMessage(err, language));
     } finally {
-      setGeneratingPdf(false);
+      setPreparingShare(false);
     }
   };
 
@@ -547,6 +548,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     setProgressDraft,
     savingSignature,
     generatingPdf,
+    preparingShare,
     open,
     close,
     changeStatus,

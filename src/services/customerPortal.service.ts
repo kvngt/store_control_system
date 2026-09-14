@@ -49,6 +49,17 @@ export const customerPortalService = {
     return data as 'encolado' | 'sin_correo';
   },
 
+  /**
+   * "Enviar por correo" del reporte: sale desde el sistema (Resend) con el enlace
+   * personal. Crea el enlace si la orden no tenía. `sin_correo` si el cliente no
+   * tiene un correo válido o pidió no recibir correos.
+   */
+  sendReportEmail: async (orderId: string) => {
+    const { data, error } = await supabase.rpc('enviar_reporte_cliente', { p_orden_id: orderId });
+    if (error) throw error;
+    return data as { correo: 'encolado' | 'sin_correo'; token: string };
+  },
+
   /** Los últimos correos al cliente de esta orden, del más nuevo al más viejo. */
   listEmails: async (orderId: string) => {
     const { data, error } = await supabase

@@ -258,6 +258,8 @@ Diez minutos. Si algo falla, [pruebas.md](pruebas.md) tiene el detalle de cada c
 - [ ] La tarjeta **Enlace del cliente** muestra el correo como **Enviado**.
 - [ ] Agregar un trabajo a esa orden → **Enviar presupuesto** → llega el correo; autorizarlo desde
       el enlace → la orden suma el trabajo y llega "Recibimos su respuesta".
+- [ ] **Enviar reporte → Enviar por correo** → llega el correo del reporte; **Descargar PDF**
+      baja un PDF con el enlace y sin notas internas.
 - [ ] `curl -s "https://<ref>.supabase.co/functions/v1/portal?token=$(printf '0%.0s' {1..64})"`
       responde `{"estado_enlace":"no_encontrado"}` con HTTP 404.
 - [ ] `https://reinventa.shop/sw.js` responde con `Cache-Control: no-cache` (DevTools → Network).

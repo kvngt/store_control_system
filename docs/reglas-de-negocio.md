@@ -181,7 +181,8 @@ mismos permisos ("técnico"); cambia el tipo de tarea.
 | Borrar avances | ✅ cualquiera | ✅ los suyos, orden no entregada | ❌ |
 | Asignar a otras personas | ✅ | ❌ | ❌ |
 | Unirse a la orden | — | — | ✅ si no está entregada |
-| Generar y compartir el reporte | ✅ | ❌ | ❌ |
+| **Enviar el reporte** al cliente (correo, WhatsApp, copiar enlace) | ✅ | ❌ | ❌ |
+| Descargar el PDF de la orden | ✅ | ❌ | ❌ |
 | Ver, crear, cambiar o desactivar el **enlace del cliente** | ✅ | ❌ | ❌ |
 | **Avisar novedades** al cliente por correo | ✅ | ❌ | ❌ |
 | Ver el **estado de cada línea** (sin autorizar, esperando, autorizada, no realizar) | ✅ | ✅ | ✅ |
@@ -325,6 +326,7 @@ Lo **pagado** es la suma con signo de los movimientos "pago de cliente" de la or
 | **Novedades** | Un admin pulsa "Avisar novedades" (después de publicar fotos o videos) | 1 minuto |
 | **Presupuesto** | Un admin pulsa "Enviar presupuesto" | 1 minuto (agrupa si se envía de nuevo) |
 | **Constancia de respuesta** | Se responde un presupuesto desde el enlace o lo registra un admin | Inmediato |
+| **Reporte** | Un admin pulsa "Enviar reporte → Enviar por correo" | 1 minuto (dos toques seguidos son un correo) |
 
 - Solo si el cliente tiene un **correo válido** y **no se dio de baja**.
 - Cambios de estado dentro de la espera se **agrupan** en un solo correo con el
@@ -341,6 +343,19 @@ Lo **pagado** es la suma con signo de los movimientos "pago de cliente" de la or
   del pie abre la página y pide confirmar: nunca da de baja solo.
 - La baja cancela los correos pendientes. El cliente puede volver a activarlos.
 - En la ficha del cliente, el taller ve y puede cambiar "Recibe avisos por correo".
+
+### El reporte
+
+- **El reporte de la orden es el enlace del cliente.** Siempre muestra lo actual:
+  estado, fotos y videos publicados, cuenta. No hay un PDF que quede desactualizado.
+- Solo un **admin** lo envía: por correo desde el sistema, por WhatsApp o copiando el
+  enlace. Un técnico no puede mandar nada al cliente.
+- **Enviar por correo** necesita un correo válido y que el cliente no se haya dado de
+  baja; si no, el taller usa WhatsApp.
+- El **PDF** existe solo para descargar (imprimir, archivar) y muestra lo mismo que el
+  enlace: fotos publicadas, líneas autorizadas, el enlace; sin notas internas ni
+  técnicos. Si la orden está entregada, el saldo es 0.
+- Ya no se suben PDFs al almacenamiento.
 
 ---
 
@@ -441,4 +456,6 @@ resolverlas con el cliente.
 10. **La autorización desde el enlace es nombre escrito + IP + navegador**, no una
     firma. Es el estándar para este flujo; si el taller necesita más, se puede pedir
     firma también ahí.
-11. **Fase 6 pendiente**: reporte web en lugar del PDF en "Generar y enviar".
+11. **PDFs viejos en el almacenamiento.** Los reportes que se subieron antes de la
+    fase 6 siguen en el bucket `reportes` (solo los ve un admin) y sus enlaces de 30
+    días ya vencieron o vencerán solos. Se pueden borrar desde el panel de Supabase.

@@ -29,8 +29,8 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 257 pruebas, 34 archivos | ~20 s | Nada |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos y presupuestos contra un Postgres real | 126 aserciones, 5 archivos | ~1 min | Docker |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 265 pruebas, 36 archivos | ~20 s | Nada |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos y reporte contra un Postgres real | 133 aserciones, 6 archivos | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, ~73 casos | 2–5 min | Credenciales de prueba |
 | **Manual** | Personas y dispositivos | Cámara, micrófono, push, subidas reales, iPhone, diseño móvil | Secciones 4–6 | 2–3 h completo | Teléfonos Android e iPhone |
 
@@ -76,6 +76,7 @@ declaran `// @vitest-environment jsdom` y renderizan con los proveedores reales
 | Portal del cliente | `portal/CustomerPortal`, `lib/emailTemplates`, `lib/phone` | Estado, vehículo, multimedia publicada y cuenta; visor de video; WhatsApp y llamar; "pagado en su totalidad"; enlace vencido con teléfono; ruta sin token no consulta; reintento; **la baja se confirma con botón, nunca al abrir**; inglés. Plantillas: asunto por estado, fecha DATE sin correrse un día, **HTML escapado**, logo solo https y color solo hexadecimal, Reply-To solo si hay correo de contacto |
 | Presupuestos | `features/workOrders/QuoteCard`, `features/workOrders/LaborTable`, `portal/CustomerPortal` (sección presupuesto), `lib/emailTemplates` | Tarjeta: se oculta sin nada que autorizar; enviar tras confirmar; aviso si el cliente no tiene correo; registrar autorización (todo marcado, se desmarca lo rechazado, vía y nombre); cancelar con confirmación; historial con vía, conteos y comentario. Tabla: total solo autorizado, "sin autorizar" aparte, insignias, línea pendiente sin controles. Portal: nada marcado, exige nombre, manda lo marcado **y todas las líneas vistas**, confirmación que sobrevive a la recarga, "el taller actualizó el presupuesto", lo no autorizado aparte. Correos: presupuesto solo con lo pendiente, constancia con lo autorizado y la vía |
 | Enlace del cliente (admin) | `features/workOrders/CustomerLinkCard` | Crear enlace; visitas; WhatsApp con el enlace; cambiar enlace pide confirmación; historial de correos con estado y motivo; avisar novedades; sin correo o con baja no ofrece avisar |
+| Reporte (fase 6) | `features/workOrders/ShareReportModal`, `lib/reportMedia`, `lib/emailTemplates` (plantilla `reporte`) | Enviar por correo desde el sistema y cerrar; sin correo o con baja el botón está apagado; WhatsApp al teléfono del cliente con el enlace; Abrir; Descargar PDF. El PDF lleva **solo fotos publicadas** (miniaturas), sin videos ni archivos internos, y firma la ruta de la firma. Correo del reporte con el enlace |
 | Layout | `components/layout/BottomNav`, `components/LazyModal` | Barra inferior; modales diferidos |
 | Datos remotos | `lib/queryClient` | Reintentos y claves de caché |
 
@@ -160,13 +161,22 @@ PostgREST en cada petición.
 - Corregir lo rechazado lo vuelve a borrador; cancelar devuelve a borrador; registrar
   por teléfono aprueba; al entregar, el costo de repuestos cuenta solo lo aprobado.
 
+**`supabase/tests/database/06_reporte_web.test.sql`** (7)
+
+- Un técnico no manda el reporte (42501).
+- El admin lo manda a un cliente con correo (`encolado`); pulsarlo dos veces programa
+  **un** solo correo.
+- Un cliente sin correo no genera nada (`sin_correo`), pero el enlace se crea igual
+  para compartirlo por WhatsApp.
+- El bucket `reportes` ya no tiene políticas de INSERT ni UPDATE.
+
 Las pruebas 01 y 02 firman la recepción antes de entregar: desde la fase 5, sin
 autorización no hay nada que cobrar ni comisión que generar.
 
 > **Estado:** escritas y validadas con el parser de Postgres, pero **todavía no
 > ejecutadas** con pgTAP (la máquina de desarrollo no tiene Docker). Las reglas de
-> la fase 4 sí se probaron de punta a punta contra el proyecto enlazado (correo real
-> a `delivered@resend.dev`, portal, agrupación, baja) con datos que luego se borraron. La
+> las fases 4, 5 y 6 sí se probaron de punta a punta contra el proyecto enlazado (correo real
+> a `delivered@resend.dev`, portal, agrupación, baja, presupuestos, reporte) con datos que luego se borraron. La
 > primera corrida puede requerir ajustes de sintaxis de pgTAP. Córrelas antes de
 > confiar en ellas.
 
@@ -216,8 +226,8 @@ Se necesita para:
 
 | Tarea | Comando | Por qué no se puede sin Docker |
 |---|---|---|
-| **Correr las pruebas de base de datos** (las 126 aserciones pgTAP) | `npm run test:db` | Necesitan un Postgres real donde crear datos y deshacerlos |
-| **Probar que las migraciones aplican desde cero** | `npx supabase db reset` | Recrea la base local aplicando las 33 migraciones en orden: detecta una migración que solo funciona sobre la base actual |
+| **Correr las pruebas de base de datos** (las 133 aserciones pgTAP) | `npm run test:db` | Necesitan un Postgres real donde crear datos y deshacerlos |
+| **Probar que las migraciones aplican desde cero** | `npx supabase db reset` | Recrea la base local aplicando las 34 migraciones en orden: detecta una migración que solo funciona sobre la base actual |
 | **Probar una migración antes de producción** | `npx supabase start` y luego la app contra la base local | Hoy cada migración se aplica directo al proyecto enlazado |
 | Probar edge functions localmente | `npx supabase functions serve` | Corren en el contenedor de Supabase |
 
@@ -232,7 +242,7 @@ proyecto enlazado.
 
 ```bash
 npx supabase start       # la primera vez descarga las imágenes (varios minutos)
-npm run test:db          # 5 archivos pgTAP
+npm run test:db          # 6 archivos pgTAP
 npx supabase db reset    # opcional: recrear la base local desde cero
 npx supabase stop        # al terminar
 ```
@@ -338,7 +348,7 @@ Formato: **acción → resultado esperado**. Marca cada casilla. Quién ejecuta:
 - [ ] Ve "Descripción de repuestos" con piezas y cantidades, sin ningún `$`.
 - [ ] Ve la mano de obra, sin botones para editarla, con el aviso "la cotiza administración".
 - [ ] Ve **Tu comisión estimada** con la cuenta: mano de obra × % ÷ técnicos.
-- [ ] No ve los botones "Reporte PDF" ni "Generar y enviar".
+- [ ] No ve los botones "Descargar PDF" ni "Enviar reporte".
 - [ ] El selector de estado no ofrece "Entregado".
 - [ ] Mueve el avance en cualquier estado no cerrado.
 - [ ] Captura la firma del cliente; se ve al recargar.
@@ -586,6 +596,33 @@ correo** y un técnico asignado (**M**).
 - [ ] Con un presupuesto enviado, intentar **Entregar** → mensaje "tiene un presupuesto esperando respuesta"; la orden no cambia.
 - [ ] Entregar con un repuesto **sin autorizar** → Finanzas no registra su costo.
 - [ ] Al día siguiente (15:00 UTC) de un presupuesto enviado sin respuesta, los admins reciben "Presupuesto sin respuesta".
+
+### 4.15 Reporte
+
+Detalle en [portal-y-correos.md](portal-y-correos.md#10-el-reporte-web). Orden con cliente
+de prueba con **tu correo**, fotos de recepción, un avance con una foto publicada y otra
+interna, y una nota en el avance.
+
+**Enviar reporte (A)**
+
+- [ ] En el detalle están **Descargar PDF** y **Enviar reporte**; **M** no ve ninguno.
+- [ ] **Enviar reporte** en una orden sin firma → la ventana muestra el enlace (se creó en ese momento) y la tarjeta **Enlace del cliente** lo muestra sin recargar.
+- [ ] La ventana dice cuándo vence el enlace (90 días después de entregar).
+- [ ] **Enviar por correo** → aviso "Reporte enviado", la ventana se cierra; en la tarjeta aparece el correo **Programado** y al minuto **Enviado**.
+- [ ] Llega el correo con el botón que abre el portal; el remitente es el nombre del taller.
+- [ ] Pulsar **Enviar por correo** dos veces seguidas en menos de un minuto (reabriendo la ventana) → llega **un** correo.
+- [ ] **Enviar por WhatsApp** abre WhatsApp al teléfono del cliente con el mensaje y el enlace.
+- [ ] **Copiar enlace** → pegar en otro navegador sin sesión abre el reporte; **Abrir** abre el portal en otra pestaña.
+- [ ] Cliente sin correo, o que se dio de baja → **Enviar por correo** está apagado con el motivo; WhatsApp sigue disponible.
+
+**Descargar PDF (A)**
+
+- [ ] Se descarga sin subir nada (DevTools → Network: ninguna petición a `storage/v1/object/reportes`).
+- [ ] Lleva las fotos de recepción **publicadas** y la foto de avance publicada, agrupada por día; **no** lleva la foto interna, videos, el texto del avance ni los técnicos asignados.
+- [ ] Los montos coinciden con el portal (solo lo autorizado); en una orden entregada el saldo es $0 con "Pagado al entregar".
+- [ ] El enlace del reporte aparece en el PDF y se puede tocar.
+- [ ] Con 20+ fotos publicadas el PDF sigue pesando pocos MB (usa miniaturas).
+
 ---
 
 ## 5. Pruebas de seguridad contra la API
@@ -636,6 +673,8 @@ H=(-H "apikey: $ANON" -H "Authorization: Bearer $TOKEN" -H "Content-Type: applic
 | 27 | Técnico: `curl "$SB/rest/v1/presupuestos?select=*" "${H[@]}"` | `[]` |
 | 28 | Sin sesión: `curl -X POST "$SB/rest/v1/rpc/responder_presupuesto_portal" -H "apikey: $ANON" -H "Content-Type: application/json" -d '{}'` | Error de permiso |
 | 29 | Sin sesión: POST a `$SB/functions/v1/portal` con `accion: responder_presupuesto` y `lineas` incompletas | `{"ok":false,"motivo":"presupuesto_cambio"}` |
+| 30 | Técnico: `curl -X POST "$SB/rest/v1/rpc/enviar_reporte_cliente" "${H[@]}" -d "{\"p_orden_id\":\"$ORDEN\"}"` | Error `42501` |
+| 31 | **Admin**: `curl -X POST "$SB/storage/v1/object/reportes/prueba.pdf" -H "apikey: $ANON" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/pdf" --data-binary @algo.pdf` | Error de permiso (`new row violates row-level security policy`): el bucket ya no acepta archivos |
 
 Cualquier resultado distinto es un problema de seguridad: repórtalo como prioridad.
 
@@ -659,6 +698,8 @@ Marca ✅ / ❌ y anota versión de sistema y navegador.
 | Push con app cerrada | | ❌ esperado | | | |
 | Instalar como app | | n/a | | | |
 | Portal del cliente: abre, reproduce video, llamar/WhatsApp | | | n/a | | |
+| Enviar reporte por WhatsApp abre la app con el mensaje | | | | n/a | n/a |
+| Descargar PDF: se guarda y se abre | | | | | |
 | Correo de recepción se ve bien (app de correo del teléfono) | | | n/a | | |
 | Campos sin zoom al tocar | | | | n/a | n/a |
 
@@ -690,6 +731,7 @@ Cada uno se corrigió en septiembre de 2026. Si alguno reaparece, es una regresi
 | Sin búsqueda global en el teléfono | 4.11 |
 | Cancelar "Entregado" dejaba el selector mostrando "Entregado" | 4.4 Estados y Kanban |
 | La campana re-descargaba todas las órdenes cada 60 s | DevTools → Network en el panel: sin peticiones periódicas a `ordenes_trabajo` |
+| El PDF compartido mostraba notas internas, técnicos y fotos no publicadas | 4.15 Descargar PDF (y `lib/reportMedia.test.ts`) |
 
 ---
 
@@ -704,6 +746,7 @@ Mínimo, siempre:
 - [ ] Si toca multimedia o notificaciones: 4.7, 4.8 y al menos Android + iPhone de la matriz.
 - [ ] Si toca el portal, los correos o `datos_portal`: 4.13 y peticiones 20–24 de la sección 5.
 - [ ] Si toca líneas, totales o presupuestos: 4.5, 4.14 y peticiones 25–29.
+- [ ] Si toca el reporte o el PDF: 4.15 y peticiones 30–31.
 - [ ] Si toca estilos: 4.11 en un teléfono real.
 - [ ] Después de publicar: [deployment.md §6](deployment.md#6-verificación-después-de-publicar).
 

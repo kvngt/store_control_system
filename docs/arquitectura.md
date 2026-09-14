@@ -41,7 +41,7 @@ avisos), el complemento es [reglas-de-negocio.md](reglas-de-negocio.md).
 | **Pruebas** | Vitest (unitarias y componentes), pgTAP (base de datos), Playwright (e2e) |
 | **Hosting** | Sitio estático en Hostinger (Apache), dominio `reinventa.shop` |
 
-Unas 26 000 líneas de TypeScript (con pruebas), 5 000 de CSS, 33 migraciones y 22 tablas.
+Unas 26 000 líneas de TypeScript (con pruebas), 5 000 de CSS, 34 migraciones y 22 tablas.
 Cómo se llegó hasta aquí, etapa por etapa: [evolucion.md](evolucion.md).
 
 ---
@@ -149,7 +149,8 @@ src/
     errors.ts                    traduce errores de Postgres y Auth
     vin.ts, bankStatementParser.ts, categorizationRules.ts, workOrderPdf.ts,
     signature.ts, branding.ts, schemaVersion.ts, queryClient.ts, siteUrl.ts,
-    phone.ts (WhatsApp y tel:), email.ts (formato de correo)
+    phone.ts (WhatsApp y tel:), email.ts (formato de correo),
+    reportMedia.ts (qué fotos lleva el PDF: solo las publicadas)
 
   types/                         database.ts reexporta domain/*.types.ts
   i18n/translations.ts           español e inglés
@@ -162,7 +163,7 @@ public/
   .htaccess                      reescritura SPA + tipos PWA para Apache
 
 supabase/
-  migrations/                    33 migraciones, en orden cronológico (historia en evolucion.md)
+  migrations/                    34 migraciones, en orden cronológico (historia en evolucion.md)
   functions/                     edge functions (Deno)
     create-employee, update-employee, delete-employee   con clave de servicio
     process-outbox, cleanup-storage                     internas, llamadas por la base
@@ -333,6 +334,7 @@ permiten cambiar totales con esa bandera: un `PATCH` directo a la API no la tien
 | `app_schema_version` | todos | Detección de desfase entre build y base |
 | `crear_enlace_cliente`, `regenerar_enlace_cliente`, `revocar_enlace_cliente` | admin | Tarjeta del enlace del cliente |
 | `notificar_cliente_avance` | admin | "Avisar novedades" por correo |
+| `enviar_reporte_cliente` | admin | "Enviar reporte → Enviar por correo" (asegura el enlace) |
 | `enviar_presupuesto`, `registrar_autorizacion`, `cancelar_presupuesto` | admin | Tarjeta de presupuesto |
 | `ordenes_esperando_autorizacion` | todos | Marca "Esperando autorización" en lista y tablero, sin montos |
 
@@ -378,7 +380,7 @@ para convertir ese silencio en un error visible.
 |---|---|---|---|
 | `orden_media` | **no** | fotos, videos, audio y firmas de órdenes | admin, o asignado a la orden sin entregar; borrar: admin o dueño |
 | `comprobantes` | **no** | fotos de cheques | admin |
-| `reportes` | **no** | PDF compartidos | admin |
+| `reportes` | **no** | PDF compartidos antes de la fase 6; lectura y borrado solo admin | nadie (el reporte es el enlace del portal) |
 | `estados_cuenta_bancarios` | no | PDF del banco | admin |
 | `sede_logos`, `avatares` | sí | logos e imágenes de perfil | admin / cada usuario |
 | `vehiculos_fotos`, `firmas` | **no** (cerrados en septiembre de 2026) | **en desuso** desde la fase 2; lectura solo admin | nadie |
@@ -598,4 +600,4 @@ reproducir. Chrome ≥ 126 y Safari graban MP4.
 
 ---
 
-*Última revisión: septiembre de 2026 (fases 1–5).*
+*Última revisión: septiembre de 2026 (fases 1–6).*

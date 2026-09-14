@@ -1,12 +1,18 @@
 import { useState } from 'react';
-import { Check, Copy, Download, Mail, MessageCircle, X } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Check, Copy, Download, ExternalLink, Mail, MessageCircle, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { useToast } from '../../context/toast.context';
+import { getErrorMessage } from '../../lib/errors';
+import { isValidEmail } from '../../lib/email';
+import { queryKeys } from '../../lib/queryClient';
+import { customerPortalService } from '../../services/customerPortal.service';
 import { reportsService } from '../../services/reports.service';
 import type { WorkOrder } from '../../types/database';
 
 interface ShareReportModalProps {
   order: WorkOrder;
-  /** The signed link to the uploaded report, and the message to send with it. */
+  /** El enlace personal del cliente (reinventa.shop/r/<token>) y el mensaje de WhatsApp. */
   link: string;
   message: string;
   onClose: () => void;
@@ -15,29 +21,25 @@ interface ShareReportModalProps {
 }
 
 /**
- * What to do with a report once it has been generated.
+ * Enviar el reporte al cliente: su enlace web, no un archivo.
  *
- * Every button here hands off to something the user already has open — their
- * WhatsApp, their mail client — rather than sending on their behalf. That is a
- * deliberate choice, not a stopgap: the shop wanted the customer to receive the
- * report from the shop's own number and address, and a server sending on their
- * behalf would arrive from neither. It also means no email or messaging
- * provider to pay for, configure or keep credentials for.
+ * El reporte es la página del cliente — estado, fotos y videos publicados,
+ * presupuesto y cuenta —, que se ve bien en un teléfono y reproduce los videos que
+ * un PDF no puede. El correo sale desde el sistema con el nombre del taller (y las
+ * respuestas llegan al correo de contacto de la sede); WhatsApp se abre con el
+ * mensaje listo para mandarlo desde el número del taller. El PDF queda para
+ * imprimir.
  */
-export default function ShareReportModal({
-  order,
-  link,
-  message,
-  onClose,
-  onDownload,
-  downloading,
-}: ShareReportModalProps) {
-  const { t } = useLanguage();
+export default function ShareReportModal({ order, link, message, onClose, onDownload, downloading }: ShareReportModalProps) {
+  const { t, language } = useLanguage();
+  const { showToast } = useToast();
+  const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const customer = order.cliente;
   const hasPhone = !!customer?.telefono?.trim();
-  const hasEmail = !!customer?.email?.trim();
+  const canEmail = isValidEmail(customer?.email) && customer?.acepta_correos !== false;
 
   const copyLink = async () => {
     try {
@@ -45,21 +47,40 @@ export default function ShareReportModal({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Clipboard permission denied, or an insecure origin. The link is on
-      // screen and selectable, so there is still a way to get at it.
+      // Sin permiso de portapapeles: el enlace está a la vista y se puede seleccionar.
     }
   };
 
-  const openExternally = (url: string) => {
-    // `noopener` matters: without it the opened tab gets a handle on this one.
-    window.open(url, '_blank', 'noopener,noreferrer');
+  const sendEmail = async () => {
+    setSending(true);
+    try {
+      const result = await customerPortalService.sendReportEmail(order.id);
+      if (result.correo === 'encolado') {
+        showToast('success', t('workOrders.reportEmailQueued'));
+        void queryClient.invalidateQueries({ queryKey: queryKeys.customerEmails(order.id) });
+        onClose();
+      } else {
+        showToast('error', t('workOrders.reportEmailNoEmail'));
+      }
+    } catch (err) {
+      showToast('error', t('workOrders.reportEmailError'), getErrorMessage(err, language));
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal"
+        style={{ maxWidth: 520 }}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="share-report-title"
+      >
         <div className="modal-header">
-          <h3 className="modal-title">{t('workOrders.shareReport')}</h3>
+          <h3 className="modal-title" id="share-report-title">{t('workOrders.shareReport')}</h3>
           <button className="modal-close" onClick={onClose} aria-label={t('common.close')}>
             <X size={20} />
           </button>
@@ -79,41 +100,45 @@ export default function ShareReportModal({
           </div>
           <div className="share-target">
             <div className="share-target-label">{t('common.email')}</div>
-            <div className="share-target-value">{customer?.email || t('workOrders.shareNoEmail')}</div>
+            <div className="share-target-value">
+              {!customer?.email?.trim()
+                ? t('workOrders.shareNoEmail')
+                : customer.acepta_correos === false
+                  ? `${customer.email} · ${t('customerLink.optedOut')}`
+                  : customer.email}
+            </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
             <button
               type="button"
               className="btn btn-primary"
-              onClick={() => openExternally(reportsService.whatsAppLink(customer, message))}
+              disabled={!canEmail || sending}
+              title={canEmail ? undefined : t('workOrders.reportEmailNoEmail')}
+              onClick={() => void sendEmail()}
+            >
+              <Mail size={16} /> {sending ? t('common.loading') : t('workOrders.sendEmail')}
+            </button>
+
+            <a
+              className="btn btn-secondary"
+              href={reportsService.whatsAppLink(customer, message)}
+              target="_blank"
+              rel="noopener noreferrer"
             >
               <MessageCircle size={16} />
               {hasPhone ? t('workOrders.sendWhatsApp') : t('workOrders.sendWhatsAppPick')}
-            </button>
+            </a>
 
-            <button
-              type="button"
-              className="btn btn-secondary"
-              disabled={!hasEmail}
-              title={hasEmail ? undefined : t('workOrders.shareNoEmail')}
-              onClick={() =>
-                openExternally(
-                  reportsService.mailtoLink(
-                    customer,
-                    `${t('workOrders.title')} ${order.numero_orden}`,
-                    message
-                  )
-                )
-              }
-            >
-              <Mail size={16} /> {t('workOrders.sendEmail')}
-            </button>
-
-            <button type="button" className="btn btn-secondary" onClick={copyLink}>
-              {copied ? <Check size={16} style={{ color: 'var(--color-success)' }} /> : <Copy size={16} />}
-              {copied ? t('workOrders.linkCopied') : t('workOrders.copyLink')}
-            </button>
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => void copyLink()}>
+                {copied ? <Check size={16} style={{ color: 'var(--color-success)' }} /> : <Copy size={16} />}
+                {copied ? t('workOrders.linkCopied') : t('workOrders.copyLink')}
+              </button>
+              <a className="btn btn-secondary" style={{ flex: 1 }} href={link} target="_blank" rel="noopener noreferrer">
+                <ExternalLink size={16} /> {t('workOrders.openReport')}
+              </a>
+            </div>
 
             <button type="button" className="btn btn-ghost" onClick={onDownload} disabled={downloading}>
               <Download size={16} /> {downloading ? t('common.loading') : t('workOrders.downloadPdf')}

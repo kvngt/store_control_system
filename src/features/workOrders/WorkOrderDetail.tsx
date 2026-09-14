@@ -113,16 +113,16 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
                 >
                   <FileDown size={14} /> {detail.generatingPdf ? t('common.loading') : t('workOrders.generatePdf')}
                 </button>
-                {/* Generate and send: the report goes to the phone number and
-                    email the customer left on the order. */}
+                {/* Enviar reporte: comparte el enlace web del cliente (correo desde el
+                    sistema o WhatsApp). El PDF de al lado es solo para imprimir. */}
                 <button
                   type="button"
                   className="btn btn-primary btn-sm"
                   onClick={detail.shareReport}
-                  disabled={detail.generatingPdf}
+                  disabled={detail.preparingShare}
                   title={t('workOrders.shareReport')}
                 >
-                  <Send size={14} /> {detail.generatingPdf ? t('common.loading') : t('workOrders.shareReport')}
+                  <Send size={14} /> {detail.preparingShare ? t('common.loading') : t('workOrders.shareReport')}
                 </button>
               </>
             )}

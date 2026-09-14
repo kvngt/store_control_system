@@ -8,9 +8,9 @@
 // demás —precios, fotos, firma— vive detrás de ese enlace, que se puede revocar.
 // Un correo reenviado o una bandeja comprometida no exponen la cuenta del cliente.
 
-export type EmailTemplate = 'recepcion' | 'estatus' | 'avance' | 'presupuesto' | 'presupuesto_confirmacion';
+export type EmailTemplate = 'recepcion' | 'estatus' | 'avance' | 'presupuesto' | 'presupuesto_confirmacion' | 'reporte';
 
-const TEMPLATES: readonly string[] = ['recepcion', 'estatus', 'avance', 'presupuesto', 'presupuesto_confirmacion'];
+const TEMPLATES: readonly string[] = ['recepcion', 'estatus', 'avance', 'presupuesto', 'presupuesto_confirmacion', 'reporte'];
 
 /** Estados de la orden que se anuncian al cliente. */
 export const ANNOUNCED_STATUSES = ['en_proceso', 'espera_repuestos', 'finalizado', 'entregado'] as const;
@@ -226,6 +226,19 @@ function copyFor(template: EmailTemplate, ctx: EmailContext): Copy | null {
         button: 'Ver su orden',
       };
     }
+    case 'reporte':
+      // Lo manda un admin a propósito ("Enviar reporte"): el reporte completo de la
+      // orden, en el estado en que esté.
+      return {
+        subject: `Reporte de su ${vehicle} · ${ctx.orden.numero}`,
+        preheader: 'El estado, las fotos y videos del trabajo y su cuenta, en un enlace.',
+        heading: 'El reporte de su vehículo',
+        paragraphs: [
+          `${shop} le comparte el reporte de la orden ${ctx.orden.numero}.`,
+          'En el enlace puede ver en qué va el trabajo, las fotos y videos que el taller compartió, los trabajos autorizados y su cuenta. No necesita crear una cuenta.',
+        ],
+        button: 'Ver reporte',
+      };
     case 'avance':
       return {
         subject: `Novedades de su ${vehicle} · ${ctx.orden.numero}`,

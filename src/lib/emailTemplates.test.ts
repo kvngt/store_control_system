@@ -128,6 +128,15 @@ describe('renderEmail: presupuestos', () => {
   });
 });
 
+describe('renderEmail: reporte', () => {
+  it('el reporte que manda un admin lleva el enlace y no el contenido', () => {
+    const email = renderEmail('reporte', base)!;
+    expect(email.subject).toBe('Reporte de su 2019 Toyota Camry · ORD-2026-014');
+    expect(email.text).toContain(`Ver reporte: ${base.portalUrl}`);
+    expect(email.text).not.toContain('$');
+  });
+});
+
 describe('escapeHtml', () => {
   it('escapa los cinco caracteres con significado en HTML', () => {
     expect(escapeHtml(`<a href="x" onclick='y'>&</a>`)).toBe('&lt;a href=&quot;x&quot; onclick=&#39;y&#39;&gt;&amp;&lt;/a&gt;');

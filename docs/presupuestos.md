@@ -241,7 +241,6 @@ Edge Functions → `portal` → Logs, busca `responder_presupuesto_portal`.
 
 ## 9. Pendiente
 
-- **Fase 6**: "Generar y enviar" comparte el enlace del portal en vez de un PDF.
 - **Correos en inglés** (el portal ya tiene inglés).
 - **Firma dentro del portal** para la autorización (hoy es nombre escrito + IP +
   navegador, el estándar para este flujo).

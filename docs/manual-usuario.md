@@ -370,7 +370,7 @@ Es la pantalla donde se sigue el trabajo día a día.
 <!-- IMAGEN: detalle de una orden completo, vista de administrador -->
 
 **Encabezado.** Número de orden, cliente, vehículo y, para administradores, los
-botones **Reporte PDF** y **Generar y enviar**.
+botones **Descargar PDF** y **Enviar reporte**.
 
 **Estado.** Un selector con los cinco estados.
 - Al elegir **Entregado** el sistema pide confirmación, porque registra dinero.
@@ -430,15 +430,32 @@ avances, pero no los de un compañero.
 <!-- IMAGEN: sección de avances con una entrada con fotos y una nota de voz -->
 
 **Firma del cliente.** El cliente firma con el dedo sobre el recuadro. Queda
-guardada con fecha y se imprime en el reporte PDF. Se puede limpiar y volver a
+guardada con fecha y aparece en el reporte del cliente y en el PDF. Se puede limpiar y volver a
 firmar; las firmas anteriores quedan como historial.
 
 **Enlace del cliente** *(solo administradores)*. Ver la sección siguiente.
 
-**Reporte PDF y Generar y enviar** *(solo administradores)*. El PDF lleva los
-datos de la orden, las fotos de inspección, el desglose, los totales y la firma.
-**Generar y enviar** crea el PDF y abre WhatsApp o el correo con el mensaje y el
-enlace listos. El enlace deja de funcionar a los 30 días.
+**Enviar reporte** *(solo administradores)*. El reporte de la orden **es el enlace
+del cliente**: siempre muestra lo último (estado, fotos y videos publicados, cuenta).
+Al pulsarlo se abre una ventana con:
+
+- **Enviar por correo**: el sistema le manda al cliente un correo con el botón para
+  abrir su reporte. Queda en el historial de la tarjeta *Enlace del cliente*. No se
+  puede usar si el cliente no tiene correo o pidió no recibir correos.
+- **Enviar por WhatsApp**: abre WhatsApp con el teléfono del cliente y el mensaje con
+  el enlace listos.
+- **Copiar enlace** y **Abrir**: para mandarlo por otro medio o revisarlo antes.
+- **Descargar PDF**.
+
+El enlace deja de funcionar 90 días después de entregar la orden.
+
+<!-- IMAGEN: ventana "Enviar reporte" con los botones de correo y WhatsApp -->
+
+**Descargar PDF** *(solo administradores)*. Un PDF para imprimir o archivar, con lo
+mismo que ve el cliente: datos de la orden, fotos **publicadas**, trabajos
+**autorizados**, totales, firma y el enlace del reporte. No lleva las notas de los
+avances ni los nombres de los técnicos. El PDF no se sube a ningún lado: se guarda
+en tu equipo.
 
 > Los técnicos no envían reportes al cliente: lo que sale del taller hacia el
 > cliente lo decide administración.
@@ -927,7 +944,7 @@ actualizarla.
 | Subir fotos, videos y notas de voz | ✅ | ✅ en sus órdenes no entregadas |
 | Publicar archivos al cliente | ✅ | ❌ |
 | Asignar técnicos | ✅ | Solo unirse él mismo |
-| Reporte PDF y enviar al cliente | ✅ | ❌ |
+| Enviar reporte al cliente y descargar PDF | ✅ | ❌ |
 | Enlace del cliente: ver, compartir, cambiar, avisar novedades | ✅ | ❌ |
 | Ver si cada trabajo está autorizado, esperando o rechazado | ✅ | ✅ |
 | Enviar presupuestos, registrar autorizaciones, cancelar | ✅ | ❌ |

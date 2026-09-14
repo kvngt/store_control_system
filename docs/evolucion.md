@@ -47,6 +47,7 @@ sep 17    ── Etapa 5  Revertir entregas, candados de dinero, optimización m
 sep 18–24 ── Etapa 6  Pedidos del cliente:
                       F1 técnicos sin dinero · F2 fotos/video/voz · F3 notificaciones y push
                       F4 portal del cliente y correos · F5 presupuestos por línea
+                      F6 el reporte es el enlace web
                       (+ permisos del técnico en la base, buckets viejos cerrados)
 ```
 
@@ -247,6 +248,24 @@ cinco están hechas.
 
 Detalle: [presupuestos.md](presupuestos.md).
 
+### Fase 6 — El reporte es el enlace web
+
+**Migración:** `20260925000000_web_report`.
+
+> "Que el reporte deje de ser un PDF que manda el mecánico: un link web, enviado solo por
+> el admin o por el sistema."
+
+- **Enviar reporte** ya no genera ni sube un PDF: comparte el **enlace del portal**, que
+  siempre está al día (videos incluidos). Se manda por **correo desde el sistema**
+  (RPC `enviar_reporte_cliente`, plantilla `reporte`), por **WhatsApp** o copiándolo.
+- El bucket `reportes` **ya no acepta archivos**: se acabaron los PDFs con enlaces
+  firmados de 30 días circulando por WhatsApp.
+- **Descargar PDF** queda para imprimir o archivar, y muestra lo mismo que el portal:
+  solo fotos publicadas (miniaturas), solo líneas autorizadas, sin notas internas ni
+  nombres de técnicos, con el enlace del portal y el saldo en cero si ya se entregó.
+
+Detalle: [portal-y-correos.md](portal-y-correos.md#10-el-reporte-web).
+
 ---
 
 ## 9. Decisiones que cambiaron de rumbo
@@ -263,7 +282,8 @@ Detalle: [presupuestos.md](presupuestos.md).
 | Tope de 100 MB con ajuste manual | 50 MB en app y bucket | Fase 2: el plan Free no permite más, y la app no lo necesita |
 | Campana que re-descargaba órdenes cada 60 s | Avisos persistentes + Realtime + push | Fase 3 |
 | Algunos permisos del técnico solo en la interfaz | Impuestos en la base | "Entre fases" |
-| Reporte PDF enviado a mano por WhatsApp o correo ("sin proveedor de correo") | Enlace del portal + correos automáticos con Resend | Fase 4 (el PDF sigue existiendo; fase 6 cambia el botón) |
+| Reporte PDF enviado a mano por WhatsApp o correo ("sin proveedor de correo") | Enlace del portal + correos automáticos con Resend | Fase 4 (portal y correos) y fase 6 (el botón comparte el enlace) |
+| PDF subido a `reportes` con enlace de 30 días; mostraba bitácora interna y técnicos | PDF solo de descarga con lo mismo que ve el cliente | Fase 6: un PDF compartido no se puede retirar ni corregir |
 | Toda línea cotizada se cobraba | Solo lo autorizado | Fase 5 |
 | Todo en un solo paquete JS | La app del taller y el portal del cliente por separado | Fase 4: el cliente abre desde datos móviles |
 | Supuesto de despliegue en Vercel/Netlify | Hostinger (Apache) + Supabase | Desde la etapa 0 |
@@ -307,6 +327,7 @@ Detalle: [presupuestos.md](presupuestos.md).
 | 31 | `20260922000001_close_legacy_signatures_bucket` | Bucket de firmas privado |
 | 32 | `20260923000000_customer_portal_and_emails` | **F4** Enlace, portal, correos |
 | 33 | `20260924000000_quotes_and_authorization` | **F5** Presupuestos por línea |
+| 34 | `20260925000000_web_report` | **F6** Reporte por correo desde el sistema; bucket de PDFs cerrado |
 
 Las migraciones son la mejor documentación de cada decisión: cada una empieza con un
 comentario que explica el problema. Léelas en orden si quieres el detalle.
@@ -324,19 +345,20 @@ comentario que explica el problema. Léelas en orden si quieres el detalle.
 | Fase 3 | 210 | 02 (multimedia y avisos) | |
 | Permisos del técnico | 211 | 03 | |
 | Fase 4 | 241 | 04 (portal y correos) | |
-| Fase 5 | **257** (34 archivos) | 05 → **126 aserciones** en 5 archivos | |
+| Fase 5 | 257 (34 archivos) | 05 → 126 aserciones en 5 archivos | |
+| Fase 6 | **265** (36 archivos) | 06 → **133 aserciones** en 6 archivos | |
 
 Las pruebas pgTAP están escritas y validadas con el parser de Postgres, pero **todavía
 no se han ejecutado** con Docker (ver [pruebas.md](pruebas.md#24-para-qué-hace-falta-docker)).
-Las fases 4 y 5 se probaron además **de punta a punta contra Supabase real** con datos
+Las fases 4, 5 y 6 se probaron además **de punta a punta contra Supabase real** con datos
 temporales que luego se borraron.
 
 ---
 
 ## 12. Lo que viene
 
-- **Fase 6 — Reporte web**: "Generar y enviar" compartirá el enlace del portal en vez de
-  subir un PDF; el PDF queda para imprimir.
+- **Probar en teléfonos reales** con el `dist` nuevo publicado: portal, presupuestos,
+  reporte, video y push ([pruebas.md](pruebas.md)).
 - **Pendientes de datos**: correo de contacto y WhatsApp de cada sede.
 - **Pendientes de decisión** (ver [reglas-de-negocio.md](reglas-de-negocio.md#10-riesgos-conocidos-y-decisiones-abiertas)):
   borrar movimientos automáticos de Finanzas, correos en inglés, pasar a Supabase Pro

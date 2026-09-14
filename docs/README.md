@@ -56,7 +56,7 @@ línea, las tres formas de autorizar (firma, enlace, registro del admin), qué c
 el dinero, qué ve cada quien y diagnóstico.
 
 **[evolucion.md](evolucion.md)** — La historia del proyecto: de la demo a las fases del
-cliente, las 33 migraciones con lo que hizo cada una, las decisiones que se
+cliente, las 34 migraciones con lo que hizo cada una, las decisiones que se
 reemplazaron y cómo creció la red de pruebas.
 
 **[pruebas.md](pruebas.md)** — Todas las pruebas: las automatizadas (Vitest, base
@@ -95,11 +95,9 @@ Hay un plan de cambios pedido por el cliente en seis fases. Estado:
 | 3 | Notificaciones internas en tiempo real y push al teléfono | Implementada |
 | 4 | Portal web del cliente (sin cuenta) y correos automáticos | Implementada |
 | 5 | Presupuestos: el cliente autoriza o rechaza por línea | Implementada |
-| 6 | Reporte como enlace web en vez de PDF | Pendiente |
+| 6 | Reporte como enlace web en vez de PDF | Implementada |
 
-Donde un documento menciona algo de la fase 6, lo marca como pendiente.
-
-> **Las fases 1–5 están desplegadas** en el proyecto de Supabase enlazado
+> **Las seis fases están desplegadas** en el proyecto de Supabase enlazado
 > (septiembre 2026). Para otro entorno hay configuración que no está en el código
 > (secretos, Vault, llaves VAPID, Resend): paso a paso en
 > [deployment.md](deployment.md#4-configuración-única-de-supabase).

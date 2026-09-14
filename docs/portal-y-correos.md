@@ -21,7 +21,8 @@ Cómo probarlo: [pruebas.md](pruebas.md#413-portal-del-cliente-y-correos).
 7. [Configuración](#7-configuración)
 8. [Límites y costos](#8-límites-y-costos)
 9. [Diagnóstico](#9-diagnóstico)
-10. [Pendiente](#10-pendiente)
+10. [El reporte web](#10-el-reporte-web)
+11. [Pendiente](#11-pendiente)
 
 ---
 
@@ -128,6 +129,7 @@ pondría el login del taller en el teléfono del cliente).
 | `avance` | Un admin pulsa **Avisar novedades** | 1 min | `avance:<orden>` |
 | `presupuesto` | Un admin pulsa **Enviar presupuesto** (fase 5) | 1 min | `presupuesto:<presupuesto>`; se omite si ya se respondió o canceló |
 | `presupuesto_confirmacion` | Se responde un presupuesto desde el enlace o lo registra un admin | Inmediato | `presupuesto_confirmacion:<presupuesto>` |
+| `reporte` | Un admin pulsa **Enviar reporte → Enviar por correo** (fase 6) | 1 min | `reporte:<orden>`; dos toques seguidos son un correo |
 
 ### Reglas al enviar
 
@@ -180,6 +182,8 @@ enlaces para revisarlos; una baja por GET daría de baja a todos sus usuarios.
 | Página del cliente | `src/portal/` (`CustomerPortal.tsx`, `strings.ts`, `portal.api.ts`, `portal.css`) |
 | Arranque separado | `src/main.tsx`, `src/appStart.tsx`, `src/portal/start.tsx` |
 | Tarjeta del admin | `src/features/workOrders/CustomerLinkCard.tsx` |
+| Enviar reporte (fase 6) | `src/features/workOrders/ShareReportModal.tsx`, `src/services/reports.service.ts` (mensaje de WhatsApp) |
+| PDF de descarga | `src/lib/workOrderPdf.ts`, filtros en `src/lib/reportMedia.ts` |
 | Servicio | `src/services/customerPortal.service.ts` |
 | Pruebas | `src/lib/emailTemplates.test.ts`, `src/portal/CustomerPortal.test.tsx`, `src/features/workOrders/CustomerLinkCard.test.tsx`, `supabase/tests/database/04_portal_y_correos.test.sql` |
 
@@ -190,6 +194,7 @@ enlaces para revisarlos; una baja por GET daría de baja a todos sus usuarios.
 | `asegurar_enlace_orden(orden)` | Interna | Devuelve el activo o crea uno |
 | `crear_enlace_cliente`, `regenerar_enlace_cliente`, `revocar_enlace_cliente` | Admin (RPC) | Tarjeta del enlace |
 | `notificar_cliente_avance(orden)` | Admin (RPC) | "Avisar novedades"; devuelve `encolado` o `sin_correo` |
+| `enviar_reporte_cliente(orden)` | Admin (RPC) | "Enviar por correo" del reporte; asegura el enlace, devuelve `{correo: encolado \| sin_correo, token}` |
 | `encolar_correo_cliente(...)` | Interna | Valida correo y baja, asegura el enlace, encola o agrupa |
 | `trg_portal_on_order_change` | Trigger | Firma → enlace + recepción; estatus → aviso y vencimiento. Nunca rompe la operación (EXCEPTION → WARNING) |
 | `datos_portal(token)` | `service_role` (función `portal`) | El JSON del cliente; cuenta el acceso |
@@ -325,13 +330,57 @@ URLs", de Storage.
 
 ---
 
-## 10. Pendiente
+## 10. El reporte web
+
+Fase 6 (migración `20260925000000_web_report`). **El reporte es este enlace.** Antes,
+"Generar y enviar" armaba un PDF en el navegador, lo subía al bucket `reportes` y
+mandaba un enlace firmado de 30 días por WhatsApp o `mailto:`. Ese PDF se congelaba el
+día que se hacía, no reproducía video, no se podía retirar y mostraba la bitácora
+interna y los nombres de los técnicos.
+
+### Qué hace hoy el botón
+
+En el detalle de la orden, **solo un administrador** ve **Enviar reporte**. Al tocarlo
+se crea el enlace si no existía y se abre una ventana con:
+
+| Opción | Qué hace |
+|---|---|
+| **Enviar por correo** | `enviar_reporte_cliente` encola la plantilla `reporte` (1 min, agrupada por orden). Deshabilitado si el cliente no tiene correo válido o se dio de baja |
+| **Enviar por WhatsApp** | `wa.me/<teléfono>` con el mensaje y el enlace |
+| **Copiar enlace** / **Abrir** | Para mandarlo por otro medio o revisarlo antes |
+| **Descargar PDF** | El PDF para imprimir o archivar (abajo) |
+
+El correo sale del sistema como los demás (Resend, Reply-To de la sede) y queda en el
+historial de la tarjeta **Enlace del cliente**.
+
+### El PDF de descarga
+
+Ya no se sube a ningún lado: se genera en el navegador y se descarga. Muestra **lo mismo
+que el portal**:
+
+- Solo fotos **publicadas** al cliente (miniaturas, para que pese poco), de recepción y
+  de avances agrupadas por día. Sin videos ni notas de voz.
+- Solo líneas **autorizadas**; si la orden está entregada, el saldo es 0 ("Pagado al
+  entregar").
+- Sin texto de los avances, sin técnicos asignados.
+- El enlace del portal, que se puede tocar en el PDF.
+
+### Seguridad
+
+- `enviar_reporte_cliente` rechaza a quien no es admin (42501).
+- El bucket `reportes` perdió sus políticas de INSERT y UPDATE: nadie sube PDFs nuevos.
+  Los que ya estaban siguen legibles solo para admin.
+
+---
+
+## 11. Pendiente
 
 - ~~**Presupuestos** (fase 5)~~ **hecho**: plantillas `presupuesto` y
   `presupuesto_confirmacion`, POST `responder_presupuesto` en la función `portal`, la
   cuenta del portal con solo lo aprobado. Ver [presupuestos.md](presupuestos.md).
-- **Reporte web** (fase 6): el botón "Generar y enviar" compartirá este enlace en
-  vez de subir un PDF.
+- ~~**Reporte web** (fase 6)~~ **hecho**: ver la sección 10.
+- **PDFs viejos** en el bucket `reportes`: se pueden borrar desde el panel de Storage
+  cuando ya no hagan falta.
 - **Correos en inglés**: agregar `clientes.idioma` y un segundo juego de textos en
   `templates.ts`.
 - **Datos de contacto de las sedes**: el correo y el WhatsApp quedaron pendientes de
