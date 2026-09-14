@@ -111,16 +111,26 @@ export default function WorkOrders() {
     entregado: t('workOrders.delivered'),
   };
 
+  // Optimization: Pre-compute the searchable string for each order when the list changes.
+  // This avoids running expensive string allocations and .toLowerCase() calls on every item
+  // during every keystroke of the search filter, reducing CPU overhead and garbage collection.
+  const searchableOrders = useMemo(() => {
+    return orders.map((o) => ({
+      order: o,
+      searchStr: `${o.numero_orden} | ${o.cliente?.nombre || ''}`.toLowerCase(),
+    }));
+  }, [orders]);
+
   const filtered = useMemo(() => {
     const searchLower = search.toLowerCase();
-    return orders.filter((o) => {
-      const matchSearch =
-        o.numero_orden.toLowerCase().includes(searchLower) ||
-        (o.cliente?.nombre || '').toLowerCase().includes(searchLower);
-      const matchStatus = filterStatus === 'all' || o.estatus === filterStatus;
-      return matchSearch && matchStatus;
-    });
-  }, [orders, search, filterStatus]);
+    return searchableOrders
+      .filter(({ order, searchStr }) => {
+        const matchSearch = searchStr.includes(searchLower);
+        const matchStatus = filterStatus === 'all' || order.estatus === filterStatus;
+        return matchSearch && matchStatus;
+      })
+      .map(({ order }) => order);
+  }, [searchableOrders, search, filterStatus]);
 
   // A mechanic/painter opens this screen to work, not to browse: their own
   // orders come first, and the rest of the sede's board is a second section

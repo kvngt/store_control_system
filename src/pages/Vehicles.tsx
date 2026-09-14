@@ -60,17 +60,22 @@ export default function Vehicles() {
   const [touched, setTouched] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
 
+  // Optimization: Pre-compute the searchable string for each vehicle when the list changes.
+  // This avoids running expensive string allocations and .toLowerCase() calls on every item
+  // during every keystroke of the search filter, reducing CPU overhead and garbage collection.
+  const searchableVehicles = useMemo(() => {
+    return vehicles.map((v) => ({
+      vehicle: v,
+      searchStr: `${v.marca} | ${v.modelo} | ${v.vin} | ${v.placa || ''} | ${v.cliente_nombre || ''}`.toLowerCase(),
+    }));
+  }, [vehicles]);
+
   const filtered = useMemo(() => {
     const searchLower = search.toLowerCase();
-    return vehicles.filter(
-      (v) =>
-        v.marca.toLowerCase().includes(searchLower) ||
-        v.modelo.toLowerCase().includes(searchLower) ||
-        v.vin.toLowerCase().includes(searchLower) ||
-        (v.placa || '').toLowerCase().includes(searchLower) ||
-        (v.cliente_nombre || '').toLowerCase().includes(searchLower)
-    );
-  }, [vehicles, search]);
+    return searchableVehicles
+      .filter(({ searchStr }) => searchStr.includes(searchLower))
+      .map(({ vehicle }) => vehicle);
+  }, [searchableVehicles, search]);
 
   const openCreateModal = () => {
     setSelected(null);

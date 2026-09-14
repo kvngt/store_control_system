@@ -101,15 +101,22 @@ export default function Customers() {
     (loadError ? getErrorMessage(loadError, language) : '') ||
     (profileQuery.error ? getErrorMessage(profileQuery.error, language) : '');
 
+  // Optimization: Pre-compute the searchable string for each customer when the list changes.
+  // This avoids running expensive string allocations and .toLowerCase() calls on every item
+  // during every keystroke of the search filter, reducing CPU overhead and garbage collection.
+  const searchableCustomers = useMemo(() => {
+    return customers.map((c) => ({
+      customer: c,
+      searchStr: `${c.nombre} | ${c.telefono} | ${c.email}`.toLowerCase(),
+    }));
+  }, [customers]);
+
   const filtered = useMemo(() => {
     const searchLower = search.toLowerCase();
-    return customers.filter(
-      (c) =>
-        c.nombre.toLowerCase().includes(searchLower) ||
-        c.telefono.includes(search) ||
-        c.email.toLowerCase().includes(searchLower)
-    );
-  }, [customers, search]);
+    return searchableCustomers
+      .filter(({ searchStr }) => searchStr.includes(searchLower))
+      .map(({ customer }) => customer);
+  }, [searchableCustomers, search]);
 
   const openCreateModal = () => {
     setSelectedCustomer(null);
