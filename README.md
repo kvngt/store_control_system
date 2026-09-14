@@ -17,7 +17,9 @@ Toda la documentación vigente está en **[docs/](docs/README.md)**:
 | Si vas a… | Lee |
 |---|---|
 | Entender el sistema | [docs/arquitectura.md](docs/arquitectura.md) → [docs/reglas-de-negocio.md](docs/reglas-de-negocio.md) |
-| Probar la plataforma completa | [docs/pruebas.md](docs/pruebas.md) |
+| Probar la plataforma (persona o agente de IA) | [docs/plan-de-pruebas.md](docs/plan-de-pruebas.md) |
+| Saber qué cubren las pruebas automatizadas | [docs/pruebas.md](docs/pruebas.md) |
+| Revisar los hallazgos de la última auditoría | [docs/auditoria-2026-09.md](docs/auditoria-2026-09.md) |
 | Desplegar | [docs/deployment.md](docs/deployment.md) |
 | Usar la aplicación | [docs/manual-usuario.md](docs/manual-usuario.md) |
 | Entender cómo evolucionó y por qué | [docs/evolucion.md](docs/evolucion.md) |
@@ -53,6 +55,7 @@ npm run dev                  # http://localhost:5173
 | `npm run test:db` | Pruebas de base de datos (pgTAP; requiere Docker y `npx supabase start`, ver [docs/pruebas.md](docs/pruebas.md#24-para-qué-hace-falta-docker)) |
 | `npm run test:e2e` | Pruebas end-to-end (Playwright; credenciales en `.env.test.local`) |
 | `npm run db:check` | Qué migraciones faltan en el proyecto enlazado |
+| `npm run qa:security` | Pruebas de seguridad contra la API desplegada (ver [docs/pruebas.md](docs/pruebas.md#25-seguridad-contra-la-api-qasecurity)) |
 
 Migraciones en `supabase/migrations/`, edge functions en `supabase/functions/`.
 **No apliques migraciones ni despliegues funciones sin leer

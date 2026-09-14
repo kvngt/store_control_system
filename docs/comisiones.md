@@ -122,6 +122,11 @@ Pantalla **Comisiones → Saldos pendientes → Pagar saldo**.
   así que se borra por referencia. Antes se buscaba por sede, fecha, monto y
   descripción, y dos mecánicos cobrando $175 el mismo día — el reparto normal de
   una bolsa de $350 — se borraban los dos.
+- **Una orden con comisiones pagadas no se puede borrar.** Borrarla se llevaba sus
+  comisiones y dejaba el cheque y su egreso sin el detalle de qué pagaban. Para
+  borrarla, primero se deshace el pago (las comisiones vuelven a pendientes).
+- **Un empleado al que ya se le pagó no se puede eliminar**: sus pagos son el historial
+  de lo que se le entregó. Si ya no trabaja en el taller, se deja en la lista.
 
 ## Configurar el porcentaje
 

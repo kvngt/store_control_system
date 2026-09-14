@@ -24,11 +24,12 @@ cómo funciona hoy, lee [arquitectura.md](arquitectura.md) y
 5. [Etapa 3 — Auditorías: seguridad, finanzas y refactorización](#5-etapa-3--auditorías-seguridad-finanzas-y-refactorización)
 6. [Etapa 4 — Comisiones y transacciones](#6-etapa-4--comisiones-y-transacciones)
 7. [Etapa 5 — Auditoría del ciclo de vida y móvil](#7-etapa-5--auditoría-del-ciclo-de-vida-y-móvil)
-8. [Etapa 6 — Los pedidos del cliente, fases 1 a 5](#8-etapa-6--los-pedidos-del-cliente-fases-1-a-5)
-9. [Decisiones que cambiaron de rumbo](#9-decisiones-que-cambiaron-de-rumbo)
-10. [Todas las migraciones](#10-todas-las-migraciones)
-11. [Cómo creció la red de pruebas](#11-cómo-creció-la-red-de-pruebas)
-12. [Lo que viene](#12-lo-que-viene)
+8. [Etapa 6 — Los pedidos del cliente, fases 1 a 6](#8-etapa-6--los-pedidos-del-cliente-fases-1-a-6)
+9. [Etapa 7 — Auditoría completa](#9-etapa-7--auditoría-completa)
+10. [Decisiones que cambiaron de rumbo](#10-decisiones-que-cambiaron-de-rumbo)
+11. [Todas las migraciones](#11-todas-las-migraciones)
+12. [Cómo creció la red de pruebas](#12-cómo-creció-la-red-de-pruebas)
+13. [Lo que viene](#13-lo-que-viene)
 
 ---
 
@@ -49,6 +50,9 @@ sep 18–24 ── Etapa 6  Pedidos del cliente:
                       F4 portal del cliente y correos · F5 presupuestos por línea
                       F6 el reporte es el enlace web
                       (+ permisos del técnico en la base, buckets viejos cerrados)
+sep 26    ── Etapa 7  Auditoría completa: funciones internas de dinero cerradas a la API,
+                      primera firma, borrados atómicos, sesión con mala señal,
+                      plan de pruebas ejecutable por persona o IA, qa:security
 ```
 
 ---
@@ -168,7 +172,7 @@ hallazgos), todo corregido:
 
 ---
 
-## 8. Etapa 6 — Los pedidos del cliente, fases 1 a 5
+## 8. Etapa 6 — Los pedidos del cliente, fases 1 a 6
 
 En una reunión, el dueño del taller pidió cinco cosas. Se planificaron en seis fases;
 cinco están hechas.
@@ -268,7 +272,35 @@ Detalle: [portal-y-correos.md](portal-y-correos.md#10-el-reporte-web).
 
 ---
 
-## 9. Decisiones que cambiaron de rumbo
+## 9. Etapa 7 — Auditoría completa
+
+**Migración:** `20260926000000_audit_hardening`.
+
+Con las seis fases hechas se revisó todo el sistema como está desplegado, no migración
+por migración: las 88 funciones vigentes con sus permisos, las 77 políticas, los 43
+triggers y el frontend en las rutas de dinero, permisos y datos del cliente.
+
+- **Lo más grave:** cuatro funciones internas de dinero se podían llamar por la API sin
+  sesión. Postgres y Supabase dan permiso de ejecución a todos al crear una función, y
+  a esas nadie se lo quitó. Una de ellas asentaba la reversión del cobro de una orden
+  entregada.
+- **La base ahora también protege la inserción**: un técnico no crea por la API una
+  orden ya "entregada" ni con otro número.
+- **Solo la primera firma autoriza**: volver a firmar ya no cobra trabajos que el cliente
+  no vio.
+- **Borrar una orden es una sola operación** y no se puede con comisiones pagadas.
+- **La app no saca al usuario al login por mala señal**, la firma actualiza la pantalla,
+  y una orden de otra sede usa los datos de su sede.
+- **Plan de pruebas ejecutable** ([plan-de-pruebas.md](plan-de-pruebas.md)): cada caso con
+  identificador, prioridad y si lo puede hacer un agente de IA. **`npm run qa:security`**
+  prueba la API desplegada, la capa que faltaba: pgTAP prueba la base por dentro, pero
+  nadie probaba qué funciones quedaban expuestas afuera.
+
+Detalle de los 15 hallazgos corregidos y los 6 abiertos: [auditoria-2026-09.md](auditoria-2026-09.md).
+
+---
+
+## 10. Decisiones que cambiaron de rumbo
 
 | Antes | Después | Cuándo y por qué |
 |---|---|---|
@@ -287,10 +319,13 @@ Detalle: [portal-y-correos.md](portal-y-correos.md#10-el-reporte-web).
 | Toda línea cotizada se cobraba | Solo lo autorizado | Fase 5 |
 | Todo en un solo paquete JS | La app del taller y el portal del cliente por separado | Fase 4: el cliente abre desde datos móviles |
 | Supuesto de despliegue en Vercel/Netlify | Hostinger (Apache) + Supabase | Desde la etapa 0 |
+| Cualquier firma nueva autorizaba lo cotizado | Solo la primera firma de la orden | Etapa 7: re-firmar cobraba trabajos que el cliente no vio |
+| Permisos de las funciones revisados a ojo en cada migración | `qa:security` contra la API desplegada | Etapa 7: el permiso por defecto no se ve en la migración |
+| Plan manual en checkboxes dentro de `pruebas.md` | `plan-de-pruebas.md` con ID, prioridad y ejecutor (persona o IA) | Etapa 7: que otra persona o un agente lo ejecute sin preguntar |
 
 ---
 
-## 10. Todas las migraciones
+## 11. Todas las migraciones
 
 | # | Migración | Qué hizo |
 |---|---|---|
@@ -328,13 +363,14 @@ Detalle: [portal-y-correos.md](portal-y-correos.md#10-el-reporte-web).
 | 32 | `20260923000000_customer_portal_and_emails` | **F4** Enlace, portal, correos |
 | 33 | `20260924000000_quotes_and_authorization` | **F5** Presupuestos por línea |
 | 34 | `20260925000000_web_report` | **F6** Reporte por correo desde el sistema; bucket de PDFs cerrado |
+| 35 | `20260926000000_audit_hardening` | **Auditoría** Funciones internas cerradas, guard de inserción, primera firma, montos no negativos, borrado con comisiones pagadas |
 
 Las migraciones son la mejor documentación de cada decisión: cada una empieza con un
 comentario que explica el problema. Léelas en orden si quieres el detalle.
 
 ---
 
-## 11. Cómo creció la red de pruebas
+## 12. Cómo creció la red de pruebas
 
 | Momento | Vitest | pgTAP | Playwright |
 |---|---|---|---|
@@ -346,7 +382,8 @@ comentario que explica el problema. Léelas en orden si quieres el detalle.
 | Permisos del técnico | 211 | 03 | |
 | Fase 4 | 241 | 04 (portal y correos) | |
 | Fase 5 | 257 (34 archivos) | 05 → 126 aserciones en 5 archivos | |
-| Fase 6 | **265** (36 archivos) | 06 → **133 aserciones** en 6 archivos | |
+| Fase 6 | 265 (36 archivos) | 06 → 133 aserciones en 6 archivos | |
+| Auditoría | **274** (37 archivos) | 07 → **158 aserciones** en 7 archivos | + `qa:security` (51 casos contra la API) |
 
 Las pruebas pgTAP están escritas y validadas con el parser de Postgres, pero **todavía
 no se han ejecutado** con Docker (ver [pruebas.md](pruebas.md#24-para-qué-hace-falta-docker)).
@@ -355,11 +392,16 @@ temporales que luego se borraron.
 
 ---
 
-## 12. Lo que viene
+## 13. Lo que viene
 
-- **Probar en teléfonos reales** con el `dist` nuevo publicado: portal, presupuestos,
-  reporte, video y push ([pruebas.md](pruebas.md)).
+- **Desplegar la auditoría**: migración 35, `delete-employee` y el `dist` nuevo; después
+  `npm run qa:security` ([auditoria-2026-09.md §5](auditoria-2026-09.md#5-qué-hay-que-desplegar)).
+- **Probar en teléfonos reales** con el `dist` nuevo publicado: el nivel "publicación" de
+  [plan-de-pruebas.md](plan-de-pruebas.md), con los casos H de portal, presupuestos,
+  reporte, video y push.
+- **Correr las pruebas pgTAP por primera vez** (Docker o staging).
 - **Pendientes de datos**: correo de contacto y WhatsApp de cada sede.
 - **Pendientes de decisión** (ver [reglas-de-negocio.md](reglas-de-negocio.md#10-riesgos-conocidos-y-decisiones-abiertas)):
   borrar movimientos automáticos de Finanzas, correos en inglés, pasar a Supabase Pro
-  antes de atender clientes reales, un proyecto de staging.
+  antes de atender clientes reales, un proyecto de staging, qué hacer con un depósito
+  mayor que lo autorizado.

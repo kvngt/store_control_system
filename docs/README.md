@@ -14,7 +14,9 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 | Si vas a… | Lee, en este orden |
 |---|---|
 | **Entender el sistema** antes de tocar código | [arquitectura.md](arquitectura.md) → [reglas-de-negocio.md](reglas-de-negocio.md) |
-| **Probar la plataforma completa** | [pruebas.md](pruebas.md) |
+| **Probar la plataforma** (persona o agente de IA) | [plan-de-pruebas.md](plan-de-pruebas.md) |
+| Saber **qué cubren las pruebas automatizadas** y cómo correrlas | [pruebas.md](pruebas.md) |
+| Revisar **qué errores se encontraron** en la última auditoría y cómo se corrigieron | [auditoria-2026-09.md](auditoria-2026-09.md) |
 | **Desplegar o configurar un entorno** | [deployment.md](deployment.md) |
 | **Usar la aplicación** o capacitar al taller | [manual-usuario.md](manual-usuario.md) |
 | Trabajar con **multimedia o notificaciones** | [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md) |
@@ -56,13 +58,22 @@ línea, las tres formas de autorizar (firma, enlace, registro del admin), qué c
 el dinero, qué ve cada quien y diagnóstico.
 
 **[evolucion.md](evolucion.md)** — La historia del proyecto: de la demo a las fases del
-cliente, las 34 migraciones con lo que hizo cada una, las decisiones que se
+cliente, las 35 migraciones con lo que hizo cada una, las decisiones que se
 reemplazaron y cómo creció la red de pruebas.
 
-**[pruebas.md](pruebas.md)** — Todas las pruebas: las automatizadas (Vitest, base
-de datos con pgTAP, Playwright), qué cubre cada una y qué no, y el plan de pruebas
-manual por módulo y por rol, con la matriz de dispositivos reales para video,
-audio y push. Termina con la lista de verificación antes de cada despliegue.
+**[plan-de-pruebas.md](plan-de-pruebas.md)** — El plan de pruebas ejecutable: cada caso
+con identificador, prioridad, pasos y resultado esperado, y si lo puede hacer un agente
+de IA o necesita una persona con un teléfono. Niveles humo, publicación y completo;
+seguridad contra la API, matriz de dispositivos, regresiones, lista antes de publicar y
+plantilla del reporte.
+
+**[pruebas.md](pruebas.md)** — Las pruebas automatizadas: Vitest, base de datos con pgTAP,
+Playwright y `qa:security`; qué cubre cada una, qué no, cómo correrlas y para qué hace
+falta Docker.
+
+**[auditoria-2026-09.md](auditoria-2026-09.md)** — La revisión de errores y seguridad de
+septiembre de 2026: qué se encontró, qué tan grave era, cómo se corrigió, con qué prueba
+se comprueba y los riesgos que quedan abiertos.
 
 **[deployment.md](deployment.md)** — Cómo se pone en producción: Supabase
 (migraciones, secretos, Vault, edge functions, límites de Storage), Hostinger,
@@ -96,6 +107,12 @@ Hay un plan de cambios pedido por el cliente en seis fases. Estado:
 | 4 | Portal web del cliente (sin cuenta) y correos automáticos | Implementada |
 | 5 | Presupuestos: el cliente autoriza o rechaza por línea | Implementada |
 | 6 | Reporte como enlace web en vez de PDF | Implementada |
+
+Después de las seis fases se hizo una **auditoría completa** (septiembre 2026): 15
+hallazgos corregidos, entre ellos funciones internas de dinero que se podían llamar por
+la API sin sesión. Detalle, pruebas y lo que queda abierto en
+[auditoria-2026-09.md](auditoria-2026-09.md). Su migración
+(`20260926000000_audit_hardening`) se despliega junto con el build que la acompaña.
 
 > **Las seis fases están desplegadas** en el proyecto de Supabase enlazado
 > (septiembre 2026). Para otro entorno hay configuración que no está en el código

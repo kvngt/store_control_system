@@ -25,7 +25,12 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
 - **Un técnico modifica una orden solo si está asignado y no está entregada**, y
   solo estado, avance y firma (`trg_order_technician_guard`). Si agregas una
   acción de técnico que cambie otra columna de `ordenes_trabajo`, añádela a la
-  lista permitida de ese trigger en una migración nueva.
+  lista permitida de ese trigger en una migración nueva. Al **insertar** una orden,
+  `trg_guard_order_insert` fuerza recepción, avance 0, sin firma y el número del
+  sistema para quien no es admin.
+- **Solo la primera firma de la orden autoriza lo cotizado** (`trg_quote_on_signature`).
+  Volver a firmar no aprueba nada: lo agregado después pasa por presupuesto o por
+  "Registrar autorización".
 - **Roles:** `admin`, `mecanico`, `pintor`. Mecánico y pintor tienen los mismos
   permisos.
 - **Las seis fases del cliente están hechas** (restricciones de técnicos, multimedia,
@@ -53,10 +58,16 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
 1. **Todo cambio de esquema o permisos es una migración nueva** en
    `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca edites una migración
    ya aplicada ni cambies tablas desde el panel.
-2. **Una función nueva en `public` es una RPC pública.** Revócala:
+2. **Una función nueva en `public` es una RPC pública.** Postgres da `EXECUTE` a
+   `PUBLIC` y Supabase a `anon` y `authenticated` al crearla. Revócala siempre:
    `REVOKE ALL ON FUNCTION ... FROM PUBLIC, anon, authenticated;` y concede solo lo
    necesario. Las `SECURITY DEFINER` llevan `SET search_path = public` y verifican
-   rol/sede por dentro.
+   rol/sede por dentro. Una función que solo llaman triggers no necesita ningún
+   `GRANT` (el trigger corre como su dueño). Olvidarlo dejó
+   `reverse_order_delivery_finance` abierta a cualquiera
+   ([auditoria-2026-09.md](auditoria-2026-09.md), AUD-01); `npm run qa:security` lo
+   detecta. Si agregas una función interna, agrega su caso a
+   `scripts/qa/api-security.mjs`.
 3. **Prueba con pgTAP** (`supabase/tests/database/`) todo lo que toque dinero o
    permisos. Un cuerpo plpgsql roto se aplica sin error y falla en producción.
 4. **Si una migración elimina o renombra columnas**, la base y el `dist` se
@@ -70,10 +81,18 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
    color literal.
 7. **Todo texto visible pasa por i18n** (`src/i18n/translations.ts`, español e
    inglés, `useLanguage().t(key)`). Los errores se guardan crudos y se traducen al
-   pintar con `lib/errors.ts`; nunca muestres el mensaje del backend.
-8. **Fechas locales** con `lib/dates.ts` (`todayLocal`, `isSameMonth`). Nunca
+   pintar con `lib/errors.ts`; nunca muestres el mensaje del backend. Excepción: un
+   `RAISE ... USING ERRCODE = '42501'` con una oración en español para el taller
+   ("La orden ya fue entregada…") se muestra tal cual en español; escribe esos
+   mensajes pensando en quien los va a leer.
+8. **Fechas locales** con `lib/dates.ts` (`todayLocal`, `daysFromTodayLocal`, `isSameMonth`). Nunca
    `toISOString().split('T')[0]` ni `new Date('AAAA-MM-DD')` para comparar meses.
-9. **Commits solo cuando se piden.**
+9. **Una orden puede ser de otra sede que la elegida.** Un admin abre órdenes desde
+   avisos y enlaces. Lo que depende de la sede (logo, nombre, porcentaje, personal)
+   sale de `order.sede_id` (`orderSede` en `useWorkOrderDetail`), no de `currentSede`.
+10. **Una consulta que falla no es "no hay datos".** Distingue el error de red de la
+   fila inexistente (`PGRST116`) antes de vaciar estado, cerrar sesión o borrar algo.
+11. **Commits solo cuando se piden.**
 
 ## 3. Dónde está cada cosa
 
@@ -112,12 +131,16 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
 
 ```bash
 npx tsc -b && npm run lint && npm test && npm run build
-npm run test:db     # si tocaste SQL (requiere Docker + npx supabase start)
+npm run test:db       # si tocaste SQL (requiere Docker + npx supabase start)
+npm run qa:security   # después de aplicar una migración que toque permisos
 ```
 
-Qué probar a mano y en qué dispositivos: [pruebas.md](pruebas.md). Las pruebas
-e2e corren contra el proyecto de `.env.local`: no agregues pruebas que entreguen
-órdenes o paguen comisiones mientras no exista staging.
+Qué cubren las pruebas automatizadas: [pruebas.md](pruebas.md). Qué probar según lo
+que cambiaste, con casos que un agente puede ejecutar: [plan-de-pruebas.md](plan-de-pruebas.md)
+(§1.4 tiene las instrucciones para agentes; §8, qué módulos probar según el cambio).
+Para comprobar el estado de una orden en la base: `scripts/qa/estado-orden.sql` (solo
+lectura). Las pruebas e2e y `qa:security` corren contra el proyecto de `.env.local`: no
+agregues pruebas que entreguen órdenes o paguen comisiones mientras no exista staging.
 
 ## 6. Observabilidad y despliegue
 

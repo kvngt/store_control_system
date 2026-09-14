@@ -399,8 +399,11 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
               onChange={(e) => setAddingOperatorId(e.target.value)}
             >
               <option value="">-- {t('workOrders.assignedTechnician')} --</option>
+              {/* Solo personal de la sede de la orden: la lista viene de la sede
+                  elegida arriba, y una orden abierta desde un aviso puede ser de
+                  otra. Asignar a alguien de otro taller le repartía la comisión. */}
               {operators
-                .filter((op) => !assignments.some((a) => a.usuario_id === op.id))
+                .filter((op) => op.sede_id === order.sede_id && !assignments.some((a) => a.usuario_id === op.id))
                 .map((op) => (
                   <option key={op.id} value={op.id}>{op.nombre_completo} ({op.rol})</option>
                 ))}

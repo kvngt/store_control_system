@@ -16,6 +16,7 @@ import {
   ADMIN_USER,
   MECHANIC_USER,
   SEDE_CENTRO,
+  SEDE_NORTE,
 } from '../test/renderWithProviders';
 import type { Customer, UserProfile, Vehicle, WorkOrder } from '../types/database';
 
@@ -29,6 +30,7 @@ const mocks = vi.hoisted(() => ({
   createWorkOrder: vi.fn(),
   addLaborItem: vi.fn(),
   updateWorkOrderStatus: vi.fn(),
+  uploadSignature: vi.fn(),
 }));
 
 vi.mock('../context/auth.context', () => ({ useAuth: () => mocks.auth.current }));
@@ -39,6 +41,13 @@ vi.mock('react-signature-canvas', () => ({
   default: () => <canvas data-testid="signature-pad" />,
 }));
 
+// Lo que importa de la firma aquí es qué hace la pantalla después de guardarla.
+vi.mock('../features/workOrders/SignatureCard', () => ({
+  default: ({ onSave }: { onSave: (dataUrl: string) => Promise<void> }) => (
+    <button type="button" onClick={() => void onSave('data:image/png;base64,AAAA')}>Guardar firma de prueba</button>
+  ),
+}));
+
 vi.mock('../services/supabaseService', () => {
   const workOrders = {
     getWorkOrders: mocks.getWorkOrders,
@@ -46,6 +55,7 @@ vi.mock('../services/supabaseService', () => {
     createWorkOrder: mocks.createWorkOrder,
     addLaborItem: mocks.addLaborItem,
     updateWorkOrderStatus: mocks.updateWorkOrderStatus,
+    uploadSignature: mocks.uploadSignature,
     uploadOrderPhotos: vi.fn(),
   };
   const customers = { getCustomers: mocks.getCustomers, createCustomer: vi.fn() };
@@ -382,6 +392,32 @@ describe('WorkOrders — order detail', () => {
     expect(screen.queryByText('$8.00')).not.toBeInTheDocument();
   });
 
+  it('re-reads the order after the customer signs, because the signature authorizes the quote', async () => {
+    mocks.uploadSignature.mockResolvedValue({ ruta: 'sede-centro/ord-1/firma-1.png', fecha: '2026-09-14T15:00:00Z' });
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+    expect(mocks.getWorkOrderDetail).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: /Guardar firma de prueba/ }));
+
+    await waitFor(() => expect(mocks.uploadSignature).toHaveBeenCalled());
+    // Las líneas pasan de "sin autorizar" a autorizadas y cambian los totales: eso
+    // lo hace un trigger, así que la orden se vuelve a leer.
+    await waitFor(() => expect(mocks.getWorkOrderDetail).toHaveBeenCalledTimes(2));
+  });
+
+  it('only offers to assign staff from the order own sede', async () => {
+    const otherSedeTech: UserProfile = { ...MECHANIC_USER, id: 'user-norte', nombre_completo: 'Pedro Norte', sede_id: SEDE_NORTE.id };
+    mocks.getOperators.mockResolvedValue([PAINTER, otherSedeTech]);
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+
+    expect(await screen.findByRole('option', { name: /Sara Vega/ })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /Pedro Norte/ })).not.toBeInTheDocument();
+  });
+
   it('re-reads the order after adding a labor line, because the DB recomputes totals', async () => {
     const user = userEvent.setup();
     renderWithProviders(<WorkOrders />);
@@ -449,7 +485,8 @@ describe('WorkOrders — order detail', () => {
   });
 
   it('shows an assigned technician the commission the labor would pay them, and how', async () => {
-    mocks.auth.current = authValue(MECHANIC_USER, { ...SEDE_CENTRO, comision_porcentaje: 35 });
+    const sede = { ...SEDE_CENTRO, comision_porcentaje: 35 };
+    mocks.auth.current = { ...authValue(MECHANIC_USER, sede), allSedes: [sede, SEDE_NORTE] };
     mocks.getWorkOrderDetail.mockResolvedValue({
       ...TECH_DETAIL,
       total_labor: 1000,

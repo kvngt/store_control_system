@@ -57,7 +57,17 @@ export function isSameMonth(value: string, ref: Date): boolean {
  * cuenta al conciliar.
  */
 export function todayLocal(): string {
+  return daysFromTodayLocal(0);
+}
+
+/**
+ * Hoy más `days` días, en la zona del navegador, como `YYYY-MM-DD`. La fecha
+ * estimada de entrega por defecto (hoy + 5) se calculaba en UTC y, capturada de
+ * noche, caía un día después.
+ */
+export function daysFromTodayLocal(days: number): string {
   const now = new Date();
+  now.setDate(now.getDate() + days);
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   return `${now.getFullYear()}-${month}-${day}`;

@@ -2,7 +2,7 @@
 
 Qué hace Restorify y por qué, en lenguaje de negocio. Es la referencia para
 decidir si algo que pasó es un error o el comportamiento esperado, y para
-escribir las pruebas ([pruebas.md](pruebas.md)).
+escribir las pruebas ([plan-de-pruebas.md](plan-de-pruebas.md)).
 
 Casi todas estas reglas las impone **la base de datos** (RLS y triggers), no la
 interfaz: se cumplen aunque alguien use la API directamente. Donde una regla vive
@@ -57,9 +57,11 @@ avance se conserva y el técnico puede corregirlo.
 - La crea cualquier persona de la sede. Si la crea un **técnico**, queda asignado a
   sí mismo y **no registra depósito, mano de obra ni repuestos**: registra la
   recepción (cliente, vehículo, fotos, notas, gasolina, millas) y un admin cotiza
-  después. Si el técnico enviara esos campos igual, la base los ignora.
+  después. Si el técnico enviara esos campos igual, la base los ignora. Tampoco puede
+  crear por la API una orden ya avanzada: la base la deja en recepción, con avance
+  0, sin firma, con el número del sistema y con él como autor.
 - Lo que un admin cotiza al crear la orden nace **sin autorizar** y se autoriza
-  cuando el cliente **firma la recepción** (sección 8).
+  cuando el cliente **firma la recepción** por primera vez (sección 8).
 - El número `ORD-AAAA-###` se genera de forma atómica: dos órdenes simultáneas
   nunca reciben el mismo.
 - La orden y sus líneas se crean en **una sola transacción**: o entra todo, o nada.
@@ -67,6 +69,7 @@ avance se conserva y el técnico puede corregirlo.
   subida y suben en segundo plano. Si una falla, la orden ya existe y la foto se
   reintenta sola; reintentar el formulario no duplica la orden.
 - Las millas no pueden ser negativas (restricción en la base).
+- Sin fecha estimada de entrega elegida, se propone hoy + 5 días (calendario local).
 
 ### Orden entregada
 
@@ -80,9 +83,12 @@ Un admin sí puede corregirla; cada corrección de dinero se asienta como un aju
 ### Borrar una orden
 
 Solo admin. Se borran sus líneas, asignaciones, avances, multimedia (filas y
-archivos en Storage), comisiones y los movimientos **automáticos** de Finanzas.
-Los movimientos importados del banco se conservan: ese dinero sí pasó por la
-cuenta.
+archivos en Storage), comisiones y los movimientos **automáticos** de Finanzas, todo
+en una sola operación: si algo falla, no se borra nada. Los movimientos importados
+del banco se conservan: ese dinero sí pasó por la cuenta.
+
+**No se borra una orden con comisiones ya pagadas.** El pago (el cheque y su egreso)
+quedaría sin el detalle de qué pagó. Primero se deshace ese pago en Comisiones.
 
 ---
 
@@ -119,8 +125,8 @@ Nadie registra a mano el dinero de una orden. Estos movimientos los crea la base
   escribir un total a mano, ni siquiera un admin por la API.
 - **Los repuestos son de traspaso**: el costo es igual al precio. El taller no gana
   en las piezas; su ganancia es la mano de obra.
-- **Negativos no.** Mano de obra, precios y depósito no aceptan valores negativos
-  (formulario y base).
+- **Negativos no.** Mano de obra, precios y depósito no aceptan valores negativos, ni
+  un repuesto cantidad cero (formulario y base).
 
 ### Des-entregar
 
@@ -174,12 +180,13 @@ mismos permisos ("técnico"); cambia el tipo de tarea.
 | Marcar **Entregado** | ✅ | ❌ | ❌ |
 | Mover el avance | ✅ | ✅ (orden no cerrada ¹) | ❌ |
 | Capturar la firma del cliente | ✅ | ✅ (orden no entregada) | ❌ |
+| Volver a firmar (la nueva firma **no** autoriza nada) | ✅ | ✅ (orden no entregada) | ❌ |
 | Subir fotos, videos y notas de voz | ✅ | ✅ (orden no entregada) | ❌ |
 | **Publicar** multimedia al cliente | ✅ | ❌ | ❌ |
 | Borrar un archivo | ✅ cualquiera | ✅ los suyos, orden no entregada | ❌ |
 | Agregar avances | ✅ | ✅ (orden no entregada) | ❌ |
 | Borrar avances | ✅ cualquiera | ✅ los suyos, orden no entregada | ❌ |
-| Asignar a otras personas | ✅ | ❌ | ❌ |
+| Asignar a otras personas (solo personal de la sede de la orden) | ✅ | ❌ | ❌ |
 | Unirse a la orden | — | — | ✅ si no está entregada |
 | **Enviar el reporte** al cliente (correo, WhatsApp, copiar enlace) | ✅ | ❌ | ❌ |
 | Descargar el PDF de la orden | ✅ | ❌ | ❌ |
@@ -249,6 +256,8 @@ por técnico = bolsa ÷ técnicos asignados, en centavos, residuo a los primeros
 - Solo a una orden en la que la persona está asignada (o si es admin).
 - No a una orden entregada (salvo admin).
 - La fila de un archivo solo puede apuntar a la carpeta de su propia orden.
+- En una orden entregada, solo un admin borra archivos: ni la fila ni el archivo en
+  Storage.
 
 ---
 
@@ -380,7 +389,10 @@ Las líneas anteriores a los presupuestos quedaron autorizadas.
 ### Cómo se autoriza
 
 1. **Firma de recepción**: lo cotizado antes de la firma queda autorizado ("lo que
-   firmó, lo aprobó"), salvo que ya hubiera un presupuesto enviado.
+   firmó, lo aprobó"), salvo que ya hubiera un presupuesto enviado. **Solo la primera
+   firma de la orden autoriza.** Si se limpia la firma y se vuelve a firmar (por
+   ejemplo, porque salió mal), lo agregado después de la recepción sigue sin
+   autorizar: se presenta con un presupuesto o se registra la autorización.
 2. **Desde su enlace**: el admin pulsa **Enviar presupuesto**; el cliente marca línea
    por línea, escribe su nombre y confirma. Se guardan su nombre, su comentario, la
    IP y el navegador. Nada viene marcado.
@@ -455,7 +467,13 @@ resolverlas con el cliente.
    cliente. *Propuesta:* mostrar el resumen de trabajos junto a la firma.
 10. **La autorización desde el enlace es nombre escrito + IP + navegador**, no una
     firma. Es el estándar para este flujo; si el taller necesita más, se puede pedir
-    firma también ahí.
+    firma también ahí. La IP guardada es la primera de la cabecera `X-Forwarded-For`,
+    que quien envía la petición puede escribir: sirve de apoyo, no de prueba.
 11. **PDFs viejos en el almacenamiento.** Los reportes que se subieron antes de la
     fase 6 siguen en el bucket `reportes` (solo los ve un admin) y sus enlaces de 30
     días ya vencieron o vencerán solos. Se pueden borrar desde el panel de Supabase.
+12. **Depósito mayor que lo autorizado.** Si el cliente dejó un depósito más alto que
+    lo que terminó autorizando, al entregar no se asienta un reembolso y el portal
+    muestra saldo $0. *Decisión pendiente:* ¿se reembolsa o queda a favor?
+13. **Órdenes sin paginar.** La lista carga todas las órdenes de la sede; a ~2.000 por
+    sede conviene paginar o esconder las entregadas antiguas.

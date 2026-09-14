@@ -10,6 +10,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "db:check": "node scripts/check-migrations.mjs",
+    "qa:security": "node scripts/qa/api-security.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

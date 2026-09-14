@@ -238,13 +238,39 @@ Sube el **contenido** de `dist/` (no la carpeta) a `public_html/` en Hostinger
 (hPanel → Administrador de archivos, o FTP), reemplazando lo anterior. Verifica
 que `.htaccess`, `sw.js`, `manifest.webmanifest` e `icons/` quedaron en la raíz.
 
+```bash
+# 7. Seguridad contra la API ya desplegada (0 FAIL)
+npm run qa:security
+```
+
+**Un build siempre espera todas las migraciones del código.** La app compara la
+migración más nueva de su carpeta con la de la base y, si la base está atrasada,
+muestra el aviso de "esquema desactualizado". Por eso el paso 4 va antes que el 6,
+aunque la migración no cambie columnas.
+
+### Pendiente de desplegar: auditoría de septiembre 2026
+
+Si `db:check` lista `20260926000000_audit_hardening`, esta versión cierra los hallazgos
+de [auditoria-2026-09.md](auditoria-2026-09.md). No mueve columnas: se puede aplicar en
+horario de trabajo.
+
+```bash
+npx supabase db push --linked                    # la migración
+npx supabase functions deploy delete-employee    # mensaje al borrar empleados con pagos
+npm run build                                    # y subir dist/
+npm run qa:security                              # SEC-05 a SEC-08 pasan a PASS
+```
+
 Si la versión incluye migraciones nuevas, **los pasos 4 y 6 van seguidos**.
 
 ---
 
 ## 6. Verificación después de publicar
 
-Diez minutos. Si algo falla, [pruebas.md](pruebas.md) tiene el detalle de cada caso.
+Diez minutos. Es el nivel **humo** del plan de pruebas; si algo falla,
+[plan-de-pruebas.md](plan-de-pruebas.md) tiene el detalle de cada caso.
+
+- [ ] `npm run qa:security` → 0 FAIL.
 
 - [ ] La app abre sin el banner de "esquema desactualizado".
 - [ ] Iniciar sesión como admin y como técnico.
@@ -269,6 +295,8 @@ Diez minutos. Si algo falla, [pruebas.md](pruebas.md) tiene el detalle de cada c
   -- restorify-outbox (cada minuto), restorify-maintenance (09:00 UTC),
   -- restorify-quote-reminders (15:00 UTC)
   ```
+- [ ] Firmar otra vez la orden de prueba (limpiar y firmar) después de agregar un trabajo →
+      el trabajo sigue **Sin autorizar** (PRE-15).
 - [ ] Borrar la orden de prueba.
 
 ---
@@ -318,6 +346,7 @@ jobs:
       - run: npm run lint
       - run: npx tsc -b
       - run: npm test
+      - run: npm run build
 
   base-de-datos:
     runs-on: ubuntu-latest

@@ -11,11 +11,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   const loadProfileAndSedes = useCallback(async (userId: string) => {
-    const { data: perfil } = await supabase
+    const { data: perfil, error: perfilError } = await supabase
       .from('perfiles')
       .select('*')
       .eq('id', userId)
       .single();
+
+    // Una consulta que falló (sin señal en el taller, la base no respondió) no es
+    // "esta cuenta no tiene perfil". Antes las dos cosas cerraban la sesión en la
+    // pantalla: a media captura, el técnico caía al login y perdía lo escrito.
+    // PGRST116 es la única respuesta que de verdad dice "no hay fila".
+    if (perfilError && perfilError.code !== 'PGRST116') return;
 
     if (!perfil) {
       setUser(null);
@@ -24,7 +30,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const { data: sedes } = await supabase.from('sedes').select('*').order('nombre');
+    const { data: sedes, error: sedesError } = await supabase.from('sedes').select('*').order('nombre');
+    // Igual que arriba: sin respuesta se conservan las sedes que ya había.
+    if (sedesError) {
+      setUser(perfil as UserProfile);
+      return;
+    }
     const sedesList = (sedes || []) as Sede[];
 
     setUser(perfil as UserProfile);
@@ -73,6 +84,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'PASSWORD_RECOVERY') {
         setPasswordRecovery(true);
       }
+      // Renovar el token (cada hora, y al volver a la pestaña) no cambia quién es
+      // ni su perfil: no hace falta volver a pedirlo, y pedirlo con mala señal era
+      // la forma más común de perder la sesión en pantalla.
+      if (event === 'TOKEN_REFRESHED') return;
       if (session?.user) {
         loadProfileAndSedes(session.user.id);
       } else {

@@ -79,6 +79,21 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Los pagos de comisiones apuntan a la persona con RESTRICT: son el historial de
+    // lo que se le pagó (y su egreso en Finanzas). Sin esta revisión el borrado
+    // fallaba con el error crudo de la llave foránea.
+    const { count: paymentsCount } = await adminClient
+      .from('comision_pagos')
+      .select('id', { count: 'exact', head: true })
+      .eq('usuario_id', userId);
+
+    if ((paymentsCount ?? 0) > 0) {
+      return jsonResponse(
+        { error: 'Este empleado tiene pagos de comisiones registrados. Eliminarlo borraría ese historial, así que no se puede eliminar.' },
+        409
+      );
+    }
+
     const { error: profileError } = await adminClient.from('perfiles').delete().eq('id', userId);
     if (profileError) {
       return jsonResponse({ error: profileError.message }, 400);

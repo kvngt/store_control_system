@@ -16,7 +16,7 @@ declare const process: { env: Record<string, string | undefined> };
 process.env.TZ = 'America/Chicago';
 
 import { describe, it, expect } from 'vitest';
-import { isSameMonth, todayLocal } from './dates';
+import { daysFromTodayLocal, isSameMonth, todayLocal } from './dates';
 
 describe('isSameMonth', () => {
   // La premisa. Si esto falla, el proceso no tomó la zona y el resto de las
@@ -74,5 +74,19 @@ describe('todayLocal', () => {
     // `toISOString().split('T')[0]`, un movimiento capturado a las 8 de la noche
     // llevaba la fecha de mañana — y el último día del mes, la del mes siguiente.
     expect(isSameMonth(todayLocal(), new Date())).toBe(true);
+  });
+});
+
+describe('daysFromTodayLocal', () => {
+  it('suma días sobre el calendario local', () => {
+    const later = new Date();
+    later.setDate(later.getDate() + 5);
+    const expected = [
+      later.getFullYear(),
+      String(later.getMonth() + 1).padStart(2, '0'),
+      String(later.getDate()).padStart(2, '0'),
+    ].join('-');
+    expect(daysFromTodayLocal(5)).toBe(expected);
+    expect(daysFromTodayLocal(0)).toBe(todayLocal());
   });
 });

@@ -90,6 +90,12 @@ una sola petición (1 h, cacheadas 50 min). Firmar no descarga nada: el archivo
 viaja solo cuando un `<img>`/`<video>` lo usa, y en las listas solo viajan
 miniaturas.
 
+**Una orden entregada no pierde archivos.** Un técnico borra sus propios archivos
+mientras la orden sigue abierta; ya entregada, solo un admin. La regla está en la fila
+(`orden_media`) y, desde la auditoría de septiembre de 2026, también en el archivo de
+Storage (política `orden_media_delete`): antes el archivo se podía borrar por la API y
+la galería y el portal quedaban con imágenes rotas.
+
 **`proveedor` en cada fila.** Hoy siempre `supabase`. Si algún día los videos se
 mueven a un servicio de streaming (Cloudflare Stream), el modelo no cambia.
 
@@ -182,9 +188,11 @@ idioma prefiere nadie en el servidor). La campana vuelve a redactar el aviso con
 traducción se muestra con el texto de la base.
 
 **Push por outbox, no directo.** `cola_envios` deja registro de cada envío, permite
-reintentos con espera creciente y es el mismo camino que usarán los correos de la
+reintentos con espera creciente y es el mismo camino que usan los correos de la
 fase 4. `FOR UPDATE SKIP LOCKED` evita dobles envíos entre la invocación
-inmediata y el cron.
+inmediata y el cron. Si la función muere a mitad de un envío, la fila vuelve a la cola
+a los 5 minutos; al quinto intento interrumpido queda en **error** con "El envío se
+interrumpió 5 veces", en vez de reintentarse para siempre.
 
 **Dispositivo, no cuenta.** Un permiso de push es de un navegador en un aparato.
 `registrar_push` mueve el endpoint a quien inició sesión; al cerrar sesión se

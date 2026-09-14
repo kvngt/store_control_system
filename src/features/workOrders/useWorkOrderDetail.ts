@@ -36,7 +36,7 @@ interface UseWorkOrderDetailOptions {
  */
 export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions) {
   const { t, language } = useLanguage();
-  const { user, currentSede } = useAuth();
+  const { user, currentSede, allSedes } = useAuth();
   const { showToast } = useToast();
   const mediaUploads = useMediaUploads();
 
@@ -73,6 +73,12 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   });
 
   const order = detailQuery.data ?? null;
+
+  // La sede de ESTA orden, no la que el admin tiene elegida arriba: un aviso o un
+  // enlace puede abrir una orden de otra sede, y entonces el PDF salía con el logo
+  // de otro taller, el WhatsApp nombraba otro taller y la comisión estimada usaba
+  // otro porcentaje.
+  const orderSede = (order && allSedes.find((s) => s.id === order.sede_id)) || currentSede;
   const loading = !!openOrderId && detailQuery.isPending;
   const error =
     mutationError || (detailQuery.error ? getErrorMessage(detailQuery.error, language) : '');
@@ -164,7 +170,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // estimación que cambia si cambia la labor o el equipo, no una promesa.
   // Un admin no la necesita — ve la bolsa entera en Comisiones.
   const crew = new Set((order?.asignaciones || []).map((a) => a.usuario_id)).size;
-  const commissionRate = currentSede?.comision_porcentaje ?? 0;
+  const commissionRate = orderSede?.comision_porcentaje ?? 0;
   const estimatedCommission =
     !isAdmin && isAssignedToMe && crew > 0
       ? Math.round(((order?.total_labor || 0) * commissionRate) / crew) / 100
@@ -449,10 +455,12 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     try {
       const { ruta, fecha } = await workOrdersService.uploadSignature(order, dataUrl);
       patchOrder({ firma_ruta: ruta, firma_fecha: fecha });
-      // Firmar crea el enlace del cliente y programa el correo de recepción.
-      void queryClient.invalidateQueries({ queryKey: queryKeys.customerLink(order.id) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.customerEmails(order.id) });
       showToast('success', t('workOrders.signatureSaved'));
+      // La primera firma autoriza lo cotizado: cambian el estado de las líneas, los
+      // totales y la tarjeta de presupuesto, y se crean el enlace y el correo de
+      // recepción. Nada de eso lo sabe esta pantalla sin volver a leer la orden.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.quotes(order.id) });
+      await refresh();
     } catch (err) {
       showToast('error', t('workOrders.signatureError'), getErrorMessage(err, language));
     } finally {
@@ -493,7 +501,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
         // Si la orden ya tiene enlace, el PDF lo lleva: la versión con videos.
         customerPortalService.getActiveLink(order.id).catch(() => null),
       ]);
-      await generateWorkOrderPdf(order, currentSede, urls, {
+      await generateWorkOrderPdf(order, orderSede, urls, {
         portalUrl: link ? customerPortalService.portalUrl(link.token) : undefined,
       });
     } catch (err) {
@@ -516,7 +524,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     try {
       const link = await customerPortalService.createLink(order.id);
       const url = customerPortalService.portalUrl(link.token);
-      setShare({ link: url, message: reportsService.buildMessage(order, url, currentSede?.nombre) });
+      setShare({ link: url, message: reportsService.buildMessage(order, url, orderSede?.nombre) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.customerLink(order.id) });
     } catch (err) {
       showToast('error', t('workOrders.shareReportError'), getErrorMessage(err, language));

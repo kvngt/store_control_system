@@ -5,7 +5,7 @@ mano de obra o repuesto tiene un estado, y solo lo autorizado entra en los total
 el cobro, el costo de repuestos y las comisiones.
 
 Reglas en lenguaje de negocio: [reglas-de-negocio.md](reglas-de-negocio.md#8-presupuestos-y-autorización).
-Cómo probarlo: [pruebas.md](pruebas.md#414-presupuestos). Portal y correos en los que
+Cómo probarlo: [plan-de-pruebas.md](plan-de-pruebas.md#414-presupuestos-pre). Portal y correos en los que
 se apoya: [portal-y-correos.md](portal-y-correos.md).
 
 ---
@@ -62,6 +62,13 @@ se apoya: [portal-y-correos.md](portal-y-correos.md).
 
 Si la firma ocurre con un presupuesto ya enviado por correo, la firma **no** decide
 por él: esas líneas siguen esperando la respuesta del cliente.
+
+**Solo la primera firma de la orden autoriza.** Limpiar la firma y volver a firmar no
+aprueba nada: un trabajo agregado después de la recepción sigue **sin autorizar**. El
+trigger lo sabe porque ya existe un presupuesto "firma de recepción" o porque ya hay
+otro archivo de firma en la carpeta de la orden (limpiar no borra el archivo). Antes de
+la auditoría de septiembre de 2026 cualquier firma nueva aprobaba los borradores
+([auditoria-2026-09.md](auditoria-2026-09.md), AUD-03).
 
 ---
 
@@ -170,7 +177,7 @@ adicional" y el costo del repuesto, como cualquier corrección de una orden entr
 | `responder_presupuesto_portal(token, id, aprobadas, lineas, nombre, comentario, ip, ua)` | `service_role` | Respuesta del cliente; `{ok:false, motivo}` en vez de fallar |
 | `_crear_presupuesto`, `_agregar_borradores`, `_lineas_pendientes`, `_resolver_presupuesto` | Internas | Revocadas para todos los roles |
 | `recordar_presupuestos_sin_respuesta()` | pg_cron | Aviso diario a admins |
-| `trg_quote_on_signature` | Trigger | La firma aprueba los borradores |
+| `trg_quote_on_signature` | Trigger | La **primera** firma de la orden aprueba los borradores |
 
 La bandera de transacción `restorify.presupuesto = on` es la llave: el guard de las
 líneas solo deja cambiar `estado`, `presupuesto_id` y `decidido_en` con ella
@@ -189,9 +196,11 @@ marca sí.
 comisiones ya dependían de los totales. Filtrar dos consultas por `aprobado` hizo
 que todo lo demás siguiera correcto sin tocarlo — y sin duplicar lógica de dinero.
 
-**La firma aprueba lo que había.** Es lo que el taller hace hoy: cotiza al recibir el
-vehículo y el cliente firma. Obligar a mandar un presupuesto por lo que el cliente
-acaba de firmar en persona sería burocracia.
+**La firma aprueba lo que había, una vez.** Es lo que el taller hace hoy: cotiza al
+recibir el vehículo y el cliente firma. Obligar a mandar un presupuesto por lo que el
+cliente acaba de firmar en persona sería burocracia. Pero una firma repetida días
+después no es el cliente viendo el trabajo nuevo; por eso solo cuenta la primera, y
+ante la duda la firma no aprueba (el admin registra la autorización).
 
 **Nada marcado en el portal; todo marcado en el diálogo del admin.** El cliente
 decide explícitamente, línea por línea. El admin transcribe una llamada donde casi

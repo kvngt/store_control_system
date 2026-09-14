@@ -20,6 +20,7 @@ import { useWorkOrderDetail } from '../features/workOrders/useWorkOrderDetail';
 import WorkOrderCreateModal from '../features/workOrders/WorkOrderCreateModal';
 import WorkOrderDetail from '../features/workOrders/WorkOrderDetail';
 import { getErrorMessage } from '../lib/errors';
+import { daysFromTodayLocal } from '../lib/dates';
 import { checkUsPlate, checkVin } from '../lib/vin';
 import type { WorkOrder, Customer, Vehicle, UserProfile } from '../types/database';
 import { Plus, Search, Eye, Car, Calendar, Trash2, ChevronRight, ChevronDown, Wrench } from 'lucide-react';
@@ -244,7 +245,7 @@ export default function WorkOrders() {
         // llegan de uno; mandarlos vacíos deja las dos capas diciendo lo mismo.
         deposito_inicial: isAdmin ? parseFloat(values.deposit) || 0 : 0,
         inspeccion_360_notas: values.inspectionNotes,
-        fecha_estimada_entrega: values.estimatedDate || new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
+        fecha_estimada_entrega: values.estimatedDate || daysFromTodayLocal(5),
         // `Math.max(0, ...)` igual que en los repuestos. La labor era la única
         // cifra de dinero que aceptaba un negativo, y sobre una orden entregada
         // un total que baja lo asienta Finanzas como reembolso al cliente.

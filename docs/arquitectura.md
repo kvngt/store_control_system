@@ -41,7 +41,7 @@ avisos), el complemento es [reglas-de-negocio.md](reglas-de-negocio.md).
 | **Pruebas** | Vitest (unitarias y componentes), pgTAP (base de datos), Playwright (e2e) |
 | **Hosting** | Sitio estático en Hostinger (Apache), dominio `reinventa.shop` |
 
-Unas 26 000 líneas de TypeScript (con pruebas), 5 000 de CSS, 34 migraciones y 22 tablas.
+Unas 26 000 líneas de TypeScript (con pruebas), 5 000 de CSS, 35 migraciones y 22 tablas.
 Cómo se llegó hasta aquí, etapa por etapa: [evolucion.md](evolucion.md).
 
 ---
@@ -163,7 +163,7 @@ public/
   .htaccess                      reescritura SPA + tipos PWA para Apache
 
 supabase/
-  migrations/                    34 migraciones, en orden cronológico (historia en evolucion.md)
+  migrations/                    35 migraciones, en orden cronológico (historia en evolucion.md)
   functions/                     edge functions (Deno)
     create-employee, update-employee, delete-employee   con clave de servicio
     process-outbox, cleanup-storage                     internas, llamadas por la base
@@ -174,7 +174,10 @@ supabase/
   config.toml
 
 e2e/                             pruebas Playwright
-scripts/                         check-migrations, copy-pdf-worker, generate-pwa-icons
+scripts/                         check-migrations, copy-pdf-worker, generate-pwa-icons,
+                                 reset-test-data.sql
+  qa/api-security.mjs            npm run qa:security: seguridad contra la API desplegada
+  qa/estado-orden.sql            todo lo que la base sabe de una orden (solo lectura)
 docs/                            esta documentación
 ```
 
@@ -273,13 +276,14 @@ técnico.
 
 | Tabla | Trigger | Qué hace |
 |---|---|---|
-| `ordenes_trabajo` | `trg_numero_orden` | Genera `ORD-AAAA-###` de forma atómica |
+| `ordenes_trabajo` | `trg_guard_order_insert` | Alta de quien no es admin: nace en recepción, avance 0, sin firma, número del sistema, autor = quien llama |
+| | `trg_numero_orden` | Genera `ORD-AAAA-###` de forma atómica |
 | | `trg_orden_sede_coherente` | Rechaza órdenes que mezclan sedes |
 | | `trg_order_money_guard` | Técnico: no entrega, no cambia sede/número, no escribe `total_labor` |
 | | `trg_order_technician_guard` | Técnico: solo asignado, orden sin entregar, y solo estado, avance y firma. Firma en la carpeta de su orden (para todos) |
 | | `trg_order_quote_delivery_guard` | No se entrega con un presupuesto esperando respuesta |
 | | `trg_order_portal` | Firma → enlace del cliente y correo de recepción; estatus → correo con espera y vencimiento del enlace |
-| | `trg_order_quote_signature` | La firma de recepción aprueba los borradores |
+| | `trg_order_quote_signature` | La **primera** firma de la orden aprueba los borradores; volver a firmar no |
 | | `trg_order_montos_create` | Crea la fila de `orden_montos` |
 | | `trg_progress_on_status` | Avance a 100 % al finalizar o entregar |
 | | `trg_order_delivery_payment` | Al entregar: cobra el saldo pendiente |
@@ -287,7 +291,8 @@ técnico.
 | | `trg_order_delivery_reversal` | Al sacar de entregado: revierte cobro final y costo de repuestos |
 | | `trg_order_commissions` | Recalcula comisiones al cambiar el estatus |
 | | `trg_order_created_notify`, `trg_order_finished_notify` | Avisos a admins |
-| | `trg_cleanup_order_finance` | Al borrar la orden: borra sus movimientos automáticos |
+| | `trg_cleanup_order_finance` | Al borrar la orden: borra sus movimientos automáticos (en la misma transacción) |
+| | `trg_order_delete_paid_guard` | No se borra una orden con comisiones pagadas |
 | `orden_montos` | `trg_order_montos_guard` | Totales solo por recálculo; depósito fijo tras entregar |
 | | `trg_order_montos_deposit` | Asienta el depósito (o su ajuste) |
 | | `trg_order_montos_delivered_adjustment` | Si cambia el total de una orden entregada, asienta la diferencia |
@@ -378,7 +383,7 @@ para convertir ese silencio en un error visible.
 
 | Bucket | Público | Contenido | Escritura |
 |---|---|---|---|
-| `orden_media` | **no** | fotos, videos, audio y firmas de órdenes | admin, o asignado a la orden sin entregar; borrar: admin o dueño |
+| `orden_media` | **no** | fotos, videos, audio y firmas de órdenes | admin, o asignado a la orden sin entregar; borrar: admin, o el dueño mientras la orden no esté entregada |
 | `comprobantes` | **no** | fotos de cheques | admin |
 | `reportes` | **no** | PDF compartidos antes de la fase 6; lectura y borrado solo admin | nadie (el reporte es el enlace del portal) |
 | `estados_cuenta_bancarios` | no | PDF del banco | admin |
@@ -418,7 +423,9 @@ pg_cron "restorify-quote-reminders" (15:00 UTC) ─► recordar_presupuestos_sin
   correos al cliente. Deja registro de cada envío y reintenta con espera
   creciente (1, 4, 16, 64 minutos; error al quinto intento).
 - `claim_outbox` toma filas con `FOR UPDATE SKIP LOCKED`: el aviso inmediato y el
-  cron no envían dos veces lo mismo.
+  cron no envían dos veces lo mismo. Una fila que quedó "procesando" (la función murió
+  a mitad) vuelve a la cola a los 5 minutos; al quinto intento interrumpido queda en
+  error.
 - La URL del proyecto y el secreto viven en **Vault**, no en migraciones. Sin
   ellos los avisos se guardan igual y la cola espera.
 
@@ -439,7 +446,15 @@ ErrorBoundary → QueryClientProvider → BrowserRouter → Theme → Language �
 ```
 
 `AuthContext` expone sesión, perfil, sede activa y `passwordRecovery`, que gana
-sobre todas las rutas (el enlace de recuperación inicia sesión).
+sobre todas las rutas (el enlace de recuperación inicia sesión). Al renovar el token no
+vuelve a pedir el perfil, y si una consulta del perfil o de las sedes falla por red
+conserva lo que ya tenía: solo una cuenta sin fila en `perfiles` (`PGRST116`) cierra la
+sesión en pantalla.
+
+**La sede elegida no es la sede de la orden.** `currentSede` es la que el admin eligió
+arriba; una orden abierta desde un aviso puede ser de otra. `useWorkOrderDetail` usa
+`orderSede` (la de `order.sede_id`) para el PDF, el mensaje de WhatsApp, la comisión
+estimada y la lista de personal asignable.
 
 `MediaUploadsProvider` vive en el layout y no en una pantalla: un técnico que
 graba un video y se va al Kanban no debe cortar la subida.
@@ -458,8 +473,11 @@ crudos y se traducen al pintar: cambiar de idioma no vuelve a consultar nada.
 
 ### Manejo de errores
 
-`lib/errors.ts` traduce códigos de Postgres (`23503`, `23505`, `42501`…) y de Auth
-a texto en los dos idiomas. `lib/media/errors.ts` hace lo mismo con los errores
+`lib/errors.ts` traduce códigos de Postgres (`23502`, `23503`, `23505`, `23514`,
+`42501`…) y de Auth a texto en los dos idiomas. Un `42501` que la base lanza con una
+oración para el taller ("La orden ya fue entregada…") se muestra tal cual en español;
+los de RLS ("new row violates row-level security…") y de privilegios siguen con el
+mensaje genérico. `lib/media/errors.ts` hace lo mismo con los errores
 de cámara, micrófono y conversión de video. **Nunca muestres el mensaje crudo del
 backend.**
 
@@ -467,7 +485,7 @@ backend.**
 
 `lib/dates.ts`. Una columna `DATE` llega como `'2026-09-01'`, y
 `new Date('2026-09-01')` es medianoche **UTC**: en EE. UU. eso es el 31 de agosto.
-Usa `isSameMonth` y `todayLocal`, nunca `toISOString().split('T')[0]`.
+Usa `isSameMonth`, `todayLocal` y `daysFromTodayLocal`, nunca `toISOString().split('T')[0]`.
 
 ### Estilos
 
@@ -519,7 +537,11 @@ si la base está atrasada, `SchemaDriftBanner` lo dice en pantalla.
   documentación de sus decisiones; léelas en orden si quieres entender cómo llegó
   el sistema a donde está.
 - **Revoca lo interno.** Una función en `public` queda expuesta como RPC a `anon` y
-  `authenticated` por defecto: `REVOKE ALL ... FROM PUBLIC, anon, authenticated`.
+  `authenticated` por defecto: `REVOKE ALL ... FROM PUBLIC, anon, authenticated`. Una
+  función que solo llaman triggers no necesita ningún permiso (el trigger corre como
+  su dueño). Después de aplicar, `npm run qa:security` lo confirma contra la API real.
+- **Protege el INSERT además del UPDATE.** Un guard `BEFORE UPDATE` no dice nada de una
+  fila que alguien inserta ya con los valores que el guard prohíbe.
 - **Prueba con pgTAP** lo que toque permisos o dinero (`supabase/tests/database/`).
 - **Coordina con el frontend**: si una migración elimina columnas, la base y el
   `dist` se despliegan juntos (ver [deployment.md](deployment.md)).
@@ -598,6 +620,16 @@ reproducir. Chrome ≥ 126 y Safari graban MP4.
 **Borrar una sede deja sus archivos en Storage** hasta la limpieza nocturna
 (`cleanup-storage`): la base no puede borrar objetos de Storage.
 
+**Los permisos de una función no se ven en la migración que la crea.** Postgres y
+Supabase le dan `EXECUTE` a `PUBLIC`, `anon` y `authenticated` al crearla; `CREATE OR
+REPLACE` conserva lo que tenga. Cuatro funciones internas de dinero quedaron abiertas
+por eso hasta la auditoría de septiembre de 2026. Para ver lo vigente:
+`SELECT proname, proacl FROM pg_proc WHERE pronamespace = 'public'::regnamespace`.
+
+**Dos peticiones no son una transacción.** Borrar en el navegador los movimientos de una
+orden y después la orden dejaba la orden sin su dinero si la segunda fallaba. Si algo
+debe pasar junto, que lo haga un trigger o una RPC.
+
 ---
 
-*Última revisión: septiembre de 2026 (fases 1–6).*
+*Última revisión: septiembre de 2026 (fases 1–6 y auditoría).*

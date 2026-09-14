@@ -418,7 +418,9 @@ el equipo.
 **Técnicos asignados.** Quién trabaja la orden. Si no estás asignado, verás el
 aviso de solo lectura y el botón **Unirme a la orden**. En una orden ya entregada
 no te puedes unir, porque cambiaría el reparto de comisiones de quienes hicieron
-el trabajo.
+el trabajo. Un administrador solo puede asignar personal **de la sede de la orden**:
+si abriste una orden de otra sede (por ejemplo, desde un aviso) y la lista sale vacía,
+cambia a esa sede en el selector de arriba.
 
 **Fotos, videos y notas de voz.** La galería de la orden (sección 9).
 
@@ -430,8 +432,12 @@ avances, pero no los de un compañero.
 <!-- IMAGEN: sección de avances con una entrada con fotos y una nota de voz -->
 
 **Firma del cliente.** El cliente firma con el dedo sobre el recuadro. Queda
-guardada con fecha y aparece en el reporte del cliente y en el PDF. Se puede limpiar y volver a
-firmar; las firmas anteriores quedan como historial.
+guardada con fecha y aparece en el reporte del cliente y en el PDF. **La primera firma
+autoriza los trabajos que ya estaban cotizados**: al guardarla, las líneas dejan de
+decir *Sin autorizar* y el total se actualiza en la pantalla. Se puede limpiar y volver
+a firmar (si salió mal); las firmas anteriores quedan como historial, pero **volver a
+firmar no autoriza nada nuevo**: lo que agregaste después de la recepción se presenta
+con un presupuesto o se registra la autorización.
 
 **Enlace del cliente** *(solo administradores)*. Ver la sección siguiente.
 
@@ -575,6 +581,10 @@ cada corrección de dinero se registra como un ajuste en Finanzas.
 Solo un administrador. Borra también sus fotos y videos, sus comisiones y los
 movimientos financieros que la orden generó automáticamente. Los movimientos
 importados del banco se conservan.
+
+**Si ya se pagaron comisiones de esa orden, no se puede borrar**: el cheque quedaría
+sin el detalle de qué pagó. Ve a **Comisiones → Pagos realizados**, deshaz ese pago
+y luego borra la orden.
 
 ---
 
@@ -897,7 +907,9 @@ Con **Nuevo Empleado** se da de alta a alguien:
 <!-- IMAGEN: modal de nuevo empleado con todos los campos -->
 
 Para dar de baja a alguien, usa el botón de quitar de su fila. **Si tiene órdenes
-asignadas el sistema no lo permite**: primero hay que reasignar ese trabajo.
+asignadas el sistema no lo permite**: primero hay que reasignar ese trabajo. **Si ya
+se le pagaron comisiones, tampoco**: sus pagos son el historial de lo que se le
+entregó.
 
 ---
 
@@ -1024,6 +1036,18 @@ todavía no se cobra. Envía el presupuesto o registra la autorización.
 
 **«No me deja editar ni borrar una línea.»**
 Está **Esperando al cliente**. Cancela el presupuesto, corrige y vuelve a enviarlo.
+
+**«Volví a firmar y el trabajo nuevo sigue sin autorizar.»**
+Es lo esperado: solo la primera firma, la de la recepción, autoriza. Para lo que se
+agregó después, envía el presupuesto o registra la autorización.
+
+**«No me deja borrar una orden: dice que tiene comisiones pagadas.»**
+Deshaz ese pago en **Comisiones**, borra la orden y, si corresponde, vuelve a pagar
+las demás comisiones.
+
+**«La app me sacó a la pantalla de inicio de sesión mientras trabajaba.»**
+No debería pasar por mala señal. Si pasa, anota la hora y el teléfono y avísale a
+administración: es un error que hay que revisar.
 
 **«No me deja entregar la orden.»**
 Tiene un presupuesto esperando respuesta. Registra la autorización (si el cliente ya

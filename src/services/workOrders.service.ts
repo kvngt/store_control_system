@@ -132,25 +132,12 @@ export const workOrdersService = {
   },
 
   deleteWorkOrder: async (orderId: string) => {
-    // Remove the automatic finanzas_movimientos entries (deposit, final
-    // payment) the order-lifecycle triggers created for this order first —
-    // otherwise deleting the order just orphans them (referencia_orden_id
-    // set to null) instead of keeping the books consistent.
+    // Los movimientos automáticos de Finanzas (depósito, pago final, costo de
+    // repuestos) los borra el trigger `cleanup_order_finance` en la misma
+    // transacción que la orden. Antes este cliente los borraba primero, en otra
+    // petición: si después el borrado de la orden fallaba (sin red, o la base lo
+    // rechazaba por tener comisiones pagadas), la orden seguía ahí sin su dinero.
     //
-    // `importacion_id IS NULL` es la misma línea que traza el trigger
-    // `cleanup_order_finance`: un movimiento conciliado contra un estado de
-    // cuenta describe dinero que sí pasó por el banco, y borrarlo porque se
-    // borró la orden a la que estaba atado deja el saldo del sistema sin
-    // cuadrar contra el saldo real. Este cliente lo borraba todo, contradiciendo
-    // a la base — hoy es inalcanzable porque el importador nunca escribe
-    // `referencia_orden_id`, pero las dos reglas no podían seguir en desacuerdo.
-    const { error: finanzasError } = await supabase
-      .from('finanzas_movimientos')
-      .delete()
-      .eq('referencia_orden_id', orderId)
-      .is('importacion_id', null);
-    if (finanzasError) throw finanzasError;
-
     // Las filas de `orden_media` se van en cascada con la orden, pero la base no
     // puede borrar objetos de Storage: sin esto, cada orden borrada dejaría sus
     // videos ocupando la cuota del plan para siempre. Se leen antes de borrar la

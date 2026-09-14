@@ -6,7 +6,7 @@ sistema le **manda correos** cuando hay algo nuevo. Los correos no traen los dat
 traen el enlace.
 
 Reglas en lenguaje de negocio: [reglas-de-negocio.md](reglas-de-negocio.md#7-portal-del-cliente-y-correos).
-Cómo probarlo: [pruebas.md](pruebas.md#413-portal-del-cliente-y-correos).
+Cómo probarlo: [plan-de-pruebas.md](plan-de-pruebas.md#413-portal-del-cliente-y-correos-por).
 
 ---
 
@@ -311,6 +311,7 @@ ORDER BY creado_en DESC;
 | `omitido` "ya recibió el aviso de este estado" | Se evitó un duplicado. Normal |
 | `error` "Resend HTTP 403" | La llave no tiene permiso o el dominio perdió la verificación (revisar DNS) |
 | `error` "Resend HTTP 422" | Resend rechazó la dirección |
+| `error` "El envío se interrumpió 5 veces" | La función de envío murió 5 veces con este correo (tiempo agotado). Revisa los logs de `process-outbox` |
 | `enviado` pero no llegó | Buscar el `proveedor_id` en Resend → Emails: dice si rebotó o cayó en spam |
 
 **"El enlace no abre."**

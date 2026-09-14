@@ -16,6 +16,10 @@ const FRIENDLY_BY_CODE: Record<string, Record<Language, string>> = {
     es: 'Falta completar un campo obligatorio. Revisa el formulario e intenta de nuevo.',
     en: 'A required field is missing. Check the form and try again.',
   },
+  '23514': {
+    es: 'Uno de los valores no es válido (por ejemplo, un monto negativo, una cantidad en cero o un correo mal escrito). Revísalo e intenta de nuevo.',
+    en: 'One of the values is not valid (e.g. a negative amount, a zero quantity or a mistyped email). Check it and try again.',
+  },
   '42501': {
     es: 'No tienes permiso para realizar esta acción.',
     en: "You don't have permission to perform this action.",
@@ -94,8 +98,22 @@ export function getAuthErrorMessage(err: unknown, language: Language): string {
     : 'Could not sign in. Check your connection and try again.';
 }
 
+function isShopSentence(message?: string): boolean {
+  return !!message && /^[A-ZÁÉÍÓÚÑ¿¡].*\s.*[.!?]$/s.test(message.trim()) && !/row-level security|permission denied/i.test(message);
+}
+
 export function getErrorMessage(err: unknown, language: Language): string {
   const e = err as ErrorLike;
+  // Los 42501 que lanza la base a propósito traen la razón escrita para el taller
+  // ("La orden ya fue entregada…", "Esta línea es parte de un presupuesto…"). El
+  // genérico "no tienes permiso" la escondía. Se reconocen por la forma: una
+  // oración con mayúscula y punto final. Los de RLS y de privilegios de Postgres
+  // ("new row violates row-level security policy…", "permission denied for…") no
+  // la tienen y siguen cambiándose por el genérico. Los propios están en español,
+  // así que en inglés también se usa el genérico.
+  if (e?.code === '42501' && language === 'es' && isShopSentence(e.message)) {
+    return e.message as string;
+  }
   const friendly = e?.code ? FRIENDLY_BY_CODE[e.code] : undefined;
   if (friendly) return friendly[language];
   return e?.message || (language === 'es' ? 'Ocurrió un error inesperado.' : 'An unexpected error occurred.');
