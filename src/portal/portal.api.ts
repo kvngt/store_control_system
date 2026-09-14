@@ -29,6 +29,40 @@ export async function fetchPortal(token: string, signal?: AbortSignal): Promise<
   throw new PortalRequestError(res.status);
 }
 
+export type QuoteAnswer =
+  | { ok: true; autorizados: number; rechazados: number; total_autorizado: number }
+  | {
+      ok: false;
+      motivo: 'enlace_invalido' | 'no_encontrado' | 'ya_respondido' | 'cancelado' | 'nombre_requerido' | 'presupuesto_cambio' | 'lineas_invalidas' | 'solicitud_invalida';
+    };
+
+/**
+ * Responde el presupuesto. `shownIds` son todas las líneas que el cliente vio: si el
+ * taller cambió el presupuesto mientras tanto, la respuesta vuelve con
+ * `presupuesto_cambio` en vez de rechazar lo que el cliente no llegó a ver.
+ */
+export async function answerQuote(
+  token: string,
+  input: { quoteId: string; approvedIds: string[]; shownIds: string[]; name: string; comment: string }
+): Promise<QuoteAnswer> {
+  const res = await fetch(portalEndpoint(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    referrerPolicy: 'no-referrer',
+    body: JSON.stringify({
+      token,
+      accion: 'responder_presupuesto',
+      presupuesto_id: input.quoteId,
+      aprobadas: input.approvedIds,
+      lineas: input.shownIds,
+      nombre: input.name,
+      comentario: input.comment,
+    }),
+  });
+  if (!res.ok && res.status !== 400) throw new PortalRequestError(res.status);
+  return (await res.json()) as QuoteAnswer;
+}
+
 export async function setEmailPreference(token: string, accepts: boolean): Promise<boolean> {
   const res = await fetch(portalEndpoint(), {
     method: 'POST',

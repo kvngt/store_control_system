@@ -6,6 +6,8 @@
 //
 //   GET  ?token=<token>                                   → el reporte
 //   POST { token, accion: 'preferencia_correos', acepta }  → alta o baja de correos
+//   POST { token, accion: 'responder_presupuesto', presupuesto_id, aprobadas, lineas,
+//          nombre, comentario }                            → autorizar por línea
 //
 // La llave de servicio vive solo aquí. El navegador nunca la ve.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
@@ -15,6 +17,20 @@ const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPAB
 });
 
 const TOKEN_RE = /^[0-9a-f]{64}$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function uuidList(value: unknown): string[] | null {
+  if (!Array.isArray(value) || value.length > 200) return null;
+  return value.every((v) => typeof v === 'string' && UUID_RE.test(v)) ? (value as string[]) : null;
+}
+
+/** La IP de quien responde, como evidencia. La primera de la cadena es la del cliente. */
+function clientIp(req: Request): string | null {
+  const forwarded = req.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim().slice(0, 64) || null;
+  return req.headers.get('cf-connecting-ip') ?? req.headers.get('x-real-ip');
+}
+
 const MEDIA_BUCKET = 'orden_media';
 /** Suficiente para ver con calma; si la página queda abierta más, vuelve a pedir. */
 const SIGNED_URL_TTL_SECONDS = 2 * 60 * 60;
@@ -124,7 +140,16 @@ async function handleGet(req: Request): Promise<Response> {
 }
 
 async function handlePost(req: Request): Promise<Response> {
-  let body: { token?: unknown; accion?: unknown; acepta?: unknown };
+  let body: {
+    token?: unknown;
+    accion?: unknown;
+    acepta?: unknown;
+    presupuesto_id?: unknown;
+    aprobadas?: unknown;
+    lineas?: unknown;
+    nombre?: unknown;
+    comentario?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
@@ -145,6 +170,31 @@ async function handlePost(req: Request): Promise<Response> {
     }
     const result = data as { ok: boolean };
     return respond(result, result.ok ? 200 : 404);
+  }
+
+  if (body.accion === 'responder_presupuesto') {
+    const aprobadas = uuidList(body.aprobadas);
+    const lineas = uuidList(body.lineas);
+    const presupuestoId = typeof body.presupuesto_id === 'string' && UUID_RE.test(body.presupuesto_id) ? body.presupuesto_id : null;
+    if (!aprobadas || !lineas || !presupuestoId || typeof body.nombre !== 'string') {
+      return respond({ ok: false, motivo: 'solicitud_invalida' }, 400);
+    }
+    const { data, error } = await supabase.rpc('responder_presupuesto_portal', {
+      p_token: token,
+      p_presupuesto_id: presupuestoId,
+      p_aprobadas: aprobadas,
+      p_lineas: lineas,
+      p_nombre: body.nombre.slice(0, 120),
+      p_comentario: typeof body.comentario === 'string' ? body.comentario.slice(0, 1000) : null,
+      p_ip: clientIp(req),
+      p_user_agent: (req.headers.get('user-agent') ?? '').slice(0, 400),
+    });
+    if (error) {
+      console.error('responder_presupuesto_portal', error.message);
+      return respond({ error: 'No se pudo guardar la respuesta.' }, 500);
+    }
+    // {ok:false, motivo} es una respuesta normal: la página explica qué pasó.
+    return respond(data, 200);
   }
 
   return respond({ error: 'Acción no válida.' }, 400);

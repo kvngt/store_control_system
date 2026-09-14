@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Check, Paintbrush, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import type { WorkOrderPart } from '../../types/database';
+import LineStateBadge from './LineStateBadge';
+import { isApproved } from './lineState';
 
 export interface PartInput {
   descripcion: string;
@@ -37,7 +39,10 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState(EMPTY_DRAFT);
 
-  const totalSale = items.reduce((sum, p) => sum + p.subtotal, 0);
+  const totalSale = items.filter(isApproved).reduce((sum, p) => sum + p.subtotal, 0);
+  const unauthorized = items
+    .filter((p) => p.estado === 'borrador' || p.estado === 'pendiente')
+    .reduce((sum, p) => sum + p.subtotal, 0);
 
   const toInput = (draft: typeof EMPTY_DRAFT): PartInput => ({
     descripcion: draft.descripcion,
@@ -142,20 +147,32 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                   </td>
                 </tr>
               ) : (
-                <tr key={part.id}>
-                  <td data-label={t('common.description')}>{part.descripcion}</td>
+                <tr key={part.id} className={part.estado === 'rechazado' ? 'line-rejected' : undefined}>
+                  <td data-label={t('common.description')}>
+                    <span className="line-desc">{part.descripcion}</span> <LineStateBadge state={part.estado} />
+                  </td>
                   <td data-label={t('common.quantity')}>{part.cantidad}</td>
                   <td data-label={t('common.price')} style={{ textAlign: 'right' }}>${part.precio_venta_unitario.toFixed(2)}</td>
                   <td data-label={t('common.subtotal')} style={{ textAlign: 'right', fontWeight: 600 }}>${part.subtotal.toFixed(2)}</td>
                   <td>
-                    <div style={{ display: 'flex', gap: 2 }}>
-                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => startEdit(part)} disabled={!canEdit}>
-                        <Pencil size={14} />
-                      </button>
-                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => onRemove(part.id, part.descripcion)} disabled={!canEdit}>
-                        <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
-                      </button>
-                    </div>
+                    {part.estado === 'pendiente' ? (
+                      <span className="field-hint" title={t('quotes.lockedHint')}>🔒</span>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 2 }}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm btn-icon"
+                          onClick={() => startEdit(part)}
+                          disabled={!canEdit}
+                          title={part.estado === 'rechazado' ? t('quotes.rejectedHint') : undefined}
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => onRemove(part.id, part.descripcion)} disabled={!canEdit}>
+                          <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               )
@@ -172,6 +189,17 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
               </td>
               <td className="desktop-only"></td>
             </tr>
+            {unauthorized > 0 && (
+              <tr>
+                <td className="desktop-only" colSpan={3} style={{ color: 'var(--color-text-tertiary)' }}>
+                  {t('quotes.unauthorizedTotal')}
+                </td>
+                <td data-label={t('quotes.unauthorizedTotal')} style={{ textAlign: 'right', color: 'var(--color-text-tertiary)' }}>
+                  ${unauthorized.toFixed(2)}
+                </td>
+                <td className="desktop-only"></td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

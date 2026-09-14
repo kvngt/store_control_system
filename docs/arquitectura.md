@@ -37,10 +37,12 @@ avisos), el complemento es [reglas-de-negocio.md](reglas-de-negocio.md).
 | **Push** | Web Push (VAPID) con service worker; app instalable (PWA) |
 | **Correo** | Resend (dominio `reinventa.shop` verificado): avisos automáticos al cliente |
 | **Portal del cliente** | Paquete aparte en `/r/<token>`, sin cuenta; datos por una edge function pública |
+| **Presupuestos** | Estado por línea (borrador → pendiente → aprobado/rechazado); solo lo aprobado se cobra |
 | **Pruebas** | Vitest (unitarias y componentes), pgTAP (base de datos), Playwright (e2e) |
 | **Hosting** | Sitio estático en Hostinger (Apache), dominio `reinventa.shop` |
 
-Unas 24 000 líneas de TypeScript (con pruebas), 4 800 de CSS, 32 migraciones y 21 tablas.
+Unas 26 000 líneas de TypeScript (con pruebas), 5 000 de CSS, 33 migraciones y 22 tablas.
+Cómo se llegó hasta aquí, etapa por etapa: [evolucion.md](evolucion.md).
 
 ---
 
@@ -117,7 +119,8 @@ src/
   features/                      módulos con estado propio, extraídos de las páginas
     workOrders/                  detalle de orden, alta, tablas de labor y repuestos,
                                  firma, bitácora de avances, reporte, comisión estimada,
-                                 enlace del cliente (CustomerLinkCard)
+                                 enlace del cliente (CustomerLinkCard), presupuesto
+                                 (QuoteCard) e insignia de estado de línea
     media/                       captura, grabadores, galería, cola de subida, bandeja
     notifications/               campana, push del dispositivo
     vehicles/                    formulario de vehículo con VIN
@@ -136,7 +139,7 @@ src/
 
   services/                      TODAS las consultas a Supabase, un módulo por dominio
     workOrders, customers, vehicles, finance, commissions, dashboard,
-    media, notifications, customerPortal, reports, search, sedes, users
+    media, notifications, customerPortal, quotes, reports, search, sedes, users
     supabaseService.ts           fachada que re-exporta los anteriores (compatibilidad)
 
   lib/                           lógica sin React
@@ -159,7 +162,7 @@ public/
   .htaccess                      reescritura SPA + tipos PWA para Apache
 
 supabase/
-  migrations/                    32 migraciones, en orden cronológico
+  migrations/                    33 migraciones, en orden cronológico (historia en evolucion.md)
   functions/                     edge functions (Deno)
     create-employee, update-employee, delete-employee   con clave de servicio
     process-outbox, cleanup-storage                     internas, llamadas por la base
@@ -192,15 +195,16 @@ viven en `features/workOrders/` con sus propios hooks.
 
 ## 4. Modelo de datos
 
-21 tablas. El eje es la **sede**: casi todo cuelga de ella y no se mezcla entre
+22 tablas. El eje es la **sede**: casi todo cuelga de ella y no se mezcla entre
 talleres.
 
 ```
 sedes ──┬── perfiles                  usuarios; rol: admin | mecanico | pintor
         ├── clientes ── vehiculos     vehiculos.sede_id derivado por trigger
         ├── ordenes_trabajo ─┬── orden_montos          1:1 · totales y depósito · SOLO ADMIN
-        │                    ├── orden_labor           mano de obra (la sede la lee)
-        │                    ├── orden_repuestos       con precio · SOLO ADMIN
+        │                    ├── orden_labor ────┐     mano de obra (la sede la lee) · estado por línea
+        │                    ├── orden_repuestos ─┤     con precio · SOLO ADMIN · estado por línea
+        │                    ├── presupuestos ◄───┘     evidencia de cada autorización · SOLO ADMIN
         │                    ├── orden_asignaciones ── perfiles
         │                    ├── orden_avances ─┐      bitácora del técnico
         │                    ├── orden_media ◄──┘      fotos, videos, audio (bucket privado)
@@ -243,6 +247,12 @@ de nuevo; lo protege RLS (solo admin). Uno activo por orden (índice único parc
 `clientes.acepta_correos` guarda la baja del cliente; `sedes.email_contacto` y
 `sedes.whatsapp`, el contacto que usan los correos y el portal.
 
+**Cada línea tiene estado** (`borrador`, `pendiente`, `aprobado`, `rechazado`) y
+**solo lo aprobado entra en los totales** — y por lo tanto en el cobro, el costo de
+repuestos y las comisiones. El estado lo cambian únicamente las funciones de
+presupuesto (bandera `restorify.presupuesto`); cada cambio deja una fila en
+`presupuestos` con quién, cómo y cuándo. Ver [presupuestos.md](presupuestos.md).
+
 **Las eliminaciones tienen intenciones distintas.** Borrar un cliente se lleva
 sus vehículos (`CASCADE`); una orden bloquea el borrado del cliente y del vehículo
 (`RESTRICT`): el historial de trabajo no se pierde por accidente. Borrar una
@@ -266,6 +276,9 @@ técnico.
 | | `trg_orden_sede_coherente` | Rechaza órdenes que mezclan sedes |
 | | `trg_order_money_guard` | Técnico: no entrega, no cambia sede/número, no escribe `total_labor` |
 | | `trg_order_technician_guard` | Técnico: solo asignado, orden sin entregar, y solo estado, avance y firma. Firma en la carpeta de su orden (para todos) |
+| | `trg_order_quote_delivery_guard` | No se entrega con un presupuesto esperando respuesta |
+| | `trg_order_portal` | Firma → enlace del cliente y correo de recepción; estatus → correo con espera y vencimiento del enlace |
+| | `trg_order_quote_signature` | La firma de recepción aprueba los borradores |
 | | `trg_order_montos_create` | Crea la fila de `orden_montos` |
 | | `trg_progress_on_status` | Avance a 100 % al finalizar o entregar |
 | | `trg_order_delivery_payment` | Al entregar: cobra el saldo pendiente |
@@ -278,8 +291,10 @@ técnico.
 | | `trg_order_montos_deposit` | Asienta el depósito (o su ajuste) |
 | | `trg_order_montos_delivered_adjustment` | Si cambia el total de una orden entregada, asienta la diferencia |
 | | `trg_order_montos_commissions` | Recalcula comisiones al cambiar totales |
-| `orden_labor` | `trg_labor_totals`, `trg_labor_delivered_guard` | Recalcula totales; técnico no toca orden entregada |
+| `orden_labor` | `trg_labor_totals`, `trg_labor_delivered_guard` | Recalcula totales (solo aprobado); técnico no toca orden entregada |
+| | `trg_labor_quote_guard` | Línea nueva = borrador; pendiente no se edita; el estado solo lo cambia un presupuesto; corregir una rechazada la vuelve a borrador |
 | `orden_repuestos` | `trg_parts_subtotal`, `trg_part_cost_passthrough` | Subtotal y costo = precio |
+| | `trg_parts_quote_guard` | Igual que en mano de obra |
 | | `trg_parts_totals`, `trg_parts_expense_sync` | Totales y ajuste de egreso en orden entregada |
 | `orden_asignaciones` | `trg_assignment_commissions` | Re-reparte la bolsa |
 | | `trg_assignment_owner_immutable` | Una asignación no cambia de orden ni de persona |
@@ -318,6 +333,8 @@ permiten cambiar totales con esa bandera: un `PATCH` directo a la API no la tien
 | `app_schema_version` | todos | Detección de desfase entre build y base |
 | `crear_enlace_cliente`, `regenerar_enlace_cliente`, `revocar_enlace_cliente` | admin | Tarjeta del enlace del cliente |
 | `notificar_cliente_avance` | admin | "Avisar novedades" por correo |
+| `enviar_presupuesto`, `registrar_autorizacion`, `cancelar_presupuesto` | admin | Tarjeta de presupuesto |
+| `ordenes_esperando_autorizacion` | todos | Marca "Esperando autorización" en lista y tablero, sin montos |
 
 > **Antes de calcular algo en el frontend, revisa si un trigger ya lo hace.** Los
 > totales de una orden no se calculan a mano en React: se releen de la base
@@ -392,6 +409,7 @@ trg_order_portal ─► encolar_correo_cliente() ─► cola_envios (email, con 
                                                      ▲
 pg_cron "restorify-outbox" (cada minuto) ────────────┘  reintento si quedó algo pendiente
 pg_cron "restorify-maintenance" (09:00 UTC) ─► purge_old_notifications() + cleanup-storage
+pg_cron "restorify-quote-reminders" (15:00 UTC) ─► recordar_presupuestos_sin_respuesta()
 ```
 
 - **La cola (`cola_envios`) es el único camino de salida.** Lleva push al equipo y
@@ -580,4 +598,4 @@ reproducir. Chrome ≥ 126 y Safari graban MP4.
 
 ---
 
-*Última revisión: septiembre de 2026 (fases 1–4).*
+*Última revisión: septiembre de 2026 (fases 1–5).*

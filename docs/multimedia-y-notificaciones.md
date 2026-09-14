@@ -136,7 +136,9 @@ Settings → Usage después del primer mes.
 
 > Esta parte cubre los avisos **al equipo del taller** (campana y push). Los correos
 > **al cliente** usan la misma cola (`cola_envios`, canal `email`) y el mismo
-> procesador: ver [portal-y-correos.md](portal-y-correos.md).
+> procesador: ver [portal-y-correos.md](portal-y-correos.md). Los avisos de
+> presupuestos (`presupuesto_respondido`, `presupuesto_respondido_cliente`,
+> `presupuesto_sin_respuesta`) usan esta misma vía: ver [presupuestos.md](presupuestos.md).
 
 ### El recorrido de un aviso
 

@@ -132,6 +132,14 @@ interface EmailData {
   orden: { numero: string; estatus: string; fecha_ingreso: string | null; fecha_estimada_entrega: string | null };
   vehiculo: string | null;
   ultimo_estatus_enviado: string | null;
+  presupuesto: {
+    numero: number;
+    estado: string;
+    via: string | null;
+    total_propuesto: number;
+    total_aprobado: number | null;
+    lineas: { descripcion: string; monto: number; estado: string }[];
+  } | null;
 }
 
 /** Resend limita a 2 peticiones por segundo en el plan gratuito. */
@@ -177,6 +185,18 @@ async function sendEmail(job: OutboxJob): Promise<JobResult> {
     }
   }
 
+  if (job.plantilla === 'presupuesto') {
+    if (!ctx.presupuesto || ctx.presupuesto.estado !== 'enviado') {
+      return { estado: 'omitido', detalle: 'El presupuesto ya fue respondido o cancelado.' };
+    }
+    if (!ctx.presupuesto.lineas.some((l) => l.estado === 'pendiente')) {
+      return { estado: 'omitido', detalle: 'El presupuesto no tiene trabajos pendientes.' };
+    }
+  }
+  if (job.plantilla === 'presupuesto_confirmacion' && ctx.presupuesto?.estado !== 'respondido') {
+    return { estado: 'omitido', detalle: 'El presupuesto no tiene una respuesta registrada.' };
+  }
+
   const email = renderEmail(job.plantilla, {
     portalUrl: `${siteUrl}/r/${ctx.token}`,
     cliente: { nombre: ctx.cliente.nombre },
@@ -196,6 +216,16 @@ async function sendEmail(job: OutboxJob): Promise<JobResult> {
     },
     vehiculo: ctx.vehiculo,
     timeZone: Deno.env.get('SHOP_TIMEZONE') || 'America/Chicago',
+    presupuesto: ctx.presupuesto
+      ? {
+          numero: ctx.presupuesto.numero,
+          estado: ctx.presupuesto.estado,
+          via: ctx.presupuesto.via,
+          totalPropuesto: Number(ctx.presupuesto.total_propuesto),
+          totalAprobado: ctx.presupuesto.total_aprobado == null ? null : Number(ctx.presupuesto.total_aprobado),
+          lineas: ctx.presupuesto.lineas,
+        }
+      : null,
   });
   if (!email) return { estado: 'error', detalle: `Plantilla "${job.plantilla}" desconocida.` };
 

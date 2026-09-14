@@ -6,7 +6,7 @@ describía cómo se paga a nadie en el taller.
 ## Cómo se calcula
 
 ```
-base de ganancia = total de la orden − total de repuestos
+base de ganancia = total de la orden − total de repuestos   (solo lo autorizado)
 bolsa            = base × (porcentaje de comisión de la sede / 100)
 por mecánico     = bolsa / número de mecánicos asignados
 ```
@@ -77,6 +77,14 @@ costo de repuestos**. Antes solo se borraban las comisiones: el ingreso se
 quedaba asentado, así que el taller reportaba el cobro completo de un carro que
 seguía en el taller y sin el pasivo de comisión que lo acompaña. Lo conciliado
 contra un estado de cuenta no se toca: ese dinero sí pasó por el banco.
+
+## Solo lo autorizado genera comisión
+
+Desde la fase 5 los totales de una orden suman solo las líneas que el cliente
+**autorizó** ([presupuestos.md](presupuestos.md)). Un trabajo sin autorizar o
+rechazado no entra en la base de la comisión, y la tarjeta "Tu comisión estimada" del
+técnico usa la misma mano de obra autorizada. Si el cliente autoriza algo después de
+la entrega, la comisión pendiente se recalcula sola.
 
 ## Lo que ve el técnico
 

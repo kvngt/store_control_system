@@ -81,6 +81,8 @@ SELECT
   (SELECT count(*) FROM comisiones)                     AS comisiones,
   (SELECT count(*) FROM comision_pagos)                 AS pagos_comision,
   (SELECT count(*) FROM orden_media)                    AS multimedia,
+  (SELECT count(*) FROM presupuestos)                   AS presupuestos,
+  (SELECT count(*) FROM orden_enlaces)                  AS enlaces,
   (SELECT count(*) FROM notificaciones)                 AS avisos,
   (SELECT count(*) FROM cola_envios)                    AS cola,
   -- Estas tres se conservan a propósito:

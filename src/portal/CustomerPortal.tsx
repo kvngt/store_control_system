@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  FileSignature,
   Gauge,
   Fuel,
   Globe,
@@ -21,8 +22,8 @@ import {
 import { applySedeBranding } from '../lib/branding';
 import { formatDuration } from '../lib/media/mime';
 import { telUrl, whatsAppUrl } from '../lib/phone';
-import { fetchPortal, setEmailPreference } from './portal.api';
-import type { PortalMedia, PortalReport, PortalResponse, PortalShop } from './portal.types';
+import { answerQuote, fetchPortal, setEmailPreference } from './portal.api';
+import type { PortalMedia, PortalQuote, PortalReport, PortalResponse, PortalShop } from './portal.types';
 import { initialPortalLanguage, portalStrings, savePortalLanguage, type PortalLanguage } from './strings';
 
 type Strings = (typeof portalStrings)['es'];
@@ -141,7 +142,7 @@ export default function CustomerPortal({ token }: { token: string | null }) {
         <Unavailable state={state.data.estado_enlace} shop={state.data.taller} s={s} />
       )}
 
-      {report && token && <Report report={report} token={token} s={s} language={language} />}
+      {report && token && <Report report={report} token={token} s={s} language={language} onReload={() => load(undefined, true)} />}
     </div>
   );
 }
@@ -188,16 +189,37 @@ function Unavailable({
   );
 }
 
-function Report({ report, token, s, language }: { report: PortalReport; token: string; s: Strings; language: PortalLanguage }) {
+function Report({
+  report,
+  token,
+  s,
+  language,
+  onReload,
+}: {
+  report: PortalReport;
+  token: string;
+  s: Strings;
+  language: PortalLanguage;
+  onReload: () => Promise<void>;
+}) {
   const fmt = useFormatters(language);
   const { orden, vehiculo, taller } = report;
   const reception = report.multimedia.filter((m) => m.origen === 'recepcion');
   const progress = report.multimedia.filter((m) => m.origen === 'avance');
   const vehicleTitle = [vehiculo.anio, vehiculo.marca, vehiculo.modelo].filter(Boolean).join(' ');
+  // La confirmación de una respuesta vive aquí y no en la sección del presupuesto:
+  // al responder, el presupuesto desaparece de la página.
+  const [notice, setNotice] = useState<string | null>(null);
 
   return (
     <div className="portal-body">
       <ShopHeader shop={taller} />
+
+      {notice && (
+        <section className="portal-card portal-notice" role="status">
+          <Check size={18} /> {notice}
+        </section>
+      )}
 
       <section className="portal-card portal-hero">
         <div className="portal-hero-top">
@@ -236,6 +258,21 @@ function Report({ report, token, s, language }: { report: PortalReport; token: s
           </p>
         )}
       </section>
+
+      {/* Lo primero después del estado: es lo único que espera algo del cliente. */}
+      {report.presupuesto && report.presupuesto.lineas.length > 0 && (
+        <QuoteSection
+          key={report.presupuesto.id}
+          quote={report.presupuesto}
+          token={token}
+          s={s}
+          fmt={fmt}
+          onAnswered={async (message) => {
+            if (message) setNotice(message);
+            await onReload();
+          }}
+        />
+      )}
 
       <section className="portal-card">
         <h2 className="portal-section-title">
@@ -400,6 +437,17 @@ function AccountSection({ report, s, fmt }: { report: PortalReport; s: Strings; 
               ))}
             </div>
           )}
+          {(cuenta.no_autorizados ?? []).length > 0 && (
+            <div className="portal-lines portal-not-authorized">
+              <div className="portal-label">{s.notAuthorized}</div>
+              {(cuenta.no_autorizados ?? []).map((line, i) => (
+                <div key={i} className="portal-line">
+                  <span>{line.descripcion}</span>
+                  <span>{fmt.money(line.monto)}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="portal-totals">
             <div className="portal-line is-total">
               <span>{s.total}</span>
@@ -430,6 +478,165 @@ function AccountSection({ report, s, fmt }: { report: PortalReport; s: Strings; 
             )}
           </div>
         </>
+      )}
+      {(report.presupuestos_respondidos ?? []).length > 0 && (
+        <div className="portal-quote-history">
+          <div className="portal-label">{s.historyTitle}</div>
+          <ul>
+            {(report.presupuestos_respondidos ?? []).map((q) => (
+              <li key={q.numero}>
+                <div>
+                  {s.historyItem
+                    .replace('{numero}', String(q.numero))
+                    .replace('{via}', s.via[q.via] ?? q.via)
+                    .replace('{fecha}', fmt.dateTime(q.respondido_en))}
+                  {q.nombre && q.via !== 'firma_recepcion' && ` ${s.historyBy.replace('{nombre}', q.nombre)}`}
+                </div>
+                <div className="portal-muted">
+                  {s.historyCounts
+                    .replace('{autorizados}', String(q.autorizados))
+                    .replace('{rechazados}', String(q.rechazados))
+                    .replace('{total}', fmt.money(q.total_aprobado ?? 0))}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * El presupuesto que espera la respuesta del cliente. Nada viene marcado: autorizar
+ * es una decisión explícita, línea por línea, con su nombre como constancia.
+ */
+function QuoteSection({
+  quote,
+  token,
+  s,
+  fmt,
+  onAnswered,
+}: {
+  quote: PortalQuote;
+  token: string;
+  s: Strings;
+  fmt: Formatters;
+  onAnswered: (message?: string) => Promise<void>;
+}) {
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [name, setName] = useState('');
+  const [comment, setComment] = useState('');
+  const [sending, setSending] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const total = quote.lineas.filter((l) => selected.has(l.id)).reduce((sum, l) => sum + Number(l.monto), 0);
+  const nameOk = name.trim().length >= 2;
+
+  const submit = async (approvedIds: string[]) => {
+    const question =
+      approvedIds.length === 0
+        ? s.confirmRejectAll
+        : s.confirmAuthorize.replace('{count}', String(approvedIds.length)).replace('{total}', fmt.money(total));
+    if (!confirm(question)) return;
+
+    setSending(true);
+    setMessage(null);
+    try {
+      const result = await answerQuote(token, {
+        quoteId: quote.id,
+        approvedIds,
+        shownIds: quote.lineas.map((l) => l.id),
+        name: name.trim(),
+        comment: comment.trim(),
+      });
+      if (result.ok) {
+        await onAnswered(s.answered);
+        return;
+      }
+      setMessage({ ok: false, text: s.answerErrors[result.motivo] ?? s.answerErrors.solicitud_invalida });
+      // El presupuesto ya no es el que el cliente tiene en pantalla: se vuelve a pedir.
+      if (result.motivo !== 'nombre_requerido') await onAnswered();
+    } catch {
+      setMessage({ ok: false, text: s.answerErrors.red });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <section className="portal-card portal-quote is-highlighted" id="presupuesto">
+      <h2 className="portal-section-title">
+        <FileSignature size={18} /> {s.quoteTitle}
+      </h2>
+      <p className="portal-muted">{s.quoteSentOn.replace('{fecha}', fmt.date(quote.enviado_en))}</p>
+      <p>{s.quoteIntro}</p>
+
+      <div className="portal-quote-select">
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSelected(new Set(quote.lineas.map((l) => l.id)))}>
+          {s.selectAll}
+        </button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSelected(new Set())}>
+          {s.selectNone}
+        </button>
+      </div>
+
+      <ul className="portal-quote-lines">
+        {quote.lineas.map((line) => (
+          <li key={line.id}>
+            <label className={'portal-quote-line' + (selected.has(line.id) ? ' is-selected' : '')}>
+              <input type="checkbox" checked={selected.has(line.id)} onChange={() => toggle(line.id)} />
+              <span className="portal-quote-desc">
+                {line.descripcion}
+                {line.cantidad > 1 && (
+                  <span className="portal-muted">
+                    {' · '}
+                    {s.quantityTimes.replace('{cantidad}', String(line.cantidad)).replace('{precio}', fmt.money(line.precio_unitario))}
+                  </span>
+                )}
+              </span>
+              <span className="portal-quote-amount">{fmt.money(line.monto)}</span>
+            </label>
+          </li>
+        ))}
+      </ul>
+
+      <div className="portal-line is-balance">
+        <span>{s.selectedTotal}</span>
+        <span>{fmt.money(total)}</span>
+      </div>
+
+      <div className="portal-field">
+        <label htmlFor="quote-name">{s.yourName}</label>
+        <input id="quote-name" className="form-input" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" maxLength={120} />
+        <p className="portal-muted">{s.yourNameHint}</p>
+      </div>
+      <div className="portal-field">
+        <label htmlFor="quote-comment">{s.comment}</label>
+        <textarea id="quote-comment" className="form-input form-textarea" value={comment} onChange={(e) => setComment(e.target.value)} maxLength={1000} />
+      </div>
+
+      <div className="portal-actions">
+        <button type="button" className="btn btn-primary" disabled={sending || selected.size === 0 || !nameOk} onClick={() => void submit([...selected])}>
+          {s.authorize}
+          {selected.size > 0 && ` (${selected.size})`}
+        </button>
+        <button type="button" className="btn btn-secondary" disabled={sending || !nameOk} onClick={() => void submit([])}>
+          {s.rejectAll}
+        </button>
+      </div>
+      {message && (
+        <p className={message.ok ? 'portal-success' : 'portal-error'} role="status">
+          {message.text}
+        </p>
       )}
     </section>
   );

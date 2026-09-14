@@ -370,6 +370,7 @@ export default function WorkOrders() {
               <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                 <span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span>
                 <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
+                {order.esperando_autorizacion && <span className="badge badge-waiting-auth">{t('quotes.waitingBadge')}</span>}
               </div>
               <div className="workorder-card-progress">
                 <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
@@ -437,7 +438,12 @@ export default function WorkOrders() {
                     </div>
                   </td>
                   <td><span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span></td>
-                  <td><span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span></td>
+                  <td>
+                    <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
+                    {order.esperando_autorizacion && (
+                      <span className="badge badge-waiting-auth" style={{ marginLeft: 4 }}>{t('quotes.waitingBadge')}</span>
+                    )}
+                  </td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: 100 }}>
                       <div className="progress-bar" style={{ flex: 1, height: '6px' }}>

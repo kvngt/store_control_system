@@ -1,9 +1,10 @@
 # Restorify — Sistema de Administración de Talleres
 
 Gestión de talleres mecánicos y de pintura con varias sedes: clientes, vehículos,
-órdenes de trabajo con tablero Kanban, fotos, videos y notas de voz, finanzas con
-importación de estados de cuenta, comisiones del personal y notificaciones en
-tiempo real y push al teléfono.
+órdenes de trabajo con tablero Kanban, fotos, videos y notas de voz, presupuestos que
+el cliente autoriza línea por línea, un enlace web para que el cliente siga su
+vehículo sin crear cuenta, correos automáticos, finanzas con importación de estados
+de cuenta, comisiones del personal y notificaciones en tiempo real y push al teléfono.
 
 Frontend en React + Vite + TypeScript servido como sitio estático; todo el backend
 es Supabase (Postgres con Row Level Security, Auth, Storage, Realtime, Edge
@@ -19,6 +20,7 @@ Toda la documentación vigente está en **[docs/](docs/README.md)**:
 | Probar la plataforma completa | [docs/pruebas.md](docs/pruebas.md) |
 | Desplegar | [docs/deployment.md](docs/deployment.md) |
 | Usar la aplicación | [docs/manual-usuario.md](docs/manual-usuario.md) |
+| Entender cómo evolucionó y por qué | [docs/evolucion.md](docs/evolucion.md) |
 | Modificar el código con un agente de IA | [docs/ai-context.md](docs/ai-context.md) |
 
 ## Stack
@@ -48,7 +50,7 @@ npm run dev                  # http://localhost:5173
 | `npm run build` | `tsc -b && vite build` → `dist/` |
 | `npm run lint` | oxlint |
 | `npm test` | Pruebas unitarias y de componentes (Vitest) |
-| `npm run test:db` | Pruebas de base de datos (pgTAP; requiere Docker y `npx supabase start`) |
+| `npm run test:db` | Pruebas de base de datos (pgTAP; requiere Docker y `npx supabase start`, ver [docs/pruebas.md](docs/pruebas.md#24-para-qué-hace-falta-docker)) |
 | `npm run test:e2e` | Pruebas end-to-end (Playwright; credenciales en `.env.test.local`) |
 | `npm run db:check` | Qué migraciones faltan en el proyecto enlazado |
 

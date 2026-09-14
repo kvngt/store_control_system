@@ -3,6 +3,7 @@ import type { OrderMedia } from './media.types';
 import type { Customer } from './customer.types';
 import type { UserProfile } from './auth.types';
 import type { Vehicle } from './vehicle.types';
+import type { LineState } from './quote.types';
 
 export interface WorkOrder {
   id: string;
@@ -44,6 +45,8 @@ export interface WorkOrder {
   repuestos_resumen?: PartSummary[];
   labor_items?: LaborItem[];
   avances?: OrderProgressUpdate[];
+  /** Hay un presupuesto enviado esperando la respuesta del cliente. */
+  esperando_autorizacion?: boolean;
 }
 
 /** Totales y depósito de una orden. Solo administradores (ver `orden_montos`). */
@@ -61,6 +64,7 @@ export interface PartSummary {
   id: string;
   descripcion: string;
   cantidad: number;
+  estado?: LineState;
 }
 
 export interface OrderProgressUpdate {
@@ -78,6 +82,10 @@ export interface LaborItem {
   orden_id: string;
   descripcion: string;
   costo: number;
+  /** Solo `aprobado` se cobra. Ausente en datos anteriores a la fase 5 = aprobado. */
+  estado?: LineState;
+  presupuesto_id?: string | null;
+  creado_en?: string;
 }
 
 export interface OrderAssignment {
@@ -98,6 +106,9 @@ export interface WorkOrderPart {
   costo_unitario: number;
   precio_venta_unitario: number;
   subtotal: number;
+  estado?: LineState;
+  presupuesto_id?: string | null;
+  creado_en?: string;
 }
 
 export interface WorkOrderInput {

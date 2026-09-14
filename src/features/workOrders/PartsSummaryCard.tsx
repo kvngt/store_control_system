@@ -1,6 +1,7 @@
 import { Package } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import type { PartSummary } from '../../types/database';
+import LineStateBadge from './LineStateBadge';
 
 /**
  * Los repuestos de una orden como los ve un mecánico o pintor: qué pieza y
@@ -32,8 +33,10 @@ export default function PartsSummaryCard({ items }: { items: PartSummary[] }) {
       ) : (
         <ul className="parts-summary-list">
           {items.map((part) => (
-            <li key={part.id} className="parts-summary-item">
-              <span>{part.descripcion}</span>
+            <li key={part.id} className={'parts-summary-item' + (part.estado === 'rechazado' ? ' line-rejected' : '')}>
+              <span>
+                <span className="line-desc">{part.descripcion}</span> <LineStateBadge state={part.estado} />
+              </span>
               <span className="parts-summary-qty">× {part.cantidad}</span>
             </li>
           ))}

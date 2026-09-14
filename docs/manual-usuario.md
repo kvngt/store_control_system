@@ -79,6 +79,9 @@ los técnicos, por eso es el único dinero de la orden que ellos ven.
 **Comisión.** La parte de la mano de obra que le toca a cada técnico asignado
 cuando la orden se entrega.
 
+**Presupuesto.** Los trabajos que se le presentan al cliente para que los autorice.
+**Lo que el cliente no autoriza no se hace ni se cobra.**
+
 ---
 
 ## 3. Entrar al sistema
@@ -344,6 +347,11 @@ obra lleva descripción y costo. Cada repuesto lleva descripción, cantidad y
 precio. Los repuestos se cobran a lo que costaron: el taller gana en la mano de
 obra.
 
+Lo que cotizas aquí queda **sin autorizar** hasta que el cliente **firme la
+recepción**: con su firma queda autorizado y empieza a contar en el total.
+
+<!-- IMAGEN: formulario de nueva orden con la nota "Se cobran cuando el cliente firma la recepción o autoriza el presupuesto" -->
+
 Al guardar, el sistema genera el número de orden y abre su detalle. **No hace
 falta esperar a que suban las fotos**: siguen subiendo en segundo plano y puedes
 seguir usando la app (sección 9).
@@ -380,6 +388,18 @@ de la inspección 360°.
 **Mano de obra.** Las líneas del trabajo cotizado. Un administrador las agrega,
 edita y quita; los totales se recalculan solos. Un técnico las ve sin poder
 cambiarlas.
+
+Cada línea puede llevar una insignia:
+
+| Insignia | Qué significa | ¿Se cobra? | ¿Se hace? |
+|---|---|---|---|
+| *(sin insignia)* | Autorizada por el cliente | Sí | Sí |
+| **Sin autorizar** | Se agregó y el cliente todavía no la ve | No | Todavía no |
+| **Esperando al cliente** | Está en un presupuesto enviado; no se puede editar | No | Todavía no |
+| **No realizar** (tachada) | El cliente no la autorizó | No | **No** |
+
+El total de la tabla suma **solo lo autorizado**; lo que falta autorizar aparece
+debajo, aparte.
 
 **Repuestos.**
 - *Administrador*: la tabla completa con cantidades y precios.
@@ -478,6 +498,54 @@ al minuto le llega un correo al cliente con el enlace.
 **Historial.** Debajo, la tarjeta lista cada correo con su estado: **Programado**,
 **Enviado**, **No enviado** (con el motivo, por ejemplo "ya recibió el aviso de
 este estado") o **Error**.
+
+### Presupuestos: lo que el cliente autoriza
+
+Cuando agregas trabajos después de la recepción (el mecánico encontró algo más, el
+cliente pidió otro servicio), quedan **sin autorizar**. La tarjeta **Presupuesto**
+del detalle de la orden te ofrece dos caminos:
+
+<!-- IMAGEN: tarjeta "Presupuesto" con "Trabajos sin autorizar" y los botones Enviar presupuesto / Registrar autorización -->
+
+**A. Enviar presupuesto al cliente.** Le llega un correo con los trabajos y el total
+y un botón a su enlace. Ahí marca **línea por línea** lo que autoriza, escribe su
+nombre y confirma. Mientras tanto:
+
+- Las líneas dicen **Esperando al cliente** y no se pueden editar (él está viendo esos
+  montos). Si necesitas corregir algo, **Cancelar presupuesto**, corrige y vuelve a
+  enviar.
+- La orden muestra **Esperando autorización** en la lista y en el tablero.
+- Si agregas otro trabajo, **Agregar al presupuesto y reenviar**: el cliente recibe un
+  solo correo con todo. Si ya tenía la página abierta, se le pide revisarla de nuevo.
+- Si el cliente no tiene correo, el sistema te lo dice: mándale el enlace con
+  **Enviar por WhatsApp** (tarjeta *Enlace del cliente*).
+- Si pasan 24 horas sin respuesta, los administradores reciben un aviso.
+
+<!-- IMAGEN: el portal del cliente con la sección "Presupuesto por autorizar", casillas por línea y el campo "Su nombre" -->
+
+**B. Registrar autorización.** El cliente te respondió **por teléfono, en persona o
+por WhatsApp**. Pulsa **Registrar autorización**: aparecen los trabajos, todos
+marcados; **desmarca lo que no autorizó**, elige cómo te respondió y quién autorizó,
+agrega una nota si hace falta y **Registrar**. Al cliente le llega un correo con lo
+que quedó registrado, para que pueda corregirte si algo no coincide.
+
+<!-- IMAGEN: diálogo "Trabajos autorizados por el cliente" -->
+
+**Cuando el cliente responde** (por cualquiera de los dos caminos):
+
+- Lo marcado queda autorizado y **suma al total**; lo demás queda **No realizar**.
+- Los técnicos asignados reciben el aviso "Trabajos autorizados · ORD-…" con qué hacer
+  y qué no.
+- Si respondió desde su enlace, tú recibes "El cliente respondió el presupuesto" con
+  su comentario.
+- La tarjeta **Presupuesto** guarda cada respuesta: cómo respondió, quién, cuándo y
+  cuánto autorizó.
+
+**Si el cliente cambia de opinión** sobre algo que rechazó, edita esa línea (aunque
+sea el mismo precio): vuelve a **Sin autorizar** y puedes presentarla de nuevo.
+
+> **No se puede entregar** una orden con un presupuesto esperando respuesta. Registra
+> la autorización o cancela el presupuesto primero.
 
 ### Orden entregada
 
@@ -861,6 +929,8 @@ actualizarla.
 | Asignar técnicos | ✅ | Solo unirse él mismo |
 | Reporte PDF y enviar al cliente | ✅ | ❌ |
 | Enlace del cliente: ver, compartir, cambiar, avisar novedades | ✅ | ❌ |
+| Ver si cada trabajo está autorizado, esperando o rechazado | ✅ | ✅ |
+| Enviar presupuestos, registrar autorizaciones, cancelar | ✅ | ❌ |
 | Órdenes: **eliminar** | ✅ | ❌ |
 | Kanban: mover tarjetas | Todas | Solo las suyas, excepto a Entregado |
 | Finanzas y Comisiones | ✅ | ❌ |
@@ -899,7 +969,17 @@ se registra de nuevo.
 
 **Al finalizar una orden**, el avance pasa a 100 % y se avisa a administración.
 
-**Al firmar la recepción**, se crea el enlace del cliente y, si tiene correo, le
+**Al firmar la recepción**, lo que estaba cotizado queda **autorizado** y empieza a
+contar en el total.
+
+**Al agregar un trabajo** después de la firma, queda sin autorizar: no se cobra
+hasta que el cliente lo autorice.
+
+**Al responder un presupuesto**, lo autorizado suma al total (y si la orden ya se
+entregó, se registra el ajuste en Finanzas); los técnicos reciben qué hacer y qué no,
+y al cliente le llega la constancia.
+
+**Al firmar la recepción**, además, se crea el enlace del cliente y, si tiene correo, le
 llega el aviso de ingreso.
 
 **Al cambiar el estado de una orden**, si el cliente tiene correo, le llega el aviso
@@ -920,6 +1000,26 @@ nunca reciban el mismo número.
 ---
 
 ## 18. Problemas comunes
+
+**«El total no incluye un trabajo que agregué.»**
+Mira la insignia de la línea: si dice **Sin autorizar** o **Esperando al cliente**,
+todavía no se cobra. Envía el presupuesto o registra la autorización.
+
+**«No me deja editar ni borrar una línea.»**
+Está **Esperando al cliente**. Cancela el presupuesto, corrige y vuelve a enviarlo.
+
+**«No me deja entregar la orden.»**
+Tiene un presupuesto esperando respuesta. Registra la autorización (si el cliente ya
+te respondió) o cancela el presupuesto.
+
+**«Soy técnico: ¿hago este trabajo?»**
+Si la línea no tiene insignia, está autorizada. **Sin autorizar** y **Esperando al
+cliente**: todavía no. **No realizar**: no.
+
+**«El cliente dice que autorizó y no aparece.»**
+Revisa la tarjeta **Presupuesto** y el historial de correos de la tarjeta *Enlace del
+cliente*. Si el correo salió pero no respondió, pregúntale por teléfono y usa
+**Registrar autorización**.
 
 **«El cliente no recibió el correo.»**
 Abre la orden y mira el historial de la tarjeta **Enlace del cliente**:

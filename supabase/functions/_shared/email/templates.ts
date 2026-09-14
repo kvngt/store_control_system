@@ -8,7 +8,9 @@
 // demás —precios, fotos, firma— vive detrás de ese enlace, que se puede revocar.
 // Un correo reenviado o una bandeja comprometida no exponen la cuenta del cliente.
 
-export type EmailTemplate = 'recepcion' | 'estatus' | 'avance';
+export type EmailTemplate = 'recepcion' | 'estatus' | 'avance' | 'presupuesto' | 'presupuesto_confirmacion';
+
+const TEMPLATES: readonly string[] = ['recepcion', 'estatus', 'avance', 'presupuesto', 'presupuesto_confirmacion'];
 
 /** Estados de la orden que se anuncian al cliente. */
 export const ANNOUNCED_STATUSES = ['en_proceso', 'espera_repuestos', 'finalizado', 'entregado'] as const;
@@ -37,6 +39,19 @@ export interface EmailContext {
   vehiculo: string | null;
   /** Zona horaria del taller, para las fechas. */
   timeZone?: string;
+  /** Solo para `presupuesto` y `presupuesto_confirmacion`. */
+  presupuesto?: QuoteEmailData | null;
+}
+
+export interface QuoteEmailData {
+  numero: number;
+  /** enviado | respondido | cancelado */
+  estado: string;
+  /** Cómo respondió: cliente_portal, admin_telefono, admin_presencial, admin_whatsapp. */
+  via?: string | null;
+  totalPropuesto: number;
+  totalAprobado?: number | null;
+  lineas: { descripcion: string; monto: number; estado: string }[];
 }
 
 export interface RenderedEmail {
@@ -88,6 +103,16 @@ function formatDate(iso: string | null | undefined, timeZone: string): string | 
   }
 }
 
+const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const money = (value: number | null | undefined) => usd.format(Number(value ?? 0));
+
+const VIA_TEXT: Record<string, string> = {
+  cliente_portal: 'desde su enlace',
+  admin_telefono: 'por teléfono',
+  admin_presencial: 'en el taller',
+  admin_whatsapp: 'por WhatsApp',
+};
+
 function firstName(name: string | null): string | null {
   const first = (name || '').trim().split(/\s+/)[0];
   return first || null;
@@ -98,6 +123,8 @@ interface Copy {
   preheader: string;
   heading: string;
   paragraphs: string[];
+  /** Trabajos con su monto, debajo de los párrafos. El último es el total. */
+  items?: { label: string; amount: string }[];
   button: string;
 }
 
@@ -158,6 +185,47 @@ function copyFor(template: EmailTemplate, ctx: EmailContext): Copy | null {
       const copy = byStatus[status];
       return copy ? { ...copy, button: 'Ver estado del vehículo' } : null;
     }
+    case 'presupuesto': {
+      const quote = ctx.presupuesto;
+      const lines = (quote?.lineas ?? []).filter((l) => l.estado === 'pendiente');
+      // Ya respondido o cancelado mientras el correo esperaba: no se manda.
+      if (!quote || quote.estado !== 'enviado' || lines.length === 0) return null;
+      const total = lines.reduce((sum, l) => sum + Number(l.monto), 0);
+      return {
+        subject: `Presupuesto para su ${vehicle} · ${ctx.orden.numero}`,
+        preheader: `${lines.length} trabajo(s) por ${money(total)} esperan su autorización.`,
+        heading: 'Tiene un presupuesto por autorizar',
+        paragraphs: [
+          `${shop} preparó un presupuesto para su ${vehicle}. En el enlace puede autorizar cada trabajo por separado: solo realizaremos lo que autorice.`,
+        ],
+        items: [...lines.map((l) => ({ label: l.descripcion, amount: money(l.monto) })), { label: 'Total', amount: money(total) }],
+        button: 'Revisar y autorizar',
+      };
+    }
+    case 'presupuesto_confirmacion': {
+      const quote = ctx.presupuesto;
+      if (!quote || quote.estado !== 'respondido') return null;
+      const approved = quote.lineas.filter((l) => l.estado === 'aprobado');
+      const rejected = quote.lineas.filter((l) => l.estado === 'rechazado');
+      const via = quote.via ? VIA_TEXT[quote.via] : null;
+      const byShop = !!quote.via && quote.via !== 'cliente_portal';
+      const approvedTotal = quote.totalAprobado ?? approved.reduce((sum, l) => sum + Number(l.monto), 0);
+      return {
+        subject: `${byShop ? 'Registramos su autorización' : 'Recibimos su respuesta'} · ${ctx.orden.numero}`,
+        preheader: approved.length ? `Autorizó ${approved.length} trabajo(s) por ${money(approvedTotal)}.` : 'No autorizó ningún trabajo.',
+        heading: approved.length ? 'Estos son los trabajos que autorizó' : 'No autorizó ningún trabajo',
+        paragraphs: [
+          byShop
+            ? `${shop} registró su respuesta al presupuesto${via ? ` ${via}` : ''}. Si algo no coincide con lo que acordó, responda a este correo o llame al taller.`
+            : 'Guardamos su respuesta al presupuesto. Solo realizaremos los trabajos que autorizó.',
+          ...(rejected.length ? [`No autorizados: ${rejected.map((l) => l.descripcion).join(', ')}.`] : []),
+        ],
+        items: approved.length
+          ? [...approved.map((l) => ({ label: l.descripcion, amount: money(l.monto) })), { label: 'Total autorizado', amount: money(approvedTotal) }]
+          : undefined,
+        button: 'Ver su orden',
+      };
+    }
     case 'avance':
       return {
         subject: `Novedades de su ${vehicle} · ${ctx.orden.numero}`,
@@ -171,8 +239,19 @@ function copyFor(template: EmailTemplate, ctx: EmailContext): Copy | null {
   }
 }
 
+function renderItems(items: Copy['items']): string {
+  if (!items?.length) return '';
+  const rows = items
+    .map((item, i) => {
+      const weight = i === items.length - 1 ? 'font-weight:700;' : '';
+      return `<tr><td style="padding:8px 0;font-size:15px;border-top:1px solid #EDEDF0;${weight}">${escapeHtml(item.label)}</td><td align="right" style="padding:8px 0 8px 12px;font-size:15px;white-space:nowrap;border-top:1px solid #EDEDF0;${weight}">${escapeHtml(item.amount)}</td></tr>`;
+    })
+    .join('');
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 12px;border-collapse:collapse;">${rows}</table>`;
+}
+
 export function renderEmail(template: string, ctx: EmailContext): RenderedEmail | null {
-  if (!['recepcion', 'estatus', 'avance'].includes(template)) return null;
+  if (!TEMPLATES.includes(template)) return null;
   const copy = copyFor(template as EmailTemplate, ctx);
   if (!copy) return null;
 
@@ -207,6 +286,7 @@ ${logo ? `<img src="${escapeHtml(logo)}" alt="${escapeHtml(ctx.taller.nombre)}" 
 <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:#111111;">${escapeHtml(copy.heading)}</h1>
 <p style="margin:0 0 12px;font-size:16px;line-height:1.55;">${escapeHtml(greeting)}</p>
 ${copy.paragraphs.map((p) => `<p style="margin:0 0 12px;font-size:16px;line-height:1.55;">${escapeHtml(p)}</p>`).join('\n')}
+${renderItems(copy.items)}
 </td></tr>
 <tr><td style="padding:12px 28px 8px;">
 <a href="${escapeHtml(portal)}" style="display:inline-block;background:${color};color:${buttonText};text-decoration:none;font-weight:700;font-size:16px;padding:14px 24px;border-radius:8px;">${escapeHtml(copy.button)}</a>
@@ -231,6 +311,7 @@ ${ctx.taller.email ? '<p style="margin:0 0 6px;font-size:13px;line-height:1.5;co
     copy.heading,
     '',
     ...copy.paragraphs,
+    ...(copy.items ? ['', ...copy.items.map((item) => `- ${item.label}: ${item.amount}`)] : []),
     '',
     `${copy.button}: ${portal}`,
     '',

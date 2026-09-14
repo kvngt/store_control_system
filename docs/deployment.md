@@ -256,12 +256,16 @@ Diez minutos. Si algo falla, [pruebas.md](pruebas.md) tiene el detalle de cada c
 - [ ] Con un cliente de prueba con tu correo: firmar la recepción → en ~2 minutos
       llega "Recibimos su…"; el botón abre `reinventa.shop/r/…` con la orden.
 - [ ] La tarjeta **Enlace del cliente** muestra el correo como **Enviado**.
+- [ ] Agregar un trabajo a esa orden → **Enviar presupuesto** → llega el correo; autorizarlo desde
+      el enlace → la orden suma el trabajo y llega "Recibimos su respuesta".
 - [ ] `curl -s "https://<ref>.supabase.co/functions/v1/portal?token=$(printf '0%.0s' {1..64})"`
       responde `{"estado_enlace":"no_encontrado"}` con HTTP 404.
 - [ ] `https://reinventa.shop/sw.js` responde con `Cache-Control: no-cache` (DevTools → Network).
 - [ ] Tareas programadas activas:
   ```sql
   SELECT jobname, schedule, active FROM cron.job WHERE jobname LIKE 'restorify-%';
+  -- restorify-outbox (cada minuto), restorify-maintenance (09:00 UTC),
+  -- restorify-quote-reminders (15:00 UTC)
   ```
 - [ ] Borrar la orden de prueba.
 

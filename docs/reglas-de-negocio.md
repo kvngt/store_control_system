@@ -19,8 +19,9 @@ solo en la interfaz, se dice.
 5. [Multimedia de la orden](#5-multimedia-de-la-orden)
 6. [Notificaciones](#6-notificaciones)
 7. [Portal del cliente y correos](#7-portal-del-cliente-y-correos)
-8. [Retención y limpieza](#8-retención-y-limpieza)
-9. [Riesgos conocidos y decisiones abiertas](#9-riesgos-conocidos-y-decisiones-abiertas)
+8. [Presupuestos y autorización](#8-presupuestos-y-autorización)
+9. [Retención y limpieza](#9-retención-y-limpieza)
+10. [Riesgos conocidos y decisiones abiertas](#10-riesgos-conocidos-y-decisiones-abiertas)
 
 ---
 
@@ -57,6 +58,8 @@ avance se conserva y el técnico puede corregirlo.
   sí mismo y **no registra depósito, mano de obra ni repuestos**: registra la
   recepción (cliente, vehículo, fotos, notas, gasolina, millas) y un admin cotiza
   después. Si el técnico enviara esos campos igual, la base los ignora.
+- Lo que un admin cotiza al crear la orden nace **sin autorizar** y se autoriza
+  cuando el cliente **firma la recepción** (sección 8).
 - El número `ORD-AAAA-###` se genera de forma atómica: dos órdenes simultáneas
   nunca reciben el mismo.
 - La orden y sus líneas se crean en **una sola transacción**: o entra todo, o nada.
@@ -85,7 +88,8 @@ cuenta.
 
 ## 2. El dinero que se asienta solo
 
-Nadie registra a mano el dinero de una orden. Estos movimientos los crea la base:
+Nadie registra a mano el dinero de una orden. Estos movimientos los crea la base, y
+**todos cuentan solo lo que el cliente autorizó** (sección 8):
 
 | Cuándo | Movimiento en Finanzas | Categoría |
 |---|---|---|
@@ -108,8 +112,10 @@ Nadie registra a mano el dinero de una orden. Estos movimientos los crea la base
   Así, entregar → des-entregar → volver a entregar deja lo cobrado en el total.
 - **El depósito no se puede cambiar en una orden entregada**: esa orden ya cobró
   su total, y la reversión usa el depósito como el monto al que volver.
-- **Los totales los calcula el sistema.** Mano de obra = suma de sus líneas;
-  repuestos = cantidad × precio; total = mano de obra + repuestos. Nadie puede
+- **Los totales los calcula el sistema, con lo autorizado.** Mano de obra = suma de
+  sus líneas **aprobadas**; repuestos = cantidad × precio de los **aprobados**;
+  total = mano de obra + repuestos. El costo de repuestos al entregar también cuenta
+  solo lo aprobado. Nadie puede
   escribir un total a mano, ni siquiera un admin por la API.
 - **Los repuestos son de traspaso**: el costo es igual al precio. El taller no gana
   en las piezas; su ganancia es la mano de obra.
@@ -178,6 +184,9 @@ mismos permisos ("técnico"); cambia el tipo de tarea.
 | Generar y compartir el reporte | ✅ | ❌ | ❌ |
 | Ver, crear, cambiar o desactivar el **enlace del cliente** | ✅ | ❌ | ❌ |
 | **Avisar novedades** al cliente por correo | ✅ | ❌ | ❌ |
+| Ver el **estado de cada línea** (sin autorizar, esperando, autorizada, no realizar) | ✅ | ✅ | ✅ |
+| **Enviar presupuesto**, **registrar autorización**, cancelar presupuesto | ✅ | ❌ | ❌ |
+| Cambiar el estado de una línea con un UPDATE directo | ❌ | ❌ | ❌ |
 | Mover su tarjeta en el Kanban | ✅ todas | ✅ (excepto a o desde Entregado) | ❌ |
 
 **Toda esta tabla la impone la base de datos** (migración `20260922000000`), con
@@ -254,7 +263,9 @@ por técnico = bolsa ÷ técnicos asignados, en centavos, residuo a los primeros
 | Un **técnico** agrega un avance | Admins de la sede | "Nuevo avance · ORD-…" con su nota |
 | Una orden pasa a **Finalizado** | Admins de la sede | "Lista para entregar · ORD-…" |
 | Se genera tu comisión (al entregar) | El técnico | "Comisión generada · ORD-… $175.00" |
-| (Fase 5) El cliente autoriza o rechaza un presupuesto | Técnicos / admins | pendiente |
+| Se responde un presupuesto (cliente, admin o firma de recepción) | Técnicos asignados | "Trabajos autorizados · ORD-…" / "Presupuesto rechazado · ORD-…" con "Autorizado: … No realizar: …" |
+| El **cliente** responde un presupuesto desde su enlace | Admins de la sede | "El cliente respondió el presupuesto · ORD-… Autorizó 2 de 3 ($450.00)" y su comentario |
+| Un presupuesto lleva **más de 24 horas** sin respuesta | Admins de la sede | "Presupuesto sin respuesta · ORD-…" (una vez al día, 15:00 UTC) |
 
 ### Reglas
 
@@ -297,7 +308,9 @@ Detalle técnico: [portal-y-correos.md](portal-y-correos.md).
 | Vehículo (placa, color, últimos 6 del VIN) | VIN completo |
 | Recepción: fecha, millaje, gasolina, observaciones, fotos visibles, firma | Archivos internos (no publicados) |
 | Fotos, videos y notas de voz de avances **publicados** | El texto de los avances (notas del técnico) |
-| Mano de obra y repuestos a precio de venta, total, depósito, pagado, saldo | Costo de repuestos para el taller |
+| Mano de obra y repuestos **autorizados** a precio de venta, total, depósito, pagado, saldo | Costo de repuestos para el taller |
+| El presupuesto que espera su respuesta, línea por línea | La evidencia completa (IP, navegador, nota del admin) |
+| Lo que no autorizó (tachado, no se cobra) y su historial de respuestas | Borradores que el admin no ha enviado |
 | Contacto del taller | Datos de otras órdenes o clientes |
 
 Lo **pagado** es la suma con signo de los movimientos "pago de cliente" de la orden
@@ -310,6 +323,8 @@ Lo **pagado** es la suma con signo de los movimientos "pago de cliente" de la or
 | **Recepción** | La primera vez que se firma la recepción | 2 minutos |
 | **Cambio de estado** | Pasa a en proceso, espera de repuestos, finalizado ("listo para recoger") o entregado | 3 minutos |
 | **Novedades** | Un admin pulsa "Avisar novedades" (después de publicar fotos o videos) | 1 minuto |
+| **Presupuesto** | Un admin pulsa "Enviar presupuesto" | 1 minuto (agrupa si se envía de nuevo) |
+| **Constancia de respuesta** | Se responde un presupuesto desde el enlace o lo registra un admin | Inmediato |
 
 - Solo si el cliente tiene un **correo válido** y **no se dio de baja**.
 - Cambios de estado dentro de la espera se **agrupan** en un solo correo con el
@@ -329,7 +344,54 @@ Lo **pagado** es la suma con signo de los movimientos "pago de cliente" de la or
 
 ---
 
-## 8. Retención y limpieza
+## 8. Presupuestos y autorización
+
+Detalle técnico: [presupuestos.md](presupuestos.md).
+
+### La regla
+
+**Lo que el cliente no autoriza no se hace ni se cobra.** Cada línea de mano de obra
+o repuesto tiene un estado:
+
+| Estado | Significa | Se cobra | Se edita |
+|---|---|---|---|
+| **Sin autorizar** (borrador) | Un admin la agregó | No | Sí |
+| **Esperando al cliente** (pendiente) | Está en un presupuesto enviado | No | No |
+| **Autorizada** | El cliente la autorizó | Sí | Sí (admin) |
+| **No realizar** (rechazada) | El cliente no la autorizó | No | Sí: al corregirla vuelve a "sin autorizar" |
+
+Las líneas anteriores a los presupuestos quedaron autorizadas.
+
+### Cómo se autoriza
+
+1. **Firma de recepción**: lo cotizado antes de la firma queda autorizado ("lo que
+   firmó, lo aprobó"), salvo que ya hubiera un presupuesto enviado.
+2. **Desde su enlace**: el admin pulsa **Enviar presupuesto**; el cliente marca línea
+   por línea, escribe su nombre y confirma. Se guardan su nombre, su comentario, la
+   IP y el navegador. Nada viene marcado.
+3. **Registrada por el admin**: el cliente respondió **por teléfono, en persona o por
+   WhatsApp**. El admin marca lo autorizado en "Trabajos autorizados por el cliente";
+   se guarda quién autorizó, quién lo registró y una nota.
+
+En los tres casos queda un registro en la tabla de presupuestos, y lo no marcado
+queda **rechazado**.
+
+### Reglas del presupuesto
+
+- **Uno abierto por orden.** Enviar de nuevo con líneas nuevas las suma al abierto;
+  el cliente recibe un solo correo.
+- **Si el presupuesto cambió** mientras el cliente lo revisaba, su respuesta no se
+  guarda y se le pide revisarlo de nuevo: nunca se rechaza algo que no vio.
+- **Un presupuesto se responde una vez.** Para cambiar de opinión, el admin corrige
+  la línea (vuelve a "sin autorizar") y la presenta de nuevo.
+- **Cancelar** devuelve lo pendiente a "sin autorizar".
+- **No se entrega** una orden con un presupuesto esperando respuesta.
+- Autorizar algo **después de entregar** asienta el ajuste en Finanzas y recalcula
+  las comisiones pendientes, como cualquier corrección.
+
+---
+
+## 9. Retención y limpieza
 
 Tareas automáticas diarias (09:00 UTC):
 
@@ -347,7 +409,7 @@ firmar.
 
 ---
 
-## 9. Riesgos conocidos y decisiones abiertas
+## 10. Riesgos conocidos y decisiones abiertas
 
 Cosas que hoy funcionan así a propósito o por falta de decisión. Conviene
 resolverlas con el cliente.
@@ -373,5 +435,10 @@ resolverlas con el cliente.
 8. **Límite diario de Resend (plan gratuito): 100 correos.** Con el volumen actual
    (~30 al día) sobra; si se supera, los envíos se reintentan y los que no alcancen
    quedan en error en el historial de la orden.
-9. **Fases 5 y 6 pendientes**: presupuestos con autorización por línea (hoy el
-   portal muestra todas las líneas cotizadas) y reporte web en lugar del PDF.
+9. **La firma de recepción autoriza lo cotizado sin mostrarlo en la tableta.** La
+   pantalla de firma no lista las líneas: se confía en que el admin las repasó con el
+   cliente. *Propuesta:* mostrar el resumen de trabajos junto a la firma.
+10. **La autorización desde el enlace es nombre escrito + IP + navegador**, no una
+    firma. Es el estándar para este flujo; si el taller necesita más, se puede pedir
+    firma también ahí.
+11. **Fase 6 pendiente**: reporte web en lugar del PDF en "Generar y enviar".

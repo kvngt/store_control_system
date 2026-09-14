@@ -12,11 +12,13 @@ import type { PortalReport } from './portal.types';
 const mocks = vi.hoisted(() => ({
   fetchPortal: vi.fn(),
   setEmailPreference: vi.fn(),
+  answerQuote: vi.fn(),
 }));
 
 vi.mock('./portal.api', () => ({
   fetchPortal: mocks.fetchPortal,
   setEmailPreference: mocks.setEmailPreference,
+  answerQuote: mocks.answerQuote,
 }));
 
 const { default: CustomerPortal } = await import('./CustomerPortal');
@@ -167,6 +169,85 @@ describe('CustomerPortal', () => {
 
     await waitFor(() => expect(mocks.setEmailPreference).toHaveBeenCalledWith(TOKEN, false));
     expect(await within(section).findByRole('button', { name: 'Volver a recibir correos' })).toBeInTheDocument();
+  });
+
+  describe('presupuesto', () => {
+    const LINE_A = '11111111-1111-4111-8111-111111111111';
+    const LINE_B = '22222222-2222-4222-8222-222222222222';
+    const withQuote = () =>
+      report({
+        presupuesto: {
+          id: '33333333-3333-4333-8333-333333333333',
+          numero: 2,
+          enviado_en: '2026-09-12T15:00:00Z',
+          total: 700,
+          lineas: [
+            { id: LINE_A, tipo: 'mano_obra', descripcion: 'Alineación', cantidad: 1, precio_unitario: 200, monto: 200 },
+            { id: LINE_B, tipo: 'mano_obra', descripcion: 'Pintura de puerta', cantidad: 1, precio_unitario: 500, monto: 500 },
+          ],
+        },
+      });
+
+    it('nada viene marcado y autorizar exige marcar algo y escribir el nombre', async () => {
+      mocks.fetchPortal.mockResolvedValue(withQuote());
+      render(<CustomerPortal token={TOKEN} />);
+
+      const section = (await screen.findByRole('heading', { name: /Presupuesto por autorizar/ })).closest('section')!;
+      const authorize = within(section).getByRole('button', { name: /Autorizar lo marcado/ });
+      expect(authorize).toBeDisabled();
+
+      await userEvent.click(within(section).getByLabelText(/Alineación/));
+      expect(authorize).toBeDisabled();
+      await userEvent.type(within(section).getByLabelText('Su nombre'), 'Marta Ruiz');
+      expect(authorize).toBeEnabled();
+      expect(within(section).getByText('Total autorizado').parentElement).toHaveTextContent('$200.00');
+    });
+
+    it('manda lo marcado y todas las líneas que vio, y muestra la confirmación', async () => {
+      mocks.fetchPortal.mockResolvedValueOnce(withQuote()).mockResolvedValue(report());
+      mocks.answerQuote.mockResolvedValue({ ok: true, autorizados: 1, rechazados: 1, total_autorizado: 200 });
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      render(<CustomerPortal token={TOKEN} />);
+
+      const section = (await screen.findByRole('heading', { name: /Presupuesto por autorizar/ })).closest('section')!;
+      await userEvent.click(within(section).getByLabelText(/Alineación/));
+      await userEvent.type(within(section).getByLabelText('Su nombre'), 'Marta Ruiz');
+      await userEvent.click(within(section).getByRole('button', { name: /Autorizar lo marcado/ }));
+
+      expect(mocks.answerQuote).toHaveBeenCalledWith(TOKEN, {
+        quoteId: '33333333-3333-4333-8333-333333333333',
+        approvedIds: [LINE_A],
+        shownIds: [LINE_A, LINE_B],
+        name: 'Marta Ruiz',
+        comment: '',
+      });
+      expect(await screen.findByText(/Guardamos su respuesta/)).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: /Presupuesto por autorizar/ })).not.toBeInTheDocument();
+    });
+
+    it('si el taller cambió el presupuesto, lo explica y lo vuelve a pedir', async () => {
+      mocks.fetchPortal.mockResolvedValue(withQuote());
+      mocks.answerQuote.mockResolvedValue({ ok: false, motivo: 'presupuesto_cambio' });
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      render(<CustomerPortal token={TOKEN} />);
+
+      const section = (await screen.findByRole('heading', { name: /Presupuesto por autorizar/ })).closest('section')!;
+      await userEvent.type(within(section).getByLabelText('Su nombre'), 'Marta Ruiz');
+      await userEvent.click(within(section).getByRole('button', { name: 'No autorizar nada' }));
+
+      expect(mocks.answerQuote).toHaveBeenCalledWith(TOKEN, expect.objectContaining({ approvedIds: [] }));
+      expect(await screen.findByText(/actualizó el presupuesto/)).toBeInTheDocument();
+      expect(mocks.fetchPortal).toHaveBeenCalledTimes(2);
+    });
+
+    it('en la cuenta separa lo no autorizado', async () => {
+      mocks.fetchPortal.mockResolvedValue(
+        report({ cuenta: { ...report().cuenta, no_autorizados: [{ descripcion: 'Pintura de puerta', monto: 500 }] } })
+      );
+      render(<CustomerPortal token={TOKEN} />);
+      expect(await screen.findByText(/No autorizados/)).toBeInTheDocument();
+      expect(screen.getByText('Pintura de puerta')).toBeInTheDocument();
+    });
   });
 
   it('cambia a inglés y lo recuerda', async () => {

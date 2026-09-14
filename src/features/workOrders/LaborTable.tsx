@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Check, Pencil, Plus, Trash2, Wrench, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import type { LaborItem } from '../../types/database';
+import LineStateBadge from './LineStateBadge';
+import { isApproved } from './lineState';
 
 interface LaborTableProps {
   items: LaborItem[];
@@ -24,7 +26,12 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState({ descripcion: '', costo: '' });
 
-  const total = items.reduce((sum, l) => sum + l.costo, 0);
+  // Solo lo autorizado se cobra; lo demás se muestra aparte para que se vea cuánto
+  // falta que el cliente autorice.
+  const total = items.filter(isApproved).reduce((sum, l) => sum + l.costo, 0);
+  const unauthorized = items
+    .filter((l) => l.estado === 'borrador' || l.estado === 'pendiente')
+    .reduce((sum, l) => sum + l.costo, 0);
 
   // Se recorta a cero igual que en la tabla de repuestos. La labor era la única
   // cifra de dinero de la app que aceptaba un negativo, y sobre una orden ya
@@ -105,19 +112,32 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                   </td>
                 </tr>
               ) : (
-                <tr key={item.id}>
-                  <td data-label={t('common.description')}>{item.descripcion}</td>
+                <tr key={item.id} className={item.estado === 'rechazado' ? 'line-rejected' : undefined}>
+                  <td data-label={t('common.description')}>
+                    <span className="line-desc">{item.descripcion}</span> <LineStateBadge state={item.estado} />
+                  </td>
                   <td data-label={t('common.total')} style={{ textAlign: 'right', fontWeight: 600 }}>${item.costo.toFixed(2)}</td>
                   {canEdit && (
                     <td>
-                      <div style={{ display: 'flex', gap: 2 }}>
-                        <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => startEdit(item)}>
-                          <Pencil size={14} />
-                        </button>
-                        <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => onRemove(item.id, item.descripcion)}>
-                          <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
-                        </button>
-                      </div>
+                      {/* Lo que espera la respuesta del cliente no se toca: él está
+                          viendo esos montos. */}
+                      {item.estado === 'pendiente' ? (
+                        <span className="field-hint" title={t('quotes.lockedHint')}>🔒</span>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 2 }}>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm btn-icon"
+                            onClick={() => startEdit(item)}
+                            title={item.estado === 'rechazado' ? t('quotes.rejectedHint') : undefined}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => onRemove(item.id, item.descripcion)}>
+                            <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   )}
                 </tr>
@@ -136,6 +156,15 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
               </td>
               {canEdit && <td className="desktop-only"></td>}
             </tr>
+            {unauthorized > 0 && (
+              <tr>
+                <td className="desktop-only" style={{ color: 'var(--color-text-tertiary)' }}>{t('quotes.unauthorizedTotal')}</td>
+                <td data-label={t('quotes.unauthorizedTotal')} style={{ textAlign: 'right', color: 'var(--color-text-tertiary)' }}>
+                  ${unauthorized.toFixed(2)}
+                </td>
+                {canEdit && <td className="desktop-only"></td>}
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

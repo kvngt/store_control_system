@@ -56,6 +56,10 @@ DO $do$ BEGIN
     '[{"descripcion":"Frenos","costo":200}]'::jsonb, '[]'::jsonb,
     '[{"usuario_id":"a0000000-0000-0000-0000-000000000002","tipo_tarea":"mecanica"}]'::jsonb
   );
+  -- La firma de recepción autoriza la mano de obra cotizada (fase 5): sin ella la
+  -- orden no tendría nada que cobrar ni comisión que generar.
+  UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma.png'
+  WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
 END $do$;
 
 -- ------------------------------------------------------------------------------------

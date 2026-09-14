@@ -28,9 +28,16 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
   lista permitida de ese trigger en una migración nueva.
 - **Roles:** `admin`, `mecanico`, `pintor`. Mecánico y pintor tienen los mismos
   permisos.
-- **Fases 1–4 hechas (restricciones de técnicos, multimedia, notificaciones, portal
-  del cliente y correos); 5–6 (presupuestos, reporte web) pendientes.** Plan y estado
-  en [README.md](README.md#estado-del-proyecto-septiembre-2026).
+- **Fases 1–5 hechas (restricciones de técnicos, multimedia, notificaciones, portal
+  del cliente y correos, presupuestos); 6 (reporte web) pendiente.** Plan y estado en
+  [README.md](README.md#estado-del-proyecto-septiembre-2026); historia y decisiones en
+  [evolucion.md](evolucion.md).
+- **Solo lo autorizado se cobra.** `orden_labor` y `orden_repuestos` tienen `estado`
+  (`borrador` | `pendiente` | `aprobado` | `rechazado`) y los totales suman solo
+  `aprobado`. Nunca cambies el estado con un UPDATE: pasa por `enviar_presupuesto`,
+  `registrar_autorizacion`, `cancelar_presupuesto` o la firma de recepción (bandera
+  `restorify.presupuesto`). Si agregas un cálculo de dinero sobre líneas, filtra por
+  `aprobado`.
 - **El portal del cliente (`src/portal/`) es un paquete aparte.** No importes ahí
   nada que arrastre `lib/supabase`, `services/`, contextos de la app ni
   `i18n/translations.ts`: habla con la edge function `portal` por `fetch` y tiene
@@ -74,6 +81,7 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
 | Detalle de orden | `src/features/workOrders/useWorkOrderDetail.ts` (permisos derivados: `canEditLines`, `canSendReport`, `canDeliver`, `canJoin`…) y `WorkOrderDetail.tsx` |
 | Multimedia | `src/lib/media/` (compresión, grabación, conversión, cola TUS en IndexedDB) y `src/features/media/`. Detalle en [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md) |
 | Notificaciones | Triggers `trg_*_notify` → `notificar()` → `notificaciones` + `cola_envios`; edge function `process-outbox`; frontend en `src/features/notifications/`, `src/lib/push.ts`, `public/sw.js` |
+| Presupuestos | `quotes.service.ts`, `features/workOrders/QuoteCard.tsx`, `LineStateBadge.tsx`, `lineState.ts`; sección `QuoteSection` del portal. Detalle en [presupuestos.md](presupuestos.md) |
 | Portal y correos | `trg_order_portal` → `encolar_correo_cliente()`; `process-outbox` (`sendEmail`) + `_shared/email/templates.ts`; edge function `portal` → `datos_portal()`; `src/portal/`; tarjeta `CustomerLinkCard.tsx`. Detalle en [portal-y-correos.md](portal-y-correos.md) |
 | Edge functions | `supabase/functions/` (Deno). Internas verifican `x-restorify-secret` con `_shared/internal.ts` |
 | Contextos | `src/context/` (Auth, Language, Theme, Toast, UnsavedChanges) |

@@ -19,6 +19,8 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 | **Usar la aplicación** o capacitar al taller | [manual-usuario.md](manual-usuario.md) |
 | Trabajar con **multimedia o notificaciones** | [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md) |
 | Trabajar con el **portal del cliente o los correos** | [portal-y-correos.md](portal-y-correos.md) |
+| Trabajar con **presupuestos** o entender por qué un total no incluye algo | [presupuestos.md](presupuestos.md) |
+| Saber **cómo llegó el sistema a ser lo que es** y por qué se tomó cada decisión | [evolucion.md](evolucion.md) |
 | Entender **cómo se paga al personal** | [comisiones.md](comisiones.md) |
 | Arreglar **correos de recuperación de contraseña** | [password-reset.md](password-reset.md) |
 | Ser un **agente de IA** que va a modificar el código | [ai-context.md](ai-context.md) primero |
@@ -48,6 +50,14 @@ diagnóstico.
 reporte web que abre sin cuenta y los correos automáticos: cuándo se crea y vence el
 enlace, qué ve y qué nunca ve el cliente, cuándo sale cada correo, límites de Resend
 y diagnóstico.
+
+**[presupuestos.md](presupuestos.md)** — La autorización por línea: los estados de una
+línea, las tres formas de autorizar (firma, enlace, registro del admin), qué cambia en
+el dinero, qué ve cada quien y diagnóstico.
+
+**[evolucion.md](evolucion.md)** — La historia del proyecto: de la demo a las fases del
+cliente, las 33 migraciones con lo que hizo cada una, las decisiones que se
+reemplazaron y cómo creció la red de pruebas.
 
 **[pruebas.md](pruebas.md)** — Todas las pruebas: las automatizadas (Vitest, base
 de datos con pgTAP, Playwright), qué cubre cada una y qué no, y el plan de pruebas
@@ -84,12 +94,12 @@ Hay un plan de cambios pedido por el cliente en seis fases. Estado:
 | 2 | Fotos, videos (hasta 2 min) y notas de voz en las órdenes | Implementada |
 | 3 | Notificaciones internas en tiempo real y push al teléfono | Implementada |
 | 4 | Portal web del cliente (sin cuenta) y correos automáticos | Implementada |
-| 5 | Presupuestos: el cliente autoriza o rechaza por línea | Pendiente |
+| 5 | Presupuestos: el cliente autoriza o rechaza por línea | Implementada |
 | 6 | Reporte como enlace web en vez de PDF | Pendiente |
 
-Donde un documento menciona algo de las fases 5–6, lo marca como pendiente.
+Donde un documento menciona algo de la fase 6, lo marca como pendiente.
 
-> **Las fases 1–4 están desplegadas** en el proyecto de Supabase enlazado
+> **Las fases 1–5 están desplegadas** en el proyecto de Supabase enlazado
 > (septiembre 2026). Para otro entorno hay configuración que no está en el código
 > (secretos, Vault, llaves VAPID, Resend): paso a paso en
 > [deployment.md](deployment.md#4-configuración-única-de-supabase).
@@ -108,6 +118,8 @@ Donde un documento menciona algo de las fases 5–6, lo marca como pendiente.
 | **Avance** | Una entrada de la bitácora de trabajo, con nota y multimedia. |
 | **Enlace del cliente** | `reinventa.shop/r/<token>`: el reporte web de una orden, sin cuenta. |
 | **Portal** | La página que abre ese enlace. |
+| **Presupuesto** | Trabajos que se le presentan al cliente para que los autorice línea por línea. |
+| **Línea autorizada** | Mano de obra o repuesto que el cliente aprobó. Solo eso se cobra. |
 | **Montos** | Totales, repuestos con precio y depósito. Solo los ve un admin. |
 | **Bolsa de comisión** | Porcentaje de la mano de obra que se reparte entre los técnicos. |
 | **RLS** | Row Level Security de Postgres: la regla que decide qué filas ve cada quien. |

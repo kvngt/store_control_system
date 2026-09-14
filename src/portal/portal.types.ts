@@ -42,9 +42,40 @@ export interface PortalOrder {
   firma_fecha: string | null;
 }
 
+export interface PortalQuoteLine {
+  id: string;
+  tipo: 'mano_obra' | 'repuesto';
+  descripcion: string;
+  cantidad: number;
+  precio_unitario: number;
+  monto: number;
+}
+
+/** El presupuesto que espera la respuesta del cliente. */
+export interface PortalQuote {
+  id: string;
+  numero: number;
+  enviado_en: string;
+  total: number;
+  lineas: PortalQuoteLine[];
+}
+
+export interface PortalQuoteHistory {
+  numero: number;
+  respondido_en: string;
+  via: 'cliente_portal' | 'admin_telefono' | 'admin_presencial' | 'admin_whatsapp' | 'firma_recepcion';
+  nombre: string | null;
+  total_aprobado: number | null;
+  autorizados: number;
+  rechazados: number;
+}
+
 export interface PortalAccount {
+  /** Solo lo autorizado: es lo que se cobra. */
   mano_obra: { descripcion: string; monto: number }[];
   repuestos: { descripcion: string; cantidad: number; precio_unitario: number; subtotal: number }[];
+  /** Lo que el cliente no autorizó: no se hace ni se cobra. */
+  no_autorizados?: { descripcion: string; monto: number }[];
   total_mano_obra: number;
   total_repuestos: number;
   total: number;
@@ -68,6 +99,8 @@ export interface PortalReport {
     vin_final: string | null;
   };
   multimedia: PortalMedia[];
+  presupuesto?: PortalQuote | null;
+  presupuestos_respondidos?: PortalQuoteHistory[];
   cuenta: PortalAccount;
   urls_vencen_en: string;
 }

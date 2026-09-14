@@ -227,7 +227,8 @@ async function buildWorkOrderPdf(order: WorkOrder, sede?: Sede | null, urls: Rec
   y += 11;
 
   // ===== Labor =====
-  const laborItems = order.labor_items || [];
+  // Solo lo autorizado: es lo que se cobra y lo que suman los totales.
+  const laborItems = (order.labor_items || []).filter((l) => (l.estado ?? 'aprobado') === 'aprobado');
   if (laborItems.length) {
     sectionTitle('Mano de Obra');
     doc.setFontSize(9);
@@ -251,7 +252,7 @@ async function buildWorkOrderPdf(order: WorkOrder, sede?: Sede | null, urls: Rec
   // Los montos viven en `orden_montos`, que solo lee un admin — y solo un admin
   // genera reportes. Si faltaran (una orden cargada sin el embed), se derivan de
   // las líneas en vez de imprimir "$NaN" en un documento para el cliente.
-  const parts = order.repuestos || [];
+  const parts = (order.repuestos || []).filter((p) => (p.estado ?? 'aprobado') === 'aprobado');
   const totalRepuestos = Number(
     order.montos?.total_repuestos ?? parts.reduce((sum, p) => sum + Number(p.subtotal), 0)
   );

@@ -29,8 +29,8 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 241 pruebas, 32 archivos | ~20 s | Nada |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal y correos contra un Postgres real | 95 aserciones, 4 archivos | ~1 min | Docker |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 257 pruebas, 34 archivos | ~20 s | Nada |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos y presupuestos contra un Postgres real | 126 aserciones, 5 archivos | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, ~73 casos | 2–5 min | Credenciales de prueba |
 | **Manual** | Personas y dispositivos | Cámara, micrófono, push, subidas reales, iPhone, diseño móvil | Secciones 4–6 | 2–3 h completo | Teléfonos Android e iPhone |
 
@@ -74,6 +74,7 @@ declaran `// @vitest-environment jsdom` y renderizan con los proveedores reales
 | Notificaciones | `features/notifications/*`, `lib/push` | Campana: conteo, marcar leído, navegar, aviso en tiempo real con toast; traducción de avisos; detección de iPhone sin instalar; tarjeta de push: activar, permiso negado, prueba, desactivar |
 | Configuración | `pages/Settings.employee` | Alta de empleado: errores visibles |
 | Portal del cliente | `portal/CustomerPortal`, `lib/emailTemplates`, `lib/phone` | Estado, vehículo, multimedia publicada y cuenta; visor de video; WhatsApp y llamar; "pagado en su totalidad"; enlace vencido con teléfono; ruta sin token no consulta; reintento; **la baja se confirma con botón, nunca al abrir**; inglés. Plantillas: asunto por estado, fecha DATE sin correrse un día, **HTML escapado**, logo solo https y color solo hexadecimal, Reply-To solo si hay correo de contacto |
+| Presupuestos | `features/workOrders/QuoteCard`, `features/workOrders/LaborTable`, `portal/CustomerPortal` (sección presupuesto), `lib/emailTemplates` | Tarjeta: se oculta sin nada que autorizar; enviar tras confirmar; aviso si el cliente no tiene correo; registrar autorización (todo marcado, se desmarca lo rechazado, vía y nombre); cancelar con confirmación; historial con vía, conteos y comentario. Tabla: total solo autorizado, "sin autorizar" aparte, insignias, línea pendiente sin controles. Portal: nada marcado, exige nombre, manda lo marcado **y todas las líneas vistas**, confirmación que sobrevive a la recarga, "el taller actualizó el presupuesto", lo no autorizado aparte. Correos: presupuesto solo con lo pendiente, constancia con lo autorizado y la vía |
 | Enlace del cliente (admin) | `features/workOrders/CustomerLinkCard` | Crear enlace; visitas; WhatsApp con el enlace; cambiar enlace pide confirmación; historial de correos con estado y motivo; avisar novedades; sin correo o con baja no ofrece avisar |
 | Layout | `components/layout/BottomNav`, `components/LazyModal` | Barra inferior; modales diferidos |
 | Datos remotos | `lib/queryClient` | Reintentos y claves de caché |
@@ -143,6 +144,25 @@ PostgREST en cada petición.
 - Cambiar el enlace deja el anterior como `revocado`; entregar fija 90 días y
   sacar de Entregado lo quita.
 
+**`supabase/tests/database/05_presupuestos.test.sql`** (31)
+
+- Lo cotizado nace en borrador y no suma; la firma de recepción lo aprueba y deja un
+  presupuesto "firma de recepción" como evidencia.
+- Una línea nueva nace en borrador aunque se pida "aprobado"; ni un admin la aprueba
+  con un UPDATE; un técnico no envía presupuestos ni los lee.
+- Enviar: líneas pendientes, presupuesto 2 por $880, correo programado; una línea
+  pendiente no se edita; no se entrega con el presupuesto abierto.
+- El cliente responde desde su enlace: rechazo si no vio todas las líneas, nombre
+  obligatorio, respuesta parcial (frenos y pastillas sí, pintura no), total $480,
+  evidencia (vía, nombre, IP, comentario, total), aviso al mecánico "Autorizado: …
+  No realizar: …", aviso al admin, correo del presupuesto omitido y constancia
+  programada, no se responde dos veces.
+- Corregir lo rechazado lo vuelve a borrador; cancelar devuelve a borrador; registrar
+  por teléfono aprueba; al entregar, el costo de repuestos cuenta solo lo aprobado.
+
+Las pruebas 01 y 02 firman la recepción antes de entregar: desde la fase 5, sin
+autorización no hay nada que cobrar ni comisión que generar.
+
 > **Estado:** escritas y validadas con el parser de Postgres, pero **todavía no
 > ejecutadas** con pgTAP (la máquina de desarrollo no tiene Docker). Las reglas de
 > la fase 4 sí se probaron de punta a punta contra el proyecto enlazado (correo real
@@ -185,6 +205,48 @@ la migración `20260912000000`; fueron reemplazadas por las de comisiones.
 **Pendiente de cubrir con e2e** (cuando haya staging): técnico sin precios en el
 detalle, multimedia con archivos de prueba, campana en tiempo real.
 
+### 2.4 ¿Para qué hace falta Docker?
+
+**Docker solo hace falta para correr Supabase en la computadora.** `npx supabase start`
+levanta en contenedores lo mismo que hay en la nube: Postgres 17 con todas las
+migraciones, Auth, Storage, Realtime y las edge functions. Sin Docker, eso no
+existe localmente.
+
+Se necesita para:
+
+| Tarea | Comando | Por qué no se puede sin Docker |
+|---|---|---|
+| **Correr las pruebas de base de datos** (las 126 aserciones pgTAP) | `npm run test:db` | Necesitan un Postgres real donde crear datos y deshacerlos |
+| **Probar que las migraciones aplican desde cero** | `npx supabase db reset` | Recrea la base local aplicando las 33 migraciones en orden: detecta una migración que solo funciona sobre la base actual |
+| **Probar una migración antes de producción** | `npx supabase start` y luego la app contra la base local | Hoy cada migración se aplica directo al proyecto enlazado |
+| Probar edge functions localmente | `npx supabase functions serve` | Corren en el contenedor de Supabase |
+
+**No** hace falta para: la app, Vitest, Playwright, desplegar ni aplicar migraciones al
+proyecto enlazado.
+
+**Qué instalar (Windows):**
+
+1. **Docker Desktop** (docker.com) con el motor **WSL 2** — esta máquina ya tiene WSL 2.
+2. Recursos: unos **4 GB de RAM libres** y **10 GB de disco** para las imágenes.
+3. Abrir Docker Desktop y dejarlo corriendo.
+
+```bash
+npx supabase start       # la primera vez descarga las imágenes (varios minutos)
+npm run test:db          # 5 archivos pgTAP
+npx supabase db reset    # opcional: recrear la base local desde cero
+npx supabase stop        # al terminar
+```
+
+La primera corrida de pgTAP puede pedir ajustes pequeños: las pruebas se escribieron y
+se validaron con el parser de Postgres, pero nunca se han ejecutado.
+
+**Alternativas si no se instala Docker:**
+
+- **Un proyecto de staging en Supabase** (el plan gratuito permite dos proyectos): las
+  pruebas corren contra él sin tocar el proyecto real.
+- **Permitir que las pruebas corran contra el proyecto enlazado** dentro de una
+  transacción que se deshace al final (no deja datos). Hoy esa ejecución está
+  bloqueada por permisos de la herramienta.
 ---
 
 ## 3. Preparación para pruebas manuales
@@ -307,9 +369,9 @@ dos técnicos asignados. En Finanzas, filtra por la orden:
 
 | Paso | Acción (A) | Movimientos esperados | Comisiones |
 |---|---|---|---|
-| 1 | Crear | +$200 "Depósito inicial" | — |
+| 1 | Crear y **firmar la recepción** (la firma autoriza la mano de obra y los repuestos) | +$200 "Depósito inicial" | — |
 | 2 | Entregar | +$1,000 "Pago final", −$200 "Costo de repuestos" | 2 × $175.00 |
-| 3 | Agregar mano de obra $100 (orden entregada) | +$100 "Ajuste por cargo adicional" | 2 × $192.50 |
+| 3 | Agregar mano de obra $100 (orden entregada): queda **sin autorizar**, nada cambia. Luego **Registrar autorización** → en persona | +$100 "Ajuste por cargo adicional" (al autorizar) | 2 × $192.50 |
 | 4 | Sacar de Entregado | −$1,100 "Reversión de entrega", +$200 "Reversión de costo de repuestos" | ninguna |
 | 5 | Volver a entregar | +$1,100 "Pago final", −$200 "Costo de repuestos" | 2 × $192.50 |
 
@@ -492,6 +554,38 @@ con **tu correo**.
 - [ ] `/r/abc` → "Enlace no válido".
 - [ ] Ver el código fuente de la página: `<meta name="robots" content="noindex, nofollow">` y `referrer` en `no-referrer`.
 
+### 4.14 Presupuestos
+
+Detalle en [presupuestos.md](presupuestos.md). Orden con cliente de prueba con **tu
+correo** y un técnico asignado (**M**).
+
+**Borradores y firma**
+
+- [ ] Alta con mano de obra $1,000 → antes de firmar, la línea dice **Sin autorizar** y el total de la orden es $0.
+- [ ] Firmar la recepción → la insignia desaparece (autorizada), el total pasa a $1,000; la tarjeta **Presupuesto** muestra "Presupuesto 1 · con la firma de recepción".
+- [ ] Agregar "Pintura $500" → **Sin autorizar**; el total no cambia; la tabla muestra "Sin autorizar $500" aparte.
+
+**Enviar y responder desde el enlace**
+
+- [ ] **Enviar presupuesto al cliente** → confirmar → la línea pasa a **Esperando al cliente** y no tiene lápiz ni papelera; la orden muestra **Esperando autorización** en la lista y el tablero (también para **M**).
+- [ ] Llega el correo "Presupuesto para su …" con la lista y el total; el botón abre el portal con la sección **Presupuesto por autorizar** arriba.
+- [ ] En el portal nada viene marcado; "Autorizar lo marcado" está apagado hasta marcar algo y escribir el nombre.
+- [ ] Mientras el cliente tiene el portal abierto, el admin agrega otra línea y **Agregar al presupuesto y reenviar**; el cliente responde con la página vieja → "El taller actualizó el presupuesto…" y ve la línea nueva.
+- [ ] Autorizar una línea y dejar otra sin marcar, con comentario → "Gracias. Guardamos su respuesta…"; la sección desaparece; en la cuenta aparece lo no autorizado tachado y "Sus autorizaciones".
+- [ ] Llega el correo "Recibimos su respuesta" con lo autorizado y el total.
+- [ ] **M** recibe "Trabajos autorizados · ORD-… Autorizado: … No realizar: …" (campana y push); en su detalle la línea rechazada dice **No realizar**.
+- [ ] El admin recibe "El cliente respondió el presupuesto · … Autorizó 1 de 2 ($…)" con el comentario.
+- [ ] La tarjeta **Presupuesto** muestra la respuesta: vía "desde su enlace", nombre, conteos y comentario.
+- [ ] El total de la orden suma solo lo autorizado.
+
+**Registrar por teléfono, cancelar, entregar**
+
+- [ ] Agregar dos líneas → **Registrar autorización** → todo viene marcado; desmarcar una, elegir "Por teléfono" → **Registrar** → una autorizada, otra **No realizar**; al cliente le llega "Registramos su autorización · … por teléfono".
+- [ ] Editar la línea rechazada (otro precio) → vuelve a **Sin autorizar**.
+- [ ] Enviar presupuesto y luego **Cancelar presupuesto** → la línea vuelve a **Sin autorizar**; el portal ya no pide autorización.
+- [ ] Con un presupuesto enviado, intentar **Entregar** → mensaje "tiene un presupuesto esperando respuesta"; la orden no cambia.
+- [ ] Entregar con un repuesto **sin autorizar** → Finanzas no registra su costo.
+- [ ] Al día siguiente (15:00 UTC) de un presupuesto enviado sin respuesta, los admins reciben "Presupuesto sin respuesta".
 ---
 
 ## 5. Pruebas de seguridad contra la API
@@ -537,6 +631,11 @@ H=(-H "apikey: $ANON" -H "Authorization: Bearer $TOKEN" -H "Content-Type: applic
 | 22 | Técnico o sin sesión: `curl -X POST "$SB/rest/v1/rpc/datos_portal" -H "apikey: $ANON" -H "Content-Type: application/json" -d '{"p_token":"x"}'` | Error de permiso |
 | 23 | `curl "$SB/rest/v1/cola_envios?select=destinatario" "${H[@]}"` (técnico) | `[]` |
 | 24 | Sin sesión: `curl "$SB/functions/v1/portal?token=$(printf '0%.0s' {1..64})"` | `404` `{"estado_enlace":"no_encontrado"}` |
+| 25 | Técnico: `curl -X POST "$SB/rest/v1/rpc/enviar_presupuesto" "${H[@]}" -d "{\"p_orden_id\":\"$ORDEN\"}"` | Error `42501` |
+| 26 | **Admin** (su token): `curl -X PATCH "$SB/rest/v1/orden_labor?orden_id=eq.$ORDEN" "${H[@]}" -d '{"estado":"aprobado"}'` | Error `42501` "El estado de una línea lo cambian el presupuesto…" |
+| 27 | Técnico: `curl "$SB/rest/v1/presupuestos?select=*" "${H[@]}"` | `[]` |
+| 28 | Sin sesión: `curl -X POST "$SB/rest/v1/rpc/responder_presupuesto_portal" -H "apikey: $ANON" -H "Content-Type: application/json" -d '{}'` | Error de permiso |
+| 29 | Sin sesión: POST a `$SB/functions/v1/portal` con `accion: responder_presupuesto` y `lineas` incompletas | `{"ok":false,"motivo":"presupuesto_cambio"}` |
 
 Cualquier resultado distinto es un problema de seguridad: repórtalo como prioridad.
 
@@ -604,6 +703,7 @@ Mínimo, siempre:
 - [ ] Si la versión toca órdenes, dinero o permisos: secciones 4.4, 4.5 y 5.
 - [ ] Si toca multimedia o notificaciones: 4.7, 4.8 y al menos Android + iPhone de la matriz.
 - [ ] Si toca el portal, los correos o `datos_portal`: 4.13 y peticiones 20–24 de la sección 5.
+- [ ] Si toca líneas, totales o presupuestos: 4.5, 4.14 y peticiones 25–29.
 - [ ] Si toca estilos: 4.11 en un teléfono real.
 - [ ] Después de publicar: [deployment.md §6](deployment.md#6-verificación-después-de-publicar).
 

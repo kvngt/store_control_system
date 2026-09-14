@@ -14,6 +14,7 @@ import type {
 import { mediaPath } from '../lib/media/mime';
 import { assertDeleted } from './support';
 import { mediaService } from './media.service';
+import { quotesService } from './quotes.service';
 
 export const workOrdersService = {
   getWorkOrders: async (sedeId?: string) => {
@@ -29,9 +30,14 @@ export const workOrdersService = {
     `).order('creado_en', { ascending: false });
     if (sedeId) query = query.eq('sede_id', sedeId);
 
-    const { data, error } = await query;
+    // Qué órdenes esperan la respuesta del cliente a un presupuesto. Tolerante: si
+    // falla, la lista se ve igual, sin la marca.
+    const [{ data, error }, waiting] = await Promise.all([
+      query,
+      quotesService.waitingOrderIds().catch(() => new Set<string>()),
+    ]);
     if (error) throw error;
-    return data as WorkOrder[];
+    return (data as WorkOrder[]).map((order) => ({ ...order, esperando_autorizacion: waiting.has(order.id) }));
   },
 
   getWorkOrderDetail: async (orderId: string) => {
@@ -46,7 +52,12 @@ export const workOrdersService = {
         labor_items:orden_labor(*),
         repuestos:orden_repuestos(*),
         asignaciones:orden_asignaciones(*, usuario:perfiles(*))
-      `).eq('id', orderId).single(),
+      `)
+        .eq('id', orderId)
+        // Las líneas en el orden en que se agregaron: es el orden del presupuesto.
+        .order('creado_en', { referencedTable: 'orden_labor', ascending: true })
+        .order('creado_en', { referencedTable: 'orden_repuestos', ascending: true })
+        .single(),
       supabase.rpc('repuestos_de_orden', { p_orden_id: orderId }),
       // Fotos, videos y notas de voz de la recepción y de cada avance. Tolerante
       // como los avances: una falla aquí no debe impedir abrir la orden.

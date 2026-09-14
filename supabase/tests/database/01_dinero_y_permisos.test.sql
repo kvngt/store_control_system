@@ -62,8 +62,12 @@ SELECT lives_ok(
        '[{"descripcion":"Frenos","costo":1000}]'::jsonb,
        '[{"descripcion":"Pastillas","cantidad":2,"precio_venta_unitario":100}]'::jsonb,
        '[{"usuario_id":"a0000000-0000-0000-0000-000000000002","tipo_tarea":"mecanica"},
-         {"usuario_id":"a0000000-0000-0000-0000-000000000003","tipo_tarea":"pintura"}]'::jsonb) $$,
-  'Un admin crea una orden con depósito, labor, repuestos y dos técnicos'
+         {"usuario_id":"a0000000-0000-0000-0000-000000000003","tipo_tarea":"pintura"}]'::jsonb);
+     -- Desde la fase 5 lo cotizado se cobra cuando el cliente lo autoriza: la firma
+     -- de recepción lo aprueba.
+     UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma.png'
+     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
+  'Un admin crea una orden con depósito, labor, repuestos y dos técnicos, y el cliente firma'
 );
 
 SELECT is(
@@ -228,6 +232,8 @@ SELECT lives_ok(
        '[{"usuario_id":"a0000000-0000-0000-0000-000000000001","tipo_tarea":"mecanica"},
          {"usuario_id":"a0000000-0000-0000-0000-000000000002","tipo_tarea":"mecanica"},
          {"usuario_id":"a0000000-0000-0000-0000-000000000003","tipo_tarea":"pintura"}]'::jsonb);
+     UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma.png'
+     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002';
      UPDATE ordenes_trabajo SET estatus = 'entregado' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002' $$,
   'Se entrega una orden con tres técnicos'
 );

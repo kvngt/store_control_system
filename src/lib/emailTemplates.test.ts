@@ -40,7 +40,7 @@ describe('renderEmail', () => {
 
   it('no redacta un aviso de estado para uno que no se anuncia ni una plantilla desconocida', () => {
     expect(renderEmail('estatus', { ...base, orden: { ...base.orden, estatus: 'recepcion' } })).toBeNull();
-    expect(renderEmail('presupuesto', base)).toBeNull();
+    expect(renderEmail('factura', base)).toBeNull();
   });
 
   it('escapa lo que escribió una persona: un nombre no puede inyectar HTML', () => {
@@ -74,6 +74,57 @@ describe('renderEmail', () => {
 
   it('saluda sin nombre cuando el cliente no tiene uno', () => {
     expect(renderEmail('avance', { ...base, cliente: { nombre: null } })!.text.startsWith('Hola:')).toBe(true);
+  });
+});
+
+describe('renderEmail: presupuestos', () => {
+  const quote = {
+    numero: 2,
+    estado: 'enviado',
+    via: null,
+    totalPropuesto: 880,
+    totalAprobado: null,
+    lineas: [
+      { descripcion: 'Frenos', monto: 300, estado: 'pendiente' },
+      { descripcion: 'Pintura <brillante>', monto: 500, estado: 'pendiente' },
+      { descripcion: 'Diagnóstico', monto: 100, estado: 'aprobado' },
+    ],
+  };
+
+  it('lista solo lo pendiente, con su total, y escapa las descripciones', () => {
+    const email = renderEmail('presupuesto', { ...base, presupuesto: quote })!;
+    expect(email.subject).toBe('Presupuesto para su 2019 Toyota Camry · ORD-2026-014');
+    expect(email.text).toContain('- Frenos: $300.00');
+    expect(email.text).toContain('- Total: $800.00');
+    expect(email.text).not.toContain('Diagnóstico');
+    expect(email.html).toContain('Pintura &lt;brillante&gt;');
+  });
+
+  it('no redacta un presupuesto que ya se respondió o que no tiene nada pendiente', () => {
+    expect(renderEmail('presupuesto', { ...base, presupuesto: { ...quote, estado: 'respondido' } })).toBeNull();
+    expect(renderEmail('presupuesto', { ...base, presupuesto: { ...quote, lineas: [] } })).toBeNull();
+    expect(renderEmail('presupuesto', base)).toBeNull();
+  });
+
+  it('la constancia dice qué autorizó y qué no, y cómo lo registró el taller', () => {
+    const answered = {
+      ...quote,
+      estado: 'respondido',
+      via: 'admin_telefono',
+      totalAprobado: 300,
+      lineas: [
+        { descripcion: 'Frenos', monto: 300, estado: 'aprobado' },
+        { descripcion: 'Pintura', monto: 500, estado: 'rechazado' },
+      ],
+    };
+    const email = renderEmail('presupuesto_confirmacion', { ...base, presupuesto: answered })!;
+    expect(email.subject).toBe('Registramos su autorización · ORD-2026-014');
+    expect(email.text).toContain('por teléfono');
+    expect(email.text).toContain('No autorizados: Pintura.');
+    expect(email.text).toContain('- Total autorizado: $300.00');
+
+    const fromPortal = renderEmail('presupuesto_confirmacion', { ...base, presupuesto: { ...answered, via: 'cliente_portal' } })!;
+    expect(fromPortal.subject).toBe('Recibimos su respuesta · ORD-2026-014');
   });
 });
 

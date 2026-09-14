@@ -23,6 +23,8 @@ import CommissionEstimateCard from './CommissionEstimateCard';
 import ProgressLog from './ProgressLog';
 import ShareReportModal from './ShareReportModal';
 import CustomerLinkCard from './CustomerLinkCard';
+import QuoteCard from './QuoteCard';
+import { isApproved } from './lineState';
 import SignatureCard from './SignatureCard';
 import MediaCaptureBar from '../media/MediaCaptureBar';
 import MediaGallery from '../media/MediaGallery';
@@ -59,8 +61,9 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
   const assignments = order.asignaciones || [];
   const laborList = order.labor_items || [];
   const partsList = order.repuestos || [];
-  const totalLabor = laborList.reduce((sum, l) => sum + l.costo, 0);
-  const totalParts = partsList.reduce((sum, p) => sum + p.subtotal, 0);
+  // Solo lo autorizado por el cliente se cobra (igual que los totales de la base).
+  const totalLabor = laborList.filter(isApproved).reduce((sum, l) => sum + l.costo, 0);
+  const totalParts = partsList.filter(isApproved).reduce((sum, p) => sum + p.subtotal, 0);
   const receptionMedia = (order.media || []).filter((m) => m.origen === 'recepcion');
   const receptionPending = detail.pendingUploads.filter((p) => p.origen === 'recepcion');
   // Null para mecánicos y pintores: `orden_montos` es solo admin.
@@ -94,6 +97,9 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
             {order.numero_orden}
             <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
             <span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span>
+            {[...laborList, ...partsList, ...(order.repuestos_resumen || [])].some((l) => l.estado === 'pendiente') && (
+              <span className="badge badge-waiting-auth">{t('quotes.waitingBadge')}</span>
+            )}
             {/* Solo administración: el reporte lleva precios y totales, y el
                 cliente pidió que los técnicos no lo manden desde su perfil. */}
             {detail.canSendReport && (
@@ -289,6 +295,9 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
           <PartsSummaryCard items={order.repuestos_resumen || []} />
         )}
       </div>
+
+      {/* Presupuesto: lo que falta autorizar y lo que espera al cliente. Solo admin. */}
+      {isAdmin && <QuoteCard order={order} />}
 
       {detail.estimatedCommission !== null && (
         <CommissionEstimateCard

@@ -212,6 +212,9 @@ export default function KanbanBoard() {
                     >
                       <div className="kanban-card-header">
                         <span className="kanban-card-order">{order.numero_orden}</span>
+                        {order.esperando_autorizacion && (
+                          <span className="badge badge-waiting-auth" style={{ fontSize: '10px' }}>{t('quotes.waitingBadge')}</span>
+                        )}
                         <span className={`badge badge-${order.tipo_trabajo}`} style={{ fontSize: '10px' }}>
                           {order.tipo_trabajo === 'mecanica'
                             ? t('workOrders.mechanical')

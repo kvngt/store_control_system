@@ -14,6 +14,7 @@ export const queryKeys = {
   workOrderDetail: (orderId: string) => ['work-order', orderId] as const,
   customerLink: (orderId: string) => ['customer-link', orderId] as const,
   customerEmails: (orderId: string) => ['customer-emails', orderId] as const,
+  quotes: (orderId: string) => ['quotes', orderId] as const,
   customers: (sedeId?: string) => ['customers', sedeId] as const,
   customerDetail: (customerId: string) => ['customer', customerId] as const,
   vehicles: (sedeId?: string) => ['vehicles', sedeId] as const,

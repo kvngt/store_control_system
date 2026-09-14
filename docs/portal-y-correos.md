@@ -21,7 +21,7 @@ Cómo probarlo: [pruebas.md](pruebas.md#413-portal-del-cliente-y-correos).
 7. [Configuración](#7-configuración)
 8. [Límites y costos](#8-límites-y-costos)
 9. [Diagnóstico](#9-diagnóstico)
-10. [Pendiente para las fases 5 y 6](#10-pendiente-para-las-fases-5-y-6)
+10. [Pendiente](#10-pendiente)
 
 ---
 
@@ -80,9 +80,10 @@ El cliente toca el botón del correo → reinventa.shop/r/<token>
 |---|---|
 | Encabezado | Logo y nombre del taller, número de orden, estado, vehículo (color, placa, últimos 6 del VIN) |
 | Estado | Cuatro pasos (Recibido → En proceso → Listo → Entregado), "esperando repuestos" como texto, avance y fecha estimada |
+| **Presupuesto por autorizar** (fase 5) | Si hay uno enviado: cada trabajo con su monto, casillas sin marcar, total de lo marcado, nombre, comentario, "Autorizar lo marcado" / "No autorizar nada". Ver [presupuestos.md](presupuestos.md) |
 | Avances | Solo fotos, videos y notas de voz de avances que un admin **publicó**, con fecha |
 | Recepción | Fecha, millaje, gasolina, observaciones, fotos de recepción visibles, firma |
-| Cuenta | Mano de obra y repuestos a **precio de venta**, total, depósito, pagado, saldo |
+| Cuenta | Mano de obra y repuestos **autorizados** a **precio de venta**, total, depósito, pagado, saldo; lo **no autorizado** aparte y tachado; "Sus autorizaciones" (presupuesto, vía, fecha, conteos) |
 | Contacto | Llamar al taller; WhatsApp y correo si la sede los tiene configurados |
 | Avisos por correo | Dejar de recibir / volver a recibir (solo si el cliente tiene correo) |
 
@@ -125,6 +126,8 @@ pondría el login del taller en el teléfono del cliente).
 | `recepcion` | Primera firma de la orden | 2 min (que suban las fotos) | `recepcion:<orden>`; nunca se repite |
 | `estatus` | Pasa a en proceso, espera de repuestos, finalizado o entregado | 3 min | `estatus:<orden>` |
 | `avance` | Un admin pulsa **Avisar novedades** | 1 min | `avance:<orden>` |
+| `presupuesto` | Un admin pulsa **Enviar presupuesto** (fase 5) | 1 min | `presupuesto:<presupuesto>`; se omite si ya se respondió o canceló |
+| `presupuesto_confirmacion` | Se responde un presupuesto desde el enlace o lo registra un admin | Inmediato | `presupuesto_confirmacion:<presupuesto>` |
 
 ### Reglas al enviar
 
@@ -322,11 +325,11 @@ URLs", de Storage.
 
 ---
 
-## 10. Pendiente para las fases 5 y 6
+## 10. Pendiente
 
-- **Presupuestos** (fase 5): plantillas `presupuesto` y `presupuesto_confirmacion`,
-  POST `responder` en la función `portal`, líneas por estado (el portal mostrará
-  solo lo aprobado; hoy muestra todas las líneas).
+- ~~**Presupuestos** (fase 5)~~ **hecho**: plantillas `presupuesto` y
+  `presupuesto_confirmacion`, POST `responder_presupuesto` en la función `portal`, la
+  cuenta del portal con solo lo aprobado. Ver [presupuestos.md](presupuestos.md).
 - **Reporte web** (fase 6): el botón "Generar y enviar" compartirá este enlace en
   vez de subir un PDF.
 - **Correos en inglés**: agregar `clientes.idioma` y un segundo juego de textos en

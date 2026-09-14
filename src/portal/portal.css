@@ -396,6 +396,102 @@
   opacity: 0.6;
 }
 
+.portal-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border-color: var(--color-success);
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.portal-quote p {
+  margin: 0 0 var(--space-3);
+}
+
+.portal-quote-select {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.portal-quote-lines {
+  list-style: none;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+}
+
+.portal-quote-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 52px;
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-2);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.portal-quote-line.is-selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-subtle);
+}
+
+.portal-quote-line input[type='checkbox'] {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+}
+
+.portal-quote-desc {
+  flex: 1;
+  min-width: 0;
+}
+
+.portal-quote-amount {
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.portal-field {
+  margin-top: var(--space-3);
+}
+
+.portal-field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: var(--space-1);
+}
+
+.portal-field .form-input {
+  width: 100%;
+  font-size: 16px;
+}
+
+.portal-not-authorized .portal-line {
+  color: var(--color-text-tertiary);
+  text-decoration: line-through;
+}
+
+.portal-quote-history {
+  margin-top: var(--space-4);
+}
+
+.portal-quote-history ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.portal-quote-history li {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-surface-border);
+  font-size: var(--font-size-base);
+}
+
 @media (max-width: 380px) {
   .portal-facts {
     grid-template-columns: 1fr 1fr;

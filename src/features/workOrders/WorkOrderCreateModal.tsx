@@ -448,6 +448,7 @@ export default function WorkOrderCreateModal({
             {/* Mano de obra y repuestos: solo administración cotiza. */}
             {isAdmin && (
             <>
+            <p className="field-hint" style={{ marginTop: 'var(--space-3)' }}>{t('quotes.createHint')}</p>
             {/* Labor Items */}
             <div className="form-group" style={{ marginTop: 'var(--space-3)' }}>
               <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
