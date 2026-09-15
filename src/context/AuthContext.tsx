@@ -40,6 +40,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setAllSedes([]);
       setCurrentSedeState(null);
+      // Una sesión sin perfil no sirve para nada y se quedaba guardada en el navegador.
+      void supabase.auth.signOut({ scope: 'local' });
       return;
     }
 
@@ -118,9 +120,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadProfileAndSedes, forgetCachedData]);
 
   const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       return { success: false, error: { code: (error as { code?: string }).code, message: error.message } };
+    }
+    // Una cuenta de Auth sin fila en `perfiles` (creada a mano en el panel, o de un
+    // empleado a medio borrar) entraba, la pantalla volvía al login y no decía nada:
+    // parecía que el botón no funcionaba. Solo PGRST116 dice "no hay perfil"; si la
+    // consulta falla por la red, se deja pasar y lo resuelve la carga normal.
+    const { error: perfilError } = await supabase
+      .from('perfiles')
+      .select('id')
+      .eq('id', data.user.id)
+      .single();
+    if (perfilError?.code === 'PGRST116') {
+      await supabase.auth.signOut({ scope: 'local' });
+      return { success: false, error: { code: 'no_profile' } };
     }
     return { success: true };
   }, []);

@@ -23,7 +23,7 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 294 pruebas, 41 archivos | ~20 s | Nada |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 303 pruebas, 43 archivos | ~20 s | Nada |
 | **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte y hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 176 aserciones, 8 archivos | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, ~73 casos | 2–5 min | Credenciales de prueba |
 | **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 53 casos | ~15 s | Nada; con cuentas de prueba cubre más |
@@ -55,6 +55,10 @@ npm test            # una vez
 npm run test:watch  # mientras desarrollas
 ```
 
+> Con la máquina cargada (Docker levantado, un build en paralelo), alguna prueba que
+> simula clics puede pasarse del tiempo límite de 5 s y fallar sin que haya nada roto.
+> Vuelve a correrla sola: si pasa, era eso.
+
 Los archivos `*.test.ts` de `src/lib` corren en entorno `node`. Los `*.test.tsx`
 declaran `// @vitest-environment jsdom` y renderizan con los proveedores reales
 (`src/test/renderWithProviders.tsx`); se simulan `AuthContext` y los servicios.
@@ -64,7 +68,9 @@ declaran `// @vitest-environment jsdom` y renderizan con los proveedores reales
 |---|---|---|
 | Fechas | `lib/dates.test.ts` | El día 1 cuenta en su mes; hoy y hoy + N días en calendario local (fecha estimada de entrega por defecto). **Corre en zona `America/Chicago` a propósito**: en UTC el error original es invisible |
 | Errores, VIN y vehículos | `lib/errors`, `lib/vin`, `pages/Vehicles.noplate` | Traducción de errores de Postgres/Auth; un 42501 escrito por la base muestra su razón y uno de RLS el genérico; CHECK violado con mensaje propio; validación de VIN; vehículos sin placa guardan `null` y se muestran como "Sin placa" |
-| Sesión | `context/AuthContext` | Una falla de red al releer el perfil o las sedes no saca al usuario; renovar el token no vuelve a pedir el perfil; una cuenta sin perfil sí queda fuera; **cerrar sesión o entrar otra persona vacía la caché de datos** |
+| Sesión | `context/AuthContext` | Una falla de red al releer el perfil o las sedes no saca al usuario; renovar el token no vuelve a pedir el perfil; una cuenta sin perfil sí queda fuera, **con el mensaje "no tiene acceso al taller"** y sin sesión guardada; **cerrar sesión o entrar otra persona vacía la caché de datos** |
+| Recuperar contraseña | `pages/ResetPassword` | Enlace vencido o ya usado (y la ruta abierta sin enlace) muestra el aviso en vez del formulario; después de guardar, "Entrar al sistema" lleva al panel |
+| Funciones de empleados | `services/users.service` | El motivo del rechazo de la función llega a la pantalla (no "non-2xx status code"); correo repetido en español; sin cuerpo se conserva el error original |
 | Importación bancaria | `lib/bankStatementParser*`, `lib/categorizationRules`, `pages/finance/ImportStatementModal`, `pages/Finance.import` | Lectura del PDF de Wells Fargo, casos límite, categorización, carga diferida del importador |
 | Finanzas | `pages/Finance.linkorder` | Vincular un movimiento a una orden; errores visibles en el diálogo |
 | Multimedia | `lib/media/uploadQueue`, `lib/media/mime`, `services/media.service`, `features/media/MediaGallery` | Cola: no re-subir tras fallar la fila, no reintentar permisos, reanudar tras recarga solo para el mismo usuario, concurrencia, sin conexión; formatos MP4 primero; galería: miniaturas firmadas, publicar solo admin, borrar solo lo propio, progreso |

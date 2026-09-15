@@ -15,12 +15,15 @@ const mocks = vi.hoisted(() => ({
   listener: null as AuthListener | null,
   perfil: vi.fn(),
   sedes: vi.fn(),
+  signOut: vi.fn(() => Promise.resolve({ error: null })),
 }));
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: () => Promise.resolve({ data: { session: { user: { id: 'user-admin' } } } }),
+      signInWithPassword: () => Promise.resolve({ data: { user: { id: 'user-nuevo' } }, error: null }),
+      signOut: mocks.signOut,
       onAuthStateChange: (cb: AuthListener) => {
         mocks.listener = cb;
         return { data: { subscription: { unsubscribe: () => {} } } };
@@ -36,8 +39,11 @@ vi.mock('../lib/supabase', () => ({
 const { AuthProvider } = await import('./AuthContext');
 const { useAuth } = await import('./auth.context');
 
+let login: ReturnType<typeof useAuth>['login'] = async () => ({ success: false });
+
 function Probe() {
-  const { user, loading, currentSede } = useAuth();
+  const { user, loading, currentSede, login: contextLogin } = useAuth();
+  login = contextLogin;
   if (loading) return <p>cargando</p>;
   return <p>{user ? `sesión de ${user.nombre_completo} en ${currentSede?.nombre}` : 'sin sesión'}</p>;
 }
@@ -119,5 +125,33 @@ describe('AuthProvider', () => {
     await act(async () => mocks.listener?.('SIGNED_IN', SESSION));
 
     await waitFor(() => expect(screen.getByText('sin sesión')).toBeInTheDocument());
+    // Y no deja esa sesión inútil guardada en el navegador.
+    expect(mocks.signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+
+  it('iniciar sesión con una cuenta sin perfil da un motivo en vez de volver al login callado', async () => {
+    await renderSignedIn();
+    mocks.perfil.mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'no rows' } });
+
+    let result;
+    await act(async () => {
+      result = await login('sinperfil@taller.test', 'Clave-de-prueba');
+    });
+
+    expect(result).toEqual({ success: false, error: { code: 'no_profile' } });
+    expect(mocks.signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+
+  it('si comprobar el perfil falla por la red, el login sigue adelante', async () => {
+    await renderSignedIn();
+    mocks.perfil.mockResolvedValue({ data: null, error: { message: 'TypeError: Failed to fetch' } });
+
+    let result;
+    await act(async () => {
+      result = await login('ana@restorify.test', 'Clave-de-prueba');
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(mocks.signOut).not.toHaveBeenCalled();
   });
 });

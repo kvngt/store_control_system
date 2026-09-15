@@ -178,7 +178,7 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | ID | P | Ejecuta | Comando | Esperado |
 |---|---|---|---|---|
 | AUT-01 | P0 | IA | `npm run lint` y `npx tsc -b` | Sin errores ni avisos |
-| AUT-02 | P0 | IA | `npm test` | Todas en verde (294 al escribir esto) |
+| AUT-02 | P0 | IA | `npm test` | Todas en verde (303 al escribir esto) |
 | AUT-03 | P0 | IA | `npm run build` | Termina sin errores |
 | AUT-04 | P0 | IA | `npm run db:check` | "Base de datos al día" |
 | AUT-05 | P0 | IA | `npx supabase start` y `npm run test:db` (requiere Docker) | 8 archivos pgTAP en verde. Sin Docker: **BLOQUEADO** |

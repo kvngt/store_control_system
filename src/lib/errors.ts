@@ -28,6 +28,11 @@ const FRIENDLY_BY_CODE: Record<string, Record<Language, string>> = {
     es: 'No se encontró el registro solicitado.',
     en: 'The requested record was not found.',
   },
+  // Auth, al crear o editar un empleado con un correo que ya tiene cuenta.
+  email_exists: {
+    es: 'Ya existe una cuenta con ese correo. Usa otro o edita a esa persona.',
+    en: 'An account with that email already exists. Use another one or edit that person.',
+  },
 };
 
 interface ErrorLike {
@@ -65,6 +70,20 @@ const AUTH_BY_CODE: Record<string, Record<Language, string>> = {
     es: 'La contraseña es demasiado débil. Usa al menos 8 caracteres.',
     en: 'That password is too weak. Use at least 8 characters.',
   },
+  over_email_send_rate_limit: {
+    es: 'Ya se envió un correo hace poco. Espera un minuto antes de pedir otro.',
+    en: 'An email was sent a moment ago. Wait a minute before asking for another.',
+  },
+  // Propio de la app: la cuenta existe en Auth pero no tiene fila en `perfiles`.
+  no_profile: {
+    es: 'Esta cuenta no tiene acceso al taller. Pide a un administrador que te dé de alta.',
+    en: 'This account has no access to the shop. Ask an administrator to add you.',
+  },
+  // El enlace de recuperación venció, ya se usó, o se abrió /reset-password sin él.
+  recovery_link_invalid: {
+    es: 'Este enlace ya no sirve: venció o ya se usó. Pide uno nuevo desde "¿Olvidaste tu contraseña?".',
+    en: 'This link no longer works: it expired or was already used. Ask for a new one from "Forgot your password?".',
+  },
 };
 
 // Fallback for SDK versions that don't set `code`: match on the English text.
@@ -75,6 +94,8 @@ const AUTH_BY_MESSAGE: [RegExp, string][] = [
   [/too many requests|rate limit/i, 'over_request_rate_limit'],
   [/should be different from the old password/i, 'same_password'],
   [/password should be at least|weak password/i, 'weak_password'],
+  [/only request this after/i, 'over_email_send_rate_limit'],
+  [/auth session missing|otp_expired|link is invalid or has expired/i, 'recovery_link_invalid'],
 ];
 
 /**

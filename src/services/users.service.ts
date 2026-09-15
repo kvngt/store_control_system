@@ -2,6 +2,38 @@
 import { supabase } from '../lib/supabase';
 import type { UserProfile, UserRole } from '../types/database';
 
+/**
+ * Llama una edge function de empleados y devuelve su motivo cuando la rechaza.
+ *
+ * Con un 4xx, `functions.invoke` no entrega el cuerpo: da un error cuyo mensaje es
+ * "Edge Function returned a non-2xx status code", y eso era lo que veía el admin en
+ * lugar de "No puedes quitar el rol de administrador al único administrador" o de
+ * "ya existe una cuenta con ese correo". El cuerpo sigue en `error.context`.
+ */
+export async function invokeAdminFunction<T>(name: string, body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke(name, { body });
+  const reason = error ? await readFunctionError(error) : (data as { error?: string } | null)?.error;
+  if (reason) throw employeeError(reason);
+  if (error) throw error;
+  return data as T;
+}
+
+async function readFunctionError(error: unknown): Promise<string | undefined> {
+  const response = (error as { context?: unknown }).context;
+  if (!(response instanceof Response)) return undefined;
+  const payload = await response.clone().json().catch(() => null);
+  return typeof payload?.error === 'string' ? payload.error : undefined;
+}
+
+// Auth responde en inglés cuando el correo ya tiene cuenta; el resto de los motivos
+// ya vienen escritos en español por las funciones.
+function employeeError(message: string) {
+  if (/already (been )?registered|already exists|email_exists/i.test(message)) {
+    return Object.assign(new Error(message), { code: 'email_exists' });
+  }
+  return new Error(message);
+}
+
 export const usersService = {
   uploadAvatar: async (userId: string, file: File) => {
     const path = `${userId}/avatar-${Date.now()}-${file.name}`;
@@ -80,10 +112,8 @@ export const usersService = {
     sede_id: string;
     telefono?: string;
   }) => {
-    const { data, error } = await supabase.functions.invoke('create-employee', { body: input });
-    if (error) throw error;
-    if (data?.error) throw new Error(data.error);
-    return data.profile as UserProfile;
+    const data = await invokeAdminFunction<{ profile: UserProfile }>('create-employee', input);
+    return data.profile;
   },
 
   /**
@@ -105,18 +135,12 @@ export const usersService = {
     /** Only when the admin is setting a new one; omit to leave it alone. */
     password?: string;
   }) => {
-    const { data, error } = await supabase.functions.invoke('update-employee', { body: input });
-    if (error) throw error;
-    if (data?.error) throw new Error(data.error);
-    return data.profile as UserProfile;
+    const data = await invokeAdminFunction<{ profile: UserProfile }>('update-employee', input);
+    return data.profile;
   },
 
   deleteEmployee: async (usuarioId: string) => {
-    const { data, error } = await supabase.functions.invoke('delete-employee', {
-      body: { usuario_id: usuarioId },
-    });
-    if (error) throw error;
-    if (data?.error) throw new Error(data.error);
+    await invokeAdminFunction('delete-employee', { usuario_id: usuarioId });
   },
 
   getOperators: async (sedeId?: string) => {

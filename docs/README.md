@@ -16,7 +16,8 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 | **Hacerte cargo del proyecto** sin poder preguntarle a quien lo hizo | [traspaso.md](traspaso.md) |
 | **Salir a producción**: bloqueantes, plan del día y vuelta atrás | [salida-a-produccion.md](salida-a-produccion.md) |
 | **Entender el sistema** antes de tocar código | [arquitectura.md](arquitectura.md) → [reglas-de-negocio.md](reglas-de-negocio.md) |
-| **Probar la plataforma** (persona o agente de IA) | [plan-de-pruebas.md](plan-de-pruebas.md) |
+| **Probar la plataforma a mano** como tester, sin programar | [manual-de-pruebas.md](manual-de-pruebas.md) |
+| **Probar la plataforma** con casos técnicos (persona o agente de IA) | [plan-de-pruebas.md](plan-de-pruebas.md) |
 | Saber **qué cubren las pruebas automatizadas** y cómo correrlas | [pruebas.md](pruebas.md) |
 | Revisar **qué errores se encontraron** en la última auditoría y cómo se corrigieron | [auditoria-2026-09.md](auditoria-2026-09.md) |
 | Ver **la plataforma completa**: qué hay en Supabase, qué servicios externos se usan y quién habla con qué | [supabase.md](supabase.md) |
@@ -74,6 +75,12 @@ el dinero, qué ve cada quien y diagnóstico.
 **[evolucion.md](evolucion.md)** — La historia del proyecto: de la demo a las fases del
 cliente, las 36 migraciones con lo que hizo cada una, las decisiones que se
 reemplazaron y cómo creció la red de pruebas.
+
+**[manual-de-pruebas.md](manual-de-pruebas.md)** — Para la persona que prueba la
+plataforma desde la pantalla: qué preparar, una orden de ejemplo con los montos que deben
+salir, 142 casos en 13 sesiones (acceso y contraseñas, personal, órdenes como admin y como
+técnico, presupuestos, enlace del cliente, dinero y comisiones, finanzas, teléfono, uso
+real, borrados), cómo reportar un fallo y la hoja de resultados.
 
 **[plan-de-pruebas.md](plan-de-pruebas.md)** — El plan de pruebas ejecutable: cada caso
 con identificador, prioridad, pasos y resultado esperado, y si lo puede hacer un agente

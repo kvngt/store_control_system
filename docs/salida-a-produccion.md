@@ -45,7 +45,8 @@ Resultado de las verificaciones después de corregir:
 
 | Verificación | Resultado |
 |---|---|
-| Vitest | 294 pruebas, 41 archivos, en verde |
+| Vitest | 303 pruebas, 43 archivos, en verde |
+| Recorrido del login en el navegador contra Supabase local (cuenta inexistente, sin perfil, primer admin, alta/edición/baja de empleados, recuperación, enlace usado, base sin usuarios) | 33 pasos; 5 fallos encontrados y corregidos (PRD-26 a PRD-28) |
 | pgTAP (Supabase local, 36 migraciones desde cero) | 176 aserciones, 8 archivos, en verde |
 | Integración contra la API local (RPC nuevas, conteos, paginación, cuenta sin perfil) | 7 de 7 |
 | `tsc -b`, `oxlint`, `npm run build`, `deno check` de las funciones cambiadas | Sin errores |
@@ -64,7 +65,7 @@ Nadie más que quien administra las cuentas puede hacer esto. Marca cada uno.
 | **PRD-02** | **Crítica** | **Plan Pro** | Free no hace respaldos diarios y pausa el proyecto tras una semana sin uso. Un error humano o un borrado en cascada no tendría vuelta atrás | Organization → Billing → Pro. Después, Database → Backups muestra los respaldos diarios |
 | **PRD-03** | Alta | **Rotar la llave de Resend** | La llave de envío se compartió en una conversación con una IA. La de acceso total que se usó para verificar el dominio puede seguir viva | Resend → API Keys: crear una de solo envío para `reinventa.shop`, `npx supabase secrets set RESEND_API_KEY=<nueva>`, borrar las anteriores. Comprobar con un correo de prueba (plan de pruebas POR-07) |
 | **PRD-04** | Alta | **Cuentas y datos de prueba** | Hay 5 cuentas (2 nunca iniciaron sesión, varias con dominio `restorify.com`), las credenciales de una admin están en `.env.test.local` y las pruebas e2e escriben datos `PWTEST` en este mismo proyecto | Configuración → Personal: dejar solo personal real, cambiar la contraseña de toda cuenta cuyas credenciales estén en un archivo. No correr `test:e2e` ni `qa:security -- --alta` contra producción |
-| **PRD-05** | Media | **SMTP de Auth con Resend** | El correo propio de Supabase permite unos 2 por hora: dos técnicos que olvidan la contraseña el mismo rato y el tercero no recibe nada | [deployment.md §4.2](deployment.md#42-auth) |
+| **PRD-05** | **Alta** | **SMTP de Auth con Resend** | El correo propio de Supabase permite unos 2 por hora y, según la política de Supabase para ese servidor de fábrica, solo entrega a correos del equipo de la organización: el "¿Olvidaste tu contraseña?" de un técnico puede no llegarle nunca. Comprobar con un correo que no sea del equipo (manual-de-pruebas A-08, B-13) | [deployment.md §4.2](deployment.md#42-auth) |
 | **PRD-06** | Media | **Sentry** | `VITE_SENTRY_DSN` está vacía: un error en el teléfono de un técnico no llega a nadie | Crear el proyecto en Sentry (org `restorify`, proyecto `restorify-frontend`, ya configurados en `vite.config.ts`), poner el DSN en `.env.local` y recompilar |
 | **PRD-07** | Media | **Contraseñas de 8 caracteres en Auth** | La app y las funciones ya exigen 8; Auth en el panel sigue en 6 y aceptaría una de 6 desde la recuperación de contraseña | Authentication → Sign In / Providers → Email → Minimum password length: 8 |
 | **PRD-08** | Baja | **Vaciar los buckets de prueba** | `vehiculos_fotos` (78 MB), `firmas` y `reportes` guardan datos de antes de las fases | [supabase.md §14](supabase.md#14-pendientes-y-limpieza) |
@@ -237,6 +238,49 @@ De ese mismo documento se revisaron y **no eran errores**: B-03 (`fecha_finaliza
 `timestamptz`; guardar el instante en UTC es lo correcto y se muestra en hora local) y B-10
 (`sw.js` ya se sirve sin caché). B-07 (capacidad por defecto repetida) quedó unificada en
 `DEFAULT_CAPACITY`.
+
+### PRD-26 · Alta · Los errores de las funciones de empleados llegaban en inglés técnico
+
+**Qué pasaba.** Cuando `create-employee`, `update-employee` o `delete-employee` rechazaban algo
+(correo repetido, quitar el rol al único admin, empleado con órdenes), el admin veía
+"Edge Function returned a non-2xx status code". `functions.invoke` no entrega el cuerpo de
+un 4xx; el motivo en español que escriben las funciones nunca llegaba a la pantalla.
+
+**Corrección.** `invokeAdminFunction` (`src/services/users.service.ts`) lee el cuerpo de la
+respuesta y convierte "already been registered" de Auth en "Ya existe una cuenta con ese
+correo". No hace falta volver a desplegar las funciones. Prueba: `users.service.test.ts`.
+
+### PRD-27 · Media · Una cuenta sin perfil "no hacía nada" al entrar
+
+**Qué pasaba.** Una cuenta creada en Authentication → Users (sin fila en `perfiles`) iniciaba
+sesión, la app la devolvía al login sin ningún mensaje y la sesión quedaba guardada en el
+navegador. Parecía que el botón Entrar no funcionaba.
+
+**Corrección.** `login` comprueba el perfil: sin él cierra la sesión y muestra "Esta cuenta no
+tiene acceso al taller. Pide a un administrador que te dé de alta." Pruebas en
+`AuthContext.test.tsx`.
+
+### PRD-28 · Media · Recuperar la contraseña: dos callejones sin salida
+
+**Qué pasaba.** (1) Después de guardar la contraseña nueva, **Entrar al sistema** dejaba a la
+persona en `/reset-password` con el formulario otra vez, y **Cancelar** tampoco salía de ahí.
+(2) Un enlace vencido o ya usado mostraba el formulario sin aviso, y al guardar decía
+"Revisa tu conexión". Los mensajes de límite de correos también decían "revisa tu conexión".
+
+**Corrección.** `ResetPassword` navega al panel o al login, y detecta el enlace inválido
+(`#error_code=otp_expired` o sin sesión) con un mensaje y un botón para pedir otro. Nuevos
+mensajes para `over_email_send_rate_limit`. Pruebas en `ResetPassword.test.tsx`; recorrido
+completo en el navegador contra Supabase local con los correos de Mailpit.
+
+### Sin usuarios en la base
+
+Probado contra Supabase local con cero cuentas: la app muestra el login, cualquier intento
+dice "Correo o contraseña incorrectos" y "¿Olvidaste tu contraseña?" responde lo mismo sin
+enviar nada. Nadie puede crear el primer administrador desde la app (a propósito: el registro
+está apagado y `create-employee` exige un admin). Se crea con
+[scripts/admin/crear-primer-admin.sql](../scripts/admin/crear-primer-admin.sql), que también
+crea una sede si no hay ninguna; con esa cuenta todas las pantallas cargan vacías sin errores
+y se puede dar de alta al resto.
 
 ---
 

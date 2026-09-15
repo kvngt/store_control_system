@@ -14,7 +14,7 @@ interface HeaderProps {
 
 interface SearchResults {
   customers: { id: string; nombre: string; telefono: string }[];
-  vehicles: { id: string; marca: string; modelo: string; placa: string; vin: string; cliente?: { nombre: string } }[];
+  vehicles: { id: string; marca: string; modelo: string; placa: string | null; vin: string; cliente?: { nombre: string } }[];
   orders: { id: string; numero_orden: string; estatus: string; cliente?: { nombre: string } }[];
 }
 
@@ -202,7 +202,9 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
                   {results.vehicles.map((v) => (
                     <button key={v.id} className="search-dropdown-item" onClick={goToVehicles}>
                       <Car size={14} />
-                      <span className="search-dropdown-item-title">{v.marca} {v.modelo} · {v.placa}</span>
+                      <span className="search-dropdown-item-title">
+                        {v.marca} {v.modelo} · {v.placa || t('vehicles.noPlate')}
+                      </span>
                       <span className="search-dropdown-item-sub">{v.cliente?.nombre}</span>
                     </button>
                   ))}

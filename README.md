@@ -25,6 +25,7 @@ Toda la documentación vigente está en **[docs/](docs/README.md)**:
 | Saber qué hay en Supabase y cómo está repartido | [docs/supabase.md](docs/supabase.md) |
 | Desplegar | [docs/deployment.md](docs/deployment.md) |
 | Usar la aplicación | [docs/manual-usuario.md](docs/manual-usuario.md) |
+| Probar la plataforma a mano (tester) | [docs/manual-de-pruebas.md](docs/manual-de-pruebas.md) |
 | Entender cómo evolucionó y por qué | [docs/evolucion.md](docs/evolucion.md) |
 | Modificar el código con un agente de IA | [docs/ai-context.md](docs/ai-context.md) |
 

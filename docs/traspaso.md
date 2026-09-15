@@ -137,7 +137,7 @@ Si todo pasa, la máquina está lista.
 ### Ramas y revisión
 
 - `main` es lo publicado. Trabaja en una rama y abre una pull request.
-- La integración continua corre en cada PR: lint, tipos, 294 pruebas, build, y las 36
+- La integración continua corre en cada PR: lint, tipos, 303 pruebas, build, y las 36
   migraciones desde cero con las 176 aserciones pgTAP. **No fusiones con CI en rojo.**
 
 ### Un cambio que toca la base
@@ -178,6 +178,8 @@ Reglas completas: [ai-context.md](ai-context.md) (sirven igual para personas).
 | **Restaurar un respaldo** | Supabase → Database → Backups (Pro). Restaura el proyecto entero a esa fecha: se pierde lo posterior |
 | **Exportar datos** | Finanzas → Exportar CSV; o `npx supabase db dump --linked --data-only -f datos.sql` (tiene datos personales: no a git) |
 | **Revisar la salud** | [salida-a-produccion.md §6](salida-a-produccion.md#6-la-primera-semana) |
+| **Dejar la plataforma sin datos de prueba** | [scripts/admin/limpiar-datos.sql](../scripts/admin/limpiar-datos.sql): conserva los correos que indiques (al menos un admin) y las sedes; termina en `ROLLBACK` hasta que lo cambies. Después, vaciar los buckets que dice el script |
+| **Probar la plataforma a mano** | [manual-de-pruebas.md](manual-de-pruebas.md) (142 casos por sesiones) |
 
 ---
 
@@ -188,6 +190,9 @@ Reglas completas: [ai-context.md](ai-context.md) (sirven igual para personas).
 | El sitio no abre o da 500 | ¿Se subió un `.htaccess` nuevo? ¿Hostinger está arriba? | [salida-a-produccion.md §5](salida-a-produccion.md#5-volver-atrás) |
 | Aviso "esquema desactualizado" | `npm run db:check`: faltan migraciones o el `dist/` es viejo | [deployment.md §5](deployment.md#5-publicar-una-versión) |
 | Nadie puede iniciar sesión | Supabase → Authentication → Providers: **Email** encendido | [salida-a-produccion.md PRD-16](salida-a-produccion.md#prd-16--media--un-config-push-habría-dejado-a-todos-sin-poder-entrar) |
+| **No queda ningún administrador** (se borró, o la base quedó sin usuarios) | Nadie puede crear cuentas desde la app y el registro público está apagado a propósito | Crear la cuenta en Authentication → Users → Add user y correr [scripts/admin/crear-primer-admin.sql](../scripts/admin/crear-primer-admin.sql) |
+| "Esta cuenta no tiene acceso al taller" | La cuenta existe en Auth pero no tiene fila en `perfiles` (se creó en el panel, no en la app) | Borrarla en Authentication → Users y crearla desde Configuración → Personal |
+| No llega el correo de "¿Olvidaste tu contraseña?" | Authentication → Logs; ¿hay SMTP propio? El correo de fábrica de Supabase manda muy pocos por hora y solo a correos del equipo del proyecto | [salida-a-produccion.md PRD-05](salida-a-produccion.md#2-bloqueantes-fuera-del-código) |
 | Una pantalla dice "no tienes permiso" | Rol de la cuenta; política RLS de la tabla | [reglas-de-negocio.md §3](reglas-de-negocio.md#3-qué-puede-hacer-cada-rol) |
 | No llegan correos al cliente | Tarjeta "Enlace del cliente" de la orden; `cola_envios` | [portal-y-correos.md §9](portal-y-correos.md#9-diagnóstico) |
 | No llegan push | Configuración → Notificaciones → Enviar prueba; secretos VAPID | [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md#diagnóstico-1) |

@@ -170,6 +170,10 @@ additional_redirect_urls = [
   "https://reinventa.shop",
   "https://reinventa.shop/",
   "http://localhost:5173",
+  # Con ruta y cualquier puerto: el enlace de recuperación apunta a /reset-password.
+  # Sin esta entrada el Supabase local descarta el redirectTo y manda el enlace a
+  # site_url (el dominio real).
+  "http://localhost:*/**",
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600

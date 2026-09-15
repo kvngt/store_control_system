@@ -13,7 +13,7 @@ import type { Sede, UserProfile } from '../types/database';
 // Supabase, so component tests mock that module instead of wrapping it.
 // The router is included because pages reach for useNavigate() to deep-link
 // into each other, and without one they throw on render.
-export function renderWithProviders(ui: ReactElement) {
+export function renderWithProviders(ui: ReactElement, { route = '/' }: { route?: string } = {}) {
   // A fresh client per render: a cache shared between tests would let one
   // test's fixtures answer the next test's query. Retries are off so a test
   // that asserts an error sees it immediately instead of after a backoff.
@@ -23,7 +23,7 @@ export function renderWithProviders(ui: ReactElement) {
 
   return render(
     <QueryClientProvider client={queryClient}>
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[route]}>
       <ThemeProvider>
         <LanguageProvider>
           <ToastProvider>

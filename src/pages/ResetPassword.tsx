@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MIN_PASSWORD_LENGTH } from '../lib/password';
 import { Hexagon, Wrench } from 'lucide-react';
 import { useLanguage } from '../context/language.context';
@@ -14,9 +15,19 @@ import loginBg from '../assets/login-bg.webp';
  * dashboard with a temporary session and never be asked to choose a password —
  * and the next time they tried the old one it still wouldn't work.
  */
+/** Supabase escribe el motivo en el fragmento cuando el enlace no sirve (#error_code=otp_expired). */
+function linkErrorInUrl(): boolean {
+  return /(^#|&)error(_code)?=/.test(window.location.hash);
+}
+
 export default function ResetPassword() {
   const { t, language } = useLanguage();
-  const { endPasswordRecovery, logout } = useAuth();
+  const { endPasswordRecovery, logout, passwordRecovery, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  // Un enlace vencido o ya usado llegaba igual a este formulario, sin sesión, y al
+  // guardar decía "Revisa tu conexión". Se decide al abrir: la sesión ya está
+  // resuelta (App no muestra rutas mientras carga).
+  const [linkInvalid] = useState(() => linkErrorInUrl() || (!passwordRecovery && !isAuthenticated));
 
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -72,10 +83,34 @@ export default function ResetPassword() {
 
           {error && <div className="login-error" role="alert">{error}</div>}
 
-          {done ? (
+          {linkInvalid && !done ? (
+            <>
+              <div className="login-error" role="alert">
+                {getAuthErrorMessage({ code: 'recovery_link_invalid' }, language)}
+              </div>
+              <button
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+                id="reset-request-new"
+                onClick={() => navigate('/login', { replace: true })}
+              >
+                {t('auth.backToLogin')}
+              </button>
+            </>
+          ) : done ? (
             <>
               <div className="login-notice" role="status">{t('auth.passwordChanged')}</div>
-              <button className="btn btn-primary" style={{ width: '100%' }} onClick={endPasswordRecovery}>
+              {/* Sin navegar, "Entrar" dejaba a la persona en /reset-password con el
+                  formulario otra vez: esa ruta existe fuera de la recuperación. */}
+              <button
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+                id="reset-continue"
+                onClick={() => {
+                  endPasswordRecovery();
+                  navigate('/', { replace: true });
+                }}
+              >
                 {t('auth.continueToApp')}
               </button>
             </>
@@ -111,7 +146,11 @@ export default function ResetPassword() {
               <button
                 type="button"
                 className="login-link"
-                onClick={() => { endPasswordRecovery(); logout(); }}
+                onClick={async () => {
+                  endPasswordRecovery();
+                  await logout();
+                  navigate('/login', { replace: true });
+                }}
               >
                 {t('common.cancel')}
               </button>

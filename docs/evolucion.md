@@ -421,7 +421,7 @@ comentario que explica el problema. Léelas en orden si quieres el detalle.
 | Fase 5 | 257 (34 archivos) | 05 → 126 aserciones en 5 archivos | |
 | Fase 6 | 265 (36 archivos) | 06 → 133 aserciones en 6 archivos | |
 | Auditoría | 274 (37 archivos) | 07 → 158 aserciones en 7 archivos | + `qa:security` (52 casos contra la API) |
-| Pre-producción | **294** (41 archivos) | 08 → **176 aserciones** en 8 archivos, en CI | `qa:security` 53 casos; integración contra la API local |
+| Pre-producción | **303** (43 archivos) | 08 → **176 aserciones** en 8 archivos, en CI | `qa:security` 53 casos; integración contra la API local |
 
 Las pruebas pgTAP se ejecutaron por primera vez con Docker el 15 de septiembre de 2026:
 **158 aserciones en verde** y las 35 migraciones aplicadas desde cero. Solo hubo que

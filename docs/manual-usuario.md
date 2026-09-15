@@ -102,7 +102,9 @@ En la misma pantalla puedes cambiar el idioma entre **Español** e **English**.
 La elección se recuerda para la próxima vez.
 
 Si el correo o la contraseña no son correctos, aparece un aviso rojo sobre el
-formulario y no se entra.
+formulario y no se entra. Si el aviso dice **"Esta cuenta no tiene acceso al
+taller"**, la cuenta existe pero nadie la dio de alta en el sistema: pídele a un
+administrador que te cree desde Configuración → Personal.
 
 ### Si olvidaste tu contraseña
 
@@ -111,7 +113,10 @@ formulario y no se entra.
 3. Revisa tu bandeja de entrada —y la carpeta de correo no deseado— y abre el
    enlace que recibiste.
 4. El enlace te lleva a una pantalla para escribir tu **contraseña nueva** dos
-   veces. Al guardarla entras directo al sistema.
+   veces. Al guardarla, **Entrar al sistema** te lleva al panel.
+
+Cada enlace sirve **una sola vez** y vence al poco tiempo (una hora, con la configuración normal). Si lo abres de nuevo o tarde,
+la pantalla dice "Este enlace ya no sirve": vuelve al inicio y pide otro.
 
 <!-- IMAGEN: pantalla de "Recuperar contraseña" con el campo de correo -->
 
