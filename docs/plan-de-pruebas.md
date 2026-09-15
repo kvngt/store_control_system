@@ -448,7 +448,7 @@ una entregada. Lo que no encuentra lo marca SKIP.
 
 | Grupo | Casos | Qué se espera |
 |---|---|---|
-| Sin sesión | SEC-01 a SEC-16 | Sin datos, sin funciones internas (`reverse_order_delivery_finance`, `sync_*`, `recalculate_order_totals`, `claim_outbox`, `datos_portal`, `responder_presupuesto_portal`, `pay_commissions`), `process-outbox` 401, portal 404 con token falso, buckets privados |
+| Sin sesión | SEC-01 a SEC-17 | Las 6 edge functions desplegadas (SEC-17); sin datos, sin funciones internas (`reverse_order_delivery_finance`, `sync_*`, `recalculate_order_totals`, `claim_outbox`, `datos_portal`, `responder_presupuesto_portal`, `pay_commissions`), `process-outbox` 401, portal 404 con token falso, buckets privados |
 | Técnico: lectura | SEC-20 a SEC-35 | No ve montos, repuestos con precio, Finanzas, enlaces, presupuestos, cola de correos, pagos ni avisos ajenos, ni datos de otra sede |
 | Técnico: escritura | SEC-40 a SEC-54 | No cotiza, no entrega, no escribe totales ni datos de recepción, no firma con archivos ajenos, no publica al cliente, no manda enlaces, presupuestos, reportes ni avisos, no asigna a otros; en órdenes ajenas o entregadas no toca nada |
 | Técnico: alta directa | SEC-55 | Una orden creada por la API nace en recepción, sin avance, sin mano de obra y con número del sistema |
@@ -528,6 +528,7 @@ Errores ya corregidos. Si alguno reaparece, es una regresión **P0**.
 | Firmar no actualizaba totales ni presupuesto *(AUD-06)* | ORD-12 | `WorkOrders.smoke.test.tsx` |
 | Con mala señal la app mandaba al login *(AUD-07)* | SES-01 | `AuthContext.test.tsx` |
 | Orden de otra sede con logo, WhatsApp y técnicos de la sede elegida *(AUD-08)* | ORD-14 | `WorkOrders.smoke.test.tsx` |
+| Editar un empleado fallaba: `update-employee` no estaba desplegada *(AUD-26)* | CFG-04 | `qa:security` SEC-17 |
 
 ---
 
@@ -551,6 +552,7 @@ Según lo que toca el cambio:
 | La firma | ORD-07, ORD-12, PRE-02, PRE-15, POR-07 |
 | Sesión o sedes | ACC, SES, SED |
 | Estilos | MOV en un teléfono real |
+| Edge functions o secretos | SEC-17 y los casos del módulo que usa la función (CFG para empleados, POR para `portal`, NOT/POR para `process-outbox`) |
 
 Después de publicar: [deployment.md §6](deployment.md#6-verificación-después-de-publicar).
 
@@ -574,7 +576,7 @@ PASS: n · FAIL: n · BLOQUEADO: n · N/A: n
 ## Resultados
 | ID | Resultado | Evidencia / nota |
 |---|---|---|
-| AUT-06 | PASS | 51 casos: 44 PASS, 0 FAIL, 7 SKIP (sin ORDEN_ENTREGADA) |
+| AUT-06 | PASS | 52 casos: 45 PASS, 0 FAIL, 7 SKIP (sin ORDEN_ENTREGADA) |
 | ORD-12 | FAIL | Ver H-1 |
 | MED-02 | BLOQUEADO | Requiere dispositivo |
 

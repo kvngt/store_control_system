@@ -208,6 +208,23 @@ for (const c of CASES) {
   results.push({ id: c.id, desc: c.desc, estado: ok ? 'PASS' : 'FAIL', http: r.status, ...(ok ? {} : { respuesta: r.text.slice(0, 300) }) });
 }
 
+// SEC-17: las Edge Functions que usan la app y la base están desplegadas. Una que falta
+// responde 404 y la pantalla falla sin más pista (pasó con update-employee, AUD-26).
+{
+  const FUNCTIONS = ['portal', 'process-outbox', 'cleanup-storage', 'create-employee', 'update-employee', 'delete-employee'];
+  const missing = [];
+  for (const name of FUNCTIONS) {
+    const r = await call('OPTIONS', `/functions/v1/${name}`);
+    if (r.status === 404) missing.push(name);
+  }
+  results.push({
+    id: 'SEC-17',
+    desc: `Las ${FUNCTIONS.length} Edge Functions están desplegadas`,
+    estado: missing.length ? 'FAIL' : 'PASS',
+    ...(missing.length ? { http: 404, respuesta: `No desplegadas: ${missing.join(', ')}` } : {}),
+  });
+}
+
 // SEC-55: alta directa de una orden por un técnico (crea datos: solo con --alta).
 if (!INCLUDE_INSERT) {
   results.push({ id: 'SEC-55', desc: 'Una orden creada directo por un técnico nace en recepción', estado: 'SKIP', motivo: 'usa --alta (crea una orden de prueba)' });

@@ -200,8 +200,10 @@ SELECT results_eq(
   'Queda la evidencia: vía, nombre, IP, comentario y total autorizado'
 );
 SELECT is(
+  -- Por presupuesto y no por fecha: la firma de recepción también avisó, en la misma
+  -- transacción, y NOW() es igual para los dos.
   (SELECT cuerpo FROM notificaciones WHERE usuario_id = 'a0000000-0000-0000-0000-000000000002' AND tipo = 'presupuesto_respondido'
-   ORDER BY creado_en DESC LIMIT 1),
+   AND datos->>'presupuesto_id' = (SELECT id FROM t_p)::text),
   'Autorizado: Frenos, Pastillas. No realizar: Pintura.',
   'El mecánico asignado recibe qué hacer y qué no'
 );

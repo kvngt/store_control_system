@@ -20,6 +20,7 @@ Toda la documentación vigente está en **[docs/](docs/README.md)**:
 | Probar la plataforma (persona o agente de IA) | [docs/plan-de-pruebas.md](docs/plan-de-pruebas.md) |
 | Saber qué cubren las pruebas automatizadas | [docs/pruebas.md](docs/pruebas.md) |
 | Revisar los hallazgos de la última auditoría | [docs/auditoria-2026-09.md](docs/auditoria-2026-09.md) |
+| Saber qué hay en Supabase y cómo está repartido | [docs/supabase.md](docs/supabase.md) |
 | Desplegar | [docs/deployment.md](docs/deployment.md) |
 | Usar la aplicación | [docs/manual-usuario.md](docs/manual-usuario.md) |
 | Entender cómo evolucionó y por qué | [docs/evolucion.md](docs/evolucion.md) |

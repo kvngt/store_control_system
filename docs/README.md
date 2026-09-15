@@ -17,6 +17,7 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 | **Probar la plataforma** (persona o agente de IA) | [plan-de-pruebas.md](plan-de-pruebas.md) |
 | Saber **qué cubren las pruebas automatizadas** y cómo correrlas | [pruebas.md](pruebas.md) |
 | Revisar **qué errores se encontraron** en la última auditoría y cómo se corrigieron | [auditoria-2026-09.md](auditoria-2026-09.md) |
+| Ver **la plataforma completa**: qué hay en Supabase, qué servicios externos se usan y quién habla con qué | [supabase.md](supabase.md) |
 | **Desplegar o configurar un entorno** | [deployment.md](deployment.md) |
 | **Usar la aplicación** o capacitar al taller | [manual-usuario.md](manual-usuario.md) |
 | Trabajar con **multimedia o notificaciones** | [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md) |
@@ -75,6 +76,16 @@ falta Docker.
 septiembre de 2026: qué se encontró, qué tan grave era, cómo se corrigió, con qué prueba
 se comprueba y los riesgos que quedan abiertos.
 
+**[supabase.md](supabase.md)** — El inventario del proyecto de Supabase y de la plataforma
+completa: el mapa de servicios (Hostinger, Supabase, Resend, push, NHTSA), quién habla
+con qué y con qué llave, esquemas y tablas, las 90 funciones agrupadas por quién puede
+ejecutarlas, buckets y sus rutas, las 6 edge functions, nombres de secretos y de Vault,
+Auth, Realtime, tareas programadas, dónde está cada cosa en el panel, el Supabase local y
+lo que falta limpiar.
+
+**[plan-de-mejora.md](plan-de-mejora.md)** — Análisis de desempeño, deuda técnica y plan de
+acción priorizado posterior a la auditoría.
+
 **[deployment.md](deployment.md)** — Cómo se pone en producción: Supabase
 (migraciones, secretos, Vault, edge functions, límites de Storage), Hostinger,
 correo con Resend, variables de entorno, el orden en que tiene que hacerse todo y
@@ -112,7 +123,8 @@ Después de las seis fases se hizo una **auditoría completa** (septiembre 2026)
 hallazgos corregidos, entre ellos funciones internas de dinero que se podían llamar por
 la API sin sesión. Detalle, pruebas y lo que queda abierto en
 [auditoria-2026-09.md](auditoria-2026-09.md). Su migración
-(`20260926000000_audit_hardening`) se despliega junto con el build que la acompaña.
+(`20260926000000_audit_hardening`) está aplicada en el proyecto enlazado y el build
+que la acompaña está publicado (15 de septiembre de 2026).
 
 > **Las seis fases están desplegadas** en el proyecto de Supabase enlazado
 > (septiembre 2026). Para otro entorno hay configuración que no está en el código

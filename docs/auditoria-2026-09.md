@@ -27,7 +27,7 @@ automatizadas: [pruebas.md](pruebas.md).
 |---|---|---|
 | **Alta** | 1 | 0 |
 | **Media** | 7 | 1 |
-| **Baja** | 7 | 5 |
+| **Baja** | 7 | 4 |
 
 El hallazgo más grave: **cuatro funciones internas de dinero se podían llamar por la
 API sin iniciar sesión**. Una de ellas, `reverse_order_delivery_finance`, asienta la
@@ -47,10 +47,12 @@ Pruebas nuevas:
 - pgTAP `07_auditoria.test.sql` (25 aserciones).
 - Vitest: `AuthContext.test.tsx`, casos nuevos en `WorkOrders.smoke`, `errors` y `dates`
   (274 pruebas en total).
-- `npm run qa:security`: 51 verificaciones contra la API.
+- `npm run qa:security`: 51 verificaciones contra la API (52 desde SEC-17, que comprueba que las edge functions estén desplegadas).
 
-> **Hasta desplegar la migración, los hallazgos de base de datos siguen abiertos en el
-> proyecto real.** Ver [sección 5](#5-qué-hay-que-desplegar).
+> **Desplegado el 15 de septiembre de 2026**: migración aplicada en el proyecto enlazado,
+> `delete-employee` actualizada y el build nuevo publicado en Hostinger. Comprobado con
+> `npm run qa:security` (0 FAIL; SEC-05 a SEC-08 en PASS) y 158 aserciones pgTAP en verde.
+> Pasos en la [sección 5](#5-qué-hay-que-desplegar), para otro entorno.
 
 ---
 
@@ -282,11 +284,12 @@ pero no depender de una sola capa es la regla del proyecto.
 
 | ID | Severidad | Qué | Por qué no se corrigió | Recomendación |
 |---|---|---|---|---|
+| AUD-26 | Media | ~~La edge function `update-employee` no estaba desplegada (404): editar un empleado desde Configuración fallaba.~~ **Resuelto el 15 de septiembre de 2026**: desplegada y verificada (responde, rechaza sin sesión). | — | `qa:security` SEC-17 comprueba ahora que las 6 funciones estén desplegadas; plan CFG-04. |
 | AUD-20 | Media | **Depósito mayor que lo autorizado**: si el cliente dejó $500 y solo autorizó $300, al entregar no se asienta un reembolso; el portal muestra saldo $0. | Es una decisión de negocio (¿se reembolsa, queda a favor?). | Decidirlo; si se reembolsa, asentar un egreso "Reembolso" al entregar. |
 | AUD-21 | Baja | **La IP de la autorización desde el enlace** es la primera de `X-Forwarded-For`, que quien envía la petición puede escribir. | Es evidencia de apoyo, no una firma; cambiar la cabecera sin saber cuál agrega el proxy de Supabase puede dejarla vacía. | Registrar también `cf-connecting-ip` o la última IP de la cadena, y verificarlo en los logs. |
 | AUD-22 | Baja | **La lista de órdenes no pagina**: carga todas las de la sede con cliente, vehículo y asignaciones. | A la escala actual (~120 órdenes/mes) no se nota. | Antes de ~2.000 órdenes por sede: filtrar entregadas antiguas o paginar. |
 | AUD-23 | Baja | **Movimientos automáticos de Finanzas se pueden borrar a mano** (ya documentado). | Decisión pendiente del taller. | Ver [reglas-de-negocio.md](reglas-de-negocio.md#10-riesgos-conocidos-y-decisiones-abiertas). |
-| AUD-24 | Baja | **Las 158 aserciones pgTAP nunca se han ejecutado**: se validaron con el parser de Postgres, pero la máquina de desarrollo no tiene Docker. | Requiere Docker o un proyecto de staging. | [pruebas.md §2.4](pruebas.md#24-para-qué-hace-falta-docker). |
+| AUD-24 | Baja | ~~Las 158 aserciones pgTAP nunca se habían ejecutado.~~ **Resuelto el 15 de septiembre de 2026**: 158 en verde con Docker. | — | Correrlas antes de aplicar cada migración ([pruebas.md §2.4](pruebas.md#24-para-qué-hace-falta-docker)). |
 | AUD-25 | Baja | **Las pruebas e2e y `qa:security` corren contra el proyecto real** (no hay staging). | Plan gratuito; no hay clientes reales todavía. | Crear un proyecto de staging antes de atender clientes. |
 
 ---

@@ -28,7 +28,7 @@ avisos), el complemento es [reglas-de-negocio.md](reglas-de-negocio.md).
 |---|---|
 | **Frontend** | React 19 + TypeScript 6, construido con Vite 8 |
 | **Datos remotos** | TanStack Query (caché, reintentos, invalidación) |
-| **Backend** | Supabase: PostgreSQL 17, Auth, Storage, Realtime, Edge Functions (Deno 2) |
+| **Backend** | Supabase: PostgreSQL 17, Auth, Storage, Realtime, Edge Functions (Deno 2). Proyecto `dbstores` en `ca-central-1`; inventario en [supabase.md](supabase.md) |
 | **Tareas en la base** | pg_net (llamadas HTTP asíncronas) y pg_cron (tareas programadas) |
 | **Ruteo** | react-router-dom 7, todo del lado del cliente |
 | **Formularios** | React Hook Form + Zod (mini) |
@@ -403,7 +403,8 @@ Lo privado se ve con URLs firmadas (1 hora para galerías, 10 minutos para el PD
   únicamente a `service_role` y arman la respuesta campo por campo.
 
 Todas corren con la clave de servicio y **saltan RLS**: cada una valida permisos
-por su cuenta.
+por su cuenta. Versiones desplegadas, secretos que usa cada una y cómo comprobar que
+están todas: [supabase.md §6](supabase.md#6-edge-functions).
 
 ---
 

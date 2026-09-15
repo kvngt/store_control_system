@@ -80,8 +80,12 @@ CREATE TEMP VIEW t_correos AS
 -- Multimedia: una foto de recepción (visible) y un video de avance (interno).
 INSERT INTO orden_media (orden_id, tipo, origen, ruta, mime, bytes, subido_por)
 SELECT id, 'foto', 'recepcion', sede_id || '/' || id || '/foto.jpg', 'image/jpeg', 1000, 'a0000000-0000-0000-0000-000000000001' FROM t_orden;
-INSERT INTO orden_media (orden_id, tipo, origen, ruta, mime, bytes, subido_por)
-SELECT id, 'video', 'avance', sede_id || '/' || id || '/video.mp4', 'video/mp4', 1000, 'a0000000-0000-0000-0000-000000000001' FROM t_orden;
+-- Un archivo de avance cuelga de un avance (orden_media_origen_coherente) y un video
+-- lleva duración (orden_media_duracion).
+INSERT INTO orden_avances (id, orden_id, usuario_id, descripcion)
+SELECT 'e0000000-0000-0000-0000-000000000001', id, 'a0000000-0000-0000-0000-000000000001', 'Nota interna del taller' FROM t_orden;
+INSERT INTO orden_media (orden_id, avance_id, tipo, origen, ruta, mime, bytes, duracion_seg, subido_por)
+SELECT id, 'e0000000-0000-0000-0000-000000000001', 'video', 'avance', sede_id || '/' || id || '/video.mp4', 'video/mp4', 1000, 30, 'a0000000-0000-0000-0000-000000000001' FROM t_orden;
 
 -- ------------------------------------------------------------------------------------
 -- 1. Firmar la recepción: nace el enlace y un solo correo de recepción

@@ -22,6 +22,9 @@ Si solo vas a publicar una versión nueva sobre un entorno ya configurado, salta
 
 ## 1. Qué se despliega y dónde
 
+Proyecto de Supabase: **`dbstores`** (`lendsiqkxhvbxxkaadrt`, región `ca-central-1`).
+Inventario completo de lo que hay dentro y dónde se ve en el panel: [supabase.md](supabase.md).
+
 | Pieza | Dónde vive | Cómo se publica |
 |---|---|---|
 | Frontend (`dist/`) | Hostinger, hosting compartido Apache, `reinventa.shop` | Subir el contenido de `dist/` a `public_html/` |
@@ -248,15 +251,17 @@ migración más nueva de su carpeta con la de la base y, si la base está atrasa
 muestra el aviso de "esquema desactualizado". Por eso el paso 4 va antes que el 6,
 aunque la migración no cambie columnas.
 
-### Pendiente de desplegar: auditoría de septiembre 2026
+### Auditoría de septiembre 2026
 
-Si `db:check` lista `20260926000000_audit_hardening`, esta versión cierra los hallazgos
-de [auditoria-2026-09.md](auditoria-2026-09.md). No mueve columnas: se puede aplicar en
+**Ya desplegada en el proyecto enlazado** (15 de septiembre de 2026). Para otro entorno: si
+`db:check` lista `20260926000000_audit_hardening`, esta versión cierra los hallazgos de
+[auditoria-2026-09.md](auditoria-2026-09.md). No mueve columnas: se puede aplicar en
 horario de trabajo.
 
 ```bash
 npx supabase db push --linked                    # la migración
 npx supabase functions deploy delete-employee    # mensaje al borrar empleados con pagos
+npx supabase functions deploy update-employee    # editar empleados (faltaba desplegar: AUD-26)
 npm run build                                    # y subir dist/
 npm run qa:security                              # SEC-05 a SEC-08 pasan a PASS
 ```
@@ -270,7 +275,8 @@ Si la versión incluye migraciones nuevas, **los pasos 4 y 6 van seguidos**.
 Diez minutos. Es el nivel **humo** del plan de pruebas; si algo falla,
 [plan-de-pruebas.md](plan-de-pruebas.md) tiene el detalle de cada caso.
 
-- [ ] `npm run qa:security` → 0 FAIL.
+- [ ] `npm run qa:security` → 0 FAIL (SEC-17 confirma que las 6 edge functions están desplegadas).
+- [ ] `npx supabase functions list` → `portal`, `process-outbox`, `cleanup-storage`, `create-employee`, `update-employee`, `delete-employee`.
 
 - [ ] La app abre sin el banner de "esquema desactualizado".
 - [ ] Iniciar sesión como admin y como técnico.

@@ -296,7 +296,12 @@ triggers y el frontend en las rutas de dinero, permisos y datos del cliente.
   prueba la API desplegada, la capa que faltaba: pgTAP prueba la base por dentro, pero
   nadie probaba qué funciones quedaban expuestas afuera.
 
-Detalle de los 15 hallazgos corregidos y los 6 abiertos: [auditoria-2026-09.md](auditoria-2026-09.md).
+Al verificar el despliegue apareció uno más: `update-employee` nunca se había desplegado, así
+que editar empleados fallaba en producción (AUD-26). Se desplegó, `qa:security` comprueba
+ahora que estén todas las funciones (SEC-17), y [supabase.md](supabase.md) documenta qué hay
+en el proyecto real y dónde, para no depender de revisarlo a mano.
+
+Detalle de los hallazgos corregidos y los abiertos: [auditoria-2026-09.md](auditoria-2026-09.md).
 
 ---
 
@@ -383,10 +388,11 @@ comentario que explica el problema. Léelas en orden si quieres el detalle.
 | Fase 4 | 241 | 04 (portal y correos) | |
 | Fase 5 | 257 (34 archivos) | 05 → 126 aserciones en 5 archivos | |
 | Fase 6 | 265 (36 archivos) | 06 → 133 aserciones en 6 archivos | |
-| Auditoría | **274** (37 archivos) | 07 → **158 aserciones** en 7 archivos | + `qa:security` (51 casos contra la API) |
+| Auditoría | **274** (37 archivos) | 07 → **158 aserciones** en 7 archivos | + `qa:security` (52 casos contra la API) |
 
-Las pruebas pgTAP están escritas y validadas con el parser de Postgres, pero **todavía
-no se han ejecutado** con Docker (ver [pruebas.md](pruebas.md#24-para-qué-hace-falta-docker)).
+Las pruebas pgTAP se ejecutaron por primera vez con Docker el 15 de septiembre de 2026:
+**158 aserciones en verde** y las 35 migraciones aplicadas desde cero. Solo hubo que
+corregir datos de prueba, no la base (ver [pruebas.md](pruebas.md#22-base-de-datos-pgtap)).
 Las fases 4, 5 y 6 se probaron además **de punta a punta contra Supabase real** con datos
 temporales que luego se borraron.
 
@@ -394,12 +400,9 @@ temporales que luego se borraron.
 
 ## 13. Lo que viene
 
-- **Desplegar la auditoría**: migración 35, `delete-employee` y el `dist` nuevo; después
-  `npm run qa:security` ([auditoria-2026-09.md §5](auditoria-2026-09.md#5-qué-hay-que-desplegar)).
 - **Probar en teléfonos reales** con el `dist` nuevo publicado: el nivel "publicación" de
   [plan-de-pruebas.md](plan-de-pruebas.md), con los casos H de portal, presupuestos,
   reporte, video y push.
-- **Correr las pruebas pgTAP por primera vez** (Docker o staging).
 - **Pendientes de datos**: correo de contacto y WhatsApp de cada sede.
 - **Pendientes de decisión** (ver [reglas-de-negocio.md](reglas-de-negocio.md#10-riesgos-conocidos-y-decisiones-abiertas)):
   borrar movimientos automáticos de Finanzas, correos en inglés, pasar a Supabase Pro

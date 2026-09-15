@@ -242,6 +242,9 @@ portal tiene inglés; los correos, por ahora, no (ver sección 10).
 
 ## 7. Configuración
 
+Qué secretos y funciones están cargados hoy en el proyecto real, y dónde se ven en el
+panel: [supabase.md](supabase.md#7-secretos-y-variables).
+
 ### Secretos de las funciones
 
 ```bash

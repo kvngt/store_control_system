@@ -26,7 +26,7 @@ decidir cuál y corregirlo.
 | **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 274 pruebas, 37 archivos | ~20 s | Nada |
 | **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte y hallazgos de la auditoría contra un Postgres real | 158 aserciones, 7 archivos | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, ~73 casos | 2–5 min | Credenciales de prueba |
-| **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 51 casos | ~15 s | Nada; con cuentas de prueba cubre más |
+| **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 52 casos | ~15 s | Nada; con cuentas de prueba cubre más |
 | **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
 
 Por qué hacen falta todas: **Vitest simula la base**, así que no puede detectar una
@@ -186,12 +186,14 @@ PostgREST en cada petición.
 Las pruebas 01 y 02 firman la recepción antes de entregar: desde la fase 5, sin
 autorización no hay nada que cobrar ni comisión que generar.
 
-> **Estado:** escritas y validadas con el parser de Postgres, pero **todavía no
-> ejecutadas** con pgTAP (la máquina de desarrollo no tiene Docker). Las reglas de
-> las fases 4, 5 y 6 sí se probaron de punta a punta contra el proyecto enlazado (correo real
-> a `delivered@resend.dev`, portal, agrupación, baja, presupuestos, reporte) con datos que luego se borraron. La
-> primera corrida puede requerir ajustes de sintaxis de pgTAP. Córrelas antes de
-> confiar en ellas.
+> **Estado:** **158 aserciones en verde** en los 7 archivos (primera corrida con Docker,
+> 15 de septiembre de 2026), con las 35 migraciones aplicadas desde cero. Esa primera
+> corrida encontró tres errores en los datos de prueba, no en la base: en 04, un video sin
+> duración ni avance que las restricciones de `orden_media` rechazan; en 05, un aviso
+> buscado por fecha cuando dos se crean en la misma transacción (`NOW()` es igual). Las
+> reglas de las fases 4, 5 y 6 además se probaron de punta a punta contra el proyecto
+> enlazado (correo real a `delivered@resend.dev`, portal, agrupación, baja, presupuestos,
+> reporte) con datos que luego se borraron.
 
 Al agregar una migración que toque permisos o dinero, agrega aquí la prueba.
 
@@ -264,8 +266,10 @@ npx supabase db reset    # opcional: recrear la base local desde cero
 npx supabase stop        # al terminar
 ```
 
-La primera corrida de pgTAP puede pedir ajustes pequeños: las pruebas se escribieron y
-se validaron con el parser de Postgres, pero nunca se han ejecutado.
+La primera vez `supabase start` descarga las imágenes (varios GB, 10–15 min); después
+arranca en segundos. Si `supabase start` dice `docker: command not found` con Docker
+Desktop abierto, la terminal se abrió antes de instalarlo: cierra VS Code por completo y
+vuelve a abrirlo.
 
 **Alternativas si no se instala Docker:**
 
@@ -289,10 +293,10 @@ Cada caso espera un rechazo o una lista vacía. Es la capa que atrapó el hallaz
 grave de la auditoría: funciones internas de dinero que pgTAP no probaba porque nadie
 había pensado en llamarlas desde fuera ([auditoria-2026-09.md](auditoria-2026-09.md)).
 
-- **Sin cuentas** corre los 16 casos sin sesión.
+- **Sin cuentas** corre los 17 casos sin sesión, incluido SEC-17: las 6 edge functions responden (no 404).
 - **Con cuentas** (`E2E_ADMIN_*` y `E2E_MECHANIC_*` de `.env.test.local`, o `QA_TECH_*` /
   `QA_ADMIN_*`) inicia sesión, busca por su cuenta una orden asignada al técnico, una
-  ajena y una entregada, y corre los 51.
+  ajena y una entregada, y corre los 52.
 - Lo que no puede preparar lo marca **SKIP**. Termina con código 1 si hay un **FAIL**.
 
 > Solo contra datos de prueba: si la base tiene un hueco, la petición que lo demuestra

@@ -228,6 +228,9 @@ push en sus dispositivos.
 
 ### Tareas programadas (pg_cron)
 
+Estado actual de las tareas, de Vault y de los buckets en el proyecto real:
+[supabase.md](supabase.md#10-tareas-programadas-y-llamadas-salientes).
+
 | Nombre | Cuándo | Qué |
 |---|---|---|
 | `restorify-outbox` | cada minuto | Si hay envíos vencidos o trabados, llama a `process-outbox` |
