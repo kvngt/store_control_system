@@ -18,10 +18,23 @@ export const customersService = {
         ])
       : [{ data: [] }, { data: [] }];
 
+    // Optimization: Pre-calculate counts using a hash map to reduce complexity
+    // from O(N*M) nested filtering to O(N+M), significantly improving
+    // customer list render times for shops with many records.
+    const vehiclesCount = (vehiculos || []).reduce((acc: Record<string, number>, v) => {
+      acc[v.cliente_id] = (acc[v.cliente_id] || 0) + 1;
+      return acc;
+    }, {});
+
+    const ordersCount = (ordenes || []).reduce((acc: Record<string, number>, o) => {
+      acc[o.cliente_id] = (acc[o.cliente_id] || 0) + 1;
+      return acc;
+    }, {});
+
     return (clientes || []).map((c) => ({
       ...c,
-      vehiculos_count: (vehiculos || []).filter((v) => v.cliente_id === c.id).length,
-      ordenes_count: (ordenes || []).filter((o) => o.cliente_id === c.id).length,
+      vehiculos_count: vehiclesCount[c.id] || 0,
+      ordenes_count: ordersCount[c.id] || 0,
     })) as Customer[];
   },
 
