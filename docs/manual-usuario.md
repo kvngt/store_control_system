@@ -124,7 +124,9 @@ Configuración.
 
 Si varias personas usan la misma tablet o teléfono, **cierra sesión al terminar**.
 Además de proteger tu cuenta, así ese dispositivo deja de recibir tus
-notificaciones y empieza a recibir las de quien entre después.
+notificaciones y empieza a recibir las de quien entre después. Al cerrar sesión la app
+borra lo que tenía cargado en pantalla: quien entre después no ve tus órdenes ni tus
+montos.
 
 ---
 
@@ -899,7 +901,7 @@ no le llegan los avisos, empieza por ahí.
 Con **Nuevo Empleado** se da de alta a alguien:
 
 1. **Nombre** y **correo** (será su usuario).
-2. **Contraseña temporal**, mínimo 6 caracteres.
+2. **Contraseña temporal**, mínimo 8 caracteres.
 3. **Rol**: Administrador, Mecánico o Pintor.
 4. **Sede** a la que pertenece.
 5. **Crear**.

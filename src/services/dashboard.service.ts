@@ -1,79 +1,71 @@
 // Aggregated KPIs for the dashboard and the finance summary cards.
 import { supabase } from '../lib/supabase';
 import type { DashboardStats, OrderStatus } from '../types/database';
-import { isSameMonth } from '../lib/dates';
+import { todayLocal } from '../lib/dates';
 
-const DEFAULT_CAPACITY = 10;
+/** Capacidad que se asume cuando una sede no tiene una configurada. */
+export const DEFAULT_CAPACITY = 10;
+
+/** Lo que devuelve `resumen_panel` (ver la migración 20260927000000). */
+interface ResumenPanel {
+  ordenes_activas: number;
+  ordenes_finalizadas_mes: number;
+  ingresos_mes: number;
+  egresos_mes: number;
+  ingresos_total: number;
+  egresos_total: number;
+  clientes_nuevos_mes: number;
+  ordenes_por_estatus: Record<OrderStatus, number>;
+  ingresos_por_mes: { mes_inicio: string; ingresos: number; egresos: number }[];
+}
+
+/** La zona horaria del navegador: "este mes" es el mes del taller, no el del servidor. */
+export function shopTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Chicago';
+  } catch {
+    return 'America/Chicago';
+  }
+}
+
+/** `2026-09-01` → "sept", sin pasar por UTC (que en EE. UU. lo movería a agosto). */
+export function monthLabel(isoDate: string): string {
+  const [year, month] = isoDate.split('-').map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString('es', { month: 'short' });
+}
 
 export const dashboardService = {
+  /**
+   * Los totales los suma la base (`resumen_panel`). Antes se descargaban todas las
+   * órdenes y todos los movimientos para sumarlos aquí: la API devuelve como máximo
+   * 1.000 filas, así que con la importación bancaria los ingresos del mes salían mal
+   * sin ningún error. La función respeta RLS: un técnico recibe ceros en el dinero.
+   */
   getDashboardStats: async (sedeId?: string, capacity: number = DEFAULT_CAPACITY): Promise<DashboardStats> => {
-    let ordersQuery = supabase.from('ordenes_trabajo').select('*');
-    if (sedeId) ordersQuery = ordersQuery.eq('sede_id', sedeId);
-    const { data: ordersData, error: ordersError } = await ordersQuery;
-    if (ordersError) throw ordersError;
-    const orders = ordersData || [];
-
-    let txnQuery = supabase.from('finanzas_movimientos').select('*');
-    if (sedeId) txnQuery = txnQuery.eq('sede_id', sedeId);
-    const { data: txnData } = await txnQuery;
-    const transactions = txnData || [];
-
-    let customerQuery = supabase.from('clientes').select('id, creado_en');
-    if (sedeId) customerQuery = customerQuery.eq('sede_id', sedeId);
-    const { data: customerData } = await customerQuery;
-    const customers = customerData || [];
-
-    const now = new Date();
-    const activeOrders = orders.filter((o) => !['finalizado', 'entregado'].includes(o.estatus));
-    // `entregado` cuenta igual que `finalizado`: el trabajo se terminó. Filtrar
-    // sólo por `finalizado` hacía que el KPI **bajara** al entregar la orden —
-    // cerrar un trabajo restaba uno del conteo de trabajos cerrados del mes.
-    const finishedThisMonth = orders.filter(
-      (o) =>
-        (o.estatus === 'finalizado' || o.estatus === 'entregado') &&
-        o.fecha_finalizacion &&
-        isSameMonth(o.fecha_finalizacion, now)
-    );
-
-    const incomeMonth = transactions
-      .filter((t) => t.tipo === 'ingreso' && isSameMonth(t.fecha, now))
-      .reduce((sum, t) => sum + Number(t.monto), 0);
-    const expenseMonth = transactions
-      .filter((t) => t.tipo === 'egreso' && isSameMonth(t.fecha, now))
-      .reduce((sum, t) => sum + Number(t.monto), 0);
-
-    const statusCounts: Record<OrderStatus, number> = {
-      recepcion: 0,
-      en_proceso: 0,
-      espera_repuestos: 0,
-      finalizado: 0,
-      entregado: 0,
-    };
-    orders.forEach((o) => {
-      statusCounts[o.estatus as OrderStatus] = (statusCounts[o.estatus as OrderStatus] || 0) + 1;
+    const { data, error } = await supabase.rpc('resumen_panel', {
+      p_sede_id: sedeId ?? null,
+      p_hoy: todayLocal(),
+      p_tz: shopTimeZone(),
     });
-
-    const ingresos_por_mes: { mes: string; ingresos: number; egresos: number }[] = [];
-    for (let i = 5; i >= 0; i--) {
-      const ref = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const ingresos = transactions
-        .filter((t) => t.tipo === 'ingreso' && isSameMonth(t.fecha, ref))
-        .reduce((sum, t) => sum + Number(t.monto), 0);
-      const egresos = transactions
-        .filter((t) => t.tipo === 'egreso' && isSameMonth(t.fecha, ref))
-        .reduce((sum, t) => sum + Number(t.monto), 0);
-      ingresos_por_mes.push({ mes: ref.toLocaleDateString('es', { month: 'short' }), ingresos, egresos });
-    }
+    if (error) throw error;
+    const r = data as ResumenPanel;
+    const safeCapacity = capacity > 0 ? capacity : DEFAULT_CAPACITY;
 
     return {
-      ordenes_activas: activeOrders.length,
-      ordenes_finalizadas_mes: finishedThisMonth.length,
-      ingresos_mes: incomeMonth,
-      egresos_mes: expenseMonth,
-      clientes_nuevos_mes: customers.filter((c) => isSameMonth(c.creado_en, now)).length,
-      tasa_ocupacion: Math.min(100, Math.round((activeOrders.length / capacity) * 100)),
-      ordenes_por_estatus: statusCounts,
-      ingresos_por_mes,
+      ordenes_activas: Number(r.ordenes_activas),
+      ordenes_finalizadas_mes: Number(r.ordenes_finalizadas_mes),
+      ingresos_mes: Number(r.ingresos_mes),
+      egresos_mes: Number(r.egresos_mes),
+      ingresos_total: Number(r.ingresos_total),
+      egresos_total: Number(r.egresos_total),
+      clientes_nuevos_mes: Number(r.clientes_nuevos_mes),
+      tasa_ocupacion: Math.min(100, Math.round((Number(r.ordenes_activas) / safeCapacity) * 100)),
+      ordenes_por_estatus: r.ordenes_por_estatus,
+      ingresos_por_mes: (r.ingresos_por_mes ?? []).map((m) => ({
+        mes: monthLabel(m.mes_inicio),
+        ingresos: Number(m.ingresos),
+        egresos: Number(m.egresos),
+      })),
     };
   },
 };

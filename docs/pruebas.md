@@ -23,10 +23,10 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 275 pruebas, 38 archivos | ~20 s | Nada |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte y hallazgos de la auditoría contra un Postgres real | 158 aserciones, 7 archivos | ~1 min | Docker |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 294 pruebas, 41 archivos | ~20 s | Nada |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte y hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 176 aserciones, 8 archivos | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, ~73 casos | 2–5 min | Credenciales de prueba |
-| **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 52 casos | ~15 s | Nada; con cuentas de prueba cubre más |
+| **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 53 casos | ~15 s | Nada; con cuentas de prueba cubre más |
 | **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
 
 Por qué hacen falta todas: **Vitest simula la base**, así que no puede detectar una
@@ -64,13 +64,17 @@ declaran `// @vitest-environment jsdom` y renderizan con los proveedores reales
 |---|---|---|
 | Fechas | `lib/dates.test.ts` | El día 1 cuenta en su mes; hoy y hoy + N días en calendario local (fecha estimada de entrega por defecto). **Corre en zona `America/Chicago` a propósito**: en UTC el error original es invisible |
 | Errores, VIN y vehículos | `lib/errors`, `lib/vin`, `pages/Vehicles.noplate` | Traducción de errores de Postgres/Auth; un 42501 escrito por la base muestra su razón y uno de RLS el genérico; CHECK violado con mensaje propio; validación de VIN; vehículos sin placa guardan `null` y se muestran como "Sin placa" |
-| Sesión | `context/AuthContext` | Una falla de red al releer el perfil o las sedes no saca al usuario; renovar el token no vuelve a pedir el perfil; una cuenta sin perfil sí queda fuera |
+| Sesión | `context/AuthContext` | Una falla de red al releer el perfil o las sedes no saca al usuario; renovar el token no vuelve a pedir el perfil; una cuenta sin perfil sí queda fuera; **cerrar sesión o entrar otra persona vacía la caché de datos** |
 | Importación bancaria | `lib/bankStatementParser*`, `lib/categorizationRules`, `pages/finance/ImportStatementModal`, `pages/Finance.import` | Lectura del PDF de Wells Fargo, casos límite, categorización, carga diferida del importador |
 | Finanzas | `pages/Finance.linkorder` | Vincular un movimiento a una orden; errores visibles en el diálogo |
 | Multimedia | `lib/media/uploadQueue`, `lib/media/mime`, `services/media.service`, `features/media/MediaGallery` | Cola: no re-subir tras fallar la fila, no reintentar permisos, reanudar tras recarga solo para el mismo usuario, concurrencia, sin conexión; formatos MP4 primero; galería: miniaturas firmadas, publicar solo admin, borrar solo lo propio, progreso |
 | Órdenes | `pages/WorkOrders.smoke`, `features/workOrders/*` (incluye `workOrderForm.schema`) | Lista (una sola versión según ancho), alta y validación, detalle; **técnico sin totales ni precios**, comisión estimada ($1,000 × 35 % ÷ 2 = $175), alta de técnico sin depósito/labor/repuestos; fotos de recepción comprimidas y su ciclo de memoria; avance solo con nota de voz; **firmar vuelve a leer la orden** (la firma autoriza lo cotizado); la lista para asignar solo trae personal de la sede de la orden |
 | Kanban | `pages/KanbanBoard` | Mover tarjetas, confirmación al entregar |
-| Clientes | `services/customers.service` | Conteo de vehículos y órdenes por cliente, con cero para quien no tiene |
+| Clientes | `services/customers.service` | Conteos embebidos de vehículos y órdenes (`vehiculos(count)`), con cero para quien no tiene; los arreglos de conteo no quedan en el cliente |
+| Listas completas | `services/support` | `fetchAll`: 2.500 filas en tres páginas, una sola consulta si caben en una, una página más si la anterior llegó llena, error de cualquier página |
+| Panel y Finanzas | `services/dashboard.service` | Llama `resumen_panel` con el día y la zona del navegador, arma tarjetas y ocupación, capacidad cero sin dividir entre cero, un error de la base no se vuelve ceros, etiqueta del mes sin correrla por UTC |
+| Borrados en la orden | `services/workOrders.service` | Quitar mano de obra, un repuesto o una asignación falla con mensaje si la base no borró nada (RLS), en vez de fingir éxito |
+| Importación bancaria | `pages/finance/ImportStatementModal` | El lote y sus movimientos viajan en una sola llamada; si falla se borra el PDF subido |
 | Notificaciones | `features/notifications/*`, `lib/push` | Campana: conteo, marcar leído, navegar, aviso en tiempo real con toast; traducción de avisos; detección de iPhone sin instalar; tarjeta de push: activar, permiso negado, prueba, desactivar |
 | Configuración | `pages/Settings.employee` | Alta de empleado: errores visibles |
 | Portal del cliente | `portal/CustomerPortal`, `lib/emailTemplates`, `lib/phone` | Estado, vehículo, multimedia publicada y cuenta; visor de video; WhatsApp y llamar; "pagado en su totalidad"; enlace vencido con teléfono; ruta sin token no consulta; reintento; **la baja se confirma con botón, nunca al abrir**; inglés. Plantillas: asunto por estado, fecha DATE sin correrse un día, **HTML escapado**, logo solo https y color solo hexadecimal, Reply-To solo si hay correo de contacto |
@@ -184,11 +188,24 @@ PostgREST en cada petición.
 - No se borra una orden con comisiones pagadas; deshecho el pago, sí.
 - Un aviso interrumpido 5 veces no se vuelve a tomar y queda en error.
 
+**`supabase/tests/database/08_produccion.test.sql`** (18)
+
+- `resumen_panel` con 1.500 movimientos del mes: suma los 1.500 (no 1.000), total histórico,
+  seis meses, órdenes activas y por estatus, clientes nuevos; un técnico recibe cero en dinero.
+- `importar_estado_cuenta`: un técnico no importa; un movimiento inválido hace fallar todo y
+  no queda lote vacío; uno válido deja lote y movimientos juntos.
+- Pagar otra vez las mismas comisiones falla (P0001).
+- Una cuenta de Auth sin perfil no lee sedes.
+- Existen los índices de las llaves foráneas más usadas; `create_work_order` tiene
+  `search_path` fijo.
+- El avance de una orden no puede pasar de 100.
+
 Las pruebas 01 y 02 firman la recepción antes de entregar: desde la fase 5, sin
 autorización no hay nada que cobrar ni comisión que generar.
 
-> **Estado:** **158 aserciones en verde** en los 7 archivos (primera corrida con Docker,
-> 15 de septiembre de 2026), con las 35 migraciones aplicadas desde cero. Esa primera
+> **Estado:** **176 aserciones en verde** en los 8 archivos con las 36 migraciones
+> aplicadas desde cero, localmente y en CI. La primera corrida (158 aserciones en 7 archivos,
+> 15 de septiembre de 2026, 35 migraciones) fue la primera vez que se ejecutaron. Esa primera
 > corrida encontró tres errores en los datos de prueba, no en la base: en 04, un video sin
 > duración ni avance que las restricciones de `orden_media` rechazan; en 05, un aviso
 > buscado por fecha cuando dos se crean en la misma transacción (`NOW()` es igual). Las
@@ -246,8 +263,8 @@ Se necesita para:
 
 | Tarea | Comando | Por qué no se puede sin Docker |
 |---|---|---|
-| **Correr las pruebas de base de datos** (las 158 aserciones pgTAP) | `npm run test:db` | Necesitan un Postgres real donde crear datos y deshacerlos |
-| **Probar que las migraciones aplican desde cero** | `npx supabase db reset` | Recrea la base local aplicando las 35 migraciones en orden: detecta una migración que solo funciona sobre la base actual |
+| **Correr las pruebas de base de datos** (las 176 aserciones pgTAP) | `npm run test:db` | Necesitan un Postgres real donde crear datos y deshacerlos |
+| **Probar que las migraciones aplican desde cero** | `npx supabase db reset` | Recrea la base local aplicando las 36 migraciones en orden: detecta una migración que solo funciona sobre la base actual |
 | **Probar una migración antes de producción** | `npx supabase start` y luego la app contra la base local | Hoy cada migración se aplica directo al proyecto enlazado |
 | Probar edge functions localmente | `npx supabase functions serve` | Corren en el contenedor de Supabase |
 
@@ -262,7 +279,7 @@ proyecto enlazado.
 
 ```bash
 npx supabase start       # la primera vez descarga las imágenes (varios minutos)
-npm run test:db          # 7 archivos pgTAP
+npm run test:db          # 8 archivos pgTAP
 npx supabase db reset    # opcional: recrear la base local desde cero
 npx supabase stop        # al terminar
 ```
@@ -294,10 +311,10 @@ Cada caso espera un rechazo o una lista vacía. Es la capa que atrapó el hallaz
 grave de la auditoría: funciones internas de dinero que pgTAP no probaba porque nadie
 había pensado en llamarlas desde fuera ([auditoria-2026-09.md](auditoria-2026-09.md)).
 
-- **Sin cuentas** corre los 17 casos sin sesión, incluido SEC-17: las 6 edge functions responden (no 404).
+- **Sin cuentas** corre los 18 casos sin sesión, incluidos SEC-17 (las 6 edge functions responden, no 404) y SEC-18 (el registro público está apagado).
 - **Con cuentas** (`E2E_ADMIN_*` y `E2E_MECHANIC_*` de `.env.test.local`, o `QA_TECH_*` /
   `QA_ADMIN_*`) inicia sesión, busca por su cuenta una orden asignada al técnico, una
-  ajena y una entregada, y corre los 52.
+  ajena y una entregada, y corre los 53.
 - Lo que no puede preparar lo marca **SKIP**. Termina con código 1 si hay un **FAIL**.
 
 > Solo contra datos de prueba: si la base tiene un hueco, la petición que lo demuestra

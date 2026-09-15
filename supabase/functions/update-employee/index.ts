@@ -131,8 +131,9 @@ Deno.serve(async (req) => {
       profilePatch.email = newEmail;
     }
 
-    if (newPassword !== null && newPassword.length < 6) {
-      return jsonResponse({ error: 'La contraseña debe tener al menos 6 caracteres.' }, 400);
+    // El mismo mínimo que la app (src/lib/password.ts) y que Auth en el panel.
+    if (newPassword !== null && newPassword.length < 8) {
+      return jsonResponse({ error: 'La contraseña debe tener al menos 8 caracteres.' }, 400);
     }
 
     // auth.users first: it owns the credentials, and if it rejects the change

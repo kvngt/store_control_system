@@ -52,6 +52,8 @@ const EMPTY_STATS = {
   ordenes_finalizadas_mes: 0,
   ingresos_mes: 0,
   egresos_mes: 0,
+  ingresos_total: 0,
+  egresos_total: 0,
   clientes_nuevos_mes: 0,
   tasa_ocupacion: 0,
   ordenes_por_estatus: {

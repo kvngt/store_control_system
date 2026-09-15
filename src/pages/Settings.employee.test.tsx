@@ -172,7 +172,7 @@ describe('User administration dialog', () => {
   });
 
   it('rejects a password the edge function would reject anyway', async () => {
-    // create-employee enforces >= 6 characters server-side. Catching it here
+    // create-employee enforces >= 8 characters server-side. Catching it here
     // saves a round trip and, more importantly, says so out loud.
     const { user, modal } = await openEmployeeDialog();
 
@@ -183,7 +183,7 @@ describe('User administration dialog', () => {
 
     expect(mocks.createEmployee).not.toHaveBeenCalled();
     const alert = await within(modal).findByRole('alert');
-    expect(alert.textContent).toMatch(/6/);
+    expect(alert.textContent).toMatch(/8/);
   });
 
   it('confirms out loud when the employee is created', async () => {

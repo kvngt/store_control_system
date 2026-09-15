@@ -1,20 +1,25 @@
 // Vehicles. Always sede-scoped: a unit must never leak across workshops.
 import { supabase } from '../lib/supabase';
 import type { Vehicle, VehicleInput } from '../types/database';
-import { assertDeleted } from './support';
+import { assertDeleted, fetchAll } from './support';
 
 export const vehiclesService = {
   // Always scoped to a sede: vehicles must never leak across workshops, not
   // even for an admin (who simply switches sede to see the other one).
   getVehicles: async (sedeId?: string) => {
-    let query = supabase.from('vehiculos').select(`
-      *,
-      cliente:clientes(nombre)
-    `);
-    if (sedeId) query = query.eq('sede_id', sedeId);
-    const { data, error } = await query;
-    if (error) throw error;
-    return (data || []).map((v) => ({
+    const data = await fetchAll<Vehicle & { cliente?: { nombre: string } | null }>((from, to) => {
+      let query = supabase
+        .from('vehiculos')
+        .select(`
+          *,
+          cliente:clientes(nombre)
+        `)
+        .order('creado_en', { ascending: false })
+        .order('id');
+      if (sedeId) query = query.eq('sede_id', sedeId);
+      return query.range(from, to);
+    });
+    return data.map((v) => ({
       ...v,
       cliente_nombre: v.cliente?.nombre,
     })) as Vehicle[];

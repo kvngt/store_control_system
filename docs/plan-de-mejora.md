@@ -4,6 +4,23 @@ Analisis completo del proyecto (septiembre 2026) con pruebas de desempeno, bugs
 encontrados y plan de accion priorizado. Complementa la auditoria ya documentada en
 [auditoria-2026-09.md](auditoria-2026-09.md).
 
+> **Foto anterior a la revisión previa a producción.** Los números de pruebas de abajo son de
+> ese momento; los actuales están en [pruebas.md](pruebas.md). Qué pasó con cada punto
+> ([salida-a-produccion.md](salida-a-produccion.md)):
+>
+> | Punto | Estado |
+> |---|---|
+> | B-01 / M-05 panel sin paginar | **Resuelto**: `resumen_panel` suma en la base (PRD-10) |
+> | B-02 / M-06 lista de órdenes | **Resuelto a medias**: se lee completa con `fetchAll` (PRD-11); paginar en pantalla sigue pendiente para miles de órdenes |
+> | B-03 fecha en UTC | **No era error**: la columna es `timestamptz` |
+> | B-04, B-05 / M-03 borrados silenciosos | **Resuelto** (PRD-24) |
+> | B-06 `refreshUser` sin aviso | Abierto, menor |
+> | B-07 / M-12 capacidad repetida | **Resuelto**: `DEFAULT_CAPACITY` |
+> | B-08 / M-09 avance fuera de rango | **Resuelto**: restricción en la migración 36 (PRD-25) |
+> | B-09 / M-11 PDFs viejos en `reportes` | Abierto (PRD-08) |
+> | B-10 caché de `sw.js` | **No era error**: `.htaccess` ya lo sirve sin caché |
+> | D-03 / M-07 staging | Abierto (deuda en salida-a-produccion.md) |
+
 ---
 
 ## Indice

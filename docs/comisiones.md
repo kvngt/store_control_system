@@ -117,6 +117,9 @@ Pantalla **Comisiones → Saldos pendientes → Pagar saldo**.
   firmado temporal, porque un cheque escaneado lleva número de cuenta.
 - El pago se registra automáticamente como **egreso** en Finanzas, categoría
   "planilla".
+- **Un pago no se registra dos veces.** Si dos administradores (o dos pestañas) pagan las
+  mismas comisiones a la vez, el segundo termina con "No hay comisiones pendientes para
+  pagar en esta selección": la base bloquea las comisiones mientras registra el primero.
 - **Deshacer un pago** devuelve las comisiones a pendientes y elimina el egreso
   de Finanzas. El movimiento guarda a qué pago pertenece (`comision_pago_id`),
   así que se borra por referencia. Antes se buscaba por sede, fecha, monto y

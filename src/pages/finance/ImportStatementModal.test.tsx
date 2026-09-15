@@ -24,8 +24,8 @@ const mocks = vi.hoisted(() => ({
   getCategorizationRules: vi.fn(),
   findPossibleDuplicates: vi.fn(),
   uploadStatement: vi.fn(),
-  createImportBatch: vi.fn(),
-  bulkInsertTransactions: vi.fn(),
+  importStatement: vi.fn(),
+  removeStatementFile: vi.fn(),
   fileFingerprint: vi.fn(),
   findImportsByFingerprint: vi.fn(),
 }));
@@ -41,8 +41,8 @@ vi.mock('../../services/supabaseService', () => ({
     getCategorizationRules: mocks.getCategorizationRules,
     findPossibleDuplicates: mocks.findPossibleDuplicates,
     uploadStatement: mocks.uploadStatement,
-    createImportBatch: mocks.createImportBatch,
-    bulkInsertTransactions: mocks.bulkInsertTransactions,
+    importStatement: mocks.importStatement,
+    removeStatementFile: mocks.removeStatementFile,
     fileFingerprint: mocks.fileFingerprint,
     findImportsByFingerprint: mocks.findImportsByFingerprint,
   },
@@ -83,8 +83,8 @@ beforeEach(() => {
   ]);
   mocks.findPossibleDuplicates.mockResolvedValue(new Map());
   mocks.uploadStatement.mockResolvedValue('sede-centro/1234-estado.pdf');
-  mocks.createImportBatch.mockResolvedValue({ id: 'imp-1' });
-  mocks.bulkInsertTransactions.mockResolvedValue(undefined);
+  mocks.importStatement.mockResolvedValue('imp-1');
+  mocks.removeStatementFile.mockResolvedValue(undefined);
   mocks.fileFingerprint.mockResolvedValue('abc123');
   mocks.findImportsByFingerprint.mockResolvedValue([]);
 });
@@ -97,10 +97,12 @@ describe('Importar Estado de Cuenta', () => {
     await loadStatement(user);
     await user.click(importButton());
 
-    await waitFor(() => expect(mocks.bulkInsertTransactions).toHaveBeenCalled());
-    const rows = mocks.bulkInsertTransactions.mock.calls[0][0];
+    await waitFor(() => expect(mocks.importStatement).toHaveBeenCalled());
+    const [batch, rows] = mocks.importStatement.mock.calls[0];
+    // El lote y sus movimientos viajan juntos: la base los guarda en una transacción.
+    expect(batch).toMatchObject({ sede_id: SEDE_CENTRO.id, ruta_archivo: 'sede-centro/1234-estado.pdf', hash_archivo: 'abc123' });
     expect(rows).toHaveLength(2);
-    expect(rows[0]).toMatchObject({ sede_id: SEDE_CENTRO.id, importacion_id: 'imp-1' });
+    expect(rows[0]).toMatchObject({ tipo: 'egreso', monto: 47.25 });
   });
 
   it('reports a failed upload instead of going quiet', async () => {
@@ -114,11 +116,11 @@ describe('Importar Estado de Cuenta', () => {
 
     // The failure has to be visible without hunting for it.
     expect(await screen.findByRole('alert')).toBeVisible();
-    expect(mocks.bulkInsertTransactions).not.toHaveBeenCalled();
+    expect(mocks.importStatement).not.toHaveBeenCalled();
   });
 
   it('reports a failed insert instead of going quiet', async () => {
-    mocks.bulkInsertTransactions.mockRejectedValue(
+    mocks.importStatement.mockRejectedValue(
       Object.assign(new Error('denied'), { code: '42501' })
     );
 
@@ -129,6 +131,19 @@ describe('Importar Estado de Cuenta', () => {
     await user.click(importButton());
 
     expect((await screen.findByRole('alert')).textContent).toMatch(/no tienes permiso/i);
+  });
+
+  it('borra el PDF subido cuando la importación no se guardó', async () => {
+    mocks.importStatement.mockRejectedValue(new Error('invalid input value for enum'));
+
+    const user = userEvent.setup();
+    renderWithProviders(<ImportStatementModal onClose={() => {}} onImported={() => {}} />);
+
+    await loadStatement(user);
+    await user.click(importButton());
+
+    await screen.findByRole('alert');
+    expect(mocks.removeStatementFile).toHaveBeenCalledWith('sede-centro/1234-estado.pdf');
   });
 
   it('says why the button is off when a selected row has no category', async () => {
@@ -169,7 +184,7 @@ describe('Importar Estado de Cuenta', () => {
 
     await waitFor(() => expect(importButton()).toBeEnabled());
     await user.click(importButton());
-    await waitFor(() => expect(mocks.bulkInsertTransactions).toHaveBeenCalled());
+    await waitFor(() => expect(mocks.importStatement).toHaveBeenCalled());
   });
 
   it('warns when the exact same file was already imported', async () => {
@@ -208,8 +223,8 @@ describe('Importar Estado de Cuenta', () => {
     await user.click(screen.getByRole('checkbox', { name: /Seleccionar \/ deseleccionar todas/i }));
     await user.click(importButton());
 
-    await waitFor(() => expect(mocks.bulkInsertTransactions).toHaveBeenCalled());
-    const inserted = mocks.bulkInsertTransactions.mock.calls[0][0];
+    await waitFor(() => expect(mocks.importStatement).toHaveBeenCalled());
+    const inserted = mocks.importStatement.mock.calls[0][1];
     // Only the non-duplicate row went in.
     expect(inserted).toHaveLength(1);
     expect(inserted[0].descripcion).toMatch(/DEPOSIT ACME BODY/);
@@ -226,7 +241,7 @@ describe('Importar Estado de Cuenta', () => {
     await loadStatement(user);
     await user.click(importButton());
 
-    expect(mocks.bulkInsertTransactions).not.toHaveBeenCalled();
+    expect(mocks.importStatement).not.toHaveBeenCalled();
     expect(await screen.findByRole('alert')).toBeVisible();
   });
 });

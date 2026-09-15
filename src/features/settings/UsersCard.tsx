@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { MIN_PASSWORD_LENGTH } from '../../lib/password';
 import { BellRing, KeyRound, Pencil, Search, Shield, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { notificationsService } from '../../services/notifications.service';
@@ -137,11 +138,11 @@ export default function UsersCard({ users, sedes, currentUserId, loading, onChan
     // Mirrors the check inside the edge functions, so the admin finds out
     // before the round trip instead of after it.
     const creating = editing === 'new';
-    if (creating && draft.password.length < 6) {
+    if (creating && draft.password.length < MIN_PASSWORD_LENGTH) {
       setModalError(t('settings.employeeShortPassword'));
       return;
     }
-    if (!creating && draft.password && draft.password.length < 6) {
+    if (!creating && draft.password && draft.password.length < MIN_PASSWORD_LENGTH) {
       setModalError(t('settings.employeeShortPassword'));
       return;
     }
@@ -410,7 +411,7 @@ export default function UsersCard({ users, sedes, currentUserId, loading, onChan
                   id="user-password"
                   type="text"
                   autoComplete="new-password"
-                  minLength={6}
+                  minLength={MIN_PASSWORD_LENGTH}
                   value={draft.password}
                   onChange={(e) => setDraft({ ...draft, password: e.target.value })}
                   placeholder={editing === 'new' ? '' : t('settings.leaveBlankToKeep')}

@@ -4,6 +4,7 @@ import { useAuth } from '../context/auth.context';
 import { useToast } from '../context/toast.context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { workOrdersService } from '../services/supabaseService';
+import { DEFAULT_CAPACITY } from '../services/dashboard.service';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
@@ -157,7 +158,7 @@ export default function KanbanBoard() {
     moveOrder(orderId, status);
   };
 
-  const capacity = currentSede?.capacidad ?? 10;
+  const capacity = currentSede?.capacidad ?? DEFAULT_CAPACITY;
   const occupancy = Math.min(100, Math.round((totalActive / capacity) * 100));
 
   if (loading) {

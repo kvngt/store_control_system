@@ -1,39 +1,34 @@
 // Customers and their CRM profile.
 import { supabase } from '../lib/supabase';
 import type { Customer, CustomerInput, Vehicle, WorkOrder } from '../types/database';
-import { assertDeleted } from './support';
+import { assertDeleted, fetchAll } from './support';
 
-/** Cuántas filas hay por `cliente_id`, en una sola pasada. */
-function countByCustomer(rows: { cliente_id: string }[] | null): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const row of rows || []) counts.set(row.cliente_id, (counts.get(row.cliente_id) || 0) + 1);
-  return counts;
-}
+/** Un cliente tal como llega con sus conteos embebidos (`vehiculos(count)`). */
+type CustomerRow = Customer & {
+  vehiculos?: { count: number }[];
+  ordenes_trabajo?: { count: number }[];
+};
 
 export const customersService = {
   getCustomers: async (sedeId?: string) => {
-    let query = supabase.from('clientes').select('*').order('creado_en', { ascending: false });
-    if (sedeId) query = query.eq('sede_id', sedeId);
-    const { data: clientes, error } = await query;
-    if (error) throw error;
+    // Los conteos los hace la base en la misma consulta (`vehiculos(count)`). Antes eran
+    // dos consultas más con `.in('cliente_id', [...todos los ids])`: con unos cientos de
+    // clientes la URL pasaba el límite del servidor y la lista fallaba, y con más de
+    // 1.000 vehículos u órdenes los conteos salían cortos.
+    const rows = await fetchAll<CustomerRow>((from, to) => {
+      let query = supabase
+        .from('clientes')
+        .select('*, vehiculos(count), ordenes_trabajo(count)')
+        .order('creado_en', { ascending: false })
+        .order('id');
+      if (sedeId) query = query.eq('sede_id', sedeId);
+      return query.range(from, to);
+    });
 
-    const clienteIds = (clientes || []).map((c) => c.id);
-    const [{ data: vehiculos }, { data: ordenes }] = clienteIds.length
-      ? await Promise.all([
-          supabase.from('vehiculos').select('id, cliente_id').in('cliente_id', clienteIds),
-          supabase.from('ordenes_trabajo').select('id, cliente_id').in('cliente_id', clienteIds),
-        ])
-      : [{ data: [] }, { data: [] }];
-
-    // Contar con un índice y no con un `.filter` por cliente: con 1.000 clientes y 3.000
-    // órdenes eran 4 millones de comparaciones en cada carga de la lista (PR #13).
-    const vehicleCounts = countByCustomer(vehiculos);
-    const orderCounts = countByCustomer(ordenes);
-
-    return (clientes || []).map((c) => ({
+    return rows.map(({ vehiculos, ordenes_trabajo, ...c }) => ({
       ...c,
-      vehiculos_count: vehicleCounts.get(c.id) || 0,
-      ordenes_count: orderCounts.get(c.id) || 0,
+      vehiculos_count: vehiculos?.[0]?.count ?? 0,
+      ordenes_count: ordenes_trabajo?.[0]?.count ?? 0,
     })) as Customer[];
   },
 

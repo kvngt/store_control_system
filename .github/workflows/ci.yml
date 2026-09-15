@@ -1,0 +1,42 @@
+# Verificación de cada cambio. Ver docs/traspaso.md §6.
+# No despliega nada y no usa secretos: la base de datos de las pruebas es un Supabase
+# local que levanta el propio runner con Docker.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: Lint, tipos, pruebas y build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc -b
+      - run: npm test
+      - run: npm run build
+
+  base-de-datos:
+    name: Migraciones desde cero y pgTAP
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      # Solo Postgres: aplica las migraciones en orden sobre una base vacía.
+      - run: supabase db start
+      - run: supabase test db

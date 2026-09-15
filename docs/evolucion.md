@@ -26,10 +26,11 @@ cómo funciona hoy, lee [arquitectura.md](arquitectura.md) y
 7. [Etapa 5 — Auditoría del ciclo de vida y móvil](#7-etapa-5--auditoría-del-ciclo-de-vida-y-móvil)
 8. [Etapa 6 — Los pedidos del cliente, fases 1 a 6](#8-etapa-6--los-pedidos-del-cliente-fases-1-a-6)
 9. [Etapa 7 — Auditoría completa](#9-etapa-7--auditoría-completa)
-10. [Decisiones que cambiaron de rumbo](#10-decisiones-que-cambiaron-de-rumbo)
-11. [Todas las migraciones](#11-todas-las-migraciones)
-12. [Cómo creció la red de pruebas](#12-cómo-creció-la-red-de-pruebas)
-13. [Lo que viene](#13-lo-que-viene)
+10. [Etapa 8 — Revisión previa a producción](#10-etapa-8--revisión-previa-a-producción)
+11. [Decisiones que cambiaron de rumbo](#11-decisiones-que-cambiaron-de-rumbo)
+12. [Todas las migraciones](#12-todas-las-migraciones)
+13. [Cómo creció la red de pruebas](#13-cómo-creció-la-red-de-pruebas)
+14. [Lo que viene](#14-lo-que-viene)
 
 ---
 
@@ -53,6 +54,9 @@ sep 18–24 ── Etapa 6  Pedidos del cliente:
 sep 26    ── Etapa 7  Auditoría completa: funciones internas de dinero cerradas a la API,
                       primera firma, borrados atómicos, sesión con mala señal,
                       plan de pruebas ejecutable por persona o IA, qa:security
+sep 27    ── Etapa 8  Revisión previa a producción: totales y listas sin el corte de 1.000
+                      filas, caché por usuario, importación atómica, pagos sin carrera,
+                      índices, cabeceras de seguridad, CI, documento de traspaso
 ```
 
 ---
@@ -305,7 +309,30 @@ Detalle de los hallazgos corregidos y los abiertos: [auditoria-2026-09.md](audit
 
 ---
 
-## 10. Decisiones que cambiaron de rumbo
+## 10. Etapa 8 — Revisión previa a producción
+
+**Migración:** `20260927000000_production_hardening`.
+
+> "Asume que mañana salimos a producción."
+
+La revisión miró lo que falla con datos reales y no con datos de prueba, y los patrones de
+error típicos de un proyecto hecho con IA:
+
+- **Totales de dinero y listas cortados a 1.000 filas.** El panel y Finanzas sumaban en el
+  navegador sobre listas que la API recorta sin avisar. Ahora suma la base
+  (`resumen_panel`) y las listas se leen completas con `fetchAll`.
+- **La tablet compartida mostraba datos del usuario anterior**: la caché ahora es por persona.
+- **La importación bancaria** es una sola transacción; **pagar comisiones** bloquea las filas.
+- **El registro público estaba abierto** en el proyecto real, al revés de lo que decía la
+  documentación; y `config.toml` habría apagado el login si alguien lo aplicaba.
+- **Índices, cabeceras de seguridad, contraseñas de 8, CI** con pgTAP desde cero,
+  `AGENTS.md` y un documento de **traspaso** para quien herede el proyecto.
+
+Detalle, bloqueantes fuera del código y plan del día: [salida-a-produccion.md](salida-a-produccion.md).
+
+---
+
+## 11. Decisiones que cambiaron de rumbo
 
 | Antes | Después | Cuándo y por qué |
 |---|---|---|
@@ -327,10 +354,14 @@ Detalle de los hallazgos corregidos y los abiertos: [auditoria-2026-09.md](audit
 | Cualquier firma nueva autorizaba lo cotizado | Solo la primera firma de la orden | Etapa 7: re-firmar cobraba trabajos que el cliente no vio |
 | Permisos de las funciones revisados a ojo en cada migración | `qa:security` contra la API desplegada | Etapa 7: el permiso por defecto no se ve en la migración |
 | Plan manual en checkboxes dentro de `pruebas.md` | `plan-de-pruebas.md` con ID, prioridad y ejecutor (persona o IA) | Etapa 7: que otra persona o un agente lo ejecute sin preguntar |
+| KPIs y totales sumados en el navegador | `resumen_panel` en la base | Etapa 8: la API corta en 1.000 filas |
+| Consultas sin `.range()` | `fetchAll` en toda lista que crece | Etapa 8: mismo motivo |
+| Importar con dos escrituras desde el navegador | `importar_estado_cuenta` en una transacción | Etapa 8: un fallo dejaba un lote vacío |
+| pgTAP solo en la máquina de quien tuviera Docker | CI con Supabase CLI en cada PR | Etapa 8: pruebas que nadie corre no protegen |
 
 ---
 
-## 11. Todas las migraciones
+## 12. Todas las migraciones
 
 | # | Migración | Qué hizo |
 |---|---|---|
@@ -368,6 +399,7 @@ Detalle de los hallazgos corregidos y los abiertos: [auditoria-2026-09.md](audit
 | 32 | `20260923000000_customer_portal_and_emails` | **F4** Enlace, portal, correos |
 | 33 | `20260924000000_quotes_and_authorization` | **F5** Presupuestos por línea |
 | 34 | `20260925000000_web_report` | **F6** Reporte por correo desde el sistema; bucket de PDFs cerrado |
+| 36 | `20260927000000_production_hardening` | **Pre-producción** `resumen_panel`, `importar_estado_cuenta`, pagos con bloqueo, 14 índices, sesión sin perfil sin acceso |
 | 35 | `20260926000000_audit_hardening` | **Auditoría** Funciones internas cerradas, guard de inserción, primera firma, montos no negativos, borrado con comisiones pagadas |
 
 Las migraciones son la mejor documentación de cada decisión: cada una empieza con un
@@ -375,7 +407,7 @@ comentario que explica el problema. Léelas en orden si quieres el detalle.
 
 ---
 
-## 12. Cómo creció la red de pruebas
+## 13. Cómo creció la red de pruebas
 
 | Momento | Vitest | pgTAP | Playwright |
 |---|---|---|---|
@@ -388,7 +420,8 @@ comentario que explica el problema. Léelas en orden si quieres el detalle.
 | Fase 4 | 241 | 04 (portal y correos) | |
 | Fase 5 | 257 (34 archivos) | 05 → 126 aserciones en 5 archivos | |
 | Fase 6 | 265 (36 archivos) | 06 → 133 aserciones en 6 archivos | |
-| Auditoría | **274** (37 archivos) | 07 → **158 aserciones** en 7 archivos | + `qa:security` (52 casos contra la API) |
+| Auditoría | 274 (37 archivos) | 07 → 158 aserciones en 7 archivos | + `qa:security` (52 casos contra la API) |
+| Pre-producción | **294** (41 archivos) | 08 → **176 aserciones** en 8 archivos, en CI | `qa:security` 53 casos; integración contra la API local |
 
 Las pruebas pgTAP se ejecutaron por primera vez con Docker el 15 de septiembre de 2026:
 **158 aserciones en verde** y las 35 migraciones aplicadas desde cero. Solo hubo que
@@ -398,8 +431,10 @@ temporales que luego se borraron.
 
 ---
 
-## 13. Lo que viene
+## 14. Lo que viene
 
+- **Completar los bloqueantes de [salida-a-produccion.md §2](salida-a-produccion.md#2-bloqueantes-fuera-del-código)**
+  y subir el build nuevo (§4); la migración 36 ya está aplicada.
 - **Probar en teléfonos reales** con el `dist` nuevo publicado: el nivel "publicación" de
   [plan-de-pruebas.md](plan-de-pruebas.md), con los casos H de portal, presupuestos,
   reporte, video y push.

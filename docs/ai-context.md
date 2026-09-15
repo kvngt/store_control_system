@@ -55,6 +55,12 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
 
 ## 2. Reglas de oro
 
+0. **Listas con `fetchAll`, totales con una RPC.** La API de Supabase devuelve como máximo
+   1.000 filas por consulta y no avisa. Nunca leas una tabla que crece con un `select`
+   sin `.range()` (usa `fetchAll` de `src/services/support.ts`, con un orden que termine
+   en `id`) y nunca sumes dinero en el navegador: los KPIs salen de `resumen_panel`.
+   Tampoco uses `.in('col', [muchos ids])`: la URL tiene un largo máximo; usa conteos
+   embebidos (`select('*, hijos(count)')`) o una RPC.
 1. **Todo cambio de esquema o permisos es una migración nueva** en
    `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca edites una migración
    ya aplicada ni cambies tablas desde el panel.
@@ -87,6 +93,17 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
    mensajes pensando en quien los va a leer.
 8. **Fechas locales** con `lib/dates.ts` (`todayLocal`, `daysFromTodayLocal`, `isSameMonth`). Nunca
    `toISOString().split('T')[0]` ni `new Date('AAAA-MM-DD')` para comparar meses.
+8b. **Lo que va junto se escribe junto.** Dos o más escrituras que no pueden quedar a
+   medias (un lote y sus movimientos, una orden y sus líneas) van en una RPC o un trigger,
+   no en varias llamadas desde el navegador (`importar_estado_cuenta`, `create_work_order`).
+   Una operación de dinero que se puede disparar dos veces bloquea sus filas
+   (`FOR UPDATE`, ver `pay_commissions`).
+8c. **La caché de datos es de una persona.** `AuthContext` la vacía al cambiar de usuario;
+   no guardes datos de la sesión en otro lado (localStorage, IndexedDB) sin borrarlos al
+   cerrar sesión.
+8d. **`supabase/config.toml` es la configuración local, no la real.** No uses
+   `supabase config push` sin revisar el diff: `[auth.email] enable_signup = false` apaga el
+   inicio de sesión con correo. La configuración real de Auth está en el panel.
 9. **Una orden puede ser de otra sede que la elegida.** Un admin abre órdenes desde
    avisos y enlaces. Lo que depende de la sede (logo, nombre, porcentaje, personal)
    sale de `order.sede_id` (`orderSede` en `useWorkOrderDetail`), no de `currentSede`.
@@ -109,6 +126,9 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
 | Edge functions | `supabase/functions/` (Deno). Internas verifican `x-restorify-secret` con `_shared/internal.ts`. Si agregas una, súmala a la lista de SEC-17 en `scripts/qa/api-security.mjs` y despliégala: una función que la app usa y no está desplegada responde 404 |
 | Qué hay en el proyecto de Supabase real (buckets, secretos por nombre, cron, Realtime, versiones de funciones, panel) | [supabase.md](supabase.md) |
 | Contextos | `src/context/` (Auth, Language, Theme, Toast, UnsavedChanges) |
+| Listas completas y totales | `fetchAll` en `src/services/support.ts`; `resumen_panel` (panel y Finanzas); `importar_estado_cuenta` (importación bancaria) |
+| Largo mínimo de contraseña | `src/lib/password.ts` (8), igual en `create-employee`, `update-employee` y el panel de Auth |
+| Traspaso, cuentas, operación y emergencias | [traspaso.md](traspaso.md); antes de publicar a clientes reales, [salida-a-produccion.md](salida-a-produccion.md) |
 | Tipos de dominio | `src/types/domain/` |
 
 ## 4. Patrones de interfaz

@@ -16,7 +16,7 @@ Si solo vas a publicar una versión nueva sobre un entorno ya configurado, salta
 6. [Verificación después de publicar](#6-verificación-después-de-publicar)
 7. [Rotar secretos y llaves](#7-rotar-secretos-y-llaves)
 8. [Volver atrás](#8-volver-atrás)
-9. [Integración continua (recomendado)](#9-integración-continua-recomendado)
+9. [Integración continua](#9-integración-continua)
 
 ---
 
@@ -88,8 +88,16 @@ Se hace una vez por entorno. Si cambias de proyecto, repite todo.
 - **Site URL**: `https://reinventa.shop`.
 - **Redirect URLs**: `https://reinventa.shop/reset-password` y el origen de
   desarrollo que uses. Detalle en [password-reset.md](password-reset.md).
-- **Registro público apagado** (`enable_signup = false`): las cuentas las crea un
-  admin con la edge function `create-employee`.
+- **Registro público apagado**: Authentication → Sign In / Providers → **Allow new users
+  to sign up** apagado. Las cuentas las crea un admin con la edge function
+  `create-employee`. **No apagues el proveedor Email**: sin él nadie inicia sesión. En el
+  proyecto real estaba abierto hasta la revisión previa a producción (PRD-01); `npm run
+  qa:security` → SEC-18 lo comprueba.
+- **Largo mínimo de contraseña: 8** (Email → Minimum password length), el mismo que exigen
+  la app y las funciones de empleados.
+- **`supabase/config.toml` no se aplica solo.** Describe el Supabase local. Si alguna vez
+  usas `npx supabase config push`, revisa el diff antes de confirmar: sobrescribe la
+  configuración de Auth del proyecto real.
 - **SMTP (recomendado)**: el correo propio de Supabase permite ~2 correos por hora.
   Authentication → Emails → SMTP Settings con Resend:
   host `smtp.resend.com`, puerto `465`, usuario `resend`, contraseña = una API key
@@ -330,9 +338,12 @@ Diez minutos. Es el nivel **humo** del plan de pruebas; si algo falla,
 
 ---
 
-## 9. Integración continua (recomendado)
+## 9. Integración continua
 
-No hay CI configurada. Un flujo mínimo de GitHub Actions para cada pull request:
+`.github/workflows/ci.yml` corre en cada push y pull request a `main`: lint, tipos, pruebas
+y build en un trabajo, y en otro levanta Postgres con la CLI de Supabase, aplica las 36
+migraciones desde cero y corre pgTAP. No despliega ni usa secretos. Referencia del flujo
+(el archivo del repositorio es la fuente de verdad):
 
 ```yaml
 name: CI

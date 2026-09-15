@@ -41,7 +41,7 @@ avisos), el complemento es [reglas-de-negocio.md](reglas-de-negocio.md).
 | **Pruebas** | Vitest (unitarias y componentes), pgTAP (base de datos), Playwright (e2e) |
 | **Hosting** | Sitio estático en Hostinger (Apache), dominio `reinventa.shop` |
 
-Unas 26 000 líneas de TypeScript (con pruebas), 5 000 de CSS, 35 migraciones y 22 tablas.
+Unas 26 000 líneas de TypeScript (con pruebas), 5 000 de CSS, 36 migraciones y 22 tablas.
 Cómo se llegó hasta aquí, etapa por etapa: [evolucion.md](evolucion.md).
 
 ---
@@ -163,7 +163,7 @@ public/
   .htaccess                      reescritura SPA + tipos PWA para Apache
 
 supabase/
-  migrations/                    35 migraciones, en orden cronológico (historia en evolucion.md)
+  migrations/                    36 migraciones, en orden cronológico (historia en evolucion.md)
   functions/                     edge functions (Deno)
     create-employee, update-employee, delete-employee   con clave de servicio
     process-outbox, cleanup-storage                     internas, llamadas por la base
@@ -342,6 +342,8 @@ permiten cambiar totales con esa bandera: un `PATCH` directo a la API no la tien
 | `enviar_reporte_cliente` | admin | "Enviar reporte → Enviar por correo" (asegura el enlace) |
 | `enviar_presupuesto`, `registrar_autorizacion`, `cancelar_presupuesto` | admin | Tarjeta de presupuesto |
 | `ordenes_esperando_autorizacion` | todos | Marca "Esperando autorización" en lista y tablero, sin montos |
+| `resumen_panel` | todos (RLS decide) | KPIs del panel y totales de Finanzas, sumados en la base con la zona horaria del taller. Un técnico recibe ceros en dinero |
+| `importar_estado_cuenta` | admin | El lote de un estado de cuenta y todos sus movimientos, en una transacción |
 
 > **Antes de calcular algo en el frontend, revisa si un trigger ya lo hace.** Los
 > totales de una orden no se calculan a mano en React: se releen de la base
@@ -461,6 +463,16 @@ estimada y la lista de personal asignable.
 graba un video y se va al Kanban no debe cortar la subida.
 
 ### Datos remotos: TanStack Query
+
+**Listas completas con `fetchAll`.** PostgREST devuelve como máximo 1.000 filas por
+consulta (Project Settings → API → Max rows) y no avisa cuando corta. Toda lista que crece
+(órdenes, clientes, vehículos, movimientos, comisiones, pagos) se lee con `fetchAll`
+(`services/support.ts`), que pide páginas con `.range()` y un orden que termina en `id`.
+Los totales no se calculan con esas listas: los hace la base (`resumen_panel`).
+
+**La caché es de quien inició sesión.** `AuthContext` la vacía al cerrar sesión o si entra
+otra persona: en la tablet compartida del taller, quien entraba después veía por un momento
+lo que había cargado el anterior.
 
 Cada lectura es un `useQuery` con clave en `lib/queryClient.ts`. Las mutaciones
 invalidan las claves afectadas en vez de parchear a mano, porque la base recalcula
@@ -582,6 +594,17 @@ Hoy se trabaja contra el proyecto alojado; Supabase local requiere Docker. Ver
 ---
 
 ## 11. Trampas conocidas
+
+**La API corta en 1.000 filas y no avisa.** Una consulta sin `.range()` sobre una tabla que
+crece funciona en desarrollo y devuelve datos incompletos en producción. Pasó con los totales
+del panel y de Finanzas ([salida-a-produccion.md](salida-a-produccion.md), PRD-10/11). Usa
+`fetchAll` para listas y una RPC para sumas.
+
+**`.in('columna', [cientos de ids])` rompe por largo de URL.** La lista de clientes dejaba
+de cargar con unos cientos de clientes (PRD-12). Conteos embebidos o una RPC.
+
+**`supabase/config.toml` no es la configuración real.** Y `[auth.email] enable_signup =
+false` no apaga solo el registro: apaga el inicio de sesión con correo (PRD-16).
 
 **El cuerpo de una función plpgsql no se valida al crearla.** Una migración con un
 error dentro de una función se aplica sin quejarse y falla la primera vez que el

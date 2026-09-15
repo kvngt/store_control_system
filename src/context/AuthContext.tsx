@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import type { UserProfile, Sede } from '../types/database';
 import { AuthContext, type LoginResult } from './auth.context';
@@ -9,8 +10,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentSede, setCurrentSedeState] = useState<Sede | null>(null);
   const [loading, setLoading] = useState(true);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
+  const queryClient = useQueryClient();
+  // Quién es dueño de lo que hay en la caché de datos. En una tablet compartida, sin
+  // esto, quien entraba después veía por un momento las órdenes y los montos que cargó
+  // la persona anterior (un admin), hasta que llegaba su propia consulta.
+  const cacheOwner = useRef<string | null>(null);
+
+  const forgetCachedData = useCallback(() => {
+    queryClient.clear();
+    cacheOwner.current = null;
+  }, [queryClient]);
 
   const loadProfileAndSedes = useCallback(async (userId: string) => {
+    if (cacheOwner.current && cacheOwner.current !== userId) forgetCachedData();
+    cacheOwner.current = userId;
     const { data: perfil, error: perfilError } = await supabase
       .from('perfiles')
       .select('*')
@@ -46,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const preferred = isAdmin ? sedesList.find((s) => s.id === savedSedeId) : undefined;
     const own = sedesList.find((s) => s.id === (perfil as UserProfile).sede_id);
     setCurrentSedeState(preferred || own || sedesList[0] || null);
-  }, []);
+  }, [forgetCachedData]);
 
   const refreshSedes = useCallback(async () => {
     const { data: sedes } = await supabase.from('sedes').select('*').order('nombre');
@@ -94,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setAllSedes([]);
         setCurrentSedeState(null);
+        forgetCachedData();
       }
     });
 
@@ -101,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       active = false;
       subscription.unsubscribe();
     };
-  }, [loadProfileAndSedes]);
+  }, [loadProfileAndSedes, forgetCachedData]);
 
   const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -115,7 +129,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
     localStorage.removeItem('restorify_sede_id');
     setPasswordRecovery(false);
-  }, []);
+    forgetCachedData();
+  }, [forgetCachedData]);
 
   const endPasswordRecovery = useCallback(() => setPasswordRecovery(false), []);
 

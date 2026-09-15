@@ -6,6 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ADMIN_USER, SEDE_CENTRO } from '../test/renderWithProviders';
 
 type AuthListener = (event: string, session: { user: { id: string } } | null) => void;
@@ -49,11 +50,16 @@ beforeEach(() => {
   mocks.sedes.mockResolvedValue({ data: [SEDE_CENTRO], error: null });
 });
 
+let queryClient: QueryClient;
+
 async function renderSignedIn() {
+  queryClient = new QueryClient();
   render(
-    <AuthProvider>
-      <Probe />
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>
+    </QueryClientProvider>
   );
   expect(await screen.findByText(`sesión de ${ADMIN_USER.nombre_completo} en ${SEDE_CENTRO.nombre}`)).toBeInTheDocument();
 }
@@ -85,6 +91,25 @@ describe('AuthProvider', () => {
     await act(async () => mocks.listener?.('SIGNED_IN', SESSION));
 
     expect(screen.getByText(`sesión de ${ADMIN_USER.nombre_completo} en ${SEDE_CENTRO.nombre}`)).toBeInTheDocument();
+  });
+
+  it('al cerrar sesión borra los datos en caché de quien estaba', async () => {
+    await renderSignedIn();
+    queryClient.setQueryData(['work-orders', 'sede-centro'], [{ id: 'orden-con-montos' }]);
+
+    await act(async () => mocks.listener?.('SIGNED_OUT', null));
+
+    expect(queryClient.getQueryData(['work-orders', 'sede-centro'])).toBeUndefined();
+  });
+
+  it('si entra otra persona sin cerrar sesión, tampoco hereda la caché', async () => {
+    await renderSignedIn();
+    queryClient.setQueryData(['dashboard-stats', 'sede-centro', 10], { ingresos_mes: 15000 });
+
+    mocks.perfil.mockResolvedValue({ data: { ...ADMIN_USER, id: 'otra-persona' }, error: null });
+    await act(async () => mocks.listener?.('SIGNED_IN', { user: { id: 'otra-persona' } }));
+
+    expect(queryClient.getQueryData(['dashboard-stats', 'sede-centro', 10])).toBeUndefined();
   });
 
   it('una cuenta que de verdad no tiene perfil sí queda fuera', async () => {

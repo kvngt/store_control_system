@@ -139,6 +139,13 @@ entregado:
   cheque existe.
 - Lo conciliado contra el banco (movimientos importados) no se revierte.
 
+### Importar un estado de cuenta
+
+- Todo o nada: el lote y sus movimientos se guardan juntos. Si algo falla, no queda un lote a
+  medias y el mismo archivo se puede volver a importar.
+- Los totales del panel y de Finanzas los suma la base con **todos** los movimientos de la
+  sede, sin importar cuántos haya.
+
 ### Fechas
 
 Las fechas de los movimientos son la fecha **local** del taller. Un movimiento del

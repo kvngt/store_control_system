@@ -4,6 +4,7 @@ import { useAuth } from '../context/auth.context';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardService, workOrdersService } from '../services/supabaseService';
+import { DEFAULT_CAPACITY } from '../services/dashboard.service';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
@@ -24,6 +25,8 @@ const EMPTY_STATS: DashboardStats = {
   ordenes_finalizadas_mes: 0,
   ingresos_mes: 0,
   egresos_mes: 0,
+  ingresos_total: 0,
+  egresos_total: 0,
   clientes_nuevos_mes: 0,
   tasa_ocupacion: 0,
   ordenes_por_estatus: { recepcion: 0, en_proceso: 0, espera_repuestos: 0, finalizado: 0, entregado: 0 },
@@ -156,7 +159,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="stat-change" style={{ color: 'var(--color-text-tertiary)' }}>
-              {stats.ordenes_activas}/{currentSede?.capacidad ?? 10} {t('dashboard.spacesInUse')}
+              {stats.ordenes_activas}/{currentSede?.capacidad ?? DEFAULT_CAPACITY} {t('dashboard.spacesInUse')}
             </div>
           </div>
           <ChevronRight size={18} className="stat-card-arrow" />

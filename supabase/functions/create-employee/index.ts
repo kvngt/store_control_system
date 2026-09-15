@@ -67,8 +67,9 @@ Deno.serve(async (req) => {
     if (!email || !password || !nombre_completo || !sede_id) {
       return jsonResponse({ error: 'Faltan campos obligatorios.' }, 400);
     }
-    if (password.length < 6) {
-      return jsonResponse({ error: 'La contraseña debe tener al menos 6 caracteres.' }, 400);
+    // El mismo mínimo que la app (src/lib/password.ts) y que Auth en el panel.
+    if (password.length < 8) {
+      return jsonResponse({ error: 'La contraseña debe tener al menos 8 caracteres.' }, 400);
     }
     if (!VALID_ROLES.includes(rol)) {
       return jsonResponse({ error: 'Rol inválido.' }, 400);

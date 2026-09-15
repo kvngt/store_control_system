@@ -62,8 +62,8 @@ const AUTH_BY_CODE: Record<string, Record<Language, string>> = {
     en: 'The new password must be different from the current one.',
   },
   weak_password: {
-    es: 'La contraseña es demasiado débil. Usa al menos 6 caracteres.',
-    en: 'That password is too weak. Use at least 6 characters.',
+    es: 'La contraseña es demasiado débil. Usa al menos 8 caracteres.',
+    en: 'That password is too weak. Use at least 8 characters.',
   },
 };
 

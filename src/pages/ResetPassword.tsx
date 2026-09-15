@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MIN_PASSWORD_LENGTH } from '../lib/password';
 import { Hexagon, Wrench } from 'lucide-react';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
@@ -26,7 +27,7 @@ export default function ResetPassword() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (password.length < 6) {
+    if (password.length < MIN_PASSWORD_LENGTH) {
       setError(t('auth.passwordTooShort'));
       return;
     }

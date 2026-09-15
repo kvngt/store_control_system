@@ -42,7 +42,8 @@ Para **por qué** está construido así: [arquitectura.md](arquitectura.md). Par
 | **Plan** | Free: 500 MB de base, 1 GB de Storage, 50 MB por archivo. Pasar a **Pro** antes de atender clientes reales ([deployment.md §4.1](deployment.md#41-plan-y-límites-de-gasto)) |
 | **Postgres** | 17.6 |
 | **Tamaño de la base** | ~15 MB |
-| **Migraciones aplicadas** | 35 (la última, `20260926000000_audit_hardening`) |
+| **Migraciones aplicadas** | 36 (la última, `20260927000000_production_hardening`, aplicada el 15 de septiembre de 2026) |
+| **Max rows de la API** | 1.000 (valor por defecto; Project Settings → API). **No bajarlo**: `fetchAll` asume páginas de 1.000 |
 | **Enlace con este repositorio** | `supabase/.temp/project-ref` (lo crea `npx supabase link`) |
 | **Entornos** | Solo este. No hay staging |
 
@@ -68,7 +69,7 @@ Para **por qué** está construido así: [arquitectura.md](arquitectura.md). Par
 │                   create-employee · update-employee · delete-employee                  │
 │                                                                                        │
 │  PostgreSQL 17                                                                         │
-│   ├─ public: 22 tablas, 90 funciones, triggers del dinero y los avisos                 │
+│   ├─ public: 22 tablas, 92 funciones, triggers del dinero y los avisos                 │
 │   ├─ pg_cron ── cada minuto / 09:00 / 15:00 UTC                                        │
 │   ├─ pg_net ─── llama a las Edge Functions internas                                    │
 │   └─ Vault ──── URL del proyecto y secreto de las funciones internas                   │
@@ -97,7 +98,7 @@ Para **por qué** está construido así: [arquitectura.md](arquitectura.md). Par
 
 | Quién | Con qué llave | Qué usa | Qué lo limita |
 |---|---|---|---|
-| **App del taller** (admin, mecánico, pintor) | Clave anónima + token de la sesión del usuario | Auth, PostgREST (tablas y 19 RPC), Storage (subidas TUS al host `lendsiqkxhvbxxkaadrt.storage.supabase.co`), Realtime, funciones de empleados | RLS, triggers de guarda, políticas de Storage, `is_admin()` dentro de cada RPC |
+| **App del taller** (admin, mecánico, pintor) | Clave anónima + token de la sesión del usuario | Auth, PostgREST (tablas y 21 RPC), Storage (subidas TUS al host `lendsiqkxhvbxxkaadrt.storage.supabase.co`), Realtime, funciones de empleados | RLS, triggers de guarda, políticas de Storage, `is_admin()` dentro de cada RPC |
 | **Portal del cliente** | Ninguna del navegador: solo `fetch` a `functions/v1/portal` | La función `portal` | El token de 64 hexadecimales; la función arma la respuesta campo por campo |
 | **La base misma** | Secreto compartido leído de Vault | `pg_net` → `process-outbox`, `cleanup-storage` | `x-restorify-secret` comparado en la función |
 | **Edge Functions** | `SUPABASE_SERVICE_ROLE_KEY` (inyectada por Supabase) | Todo, sin RLS | Cada función valida por su cuenta: JWT + rol admin, token del cliente o secreto interno |
@@ -167,11 +168,11 @@ No hay vistas.
 
 ### 4.3 Funciones de `public`
 
-90 funciones, en cuatro grupos según **quién puede ejecutarlas**:
+92 funciones, en cuatro grupos según **quién puede ejecutarlas**:
 
 | Grupo | Cuántas | Cuáles | Quién |
 |---|---|---|---|
-| **RPC de la app** | 19 | `create_work_order`, `repuestos_de_orden`, `pay_commissions`, `sede_delete_impact`, `delete_sede_cascade`, `registrar_push`, `eliminar_push`, `probar_push`, `usuarios_con_push`, `crear_enlace_cliente`, `regenerar_enlace_cliente`, `revocar_enlace_cliente`, `notificar_cliente_avance`, `enviar_reporte_cliente`, `enviar_presupuesto`, `registrar_autorizacion`, `cancelar_presupuesto`, `ordenes_esperando_autorizacion`, `app_schema_version` | Usuarios con sesión (`authenticated`). Las de admin lo validan por dentro |
+| **RPC de la app** | 21 | `resumen_panel`, `importar_estado_cuenta` (migración 36), `create_work_order`, `repuestos_de_orden`, `pay_commissions`, `sede_delete_impact`, `delete_sede_cascade`, `registrar_push`, `eliminar_push`, `probar_push`, `usuarios_con_push`, `crear_enlace_cliente`, `regenerar_enlace_cliente`, `revocar_enlace_cliente`, `notificar_cliente_avance`, `enviar_reporte_cliente`, `enviar_presupuesto`, `registrar_autorizacion`, `cancelar_presupuesto`, `ordenes_esperando_autorizacion`, `app_schema_version` | Usuarios con sesión (`authenticated`). Las de admin lo validan por dentro |
 | **Ayudantes de RLS** | 4 | `is_admin`, `current_user_role`, `current_user_sede_id`, `is_assigned_to_order` | Las usan las políticas; sin sesión devuelven vacío |
 | **Internas** | 26 | Dinero (`recalculate_order_totals`, `sync_order_commissions`, `sync_order_parts_expense`, `reverse_order_delivery_finance`); avisos (`notificar`, `admins_de_sede`, `datos_orden_aviso`); cola (`claim_outbox`, `finish_outbox`, `dispatch_outbox_if_due`, `invoke_edge_function`, `purge_old_notifications`, `archivos_huerfanos`); portal y correos (`datos_portal`, `datos_correo`, `encolar_correo_cliente`, `asegurar_enlace_orden`, `preferencia_correos_portal`, `responder_presupuesto_portal`, `marcar_estatus_enviado`, `es_correo_valido`); presupuestos (`_crear_presupuesto`, `_agregar_borradores`, `_lineas_pendientes`, `_resolver_presupuesto`, `recordar_presupuestos_sin_respuesta`) | Solo `service_role` (Edge Functions), triggers y pg_cron |
 | **De trigger** | 41 | `trg_*`, `handle_*`, `cleanup_order_finance` | Solo como trigger |
@@ -186,8 +187,8 @@ Qué hace cada trigger, por tabla: [arquitectura.md §5](arquitectura.md#5-dónd
 
 Viven en `supabase/migrations/` y se aplican con `npx supabase db push --linked`. **No se
 cambia el esquema desde el panel**: lo que no está en una migración no existe en otro
-entorno y lo borra el próximo `db reset`. Historia de las 35:
-[evolucion.md §11](evolucion.md#11-todas-las-migraciones).
+entorno y lo borra el próximo `db reset`. Historia de las 36:
+[evolucion.md §12](evolucion.md#12-todas-las-migraciones).
 
 ---
 
@@ -231,8 +232,8 @@ Deno 2. Código en `supabase/functions/`; se despliegan con
 | `portal` | no | Portal del cliente (`/r/<token>`) | Token de 64 hex; `datos_portal` decide campo por campo | Llave de servicio | v2 |
 | `process-outbox` | no | La base (`pg_net`) al crear un aviso, y pg_cron cada minuto | Secreto `x-restorify-secret` | Llave de servicio, Resend, VAPID | v5 |
 | `cleanup-storage` | no | pg_cron a las 09:00 UTC | Secreto `x-restorify-secret` | Llave de servicio | v2 |
-| `create-employee` | sí | Configuración → Personal → Nuevo empleado | JWT + rol admin | Admin API de Auth | v3 |
-| `update-employee` | sí | Configuración → Personal → editar | JWT + rol admin; no degrada al último admin | Admin API de Auth | v1 (desplegada el 15 sep 2026) |
+| `create-employee` | sí | Configuración → Personal → Nuevo empleado | JWT + rol admin | Admin API de Auth | v4 (contraseña mínima de 8, 15 sep 2026) |
+| `update-employee` | sí | Configuración → Personal → editar | JWT + rol admin; no degrada al último admin | Admin API de Auth | v2 (contraseña mínima de 8, 15 sep 2026) |
 | `delete-employee` | sí | Configuración → Personal → quitar | JWT + rol admin; nadie se borra a sí mismo, ni a quien tiene órdenes asignadas o pagos de comisión | Admin API de Auth | v4 |
 
 `verify_jwt = false` para las tres primeras está declarado en `supabase/config.toml`, y
@@ -298,7 +299,8 @@ En `.env.local`. Vite las **incrusta al compilar**, así que son públicas. Deta
 | | |
 |---|---|
 | **Método** | Correo y contraseña. Sin proveedores externos, sin SMS, sin MFA |
-| **Registro público** | **Apagado**: las cuentas las crea un admin con `create-employee` |
+| **Registro público** | **Abierto en el proyecto real** (comprobado el 15 de septiembre de 2026 en `/auth/v1/settings`, `disable_signup: false`). Debe apagarse: Authentication → Sign In / Providers → Allow new users to sign up ([salida-a-produccion.md PRD-01](salida-a-produccion.md#2-bloqueantes-fuera-del-código)). Las cuentas las crea un admin con `create-employee`, que funciona igual con el registro apagado. `qa:security` SEC-18 lo vigila |
+| **Largo mínimo de contraseña** | La app y las funciones exigen 8; en el panel sigue en 6 hasta aplicar PRD-07 |
 | **Confirmación de correo** | No se pide: el admin crea la cuenta ya confirmada |
 | **Duración del token** | 1 hora; supabase-js lo renueva solo |
 | **Site URL y redirecciones** | `https://reinventa.shop` y `https://reinventa.shop/reset-password` |
@@ -391,7 +393,7 @@ nombres del menú; busca el más parecido.
 
 ## 12. El Supabase local (Docker)
 
-`npx supabase start` levanta en Docker una copia vacía del proyecto con las 35
+`npx supabase start` levanta en Docker una copia vacía del proyecto con las 36
 migraciones. Sirve para las pruebas pgTAP y para probar una migración antes de aplicarla.
 **No toca el proyecto real.** Cómo instalar Docker: [pruebas.md §2.4](pruebas.md#24-para-qué-hace-falta-docker).
 
@@ -405,7 +407,7 @@ migraciones. Sirve para las pruebas pgTAP y para probar una migración antes de 
 ```bash
 npx supabase start     # levantar (la primera vez descarga varios GB)
 npx supabase status    # direcciones y llaves locales
-npm run test:db        # 7 archivos pgTAP, 158 aserciones
+npm run test:db        # 8 archivos pgTAP, 176 aserciones
 npx supabase db reset  # recrear la base local desde cero
 npx supabase stop      # apagar
 ```
@@ -443,6 +445,7 @@ ORDER BY 2 DESC, 3 DESC, 1;
 
 | Qué | Por qué importa | Cómo |
 |---|---|---|
+| **Apagar el registro público** | Está abierto: cualquiera crea cuentas por la API y gasta el cupo de correos de Auth | Authentication → Sign In / Providers. SEC-18 en PASS |
 | **Pasar a Pro** | Free no tiene respaldos diarios, pausa proyectos inactivos y limita Storage a 1 GB | Organization → Billing |
 | **Staging** | Hoy las pruebas e2e y `qa:security` corren contra el único proyecto | Un segundo proyecto con las mismas migraciones y secretos propios |
 | **Vaciar los buckets cerrados** | `vehiculos_fotos` (78 MB), `firmas` y `reportes` guardan datos de prueba de antes de las fases y ocupan cuota | Storage → el bucket → seleccionar todo → Delete. Las políticas quedan; no rompe nada |

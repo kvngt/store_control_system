@@ -225,6 +225,20 @@ for (const c of CASES) {
   });
 }
 
+// SEC-18: el registro público está apagado. Con él abierto cualquiera se crea una
+// cuenta por la API; sin perfil no ve datos, pero gasta el cupo de correos de Auth (que
+// es el de recuperar contraseñas). Se apaga en Authentication → Sign In / Providers.
+{
+  const r = await call('GET', '/auth/v1/settings');
+  const open = r.json?.disable_signup !== true;
+  results.push({
+    id: 'SEC-18',
+    desc: 'El registro público de cuentas está apagado',
+    estado: open ? 'FAIL' : 'PASS',
+    ...(open ? { http: r.status, respuesta: `disable_signup=${r.json?.disable_signup}. Apágalo en el panel: Authentication → Sign In / Providers → Allow new users to sign up` } : {}),
+  });
+}
+
 // SEC-55: alta directa de una orden por un técnico (crea datos: solo con --alta).
 if (!INCLUDE_INSERT) {
   results.push({ id: 'SEC-55', desc: 'Una orden creada directo por un técnico nace en recepción', estado: 'SKIP', motivo: 'usa --alta (crea una orden de prueba)' });

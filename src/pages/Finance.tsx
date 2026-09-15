@@ -119,15 +119,11 @@ export default function Finance() {
     [transactions, filterType]
   );
 
-  const { totalIncome, totalExpense } = useMemo(() => {
-    let income = 0;
-    let expense = 0;
-    for (const t of transactions) {
-      if (t.tipo === 'ingreso') income += Number(t.monto);
-      else if (t.tipo === 'egreso') expense += Number(t.monto);
-    }
-    return { totalIncome: income, totalExpense: expense };
-  }, [transactions]);
+  // Los suma la base (`resumen_panel`), no esta pantalla: la lista de movimientos es
+  // para mostrarla, y sumar en el navegador ya dio totales cortos cuando la API recortaba
+  // a 1.000 filas.
+  const totalIncome = stats?.ingresos_total ?? 0;
+  const totalExpense = stats?.egresos_total ?? 0;
 
   const balance = totalIncome - totalExpense;
 

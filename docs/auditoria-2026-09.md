@@ -8,6 +8,9 @@ con la razón.
 Para ejecutar las pruebas: [plan-de-pruebas.md](plan-de-pruebas.md). Para las pruebas
 automatizadas: [pruebas.md](pruebas.md).
 
+> Después de esta auditoría se hizo una **revisión previa a producción** con hallazgos
+> nuevos (PRD-01 a PRD-25), entre ellos dos bloqueantes: [salida-a-produccion.md](salida-a-produccion.md).
+
 ---
 
 ## Índice

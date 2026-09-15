@@ -5,17 +5,35 @@ import type {
   CategorizationRule,
   FinancialTransaction,
   ParsedStatementTransaction,
+  TransactionCategory,
   TransactionType,
 } from '../types/database';
+import { fetchAll } from './support';
+
+/** Un movimiento del estado de cuenta listo para importar. */
+export interface StatementRowInput {
+  tipo: TransactionType;
+  categoria: TransactionCategory;
+  monto: number;
+  descripcion: string;
+  fecha: string;
+  numero_cheque?: string | null;
+}
 
 export const financeService = {
-  getTransactions: async (sedeId?: string) => {
-    let query = supabase.from('finanzas_movimientos').select('*').order('fecha', { ascending: false });
-    if (sedeId) query = query.eq('sede_id', sedeId);
-    const { data, error } = await query;
-    if (error) throw error;
-    return data as FinancialTransaction[];
-  },
+  // Todos, de a páginas: con la importación bancaria una sede pasa de 1.000 movimientos
+  // en pocos meses. Los totales no se calculan con esta lista (ver `resumen_panel`).
+  getTransactions: async (sedeId?: string) =>
+    fetchAll<FinancialTransaction>((from, to) => {
+      let query = supabase
+        .from('finanzas_movimientos')
+        .select('*')
+        .order('fecha', { ascending: false })
+        .order('creado_en', { ascending: false })
+        .order('id');
+      if (sedeId) query = query.eq('sede_id', sedeId);
+      return query.range(from, to);
+    }),
 
   createTransaction: async (input: Omit<FinancialTransaction, 'id' | 'creado_en'>) => {
     const { data, error } = await supabase.from('finanzas_movimientos').insert(input).select().single();
@@ -88,17 +106,27 @@ export const financeService = {
     return (data || []) as BankStatementImport[];
   },
 
-  createImportBatch: async (input: {
-    sede_id: string;
-    nombre_archivo: string;
-    ruta_archivo: string;
-    importado_por: string;
-    total_transacciones: number;
-    hash_archivo?: string;
-  }) => {
-    const { data, error } = await supabase.from('finanzas_importaciones').insert(input).select().single();
+  /**
+   * El lote y todos sus movimientos en una sola transacción (`importar_estado_cuenta`).
+   * Antes eran dos escrituras: si fallaba la segunda quedaba un lote vacío que además
+   * hacía creer que el archivo ya se había importado.
+   */
+  importStatement: async (
+    batch: { sede_id: string; nombre_archivo: string; ruta_archivo: string; hash_archivo?: string },
+    rows: StatementRowInput[]
+  ) => {
+    const { data, error } = await supabase.rpc('importar_estado_cuenta', {
+      p_importacion: batch,
+      p_movimientos: rows,
+    });
     if (error) throw error;
-    return data as BankStatementImport;
+    return data as string;
+  },
+
+  /** Borra el PDF subido cuando la importación no llegó a guardarse. */
+  removeStatementFile: async (path: string) => {
+    const { error } = await supabase.storage.from('estados_cuenta_bancarios').remove([path]);
+    if (error) throw error;
   },
 
   // Flags parsed transactions that likely already exist in finanzas_movimientos
@@ -142,12 +170,6 @@ export const financeService = {
       if (match) matches.set(idx, match.descripcion);
     });
     return matches;
-  },
-
-  bulkInsertTransactions: async (rows: Omit<FinancialTransaction, 'id' | 'creado_en'>[]) => {
-    if (rows.length === 0) return;
-    const { error } = await supabase.from('finanzas_movimientos').insert(rows);
-    if (error) throw error;
   },
 
   // Deletes every finanzas_movimientos row from a batch, then the batch

@@ -145,33 +145,32 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
     }
     setSaving(true);
     setError('');
+    let uploadedPath: string | null = null;
     try {
-      const path = await supabaseService.uploadStatement(file, sedeId);
-      const batch = await supabaseService.createImportBatch({
-        sede_id: sedeId,
-        nombre_archivo: file.name,
-        ruta_archivo: path,
-        importado_por: user.id,
-        total_transacciones: selectedRows.length,
-        hash_archivo: fingerprint || undefined,
-      });
-      await supabaseService.bulkInsertTransactions(
-        selectedRows.map((r) => ({
+      uploadedPath = await supabaseService.uploadStatement(file, sedeId);
+      // El lote y sus movimientos en una sola transacción: o entra todo, o nada.
+      await supabaseService.importStatement(
+        {
           sede_id: sedeId,
+          nombre_archivo: file.name,
+          ruta_archivo: uploadedPath,
+          hash_archivo: fingerprint || undefined,
+        },
+        selectedRows.map((r) => ({
           tipo: r.tipo,
           categoria: r.categoria as TransactionCategory,
           monto: r.monto,
           descripcion: `Importado: ${r.descripcion}`,
           fecha: r.fecha,
           numero_cheque: r.numero_cheque?.trim() || null,
-          registrado_por: user.id,
-          importacion_id: batch.id,
         }))
       );
       setSuccessCount(selectedRows.length);
       setRows([]);
       onImported();
     } catch (err) {
+      // La importación no se guardó: el PDF subido no describe nada. Mejor esfuerzo.
+      if (uploadedPath) void supabaseService.removeStatementFile(uploadedPath).catch(() => {});
       setError(getErrorMessage(err, language));
     } finally {
       setSaving(false);

@@ -13,6 +13,8 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 
 | Si vas a… | Lee, en este orden |
 |---|---|
+| **Hacerte cargo del proyecto** sin poder preguntarle a quien lo hizo | [traspaso.md](traspaso.md) |
+| **Salir a producción**: bloqueantes, plan del día y vuelta atrás | [salida-a-produccion.md](salida-a-produccion.md) |
 | **Entender el sistema** antes de tocar código | [arquitectura.md](arquitectura.md) → [reglas-de-negocio.md](reglas-de-negocio.md) |
 | **Probar la plataforma** (persona o agente de IA) | [plan-de-pruebas.md](plan-de-pruebas.md) |
 | Saber **qué cubren las pruebas automatizadas** y cómo correrlas | [pruebas.md](pruebas.md) |
@@ -31,6 +33,17 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 ---
 
 ## Qué hay en cada documento
+
+**[traspaso.md](traspaso.md)** — Para quien hereda el proyecto: cuentas y accesos, lo que
+solo existe fuera del repositorio, cómo dejar una máquina lista, orden de lectura, cómo se
+trabaja y se publica, qué hacer cuando algo se rompe, instrucciones para agentes de IA y los
+patrones de error de un proyecto construido con IA que conviene seguir vigilando.
+
+**[salida-a-produccion.md](salida-a-produccion.md)** — La revisión con la premisa de atender
+clientes reales al día siguiente: bloqueantes fuera del código (registro público abierto,
+plan sin respaldos, llaves que rotar), los errores corregidos (totales cortados a 1.000 filas,
+caché compartida en tablets, importación a medias, pagos dobles), el plan del día de la
+salida, cómo volver atrás y qué vigilar la primera semana.
 
 **[arquitectura.md](arquitectura.md)** — Cómo está construido. La decisión central
 (no hay servidor propio: el navegador habla directo con Supabase, así que la
@@ -59,7 +72,7 @@ línea, las tres formas de autorizar (firma, enlace, registro del admin), qué c
 el dinero, qué ve cada quien y diagnóstico.
 
 **[evolucion.md](evolucion.md)** — La historia del proyecto: de la demo a las fases del
-cliente, las 35 migraciones con lo que hizo cada una, las decisiones que se
+cliente, las 36 migraciones con lo que hizo cada una, las decisiones que se
 reemplazaron y cómo creció la red de pruebas.
 
 **[plan-de-pruebas.md](plan-de-pruebas.md)** — El plan de pruebas ejecutable: cada caso
@@ -78,13 +91,14 @@ se comprueba y los riesgos que quedan abiertos.
 
 **[supabase.md](supabase.md)** — El inventario del proyecto de Supabase y de la plataforma
 completa: el mapa de servicios (Hostinger, Supabase, Resend, push, NHTSA), quién habla
-con qué y con qué llave, esquemas y tablas, las 90 funciones agrupadas por quién puede
+con qué y con qué llave, esquemas y tablas, las 92 funciones agrupadas por quién puede
 ejecutarlas, buckets y sus rutas, las 6 edge functions, nombres de secretos y de Vault,
 Auth, Realtime, tareas programadas, dónde está cada cosa en el panel, el Supabase local y
 lo que falta limpiar.
 
 **[plan-de-mejora.md](plan-de-mejora.md)** — Análisis de desempeño, deuda técnica y plan de
-acción priorizado posterior a la auditoría.
+acción posterior a la auditoría. Es una foto anterior a la revisión previa a producción:
+lo que se resolvió de ahí está marcado al principio del documento.
 
 **[deployment.md](deployment.md)** — Cómo se pone en producción: Supabase
 (migraciones, secretos, Vault, edge functions, límites de Storage), Hostinger,
@@ -119,7 +133,13 @@ Hay un plan de cambios pedido por el cliente en seis fases. Estado:
 | 5 | Presupuestos: el cliente autoriza o rechaza por línea | Implementada |
 | 6 | Reporte como enlace web en vez de PDF | Implementada |
 
-Después de las seis fases se hizo una **auditoría completa** (septiembre 2026): 15
+Después de las fases hubo dos revisiones: una **auditoría** y una **revisión previa a
+producción** (migración 36, aplicada; el build que la acompaña falta subirlo a Hostinger).
+**Antes de atender clientes reales, completar
+[salida-a-produccion.md §2](salida-a-produccion.md#2-bloqueantes-fuera-del-código)**: el
+registro público de cuentas está abierto en el proyecto real y el plan no tiene respaldos.
+
+La **auditoría completa** (septiembre 2026): 15
 hallazgos corregidos, entre ellos funciones internas de dinero que se podían llamar por
 la API sin sesión. Detalle, pruebas y lo que queda abierto en
 [auditoria-2026-09.md](auditoria-2026-09.md). Su migración

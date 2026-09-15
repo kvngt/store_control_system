@@ -12,7 +12,7 @@ import type {
   WorkOrderPart,
 } from '../types/database';
 import { mediaPath } from '../lib/media/mime';
-import { assertDeleted } from './support';
+import { assertDeleted, fetchAll } from './support';
 import { mediaService } from './media.service';
 import { quotesService } from './quotes.service';
 
@@ -21,23 +21,25 @@ export const workOrdersService = {
     // `montos` llega en null para mecánicos y pintores: `orden_montos` es solo
     // admin por RLS, y PostgREST resuelve un embed bloqueado como vacío en vez de
     // fallar. Una sola consulta sirve a los dos roles.
-    let query = supabase.from('ordenes_trabajo').select(`
-      *,
-      montos:orden_montos(total_repuestos, total_general, deposito_inicial),
-      cliente:clientes(*),
-      vehiculo:vehiculos(*),
-      asignaciones:orden_asignaciones(*, usuario:perfiles(*))
-    `).order('creado_en', { ascending: false });
-    if (sedeId) query = query.eq('sede_id', sedeId);
+    const page = (from: number, to: number) => {
+      let query = supabase.from('ordenes_trabajo').select(`
+        *,
+        montos:orden_montos(total_repuestos, total_general, deposito_inicial),
+        cliente:clientes(*),
+        vehiculo:vehiculos(*),
+        asignaciones:orden_asignaciones(*, usuario:perfiles(*))
+      `).order('creado_en', { ascending: false }).order('id');
+      if (sedeId) query = query.eq('sede_id', sedeId);
+      return query.range(from, to);
+    };
 
     // Qué órdenes esperan la respuesta del cliente a un presupuesto. Tolerante: si
     // falla, la lista se ve igual, sin la marca.
-    const [{ data, error }, waiting] = await Promise.all([
-      query,
+    const [data, waiting] = await Promise.all([
+      fetchAll<WorkOrder>(page),
       quotesService.waitingOrderIds().catch(() => new Set<string>()),
     ]);
-    if (error) throw error;
-    return (data as WorkOrder[]).map((order) => ({ ...order, esperando_autorizacion: waiting.has(order.id) }));
+    return data.map((order) => ({ ...order, esperando_autorizacion: waiting.has(order.id) }));
   },
 
   getWorkOrderDetail: async (orderId: string) => {
@@ -191,9 +193,12 @@ export const workOrdersService = {
     return data as LaborItem;
   },
 
+  // Un DELETE que RLS no permite no da error: borra cero filas. Sin
+  // `assertDeleted` la pantalla quitaba la línea y volvía a aparecer al recargar.
   removeLaborItem: async (id: string) => {
-    const { error } = await supabase.from('orden_labor').delete().eq('id', id);
+    const { data, error } = await supabase.from('orden_labor').delete().eq('id', id).select('id');
     if (error) throw error;
+    assertDeleted(data, 'la línea de mano de obra');
   },
 
   // Only the sale price is captured in the UI. `costo_unitario` is still
@@ -240,8 +245,9 @@ export const workOrdersService = {
   },
 
   removePart: async (id: string) => {
-    const { error } = await supabase.from('orden_repuestos').delete().eq('id', id);
+    const { data, error } = await supabase.from('orden_repuestos').delete().eq('id', id).select('id');
     if (error) throw error;
+    assertDeleted(data, 'el repuesto');
   },
 
   addAssignment: async (orderId: string, usuarioId: string, tipoTarea: 'mecanica' | 'pintura') => {
@@ -252,8 +258,9 @@ export const workOrdersService = {
   },
 
   removeAssignment: async (id: string) => {
-    const { error } = await supabase.from('orden_asignaciones').delete().eq('id', id);
+    const { data, error } = await supabase.from('orden_asignaciones').delete().eq('id', id).select('id');
     if (error) throw error;
+    assertDeleted(data, 'la asignación');
   },
 
   updateAssignmentStatus: async (id: string, estatus: 'pendiente' | 'en_curso' | 'completada') => {

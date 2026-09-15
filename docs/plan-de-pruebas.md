@@ -178,10 +178,10 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | ID | P | Ejecuta | Comando | Esperado |
 |---|---|---|---|---|
 | AUT-01 | P0 | IA | `npm run lint` y `npx tsc -b` | Sin errores ni avisos |
-| AUT-02 | P0 | IA | `npm test` | Todas en verde (274 al escribir esto) |
+| AUT-02 | P0 | IA | `npm test` | Todas en verde (294 al escribir esto) |
 | AUT-03 | P0 | IA | `npm run build` | Termina sin errores |
 | AUT-04 | P0 | IA | `npm run db:check` | "Base de datos al día" |
-| AUT-05 | P0 | IA | `npx supabase start` y `npm run test:db` (requiere Docker) | 7 archivos pgTAP en verde. Sin Docker: **BLOQUEADO** |
+| AUT-05 | P0 | IA | `npx supabase start` y `npm run test:db` (requiere Docker) | 8 archivos pgTAP en verde. Sin Docker: **BLOQUEADO** |
 | AUT-06 | P0 | IA | `npm run qa:security` | 0 FAIL. Los SKIP dicen qué falta (una cuenta o una orden) |
 | AUT-07 | P1 | IA | `npm run qa:security -- --alta` (con cuenta de técnico) | SEC-55 PASS. Borra la orden que imprime |
 | AUT-08 | P1 | IA | `npm run test:e2e` | Todas en verde o saltadas por falta de credenciales |
@@ -200,6 +200,8 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | ACC-04 | P1 | H | "¿Olvidaste tu contraseña?" → llega el correo; el enlace abre `reinventa.shop/reset-password` (no `localhost`); la contraseña nueva funciona. |
 | ACC-05 | P1 | IA | Recargar la página → sigue con sesión en la misma pantalla. |
 | ACC-06 | P1 | IA | Cerrar sesión → login; el botón Atrás del navegador no muestra datos. |
+| ACC-07 | P0 | IA | En el mismo navegador: **A** abre Panel, Órdenes (con totales) y Finanzas; cierra sesión; entra **M** → en ningún momento aparece un monto ni un total de **A** (tampoco un instante mientras carga). Repetir sin cerrar sesión, cambiando de cuenta desde otra pestaña. *(PRD-13; automatizado en `AuthContext.test.tsx`.)* |
+| ACC-08 | P0 | IA | `curl -s "$SB_URL/auth/v1/settings" -H "apikey: $SB_ANON"` → `"disable_signup":true`. *(PRD-01; automatizado en SEC-18.)* |
 | SES-01 | P2 | H | Dejar la app abierta más de una hora en un teléfono con señal intermitente (alternar modo avión), con **Nueva orden** a medio llenar → nunca aparece el login y lo escrito sigue ahí. *(Automatizado en `AuthContext.test.tsx`.)* |
 
 ### 4.2 Sedes (SED)
@@ -266,6 +268,7 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 | DIN-09 | P0 | IA | Pagar las comisiones de la orden de DIN-05 (COM-03) y **A** intenta borrarla → "tiene comisiones que ya se pagaron. Deshaz ese pago…"; la orden, sus movimientos y el pago siguen. Deshacer el pago y borrar → funciona. *(AUD-05)* |
 | DIN-10 | P1 | IA | Movimiento manual con fecha del **día 1** del mes → el panel lo cuenta en ese mes. |
 | DIN-11 | P1 | IA | Movimiento capturado **después de las 7 p. m.** → la fecha propuesta es la de hoy. |
+| DIN-12 | P0 | IA | Con una sede de prueba con más de 1.000 movimientos (importar varios estados de cuenta): "Ingresos del mes" del panel y las tarjetas de Finanzas coinciden con `SELECT tipo, SUM(monto) FROM finanzas_movimientos WHERE sede_id = '<sede>' AND fecha >= date_trunc('month', CURRENT_DATE) GROUP BY tipo`, y la tabla de Finanzas muestra todos. *(PRD-10/11; automatizado en pgTAP 08.)* |
 
 ### 4.6 Comisiones (COM)
 
@@ -325,6 +328,7 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 | FIN-05 | P1 | IA | Importar **el mismo** archivo otra vez (aunque tenga otro nombre) → aviso rojo con la fecha anterior. |
 | FIN-06 | P1 | IA | Revertir la importación → desaparecen solo sus movimientos. |
 | FIN-07 | P2 | IA | Un PDF escaneado o de otro banco → mensaje que lo explica. |
+| FIN-08 | P0 | IA | Importar un estado de cuenta con DevTools → Network en **Offline** justo al confirmar → error visible; en Finanzas no aparece un lote vacío y el mismo archivo se puede volver a importar sin el aviso de "ya importado". *(PRD-14.)* |
 
 ### 4.10 Configuración y personal (CFG)
 
@@ -448,7 +452,7 @@ una entregada. Lo que no encuentra lo marca SKIP.
 
 | Grupo | Casos | Qué se espera |
 |---|---|---|
-| Sin sesión | SEC-01 a SEC-17 | Las 6 edge functions desplegadas (SEC-17); sin datos, sin funciones internas (`reverse_order_delivery_finance`, `sync_*`, `recalculate_order_totals`, `claim_outbox`, `datos_portal`, `responder_presupuesto_portal`, `pay_commissions`), `process-outbox` 401, portal 404 con token falso, buckets privados |
+| Sin sesión | SEC-01 a SEC-18 | Registro público apagado (SEC-18); las 6 edge functions desplegadas (SEC-17); sin datos, sin funciones internas (`reverse_order_delivery_finance`, `sync_*`, `recalculate_order_totals`, `claim_outbox`, `datos_portal`, `responder_presupuesto_portal`, `pay_commissions`), `process-outbox` 401, portal 404 con token falso, buckets privados |
 | Técnico: lectura | SEC-20 a SEC-35 | No ve montos, repuestos con precio, Finanzas, enlaces, presupuestos, cola de correos, pagos ni avisos ajenos, ni datos de otra sede |
 | Técnico: escritura | SEC-40 a SEC-54 | No cotiza, no entrega, no escribe totales ni datos de recepción, no firma con archivos ajenos, no publica al cliente, no manda enlaces, presupuestos, reportes ni avisos, no asigna a otros; en órdenes ajenas o entregadas no toca nada |
 | Técnico: alta directa | SEC-55 | Una orden creada por la API nace en recepción, sin avance, sin mano de obra y con número del sistema |
@@ -529,6 +533,11 @@ Errores ya corregidos. Si alguno reaparece, es una regresión **P0**.
 | Con mala señal la app mandaba al login *(AUD-07)* | SES-01 | `AuthContext.test.tsx` |
 | Orden de otra sede con logo, WhatsApp y técnicos de la sede elegida *(AUD-08)* | ORD-14 | `WorkOrders.smoke.test.tsx` |
 | Editar un empleado fallaba: `update-employee` no estaba desplegada *(AUD-26)* | CFG-04 | `qa:security` SEC-17 |
+| Totales del panel y de Finanzas cortados a 1.000 filas *(PRD-10)* | DIN-12 | pgTAP 08, `dashboard.service.test.ts` |
+| Listas cortadas a 1.000 filas; lista de clientes que no cargaba por largo de URL *(PRD-11/12)* | DIN-12 | `support.test.ts`, `customers.service.test.ts` |
+| Montos del admin visibles para el siguiente usuario de la tablet *(PRD-13)* | ACC-07 | `AuthContext.test.tsx` |
+| Importación bancaria que dejaba un lote vacío *(PRD-14)* | FIN-08 | pgTAP 08, `ImportStatementModal.test.tsx` |
+| Registro público abierto *(PRD-01)* | ACC-08 | `qa:security` SEC-18 |
 
 ---
 
@@ -552,6 +561,8 @@ Según lo que toca el cambio:
 | La firma | ORD-07, ORD-12, PRE-02, PRE-15, POR-07 |
 | Sesión o sedes | ACC, SES, SED |
 | Estilos | MOV en un teléfono real |
+| Listas, totales o servicios de datos | DIN-12 y la lista afectada con más de 1.000 filas |
+| Sesión o caché de datos | ACC-07 |
 | Edge functions o secretos | SEC-17 y los casos del módulo que usa la función (CFG para empleados, POR para `portal`, NOT/POR para `process-outbox`) |
 
 Después de publicar: [deployment.md §6](deployment.md#6-verificación-después-de-publicar).

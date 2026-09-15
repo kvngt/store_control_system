@@ -16,6 +16,8 @@ Toda la documentación vigente está en **[docs/](docs/README.md)**:
 
 | Si vas a… | Lee |
 |---|---|
+| **Hacerte cargo del proyecto** (persona o agente de IA) | [docs/traspaso.md](docs/traspaso.md) y [AGENTS.md](AGENTS.md) |
+| **Salir a producción** o revisar qué falta antes | [docs/salida-a-produccion.md](docs/salida-a-produccion.md) |
 | Entender el sistema | [docs/arquitectura.md](docs/arquitectura.md) → [docs/reglas-de-negocio.md](docs/reglas-de-negocio.md) |
 | Probar la plataforma (persona o agente de IA) | [docs/plan-de-pruebas.md](docs/plan-de-pruebas.md) |
 | Saber qué cubren las pruebas automatizadas | [docs/pruebas.md](docs/pruebas.md) |

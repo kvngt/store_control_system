@@ -6,6 +6,7 @@
 // this module reads balances and records payments.
 import { supabase } from '../lib/supabase';
 import type { Commission, CommissionBalance, CommissionPayment } from '../types/database';
+import { fetchAll } from './support';
 
 const COMMISSION_SELECT = `
   *,
@@ -15,40 +16,40 @@ const COMMISSION_SELECT = `
 
 export const commissionsService = {
   /** Every accrual for a sede, newest first. */
-  getCommissions: async (sedeId?: string) => {
-    let query = supabase
-      .from('comisiones')
-      .select(COMMISSION_SELECT)
-      .order('creado_en', { ascending: false });
-    if (sedeId) query = query.eq('sede_id', sedeId);
-    const { data, error } = await query;
-    if (error) throw error;
-    return (data || []) as Commission[];
-  },
+  getCommissions: async (sedeId?: string) =>
+    fetchAll<Commission>((from, to) => {
+      let query = supabase
+        .from('comisiones')
+        .select(COMMISSION_SELECT)
+        .order('creado_en', { ascending: false })
+        .order('id');
+      if (sedeId) query = query.eq('sede_id', sedeId);
+      return query.range(from, to);
+    }),
 
   /** Only what is still owed. */
-  getPendingCommissions: async (sedeId?: string) => {
-    let query = supabase
-      .from('comisiones')
-      .select(COMMISSION_SELECT)
-      .is('pago_id', null)
-      .order('creado_en', { ascending: false });
-    if (sedeId) query = query.eq('sede_id', sedeId);
-    const { data, error } = await query;
-    if (error) throw error;
-    return (data || []) as Commission[];
-  },
+  getPendingCommissions: async (sedeId?: string) =>
+    fetchAll<Commission>((from, to) => {
+      let query = supabase
+        .from('comisiones')
+        .select(COMMISSION_SELECT)
+        .is('pago_id', null)
+        .order('creado_en', { ascending: false })
+        .order('id');
+      if (sedeId) query = query.eq('sede_id', sedeId);
+      return query.range(from, to);
+    }),
 
-  getPayments: async (sedeId?: string) => {
-    let query = supabase
-      .from('comision_pagos')
-      .select('*, usuario:perfiles!usuario_id(*)')
-      .order('fecha_pago', { ascending: false });
-    if (sedeId) query = query.eq('sede_id', sedeId);
-    const { data, error } = await query;
-    if (error) throw error;
-    return (data || []) as CommissionPayment[];
-  },
+  getPayments: async (sedeId?: string) =>
+    fetchAll<CommissionPayment>((from, to) => {
+      let query = supabase
+        .from('comision_pagos')
+        .select('*, usuario:perfiles!usuario_id(*)')
+        .order('fecha_pago', { ascending: false })
+        .order('id');
+      if (sedeId) query = query.eq('sede_id', sedeId);
+      return query.range(from, to);
+    }),
 
   /**
    * Groups pending accruals into one row per technician — the "wallet" the
