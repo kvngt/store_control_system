@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { useToast } from '../context/toast.context';
@@ -80,7 +80,23 @@ export default function KanbanBoard() {
     entregado: t('workOrders.delivered'),
   };
 
-  const getOrdersByStatus = (status: OrderStatus) => orders.filter((o) => o.estatus === status);
+  // Una pasada para las cinco columnas y la ocupación, y solo cuando cambian las órdenes.
+  // Antes eran seis `.filter` sobre todo el tablero en cada render (PRs #3, #5–#7, #9, #11).
+  const { ordersByStatus, totalActive } = useMemo(() => {
+    const grouped: Record<OrderStatus, WorkOrder[]> = {
+      recepcion: [],
+      en_proceso: [],
+      espera_repuestos: [],
+      finalizado: [],
+      entregado: [],
+    };
+    let active = 0;
+    for (const order of orders) {
+      grouped[order.estatus]?.push(order);
+      if (order.estatus !== 'finalizado' && order.estatus !== 'entregado') active += 1;
+    }
+    return { ordersByStatus: grouped, totalActive: active };
+  }, [orders]);
 
   const isAdmin = user?.rol === 'admin';
 
@@ -142,7 +158,6 @@ export default function KanbanBoard() {
   };
 
   const capacity = currentSede?.capacidad ?? 10;
-  const totalActive = orders.filter((o) => !['finalizado', 'entregado'].includes(o.estatus)).length;
   const occupancy = Math.min(100, Math.round((totalActive / capacity) * 100));
 
   if (loading) {
@@ -181,7 +196,7 @@ export default function KanbanBoard() {
 
       <div className="kanban-board">
         {COLUMNS.map(({ status, emoji }) => {
-          const columnOrders = getOrdersByStatus(status);
+          const columnOrders = ordersByStatus[status];
           return (
             <div key={status} className="kanban-column">
               <div className={`kanban-column-header ${status}`}>

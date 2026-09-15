@@ -3,6 +3,13 @@ import { supabase } from '../lib/supabase';
 import type { Customer, CustomerInput, Vehicle, WorkOrder } from '../types/database';
 import { assertDeleted } from './support';
 
+/** Cuántas filas hay por `cliente_id`, en una sola pasada. */
+function countByCustomer(rows: { cliente_id: string }[] | null): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const row of rows || []) counts.set(row.cliente_id, (counts.get(row.cliente_id) || 0) + 1);
+  return counts;
+}
+
 export const customersService = {
   getCustomers: async (sedeId?: string) => {
     let query = supabase.from('clientes').select('*').order('creado_en', { ascending: false });
@@ -18,10 +25,15 @@ export const customersService = {
         ])
       : [{ data: [] }, { data: [] }];
 
+    // Contar con un índice y no con un `.filter` por cliente: con 1.000 clientes y 3.000
+    // órdenes eran 4 millones de comparaciones en cada carga de la lista (PR #13).
+    const vehicleCounts = countByCustomer(vehiculos);
+    const orderCounts = countByCustomer(ordenes);
+
     return (clientes || []).map((c) => ({
       ...c,
-      vehiculos_count: (vehiculos || []).filter((v) => v.cliente_id === c.id).length,
-      ordenes_count: (ordenes || []).filter((o) => o.cliente_id === c.id).length,
+      vehiculos_count: vehicleCounts.get(c.id) || 0,
+      ordenes_count: orderCounts.get(c.id) || 0,
     })) as Customer[];
   },
 

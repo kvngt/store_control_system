@@ -131,6 +131,19 @@ export default function Finance() {
 
   const balance = totalIncome - totalExpense;
 
+  // Más recientes primero. Fuera del JSX para no reordenar (ni crear dos `Date` por
+  // comparación) cada vez que se abre un diálogo o se escribe en él (PR #8).
+  const sortedTransactions = useMemo(
+    () => [...filtered].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()),
+    [filtered]
+  );
+
+  // La escala de las barras del resumen mensual: un solo máximo, no uno por barra (PR #10).
+  const monthlyMax = useMemo(
+    () => Math.max(1, ...(stats?.ingresos_por_mes ?? []).map((m) => Math.max(m.ingresos, m.egresos))),
+    [stats]
+  );
+
   const categoryLabels: Record<string, string> = {
     pago_cliente: t('finance.clientPayment'),
     compra_repuesto: t('finance.partsPurchase'),
@@ -298,12 +311,11 @@ export default function Finance() {
           </div>
           <div className="chart-bars" style={{ height: 180 }}>
             {stats.ingresos_por_mes.map((month, i) => {
-              const maxVal = Math.max(1, ...stats.ingresos_por_mes.map((m) => Math.max(m.ingresos, m.egresos)));
               return (
                 <div key={i} className="chart-bar-group">
                   <div className="chart-bar-pair">
-                    <div className="chart-bar income" style={{ height: `${(month.ingresos / maxVal) * 140}px` }} title={`${t('finance.income')}: $${month.ingresos.toLocaleString()}`}></div>
-                    <div className="chart-bar expense" style={{ height: `${(month.egresos / maxVal) * 140}px` }} title={`${t('finance.expense')}: $${month.egresos.toLocaleString()}`}></div>
+                    <div className="chart-bar income" style={{ height: `${(month.ingresos / monthlyMax) * 140}px` }} title={`${t('finance.income')}: $${month.ingresos.toLocaleString()}`}></div>
+                    <div className="chart-bar expense" style={{ height: `${(month.egresos / monthlyMax) * 140}px` }} title={`${t('finance.expense')}: $${month.egresos.toLocaleString()}`}></div>
                   </div>
                   <span className="chart-bar-label">{month.mes}</span>
                 </div>
@@ -375,7 +387,7 @@ export default function Finance() {
             </tr>
           </thead>
           <tbody>
-            {[...filtered].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).map((txn) => (
+            {sortedTransactions.map((txn) => (
               <tr key={txn.id}>
                 <td data-label={t('common.date')} style={{ whiteSpace: 'nowrap' }}>{txn.fecha}</td>
                 <td data-label={t('common.type')}>
