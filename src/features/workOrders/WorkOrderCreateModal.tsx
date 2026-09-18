@@ -7,6 +7,7 @@ import type { Customer, UserProfile, Vehicle } from '../../types/database';
 import VehicleFields from '../vehicles/VehicleFields';
 import { ZONES } from './useIntakePhotos';
 import type { WorkOrderFormApi } from './useWorkOrderForm';
+import { AlertError } from '../../components/AlertError';
 
 /**
  * Refuses the keys that put a minus sign into a `type="number"` box.
@@ -127,7 +128,7 @@ export default function WorkOrderCreateModal({
           style={{ display: 'contents' }}
         >
           <div className="modal-body">
-            {error && <div className="alert-error">{error}</div>}
+            <AlertError message={error} />
             <input type="file" ref={fileInputRef} accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileChange} />
             {/* No `capture` here: extras are often picked from the gallery. */}
             <input type="file" ref={extraInputRef} accept="image/*" multiple style={{ display: 'none' }} onChange={handleExtraFilesChange} />

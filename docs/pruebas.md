@@ -228,6 +228,18 @@ cp .env.test.example .env.test.local     # y completa credenciales
 npm run test:e2e
 ```
 
+> **Siempre contra un servidor local.** La suite escribe en el proyecto de Supabase
+> real (no hay staging todavía), así que apuntar además el navegador al sitio
+> publicado significa manejar producción con una orden de `npm`. Desde ahora
+> `playwright.config.ts` **rechaza** un `E2E_BASE_URL` que no sea `localhost`, salvo
+> que se defina también `E2E_ALLOW_REMOTE=1`; y solo levanta `npm run dev` cuando es
+> local. Antes, con `E2E_BASE_URL=https://reinventa.shop`, `reuseExistingServer` veía
+> que el sitio respondía y nadie se enteraba.
+
+> **Las cuentas de prueba son datos reales.** Si alguien borra un empleado desde
+> Configuración, las credenciales de `.env.test.local` dejan de servir y la mitad de
+> la suite falla en el login, lo que se lee como un fallo del producto. Comprueba las
+> cuentas antes de creer en una tanda roja.
 `playwright.config.ts` levanta `npm run dev` y corre en Chromium. Las pruebas que
 necesitan sesión **se saltan solas** si faltan credenciales:
 `E2E_ADMIN_EMAIL/PASSWORD`, `E2E_MECHANIC_EMAIL/PASSWORD`, `E2E_PAINTER_EMAIL/PASSWORD`.

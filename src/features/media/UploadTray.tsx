@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AlertCircle, Check, ChevronDown, ChevronUp, Image as ImageIcon, Mic, RotateCcw, UploadCloud, Video, WifiOff, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import type { UploadItem } from '../../lib/media/uploadQueue';
@@ -18,8 +18,19 @@ export default function UploadTray() {
   const { t } = useLanguage();
   const { items, online, retry, discard } = useMediaUploads();
   const [expanded, setExpanded] = useState(false);
+  const busy = items.length > 0;
 
-  if (items.length === 0) return null;
+  // En el teléfono la bandeja flota por encima de la barra inferior, y `.page-content`
+  // solo reserva la altura de esa barra: justo después de grabar un video, la bandeja
+  // aparecía encima del botón "Agregar Avance" y no había forma de pulsarlo. Mismo
+  // recurso que `drawer-open` en AppLayout: el <body> avisa y el CSS reserva sitio.
+  useEffect(() => {
+    if (!busy) return;
+    document.body.classList.add('uploads-open');
+    return () => document.body.classList.remove('uploads-open');
+  }, [busy]);
+
+  if (!busy) return null;
 
   const done = items.filter((i) => i.estado === 'listo').length;
   const failed = items.filter((i) => i.estado === 'error').length;

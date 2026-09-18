@@ -41,6 +41,22 @@ localhost.
 
 Ver [`src/lib/siteUrl.ts`](../src/lib/siteUrl.ts).
 
+## Lo que hay que definir al compilar
+
+`VITE_PUBLIC_SITE_URL` no está en `.env.local` por defecto, y sin ella el código
+cae en el origen del navegador: un `dist/` compilado así sigue emitiendo enlaces a
+localhost por más correcto que esté el panel.
+
+```bash
+# .env.local, en la máquina que compila
+VITE_PUBLIC_SITE_URL=https://reinventa.shop
+```
+
+Vite **incrusta** el valor en el bundle, no lo lee al ejecutar. Después de definirla
+hay que recompilar y volver a subir `dist/` (ver [deployment.md](deployment.md)); el
+`dist/` que ya está publicado conserva el comportamiento viejo. `npm run build`
+avisa cuando la variable falta, pero no falla: un preview desechable no lo merece.
+
 ## Lo que hay que configurar en el panel de Supabase
 
 Ningún cambio en el código sustituye estos dos pasos.

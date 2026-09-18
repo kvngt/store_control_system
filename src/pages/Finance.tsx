@@ -15,6 +15,7 @@ import type { FinancialTransaction, TransactionType, TransactionCategory, Dashbo
 // bundle for users who never open the import dialog.
 const ImportStatementModal = lazy(() => import('./finance/ImportStatementModal'));
 import LazyModal from '../components/LazyModal';
+import { AlertError } from '../components/AlertError';
 import {
   DollarSign,
   TrendingUp,
@@ -447,7 +448,7 @@ export default function Finance() {
               <button className="modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
             <div className="modal-body">
-              {modalError && <div className="alert-error" role="alert">{modalError}</div>}
+              <AlertError message={modalError} />
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">{t('common.type')}</label>

@@ -12,6 +12,7 @@ import type {
   TransactionCategory,
 } from '../../types/database';
 import { X, Upload, AlertTriangle } from 'lucide-react';
+import { AlertError } from '../../components/AlertError';
 
 interface Props {
   onClose: () => void;
@@ -185,7 +186,7 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
           <button className="modal-close" onClick={onClose}><X size={20} /></button>
         </div>
         <div className="modal-body">
-          {error && <div className="alert-error" role="alert">{error}</div>}
+          <AlertError message={error} />
 
           {successCount !== null ? (
             <div style={{

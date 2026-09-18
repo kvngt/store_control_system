@@ -147,8 +147,13 @@ encoló:
 ### Agrupación
 
 Un segundo cambio dentro de la espera **reemplaza** la fila pendiente (índice único
-parcial sobre `clave_dedupe` con `estado = 'pendiente'`) y reinicia la espera. Quien
-arrastra una orden por tres columnas manda un solo correo, con el último estado.
+parcial sobre `clave_dedupe` con `estado = 'pendiente'`). Quien arrastra una orden por
+tres columnas manda un solo correo, con el último estado.
+
+La hora de envío es la **del primero de la ráfaga**: `enviar_despues_de` se calcula con
+`LEAST`, así que colapsar avisos nunca los aplaza. Antes cada cambio reiniciaba la
+espera, y una orden que se movía cada dos minutos empujaba su correo indefinidamente:
+el cliente no se enteraba de nada.
 
 ### Resend
 
@@ -389,3 +394,17 @@ que el portal**:
   `templates.ts`.
 - **Datos de contacto de las sedes**: el correo y el WhatsApp quedaron pendientes de
   cargar en Configuración.
+
+### Cuándo sale el aviso de recepción
+
+Al firmar, y **sin espera** cuando la orden ya tiene alguna foto de recepción
+registrada — que es el caso normal, porque las fotos se encolan al crear la orden y la
+firma va después. Si todavía no ha aterrizado ninguna, espera **30 segundos** para que
+lo primero que abra el cliente no sea un reporte vacío.
+
+Antes eran dos minutos fijos, y desde el mostrador eso se sentía como que el correo no
+salía: el cliente firmaba, se iba, y el aviso llegaba cuando ya estaba en la calle. Se
+evaluó esperar a que terminara la cola de subida, pero esa cola vive en el IndexedDB
+del teléfono que firmó: si se cierra la pestaña o se va la señal, el correo no saldría
+nunca. Efecto conocido: una orden **sin fotos por diseño** también espera esos 30
+segundos, porque desde la base no se distingue de una cuyas fotos vienen en camino.

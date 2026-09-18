@@ -13,6 +13,7 @@ import type { SedeDeleteImpact } from '../services/sedes.service';
 import UsersCard from '../features/settings/UsersCard';
 import PushSettingsCard from '../features/notifications/PushSettingsCard';
 import type { Sede, UserProfile } from '../types/database';
+import { AlertError } from '../components/AlertError';
 import {
   Building2,
   Phone,
@@ -729,7 +730,7 @@ export default function Settings() {
               <button className="modal-close" onClick={() => setDeleteTarget(null)}><X size={20} /></button>
             </div>
             <div className="modal-body">
-              {deleteError && <div className="alert-error" role="alert">{deleteError}</div>}
+              <AlertError message={deleteError} />
 
               <p style={{ marginBottom: 'var(--space-3)' }}>
                 {t('settings.deleteSedeWarning').replace('{sede}', deleteTarget.nombre)}

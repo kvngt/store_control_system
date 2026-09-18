@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MessageSquarePlus, Plus, Trash2 } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import type { UploadItem } from '../../lib/media/uploadQueue';
 import type { OrderMedia, OrderProgressUpdate, PreparedMedia } from '../../types/database';
 import DraftMediaStrip from '../media/DraftMediaStrip';
@@ -48,6 +49,19 @@ export default function ProgressLog({
   const { t, language } = useLanguage();
   const [note, setNote] = useState('');
   const [drafts, setDrafts] = useState<PreparedMedia[]>([]);
+  const { registerGuard } = useUnsavedChanges();
+
+  // Un avance a medias es trabajo real: una nota escrita con guantes, un video
+  // de treinta segundos, una nota de voz. Vivía solo en este estado local y se
+  // perdía sin preguntar al tocar una pestaña o el botón Volver. El guardia se
+  // lee de una referencia para no darlo de alta y de baja en cada tecla.
+  const dirtyRef = useRef(false);
+  dirtyRef.current = note.trim().length > 0 || drafts.length > 0;
+
+  useEffect(
+    () => registerGuard(() => !dirtyRef.current || confirm(t('workOrders.confirmDiscardProgress'))),
+    [registerGuard, t],
+  );
 
   const submit = async () => {
     if (await onAdd(note, drafts)) {

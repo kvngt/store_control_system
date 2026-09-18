@@ -2,19 +2,7 @@
 // Mirrors create-employee: runs with the service-role key because deleting an
 // `auth.users` row requires Supabase's admin API, and only an authenticated
 // admin (verified below against their own `perfiles.rol`) may call it.
-import { createClient } from 'jsr:@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-function jsonResponse(body: unknown, status: number) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
+import { corsHeaders, jsonResponse, resolveAdminCaller } from '../_shared/caller.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -22,36 +10,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return jsonResponse({ error: 'No autorizado.' }, 401);
-    }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-    const callerClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const {
-      data: { user: caller },
-    } = await callerClient.auth.getUser();
-    if (!caller) {
-      return jsonResponse({ error: 'No autorizado.' }, 401);
-    }
-
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
-
-    const { data: callerProfile } = await adminClient
-      .from('perfiles')
-      .select('rol')
-      .eq('id', caller.id)
-      .single();
-
-    if (callerProfile?.rol !== 'admin') {
-      return jsonResponse({ error: 'Solo un administrador puede eliminar empleados.' }, 403);
-    }
+    const auth = await resolveAdminCaller(req, 'eliminar empleados');
+    // Un motivo ya formado: sesión vencida, fallo pasajero del servicio, o no es admin.
+    if (auth instanceof Response) return auth;
+    const { userId: callerId, adminClient } = auth;
 
     const body = await req.json();
     const userId = String(body.usuario_id || '').trim();
@@ -60,7 +22,7 @@ Deno.serve(async (req) => {
     }
 
     // An admin deleting themselves would lock the shop out of its own settings.
-    if (userId === caller.id) {
+    if (userId === callerId) {
       return jsonResponse({ error: 'No puedes eliminar tu propio usuario.' }, 400);
     }
 

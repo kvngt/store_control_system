@@ -12,9 +12,13 @@ interface SignatureCardProps {
   signedAt?: string | null;
   customerName?: string;
   canEdit: boolean;
+  /**
+   * Si se ofrece volver a firmar sobre una firma existente. Es admin y solo en
+   * recepción: pasada esa etapa, la firma es el respaldo de lo autorizado.
+   */
+  canResign: boolean;
   saving: boolean;
   onSave: (dataUrl: string) => Promise<void>;
-  onClear: () => Promise<void>;
 }
 
 /**
@@ -24,24 +28,35 @@ interface SignatureCardProps {
  * nothing else: `signature_pad` draws in canvas pixels, so the element needs a
  * real `width` attribute — a CSS-stretched canvas offsets every stroke from
  * the pen.
+ *
+ * Volver a firmar no borra nada. Antes, el botón lanzaba de inmediato un UPDATE
+ * que dejaba `firma_ruta` en NULL: sin confirmar, sin poder cancelar, y sin
+ * forma de recuperar la firma anterior desde la app. Ahora es un cambio de modo
+ * en esta tarjeta, la firma vieja sigue en su sitio, y guardar la sustituye de
+ * una sola vez. Como la ruta nunca pasa por NULL, `trg_quote_on_signature`
+ * tampoco se vuelve a disparar: volver a firmar no aprueba nada.
  */
 export default function SignatureCard({
   signaturePath,
   signedAt,
   customerName,
   canEdit,
+  canResign,
   saving,
   onSave,
-  onClear,
 }: SignatureCardProps) {
   const { t, language } = useLanguage();
   const { showToast } = useToast();
   const padRef = useRef<SignatureCanvas>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(560);
+  const [capturing, setCapturing] = useState(false);
   // Bucket privado: la firma se ve con una URL firmada, no con una pública.
   const { urls } = useSignedUrls([signaturePath]);
   const signatureUrl = signaturePath ? urls[signaturePath] : undefined;
+
+  const resigning = capturing && !!signaturePath;
+  const showPad = capturing || (canEdit && !signaturePath);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -51,7 +66,7 @@ export default function SignatureCard({
     const observer = new ResizeObserver(update);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [signaturePath]);
+  }, [signaturePath, capturing]);
 
   const save = async () => {
     const pad = padRef.current;
@@ -61,6 +76,7 @@ export default function SignatureCard({
       return;
     }
     await onSave(trimmedSignatureDataUrl(pad.getCanvas()));
+    setCapturing(false);
   };
 
   return (
@@ -70,38 +86,10 @@ export default function SignatureCard({
         {t('workOrders.customerSignature')}
       </h3>
 
-      {signaturePath ? (
-        <div>
-          {signatureUrl ? (
-            <img src={signatureUrl} alt={t('workOrders.customerSignature')} className="signature-preview" />
-          ) : (
-            <div className="signature-preview signature-loading">
-              <span className="spinner-small" />
-            </div>
-          )}
-          <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 'var(--space-2)' }}>
-            {customerName}
-            {signedAt &&
-              ` — ${t('workOrders.signedOn')} ${new Date(signedAt).toLocaleDateString(
-                language === 'es' ? 'es' : 'en'
-              )}`}
-          </p>
-          {canEdit && (
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={onClear}
-              disabled={saving}
-              style={{ marginTop: 'var(--space-2)' }}
-            >
-              <Pencil size={14} /> {t('workOrders.resign')}
-            </button>
-          )}
-        </div>
-      ) : canEdit ? (
+      {showPad ? (
         <>
           <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-3)' }}>
-            {t('workOrders.signatureHint')}
+            {resigning ? t('workOrders.resignHint') : t('workOrders.signatureHint')}
           </p>
           <div className="signature-wrap" ref={wrapRef}>
             <SignatureCanvas
@@ -122,8 +110,47 @@ export default function SignatureCard({
             <button type="button" className="btn btn-primary btn-sm" onClick={save} disabled={saving}>
               <Check size={14} /> {saving ? t('common.loading') : t('workOrders.saveSignature')}
             </button>
+            {/* La salida que no existía: se vuelve a la firma anterior, intacta. */}
+            {resigning && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setCapturing(false)}
+                disabled={saving}
+              >
+                {t('common.cancel')}
+              </button>
+            )}
           </div>
         </>
+      ) : signaturePath ? (
+        <div>
+          {signatureUrl ? (
+            <img src={signatureUrl} alt={t('workOrders.customerSignature')} className="signature-preview" />
+          ) : (
+            <div className="signature-preview signature-loading">
+              <span className="spinner-small" />
+            </div>
+          )}
+          <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 'var(--space-2)' }}>
+            {customerName}
+            {signedAt &&
+              ` — ${t('workOrders.signedOn')} ${new Date(signedAt).toLocaleDateString(
+                language === 'es' ? 'es' : 'en'
+              )}`}
+          </p>
+          {canResign && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => setCapturing(true)}
+              disabled={saving}
+              style={{ marginTop: 'var(--space-2)' }}
+            >
+              <Pencil size={14} /> {t('workOrders.resign')}
+            </button>
+          )}
+        </div>
       ) : (
         <p style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)' }}>
           {t('workOrders.noSignature')}

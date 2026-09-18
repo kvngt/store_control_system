@@ -10,21 +10,7 @@
 //
 // Only an authenticated admin (checked below against their own `perfiles.rol`)
 // may call it.
-import { createClient } from 'jsr:@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-const VALID_ROLES = ['admin', 'mecanico', 'pintor'];
-
-function jsonResponse(body: unknown, status: number) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
+import { corsHeaders, jsonResponse, resolveAdminCaller, VALID_ROLES } from '../_shared/caller.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -32,36 +18,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return jsonResponse({ error: 'No autorizado.' }, 401);
-    }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-    const callerClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const {
-      data: { user: caller },
-    } = await callerClient.auth.getUser();
-    if (!caller) {
-      return jsonResponse({ error: 'No autorizado.' }, 401);
-    }
-
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
-
-    const { data: callerProfile } = await adminClient
-      .from('perfiles')
-      .select('rol')
-      .eq('id', caller.id)
-      .single();
-
-    if (callerProfile?.rol !== 'admin') {
-      return jsonResponse({ error: 'Solo un administrador puede editar empleados.' }, 403);
-    }
+    const auth = await resolveAdminCaller(req, 'editar empleados');
+    // Un motivo ya formado: sesión vencida, fallo pasajero del servicio, o no es admin.
+    if (auth instanceof Response) return auth;
+    const { adminClient } = auth;
 
     const body = await req.json();
     const userId = String(body.usuario_id || '').trim();

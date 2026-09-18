@@ -58,20 +58,31 @@ test.describe('WORK-01 | Modal Nueva Orden', () => {
 test.describe('WORK-02 | Validación millas negativas', () => {
   test.skip(!hasMechanicCredentials, 'Requiere credenciales de mecánico');
 
-  test('el campo de millas rechaza valores negativos', async ({ page }) => {
+  // El signo menos se ataja en el teclado; un pegado o un autocompletado nunca
+  // dispara keydown, así que lo para el esquema al enviar. Son dos caminos
+  // distintos y cada uno necesita su prueba: `fill()` no teclea.
+  test('el teclado descarta el signo menos', async ({ page }) => {
     await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
     await page.goto('/work-orders');
     await page.waitForSelector('#new-order-btn', { timeout: 10000 });
     await page.click('#new-order-btn');
 
     const milesField = page.locator('#order-miles-in');
-    await milesField.fill('-250');
-
-    // El signo menos debe descartarse
+    await milesField.pressSequentially('-250');
     await expect(milesField).toHaveValue('250');
+  });
 
-    // Y debe aparecer el mensaje de error en el modal
-    await expect(page.locator('.modal')).toContainText(
+  test('un valor negativo pegado se rechaza al enviar', async ({ page }) => {
+    await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
+    await page.goto('/work-orders');
+    await page.waitForSelector('#new-order-btn', { timeout: 10000 });
+    await page.click('#new-order-btn');
+
+    const modal = page.locator('.modal');
+    await modal.locator('#order-miles-in').fill('-250');
+    await modal.locator('.modal-footer button[type="submit"]').click();
+
+    await expect(modal).toContainText(
       /Las millas de ingreso no pueden ser negativas|Intake mileage cannot be negative/
     );
   });
@@ -170,7 +181,7 @@ test.describe('WORK-05 | Tablero Kanban', () => {
   test('muestra la barra de ocupación del taller', async ({ page }) => {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
     await page.goto('/kanban');
-    await page.waitForSelector('.kanban-board, .kanban-column, [class*="kanban"]', { timeout: 12000 });
+    await page.waitForSelector('.kanban-column', { timeout: 12000 });
     // Debe haber algún indicador de ocupación
     await expect(page.locator('.occupancy, .ocupacion, [class*="occupanc"], [class*="ocupac"]').first()).toBeVisible({ timeout: 6000 }).catch(() => {
       // Puede que el selector sea diferente; verificar al menos que cargó
@@ -184,12 +195,12 @@ test.describe('WORK-06 | Kanban: mecánico solo mueve sus órdenes', () => {
   test('las tarjetas de otros no tienen selector "Mover a"', async ({ page }) => {
     await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
     await page.goto('/kanban');
-    await page.waitForSelector('.kanban-board, .kanban-column, [class*="kanban"]', { timeout: 12000 });
+    await page.waitForSelector('.kanban-column', { timeout: 12000 });
 
     // El selector "Mover a" solo debe aparecer en tarjetas propias
     // Es difícil verificar "solo las mías" sin saber el contenido exacto,
     // pero podemos verificar que al menos existe la lógica (algunos tienen, algunos no)
     // Este test verifica que la página cargó sin error
-    await expect(page.locator('.kanban-board, .board, [class*="kanban"]').first()).toBeVisible();
+    await expect(page.locator('.kanban-board')).toBeVisible();
   });
 });

@@ -311,13 +311,4 @@ export const workOrdersService = {
     return { ruta: path, fecha: firmaFecha };
   },
 
-  // Desvincula la firma para poder volver a capturarla. El archivo se deja a
-  // propósito: el historial de firmas de una orden vale la pena conservarlo.
-  clearSignature: async (orderId: string) => {
-    const { error } = await supabase
-      .from('ordenes_trabajo')
-      .update({ firma_ruta: null, firma_fecha: null })
-      .eq('id', orderId);
-    if (error) throw error;
-  },
 };

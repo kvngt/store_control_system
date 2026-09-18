@@ -8,6 +8,7 @@ import { useToast } from '../../context/toast.context';
 import { usersService } from '../../services/supabaseService';
 import { getErrorMessage } from '../../lib/errors';
 import type { Sede, UserProfile, UserRole } from '../../types/database';
+import { AlertError } from '../../components/AlertError';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -335,7 +336,7 @@ export default function UsersCard({ users, sedes, currentUserId, loading, onChan
               <button className="modal-close" onClick={() => setEditing(null)}><X size={20} /></button>
             </div>
             <div className="modal-body">
-              {modalError && <div className="alert-error" role="alert">{modalError}</div>}
+              <AlertError message={modalError} />
 
               <div className="form-group">
                 <label className="form-label" htmlFor="user-name">{t('common.name')}</label>

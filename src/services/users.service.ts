@@ -2,6 +2,62 @@
 import { supabase } from '../lib/supabase';
 import type { UserProfile, UserRole } from '../types/database';
 
+/** Motivo de un rechazo de una edge function: texto y, si lo hay, un código. */
+interface FunctionFailure {
+  message?: string;
+  code?: string;
+}
+
+/**
+ * Códigos derivados del status cuando el cuerpo no trae uno.
+ *
+ * Un 401 de la **pasarela** de Supabase (JWT ausente o vencido, antes de que corra
+ * la función) responde `{code: 401, message: "..."}`, sin la clave `error` que
+ * escriben nuestras funciones. Sin esto, ese caso perdía el motivo y la pantalla
+ * mostraba "Edge Function returned a non-2xx status code".
+ *
+ * 404 es una función que no está desplegada, que es un fallo de despliegue y no
+ * del taller.
+ */
+const CODE_BY_STATUS: Record<number, string> = {
+  401: 'session_expired',
+  403: 'forbidden',
+  404: 'function_missing',
+  429: 'service_unavailable',
+  500: 'service_unavailable',
+  502: 'service_unavailable',
+  503: 'service_unavailable',
+  504: 'service_unavailable',
+};
+
+/**
+ * El token de quien llama, renovando una vez si hace falta.
+ *
+ * supabase-js resuelve el token por petición, y `getSession()` devuelve `null`
+ * dentro del margen de 90 s previo al vencimiento cuando el refresco automático
+ * falló y su enfriamiento de 60 s sigue corriendo. Como la clave pública es del
+ * formato nuevo (`sb_publishable_…`), la librería tampoco usa la clave anónima
+ * como respaldo: la petición salía **sin cabecera `Authorization`** y la función
+ * respondía "No autorizado." a un administrador con la sesión abierta. Un
+ * refresco explícito es la diferencia entre ese mensaje y hacer el trabajo.
+ *
+ * Mismo patrón que `accessToken` en `media.service.ts`.
+ */
+async function adminAccessToken(): Promise<string> {
+  const { data } = await supabase.auth.getSession();
+  let token = data.session?.access_token;
+  if (!token) {
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    token = refreshed.session?.access_token;
+  }
+  if (!token) {
+    throw Object.assign(new Error('La sesión expiró. Vuelve a iniciar sesión.'), {
+      code: 'session_expired',
+    });
+  }
+  return token;
+}
+
 /**
  * Llama una edge function de empleados y devuelve su motivo cuando la rechaza.
  *
@@ -11,27 +67,49 @@ import type { UserProfile, UserRole } from '../types/database';
  * "ya existe una cuenta con ese correo". El cuerpo sigue en `error.context`.
  */
 export async function invokeAdminFunction<T>(name: string, body: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase.functions.invoke(name, { body });
-  const reason = error ? await readFunctionError(error) : (data as { error?: string } | null)?.error;
-  if (reason) throw employeeError(reason);
+  // Resolver el token aquí, y mandarlo explícito, quita de en medio la resolución
+  // automática del SDK: o va firmada, o ni siquiera sale.
+  const token = await adminAccessToken();
+  const { data, error } = await supabase.functions.invoke(name, {
+    body,
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const failure = error
+    ? await readFunctionError(error)
+    : toFailure((data as { error?: string; code?: string } | null) ?? undefined);
+  if (failure?.message || failure?.code) throw employeeError(failure);
   if (error) throw error;
   return data as T;
 }
 
-async function readFunctionError(error: unknown): Promise<string | undefined> {
+function toFailure(payload?: { error?: string; code?: string }): FunctionFailure | undefined {
+  if (!payload || typeof payload.error !== 'string') return undefined;
+  return { message: payload.error, code: typeof payload.code === 'string' ? payload.code : undefined };
+}
+
+async function readFunctionError(error: unknown): Promise<FunctionFailure | undefined> {
   const response = (error as { context?: unknown }).context;
   if (!(response instanceof Response)) return undefined;
   const payload = await response.clone().json().catch(() => null);
-  return typeof payload?.error === 'string' ? payload.error : undefined;
+  const message = [payload?.error, payload?.message, payload?.msg].find(
+    (value): value is string => typeof value === 'string' && value.length > 0,
+  );
+  // La pasarela manda `code` numérico; el nuestro es una cadena.
+  const code = typeof payload?.code === 'string' ? payload.code : CODE_BY_STATUS[response.status];
+  return { message, code };
 }
 
 // Auth responde en inglés cuando el correo ya tiene cuenta; el resto de los motivos
 // ya vienen escritos en español por las funciones.
-function employeeError(message: string) {
+function employeeError(failure: FunctionFailure) {
+  const message = failure.message ?? '';
   if (/already (been )?registered|already exists|email_exists/i.test(message)) {
     return Object.assign(new Error(message), { code: 'email_exists' });
   }
-  return new Error(message);
+  const error = new Error(message);
+  // Sin código, `getErrorMessage` muestra el mensaje tal cual, que es lo que
+  // queremos para los motivos concretos (un solo admin, órdenes asignadas).
+  return failure.code ? Object.assign(error, { code: failure.code }) : error;
 }
 
 export const usersService = {

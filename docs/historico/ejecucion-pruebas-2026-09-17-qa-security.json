@@ -1,0 +1,335 @@
+{
+  "proyecto": "https://lendsiqkxhvbxxkaadrt.supabase.co",
+  "sesiones": {
+    "tecnico": true,
+    "admin": true
+  },
+  "ordenes": {
+    "ORDEN": null,
+    "ORDEN_AJENA": null,
+    "ORDEN_ENTREGADA": null
+  },
+  "pass": 35,
+  "fail": 1,
+  "skip": 17,
+  "resultados": [
+    {
+      "id": "SEC-01",
+      "desc": "Sin sesión no se listan clientes",
+      "estado": "PASS",
+      "http": 200
+    },
+    {
+      "id": "SEC-02",
+      "desc": "Sin sesión no se listan órdenes",
+      "estado": "PASS",
+      "http": 200
+    },
+    {
+      "id": "SEC-03",
+      "desc": "Sin sesión no se listan enlaces del cliente",
+      "estado": "PASS",
+      "http": 200
+    },
+    {
+      "id": "SEC-04",
+      "desc": "Sin sesión no se llama datos_portal",
+      "estado": "PASS",
+      "http": 401
+    },
+    {
+      "id": "SEC-05",
+      "desc": "Sin sesión no se revierte el cobro de una orden",
+      "estado": "PASS",
+      "http": 401
+    },
+    {
+      "id": "SEC-06",
+      "desc": "Sin sesión no se recalculan comisiones",
+      "estado": "PASS",
+      "http": 401
+    },
+    {
+      "id": "SEC-07",
+      "desc": "Sin sesión no se asienta costo de repuestos",
+      "estado": "PASS",
+      "http": 401
+    },
+    {
+      "id": "SEC-08",
+      "desc": "Sin sesión no se recalculan totales",
+      "estado": "PASS",
+      "http": 401
+    },
+    {
+      "id": "SEC-09",
+      "desc": "Sin sesión no se toma la cola de envíos",
+      "estado": "PASS",
+      "http": 401
+    },
+    {
+      "id": "SEC-10",
+      "desc": "Sin sesión no se responde un presupuesto por RPC",
+      "estado": "PASS",
+      "http": 404
+    },
+    {
+      "id": "SEC-11",
+      "desc": "process-outbox sin secreto responde 401",
+      "estado": "PASS",
+      "http": 401
+    },
+    {
+      "id": "SEC-12",
+      "desc": "Portal con token inexistente responde 404",
+      "estado": "PASS",
+      "http": 404
+    },
+    {
+      "id": "SEC-13",
+      "desc": "Portal: cambiar correos con token inexistente responde 404",
+      "estado": "PASS",
+      "http": 404
+    },
+    {
+      "id": "SEC-14",
+      "desc": "El bucket viejo de firmas no es público",
+      "estado": "PASS",
+      "http": 400
+    },
+    {
+      "id": "SEC-15",
+      "desc": "La multimedia de órdenes no es pública",
+      "estado": "PASS",
+      "http": 400
+    },
+    {
+      "id": "SEC-16",
+      "desc": "Sin sesión no se paga una comisión",
+      "estado": "PASS",
+      "http": 401
+    },
+    {
+      "id": "SEC-20",
+      "desc": "Un técnico no ve montos (orden_montos)",
+      "estado": "PASS",
+      "http": 200
+    },
+    {
+      "id": "SEC-21",
+      "desc": "Un técnico no ve repuestos con precio",
+      "estado": "PASS",
+      "http": 200
+    },
+    {
+      "id": "SEC-22",
+      "desc": "Un técnico no ve Finanzas",
+      "estado": "PASS",
+      "http": 200
+    },
+    {
+      "id": "SEC-23",
+      "desc": "Un técnico no ve enlaces del cliente",
+      "estado": "PASS",
+      "http": 200
+    },
+    {
+      "id": "SEC-24",
+      "desc": "Un técnico no ve presupuestos",
+      "estado": "PASS",
+      "http": 200
+    },
+    {
+      "id": "SEC-25",
+      "desc": "Un técnico no ve la cola de correos",
+      "estado": "PASS",
+      "http": 200
+    },
+    {
+      "id": "SEC-26",
+      "desc": "Un técnico no llama datos_portal",
+      "estado": "PASS",
+      "http": 403
+    },
+    {
+      "id": "SEC-27",
+      "desc": "Un técnico no revierte el cobro de una orden",
+      "estado": "PASS",
+      "http": 403
+    },
+    {
+      "id": "SEC-28",
+      "desc": "Un técnico no toma la cola de envíos",
+      "estado": "PASS",
+      "http": 403
+    },
+    {
+      "id": "SEC-29",
+      "desc": "Un técnico no crea avisos para otros",
+      "estado": "PASS",
+      "http": 403
+    },
+    {
+      "id": "SEC-30",
+      "desc": "Un técnico no paga comisiones",
+      "estado": "PASS",
+      "http": 403
+    },
+    {
+      "id": "SEC-31",
+      "desc": "Un técnico no se cambia a admin",
+      "estado": "PASS",
+      "http": 403
+    },
+    {
+      "id": "SEC-32",
+      "desc": "Un técnico solo ve sus propios pagos de comisión",
+      "estado": "PASS",
+      "http": 200
+    },
+    {
+      "id": "SEC-33",
+      "desc": "Un técnico solo ve sus propios avisos",
+      "estado": "PASS",
+      "http": 200
+    },
+    {
+      "id": "SEC-34",
+      "desc": "Un técnico no ve órdenes de otra sede",
+      "estado": "PASS",
+      "http": 200
+    },
+    {
+      "id": "SEC-35",
+      "desc": "Un técnico no ve clientes de otra sede",
+      "estado": "PASS",
+      "http": 200
+    },
+    {
+      "id": "SEC-40",
+      "desc": "Un técnico no agrega mano de obra",
+      "estado": "SKIP",
+      "motivo": "falta ORDEN"
+    },
+    {
+      "id": "SEC-41",
+      "desc": "Un técnico no entrega la orden",
+      "estado": "SKIP",
+      "motivo": "falta ORDEN"
+    },
+    {
+      "id": "SEC-42",
+      "desc": "Un técnico no escribe totales",
+      "estado": "SKIP",
+      "motivo": "falta ORDEN"
+    },
+    {
+      "id": "SEC-43",
+      "desc": "Un técnico no cambia datos de recepción",
+      "estado": "SKIP",
+      "motivo": "falta ORDEN"
+    },
+    {
+      "id": "SEC-44",
+      "desc": "Nadie firma con un archivo de otra orden",
+      "estado": "SKIP",
+      "motivo": "falta ORDEN"
+    },
+    {
+      "id": "SEC-45",
+      "desc": "Un técnico no publica archivos al cliente",
+      "estado": "SKIP",
+      "motivo": "falta ORDEN"
+    },
+    {
+      "id": "SEC-46",
+      "desc": "Un técnico no crea el enlace del cliente",
+      "estado": "SKIP",
+      "motivo": "falta ORDEN"
+    },
+    {
+      "id": "SEC-47",
+      "desc": "Un técnico no envía presupuestos",
+      "estado": "SKIP",
+      "motivo": "falta ORDEN"
+    },
+    {
+      "id": "SEC-48",
+      "desc": "Un técnico no envía el reporte",
+      "estado": "SKIP",
+      "motivo": "falta ORDEN"
+    },
+    {
+      "id": "SEC-49",
+      "desc": "Un técnico no avisa novedades al cliente",
+      "estado": "SKIP",
+      "motivo": "falta ORDEN"
+    },
+    {
+      "id": "SEC-50",
+      "desc": "Un técnico no asigna a otra persona",
+      "estado": "SKIP",
+      "motivo": "falta ORDEN"
+    },
+    {
+      "id": "SEC-51",
+      "desc": "Un técnico no mueve el avance de una orden ajena",
+      "estado": "SKIP",
+      "motivo": "falta ORDEN_AJENA"
+    },
+    {
+      "id": "SEC-52",
+      "desc": "Un técnico no agrega avances a una orden ajena",
+      "estado": "SKIP",
+      "motivo": "falta ORDEN_AJENA"
+    },
+    {
+      "id": "SEC-53",
+      "desc": "Un técnico no saca una orden de Entregado",
+      "estado": "SKIP",
+      "motivo": "falta ORDEN_ENTREGADA"
+    },
+    {
+      "id": "SEC-54",
+      "desc": "Un técnico no agrega avances a una orden entregada",
+      "estado": "SKIP",
+      "motivo": "falta ORDEN_ENTREGADA"
+    },
+    {
+      "id": "SEC-60",
+      "desc": "Ni un admin aprueba una línea con un UPDATE",
+      "estado": "SKIP",
+      "motivo": "falta ORDEN"
+    },
+    {
+      "id": "SEC-61",
+      "desc": "Ni un admin sube PDFs al bucket de reportes",
+      "estado": "PASS",
+      "http": 400
+    },
+    {
+      "id": "SEC-62",
+      "desc": "Ni un admin revierte cobros por RPC",
+      "estado": "PASS",
+      "http": 403
+    },
+    {
+      "id": "SEC-17",
+      "desc": "Las 6 Edge Functions están desplegadas",
+      "estado": "PASS"
+    },
+    {
+      "id": "SEC-18",
+      "desc": "El registro público de cuentas está apagado",
+      "estado": "FAIL",
+      "http": 200,
+      "respuesta": "disable_signup=false. Apágalo en el panel: Authentication → Sign In / Providers → Allow new users to sign up"
+    },
+    {
+      "id": "SEC-55",
+      "desc": "Una orden creada directo por un técnico nace en recepción",
+      "estado": "SKIP",
+      "motivo": "usa --alta (crea una orden de prueba)"
+    }
+  ]
+}

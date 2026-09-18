@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/auth.context';
 import { useLanguage } from '../../context/language.context';
+import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import type { OrderStatus, UserProfile } from '../../types/database';
 import LaborTable from './LaborTable';
 import PartsTable from './PartsTable';
@@ -49,6 +50,7 @@ interface WorkOrderDetailProps {
  */
 export default function WorkOrderDetail({ detail, operators, statusLabels, onBack }: WorkOrderDetailProps) {
   const { t } = useLanguage();
+  const { confirmNavigation } = useUnsavedChanges();
   const { user } = useAuth();
   const [addingOperatorId, setAddingOperatorId] = useState('');
 
@@ -76,9 +78,15 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
     setAddingOperatorId('');
   };
 
+  // Volver es la salida más usada del detalle, y descartaba un avance a medias
+  // sin preguntar. Pasa por los mismos guardias que la navegación del menú.
+  const handleBack = () => {
+    if (confirmNavigation()) onBack();
+  };
+
   return (
     <div className="animate-fade-in">
-      <button className="btn btn-ghost" onClick={onBack} style={{ marginBottom: 'var(--space-4)' }}>
+      <button className="btn btn-ghost" onClick={handleBack} style={{ marginBottom: 'var(--space-4)' }}>
         <ChevronLeft size={18} /> {t('common.back')}
       </button>
 
@@ -265,9 +273,9 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
           signedAt={order.firma_fecha}
           customerName={customer?.nombre}
           canEdit={detail.canEdit}
+          canResign={detail.canResign}
           saving={detail.savingSignature}
           onSave={detail.saveSignature}
-          onClear={detail.clearSignature}
         />
 
         <LaborTable

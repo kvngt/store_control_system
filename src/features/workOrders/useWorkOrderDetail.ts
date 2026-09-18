@@ -140,6 +140,13 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // controles deshabilitados en vez de un error al apretarlos.
   const canEdit = isAdmin || (isAssignedToMe && !isDelivered);
 
+  // Volver a firmar es distinto de firmar. La primera firma autoriza lo cotizado
+  // y es el respaldo de lo que el cliente aceptó; sustituirla más tarde rehace ese
+  // respaldo, así que no es trabajo del taller y solo tiene sentido mientras la
+  // orden sigue en recepción. Un técnico asignado veía el botón y podía borrar la
+  // firma de un toque.
+  const canResign = isAdmin && order?.estatus === 'recepcion';
+
   // Antes exigía `en_proceso`, lo que dejaba trabada una orden reabierta desde
   // `finalizado`: llegaba con el avance en 100 y el control bloqueado en todo
   // estatus que no fuera `en_proceso`, así que nadie podía bajarlo.
@@ -468,18 +475,6 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     }
   };
 
-  const clearSignature = async () => {
-    if (!order) return;
-    setSavingSignature(true);
-    try {
-      await workOrdersService.clearSignature(order.id);
-      patchOrder({ firma_ruta: null, firma_fecha: null });
-    } catch (err) {
-      showToast('error', t('workOrders.signatureError'), getErrorMessage(err, language));
-    } finally {
-      setSavingSignature(false);
-    }
-  };
 
   // ----- PDF -----------------------------------------------------------------
 
@@ -541,6 +536,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     busy,
     error,
     canEdit,
+    canResign,
     canEditProgress,
     canDeliver,
     canJoin,
@@ -579,7 +575,6 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     isAdmin,
     userId: user?.id,
     saveSignature,
-    clearSignature,
     generatePdf,
     share,
     shareReport,

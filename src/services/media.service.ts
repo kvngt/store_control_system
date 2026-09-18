@@ -15,7 +15,13 @@ async function accessToken(): Promise<string> {
   // más que la vida del token en subir.
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
-  if (!token) throw Object.assign(new Error('La sesión expiró. Vuelve a iniciar sesión.'), { status: 401 });
+  // Mismo `code` que `users.service.ts`: las dos rutas dicen lo mismo, traducido.
+  if (!token) {
+    throw Object.assign(new Error('La sesión expiró. Vuelve a iniciar sesión.'), {
+      status: 401,
+      code: 'session_expired',
+    });
+  }
   return token;
 }
 

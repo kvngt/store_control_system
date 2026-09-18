@@ -20,6 +20,7 @@ import { emptyList } from '../lib/emptyList';
 import { todayLocal } from '../lib/dates';
 import { getErrorMessage } from '../lib/errors';
 import type { Commission, CommissionBalance, CommissionPayment } from '../types/database';
+import { AlertError } from '../components/AlertError';
 
 const money = (value: number) =>
   `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -312,7 +313,7 @@ export default function Payroll() {
                       {money(balance.total)}
                     </div>
                     {isAdmin && (
-                      <button className="btn btn-primary btn-sm" onClick={() => openPayModal(balance)}>
+                      <button className="btn btn-primary btn-sm pay-balance-btn" onClick={() => openPayModal(balance)}>
                         <Banknote size={16} /> {t('payroll.payBalance')}
                       </button>
                     )}
@@ -464,7 +465,7 @@ export default function Payroll() {
               <button className="modal-close" onClick={() => setPayTarget(null)}><X size={20} /></button>
             </div>
             <div className="modal-body">
-              {payError && <div className="alert-error" role="alert">{payError}</div>}
+              <AlertError message={payError} />
 
               <div className="share-target">
                 <div className="share-target-label">{t('payroll.employee')}</div>

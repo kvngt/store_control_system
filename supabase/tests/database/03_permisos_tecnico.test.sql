@@ -13,7 +13,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(23);
+SELECT plan(27);
 
 -- ------------------------------------------------------------------------------------
 -- Datos de prueba: un admin, un mecánico asignado y uno que no lo está
@@ -121,6 +121,36 @@ SELECT throws_ok(
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
   '42501', NULL,
   'La firma no puede apuntar a la carpeta de otra orden'
+);
+
+-- Volver a recepción es donde se captura la firma y donde la primera firma
+-- autoriza lo cotizado: es una decisión de administración, no del taller.
+SELECT throws_ok(
+  $$ UPDATE ordenes_trabajo SET estatus = 'recepcion'
+     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
+  '42501', NULL,
+  'El técnico asignado no puede devolver la orden a Recepción'
+);
+
+SELECT lives_ok(
+  $$ UPDATE ordenes_trabajo SET estatus = 'finalizado'
+     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
+  'El técnico asignado sí puede darla por finalizada'
+);
+
+SELECT lives_ok(
+  $$ UPDATE ordenes_trabajo SET estatus = 'en_proceso', fecha_finalizacion = NULL
+     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
+  'Y volver a ponerla en proceso'
+);
+
+-- Anular la firma rehacía el respaldo de lo autorizado, y además dejaba a
+-- trg_quote_on_signature listo para aprobar los borradores en la firma siguiente.
+SELECT throws_ok(
+  $$ UPDATE ordenes_trabajo SET firma_ruta = NULL, firma_fecha = NULL
+     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
+  '42501', NULL,
+  'El técnico asignado no puede anular la firma de recepción'
 );
 
 SELECT throws_ok(

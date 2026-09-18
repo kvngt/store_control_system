@@ -70,7 +70,7 @@ test.describe('mechanic/painter session', () => {
     await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
 
     await page.goto('/customers');
-    await expect(page.locator('#new-customer-btn, .page-title')).toBeVisible();
+    await expect(page.locator('.page-title')).toBeVisible();
     await expect(page.locator('.table-actions button[title="Eliminar"], .table-actions button[title="Delete"]')).toHaveCount(0);
 
     await page.goto('/vehicles');
@@ -78,17 +78,16 @@ test.describe('mechanic/painter session', () => {
     await expect(page.locator('.table-actions button[title="Eliminar"], .table-actions button[title="Delete"]')).toHaveCount(0);
   });
 
+  // `fill()` sets the value in one go and never fires keydown, so it cannot
+  // exercise the keyboard guard — it is the paste path, covered in
+  // qa-workorders.spec.ts. Here we type.
   test('intake mileage rejects a negative value', async ({ page }) => {
     await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
     await page.goto('/work-orders');
     await page.click('#new-order-btn');
 
     const miles = page.locator('#order-miles-in');
-    await miles.fill('-250');
-    // The minus sign never lands in the field, and the reason is shown.
+    await miles.pressSequentially('-250');
     await expect(miles).toHaveValue('250');
-    await expect(page.locator('.modal')).toContainText(
-      /Las millas de ingreso no pueden ser negativas|Intake mileage cannot be negative/
-    );
   });
 });

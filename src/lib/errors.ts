@@ -28,6 +28,32 @@ const FRIENDLY_BY_CODE: Record<string, Record<Language, string>> = {
     es: 'No se encontró el registro solicitado.',
     en: 'The requested record was not found.',
   },
+  // Rechazos de las edge functions de administración. Antes llegaban como el texto
+  // en español que la función trae dentro ("No autorizado.") y se mostraba tal cual,
+  // sin traducir y sin decir qué hacer. Ahora la función manda un `code` y el
+  // mensaje se escribe aquí, donde vive el resto.
+  session_expired: {
+    es: 'Tu sesión expiró. Vuelve a iniciar sesión e intenta de nuevo.',
+    en: 'Your session expired. Sign in again and retry.',
+  },
+  forbidden: {
+    es: 'No tienes permiso para realizar esta acción.',
+    en: "You don't have permission to perform this action.",
+  },
+  admin_only: {
+    es: 'Solo un administrador puede administrar el personal.',
+    en: 'Only an administrator can manage staff.',
+  },
+  // Un fallo pasajero del servicio de identidad o de la base. No es un permiso: se
+  // reintenta. Distinguirlo es lo que evita decirle "no autorizado" a un admin.
+  service_unavailable: {
+    es: 'El servicio no respondió a tiempo. Espera unos segundos e intenta de nuevo.',
+    en: 'The service did not respond in time. Wait a few seconds and try again.',
+  },
+  function_missing: {
+    es: 'Esta acción no está disponible en el servidor. Avisa a quien administra el sistema.',
+    en: 'This action is not available on the server. Tell whoever administers the system.',
+  },
   // Auth, al crear o editar un empleado con un correo que ya tiene cuenta.
   email_exists: {
     es: 'Ya existe una cuenta con ese correo. Usa otro o edita a esa persona.',

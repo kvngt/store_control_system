@@ -112,10 +112,11 @@ test.describe('CUST-03 | Perfil de cliente', () => {
     const eyeBtn = page.locator('tbody tr button.btn-ghost, .customer-card button.btn-ghost').first();
     await eyeBtn.click();
 
-    // The customer profile modal should open
-    await expect(page.locator('.modal').first()).toBeVisible({ timeout: 8000 });
-    // Should show vehicle or history sections
-    await expect(page.locator('.modal')).toContainText(/Vehículos|Vehicles|Hist|Work Order/i);
+    // El perfil no es un diálogo: es una vista de página con su botón de volver
+    // (ver Customers.tsx, renderProfile). La prueba esperaba un .modal que nunca
+    // existió en esta pantalla.
+    await expect(page.locator('.page-title, .card-title').first()).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('.animate-fade-in')).toContainText(/Vehículos|Vehicles|Hist|Work Order/i);
   });
 });
 

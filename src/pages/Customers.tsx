@@ -24,6 +24,7 @@ import {
   ChevronLeft,
 } from 'lucide-react';
 import type { Customer, Vehicle, WorkOrder } from '../types/database';
+import { AlertError } from '../components/AlertError';
 
 export default function Customers() {
   const { t, language } = useLanguage();
@@ -449,7 +450,7 @@ export default function Customers() {
               </button>
             </div>
             <div className="modal-body">
-              {formError && <div className="alert-error" role="alert">{formError}</div>}
+              <AlertError message={formError} />
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">{t('common.name')}</label>

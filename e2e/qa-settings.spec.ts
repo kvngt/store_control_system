@@ -115,9 +115,10 @@ test.describe('CFG-11 | Modal de nuevo empleado: abre y valida', () => {
   async function openEmployeeModal(page: Page) {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
     await page.goto('/settings');
-    // The button uses t('settings.newEmployee') = 'Nuevo Empleado' or 'New Employee'
-    await page.waitForSelector('button:has-text("Nuevo Empleado"), button:has-text("New Employee")', { timeout: 12000 });
-    await page.locator('button:has-text("Nuevo Empleado"), button:has-text("New Employee")').first().click();
+    // The button is t('settings.newUser') — match the id, not the label, so a
+    // wording change doesn't read as a broken screen.
+    await page.waitForSelector('#new-user-btn', { timeout: 12000 });
+    await page.locator('#new-user-btn').click();
     const modal = page.locator('.modal');
     await expect(modal).toBeVisible({ timeout: 5000 });
     return modal;
@@ -125,8 +126,8 @@ test.describe('CFG-11 | Modal de nuevo empleado: abre y valida', () => {
 
   test('el modal de nuevo empleado abre con los campos correctos', async ({ page }) => {
     const modal = await openEmployeeModal(page);
-    await expect(modal.locator('input[type="text"], input[type="email"], input#employee-password').first()).toBeVisible();
-    await expect(modal.locator('input#employee-password').first()).toBeVisible();
+    await expect(modal.locator('input[type="text"], input[type="email"], input#user-password').first()).toBeVisible();
+    await expect(modal.locator('input#user-password').first()).toBeVisible();
     await expect(modal.locator('select').first()).toBeVisible();
   });
 
@@ -134,7 +135,7 @@ test.describe('CFG-11 | Modal de nuevo empleado: abre y valida', () => {
     const modal = await openEmployeeModal(page);
     // Only fill email and password; leave name empty
     await modal.locator('input[type="email"]').first().fill('test@example.com');
-    await modal.locator('input#employee-password').first().fill('Password123!');
+    await modal.locator('input#user-password').first().fill('Password123!');
 
     const saveBtn = modal.locator('button.btn.btn-primary').last();
     await saveBtn.click();
@@ -146,10 +147,10 @@ test.describe('CFG-11 | Modal de nuevo empleado: abre y valida', () => {
 
   test('no puede crear empleado con contraseña menor a 6 caracteres', async ({ page }) => {
     const modal = await openEmployeeModal(page);
-    const nameInput = modal.locator('#employee-name');
+    const nameInput = modal.locator('#user-name');
     await nameInput.fill('Test Employee QA');
     await modal.locator('input[type="email"]').first().fill('testqa-short-pass@example.com');
-    await modal.locator('input#employee-password').first().fill('123');
+    await modal.locator('input#user-password').first().fill('123');
 
     const saveBtn = modal.locator('button.btn.btn-primary').last();
     await saveBtn.click();
@@ -160,10 +161,10 @@ test.describe('CFG-11 | Modal de nuevo empleado: abre y valida', () => {
 
   test('no puede crear empleado con email ya registrado', async ({ page }) => {
     const modal = await openEmployeeModal(page);
-    const nameInput = modal.locator('#employee-name');
+    const nameInput = modal.locator('#user-name');
     await nameInput.fill('Duplicado QA Test');
     await modal.locator('input[type="email"]').first().fill(ADMIN_EMAIL!);
-    await modal.locator('input#employee-password').first().fill('Restorify2026!');
+    await modal.locator('input#user-password').first().fill('Restorify2026!');
 
     const saveBtn = modal.locator('button.btn.btn-primary').last();
     await saveBtn.click();
@@ -187,6 +188,6 @@ test.describe('CFG-12 | Mecánico solo ve su perfil en Settings', () => {
     await page.waitForSelector('.page-title, h1, .settings-profile', { timeout: 10000 });
 
     await expect(page.locator('h2:has-text("Sedes"), h3:has-text("Sedes")').first()).not.toBeVisible().catch(() => {});
-    await expect(page.locator('#new-employee-btn, button:has-text("Nuevo Empleado")').first()).toHaveCount(0);
+    await expect(page.locator('#new-user-btn')).toHaveCount(0);
   });
 });

@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useLanguage } from '../../context/language.context';
+import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import {
   LayoutDashboard,
   Users,
@@ -10,6 +11,14 @@ import {
 
 export default function BottomNav() {
   const { t } = useLanguage();
+  const { confirmNavigation } = useUnsavedChanges();
+
+  // La barra lateral y el encabezado ya preguntaban antes de salir de un
+  // formulario a medias; esta barra no, y es la navegación real del teléfono.
+  // Un avance con nota y video se perdía con un toque, sin aviso.
+  const handleNavClick = (e: React.MouseEvent) => {
+    if (!confirmNavigation()) e.preventDefault();
+  };
 
   // Short labels: a bottom tab has room for one word, so these are their own
   // keys rather than the full menu names ("Órdenes de Trabajo" wraps and
@@ -31,6 +40,7 @@ export default function BottomNav() {
           to={item.to}
           className={({ isActive }) => `bottom-nav-item ${isActive ? 'active' : ''}`}
           end={item.to === '/'}
+          onClick={handleNavClick}
         >
           <item.icon className="bottom-nav-icon" size={24} />
           <span className="bottom-nav-label">{item.label}</span>

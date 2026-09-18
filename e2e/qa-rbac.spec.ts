@@ -36,8 +36,12 @@ test.describe('RBAC-02 | Admin accede a Payroll', () => {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
     await page.goto('/payroll');
     await expect(page).toHaveURL(/\/payroll/);
-    // Debe existir un botón de nuevo pago
-    await expect(page.locator('#new-payroll-btn, button:has-text("Nuevo Pago"), button:has-text("New Payment")').first()).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('.page-title')).toBeVisible({ timeout: 8000 });
+    // No hay un botón global de "nuevo pago": el saldo de cada técnico se paga
+    // desde su propia tarjeta. Sin saldos pendientes no hay ninguno, y eso
+    // también es correcto.
+    const balances = page.locator('.pay-balance-btn');
+    if (await balances.count()) await expect(balances.first()).toBeVisible();
   });
 });
 
@@ -149,7 +153,7 @@ test.describe('RBAC-40 | Settings: admin ve sedes y empleados', () => {
   test('sección de sedes está presente', async ({ page }) => {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
     await page.goto('/settings');
-    await expect(page.locator('#new-employee-btn, button:has-text("Nuevo Empleado"), button:has-text("New Employee")').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#new-user-btn')).toBeVisible({ timeout: 10000 });
   });
 });
 
@@ -159,7 +163,7 @@ test.describe('RBAC-41 | Settings: mecánico NO ve gestión de sedes', () => {
     await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
     await page.goto('/settings');
     await page.waitForSelector('.page-title, h1, .settings-profile', { timeout: 10000 });
-    await expect(page.locator('#new-employee-btn, button:has-text("Nuevo Empleado")').first()).toHaveCount(0);
+    await expect(page.locator('#new-user-btn')).toHaveCount(0);
   });
 });
 

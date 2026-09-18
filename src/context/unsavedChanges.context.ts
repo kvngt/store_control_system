@@ -10,7 +10,20 @@ import { createContext, useContext } from 'react';
 export type Guard = () => boolean; // return true = OK to leave, false = user cancelled
 
 interface UnsavedChangesContextType {
+  /**
+   * El hueco de siempre, para un único dueño (hoy el modal de nueva orden).
+   * Mantiene su semántica: volver a llamarlo reemplaza lo que hubiera.
+   */
   setGuard: (guard: Guard | null) => void;
+  /**
+   * Registra un guardia más y devuelve su baja.
+   *
+   * Existe porque el hueco único no daba abasto: dos formularios sucios a la vez
+   * se pisaban, y el `setGuard(null)` de limpieza de cualquiera borraba el del
+   * otro. Con esto, el formulario de avance puede protegerse sin desproteger la
+   * orden que se está creando.
+   */
+  registerGuard: (guard: Guard) => () => void;
   confirmNavigation: () => boolean;
 }
 

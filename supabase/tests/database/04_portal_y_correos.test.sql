@@ -13,7 +13,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(24);
+SELECT plan(26);
 
 -- ------------------------------------------------------------------------------------
 -- Datos de prueba
@@ -117,10 +117,13 @@ RESET ROLE;
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000001';
 SELECT is((SELECT COUNT(*)::int FROM t_enlace), 1, 'Firmar crea el enlace');
 SELECT ok((SELECT token ~ '^[0-9a-f]{64}$' FROM t_enlace), 'El token tiene 64 hexadecimales');
+-- La orden ya tiene una foto de recepción registrada (ver el fixture), así que el
+-- aviso sale al instante: el cliente firma y el correo está en camino antes de que
+-- salga del mostrador.
 SELECT results_eq(
-  $$ SELECT plantilla, estado, destinatario, enviar_despues_de > NOW() + INTERVAL '90 seconds' FROM t_correos $$,
+  $$ SELECT plantilla, estado, destinatario, enviar_despues_de <= NOW() FROM t_correos $$,
   $$ VALUES ('recepcion'::text, 'pendiente'::text, 'marta@prueba.local'::text, true) $$,
-  'Se programa un correo de recepción con dos minutos de espera'
+  'Con fotos de recepción ya registradas, el aviso al cliente sale al firmar'
 );
 
 -- Volver a firmar no reenvía la recepción.
@@ -138,6 +141,19 @@ SELECT results_eq(
   $$ VALUES ('espera_repuestos'::text, true) $$,
   'Dos cambios seguidos quedan en un solo aviso pendiente, con el último estado y tres minutos de espera'
 );
+
+-- Colapsar una ráfaga está bien; aplazarla, no. Antes cada cambio REINICIABA la
+-- espera, así que una orden que se mueve a menudo nunca llegaba a avisar al cliente.
+CREATE TEMP TABLE t_programado AS SELECT enviar_despues_de FROM t_correos WHERE plantilla = 'estatus';
+UPDATE ordenes_trabajo SET estatus = 'finalizado' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
+SELECT ok(
+  (SELECT c.enviar_despues_de <= p.enviar_despues_de FROM t_correos c, t_programado p WHERE c.plantilla = 'estatus'),
+  'Un tercer cambio no aplaza el aviso: conserva la hora del primero de la ráfaga'
+);
+
+-- Se devuelve al estado que leen las pruebas de abajo: datos_correo usa el estatus
+-- del momento del envío, no el de cuando se encoló.
+UPDATE ordenes_trabajo SET estatus = 'espera_repuestos' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
 
 UPDATE ordenes_trabajo SET estatus = 'en_proceso' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002';
 SELECT is(
@@ -214,6 +230,27 @@ SELECT ok(
 );
 UPDATE ordenes_trabajo SET estatus = 'finalizado' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
 SELECT is((SELECT expira_en FROM t_enlace), NULL::timestamptz, 'Sacarla de Entregado quita el vencimiento');
+
+-- ------------------------------------------------------------------------------------
+-- 6. Recepción sin fotos todavía: un piso corto, no dos minutos
+-- ------------------------------------------------------------------------------------
+-- Al final del archivo a propósito: borra la multimedia de recepción, y de aquí en
+-- adelante nada la vuelve a mirar.
+RESET ROLE;
+-- La sección anterior dio de baja al cliente, y sin su consentimiento
+-- encolar_correo_cliente devuelve NULL. Se vuelve a suscribir para poder medir la
+-- espera, que es lo que esta prueba mira.
+UPDATE clientes SET acepta_correos = true
+WHERE id = (SELECT cliente_id FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001');
+
+DELETE FROM cola_envios WHERE plantilla = 'recepcion';
+DELETE FROM orden_media WHERE origen = 'recepcion';
+UPDATE ordenes_trabajo SET firma_ruta = NULL WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
+UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma-3.png' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
+SELECT ok(
+  (SELECT enviar_despues_de BETWEEN NOW() AND NOW() + INTERVAL '1 minute' FROM t_correos WHERE plantilla = 'recepcion'),
+  'Sin fotos todavía, el aviso espera menos de un minuto en vez de dos'
+);
 
 -- ------------------------------------------------------------------------------------
 RESET ROLE;
