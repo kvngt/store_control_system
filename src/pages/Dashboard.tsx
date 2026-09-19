@@ -29,7 +29,7 @@ const EMPTY_STATS: DashboardStats = {
   egresos_total: 0,
   clientes_nuevos_mes: 0,
   tasa_ocupacion: 0,
-  ordenes_por_estatus: { recepcion: 0, en_proceso: 0, espera_repuestos: 0, finalizado: 0, entregado: 0 },
+  ordenes_por_estatus: { recepcion: 0, en_proceso: 0, espera_autorizacion: 0, finalizado: 0, entregado: 0 },
   ingresos_por_mes: [],
 };
 
@@ -78,12 +78,12 @@ export default function Dashboard() {
   const statusLabels: Record<string, string> = {
     recepcion: t('workOrders.intake'),
     en_proceso: t('workOrders.inProgress'),
-    espera_repuestos: t('workOrders.waitingParts'),
+    espera_autorizacion: t('workOrders.waitingAuthorization'),
     finalizado: t('workOrders.completed'),
     entregado: t('workOrders.delivered'),
   };
 
-  const waitingOrders = recentOrders.filter((o) => o.estatus === 'espera_repuestos');
+  const waitingOrders = recentOrders.filter((o) => o.estatus === 'espera_autorizacion');
   const laggingOrders = recentOrders.filter((o) => o.estatus === 'en_proceso' && o.porcentaje_avance < 30);
 
   if (loading) {
@@ -251,7 +251,7 @@ export default function Dashboard() {
                 <Clock size={16} style={{ color: 'var(--color-warning)', flexShrink: 0 }} />
                 <div style={{ flex: 1, textAlign: 'left' }}>
                   <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>
-                    {order.numero_orden} · {t('dashboard.alertWaitingParts')}
+                    {order.numero_orden} · {t('dashboard.alertWaitingAuthorization')}
                   </div>
                   <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
                     {order.cliente?.nombre} — {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}

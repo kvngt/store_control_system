@@ -188,7 +188,7 @@ describe('Vehicle without a plate', () => {
     renderWithProviders(<Vehicles />);
 
     await screen.findByText('Ford F-150');
-    await user.click(within(screen.getByRole('row', { name: /Ford F-150/ })).getAllByRole('button')[0]);
+    await user.click(within(screen.getByRole('row', { name: /Ford F-150/ })).getByRole('button', { name: 'Editar' }));
 
     expect(await screen.findByLabelText(/Sin placa/i)).toBeChecked();
   });

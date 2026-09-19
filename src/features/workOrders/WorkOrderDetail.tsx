@@ -23,6 +23,8 @@ import PartsSummaryCard from './PartsSummaryCard';
 import CommissionEstimateCard from './CommissionEstimateCard';
 import ProgressLog from './ProgressLog';
 import ShareReportModal from './ShareReportModal';
+import AuthorizationReasonModal from './AuthorizationReasonModal';
+import PublishProgressModal from './PublishProgressModal';
 import CustomerLinkCard from './CustomerLinkCard';
 import QuoteCard from './QuoteCard';
 import { isApproved } from './lineState';
@@ -92,6 +94,12 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
 
       {detail.error && <div className="alert-error">{detail.error}</div>}
       {detail.loading && <div className="loading-state"><div className="spinner" /></div>}
+      {order.estatus === 'espera_autorizacion' && (
+        <div className="alert-warn">
+          <strong>{t('workOrders.authorizationBanner')}</strong>
+          {order.motivo_autorizacion ? ` ${order.motivo_autorizacion}` : null}
+        </div>
+      )}
       {!detail.canEdit && (
         <div className="alert-info">
           {detail.isDelivered ? t('workOrders.deliveredNotice') : t('workOrders.readOnlyNotice')}
@@ -285,6 +293,8 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
           onAdd={detail.addLabor}
           onUpdate={detail.updateLabor}
           onRemove={detail.removeLabor}
+          canComplete={detail.canCompleteLabor}
+          onToggleComplete={detail.toggleLaborComplete}
         />
 
         {/* Un técnico no ve precios de repuestos: la tabla con montos es solo
@@ -444,8 +454,26 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
         onAdd={detail.addProgressUpdate}
         onRemove={detail.removeProgressUpdate}
         onToggleVisibility={detail.toggleMediaVisibility}
+        onToggleEntryVisibility={detail.toggleProgressVisibility}
         onDeleteMedia={detail.deleteMedia}
       />
+
+      {detail.askingAuthReason && (
+        <AuthorizationReasonModal
+          saving={detail.busy}
+          onCancel={detail.cancelAuthReason}
+          onConfirm={detail.submitAuthReason}
+        />
+      )}
+
+      {detail.publishingProgress && (
+        <PublishProgressModal
+          entry={detail.publishingProgress}
+          saving={detail.busy}
+          onCancel={detail.cancelPublishProgress}
+          onConfirm={detail.confirmPublishProgress}
+        />
+      )}
 
       {detail.share && (
         <ShareReportModal

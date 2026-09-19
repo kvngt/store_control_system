@@ -13,7 +13,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(27);
+SELECT plan(39);
 
 -- ------------------------------------------------------------------------------------
 -- Datos de prueba: un admin, un mecánico asignado y uno que no lo está
@@ -143,6 +143,87 @@ SELECT lives_ok(
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
   'Y volver a ponerla en proceso'
 );
+
+-- Pedir autorización es lo que un mecánico hace cuando descubre que falta algo. Sin el
+-- motivo, el admin no sabe qué cotizar, así que el estado no se puede fijar sin él.
+SELECT throws_ok(
+  $$ UPDATE ordenes_trabajo SET estatus = 'espera_autorizacion'
+     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
+  '42501', NULL,
+  'El técnico no puede pedir autorización sin decir por qué'
+);
+
+SELECT lives_ok(
+  $$ UPDATE ordenes_trabajo
+     SET estatus = 'espera_autorizacion', motivo_autorizacion = '  El radiador está picado  '
+     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
+  'El técnico pide autorización con su motivo'
+);
+
+SELECT is(
+  (SELECT motivo_autorizacion FROM t_orden),
+  'El radiador está picado',
+  'El motivo se guarda sin los espacios de los extremos'
+);
+
+-- Al salir del estado, el motivo deja de ser cierto y no debe quedar colgado.
+SELECT lives_ok(
+  $$ UPDATE ordenes_trabajo SET estatus = 'en_proceso'
+     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
+  'El técnico saca la orden de espera de autorización'
+);
+
+SELECT is(
+  (SELECT motivo_autorizacion FROM t_orden),
+  NULL::text,
+  'Salir del estado limpia el motivo'
+);
+
+-- ------------------------------------------------------------------------------------
+-- 2b. Marcar un trabajo como completado
+-- ------------------------------------------------------------------------------------
+-- La firma de recepción ya aprobó los borradores, así que la línea se puede tachar.
+SELECT is((SELECT estado FROM orden_labor WHERE descripcion = 'Frenos'), 'aprobado',
+  'Punto de partida: la firma de recepción dejó la línea aprobada');
+
+-- La tabla sigue cerrada: un UPDATE directo no pasa la RLS y devuelve cero filas.
+SELECT is_empty(
+  $$ UPDATE orden_labor SET completado_en = NOW()
+     WHERE descripcion = 'Frenos' RETURNING id $$,
+  'Un técnico no escribe orden_labor directamente, ni la columna nueva'
+);
+
+SELECT lives_ok(
+  $$ SELECT marcar_labor_completada((SELECT id FROM orden_labor WHERE descripcion = 'Frenos')) $$,
+  'El técnico asignado marca el trabajo por la RPC'
+);
+
+SELECT results_eq(
+  $$ SELECT completado_en IS NOT NULL, completado_por, costo, estado
+     FROM orden_labor WHERE descripcion = 'Frenos' $$,
+  $$ VALUES (true, 'a0000000-0000-0000-0000-000000000002'::uuid, 500.00::numeric, 'aprobado'::text) $$,
+  'Queda quién y cuándo, y no se toca ni el costo ni el estado de la línea'
+);
+
+SELECT lives_ok(
+  $$ SELECT marcar_labor_completada((SELECT id FROM orden_labor WHERE descripcion = 'Frenos'), false) $$,
+  'Y lo puede desmarcar'
+);
+
+SELECT is(
+  (SELECT completado_en FROM orden_labor WHERE descripcion = 'Frenos'),
+  NULL::timestamptz,
+  'Desmarcar borra la marca'
+);
+
+-- Un técnico de la misma sede que no está en la orden no decide qué se hizo en ella.
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000004';
+SELECT throws_ok(
+  $$ SELECT marcar_labor_completada((SELECT id FROM orden_labor WHERE descripcion = 'Frenos')) $$,
+  '42501', NULL,
+  'Un técnico no asignado no marca el trabajo de esa orden'
+);
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
 
 -- Anular la firma rehacía el respaldo de lo autorizado, y además dejaba a
 -- trg_quote_on_signature listo para aprobar los borradores en la firma siguiente.

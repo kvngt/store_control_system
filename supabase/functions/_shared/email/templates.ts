@@ -13,7 +13,10 @@ export type EmailTemplate = 'recepcion' | 'estatus' | 'avance' | 'presupuesto' |
 const TEMPLATES: readonly string[] = ['recepcion', 'estatus', 'avance', 'presupuesto', 'presupuesto_confirmacion', 'reporte'];
 
 /** Estados de la orden que se anuncian al cliente. */
-export const ANNOUNCED_STATUSES = ['en_proceso', 'espera_repuestos', 'finalizado', 'entregado'] as const;
+// `espera_autorizacion` no está a propósito: un aviso de que el vehículo espera
+// autorización antes de que exista el presupuesto no le dice nada útil al cliente, y se
+// pisa con el correo del presupuesto que sale minutos después.
+export const ANNOUNCED_STATUSES = ['en_proceso', 'finalizado', 'entregado'] as const;
 export type AnnouncedStatus = (typeof ANNOUNCED_STATUSES)[number];
 
 export interface EmailContext {
@@ -157,12 +160,6 @@ function copyFor(template: EmailTemplate, ctx: EmailContext): Copy | null {
           preheader: 'El trabajo en su vehículo ya comenzó.',
           heading: 'Comenzamos el trabajo',
           paragraphs: [`El equipo de ${shop} ya está trabajando en su ${vehicle}.`],
-        },
-        espera_repuestos: {
-          subject: `Su ${vehicle} espera repuestos · ${ctx.orden.numero}`,
-          preheader: 'Continuaremos en cuanto lleguen las piezas.',
-          heading: 'Esperando repuestos',
-          paragraphs: [`El trabajo en su ${vehicle} está en pausa mientras llegan las piezas. Continuaremos en cuanto estén en el taller.`],
         },
         finalizado: {
           subject: `Su ${vehicle} está listo · ${ctx.orden.numero}`,

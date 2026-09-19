@@ -28,6 +28,13 @@ const FRIENDLY_BY_CODE: Record<string, Record<Language, string>> = {
     es: 'No se encontró el registro solicitado.',
     en: 'The requested record was not found.',
   },
+  // Un valor que la base ya no conoce. Pasa cuando una pestaña lleva abierta desde antes
+  // de un despliegue y manda un estado que se renombró: el bundle viejo sigue diciendo
+  // 'espera_repuestos' y el enum ya no lo tiene. No es culpa de quien lo intentó.
+  "22P02": {
+    es: 'Recarga la página: la app está desactualizada y mandó un dato que ya no existe.',
+    en: 'Reload the page: the app is out of date and sent a value that no longer exists.',
+  },
   // Rechazos de las edge functions de administración. Antes llegaban como el texto
   // en español que la función trae dentro ("No autorizado.") y se mostraba tal cual,
   // sin traducir y sin decir qué hacer. Ahora la función manda un `code` y el

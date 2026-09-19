@@ -59,7 +59,7 @@ const EMPTY_STATS = {
   clientes_nuevos_mes: 0,
   tasa_ocupacion: 0,
   ordenes_por_estatus: {
-    recepcion: 0, en_proceso: 0, espera_repuestos: 0, finalizado: 0, entregado: 0,
+    recepcion: 0, en_proceso: 0, espera_autorizacion: 0, finalizado: 0, entregado: 0,
   },
   ingresos_por_mes: [],
 };

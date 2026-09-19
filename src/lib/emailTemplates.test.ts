@@ -33,13 +33,15 @@ describe('renderEmail', () => {
   it('anuncia cada estado con su propio asunto', () => {
     const subject = (estatus: string) => renderEmail('estatus', { ...base, orden: { ...base.orden, estatus } })?.subject;
     expect(subject('en_proceso')).toMatch(/^Estamos trabajando/);
-    expect(subject('espera_repuestos')).toMatch(/espera repuestos/);
     expect(subject('finalizado')).toMatch(/está listo/);
     expect(subject('entregado')).toMatch(/^Gracias por su visita/);
   });
 
   it('no redacta un aviso de estado para uno que no se anuncia ni una plantilla desconocida', () => {
     expect(renderEmail('estatus', { ...base, orden: { ...base.orden, estatus: 'recepcion' } })).toBeNull();
+    // Pedir autorización tampoco se anuncia: el presupuesto todavía no existe y su
+    // propio correo sale minutos después.
+    expect(renderEmail('estatus', { ...base, orden: { ...base.orden, estatus: 'espera_autorizacion' } })).toBeNull();
     expect(renderEmail('factura', base)).toBeNull();
   });
 

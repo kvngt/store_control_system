@@ -40,7 +40,7 @@ function report(overrides: Partial<PortalReport> = {}): PortalReport {
     enlace: { expira_en: null },
     orden: {
       numero: 'ORD-2026-014',
-      estatus: 'espera_repuestos',
+      estatus: 'espera_autorizacion',
       tipo_trabajo: 'mecanica',
       porcentaje_avance: 40,
       fecha_ingreso: '2026-09-10T15:00:00Z',
@@ -56,12 +56,12 @@ function report(overrides: Partial<PortalReport> = {}): PortalReport {
     vehiculo: { marca: 'Toyota', modelo: 'Camry', anio: 2019, color: 'Gris', placa: 'ABC123', vin_final: '004352' },
     multimedia: [
       {
-        id: 'm1', tipo: 'foto', origen: 'recepcion', zona: 'front', mime: 'image/jpeg', duracion_seg: null,
+        id: 'm1', tipo: 'foto', origen: 'recepcion', avance_id: null, zona: 'front', mime: 'image/jpeg', duracion_seg: null,
         ancho: 1920, alto: 1080, creado_en: '2026-09-10T15:01:00Z',
         url: 'https://storage.example/foto.jpg', miniatura_url: 'https://storage.example/foto-thumb.jpg',
       },
       {
-        id: 'm2', tipo: 'video', origen: 'avance', zona: null, mime: 'video/mp4', duracion_seg: 75,
+        id: 'm2', tipo: 'video', origen: 'avance', avance_id: null, zona: null, mime: 'video/mp4', duracion_seg: 75,
         ancho: 1280, alto: 720, creado_en: '2026-09-11T18:00:00Z',
         url: 'https://storage.example/video.mp4', miniatura_url: 'https://storage.example/video-thumb.jpg',
       },
@@ -89,13 +89,35 @@ beforeEach(() => {
 });
 
 describe('CustomerPortal', () => {
+  // Lo que el técnico marcó como visible: su fecha y su texto, agrupando sus archivos.
+  it('muestra los avances que el taller publicó, sin nombrar a nadie', async () => {
+    mocks.fetchPortal.mockResolvedValue({
+      ...report(),
+      avances: [{ id: 'av-1', fecha: '2026-09-18T15:00:00Z', mensaje: 'Ya lijamos la puerta.' }],
+    });
+    render(<CustomerPortal token={TOKEN} />);
+
+    expect(await screen.findByText('Ya lijamos la puerta.')).toBeInTheDocument();
+  });
+
+  // Un avance publicado que solo trae archivos: el hueco del texto no se queda en blanco.
+  it('un avance sin texto dice que el taller compartió archivos', async () => {
+    mocks.fetchPortal.mockResolvedValue({
+      ...report(),
+      avances: [{ id: 'av-2', fecha: '2026-09-18T15:00:00Z', mensaje: null }],
+    });
+    render(<CustomerPortal token={TOKEN} />);
+
+    expect(await screen.findByText('El taller compartió archivos de este avance.')).toBeInTheDocument();
+  });
+
   it('muestra el estado, el vehículo, lo publicado y la cuenta', async () => {
     mocks.fetchPortal.mockResolvedValue(report());
     render(<CustomerPortal token={TOKEN} />);
 
     expect(await screen.findByRole('heading', { name: /2019 Toyota Camry/ })).toBeInTheDocument();
     expect(mocks.fetchPortal).toHaveBeenCalledWith(TOKEN, expect.anything());
-    expect(screen.getAllByText('Esperando repuestos').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Esperando su autorización').length).toBeGreaterThan(0);
     expect(screen.getByText(/VIN termina en 004352/)).toBeInTheDocument();
     expect(screen.getByText('Rayón en la puerta trasera.')).toBeInTheDocument();
     expect(screen.getByAltText('Firma del cliente')).toHaveAttribute('src', expect.stringContaining('firma.png'));

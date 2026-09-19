@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MessageSquarePlus, Plus, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, MessageSquarePlus, Plus, Trash2 } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import type { UploadItem } from '../../lib/media/uploadQueue';
@@ -22,6 +22,8 @@ interface ProgressLogProps {
   onAdd: (note: string, media: PreparedMedia[]) => Promise<boolean>;
   onRemove: (id: string) => Promise<void>;
   onToggleVisibility: (media: OrderMedia) => void;
+  /** Mostrar u ocultar el avance completo al cliente: su texto y sus archivos. */
+  onToggleEntryVisibility: (entry: OrderProgressUpdate) => void;
   onDeleteMedia: (media: OrderMedia) => void;
 }
 
@@ -44,6 +46,7 @@ export default function ProgressLog({
   onAdd,
   onRemove,
   onToggleVisibility,
+  onToggleEntryVisibility,
   onDeleteMedia,
 }: ProgressLogProps) {
   const { t, language } = useLanguage();
@@ -110,11 +113,31 @@ export default function ProgressLog({
                   {avance.usuario?.nombre_completo || '—'} ·{' '}
                   {new Date(avance.creado_en).toLocaleString(language === 'es' ? 'es' : 'en')}
                 </div>
-                {(isAdmin || userId === avance.usuario_id) && (
-                  <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => onRemove(avance.id)} aria-label={t('common.delete')}>
-                    <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
-                  </button>
-                )}
+                <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  {avance.visible_cliente && (
+                    <span className="badge badge-finalizado">{t('workOrders.progressVisibleBadge')}</span>
+                  )}
+                  {(isAdmin || userId === avance.usuario_id) && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm btn-icon"
+                      onClick={() => onToggleEntryVisibility(avance)}
+                      disabled={busy}
+                      aria-label={avance.visible_cliente ? t('workOrders.hideFromCustomer') : t('workOrders.showToCustomer')}
+                      title={avance.visible_cliente ? t('workOrders.hideFromCustomer') : t('workOrders.showToCustomer')}
+                      aria-pressed={!!avance.visible_cliente}
+                    >
+                      {avance.visible_cliente
+                        ? <Eye size={14} style={{ color: 'var(--color-success)' }} />
+                        : <EyeOff size={14} />}
+                    </button>
+                  )}
+                  {(isAdmin || userId === avance.usuario_id) && (
+                    <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => onRemove(avance.id)} aria-label={t('common.delete')}>
+                      <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
+                    </button>
+                  )}
+                </div>
               </div>
               {avance.descripcion && (
                 <p style={{ marginTop: 'var(--space-2)', fontSize: 'var(--font-size-sm)', lineHeight: 1.6 }}>{avance.descripcion}</p>

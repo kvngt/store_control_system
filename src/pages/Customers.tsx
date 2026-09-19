@@ -180,7 +180,7 @@ export default function Customers() {
   const statusLabels: Record<string, string> = {
     recepcion: t('workOrders.intake'),
     en_proceso: t('workOrders.inProgress'),
-    espera_repuestos: t('workOrders.waitingParts'),
+    espera_autorizacion: t('workOrders.waitingAuthorization'),
     finalizado: t('workOrders.completed'),
     entregado: t('workOrders.delivered'),
   };

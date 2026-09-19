@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -6,7 +7,7 @@ import { customersService, vehiclesService } from '../services/supabaseService';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
-import { Search, Plus, Edit3, Trash2, X } from 'lucide-react';
+import { Search, Plus, Edit3, Trash2, X, Eye, ChevronLeft, ClipboardList, Car } from 'lucide-react';
 import { checkUsPlate, checkVin } from '../lib/vin';
 import VehicleFields from '../features/vehicles/VehicleFields';
 import { EMPTY_VEHICLE_FIELDS, validateVehicleFields } from '../features/vehicles/vehicleForm';
@@ -25,6 +26,10 @@ export default function Vehicles() {
   // Strict isolation: only ever the active sede's vehicles and customers.
   const sedeId = isAdmin ? currentSede?.id : user?.sede_id;
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  // El historial del vehículo: qué se le hizo y cuándo. Es lo que sirve para responder
+  // "qué le hicimos la vez pasada", y hasta ahora solo existía por cliente.
+  const [viewId, setViewId] = useState<string | null>(null);
 
   // Separate queries: the customer list is the same cache entry Clientes and
   // the order intake dialog already use, so opening this screen after one of
@@ -36,6 +41,12 @@ export default function Vehicles() {
   const customersQuery = useQuery({
     queryKey: queryKeys.customers(sedeId),
     queryFn: () => customersService.getCustomers(sedeId),
+  });
+  // Por id y no por objeto: la fila se reemplaza en cada refetch de la lista.
+  const detailQuery = useQuery({
+    queryKey: queryKeys.vehicleDetail(viewId ?? ''),
+    queryFn: () => vehiclesService.getVehicleDetail(viewId ?? ''),
+    enabled: !!viewId,
   });
 
   const vehicles = vehiclesQuery.data ?? emptyList<Vehicle>();
@@ -163,6 +174,94 @@ export default function Vehicles() {
     }
   };
 
+  // La vista de detalle, igual que el perfil del cliente: la misma pantalla, no una ruta
+  // aparte. El número de orden abre la orden con el enlace profundo que ya existe.
+  if (viewId) {
+    const d = detailQuery.data;
+    const orders = d?.orders ?? [];
+    const v = d?.vehicle;
+    const title = v ? [v.anio, v.marca, v.modelo].filter(Boolean).join(' ') : '';
+    return (
+      <div className="animate-fade-in">
+        <button className="btn btn-ghost" onClick={() => setViewId(null)} style={{ marginBottom: 'var(--space-4)' }}>
+          <ChevronLeft size={18} /> {t('common.back')}
+        </button>
+
+        {detailQuery.isPending ? (
+          <div className="loading-state"><div className="spinner" /></div>
+        ) : !v ? (
+          <p className="orders-section-empty">{t('common.noResults')}</p>
+        ) : (
+          <>
+            <div className="page-header">
+              <div>
+                <h1 className="page-title">
+                  <Car size={22} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
+                  {title}
+                </h1>
+                <p className="page-subtitle">
+                  {v.placa || t('vehicles.noPlate')} · {t('vehicles.owner')}: {v.cliente_nombre || '—'}
+                </p>
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title">
+                  <ClipboardList size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
+                  {t('vehicles.serviceHistory')} ({orders.length})
+                </h3>
+              </div>
+              <div className="table-container cards-on-mobile" style={{ border: 'none' }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{t('workOrders.orderNumber')}</th>
+                      <th>{t('common.type')}</th>
+                      <th>{t('common.status')}</th>
+                      <th>{t('common.date')}</th>
+                      {isAdmin && <th>{t('common.total')}</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.length === 0 ? (
+                      <tr>
+                        <td colSpan={isAdmin ? 5 : 4} style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
+                          {t('vehicles.noOrders')}
+                        </td>
+                      </tr>
+                    ) : (
+                      orders.map((o) => (
+                        <tr key={o.id}>
+                          <td data-label={t('workOrders.orderNumber')}>
+                            <button
+                              type="button"
+                              className="link-button"
+                              onClick={() => navigate(`/work-orders?open=${o.id}`)}
+                            >
+                              {o.numero_orden}
+                            </button>
+                          </td>
+                          <td data-label={t('common.type')}><span className={`badge badge-${o.tipo_trabajo}`}>{o.tipo_trabajo}</span></td>
+                          <td data-label={t('common.status')}><span className={`badge badge-${o.estatus}`}>{o.estatus}</span></td>
+                          <td data-label={t('common.date')}>{new Date(o.creado_en).toLocaleDateString(language === 'es' ? 'es' : 'en')}</td>
+                          {isAdmin && (
+                            <td data-label={t('common.total')} style={{ fontWeight: 600 }}>
+                              ${Number(o.montos?.total_general ?? 0).toLocaleString()}
+                            </td>
+                          )}
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
   return (
     <div>
       <div className="page-header">
@@ -219,7 +318,8 @@ export default function Vehicles() {
                   <td data-label={t('vehicles.owner')} style={{ color: 'var(--color-text-secondary)' }}>{v.cliente_nombre}</td>
                   <td>
                     <div className="table-actions">
-                      <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openEditModal(v)}><Edit3 size={16} /></button>
+                      <button className="btn btn-ghost btn-sm btn-icon" title={t('common.view')} onClick={() => setViewId(v.id)}><Eye size={16} /></button>
+                      <button className="btn btn-ghost btn-sm btn-icon" title={t('common.edit')} onClick={() => openEditModal(v)}><Edit3 size={16} /></button>
                       {isAdmin && (
                         <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={() => handleDelete(v)}><Trash2 size={16} /></button>
                       )}

@@ -21,6 +21,11 @@ import WorkOrderCreateModal from '../features/workOrders/WorkOrderCreateModal';
 import WorkOrderDetail from '../features/workOrders/WorkOrderDetail';
 import { getErrorMessage } from '../lib/errors';
 import { daysFromTodayLocal } from '../lib/dates';
+import { orderDueState, type DueState } from '../lib/orderDue';
+import ArchivedOrders from '../features/workOrders/ArchivedOrders';
+
+/** El archivo no es un estatus: es otra vista de la misma pantalla. */
+const ARCHIVED = 'archivadas';
 import { checkUsPlate, checkVin } from '../lib/vin';
 import type { WorkOrder, Customer, Vehicle, UserProfile } from '../types/database';
 import { Plus, Search, Eye, Car, Calendar, Trash2, ChevronRight, ChevronDown, Wrench } from 'lucide-react';
@@ -39,6 +44,17 @@ export default function WorkOrders() {
   // resto del tablero), así que el teléfono cargaba cuatro copias del marcado
   // para mostrar dos.
   const isMobile = useIsMobile();
+  // Un rótulo accesible además del color: el color solo no es información.
+  const dueLabel = (state: DueState) =>
+    state === 'vencida' ? t('workOrders.dueOverdue') : state === 'hoy' ? t('workOrders.dueToday') : t('workOrders.dueSoon');
+  const dueClass = (o: WorkOrder) => {
+    const state = orderDueState(o);
+    return state ? `due-${state}` : undefined;
+  };
+  const dueTitle = (o: WorkOrder) => {
+    const state = orderDueState(o);
+    return state ? dueLabel(state) : undefined;
+  };
 
   const form = useWorkOrderForm();
   const mediaUploads = useMediaUploads();
@@ -107,7 +123,7 @@ export default function WorkOrders() {
   const statusLabels: Record<string, string> = {
     recepcion: t('workOrders.intake'),
     en_proceso: t('workOrders.inProgress'),
-    espera_repuestos: t('workOrders.waitingParts'),
+    espera_autorizacion: t('workOrders.waitingAuthorization'),
     finalizado: t('workOrders.completed'),
     entregado: t('workOrders.delivered'),
   };
@@ -380,7 +396,7 @@ export default function WorkOrders() {
                 <span style={{ fontSize: 'var(--font-size-xs)', minWidth: 28 }}>{order.porcentaje_avance}%</span>
               </div>
               <div className="workorder-card-footer">
-                <span>
+                <span className={dueClass(order)} title={dueTitle(order)}>
                   <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
                   {order.fecha_estimada_entrega}
                 </span>
@@ -453,8 +469,8 @@ export default function WorkOrders() {
                       <span style={{ fontSize: 'var(--font-size-xs)', minWidth: 28 }}>{order.porcentaje_avance}%</span>
                     </div>
                   </td>
-                  <td style={{ fontSize: 'var(--font-size-sm)' }}>
-                    <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle', color: 'var(--color-text-tertiary)' }} />
+                  <td style={{ fontSize: 'var(--font-size-sm)' }} className={dueClass(order)} title={dueTitle(order)}>
+                    <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
                     {order.fecha_estimada_entrega}
                   </td>
                   {isAdmin && (
@@ -512,20 +528,25 @@ export default function WorkOrders() {
           <input className="form-input" placeholder={t('common.search')} value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 36 }} />
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-1)', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 }}>
-          {['all', 'recepcion', 'en_proceso', 'espera_repuestos', 'finalizado', 'entregado'].map((status) => (
+          {['all', 'recepcion', 'en_proceso', 'espera_autorizacion', 'finalizado', 'entregado', ARCHIVED].map((status) => (
             <button
               key={status}
               className={`tab ${filterStatus === status ? 'active' : ''}`}
               onClick={() => setFilterStatus(status)}
               style={{ borderBottom: 'none', padding: 'var(--space-2) var(--space-3)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-sm)', flexShrink: 0 }}
             >
-              {status === 'all' ? t('common.all') : statusLabels[status]}
+              {status === 'all' ? t('common.all') : status === ARCHIVED ? t('workOrders.archived') : statusLabels[status]}
             </button>
           ))}
         </div>
       </div>
 
-      {loading ? (
+      {filterStatus === ARCHIVED ? (
+        <>
+          <p className="field-hint" style={{ marginBottom: 'var(--space-3)' }}>{t('workOrders.archivedHint')}</p>
+          <ArchivedOrders sedeId={sedeId} isAdmin={isAdmin} onOpen={detail.open} />
+        </>
+      ) : loading ? (
         <div className="loading-state"><div className="spinner" /></div>
       ) : isAdmin ? (
         renderOrderList(filtered)

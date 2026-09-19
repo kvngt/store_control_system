@@ -27,7 +27,19 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
   acción de técnico que cambie otra columna de `ordenes_trabajo`, añádela a la
   lista permitida de ese trigger en una migración nueva. Al **insertar** una orden,
   `trg_guard_order_insert` fuerza recepción, avance 0, sin firma y el número del
-  sistema para quien no es admin.
+  sistema para quien no es admin. **Tampoco elige cualquier estado**: solo
+  `en_proceso`, `espera_autorizacion` y `finalizado`; devolver una orden a recepción y
+  entregarla son de administración.
+- **Pedir autorización exige un motivo.** `espera_autorizacion` (antes "espera de
+  repuestos") es donde el técnico dice que encontró algo que hay que cotizar, y la base
+  rechaza el estado sin `ordenes_trabajo.motivo_autorizacion`. Al salir del estado el
+  motivo se limpia. Cuando el cliente autoriza, `_resolver_presupuesto` devuelve la orden
+  a `en_proceso` sola.
+- **El técnico puede tachar una mano de obra hecha**, pero `orden_labor` sigue siendo
+  escritura solo de admin: se hace por la RPC `marcar_labor_completada`, que solo toca
+  `completado_en`/`completado_por` y solo sobre una línea `aprobado`. Si necesitas que un
+  técnico escriba algo más de una tabla de dinero, otra RPC estrecha, nunca una política
+  más laxa.
 - **Solo la primera firma de la orden autoriza lo cotizado** (`trg_quote_on_signature`).
   Volver a firmar no aprueba nada: lo agregado después pasa por presupuesto o por
   "Registrar autorización".
@@ -47,6 +59,15 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
   `registrar_autorizacion`, `cancelar_presupuesto` o la firma de recepción (bandera
   `restorify.presupuesto`). Si agregas un cálculo de dinero sobre líneas, filtra por
   `aprobado`.
+- **Un avance puede ser visible para el cliente.** `orden_avances.visible_cliente` lo
+  marca el técnico, y con él salen su texto y sus archivos (`trg_publicar_archivos_avance`
+  y la herencia en `trg_prepare_orden_media`). Ya no es cierto que todo lo del técnico sea
+  interno hasta que un admin lo publique. Lo que **sigue** siendo cierto: al cliente no le
+  llega el nombre de ningún técnico, y el archivo suelto lo publica solo un admin.
+- **La lista de órdenes no trae el histórico.** `getWorkOrders` excluye las entregadas de
+  más de 90 días; el archivo se pide con `getArchivedWorkOrders`, paginado y buscando en
+  el servidor. No le quites el filtro para "ver todo": es lo que evita descargar miles de
+  órdenes con sus relaciones embebidas.
 - **El portal del cliente (`src/portal/`) es un paquete aparte.** No importes ahí
   nada que arrastre `lib/supabase`, `services/`, contextos de la app ni
   `i18n/translations.ts`: habla con la edge function `portal` por `fetch` y tiene

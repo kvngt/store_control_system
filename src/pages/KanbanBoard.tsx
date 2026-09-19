@@ -9,12 +9,14 @@ import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
 import type { OrderStatus, WorkOrder } from '../types/database';
+import AuthorizationReasonModal from '../features/workOrders/AuthorizationReasonModal';
+import { orderDueState, type DueState } from '../lib/orderDue';
 import { Calendar, Gauge } from 'lucide-react';
 
 const COLUMNS: { status: OrderStatus; emoji: string }[] = [
   { status: 'recepcion', emoji: '📥' },
   { status: 'en_proceso', emoji: '⚙️' },
-  { status: 'espera_repuestos', emoji: '⏳' },
+  { status: 'espera_autorizacion', emoji: '⏳' },
   { status: 'finalizado', emoji: '✅' },
   { status: 'entregado', emoji: '🚗' },
 ];
@@ -37,8 +39,8 @@ export default function KanbanBoard() {
   // refuses, so a drag on shop wifi feels immediate. React Query holds the
   // pre-move list in `context` for exactly that rollback.
   const move = useMutation({
-    mutationFn: ({ orderId, status }: { orderId: string; status: OrderStatus }) =>
-      workOrdersService.updateWorkOrderStatus(orderId, status),
+    mutationFn: ({ orderId, status, motivo }: { orderId: string; status: OrderStatus; motivo?: string }) =>
+      workOrdersService.updateWorkOrderStatus(orderId, status, motivo),
     onMutate: async ({ orderId, status }) => {
       // Stop an in-flight refetch from landing on top of the optimistic write.
       await queryClient.cancelQueries({ queryKey: boardKey });
@@ -66,6 +68,12 @@ export default function KanbanBoard() {
   // teléfono ese desplegable es la única forma de mover una tarjeta — el
   // arrastre de HTML5 no existe en táctil — así que era la ruta normal.
   const [moveEpoch, setMoveEpoch] = useState(0);
+  // Qué orden está esperando que alguien escriba su motivo. El tablero es la ruta táctil
+  // del taller, así que pedir autorización tiene que poder hacerse desde aquí.
+  const [askingReasonFor, setAskingReasonFor] = useState<string | null>(null);
+  // Un rótulo accesible además del color: el color solo no es información.
+  const dueLabel = (state: DueState) =>
+    state === 'vencida' ? t('workOrders.dueOverdue') : state === 'hoy' ? t('workOrders.dueToday') : t('workOrders.dueSoon');
 
   // Both errors are held raw and translated here, never at fetch time: that is
   // what keeps switching the UI language from re-querying the whole board.
@@ -76,7 +84,7 @@ export default function KanbanBoard() {
   const statusLabels: Record<OrderStatus, string> = {
     recepcion: t('workOrders.intake'),
     en_proceso: t('workOrders.inProgress'),
-    espera_repuestos: t('workOrders.waitingParts'),
+    espera_autorizacion: t('workOrders.waitingAuthorization'),
     finalizado: t('workOrders.completed'),
     entregado: t('workOrders.delivered'),
   };
@@ -87,7 +95,7 @@ export default function KanbanBoard() {
     const grouped: Record<OrderStatus, WorkOrder[]> = {
       recepcion: [],
       en_proceso: [],
-      espera_repuestos: [],
+      espera_autorizacion: [],
       finalizado: [],
       entregado: [],
     };
@@ -145,6 +153,10 @@ export default function KanbanBoard() {
     }
     if (order.estatus === 'entregado' && !confirm(t('workOrders.confirmUndeliver'))) {
       discard();
+      return;
+    }
+    if (status === 'espera_autorizacion') {
+      setAskingReasonFor(orderId);
       return;
     }
 
@@ -309,7 +321,10 @@ export default function KanbanBoard() {
                             </>
                           )}
                         </div>
-                        <div className="kanban-card-date">
+                        <div
+                          className={['kanban-card-date', orderDueState(order) ? `due-${orderDueState(order)}` : ''].filter(Boolean).join(' ')}
+                          title={orderDueState(order) ? dueLabel(orderDueState(order)!) : undefined}
+                        >
                           <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
                           {order.fecha_estimada_entrega}
                         </div>
@@ -339,6 +354,19 @@ export default function KanbanBoard() {
           );
         })}
       </div>
+      {askingReasonFor && (
+        <AuthorizationReasonModal
+          saving={move.isPending}
+          onCancel={() => {
+            setAskingReasonFor(null);
+            setMoveEpoch((n) => n + 1);
+          }}
+          onConfirm={(motivo) => {
+            move.mutate({ orderId: askingReasonFor, status: 'espera_autorizacion', motivo });
+            setAskingReasonFor(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test/renderWithProviders';
 import LaborTable from './LaborTable';
 import type { LaborItem } from '../../types/database';
@@ -20,7 +21,7 @@ const noop = vi.fn(async () => {});
 
 describe('LaborTable con estados', () => {
   it('suma solo lo autorizado y muestra aparte lo que falta autorizar', () => {
-    renderWithProviders(<LaborTable items={items} canEdit busy={false} onAdd={noop} onUpdate={noop} onRemove={noop} />);
+    renderWithProviders(<LaborTable items={items} canEdit busy={false} onAdd={noop} onUpdate={noop} onRemove={noop} canComplete={false} onToggleComplete={vi.fn()} />);
 
     const totalCell = screen.getAllByText('$100.00').find((el) => el.getAttribute('data-label'));
     expect(totalCell).toBeTruthy();
@@ -29,7 +30,7 @@ describe('LaborTable con estados', () => {
   });
 
   it('marca cada estado y bloquea la edición de lo que espera al cliente', () => {
-    renderWithProviders(<LaborTable items={items} canEdit busy={false} onAdd={noop} onUpdate={noop} onRemove={noop} />);
+    renderWithProviders(<LaborTable items={items} canEdit busy={false} onAdd={noop} onUpdate={noop} onRemove={noop} canComplete={false} onToggleComplete={vi.fn()} />);
 
     expect(screen.getByText('Esperando al cliente')).toBeInTheDocument();
     expect(screen.getByText('No realizar')).toBeInTheDocument();
@@ -43,8 +44,38 @@ describe('LaborTable con estados', () => {
   });
 
   it('un técnico ve los estados sin controles', () => {
-    renderWithProviders(<LaborTable items={items} canEdit={false} busy={false} onAdd={noop} onUpdate={noop} onRemove={noop} />);
+    renderWithProviders(<LaborTable items={items} canEdit={false} busy={false} onAdd={noop} onUpdate={noop} onRemove={noop} canComplete={false} onToggleComplete={vi.fn()} />);
     expect(screen.getByText('No realizar')).toBeInTheDocument();
     expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  // Tachar el trabajo es del técnico asignado, así que el control existe aunque no pueda
+  // cotizar. Solo sobre lo que el cliente autorizó: marcar una línea rechazada la
+  // devolvería a borrador y reviviría en el siguiente presupuesto.
+  it('ofrece tachar solo las líneas aprobadas, también a quien no puede cotizar', () => {
+    const toggle = vi.fn();
+    renderWithProviders(
+      <LaborTable items={items} canEdit={false} busy={false} onAdd={noop} onUpdate={noop} onRemove={noop} canComplete onToggleComplete={toggle} />
+    );
+
+    const aprobada = screen.getByText('Diagnóstico').closest('tr')!;
+    expect(within(aprobada).getAllByRole('button')).toHaveLength(1);
+    for (const desc of ['Frenos', 'Pintura', 'Alineación']) {
+      expect(within(screen.getByText(desc).closest('tr')!).queryAllByRole('button')).toHaveLength(0);
+    }
+  });
+
+  it('avisa de qué línea se marcó y cuenta las hechas', async () => {
+    const toggle = vi.fn();
+    const hechas = [{ ...items[0], completado_en: new Date().toISOString() }, ...items.slice(1)];
+    renderWithProviders(
+      <LaborTable items={hechas} canEdit={false} busy={false} onAdd={noop} onUpdate={noop} onRemove={noop} canComplete onToggleComplete={toggle} />
+    );
+
+    expect(screen.getByText('Diagnóstico').closest('tr')).toHaveClass('line-done');
+    expect(screen.getByText('1 / 1')).toBeInTheDocument();
+
+    await userEvent.click(within(screen.getByText('Diagnóstico').closest('tr')!).getByRole('button'));
+    expect(toggle).toHaveBeenCalledWith(hechas[0]);
   });
 });

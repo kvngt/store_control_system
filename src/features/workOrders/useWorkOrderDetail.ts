@@ -13,7 +13,7 @@ import { customerPortalService } from '../../services/customerPortal.service';
 import { reportAssetPaths } from '../../lib/reportMedia';
 import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';
-import type { OrderMedia, OrderStatus, PreparedMedia, UserProfile, WorkOrder } from '../../types/database';
+import type { LaborItem, OrderMedia, OrderProgressUpdate, OrderStatus, PreparedMedia, UserProfile, WorkOrder } from '../../types/database';
 
 interface UseWorkOrderDetailOptions {
   /**
@@ -62,6 +62,11 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // eligió — "Entregado" en una orden que no se entregó. Y esa lista es
   // justamente la ruta táctil, porque en un teléfono no hay arrastre.
   const [statusEpoch, setStatusEpoch] = useState(0);
+  // Pedir autorización necesita un motivo, así que el cambio de estado se parte en dos:
+  // el <select> abre el diálogo y el diálogo hace el UPDATE.
+  const [askingAuthReason, setAskingAuthReason] = useState(false);
+  // El avance que está por publicarse. El diálogo muestra su texto como lo verá el cliente.
+  const [publishingProgress, setPublishingProgress] = useState<OrderProgressUpdate | null>(null);
 
   const isAdmin = user?.rol === 'admin';
 
@@ -152,6 +157,10 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // estatus que no fuera `en_proceso`, así que nadie podía bajarlo.
   const canEditProgress = canEdit && !isComplete;
 
+  // Tachar un trabajo hecho es del técnico asignado además del admin: es lo único que
+  // escribe sobre una línea de dinero, y solo para decir que ya se hizo.
+  const canCompleteLabor = canEdit;
+
   // Entregar asienta el ingreso del trabajo y devenga las comisiones. Es una
   // decisión de administración, no un paso del taller: un técnico asignado podía
   // mover la orden a "entregado" y con eso acreditarse su propia comisión.
@@ -208,6 +217,10 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
       discard();
       return;
     }
+    if (status === 'espera_autorizacion') {
+      setAskingAuthReason(true);
+      return;
+    }
 
     try {
       await workOrdersService.updateWorkOrderStatus(order.id, status);
@@ -215,6 +228,73 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     } catch (err) {
       discard();
       fail(err);
+    }
+  };
+
+  const submitAuthReason = async (motivo: string) => {
+    if (!order) return;
+    setBusy(true);
+    try {
+      await workOrdersService.updateWorkOrderStatus(order.id, 'espera_autorizacion', motivo);
+      setAskingAuthReason(false);
+      await refresh();
+    } catch (err) {
+      fail(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Cancelar deja el <select> mostrando el estado real, no el que no llegó a guardarse.
+  const cancelAuthReason = () => {
+    setAskingAuthReason(false);
+    setStatusEpoch((n) => n + 1);
+  };
+
+  // Publicar pasa por el diálogo; dejar de publicar es inmediato, porque quitar algo de la
+  // vista del cliente nunca es el movimiento peligroso.
+  const toggleProgressVisibility = async (entry: OrderProgressUpdate) => {
+    if (!entry.visible_cliente) {
+      setPublishingProgress(entry);
+      return;
+    }
+    setBusy(true);
+    try {
+      await workOrdersService.setProgressVisibility(entry.id, false);
+      await refresh(false);
+    } catch (err) {
+      fail(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmPublishProgress = async (descripcion: string) => {
+    if (!publishingProgress) return;
+    setBusy(true);
+    try {
+      await workOrdersService.setProgressVisibility(publishingProgress.id, true, descripcion);
+      setPublishingProgress(null);
+      showToast('success', t('workOrders.progressPublished'));
+      await refresh(false);
+    } catch (err) {
+      fail(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleLaborComplete = async (item: LaborItem) => {
+    if (!order) return;
+    setBusy(true);
+    try {
+      await workOrdersService.setLaborCompleted(item.id, !item.completado_en);
+      // Sin recargar el tablero: no cambian totales ni estado de la orden.
+      await refresh(false);
+    } catch (err) {
+      fail(err);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -536,6 +616,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     busy,
     error,
     canEdit,
+    canCompleteLabor,
     canResign,
     canEditProgress,
     canDeliver,
@@ -548,6 +629,13 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     isComplete,
     isDelivered,
     statusEpoch,
+    askingAuthReason,
+    publishingProgress,
+    toggleProgressVisibility,
+    confirmPublishProgress,
+    cancelPublishProgress: () => setPublishingProgress(null),
+    submitAuthReason,
+    cancelAuthReason,
     progressDraft,
     setProgressDraft,
     savingSignature,
@@ -556,6 +644,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     open,
     close,
     changeStatus,
+    toggleLaborComplete,
     changeProgress,
     addLabor,
     updateLabor,

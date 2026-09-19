@@ -118,8 +118,8 @@ test.describe('WORK-03 | Búsqueda y filtros de estado', () => {
     // Status filter buttons use the .tab class
     const filterBtns = page.locator('button.tab');
     await expect(filterBtns.first()).toBeVisible({ timeout: 8000 });
-    // Should have 6 tabs (all + 5 statuses)
-    await expect(filterBtns).toHaveCount(6, { timeout: 5000 });
+    // Todas + los 5 estados + Archivadas, que es un modo aparte y no un estatus.
+    await expect(filterBtns).toHaveCount(7, { timeout: 5000 });
   });
 });
 

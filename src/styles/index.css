@@ -54,7 +54,11 @@
   /* Status Colors for Work Orders */
   --color-status-recepcion: #8B5CF6;
   --color-status-en-proceso: #3B82F6;
-  --color-status-espera: #F59E0B;
+  --color-status-autorizacion: #F59E0B;
+  /* Cuánto aprieta la fecha estimada de entrega de una orden. */
+  --color-due-vencida: #EF4444;
+  --color-due-hoy: #F59E0B;
+  --color-due-proxima: #FBBF24;
   --color-status-finalizado: #10B981;
   --color-status-entregado: #6B7280;
 
@@ -176,7 +180,8 @@
 :root[data-theme='light'] .badge-recepcion { color: #7C3AED; }
 :root[data-theme='light'] .badge-en_proceso,
 :root[data-theme='light'] .badge-mecanica { color: #2563EB; }
-:root[data-theme='light'] .badge-espera_repuestos { color: #B45309; }
+:root[data-theme='light'] .badge-espera_autorizacion,
+:root[data-theme='light'] .badge-warn { color: #B45309; }
 :root[data-theme='light'] .badge-finalizado { color: #059669; }
 :root[data-theme='light'] .badge-entregado { color: #4B5563; }
 :root[data-theme='light'] .badge-pintura { color: #DB2777; }

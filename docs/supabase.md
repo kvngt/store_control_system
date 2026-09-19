@@ -160,7 +160,7 @@ Las 22 tienen **RLS activado**. Columnas y relaciones: [arquitectura.md §4](arq
 | | `cola_envios` | Cola de push y correos con su estado | **Solo admin** (los correos) |
 
 **Tipos enumerados:** `user_role` (admin, mecanico, pintor), `order_status` (recepcion,
-en_proceso, espera_repuestos, finalizado, entregado), `work_type` (mecanica, pintura,
+en_proceso, espera_autorizacion, finalizado, entregado), `work_type` (mecanica, pintura,
 combinado), `task_status` (pendiente, en_curso, completada), `transaction_type` (ingreso,
 egreso), `transaction_category` (pago_cliente, compra_repuesto, planilla, gasto_operativo).
 

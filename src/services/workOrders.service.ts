@@ -12,12 +12,25 @@ import type {
   WorkOrderPart,
 } from '../types/database';
 import { mediaPath } from '../lib/media/mime';
-import { assertDeleted, fetchAll } from './support';
+import { assertAffected, assertDeleted, fetchAll } from './support';
+import { daysFromTodayLocal } from '../lib/dates';
+
+/** Desde cuándo una orden entregada deja el tablero y pasa al archivo. */
+const ARCHIVE_DAYS = 90;
 import { mediaService } from './media.service';
 import { quotesService } from './quotes.service';
 
 export const workOrdersService = {
+  // El tablero deja de arrastrar el histórico: una orden entregada hace tres años
+  // competía con las activas en la lista, en el Kanban y en el buscador, y venía con su
+  // cliente, su vehículo y sus asignaciones embebidos. Las entregadas de más de 90 días se
+  // piden aparte, en `getArchivedWorkOrders`.
+  //
+  // El `fecha_finalizacion.is.null` del `or` no es decorativo: una orden 'entregado' sin
+  // fecha existe (el trigger de progreso no la escribe, solo lo hace el servicio), y sin esa
+  // cláusula desaparecería de las dos listas.
   getWorkOrders: async (sedeId?: string) => {
+    const corte = daysFromTodayLocal(-ARCHIVE_DAYS);
     // `montos` llega en null para mecánicos y pintores: `orden_montos` es solo
     // admin por RLS, y PostgREST resuelve un embed bloqueado como vacío en vez de
     // fallar. Una sola consulta sirve a los dos roles.
@@ -30,6 +43,9 @@ export const workOrdersService = {
         asignaciones:orden_asignaciones(*, usuario:perfiles(*))
       `).order('creado_en', { ascending: false }).order('id');
       if (sedeId) query = query.eq('sede_id', sedeId);
+      query = query.or(
+        `estatus.neq.entregado,fecha_finalizacion.is.null,fecha_finalizacion.gte.${corte}`
+      );
       return query.range(from, to);
     };
 
@@ -40,6 +56,42 @@ export const workOrdersService = {
       quotesService.waitingOrderIds().catch(() => new Set<string>()),
     ]);
     return data.map((order) => ({ ...order, esperando_autorizacion: waiting.has(order.id) }));
+  },
+
+  /**
+   * Las órdenes archivadas: entregadas hace más de 90 días.
+   *
+   * Con `limit` y "cargar más" en vez de `fetchAll`, y buscando **en el servidor**: es la
+   * lista que crece sin fin, y traérsela entera sería recrear al otro lado del filtro el
+   * problema que este filtro resuelve. Embeds mínimos por lo mismo.
+   */
+  getArchivedWorkOrders: async (
+    sedeId: string | undefined,
+    { search = '', limit = 25, offset = 0 }: { search?: string; limit?: number; offset?: number } = {}
+  ) => {
+    const corte = daysFromTodayLocal(-ARCHIVE_DAYS);
+    let query = supabase
+      .from('ordenes_trabajo')
+      .select(`
+        id, numero_orden, estatus, tipo_trabajo, fecha_finalizacion, fecha_estimada_entrega,
+        montos:orden_montos(total_general),
+        cliente:clientes(nombre),
+        vehiculo:vehiculos(marca, modelo, anio, placa)
+      `)
+      .eq('estatus', 'entregado')
+      .lt('fecha_finalizacion', corte)
+      .order('fecha_finalizacion', { ascending: false })
+      .order('id');
+    if (sedeId) query = query.eq('sede_id', sedeId);
+    const termino = search.trim();
+    if (termino) {
+      // En el servidor: el archivo no está en memoria, así que filtrarlo en el cliente
+      // solo buscaría dentro de la página que se pidió.
+      query = query.or(`numero_orden.ilike.%${termino}%,clientes.nombre.ilike.%${termino}%`);
+    }
+    const { data, error } = await query.range(offset, offset + limit - 1);
+    if (error) throw error;
+    return (data || []) as unknown as WorkOrder[];
   },
 
   getWorkOrderDetail: async (orderId: string) => {
@@ -118,13 +170,41 @@ export const workOrdersService = {
     return data as WorkOrder;
   },
 
-  updateWorkOrderStatus: async (orderId: string, estatus: OrderStatus) => {
+  // `motivo` solo viaja hacia "espera de autorización", que es el único estado que lo
+  // exige (la base responde 42501 sin él). Al salir de ese estado no hay que mandar nada:
+  // el trigger limpia el motivo, porque dejarlo puesto mostraría un banner que ya no es
+  // cierto.
+  updateWorkOrderStatus: async (orderId: string, estatus: OrderStatus, motivo?: string) => {
     const isClosed = estatus === 'finalizado' || estatus === 'entregado';
     const updates: Record<string, unknown> = isClosed
       ? { estatus, fecha_finalizacion: new Date().toISOString(), porcentaje_avance: 100 }
       : { estatus, fecha_finalizacion: null };
+    if (estatus === 'espera_autorizacion') updates.motivo_autorizacion = motivo ?? null;
 
     const { error } = await supabase.from('ordenes_trabajo').update(updates).eq('id', orderId);
+    if (error) throw error;
+  },
+
+  // Por RPC y no con un UPDATE: `orden_labor` es escritura solo de admin, y así sigue.
+  // La función comprueba por dentro la asignación y toca dos columnas, nada más.
+  // El texto y la visibilidad viajan juntos porque el diálogo deja corregir la nota antes
+  // de publicarla: es el mismo campo que lee el taller.
+  //
+  // Una política que no deja pasar la fila devuelve 0 filas SIN error, así que se pide la
+  // fila de vuelta para no reportar un éxito que no ocurrió.
+  setProgressVisibility: async (id: string, visible: boolean, descripcion?: string) => {
+    const updates: Record<string, unknown> = { visible_cliente: visible };
+    if (descripcion !== undefined) updates.descripcion = descripcion;
+    const { data, error } = await supabase.from('orden_avances').update(updates).eq('id', id).select('id');
+    if (error) throw error;
+    assertAffected(data, 'el avance');
+  },
+
+  setLaborCompleted: async (laborId: string, completado: boolean) => {
+    const { error } = await supabase.rpc('marcar_labor_completada', {
+      p_labor_id: laborId,
+      p_completado: completado,
+    });
     if (error) throw error;
   },
 

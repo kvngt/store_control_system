@@ -12,7 +12,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(21);
+SELECT plan(27);
 
 -- ------------------------------------------------------------------------------------
 -- Datos de prueba
@@ -218,6 +218,48 @@ SELECT results_eq(
   $$ SELECT origen, visible_cliente FROM orden_media ORDER BY origen $$,
   $$ VALUES ('avance'::text, false), ('recepcion'::text, true) $$,
   'La recepción nace visible al cliente; lo del técnico, interno aunque lo pida'
+);
+
+-- Publicar el avance arrastra los archivos que ya tenía. El técnico nunca escribe
+-- orden_media (su política de UPDATE exige admin): actualiza su avance y la base propaga.
+SELECT lives_ok(
+  $$ UPDATE orden_avances SET visible_cliente = true
+     WHERE id = 'e0000000-0000-0000-0000-000000000001' $$,
+  'La técnica muestra su avance al cliente'
+);
+
+SELECT is(
+  (SELECT visible_cliente FROM orden_media WHERE origen = 'avance'),
+  true,
+  'Publicar el avance publica el video que ya estaba subido'
+);
+
+-- El caso normal, no el raro: la cola de subida vive en el teléfono y un video aterriza
+-- minutos después de guardarse el avance. Si naciera interno, el cliente no lo vería.
+SELECT lives_ok(
+  $$ INSERT INTO orden_media (orden_id, avance_id, tipo, origen, ruta, mime, bytes)
+     SELECT id, 'e0000000-0000-0000-0000-000000000001', 'foto', 'avance',
+            '10000000-0000-0000-0000-000000000001/' || id || '/foto-avance.jpg', 'image/jpeg', 2000
+     FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002' $$,
+  'Sube una foto más al avance ya publicado'
+);
+
+SELECT is(
+  (SELECT visible_cliente FROM orden_media WHERE ruta LIKE '%foto-avance.jpg'),
+  true,
+  'Un archivo que llega después hereda la visibilidad de su avance'
+);
+
+SELECT lives_ok(
+  $$ UPDATE orden_avances SET visible_cliente = false
+     WHERE id = 'e0000000-0000-0000-0000-000000000001' $$,
+  'Y lo puede dejar de mostrar'
+);
+
+SELECT is(
+  (SELECT COUNT(*)::int FROM orden_media WHERE origen = 'avance' AND visible_cliente),
+  0,
+  'Despublicar el avance oculta todos sus archivos'
 );
 
 SELECT throws_ok(

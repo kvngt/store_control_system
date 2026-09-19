@@ -10,7 +10,7 @@ export type WorkType = 'mecanica' | 'pintura' | 'combinado';
 export type OrderStatus =
   | 'recepcion'
   | 'en_proceso'
-  | 'espera_repuestos'
+  | 'espera_autorizacion'
   | 'finalizado'
   | 'entregado';
 

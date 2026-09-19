@@ -501,3 +501,28 @@
     font-size: var(--font-size-xl);
   }
 }
+
+/* Los avances que el taller decidió mostrar: cada uno con su fecha, su texto y sus
+   archivos. Sin autor — al cliente no se le nombran los técnicos. */
+.portal-updates {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.portal-update {
+  border-left: 3px solid var(--color-surface-border);
+  padding-left: 14px;
+}
+
+.portal-update-date {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+.portal-update-text {
+  margin: 4px 0 10px;
+  line-height: 1.6;
+  white-space: pre-line;
+}

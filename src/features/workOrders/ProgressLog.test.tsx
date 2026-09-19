@@ -43,6 +43,7 @@ function renderLog(overrides: Partial<Parameters<typeof ProgressLog>[0]> = {}) {
     userId: 'user-mecanico',
     onAdd: vi.fn(async () => true),
     onRemove: vi.fn(async () => {}),
+    onToggleEntryVisibility: vi.fn(),
     onToggleVisibility: vi.fn(),
     onDeleteMedia: vi.fn(),
     ...overrides,

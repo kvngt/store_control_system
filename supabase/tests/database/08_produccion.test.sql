@@ -12,7 +12,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(18);
+SELECT plan(22);
 
 -- ------------------------------------------------------------------------------------
 -- Datos de prueba
@@ -174,6 +174,41 @@ SELECT throws_ok(
      WHERE sede_id = '10000000-0000-0000-0000-000000000001' $$,
   '23514', NULL,
   'El avance de una orden no puede pasar de 100'
+);
+
+-- ------------------------------------------------------------------------------------
+-- Recordatorio de órdenes que pasaron su fecha de entrega
+-- ------------------------------------------------------------------------------------
+RESET ROLE;
+UPDATE ordenes_trabajo SET fecha_estimada_entrega = (NOW() AT TIME ZONE 'America/Chicago')::date - 3,
+                           estatus = 'en_proceso'
+WHERE sede_id = '10000000-0000-0000-0000-000000000001';
+
+SELECT is(
+  (SELECT recordar_ordenes_vencidas()),
+  1,
+  'El barrido avisa de la orden atrasada'
+);
+
+SELECT ok(
+  (SELECT cuerpo LIKE '3 día(s)%' FROM notificaciones WHERE tipo = 'orden_vencida' LIMIT 1),
+  'El aviso dice cuántos días lleva de retraso'
+);
+
+-- Una vez al día como mucho: si no, el taller aprende a ignorarlo.
+SELECT is(
+  (SELECT recordar_ordenes_vencidas()),
+  0,
+  'El mismo día no vuelve a avisar'
+);
+
+-- El trabajo se acabó: una orden entregada con la fecha pasada no es un retraso.
+UPDATE ordenes_trabajo SET estatus = 'entregado', recordado_entrega_en = NULL
+WHERE sede_id = '10000000-0000-0000-0000-000000000001';
+SELECT is(
+  (SELECT recordar_ordenes_vencidas()),
+  0,
+  'Una orden entregada no genera recordatorio'
 );
 
 SELECT * FROM finish();

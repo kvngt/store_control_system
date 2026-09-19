@@ -118,6 +118,19 @@ if (ctx.TOKEN_TECH) {
     ctx.ORDEN_ENTREGADA ||= list.find((o) => mine(o) && o.estatus === 'entregado')?.id;
     ctx.ORDEN_AJENA ||= list.find((o) => !mine(o) && o.estatus !== 'entregado')?.id;
     ctx.ORDEN_ROW = list.find((o) => o.id === ctx.ORDEN);
+
+    const lineaDe = async (ordenId) => {
+      if (!ordenId) return undefined;
+      const r = await call(
+        'GET',
+        `/rest/v1/orden_labor?select=id&estado=eq.aprobado&orden_id=eq.${ordenId}&limit=1`,
+        { token: ctx.TOKEN_TECH }
+      );
+      return r.json?.[0]?.id;
+    };
+    ctx.LABOR ||= await lineaDe(ctx.ORDEN);
+    ctx.LABOR_AJENA ||= await lineaDe(ctx.ORDEN_AJENA);
+    ctx.LABOR_ENTREGADA ||= await lineaDe(ctx.ORDEN_ENTREGADA);
   }
 }
 
@@ -180,7 +193,18 @@ const CASES = [
   tech({ id: 'SEC-53', desc: 'Un técnico no saca una orden de Entregado', needs: ['ORDEN_ENTREGADA'], method: 'PATCH', path: (c) => `/rest/v1/ordenes_trabajo?id=eq.${c.ORDEN_ENTREGADA}`, body: { estatus: 'finalizado' }, expect: 'denied' }),
   tech({ id: 'SEC-54', desc: 'Un técnico no agrega avances a una orden entregada', needs: ['ORDEN_ENTREGADA'], method: 'POST', path: () => '/rest/v1/orden_avances', body: (c) => ({ orden_id: c.ORDEN_ENTREGADA, descripcion: 'PRUEBA' }), expect: 'denied' }),
 
-  admin({ id: 'SEC-60', desc: 'Ni un admin aprueba una línea con un UPDATE', needs: ['ORDEN'], method: 'PATCH', path: (c) => `/rest/v1/orden_labor?orden_id=eq.${c.ORDEN}`, body: { estado: 'aprobado' }, headers: { Prefer: 'return=representation' }, expect: 'denied-or-empty' }),
+  anon({ id: 'SEC-56', desc: 'Sin sesión no se marca un trabajo como hecho', method: 'POST', path: () => rpc('marcar_labor_completada'), body: { p_labor_id: ZERO_UUID }, expect: 'denied' }),
+  tech({ id: 'SEC-57', desc: 'Un técnico no marca trabajo de una orden ajena', needs: ['LABOR_AJENA'], method: 'POST', path: () => rpc('marcar_labor_completada'), body: (c) => ({ p_labor_id: c.LABOR_AJENA }), expect: 'denied' }),
+  tech({ id: 'SEC-58', desc: 'Un técnico no marca trabajo de una orden entregada', needs: ['LABOR_ENTREGADA'], method: 'POST', path: () => rpc('marcar_labor_completada'), body: (c) => ({ p_labor_id: c.LABOR_ENTREGADA }), expect: 'denied' }),
+  tech({ id: 'SEC-59', desc: 'La columna nueva no abre orden_labor a un PATCH', needs: ['LABOR'], method: 'PATCH', path: (c) => `/rest/v1/orden_labor?id=eq.${c.LABOR}`, body: { completado_en: '2026-01-01T00:00:00Z' }, headers: { Prefer: 'return=representation' }, expect: 'denied-or-empty' }),
+  // El estado de una línea lo cambian el presupuesto, la firma o una autorización registrada,
+  // nunca un UPDATE a mano. Se pide un estado DISTINTO del actual a propósito: el trigger solo
+  // salta cuando el valor cambia, así que pedir 'aprobado' sobre una línea ya aprobada no
+  // probaba nada y pasaba o fallaba según cómo estuviera la orden de prueba.
+  anon({ id: 'SEC-63', desc: 'Sin sesión no se dispara el barrido de órdenes vencidas', method: 'POST', path: () => rpc('recordar_ordenes_vencidas'), expect: 'denied' }),
+  tech({ id: 'SEC-64', desc: 'Un técnico no dispara el barrido de órdenes vencidas', method: 'POST', path: () => rpc('recordar_ordenes_vencidas'), expect: 'denied' }),
+  admin({ id: 'SEC-65', desc: 'Ni un admin dispara el barrido de órdenes vencidas', method: 'POST', path: () => rpc('recordar_ordenes_vencidas'), expect: 'denied' }),
+  admin({ id: 'SEC-60', desc: 'Ni un admin cambia el estado de una línea con un UPDATE', needs: ['ORDEN'], method: 'PATCH', path: (c) => `/rest/v1/orden_labor?orden_id=eq.${c.ORDEN}&estado=neq.rechazado`, body: { estado: 'rechazado' }, headers: { Prefer: 'return=representation' }, expect: 'denied' }),
   admin({ id: 'SEC-61', desc: 'Ni un admin sube PDFs al bucket de reportes', method: 'POST', path: () => '/storage/v1/object/reportes/prueba-qa-security.pdf', body: '%PDF-1.4', headers: { 'Content-Type': 'application/pdf' }, expect: 'denied' }),
   admin({ id: 'SEC-62', desc: 'Ni un admin revierte cobros por RPC', method: 'POST', path: () => rpc('reverse_order_delivery_finance'), body: { target_order_id: ZERO_UUID }, expect: 'denied' }),
 ];

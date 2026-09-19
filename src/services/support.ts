@@ -36,6 +36,18 @@ export async function fetchAll<T>(
 // Without this the UI would say "deleted" and then redraw the row still there.
 // `.select('id')` makes the affected rows observable, so a no-op can be turned
 // into the same 42501 the error mapper already renders as "no tienes permiso".
+// Lo mismo para un UPDATE, que tiene el mismo agujero: una política que no deja pasar la
+// fila devuelve cero filas y ningún error, así que la pantalla diría "guardado" sobre algo
+// que no se guardó.
+export function assertAffected(rows: { id: string }[] | null, entity: string) {
+  if ((rows || []).length === 0) {
+    throw Object.assign(
+      new Error(`No se pudo guardar ${entity}: permiso denegado o el registro ya no existe.`),
+      { code: '42501' }
+    );
+  }
+}
+
 export function assertDeleted(rows: { id: string }[] | null, entity: string) {
   if ((rows || []).length === 0) {
     throw Object.assign(

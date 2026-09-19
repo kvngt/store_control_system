@@ -25,6 +25,12 @@ export interface WorkOrder {
   porcentaje_avance: number;
   /** Visible para toda la sede: la comisión del técnico sale de aquí. */
   total_labor: number;
+  /**
+   * Por qué la orden está en "espera de autorización": lo escribe el técnico al moverla,
+   * y es lo primero que el admin necesita leer antes de cotizar. La base lo exige para
+   * fijar ese estado y lo limpia al salir de él.
+   */
+  motivo_autorizacion?: string | null;
   creado_por: string;
   creado_en: string;
   // Virtual fields from joins
@@ -73,6 +79,11 @@ export interface OrderProgressUpdate {
   usuario_id: string;
   descripcion: string;
   creado_en: string;
+  /**
+   * Si el cliente ve este avance en su enlace. Lo marca el técnico, y con él salen su
+   * texto y sus archivos. Al cliente no le llega el autor.
+   */
+  visible_cliente?: boolean;
   // Virtual
   usuario?: UserProfile;
 }
@@ -86,6 +97,9 @@ export interface LaborItem {
   estado?: LineState;
   presupuesto_id?: string | null;
   creado_en?: string;
+  /** Cuándo se tachó el trabajo, y quién. Nulo = pendiente de hacer. */
+  completado_en?: string | null;
+  completado_por?: string | null;
 }
 
 export interface OrderAssignment {

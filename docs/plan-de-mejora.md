@@ -11,7 +11,7 @@ encontrados y plan de accion priorizado. Complementa la auditoria ya documentada
 > | Punto | Estado |
 > |---|---|
 > | B-01 / M-05 panel sin paginar | **Resuelto**: `resumen_panel` suma en la base (PRD-10) |
-> | B-02 / M-06 lista de órdenes | **Resuelto a medias**: se lee completa con `fetchAll` (PRD-11); paginar en pantalla sigue pendiente para miles de órdenes |
+> | B-02 / M-06 lista de órdenes | **Resuelto**: la lista activa excluye las entregadas de más de 90 días y el archivo se pide paginado, buscando en el servidor (`getArchivedWorkOrders`) |
 > | B-03 fecha en UTC | **No era error**: la columna es `timestamptz` |
 > | B-04, B-05 / M-03 borrados silenciosos | **Resuelto** (PRD-24) |
 > | B-06 `refreshUser` sin aviso | Abierto, menor |
@@ -630,3 +630,32 @@ npx playwright test e2e/qa-workorders.spec.ts --project=chromium
 documentacion en docs/, resultados de `npm run build`, `npm test` (274 pruebas),
 `npm run qa:security` (18 PASS / 0 FAIL / 33 SKIP) y revision de la auditoria
 de septiembre 2026.*
+
+---
+
+## Si el taller echa de menos "espera de repuestos"
+
+Al convertir ese estado en `espera_autorizacion` se perdió el único sitio donde el tablero
+decía "el cliente ya autorizó, estamos esperando que llegue la pieza". Se decidió vivir sin
+él para salir a producción; una orden así se queda en *En proceso* con un avance que lo
+explique.
+
+Devolverlo es **aditivo** y no migra datos. En una migración propia, porque Postgres no deja
+usar un valor de enum en la misma transacción que lo agrega:
+
+```sql
+ALTER TYPE public.order_status ADD VALUE 'espera_repuestos' AFTER 'espera_autorizacion';
+```
+
+Y después, en otra migración y en el frontend:
+
+1. `v_estados_tecnico` de `trg_guard_order_technician` y el `IN` de
+   `trg_portal_on_order_change` (si se quiere anunciar al cliente).
+2. `ordenes_por_estatus` de `resumen_panel` — son cinco pares literales.
+3. `ANNOUNCED_STATUSES` y el mapa `byStatus` de `_shared/email/templates.ts`.
+4. El tipo en `src/types/domain/enums.ts` **y** la unión propia del portal en
+   `src/portal/portal.types.ts`, más sus textos en `src/portal/strings.ts`.
+5. Etiquetas i18n, columna del Kanban, pestaña de la lista, panel y PDF.
+6. Clase `.badge-*` y `.kanban-column-header.*`, con su variable de color.
+
+Estimado: una migración y unas 2 horas de interfaz.

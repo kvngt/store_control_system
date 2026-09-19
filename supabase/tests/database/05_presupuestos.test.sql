@@ -15,7 +15,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(31);
+SELECT plan(32);
 
 -- ------------------------------------------------------------------------------------
 -- Datos de prueba
@@ -177,6 +177,10 @@ SELECT is(
   'Autorizar exige el nombre de quien autoriza'
 );
 
+-- El caso real: el mecánico la mandó a esperar autorización y el cliente responde.
+UPDATE ordenes_trabajo SET estatus = 'espera_autorizacion', motivo_autorizacion = 'Faltan pastillas'
+WHERE id = (SELECT id FROM t_orden);
+
 SELECT is(
   (SELECT responder_presupuesto_portal(
      (SELECT token FROM t_p), (SELECT id FROM t_p),
@@ -193,6 +197,11 @@ SELECT results_eq(
   'Cada línea queda como la decidió el cliente'
 );
 SELECT is((SELECT total_general FROM t_orden), 480.00::numeric, 'El total suma solo lo aprobado: 100 + 300 + 80');
+SELECT results_eq(
+  $$ SELECT estatus::text, motivo_autorizacion FROM t_orden $$,
+  $$ VALUES ('en_proceso'::text, NULL::text) $$,
+  'Autorizar saca la orden de espera de autorización y limpia el motivo'
+);
 SELECT results_eq(
   $$ SELECT respondido_via, respondido_por_nombre, ip, comentario_cliente, total_aprobado
      FROM presupuestos WHERE id = (SELECT id FROM t_p) $$,

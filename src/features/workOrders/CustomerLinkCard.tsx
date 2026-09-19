@@ -17,7 +17,7 @@ interface CustomerLinkCardProps {
 }
 
 const STATE_BADGE: Record<CustomerEmail['estado'], string> = {
-  pendiente: 'badge-espera_repuestos',
+  pendiente: 'badge-warn',
   procesando: 'badge-en_proceso',
   enviado: 'badge-finalizado',
   omitido: 'badge-entregado',

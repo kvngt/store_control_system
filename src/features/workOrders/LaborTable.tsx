@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Pencil, Plus, Trash2, Wrench, X } from 'lucide-react';
+import { Check, CheckCircle2, Circle, Pencil, Plus, Trash2, Wrench, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import type { LaborItem } from '../../types/database';
 import LineStateBadge from './LineStateBadge';
@@ -12,6 +12,12 @@ interface LaborTableProps {
   onAdd: (item: { descripcion: string; costo: number }) => Promise<void>;
   onUpdate: (id: string, item: { descripcion: string; costo: number }) => Promise<void>;
   onRemove: (id: string, descripcion: string) => Promise<void>;
+  /**
+   * Si se ofrece tachar el trabajo hecho. Es del técnico asignado, no solo del admin: por
+   * eso va aparte de `canEdit`, que gobierna cotizar.
+   */
+  canComplete: boolean;
+  onToggleComplete: (item: LaborItem) => void;
 }
 
 /**
@@ -20,7 +26,7 @@ interface LaborTableProps {
  * The row drafts live here rather than on the page: they are keystrokes in one
  * card, and nothing outside it ever needs to read them.
  */
-export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRemove }: LaborTableProps) {
+export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRemove, canComplete, onToggleComplete }: LaborTableProps) {
   const { t } = useLanguage();
   const [newDraft, setNewDraft] = useState({ descripcion: '', costo: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -32,6 +38,11 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
   const unauthorized = items
     .filter((l) => l.estado === 'borrador' || l.estado === 'pendiente')
     .reduce((sum, l) => sum + l.costo, 0);
+
+  // Solo se tacha lo autorizado, así que el conteo se mide contra eso y no contra todas
+  // las líneas: si no, el taller vería "2 de 5" con tres cosas que nadie aprobó.
+  const aprobadas = items.filter(isApproved);
+  const completadas = aprobadas.filter((l) => !!l.completado_en).length;
 
   // Se recorta a cero igual que en la tabla de repuestos. La labor era la única
   // cifra de dinero de la app que aceptaba un negativo, y sobre una orden ya
@@ -112,8 +123,31 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                   </td>
                 </tr>
               ) : (
-                <tr key={item.id} className={item.estado === 'rechazado' ? 'line-rejected' : undefined}>
+                <tr
+                  key={item.id}
+                  className={[
+                    item.estado === 'rechazado' ? 'line-rejected' : '',
+                    item.completado_en ? 'line-done' : '',
+                  ].filter(Boolean).join(' ') || undefined}
+                >
                   <td data-label={t('common.description')}>
+                    {/* Va en esta celda y no en la de acciones: esa solo existe para un
+                        admin, y tachar el trabajo es justamente del técnico. */}
+                    {canComplete && isApproved(item) && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm btn-icon labor-check"
+                        onClick={() => onToggleComplete(item)}
+                        disabled={busy}
+                        title={item.completado_en ? t('workOrders.unmarkCompleted') : t('workOrders.markCompleted')}
+                        aria-label={item.completado_en ? t('workOrders.unmarkCompleted') : t('workOrders.markCompleted')}
+                        aria-pressed={!!item.completado_en}
+                      >
+                        {item.completado_en
+                          ? <CheckCircle2 size={16} style={{ color: 'var(--color-success)' }} />
+                          : <Circle size={16} />}
+                      </button>
+                    )}
                     <span className="line-desc">{item.descripcion}</span> <LineStateBadge state={item.estado} />
                   </td>
                   <td data-label={t('common.total')} style={{ textAlign: 'right', fontWeight: 600 }}>${item.costo.toFixed(2)}</td>
@@ -156,6 +190,15 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
               </td>
               {canEdit && <td className="desktop-only"></td>}
             </tr>
+            {aprobadas.length > 0 && (
+              <tr>
+                <td className="desktop-only" style={{ color: 'var(--color-text-tertiary)' }}>{t('workOrders.laborCompletedCount')}</td>
+                <td data-label={t('workOrders.laborCompletedCount')} style={{ textAlign: 'right', color: 'var(--color-text-tertiary)' }}>
+                  {completadas} / {aprobadas.length}
+                </td>
+                {canEdit && <td className="desktop-only"></td>}
+              </tr>
+            )}
             {unauthorized > 0 && (
               <tr>
                 <td className="desktop-only" style={{ color: 'var(--color-text-tertiary)' }}>{t('quotes.unauthorizedTotal')}</td>

@@ -11,6 +11,9 @@ import { QueryClient } from '@tanstack/react-query';
  */
 export const queryKeys = {
   workOrders: (sedeId?: string) => ['work-orders', sedeId] as const,
+  /** El archivo se pide aparte y paginado: es la lista que crece para siempre. */
+  archivedWorkOrders: (sedeId: string | undefined, search: string, page: number) =>
+    ['work-orders-archived', sedeId, search, page] as const,
   workOrderDetail: (orderId: string) => ['work-order', orderId] as const,
   customerLink: (orderId: string) => ['customer-link', orderId] as const,
   customerEmails: (orderId: string) => ['customer-emails', orderId] as const,
@@ -18,6 +21,7 @@ export const queryKeys = {
   customers: (sedeId?: string) => ['customers', sedeId] as const,
   customerDetail: (customerId: string) => ['customer', customerId] as const,
   vehicles: (sedeId?: string) => ['vehicles', sedeId] as const,
+  vehicleDetail: (vehicleId: string) => ['vehicle', vehicleId] as const,
   operators: (sedeId?: string) => ['operators', sedeId] as const,
   users: (sedeId?: string) => ['users', sedeId] as const,
   transactions: (sedeId?: string) => ['transactions', sedeId] as const,

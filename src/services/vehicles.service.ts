@@ -1,6 +1,6 @@
 // Vehicles. Always sede-scoped: a unit must never leak across workshops.
 import { supabase } from '../lib/supabase';
-import type { Vehicle, VehicleInput } from '../types/database';
+import type { Customer, Vehicle, VehicleInput, WorkOrder } from '../types/database';
 import { assertDeleted, fetchAll } from './support';
 
 export const vehiclesService = {
@@ -23,6 +23,37 @@ export const vehiclesService = {
       ...v,
       cliente_nombre: v.cliente?.nombre,
     })) as Vehicle[];
+  },
+
+  /**
+   * Un vehículo con su dueño y todo lo que se le ha hecho.
+   *
+   * Es lo que sirve para responder "qué le hicimos la vez pasada". Las órdenes van con
+   * `fetchAll`, no con un `select` suelto: un carro de flota puede pasar por el taller
+   * muchas veces, y la API corta en 1.000 filas sin avisar. (`getCustomerDetail` sí lee sin
+   * paginar; es deuda vieja y no vale copiarla.)
+   */
+  getVehicleDetail: async (vehicleId: string) => {
+    const [{ data: vehicle, error }, orders] = await Promise.all([
+      supabase.from('vehiculos').select('*, cliente:clientes(*)').eq('id', vehicleId).single(),
+      fetchAll<WorkOrder>((from, to) =>
+        supabase
+          .from('ordenes_trabajo')
+          // `montos` es solo admin (RLS): para un técnico llega en null.
+          .select('*, montos:orden_montos(total_general)')
+          .eq('vehiculo_id', vehicleId)
+          .order('creado_en', { ascending: false })
+          .order('id')
+          .range(from, to)
+      ),
+    ]);
+    if (error) throw error;
+    const { cliente, ...rest } = vehicle as Vehicle & { cliente?: Customer | null };
+    return {
+      vehicle: { ...rest, cliente_nombre: cliente?.nombre } as Vehicle,
+      customer: (cliente ?? null) as Customer | null,
+      orders,
+    };
   },
 
   getVehiclesByCustomer: async (customerId: string) => {

@@ -999,7 +999,8 @@ body.drawer-open {
   color: #60A5FA;
 }
 
-.badge-espera_repuestos {
+.badge-espera_autorizacion,
+.badge-warn {
   background: rgba(245, 158, 11, 0.15);
   color: #FBBF24;
 }
@@ -1343,7 +1344,7 @@ body.drawer-open {
 
 .kanban-column-header.recepcion { border-bottom-color: var(--color-status-recepcion); }
 .kanban-column-header.en_proceso { border-bottom-color: var(--color-status-en-proceso); }
-.kanban-column-header.espera_repuestos { border-bottom-color: var(--color-status-espera); }
+.kanban-column-header.espera_autorizacion { border-bottom-color: var(--color-status-autorizacion); }
 .kanban-column-header.finalizado { border-bottom-color: var(--color-status-finalizado); }
 .kanban-column-header.entregado { border-bottom-color: var(--color-status-entregado); }
 
@@ -1651,6 +1652,24 @@ body.drawer-open {
   border: 1px solid rgba(239, 68, 68, 0.2);
   border-radius: var(--radius-md);
   color: var(--color-danger);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-4);
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Una orden esperando autorización: no es un error, pero el admin tiene algo que hacer. */
+/* La fecha estimada de entrega, cuando ya aprieta. Solo color y peso: en una tarjeta de
+   teléfono no hay sitio para una insignia más, y el icono del calendario ya está ahí. */
+.due-vencida { color: var(--color-due-vencida); font-weight: 700; }
+.due-hoy { color: var(--color-due-hoy); font-weight: 700; }
+.due-proxima { color: var(--color-due-proxima); }
+
+.alert-warn {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  color: var(--color-warning);
   font-size: var(--font-size-sm);
   margin-bottom: var(--space-4);
   animation: fadeIn 0.3s ease-out;
@@ -4043,6 +4062,17 @@ body.drawer-open {
 .line-state-rechazado {
   background: var(--color-danger-bg);
   color: var(--color-danger);
+}
+
+/* Un trabajo ya hecho: se atenúa, nunca se tacha. Tachar dice "cancelado", y esto es lo
+   contrario — es lo único de la orden que sí se completó. */
+.line-done .line-desc {
+  color: var(--color-text-tertiary);
+}
+
+.labor-check {
+  vertical-align: middle;
+  margin-right: var(--space-1);
 }
 
 .line-rejected .line-desc {

@@ -16,6 +16,8 @@ export interface PortalMedia {
   id: string;
   tipo: 'foto' | 'video' | 'audio';
   origen: 'recepcion' | 'avance';
+  /** El avance al que pertenece, para agruparlo bajo su tarjeta. */
+  avance_id: string | null;
   zona: string | null;
   mime: string;
   duracion_seg: number | null;
@@ -29,7 +31,7 @@ export interface PortalMedia {
 
 export interface PortalOrder {
   numero: string;
-  estatus: 'recepcion' | 'en_proceso' | 'espera_repuestos' | 'finalizado' | 'entregado';
+  estatus: 'recepcion' | 'en_proceso' | 'espera_autorizacion' | 'finalizado' | 'entregado';
   tipo_trabajo: string;
   porcentaje_avance: number;
   fecha_ingreso: string;
@@ -84,6 +86,13 @@ export interface PortalAccount {
   saldo: number;
 }
 
+/** Un avance que el taller decidió mostrar. Sin autor: no se nombran los técnicos. */
+export interface PortalProgress {
+  id: string;
+  fecha: string;
+  mensaje: string | null;
+}
+
 export interface PortalReport {
   estado_enlace: 'ok';
   taller: PortalShop;
@@ -99,6 +108,7 @@ export interface PortalReport {
     vin_final: string | null;
   };
   multimedia: PortalMedia[];
+  avances?: PortalProgress[];
   presupuesto?: PortalQuote | null;
   presupuestos_respondidos?: PortalQuoteHistory[];
   cuenta: PortalAccount;

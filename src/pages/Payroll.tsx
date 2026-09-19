@@ -381,7 +381,7 @@ export default function Payroll() {
                   <td data-label={t('payroll.technicians')} style={{ textAlign: 'right' }}>{c.tecnicos}</td>
                   <td data-label={t('payroll.share')} style={{ textAlign: 'right', fontWeight: 700 }}>{money(Number(c.monto))}</td>
                   <td data-label={t('common.status')}>
-                    <span className={`badge badge-${c.pago_id ? 'entregado' : 'espera_repuestos'}`}>
+                    <span className={`badge badge-${c.pago_id ? 'entregado' : 'warn'}`}>
                       {c.pago_id ? t('payroll.settled') : t('payroll.pending')}
                     </span>
                   </td>

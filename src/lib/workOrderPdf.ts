@@ -22,7 +22,7 @@ const money = (value: number) =>
 const STATUS_LABELS: Record<string, string> = {
   recepcion: 'Recepción',
   en_proceso: 'En Proceso',
-  espera_repuestos: 'Espera de Repuestos',
+  espera_autorizacion: 'Espera de Repuestos',
   finalizado: 'Finalizado',
   entregado: 'Entregado',
 };

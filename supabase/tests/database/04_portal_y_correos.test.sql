@@ -13,7 +13,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(26);
+SELECT plan(27);
 
 -- ------------------------------------------------------------------------------------
 -- Datos de prueba
@@ -135,25 +135,35 @@ SELECT is((SELECT COUNT(*)::int FROM t_correos WHERE plantilla = 'recepcion'), 1
 -- 2. Cambios de estatus seguidos: un solo aviso, con el último estado
 -- ------------------------------------------------------------------------------------
 UPDATE ordenes_trabajo SET estatus = 'en_proceso' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
-UPDATE ordenes_trabajo SET estatus = 'espera_repuestos' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
+UPDATE ordenes_trabajo SET estatus = 'finalizado' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
 SELECT results_eq(
   $$ SELECT datos->>'estatus', enviar_despues_de > NOW() + INTERVAL '150 seconds' FROM t_correos WHERE plantilla = 'estatus' $$,
-  $$ VALUES ('espera_repuestos'::text, true) $$,
+  $$ VALUES ('finalizado'::text, true) $$,
   'Dos cambios seguidos quedan en un solo aviso pendiente, con el último estado y tres minutos de espera'
 );
 
 -- Colapsar una ráfaga está bien; aplazarla, no. Antes cada cambio REINICIABA la
 -- espera, así que una orden que se mueve a menudo nunca llegaba a avisar al cliente.
 CREATE TEMP TABLE t_programado AS SELECT enviar_despues_de FROM t_correos WHERE plantilla = 'estatus';
-UPDATE ordenes_trabajo SET estatus = 'finalizado' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
+UPDATE ordenes_trabajo SET estatus = 'en_proceso' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
 SELECT ok(
   (SELECT c.enviar_despues_de <= p.enviar_despues_de FROM t_correos c, t_programado p WHERE c.plantilla = 'estatus'),
   'Un tercer cambio no aplaza el aviso: conserva la hora del primero de la ráfaga'
 );
 
+-- Pedir autorización no le anuncia nada al cliente: el presupuesto todavía no existe, y
+-- el correo del presupuesto sale minutos después. El aviso pendiente sigue siendo el
+-- anterior, sin que este cambio lo pise.
+UPDATE ordenes_trabajo SET estatus = 'espera_autorizacion', motivo_autorizacion = 'PRUEBA hay que cambiar el radiador' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
+SELECT results_eq(
+  $$ SELECT datos->>'estatus' FROM t_correos WHERE plantilla = 'estatus' $$,
+  $$ VALUES ('en_proceso'::text) $$,
+  'Pedir autorización no programa ningún aviso nuevo al cliente'
+);
+
 -- Se devuelve al estado que leen las pruebas de abajo: datos_correo usa el estatus
 -- del momento del envío, no el de cuando se encoló.
-UPDATE ordenes_trabajo SET estatus = 'espera_repuestos' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
+UPDATE ordenes_trabajo SET estatus = 'en_proceso' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
 
 UPDATE ordenes_trabajo SET estatus = 'en_proceso' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002';
 SELECT is(
@@ -167,7 +177,7 @@ SELECT is(
 SELECT results_eq(
   $$ SELECT d->'cliente'->>'email', d->'orden'->>'estatus', (d->>'token') = (SELECT token FROM t_enlace), d->>'vehiculo'
      FROM (SELECT datos_correo(id) AS d FROM t_correos WHERE plantilla = 'estatus') x $$,
-  $$ VALUES ('marta@prueba.local'::text, 'espera_repuestos'::text, true, '2019 Toyota Camry'::text) $$,
+  $$ VALUES ('marta@prueba.local'::text, 'en_proceso'::text, true, '2019 Toyota Camry'::text) $$,
   'datos_correo lee al enviar: correo actual, estatus actual, enlace y vehículo'
 );
 

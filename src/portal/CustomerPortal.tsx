@@ -206,6 +206,12 @@ function Report({
   const { orden, vehiculo, taller } = report;
   const reception = report.multimedia.filter((m) => m.origen === 'recepcion');
   const progress = report.multimedia.filter((m) => m.origen === 'avance');
+  // Los avances que el taller decidió mostrar, cada uno con sus archivos. Los archivos
+  // publicados cuyo avance no viene en la lista (los que un admin publicó suelto) se
+  // agrupan al final, como siempre.
+  const updates = report.avances ?? [];
+  const updateIds = new Set(updates.map((u) => u.id));
+  const looseProgress = progress.filter((m) => !m.avance_id || !updateIds.has(m.avance_id));
   const vehicleTitle = [vehiculo.anio, vehiculo.marca, vehiculo.modelo].filter(Boolean).join(' ');
   // La confirmación de una respuesta vive aquí y no en la sección del presupuesto:
   // al responder, el presupuesto desaparece de la página.
@@ -278,7 +284,23 @@ function Report({
         <h2 className="portal-section-title">
           <Wrench size={18} /> {s.progressTitle}
         </h2>
-        {progress.length > 0 ? <PortalMediaGrid media={progress} s={s} fmt={fmt} showDates /> : <p className="portal-muted">{s.noProgressMedia}</p>}
+        {updates.length === 0 && looseProgress.length === 0 ? (
+          <p className="portal-muted">{s.noProgressMedia}</p>
+        ) : (
+          <div className="portal-updates">
+            {updates.map((u) => {
+              const files = progress.filter((m) => m.avance_id === u.id);
+              return (
+                <article key={u.id} className="portal-update">
+                  <p className="portal-update-date">{fmt.dateTime(u.fecha)}</p>
+                  <p className="portal-update-text">{u.mensaje || s.progressNoMessage}</p>
+                  {files.length > 0 && <PortalMediaGrid media={files} s={s} fmt={fmt} />}
+                </article>
+              );
+            })}
+            {looseProgress.length > 0 && <PortalMediaGrid media={looseProgress} s={s} fmt={fmt} showDates />}
+          </div>
+        )}
       </section>
 
       <section className="portal-card">
@@ -369,7 +391,7 @@ function stepIndex(status: PortalReport['orden']['estatus']): number {
     case 'recepcion':
       return 0;
     case 'en_proceso':
-    case 'espera_repuestos':
+    case 'espera_autorizacion':
       return 1;
     case 'finalizado':
       return 2;

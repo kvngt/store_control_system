@@ -13,7 +13,7 @@ const RESUMEN = {
   ingresos_total: 48000,
   egresos_total: 9100,
   clientes_nuevos_mes: 3,
-  ordenes_por_estatus: { recepcion: 1, en_proceso: 2, espera_repuestos: 1, finalizado: 1, entregado: 5 },
+  ordenes_por_estatus: { recepcion: 1, en_proceso: 2, espera_autorizacion: 1, finalizado: 1, entregado: 5 },
   ingresos_por_mes: [
     { mes_inicio: '2026-08-01', ingresos: 9000, egresos: 1000 },
     { mes_inicio: '2026-09-01', ingresos: 15000, egresos: 3200.5 },
