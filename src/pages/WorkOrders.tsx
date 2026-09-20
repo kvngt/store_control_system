@@ -120,6 +120,12 @@ export default function WorkOrders() {
   // the board itself.
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  const typeLabels: Record<string, string> = {
+    mecanica: t('workOrders.typeMecanica'),
+    pintura: t('workOrders.typePintura'),
+    combinado: t('workOrders.typeCombinado'),
+  };
+
   const statusLabels: Record<string, string> = {
     recepcion: t('workOrders.intake'),
     en_proceso: t('workOrders.inProgress'),
@@ -385,7 +391,7 @@ export default function WorkOrders() {
                 {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
               </div>
               <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                <span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span>
+                <span className={`badge badge-${order.tipo_trabajo}`}>{typeLabels[order.tipo_trabajo]}</span>
                 <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
                 {order.esperando_autorizacion && <span className="badge badge-waiting-auth">{t('quotes.waitingBadge')}</span>}
               </div>
@@ -454,7 +460,7 @@ export default function WorkOrders() {
                       {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
                     </div>
                   </td>
-                  <td><span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span></td>
+                  <td><span className={`badge badge-${order.tipo_trabajo}`}>{typeLabels[order.tipo_trabajo]}</span></td>
                   <td>
                     <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
                     {order.esperando_autorizacion && (
@@ -512,7 +518,11 @@ export default function WorkOrders() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{t('workOrders.title')}</h1>
-          <p className="page-subtitle">{filtered.length} {t('common.results')}</p>
+          {/* En el archivo el conteo de la lista activa no significa nada: diría 0 aunque
+              hubiera cincuenta archivadas. Esa sección lleva su propio conteo. */}
+          {filterStatus !== ARCHIVED && (
+            <p className="page-subtitle">{filtered.length} {t('common.results')}</p>
+          )}
         </div>
         <button className="btn btn-primary" id="new-order-btn" onClick={() => setShowCreateModal(true)}>
           <Plus size={18} /> {t('workOrders.newOrder')}

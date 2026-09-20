@@ -292,6 +292,7 @@ export default function KanbanBoard() {
                               // Si la orden ya está entregada la opción se deja,
                               // o el <select> no podría mostrar su propio valor.
                               .filter((c) => c.status !== 'entregado' || canDeliver || order.estatus === 'entregado')
+                              .filter((c) => c.status !== 'recepcion' || isAdmin || order.estatus === 'recepcion')
                               .map((c) => (
                                 <option key={c.status} value={c.status}>
                                   {statusLabels[c.status]}

@@ -163,6 +163,9 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
               // paso del taller. Si la orden ya está entregada la opción se deja
               // visible, o el <select> no podría mostrar su propio valor.
               .filter((s) => s !== 'entregado' || detail.canDeliver || order.estatus === 'entregado')
+              // Devolver una orden a Recepción es de administración: la base responde 42501.
+              // Se filtra igual que Entregado, para no ofrecer algo que siempre falla.
+              .filter((s) => s !== 'recepcion' || detail.isAdmin || order.estatus === 'recepcion')
               .map((s) => (
                 <option key={s} value={s}>{statusLabels[s]}</option>
               ))}

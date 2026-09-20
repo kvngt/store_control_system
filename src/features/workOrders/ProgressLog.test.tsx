@@ -72,9 +72,12 @@ describe('ProgressLog', () => {
     expect(props.onAdd).toHaveBeenCalledWith('', [VOICE_NOTE]);
   });
 
-  it('avisa que lo subido es interno hasta que administración lo publique', () => {
+  // El aviso cambió con los avances publicables: ya no es administración quien decide,
+  // sino el técnico con el interruptor del ojo.
+  it('explica que el avance nace interno y cómo mostrarlo al cliente', () => {
     renderLog();
-    expect(screen.getByText(/interno hasta que administración lo publique/i)).toBeInTheDocument();
+    expect(screen.getByText(/nace interno/i)).toBeInTheDocument();
+    expect(screen.getByText(/lo muestras al cliente/i)).toBeInTheDocument();
   });
 
   it('no muestra el formulario a quien no puede editar la orden', () => {
