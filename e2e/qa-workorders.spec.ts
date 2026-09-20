@@ -56,13 +56,15 @@ test.describe('WORK-01 | Modal Nueva Orden', () => {
 // WORK-02: Validación millas negativas
 // ---------------------------------------------------------------------------
 test.describe('WORK-02 | Validación millas negativas', () => {
-  test.skip(!hasMechanicCredentials, 'Requiere credenciales de mecánico');
+  test.skip(!hasAdminCredentials, 'Requiere credenciales de admin');
 
   // El signo menos se ataja en el teclado; un pegado o un autocompletado nunca
   // dispara keydown, así que lo para el esquema al enviar. Son dos caminos
   // distintos y cada uno necesita su prueba: `fill()` no teclea.
+  // Como admin: abrir una orden es de administración desde 20261004000000, y lo que se
+  // prueba aquí — que el campo de millas no acepte un negativo — no depende del rol.
   test('el teclado descarta el signo menos', async ({ page }) => {
-    await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
+    await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
     await page.goto('/work-orders');
     await page.waitForSelector('#new-order-btn', { timeout: 10000 });
     await page.click('#new-order-btn');
@@ -73,7 +75,7 @@ test.describe('WORK-02 | Validación millas negativas', () => {
   });
 
   test('un valor negativo pegado se rechaza al enviar', async ({ page }) => {
-    await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
+    await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
     await page.goto('/work-orders');
     await page.waitForSelector('#new-order-btn', { timeout: 10000 });
     await page.click('#new-order-btn');

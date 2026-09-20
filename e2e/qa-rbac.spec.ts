@@ -6,7 +6,7 @@
  * - Visibilidad de botones Eliminar (solo admin)
  * - Selector de sede (solo admin)
  * - Mecánico ve sección "Otras órdenes" colapsada
- * - Mecánico no puede asignar técnicos a otros
+ * - Mecánico no puede abrir órdenes ni asignarse a una (la asignación reparte la comisión)
  * - Navegación de admin a Configuración de sedes/empleados
  */
 import { test, expect } from '@playwright/test';
@@ -142,6 +142,48 @@ test.describe('RBAC-30 | Vista de órdenes para mecánico/pintor', () => {
     // Expandir
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Abrir una orden y asignarse son de administración (migración 20261004000000).
+// Asignarse no es una etiqueta: la asignación dispara el reparto de la comisión,
+// así que auto-asignarse era concederse una parte de la mano de obra.
+// ---------------------------------------------------------------------------
+test.describe('RBAC-31 | Mecánico NO abre órdenes ni se une a una', () => {
+  test.skip(!hasMechanicCredentials, 'Requiere credenciales de mecánico');
+  test('no existe el botón de nueva orden', async ({ page }) => {
+    await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
+    await page.goto('/work-orders');
+    await page.waitForSelector('.orders-section', { timeout: 10000 });
+
+    await expect(page.locator('#new-order-btn')).toHaveCount(0);
+  });
+
+  test('no existe el botón de unirse en una orden que no trabaja', async ({ page }) => {
+    await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
+    await page.goto('/work-orders');
+
+    // "Otras Órdenes" son justo las que no tiene asignadas: las que alguien querría tomar.
+    const toggle = page.locator('.orders-section-toggle');
+    await toggle.click();
+    const otra = page.locator('.orders-section').last().locator('.row-clickable, .workorder-card').first();
+    if ((await otra.count()) === 0) test.skip(true, 'No hay órdenes ajenas en la sede de prueba');
+    await otra.click();
+
+    await page.waitForSelector('.modal, .page-title', { timeout: 10000 });
+    await expect(page.getByRole('button', { name: /Unirme a la orden|Join this order/ })).toHaveCount(0);
+  });
+});
+
+test.describe('RBAC-04 | Admin sí abre órdenes', () => {
+  test.skip(!hasAdminCredentials, 'Requiere credenciales de admin');
+  // La negativa de RBAC-31 solo significa algo si el botón existe para alguien.
+  test('el botón de nueva orden está', async ({ page }) => {
+    await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
+    await page.goto('/work-orders');
+
+    await expect(page.locator('#new-order-btn')).toBeVisible({ timeout: 10000 });
   });
 });
 

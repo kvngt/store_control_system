@@ -132,7 +132,9 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   }, [order?.id, order?.porcentaje_avance]);
 
   // A technician may only touch an order they are actually assigned to.
-  // Admins can always edit. Joining an order is the way in.
+  // Admins can always edit. La entrada es que un administrador los asigne: desde
+  // 20261004000000 `orden_asignaciones_insert` es `is_admin()`, así que nadie se pone a sí
+  // mismo en una orden — asignar reparte la comisión de la mano de obra.
   const isAssignedToMe = (order?.asignaciones || []).some((a) => a.usuario_id === user?.id);
   const isDelivered = order?.estatus === 'entregado';
   const isComplete = order?.estatus === 'finalizado' || isDelivered;
@@ -165,11 +167,6 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // decisión de administración, no un paso del taller: un técnico asignado podía
   // mover la orden a "entregado" y con eso acreditarse su propia comisión.
   const canDeliver = isAdmin;
-
-  // Unirse a una orden ya entregada re-reparte la bolsa: quien se auto-asigna
-  // después del hecho se lleva una tajada y le baja la de quienes hicieron el
-  // trabajo.
-  const canJoin = !!order && !isDelivered && !isAssignedToMe;
 
   // Cotizar es de administración: mano de obra y repuestos solo los agrega o
   // cambia un admin. La base lo impone (RLS de `orden_labor` / `orden_repuestos`);
@@ -412,31 +409,13 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     }
   };
 
-  /** A technician adds themselves to an order they didn't create. */
-  const joinOrder = async () => {
-    if (!order || !user) return;
-    if (!canJoin) {
-      showToast('error', t('workOrders.joinDeliveredBlocked'));
-      return;
-    }
-    setBusy(true);
-    try {
-      await workOrdersService.addAssignment(
-        order.id,
-        user.id,
-        user.rol === 'pintor' ? 'pintura' : 'mecanica'
-      );
-      // The board splits "my orders" from the rest by assignment, so joining
-      // one does move it between sections.
-      await refresh();
-      showToast('success', t('workOrders.joinedOrder'));
-    } catch (err) {
-      showToast('error', t('workOrders.joinError'), getErrorMessage(err, language));
-    } finally {
-      setBusy(false);
-    }
-  };
-
+  // Aquí vivía `joinOrder`: un técnico se metía a sí mismo en `orden_asignaciones`. Era la
+  // única escritura del navegador que lo hacía, y asignarse no es una etiqueta —
+  // `trg_assignment_commissions` llama a `sync_order_commissions`, que reparte la mano de
+  // obra entre los asignados. Unirse era concederse una comisión y bajarle la suya a quien
+  // estaba haciendo el trabajo. Desde 20261004000000 la base lo rechaza
+  // (`orden_asignaciones_insert` es `is_admin()`) y asignar se hace desde el selector de
+  // administración, unas líneas más arriba en `WorkOrderDetail`.
   const removeAssignment = async (id: string, nombre: string) => {
     if (!order) return;
     if (!confirm(`${t('common.delete')}: ${nombre}?`)) return;
@@ -620,7 +599,6 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     canResign,
     canEditProgress,
     canDeliver,
-    canJoin,
     canEditLines,
     canSendReport,
     estimatedCommission,
@@ -653,7 +631,6 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     updatePart,
     removePart,
     addAssignment,
-    joinOrder,
     removeAssignment,
     addProgressUpdate,
     removeProgressUpdate,

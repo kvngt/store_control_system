@@ -78,12 +78,21 @@ test.describe('mechanic/painter session', () => {
     await expect(page.locator('.table-actions button[title="Eliminar"], .table-actions button[title="Delete"]')).toHaveCount(0);
   });
 
+});
+
+// El formulario de alta es de administración desde 20261004000000, así que esta prueba
+// necesita sesión de admin. Vive en su propio bloque para no depender de que existan
+// credenciales de mecánico, que es de lo que colgaba antes.
+test.describe('intake form (admin session)', () => {
+  test.skip(!hasAdminCredentials, 'Set E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD in .env.test.local to run this test.');
+
   // `fill()` sets the value in one go and never fires keydown, so it cannot
   // exercise the keyboard guard — it is the paste path, covered in
   // qa-workorders.spec.ts. Here we type.
   test('intake mileage rejects a negative value', async ({ page }) => {
-    await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
+    await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
     await page.goto('/work-orders');
+    await page.waitForSelector('#new-order-btn', { timeout: 10000 });
     await page.click('#new-order-btn');
 
     const miles = page.locator('#order-miles-in');

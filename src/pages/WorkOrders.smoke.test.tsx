@@ -288,21 +288,27 @@ describe('WorkOrders', () => {
 // Submitting the intake dialog used to run a string of `if`s that built one
 // message out of field labels, so a form with several problems reported the
 // first one and never said which box it meant.
-describe('WorkOrders — intake by a technician', () => {
-  it('leaves deposit, labor and parts out of the form', async () => {
+// Abrir una orden es recibir un vehículo y comprometer al taller: es de administración.
+// Antes esta prueba abría el formulario como mecánico y comprobaba que no trajera dinero;
+// ahora el formulario no se le ofrece. Quien lo impone es la base
+// (`ordenes_trabajo_insert`); esconder el botón solo evita un error en la cara.
+describe('WorkOrders — abrir una orden es de administración', () => {
+  it('un mecánico no ve el botón de nueva orden', async () => {
     mocks.auth.current = authValue(MECHANIC_USER);
-    const user = userEvent.setup();
     renderWithProviders(<WorkOrders />);
     // Un técnico no asignado ve la orden en la sección colapsada "Otras", así
     // que se espera al tablero y no a la orden.
     await screen.findByRole('button', { name: /Otras/i });
 
-    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    const dialog = (await screen.findByText('Nueva Orden', { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    expect(screen.queryByRole('button', { name: /Nueva Orden/i })).not.toBeInTheDocument();
+  });
 
-    expect(within(dialog).queryByText(/Depósito/)).not.toBeInTheDocument();
-    expect(within(dialog).queryByText('Descripción de Labor')).not.toBeInTheDocument();
-    expect(within(dialog).queryByText('Descripción de Repuestos')).not.toBeInTheDocument();
+  // La negativa de arriba solo significa algo si el botón existe para alguien.
+  it('un admin sí lo ve', async () => {
+    renderWithProviders(<WorkOrders />);
+    await screen.findAllByText('OT-2026-0042');
+
+    expect(screen.getByRole('button', { name: /Nueva Orden/i })).toBeInTheDocument();
   });
 });
 
@@ -451,6 +457,10 @@ describe('WorkOrders — order detail', () => {
     const laborCard = screen.getByText('Cambio de aceite').closest('.card') as HTMLElement;
     expect(laborCard.querySelector('.btn-secondary')).toBeNull();
     expect(within(laborCard).getByText(/la cotiza administración/i)).toBeInTheDocument();
+
+    // Y no puede tomarla. Asignarse dispara `sync_order_commissions`, así que unirse a una
+    // orden ajena era repartirse la mano de obra de quien la está trabajando.
+    expect(screen.queryByRole('button', { name: /Unirme a la orden/i })).not.toBeInTheDocument();
   });
 
   it('shows an admin the totals and the report buttons', async () => {

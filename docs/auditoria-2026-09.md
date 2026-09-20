@@ -119,7 +119,11 @@ contador de folios saltaba a 900.
 en recepción, sin avance, sin mano de obra, sin firma, con el número generado por el
 sistema y con el técnico como autor.
 
-**Se comprueba con.** pgTAP 07 (8–12) · `qa:security -- --alta` SEC-55.
+**Se comprueba con.** pgTAP 07 (8–12) · `qa:security` SEC-55.
+
+> **Desde 20261004000000 el agujero está cerrado más arriba:** un técnico ya no inserta
+> órdenes en absoluto (`ordenes_trabajo_insert` es `is_admin()`), así que el trigger que
+> corregía la fila quedó como red y las pruebas comprueban el rechazo, no la corrección.
 
 ### AUD-03 · Media · Volver a firmar autorizaba trabajos que el cliente no vio
 

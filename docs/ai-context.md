@@ -25,11 +25,18 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
 - **Un técnico modifica una orden solo si está asignado y no está entregada**, y
   solo estado, avance y firma (`trg_order_technician_guard`). Si agregas una
   acción de técnico que cambie otra columna de `ordenes_trabajo`, añádela a la
-  lista permitida de ese trigger en una migración nueva. Al **insertar** una orden,
-  `trg_guard_order_insert` fuerza recepción, avance 0, sin firma y el número del
-  sistema para quien no es admin. **Tampoco elige cualquier estado**: solo
+  lista permitida de ese trigger en una migración nueva. **Tampoco elige cualquier estado**: solo
   `en_proceso`, `espera_autorizacion` y `finalizado`; devolver una orden a recepción y
   entregarla son de administración.
+- **Abrir una orden y asignar a alguien son solo de admin** (`ordenes_trabajo_insert` y
+  `orden_asignaciones_insert`, ambas `is_admin()`). Lo segundo es dinero, no una etiqueta:
+  `trg_assignment_commissions` llama a `sync_order_commissions`, que reparte la mano de obra
+  entre los asignados, así que auto-asignarse era concederse una comisión y diluir la de
+  quien sí trabajó la orden. `create_work_order` es `SECURITY INVOKER`, así que la política
+  la cubre sin tocarla. `trg_guard_order_insert` (que bajaba a recepción la orden de un
+  no-admin) se queda como red, pero su cuerpo ya no es alcanzable desde la API. Un técnico
+  sigue **viendo** las órdenes de su sede y moviendo el `estatus_tarea` de su propia
+  asignación, que no toca el reparto.
 - **Pedir autorización exige un motivo.** `espera_autorizacion` (antes "espera de
   repuestos") es donde el técnico dice que encontró algo que hay que cotizar, y la base
   rechaza el estado sin `ordenes_trabajo.motivo_autorizacion`. Al salir del estado el

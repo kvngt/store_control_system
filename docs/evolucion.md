@@ -289,7 +289,8 @@ triggers y el frontend en las rutas de dinero, permisos y datos del cliente.
   a esas nadie se lo quitó. Una de ellas asentaba la reversión del cobro de una orden
   entregada.
 - **La base ahora también protege la inserción**: un técnico no crea por la API una
-  orden ya "entregada" ni con otro número.
+  orden ya "entregada" ni con otro número. (Desde `20261004000000` ya no la crea en
+  absoluto: abrir una orden es de administración.)
 - **Solo la primera firma autoriza**: volver a firmar ya no cobra trabajos que el cliente
   no vio.
 - **Borrar una orden es una sola operación** y no se puede con comisiones pagadas.

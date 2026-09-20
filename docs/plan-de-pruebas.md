@@ -183,7 +183,7 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | AUT-04 | P0 | IA | `npm run db:check` | "Base de datos al día" |
 | AUT-05 | P0 | IA | `npx supabase start` y `npm run test:db` (requiere Docker) | 8 archivos pgTAP en verde. Sin Docker: **BLOQUEADO** |
 | AUT-06 | P0 | IA | `npm run qa:security` | 0 FAIL. Los SKIP dicen qué falta (una cuenta o una orden) |
-| AUT-07 | P1 | IA | `npm run qa:security -- --alta` (con cuenta de técnico) | SEC-55 PASS. Borra la orden que imprime |
+| AUT-07 | P1 | IA | `npm run qa:security` (con cuenta de técnico) | SEC-55 PASS. Ya no crea nada: desde que abrir una orden es solo de admin, el caso comprueba el rechazo |
 | AUT-08 | P1 | IA | `npm run test:e2e` | Todas en verde o saltadas por falta de credenciales |
 
 ---
@@ -235,10 +235,10 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | ORD-02 | P1 | IA | El número es el siguiente consecutivo `ORD-AAAA-###`. |
 | ORD-03 | P2 | IA | Mientras una foto se comprime, el botón dice "Procesando…" y no deja crear. |
 | ORD-04 | P1 | IA | Millas negativas → rechazado (el campo no acepta el signo menos). |
-| ORD-05 | P0 | IA | **M** abre Nueva orden → no aparecen depósito, mano de obra ni repuestos. Crea la orden → queda asignado a sí mismo; **A** recibe "Recepción registrada · Falta cotizar". |
+| ORD-05 | P0 | IA | **M** no ve el botón **Nueva orden**; **A** sí. Un POST directo a `/rest/v1/ordenes_trabajo` con la sesión de **M** responde 42501 (lo cubre `qa:security` SEC-55). |
 | ORD-06 | P0 | IA | **M** en el detalle de una orden asignada → no ve tarjeta de totales, depósito ni repuestos con precio; ve "Descripción de repuestos" sin ningún `$`; ve la mano de obra sin botones con "la cotiza administración"; ve **Tu comisión estimada** con la cuenta (mano de obra × % ÷ técnicos); no ve **Descargar PDF** ni **Enviar reporte**; el selector de estado no ofrece "Entregado". |
 | ORD-07 | P1 | IA | **M** mueve el avance en un estado no cerrado y captura la firma → ambos se ven al recargar. |
-| ORD-08 | P1 | IA | **N** abre la orden → aviso de solo lectura y botón **Unirme a la orden**; al unirse la ve como asignado. En una orden entregada el botón no aparece. |
+| ORD-08 | P1 | IA | **N** abre una orden que no trabaja → aviso de solo lectura ("un administrador tiene que asignarte") y, donde estaba "Unirme a la orden", la frase "Administración asigna quién trabaja esta orden". El botón ya no existe para nadie: asignar se hace desde el selector de **A** en la tarjeta de técnicos. Un POST directo a `/rest/v1/orden_asignaciones` con su propio `usuario_id` responde 42501 (SEC-69 y SEC-70). |
 | ORD-09 | P1 | IA | **A** elige "Entregado" y cancela la confirmación → el selector vuelve al estado real. |
 | ORD-10 | P1 | IA | **A** reabre una orden finalizada → se borra la fecha de finalización. |
 | ORD-11 | P1 | IA | Kanban: en computadora, arrastrar entre columnas; en teléfono, "Mover a" (cancelar la confirmación deja el selector como estaba). **M** en su tarjeta: sin "Entregado"; en tarjetas ajenas no hay selector. |
@@ -443,7 +443,8 @@ alguien con la clave pública de la app o un técnico con su propia sesión.
 ```bash
 npm run qa:security             # tabla PASS / FAIL / SKIP
 npm run qa:security -- --json   # para un agente
-npm run qa:security -- --alta   # además SEC-55 (crea una orden de prueba)
+# Ya no hay `--alta`: el único caso que escribía (SEC-55) ahora comprueba un rechazo,
+# así que la suite entera es de solo lectura.
 ```
 
 Inicia sesión solo con las cuentas de `.env.test.local` (o `QA_TECH_EMAIL`/`QA_TECH_PASSWORD`,
@@ -455,7 +456,9 @@ una entregada. Lo que no encuentra lo marca SKIP.
 | Sin sesión | SEC-01 a SEC-18 | Registro público apagado (SEC-18); las 6 edge functions desplegadas (SEC-17); sin datos, sin funciones internas (`reverse_order_delivery_finance`, `sync_*`, `recalculate_order_totals`, `claim_outbox`, `datos_portal`, `responder_presupuesto_portal`, `pay_commissions`), `process-outbox` 401, portal 404 con token falso, buckets privados |
 | Técnico: lectura | SEC-20 a SEC-35 | No ve montos, repuestos con precio, Finanzas, enlaces, presupuestos, cola de correos, pagos ni avisos ajenos, ni datos de otra sede |
 | Técnico: escritura | SEC-40 a SEC-54 | No cotiza, no entrega, no escribe totales ni datos de recepción, no firma con archivos ajenos, no publica al cliente, no manda enlaces, presupuestos, reportes ni avisos, no asigna a otros; en órdenes ajenas o entregadas no toca nada |
-| Técnico: alta directa | SEC-55 | Una orden creada por la API nace en recepción, sin avance, sin mano de obra y con número del sistema |
+| Técnico: alta y asignación | SEC-55, SEC-69, SEC-39 | No abre una orden por la API (42501) y no se asigna a ninguna — ni a una ajena ni a la que ya trabaja. Asignar reparte la comisión de la mano de obra |
+| Sin sesión: alta | SEC-68 | Tampoco se abre una orden sin sesión |
+| Importación bancaria | SEC-66, SEC-67 | Ni sin sesión ni un técnico deshacen una importación |
 | Admin | SEC-60 a SEC-62 | Ni un admin aprueba una línea con un UPDATE, sube PDFs a `reportes` ni llama funciones internas |
 
 **Cualquier FAIL es P0.**
@@ -526,6 +529,7 @@ Errores ya corregidos. Si alguno reaparece, es una regresión **P0**.
 | El PDF compartido mostraba notas internas, técnicos y fotos no publicadas | REP-08 | `lib/reportMedia.test.ts` |
 | Funciones internas de dinero ejecutables por la API *(AUD-01)* | SEC-05 a SEC-08, SEC-27, SEC-62 | pgTAP 07 |
 | Un técnico creaba órdenes "entregadas" por la API *(AUD-02)* | SEC-55 | pgTAP 07 |
+| Un técnico se asignaba a una orden y con eso a su comisión | SEC-69, SEC-39 | pgTAP 07 |
 | Volver a firmar autorizaba trabajos nuevos *(AUD-03)* | PRE-15 | pgTAP 07 |
 | Borrar una orden podía dejarla sin su dinero *(AUD-04)* | DIN-08 | — |
 | Borrar una orden con comisiones pagadas *(AUD-05)* | DIN-09, SEC-73 | pgTAP 07 |

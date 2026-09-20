@@ -1,8 +1,8 @@
 -- ====================================================================================
 -- RESTORIFY — Pruebas de base de datos: hallazgos de la auditoría de septiembre 2026
 -- ====================================================================================
--- Qué cubre (migración 20260926000000): nadie sin rol ejecuta las funciones internas
--- de dinero; un técnico no inserta una orden ya entregada ni con otro número; solo la
+-- Qué cubre (migraciones 20260926000000 y 20261004000000): nadie sin rol ejecuta las
+-- funciones internas de dinero; un técnico no abre órdenes ni se asigna a una; solo la
 -- primera firma autoriza lo cotizado; montos negativos rechazados; un aviso que tumba
 -- la función termina en error; no se borra una orden con comisiones pagadas.
 --
@@ -57,39 +57,57 @@ SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.role = 'authenticated';
 
 -- ------------------------------------------------------------------------------------
--- 2. Un técnico que inserta directo por la API
+-- 2. Un técnico no abre órdenes ni se asigna a una
 -- ------------------------------------------------------------------------------------
+-- Antes esta sección comprobaba que la orden de un técnico **se corrigiera** al entrar
+-- (`trg_guard_order_insert` la bajaba a recepción, sin avance ni firma). Desde
+-- 20261004000000 ya no entra: abrir una orden es de administración, así que lo que hay que
+-- probar es el rechazo. El trigger se queda puesto como red, pero su cuerpo ya no es
+-- alcanzable para un `authenticated` que no sea admin, y por eso no se puede probar desde
+-- aquí.
+--
+-- La segunda mitad es dinero: `trg_assignment_commissions` llama a `sync_order_commissions`
+-- en cuanto entra la asignación, y esa función reparte la mano de obra entre los asignados.
+-- Auto-asignarse era concederse una comisión y diluir la de quien sí trabajó la orden.
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
 
-SELECT lives_ok(
+SELECT throws_ok(
   $$ INSERT INTO ordenes_trabajo (numero_orden, sede_id, cliente_id, vehiculo_id, tipo_trabajo, estatus,
        millas_ingreso, nivel_gasolina, fecha_estimada_entrega, porcentaje_avance, total_labor, creado_por, firma_ruta)
      VALUES ('ORD-2026-900', '10000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000001',
        'd0000000-0000-0000-0000-000000000002', 'mecanica', 'entregado', 10, '1/2', '2026-10-01', 90, 5000,
        'a0000000-0000-0000-0000-000000000001', 'otra/orden/firma-1.png') $$,
-  'Un técnico puede registrar una recepción directo por la API'
+  '42501', NULL,
+  'Un técnico no abre una orden directo por la API'
+);
+SELECT is_empty(
+  $$ SELECT 1 FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002' $$,
+  'No quedó ninguna orden a medio crear'
 );
 
-RESET ROLE;
-SELECT is(
-  (SELECT estatus::text FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002'),
-  'recepcion',
-  'La orden nace en recepción aunque la pida entregada'
+-- La orden que las secciones siguientes necesitan, abierta por quien sí puede.
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000001';
+INSERT INTO ordenes_trabajo (sede_id, cliente_id, vehiculo_id, tipo_trabajo, millas_ingreso,
+  nivel_gasolina, fecha_estimada_entrega, creado_por)
+VALUES ('10000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000001',
+  'd0000000-0000-0000-0000-000000000002', 'mecanica', 10, '1/2', '2026-10-01',
+  'a0000000-0000-0000-0000-000000000001');
+
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
+SELECT throws_ok(
+  $$ INSERT INTO orden_asignaciones (orden_id, usuario_id, tipo_tarea)
+     SELECT id, 'a0000000-0000-0000-0000-000000000002', 'mecanica'
+     FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002' $$,
+  '42501', NULL,
+  'Un técnico no se asigna a una orden'
 );
-SELECT ok(
-  (SELECT porcentaje_avance = 0 AND total_labor = 0 AND firma_ruta IS NULL
-          AND creado_por = 'a0000000-0000-0000-0000-000000000002'
-   FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002'),
-  'Sin avance, sin mano de obra, sin firma ajena y con el técnico como autor'
+SELECT is_empty(
+  $$ SELECT 1 FROM orden_asignaciones WHERE usuario_id = 'a0000000-0000-0000-0000-000000000002' $$,
+  'Y por lo tanto no se queda asignado'
 );
-SELECT isnt(
-  (SELECT numero_orden FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002'),
-  'ORD-2026-900',
-  'El número lo genera el sistema'
-);
-SELECT ok(
-  COALESCE((SELECT ultimo_numero FROM numero_orden_contadores WHERE anio = EXTRACT(YEAR FROM NOW())::int), 0) < 900,
-  'El contador de folios no salta'
+SELECT is_empty(
+  $$ SELECT 1 FROM comisiones WHERE usuario_id = 'a0000000-0000-0000-0000-000000000002' $$,
+  'Ni se concede una comisión, que es la razón de fondo'
 );
 
 -- ------------------------------------------------------------------------------------
@@ -113,9 +131,9 @@ END $do$;
 RESET ROLE;
 CREATE TEMP VIEW t_orden AS
   SELECT id, sede_id FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
-CREATE TEMP VIEW t_orden_tecnico AS
+CREATE TEMP VIEW t_orden_sin_cotizar AS
   SELECT id, sede_id FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002';
-GRANT SELECT ON t_orden, t_orden_tecnico TO authenticated;
+GRANT SELECT ON t_orden, t_orden_sin_cotizar TO authenticated;
 
 -- El archivo de la primera firma, como lo deja la app antes de guardar la ruta.
 INSERT INTO storage.objects (bucket_id, name)
@@ -156,21 +174,21 @@ SELECT is(
   'El total sigue siendo lo autorizado'
 );
 
--- La orden del técnico se firmó sin nada cotizado (no quedó presupuesto); el admin
--- cotiza después, alguien limpia la firma y vuelve a firmar.
+-- La segunda orden se firmó sin nada cotizado (no quedó presupuesto); el admin cotiza
+-- después, alguien limpia la firma y vuelve a firmar.
 RESET ROLE;
 INSERT INTO storage.objects (bucket_id, name)
-SELECT 'orden_media', sede_id || '/' || id || '/firma-' || n || '.png' FROM t_orden_tecnico, (VALUES (1), (2)) AS v(n);
+SELECT 'orden_media', sede_id || '/' || id || '/firma-' || n || '.png' FROM t_orden_sin_cotizar, (VALUES (1), (2)) AS v(n);
 SET LOCAL ROLE authenticated;
-UPDATE ordenes_trabajo SET firma_ruta = (SELECT sede_id || '/' || id || '/firma-1.png' FROM t_orden_tecnico)
-WHERE id = (SELECT id FROM t_orden_tecnico);
-UPDATE ordenes_trabajo SET firma_ruta = NULL WHERE id = (SELECT id FROM t_orden_tecnico);
-INSERT INTO orden_labor (orden_id, descripcion, costo) SELECT id, 'Alineación', 300 FROM t_orden_tecnico;
-UPDATE ordenes_trabajo SET firma_ruta = (SELECT sede_id || '/' || id || '/firma-2.png' FROM t_orden_tecnico)
-WHERE id = (SELECT id FROM t_orden_tecnico);
+UPDATE ordenes_trabajo SET firma_ruta = (SELECT sede_id || '/' || id || '/firma-1.png' FROM t_orden_sin_cotizar)
+WHERE id = (SELECT id FROM t_orden_sin_cotizar);
+UPDATE ordenes_trabajo SET firma_ruta = NULL WHERE id = (SELECT id FROM t_orden_sin_cotizar);
+INSERT INTO orden_labor (orden_id, descripcion, costo) SELECT id, 'Alineación', 300 FROM t_orden_sin_cotizar;
+UPDATE ordenes_trabajo SET firma_ruta = (SELECT sede_id || '/' || id || '/firma-2.png' FROM t_orden_sin_cotizar)
+WHERE id = (SELECT id FROM t_orden_sin_cotizar);
 
 SELECT is(
-  (SELECT estado FROM orden_labor WHERE orden_id = (SELECT id FROM t_orden_tecnico)),
+  (SELECT estado FROM orden_labor WHERE orden_id = (SELECT id FROM t_orden_sin_cotizar)),
   'borrador',
   'Tampoco autoriza cuando la primera firma no tenía nada que aprobar'
 );

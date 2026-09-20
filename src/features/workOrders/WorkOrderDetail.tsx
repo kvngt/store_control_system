@@ -435,15 +435,14 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
             </button>
           </div>
         ) : (
-          // `canJoin` ya excluye estar asignado y la orden entregada: unirse
-          // después de la entrega re-reparte una bolsa de comisión ya calculada.
-          detail.canJoin && (
-            <div style={{ marginTop: 'var(--space-4)' }}>
-              <button type="button" className="btn btn-primary" onClick={detail.joinOrder} disabled={detail.busy}>
-                <Plus size={16} /> {t('workOrders.joinOrder')}
-              </button>
-            </div>
-          )
+          // Aquí estaba "Unirme a la orden". Asignarse reparte la comisión
+          // (`sync_order_commissions` divide la mano de obra entre los asignados), así que
+          // es de administración y la base lo rechaza. Se deja la frase en su lugar: una
+          // tarjeta que solo lista nombres, sin decir quién los pone, se lee como un botón
+          // que falta.
+          <p className="field-hint" style={{ marginTop: 'var(--space-4)' }}>
+            {t('workOrders.assignedByAdmin')}
+          </p>
         )}
       </div>
 

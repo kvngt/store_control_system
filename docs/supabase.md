@@ -140,11 +140,11 @@ Las 22 tienen **RLS activado**. Columnas y relaciones: [arquitectura.md §4](arq
 | | `perfiles` | Una fila por usuario de `auth.users`: nombre, rol, sede | Uno mismo, su sede, admin |
 | **Clientes** | `clientes` | Datos de contacto y preferencia de correos | Su sede, admin |
 | | `vehiculos` | VIN, placa, marca, modelo | Su sede, admin |
-| **Órdenes** | `ordenes_trabajo` | La orden: estado, avance, firma, total de mano de obra | Su sede, admin |
+| **Órdenes** | `ordenes_trabajo` | La orden: estado, avance, firma, total de mano de obra | Lee su sede; **abrirla, solo admin**; el UPDATE, su sede (y el trigger exige estar asignado) |
 | | `orden_montos` | Total, repuestos y depósito (1:1 con la orden) | **Solo admin** |
 | | `orden_labor` | Líneas de mano de obra con su estado de autorización | Su sede, admin |
 | | `orden_repuestos` | Repuestos con precio | **Solo admin** (el técnico usa `repuestos_de_orden`) |
-| | `orden_asignaciones` | Técnicos de la orden | Su sede, admin |
+| | `orden_asignaciones` | Técnicos de la orden — y por lo tanto quién cobra comisión | Lee su sede; **asignar y desasignar, solo admin**; cada quien mueve el `estatus_tarea` de su propia fila |
 | | `orden_avances` | Bitácora del técnico | Su sede, admin |
 | | `orden_media` | Fotos, videos y audio: ruta en Storage, visible al cliente o no | Su sede, admin |
 | | `numero_orden_contadores` | Último folio por año | Nadie directamente (RLS sin políticas); la usa un trigger |

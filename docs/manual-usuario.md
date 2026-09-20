@@ -345,9 +345,10 @@ ubicación GPS que guarda la cámara.
 
 **5 — Notas de inspección.** Texto libre sobre el estado del vehículo.
 
-**6 — Técnicos asignados.** Un administrador elige quién trabajará la orden. Si
-la crea un técnico, **se asigna automáticamente a sí mismo** y no puede asignar a
-otros; sus compañeros se unen desde el detalle de la orden.
+**6 — Técnicos asignados.** Un administrador elige quién trabajará la orden. Es
+lo único que decide quién cobra comisión por ella, así que **solo administración
+asigna**: un mecánico o pintor no puede ponerse en una orden por su cuenta ni
+quitarse de una en la que está.
 
 **7 — Mano de obra y repuestos** *(solo administradores)*. Cada línea de mano de
 obra lleva descripción y costo. Cada repuesto lleva descripción, cantidad y
@@ -422,10 +423,11 @@ el equipo.
 <!-- IMAGEN: detalle de la misma orden vista por un mecánico: sin totales, con
      repuestos sin precio y la tarjeta "Tu comisión estimada" -->
 
-**Técnicos asignados.** Quién trabaja la orden. Si no estás asignado, verás el
-aviso de solo lectura y el botón **Unirme a la orden**. En una orden ya entregada
-no te puedes unir, porque cambiaría el reparto de comisiones de quienes hicieron
-el trabajo. Un administrador solo puede asignar personal **de la sede de la orden**:
+**Técnicos asignados.** Quién trabaja la orden, y por lo tanto quién cobra comisión
+por ella. **Solo administración asigna:** si no estás asignado verás el aviso de solo
+lectura y la nota de que un administrador tiene que ponerte en la orden. No hay forma
+de unirte por tu cuenta, ni de quitarte. Un administrador solo puede asignar personal
+**de la sede de la orden**:
 si abriste una orden de otra sede (por ejemplo, desde un aviso) y la lista sale vacía,
 cambia a esa sede en el selector de arriba.
 
@@ -700,7 +702,7 @@ mientras la app está abierta, con un mensaje breve en pantalla.
 |---|---|
 | **Nueva orden asignada** | El técnico al que asignan |
 | **Ya no estás asignado** | El técnico al que quitan |
-| **Recepción registrada · Falta cotizar** | Administradores, cuando un técnico crea una orden |
+| **Recepción registrada · Falta cotizar** | Administradores, cuando un técnico crea una orden. **Ya no se emite:** abrir una orden es de administración desde 20261004000000. Los avisos de este tipo que ya existían se siguen leyendo |
 | **Nuevo avance** | Administradores, cuando un técnico agrega un avance |
 | **Lista para entregar** | Administradores, cuando una orden pasa a Finalizado |
 | **Comisión generada** | Cada técnico, cuando se entrega su orden, con su monto |
@@ -962,7 +964,8 @@ actualizarla.
 | Marcar **Entregado** | ✅ | ❌ |
 | Subir fotos, videos y notas de voz | ✅ | ✅ en sus órdenes no entregadas |
 | Publicar archivos al cliente | ✅ | ❌ |
-| Asignar técnicos | ✅ | Solo unirse él mismo |
+| Abrir una orden de trabajo | ✅ | ❌ |
+| Asignar técnicos (incluido a sí mismo) | ✅ | ❌ |
 | Enviar reporte al cliente y descargar PDF | ✅ | ❌ |
 | Enlace del cliente: ver, compartir, cambiar, avisar novedades | ✅ | ❌ |
 | Ver si cada trabajo está autorizado, esperando o rechazado | ✅ | ✅ |
@@ -1107,8 +1110,8 @@ Revisa que el filtro de estado esté en «Todos» y —si eres administrador— 
 estés en la sede correcta.
 
 **«Me pidieron ayudar en una orden y no puedo editarla.»**
-Está en **Otras Órdenes de Trabajo**. Ábrela y usa **Unirme a la orden**. Si ya
-está entregada, no es posible.
+Pídele a un administrador que te asigne a ella. Asignar reparte la comisión de la
+mano de obra, así que es una decisión de administración y nadie se pone a sí mismo.
 
 **«No puedo mover la barra de avance.»**
 La orden está Finalizada o Entregada, o no estás asignado a ella.

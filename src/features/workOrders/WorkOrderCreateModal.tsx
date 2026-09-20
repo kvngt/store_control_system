@@ -285,9 +285,9 @@ export default function WorkOrderCreateModal({
                 />
                 <FieldError messageKey={errors.milesIn?.message} />
               </div>
-              {/* Cobrar es de administración: un técnico registra la recepción
-                  y el depósito lo anota un admin. `create_work_order` ignora
-                  este campo si no lo manda un admin. */}
+              {/* Cobrar es de administración, igual que abrir la orden desde
+                  20261004000000. El `isAdmin` se queda como red, porque
+                  `create_work_order` también ignora este campo si no lo manda un admin. */}
               {isAdmin && (
                 <div className="form-group">
                   <label className="form-label">{t('workOrders.deposit')} ($)</label>
@@ -311,9 +311,11 @@ export default function WorkOrderCreateModal({
               <input className="form-input" type="date" {...register('estimatedDate')} />
             </div>
 
-            {/* Operators — only admins choose who works the order. A
-                technician creating one is auto-assigned to themselves. */}
-            {isAdmin ? (
+            {/* Quién trabaja la orden. Aquí había una segunda rama para el técnico que
+                creaba la suya y quedaba auto-asignado; desde 20261004000000 abrir una orden
+                y asignar son de administración, así que ese caso ya no existe. El `isAdmin`
+                se queda como red: el modal solo lo abre un admin. */}
+            {isAdmin && (
               <div className="form-group">
                 <label className="form-label">{t('workOrders.assignedTechnician')}</label>
                 <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
@@ -336,13 +338,6 @@ export default function WorkOrderCreateModal({
                     );
                   })}
                 </div>
-              </div>
-            ) : (
-              <div className="form-group">
-                <label className="form-label">{t('workOrders.assignedTechnician')}</label>
-                <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                  {t('workOrders.autoAssigned')}
-                </p>
               </div>
             )}
 

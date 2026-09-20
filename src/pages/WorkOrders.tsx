@@ -79,9 +79,12 @@ export default function WorkOrders() {
     queryKey: queryKeys.vehicles(sedeId),
     queryFn: () => vehiclesService.getVehicles(sedeId),
   });
+  // Solo la consume interfaz de administración (el selector del alta y el de la tarjeta de
+  // técnicos), así que en el teléfono de un mecánico era una descarga que nadie mira.
   const operatorsQuery = useQuery({
     queryKey: queryKeys.operators(sedeId),
     queryFn: () => usersService.getOperators(sedeId),
+    enabled: isAdmin,
   });
 
   const customers = customersQuery.data ?? emptyList<Customer>();
@@ -246,15 +249,14 @@ export default function WorkOrders() {
         );
       }
 
-      // Admins pick who works the order; a mechanic/painter creating one is
-      // always assigned to themselves (they can't assign colleagues — those
-      // join the order themselves from the order detail).
-      const asignaciones = isAdmin
-        ? values.selectedOperators.map((id) => {
-            const op = operators.find((o) => o.id === id);
-            return { usuario_id: id, tipo_tarea: (op?.rol === 'pintor' ? 'pintura' : 'mecanica') as 'mecanica' | 'pintura' };
-          })
-        : [{ usuario_id: user.id, tipo_tarea: (user.rol === 'pintor' ? 'pintura' : 'mecanica') as 'mecanica' | 'pintura' }];
+      // Solo un admin llega hasta aquí, así que solo queda su rama. La que había debajo
+      // asignaba a quien creaba la orden cuando no era admin — que es exactamente lo que se
+      // cerró: la asignación genera la comisión, así que crear y auto-asignarse era
+      // concederse una comisión que nadie autorizó.
+      const asignaciones = values.selectedOperators.map((id) => {
+        const op = operators.find((o) => o.id === id);
+        return { usuario_id: id, tipo_tarea: (op?.rol === 'pintor' ? 'pintura' : 'mecanica') as 'mecanica' | 'pintura' };
+      });
 
       const order = createdOrderRef.current ?? await workOrdersService.createWorkOrder({
         sede_id: targetSedeId,
@@ -263,9 +265,10 @@ export default function WorkOrders() {
         tipo_trabajo: values.workType,
         millas_ingreso: Math.max(0, parseInt(values.milesIn, 10) || 0),
         nivel_gasolina: values.fuelLevel,
-        // Depósito, labor y repuestos solo los registra un admin. El formulario
-        // ya no se los muestra a un técnico y `create_work_order` los ignora si
-        // llegan de uno; mandarlos vacíos deja las dos capas diciendo lo mismo.
+        // Desde que abrir una orden es solo de admin, estas guardas son redundantes por
+        // arriba. Se quedan porque `create_work_order` también ignora el dinero que le
+        // mande quien no es admin: dos capas diciendo lo mismo, y ninguna que haya que
+        // recordar si algún día la pantalla cambia.
         deposito_inicial: isAdmin ? parseFloat(values.deposit) || 0 : 0,
         inspeccion_360_notas: values.inspectionNotes,
         fecha_estimada_entrega: values.estimatedDate || daysFromTodayLocal(5),
@@ -525,9 +528,14 @@ export default function WorkOrders() {
             <p className="page-subtitle">{filtered.length} {t('common.results')}</p>
           )}
         </div>
-        <button className="btn btn-primary" id="new-order-btn" onClick={() => setShowCreateModal(true)}>
-          <Plus size={18} /> {t('workOrders.newOrder')}
-        </button>
+        {/* Abrir una orden es recibir un vehículo y comprometer al taller: es de
+            administración. La base lo impone con `ordenes_trabajo_insert`; esconder el
+            botón solo evita que un técnico se lleve un error. */}
+        {isAdmin && (
+          <button className="btn btn-primary" id="new-order-btn" onClick={() => setShowCreateModal(true)}>
+            <Plus size={18} /> {t('workOrders.newOrder')}
+          </button>
+        )}
       </div>
 
       {error && <div className="alert-error">{error}</div>}
@@ -605,7 +613,7 @@ export default function WorkOrders() {
         </>
       )}
 
-      {showCreateModal && (
+      {isAdmin && showCreateModal && (
         <WorkOrderCreateModal
           form={form}
           customers={customers}

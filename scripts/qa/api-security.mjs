@@ -8,7 +8,6 @@
 //
 //   npm run qa:security                  # sin sesión + lo que permitan las cuentas
 //   npm run qa:security -- --json        # resultado en JSON (para un agente)
-//   npm run qa:security -- --alta        # incluye SEC-55: CREA una orden de prueba
 //
 // Configuración (variables de entorno; si faltan, se leen de .env.local y
 // .env.test.local):
@@ -32,7 +31,6 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const args = new Set(process.argv.slice(2));
 const JSON_OUTPUT = args.has('--json');
-const INCLUDE_INSERT = args.has('--alta');
 
 function readEnvFile(name) {
   const path = join(ROOT, name);
@@ -117,7 +115,11 @@ if (ctx.TOKEN_TECH) {
     ctx.ORDEN ||= list.find((o) => mine(o) && o.estatus !== 'entregado')?.id;
     ctx.ORDEN_ENTREGADA ||= list.find((o) => mine(o) && o.estatus === 'entregado')?.id;
     ctx.ORDEN_AJENA ||= list.find((o) => !mine(o) && o.estatus !== 'entregado')?.id;
-    ctx.ORDEN_ROW = list.find((o) => o.id === ctx.ORDEN);
+    // SEC-55 solo necesita un `cliente_id` y un `vehiculo_id` reales, para que lo único que
+    // pueda tumbar su POST sea la política y no una clave foránea inventada. Cae a cualquier
+    // orden visible: si el técnico de prueba no tiene ninguna asignada, el caso se saltaba
+    // sin necesidad.
+    ctx.ORDEN_ROW = list.find((o) => o.id === ctx.ORDEN) ?? list[0];
 
     const lineaDe = async (ordenId) => {
       if (!ordenId) return undefined;
@@ -137,6 +139,10 @@ if (ctx.TOKEN_TECH) {
 // ------------------------------------------------------------------------------------
 // Casos
 // ------------------------------------------------------------------------------------
+// Los identificadores **SEC-70 en adelante están tomados** por los casos manuales de
+// plan-de-pruebas.md §5 (curl a mano contra Storage y órdenes ajenas). Para un caso nuevo
+// automatizado usa un hueco de abajo — quedan libres SEC-19, SEC-36, SEC-37 y SEC-38 — o
+// sigue desde SEC-71 solo si antes lo reservas en ese documento.
 const anon = (c) => ({ ...c, who: 'anon' });
 const tech = (c) => ({ ...c, who: 'tech', needs: ['TOKEN_TECH', ...(c.needs || [])] });
 const admin = (c) => ({ ...c, who: 'admin', needs: ['TOKEN_ADMIN', ...(c.needs || [])] });
@@ -206,6 +212,25 @@ const CASES = [
   admin({ id: 'SEC-65', desc: 'Ni un admin dispara el barrido de órdenes vencidas', method: 'POST', path: () => rpc('recordar_ordenes_vencidas'), expect: 'denied' }),
   anon({ id: 'SEC-66', desc: 'Sin sesión no se deshace una importación bancaria', method: 'POST', path: () => rpc('deshacer_importacion_estado_cuenta'), body: { p_importacion_id: ZERO_UUID }, expect: 'denied' }),
   tech({ id: 'SEC-67', desc: 'Un técnico no deshace una importación bancaria', method: 'POST', path: () => rpc('deshacer_importacion_estado_cuenta'), body: { p_importacion_id: ZERO_UUID }, expect: 'denied' }),
+  // Abrir una orden y asignar a alguien son de administración desde 20261004000000. Los ids
+  // de cliente y vehículo son reales a propósito: así lo único que puede tumbar la petición
+  // es la política, y no una clave foránea inventada.
+  anon({ id: 'SEC-68', desc: 'Sin sesión no se abre una orden', method: 'POST', path: () => '/rest/v1/ordenes_trabajo', body: { sede_id: ZERO_UUID, cliente_id: ZERO_UUID, vehiculo_id: ZERO_UUID, tipo_trabajo: 'mecanica', millas_ingreso: 1, nivel_gasolina: '1/2' }, expect: 'denied' }),
+  tech({ id: 'SEC-55', desc: 'Un técnico no abre una orden de trabajo', needs: ['ORDEN_ROW', 'TECH_SEDE'], method: 'POST', path: () => '/rest/v1/ordenes_trabajo', headers: { Prefer: 'return=representation' }, body: (c) => ({
+    sede_id: c.TECH_SEDE,
+    cliente_id: c.ORDEN_ROW.cliente_id,
+    vehiculo_id: c.ORDEN_ROW.vehiculo_id,
+    tipo_trabajo: 'mecanica',
+    millas_ingreso: 1,
+    nivel_gasolina: '1/2',
+    fecha_estimada_entrega: '2030-01-01',
+    inspeccion_360_notas: 'PRUEBA qa:security — no debería crearse',
+  }), expect: 'denied' }),
+  // El de fondo: la asignación dispara `sync_order_commissions`, así que auto-asignarse es
+  // concederse una comisión. Se prueba sobre la orden que NO tiene asignada, que es el caso
+  // que valía la pena para quien quisiera aprovecharlo.
+  tech({ id: 'SEC-69', desc: 'Un técnico no se asigna a una orden (se concedería la comisión)', needs: ['ORDEN_AJENA', 'TECH_ID'], method: 'POST', path: () => '/rest/v1/orden_asignaciones', headers: { Prefer: 'return=representation' }, body: (c) => ({ orden_id: c.ORDEN_AJENA, usuario_id: c.TECH_ID, tipo_tarea: 'mecanica' }), expect: 'denied' }),
+  tech({ id: 'SEC-39', desc: 'Un técnico tampoco se asigna a la orden que ya trabaja', needs: ['ORDEN', 'TECH_ID'], method: 'POST', path: () => '/rest/v1/orden_asignaciones', headers: { Prefer: 'return=representation' }, body: (c) => ({ orden_id: c.ORDEN, usuario_id: c.TECH_ID, tipo_tarea: 'pintura' }), expect: 'denied' }),
   admin({ id: 'SEC-60', desc: 'Ni un admin cambia el estado de una línea con un UPDATE', needs: ['ORDEN'], method: 'PATCH', path: (c) => `/rest/v1/orden_labor?orden_id=eq.${c.ORDEN}&estado=neq.rechazado`, body: { estado: 'rechazado' }, headers: { Prefer: 'return=representation' }, expect: 'denied' }),
   admin({ id: 'SEC-61', desc: 'Ni un admin sube PDFs al bucket de reportes', method: 'POST', path: () => '/storage/v1/object/reportes/prueba-qa-security.pdf', body: '%PDF-1.4', headers: { 'Content-Type': 'application/pdf' }, expect: 'denied' }),
   admin({ id: 'SEC-62', desc: 'Ni un admin revierte cobros por RPC', method: 'POST', path: () => rpc('reverse_order_delivery_finance'), body: { target_order_id: ZERO_UUID }, expect: 'denied' }),
@@ -262,42 +287,6 @@ for (const c of CASES) {
     desc: 'El registro público de cuentas está apagado',
     estado: open ? 'FAIL' : 'PASS',
     ...(open ? { http: r.status, respuesta: `disable_signup=${r.json?.disable_signup}. Apágalo en el panel: Authentication → Sign In / Providers → Allow new users to sign up` } : {}),
-  });
-}
-
-// SEC-55: alta directa de una orden por un técnico (crea datos: solo con --alta).
-if (!INCLUDE_INSERT) {
-  results.push({ id: 'SEC-55', desc: 'Una orden creada directo por un técnico nace en recepción', estado: 'SKIP', motivo: 'usa --alta (crea una orden de prueba)' });
-} else if (!ctx.TOKEN_TECH || !ctx.ORDEN_ROW || !ctx.TECH_SEDE) {
-  results.push({ id: 'SEC-55', desc: 'Una orden creada directo por un técnico nace en recepción', estado: 'SKIP', motivo: 'falta TOKEN_TECH con una orden asignada' });
-} else {
-  const r = await call('POST', '/rest/v1/ordenes_trabajo', {
-    token: ctx.TOKEN_TECH,
-    headers: { Prefer: 'return=representation' },
-    body: {
-      sede_id: ctx.TECH_SEDE,
-      cliente_id: ctx.ORDEN_ROW.cliente_id,
-      vehiculo_id: ctx.ORDEN_ROW.vehiculo_id,
-      tipo_trabajo: 'mecanica',
-      estatus: 'entregado',
-      millas_ingreso: 1,
-      nivel_gasolina: '1/2',
-      fecha_estimada_entrega: '2030-01-01',
-      porcentaje_avance: 90,
-      total_labor: 5000,
-      numero_orden: 'ORD-2099-999',
-      inspeccion_360_notas: 'PRUEBA qa:security — borrar',
-    },
-  });
-  const row = Array.isArray(r.json) ? r.json[0] : null;
-  const ok = r.status >= 300 || (row && row.estatus === 'recepcion' && Number(row.total_labor) === 0 && row.numero_orden !== 'ORD-2099-999');
-  results.push({
-    id: 'SEC-55',
-    desc: 'Una orden creada directo por un técnico nace en recepción',
-    estado: ok ? 'PASS' : 'FAIL',
-    http: r.status,
-    ...(row ? { creada: `${row.numero_orden} (${row.id}) — bórrala como admin` } : {}),
-    ...(ok ? {} : { respuesta: r.text.slice(0, 300) }),
   });
 }
 

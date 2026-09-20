@@ -180,9 +180,10 @@ export const workOrdersService = {
     //
     // Ya no hay camino alternativo sin RPC. Aquel fallback insertaba los montos
     // directamente en `ordenes_trabajo`, que desde 20260918000000 no los tiene,
-    // y la función también decide qué puede registrar quien llama: un técnico
-    // crea la recepción y queda asignado, pero depósito, labor y repuestos solo
-    // los toma de un administrador.
+    // y la función también decide qué puede registrar quien llama. Desde 20261004000000
+    // solo llega un admin: `create_work_order` es SECURITY INVOKER y el INSERT pasa por
+    // `ordenes_trabajo_insert`, que es `is_admin()`. Las guardas de dinero de dentro de la
+    // función se quedan como segunda capa.
     const { data, error } = await supabase.rpc('create_work_order', {
       p_order: orderPayload,
       p_labor: input.labor_items,

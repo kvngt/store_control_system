@@ -219,7 +219,7 @@ Cuenta: **mecánico**, en el teléfono. Deja la sesión del admin abierta en la 
 | E-13 | 🟡 | Sube un video, y a mitad **cierra la app** y vuelve a abrirla | La subida continúa |
 | E-14 | 🟡 | Intenta borrar un avance del admin (si hay) | No puede; los suyos sí |
 | E-15 | 🟡 | En la computadora (admin): campana | Llegaron avisos "Nuevo avance" del mecánico |
-| E-16 | 🔴 | Como mecánico: **Nueva Orden** para el mismo cliente | No aparecen depósito, mano de obra ni repuestos; queda asignado a sí mismo. El admin recibe "Recepción registrada · Falta cotizar" |
+| E-16 | 🔴 | Como mecánico: buscar **Nueva Orden** en /work-orders | El botón no existe. Abrir una orden es de administración desde 20261004000000 |
 
 > Borra la orden de E-16 al terminar (como admin), para que no altere los números.
 

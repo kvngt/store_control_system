@@ -290,7 +290,7 @@ técnico.
 | | `trg_order_parts_expense` | Al entregar: asienta el costo de repuestos |
 | | `trg_order_delivery_reversal` | Al sacar de entregado: revierte cobro final y costo de repuestos |
 | | `trg_order_commissions` | Recalcula comisiones al cambiar el estatus |
-| | `trg_order_created_notify`, `trg_order_finished_notify` | Avisos a admins |
+| | `trg_order_created_notify`, `trg_order_finished_notify` | Avisos a admins. El primero solo actuaba cuando la orden la creaba quien no es admin, así que desde 20261004000000 no tiene caso; se deja como red |
 | | `trg_cleanup_order_finance` | Al borrar la orden: borra sus movimientos automáticos (en la misma transacción) |
 | | `trg_order_delete_paid_guard` | No se borra una orden con comisiones pagadas |
 | `orden_montos` | `trg_order_montos_guard` | Totales solo por recálculo; depósito fijo tras entregar |
@@ -365,7 +365,10 @@ El patrón general es `is_admin() OR sede_id = current_user_sede_id()`. Sobre é
 
 - **Solo admin:** `orden_montos`, `orden_repuestos`, `finanzas_*`, escritura de
   `comisiones` y `comision_pagos`, escritura de `orden_labor`, borrado de
-  clientes, vehículos y órdenes, publicar multimedia al cliente.
+  clientes, vehículos y órdenes, publicar multimedia al cliente, **abrir una orden**
+  (`ordenes_trabajo_insert`) y **alta y baja de asignaciones**
+  (`orden_asignaciones_insert` / `_delete`) — asignar reparte la comisión de la mano de
+  obra, así que no es una etiqueta.
 - **Propio:** `notificaciones` y `push_suscripciones` (cada quien las suyas);
   `comisiones` las lee el técnico dueño; avances y archivos se borran por su autor.
 - **Asignado:** modificar una orden (estado, avance, firma), escribir avances y

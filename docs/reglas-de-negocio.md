@@ -276,7 +276,7 @@ por técnico = bolsa ÷ técnicos asignados, en centavos, residuo a los primeros
 |---|---|---|
 | Te asignan a una orden (al crearla o después) | El técnico | "Nueva orden asignada · ORD-…" |
 | Te quitan de una orden | El técnico | "Ya no estás asignado · ORD-…" |
-| Un **técnico** registra una recepción | Admins de la sede | "Recepción registrada · ORD-… Falta cotizar." |
+| ~~Un **técnico** registra una recepción~~ | Admins de la sede | "Recepción registrada · ORD-… Falta cotizar." **Ya no ocurre:** abrir una orden es de administración (20261004000000), así que `trg_order_created_notify` quedó sin caso. El trigger se deja como red |
 | Un **técnico** agrega un avance | Admins de la sede | "Nuevo avance · ORD-…" con su nota |
 | Una orden pasa a **Finalizado** | Admins de la sede | "Lista para entregar · ORD-…" |
 | Se genera tu comisión (al entregar) | El técnico | "Comisión generada · ORD-… $175.00" |

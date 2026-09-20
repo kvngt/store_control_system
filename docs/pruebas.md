@@ -26,7 +26,7 @@ decidir cuál y corregirlo.
 | **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 385 pruebas, 55 archivos | ~25 s | Nada |
 | **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte y hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 212 aserciones, 8 archivos | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, 74 casos (72 pasan, 2 se saltan) | 2–5 min | Credenciales de prueba |
-| **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 62 casos con las cuentas de prueba (61 PASS · 1 SKIP sin `--alta`) | ~15 s | Nada; con cuentas de prueba cubre más |
+| **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 65 casos con las cuentas de prueba (65 PASS · 0 SKIP), todos de solo lectura | ~15 s | Nada; con cuentas de prueba cubre más |
 | **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
 
 Por qué hacen falta todas: **Vitest simula la base**, así que no puede detectar una
@@ -320,7 +320,8 @@ vuelve a abrirlo.
 ```bash
 npm run qa:security             # tabla PASS / FAIL / SKIP
 npm run qa:security -- --json   # para un agente o un CI
-npm run qa:security -- --alta   # además crea una orden como técnico (SEC-55)
+# `--alta` ya no existe: SEC-55 comprobaba que la orden de un técnico naciera corregida y
+# ahora comprueba que no entre, así que la suite no escribe nada.
 ```
 
 `scripts/qa/api-security.mjs` llama la API **desplegada** (la de `.env.local`) como lo
