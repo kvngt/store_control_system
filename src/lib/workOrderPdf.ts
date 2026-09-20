@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import type { Sede, WorkOrder } from '../types/database';
 import { customerReportPhotos, groupByDay, reportImagePath } from './reportMedia';
+import { money } from './money';
 
 export interface WorkOrderPdfOptions {
   /** El enlace personal del cliente, si la orden tiene: la versión web con videos. */
@@ -16,8 +17,6 @@ const MUTED: [number, number, number] = [110, 110, 130];
 
 // Keeps the minus sign in front of the currency symbol: "-$100.00", not
 // "$-100.00", which is how the shop's paperwork reads.
-const money = (value: number) =>
-  `${value < 0 ? '-' : ''}$${Math.abs(value).toFixed(2)}`;
 
 const STATUS_LABELS: Record<string, string> = {
   recepcion: 'Recepción',

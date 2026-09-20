@@ -8,6 +8,7 @@ import { queryKeys } from '../../lib/queryClient';
 import { relativeTime } from '../notifications/renderNotification';
 import { quotesService } from '../../services/quotes.service';
 import type { AdminAuthorizationVia, LineState, Quote, WorkOrder } from '../../types/database';
+import { money } from '../../lib/money';
 
 interface QuoteLine {
   id: string;
@@ -18,7 +19,6 @@ interface QuoteLine {
   presupuestoId: string | null;
 }
 
-const money = (value: number) => `$${Number(value).toFixed(2)}`;
 
 /** Las líneas de la orden con su monto y estado, en el orden en que se agregaron. */
 function linesOf(order: WorkOrder): QuoteLine[] {

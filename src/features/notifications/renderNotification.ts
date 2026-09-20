@@ -1,9 +1,9 @@
 import type { AppNotification } from '../../types/database';
+import { money as formatMoney } from '../../lib/money';
 
-const money = (value: unknown) => {
-  const n = Number(value);
-  return Number.isFinite(n) ? `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '';
-};
+// Un dato ausente deja el hueco vacío en vez de afirmar "$0.00": un aviso que inventa una
+// cifra es peor que uno incompleto.
+const money = (value: unknown) => (Number.isFinite(Number(value)) ? formatMoney(Number(value)) : '');
 
 /**
  * El texto de un aviso en el idioma de la pantalla.
@@ -25,8 +25,18 @@ export function renderNotification(n: AppNotification, t: (key: string) => strin
       .replace(/^\s*—\s*/, '')
       .trim();
 
-  const titleKey = `notifications.types.${n.tipo}.title`;
-  const bodyKey = `notifications.types.${n.tipo}.body`;
+  // Un mismo tipo puede necesitar dos redacciones cuando el dato cambia el sentido de la
+  // frase. La base ya ramifica el título de la respuesta del cliente entre "respondió" y "no
+  // autorizó"; sin esta variante la plantilla genérica lo tapaba y en la campana un rechazo
+  // se leía igual que una aprobación. `!= null` a propósito: un aviso viejo sin el dato se
+  // queda con la redacción de siempre en vez de convertirse en un rechazo.
+  const variante =
+    n.tipo === 'presupuesto_respondido_cliente' && data.autorizados != null && Number(data.autorizados) === 0
+      ? '_rechazo'
+      : '';
+
+  const titleKey = `notifications.types.${n.tipo}${variante}.title`;
+  const bodyKey = `notifications.types.${n.tipo}${variante}.body`;
   const titleTemplate = t(titleKey);
   const bodyTemplate = t(bodyKey);
 

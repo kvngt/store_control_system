@@ -53,6 +53,37 @@ describe('renderNotification', () => {
     });
   });
 
+  // La base ramifica el título de la respuesta del cliente. La plantilla genérica lo tapaba,
+  // así que en la campana un rechazo se leía "El cliente respondió el presupuesto".
+  it('distingue el rechazo del cliente de la autorización', () => {
+    const datos = { numero_orden: 'ORD-2026-014', presupuesto_id: 'p-1' };
+    const rechazo = notification({
+      tipo: 'presupuesto_respondido_cliente',
+      titulo: 'El cliente no autorizó el presupuesto · ORD-2026-014',
+      datos: { ...datos, autorizados: 0, rechazados: 2 },
+    });
+    const aprueba = notification({
+      tipo: 'presupuesto_respondido_cliente',
+      titulo: 'El cliente respondió el presupuesto · ORD-2026-014',
+      datos: { ...datos, autorizados: 2, rechazados: 0 },
+    });
+
+    expect(renderNotification(rechazo, es).title).toBe('El cliente no autorizó el presupuesto · ORD-2026-014');
+    expect(renderNotification(rechazo, en).title).toBe('The customer did not authorize the quote · ORD-2026-014');
+    expect(renderNotification(aprueba, es).title).toBe('El cliente respondió el presupuesto · ORD-2026-014');
+    expect(renderNotification(aprueba, en).title).toBe('The customer answered the quote · ORD-2026-014');
+  });
+
+  // Un aviso guardado antes de que existiera el dato no debe convertirse en un rechazo.
+  it('un aviso viejo sin el conteo se queda con la redacción de siempre', () => {
+    const n = notification({
+      tipo: 'presupuesto_respondido_cliente',
+      titulo: 'El cliente respondió el presupuesto · ORD-2026-014',
+      datos: { numero_orden: 'ORD-2026-014' },
+    });
+    expect(renderNotification(n, es).title).toBe('El cliente respondió el presupuesto · ORD-2026-014');
+  });
+
   it('usa el texto de la base para un tipo que el frontend todavía no conoce', () => {
     const n = notification({ tipo: 'presupuesto_aprobado', titulo: 'Trabajo autorizado · ORD-2026-014', cuerpo: 'Puedes continuar' });
     expect(renderNotification(n, en)).toEqual({ title: 'Trabajo autorizado · ORD-2026-014', body: 'Puedes continuar' });

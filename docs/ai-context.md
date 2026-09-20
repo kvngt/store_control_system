@@ -107,16 +107,26 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
    `src/styles/index.css`, componentes en `src/styles/components.css`. Nunca un
    color literal.
 7. **Todo texto visible pasa por i18n** (`src/i18n/translations.ts`, español e
-   inglés, `useLanguage().t(key)`). Los errores se guardan crudos y se traducen al
+   inglés, `useLanguage().t(key)`). `Translations` es una firma de índice, así que
+   TypeScript no compara los dos árboles y `getTranslation` devuelve **la clave** cuando
+   falta: la pantalla mostraría `workOrders.archivedSearch`. `src/i18n/translations.test.ts`
+   es la red — mismas claves, mismos marcadores `{dato}`, ningún texto vacío — con una lista
+   corta de omisiones a propósito. Los errores se guardan crudos y se traducen al
    pintar con `lib/errors.ts`; nunca muestres el mensaje del backend. Excepción: un
    `RAISE ... USING ERRCODE = '42501'` con una oración en español para el taller
    ("La orden ya fue entregada…") se muestra tal cual en español; escribe esos
    mensajes pensando en quien los va a leer.
+7b. **El dinero se escribe con `lib/money.ts`** (`money`, `moneySigned`), nunca con
+   `toFixed(2)` ni `toLocaleString()`. El segundo no es otro estilo, está mal:
+   `toLocaleString()` sin opciones se come los centavos ($1,650.50 → "$1,650.5") y cambia
+   según el idioma del teléfono. El portal y los correos ya tenían su propio
+   `Intl.NumberFormat`; son paquetes aparte y siguen con el suyo.
 8. **Fechas locales** con `lib/dates.ts` (`todayLocal`, `daysFromTodayLocal`, `isSameMonth`). Nunca
    `toISOString().split('T')[0]` ni `new Date('AAAA-MM-DD')` para comparar meses.
 8b. **Lo que va junto se escribe junto.** Dos o más escrituras que no pueden quedar a
    medias (un lote y sus movimientos, una orden y sus líneas) van en una RPC o un trigger,
-   no en varias llamadas desde el navegador (`importar_estado_cuenta`, `create_work_order`).
+   no en varias llamadas desde el navegador (`importar_estado_cuenta`,
+   `deshacer_importacion_estado_cuenta`, `create_work_order`).
    Una operación de dinero que se puede disparar dos veces bloquea sus filas
    (`FOR UPDATE`, ver `pay_commissions`).
 8c. **La caché de datos es de una persona.** `AuthContext` la vacía al cambiar de usuario;
@@ -151,6 +161,7 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
 | Listas completas y totales | `fetchAll` en `src/services/support.ts`; `resumen_panel` (panel y Finanzas); `importar_estado_cuenta` (importación bancaria) |
 | Largo mínimo de contraseña | `src/lib/password.ts` (8), igual en `create-employee`, `update-employee` y el panel de Auth |
 | Traspaso, cuentas, operación y emergencias | [traspaso.md](traspaso.md); antes de publicar a clientes reales, [salida-a-produccion.md](salida-a-produccion.md) |
+| Formato del dinero | `src/lib/money.ts` (`money`, `moneySigned`); el portal y los correos tienen el suyo |
 | Tipos de dominio | `src/types/domain/` |
 
 ## 4. Patrones de interfaz
@@ -167,8 +178,11 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
   `useIsMobile()` para renderizar una sola versión; respeta `env(safe-area-inset-*)`.
 - **Un `<select>` controlado que se cancela con `confirm`** se remonta con una `key`
   (`statusEpoch`).
-- **Un `DELETE` rechazado por RLS devuelve éxito sin filas**: usa `.select('id')` y
-  `assertDeleted` (`src/services/support.ts`).
+- **Un `DELETE` o un `UPDATE` rechazado por RLS devuelve éxito sin filas**: usa
+  `.select('id')` y `assertDeleted` / `assertAffected` (`src/services/support.ts`). Sin eso
+  la pantalla dibuja el cambio sobre una fila que la base no tocó; en `uploadSignature`
+  llegaba a decir "firmada" con la orden sin firma y el total en cero. Excepción: marcar un
+  aviso como leído, donde cero filas significa "ya estaba leído".
 
 ## 5. Verificar un cambio
 

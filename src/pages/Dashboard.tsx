@@ -19,6 +19,7 @@ import {
   Car,
   ChevronRight,
 } from 'lucide-react';
+import { money } from '../lib/money';
 
 const EMPTY_STATS: DashboardStats = {
   ordenes_activas: 0,
@@ -136,7 +137,7 @@ export default function Dashboard() {
             </div>
             <div className="stat-content">
               <div className="stat-label">{t('dashboard.monthlyRevenue')}</div>
-              <div className="stat-value">${stats.ingresos_mes.toLocaleString()}</div>
+              <div className="stat-value">{money(stats.ingresos_mes)}</div>
             </div>
             <ChevronRight size={18} className="stat-card-arrow" />
           </button>
@@ -214,12 +215,12 @@ export default function Dashboard() {
                   <div
                     className="chart-bar income"
                     style={{ height: `${(month.ingresos / maxRevenue) * 160}px` }}
-                    title={`$${month.ingresos.toLocaleString()}`}
+                    title={money(month.ingresos)}
                   ></div>
                   <div
                     className="chart-bar expense"
                     style={{ height: `${(month.egresos / maxRevenue) * 160}px` }}
-                    title={`$${month.egresos.toLocaleString()}`}
+                    title={money(month.egresos)}
                   ></div>
                 </div>
                 <span className="chart-bar-label">{month.mes}</span>
@@ -356,7 +357,7 @@ export default function Dashboard() {
                   </td>
                   {isAdmin && (
                     <td data-label={t('common.total')} style={{ fontWeight: 600 }}>
-                      ${Number(order.montos?.total_general ?? 0).toLocaleString()}
+                      {money(order.montos?.total_general)}
                     </td>
                   )}
                   <td data-label={t('common.actions')}>

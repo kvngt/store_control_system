@@ -14,6 +14,7 @@ import { EMPTY_VEHICLE_FIELDS, validateVehicleFields } from '../features/vehicle
 import CustomerPicker from '../components/CustomerPicker';
 import type { NewCustomerDraft } from '../components/CustomerPicker';
 import type { Vehicle, Customer } from '../types/database';
+import { money } from '../lib/money';
 
 // The vehicle half of the form lives in `VehicleFields`, shared with the order
 // intake dialog; this screen adds only the owner.
@@ -52,7 +53,7 @@ export default function Vehicles() {
   const vehicles = vehiclesQuery.data ?? emptyList<Vehicle>();
   const customers = customersQuery.data ?? emptyList<Customer>();
   const loading = vehiclesQuery.isPending || customersQuery.isPending;
-  const loadError = vehiclesQuery.error ?? customersQuery.error;
+  const loadError = vehiclesQuery.error ?? customersQuery.error ?? detailQuery.error;
 
   const loadData = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.vehicles(sedeId) });
@@ -187,10 +188,14 @@ export default function Vehicles() {
           <ChevronLeft size={18} /> {t('common.back')}
         </button>
 
+        {error && <div className="alert-error">{error}</div>}
+
         {detailQuery.isPending ? (
           <div className="loading-state"><div className="spinner" /></div>
         ) : !v ? (
-          <p className="orders-section-empty">{t('common.noResults')}</p>
+          // Sin el `!error` esto decía "sin resultados" cuando la consulta se había caído:
+          // el vehículo existe y la pantalla afirmaba lo contrario.
+          !error && <p className="orders-section-empty">{t('common.noResults')}</p>
         ) : (
           <>
             <div className="page-header">
@@ -247,7 +252,7 @@ export default function Vehicles() {
                           <td data-label={t('common.date')}>{new Date(o.creado_en).toLocaleDateString(language === 'es' ? 'es' : 'en')}</td>
                           {isAdmin && (
                             <td data-label={t('common.total')} style={{ fontWeight: 600 }}>
-                              ${Number(o.montos?.total_general ?? 0).toLocaleString()}
+                              {money(o.montos?.total_general)}
                             </td>
                           )}
                         </tr>

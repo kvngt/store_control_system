@@ -32,23 +32,41 @@ export const customersService = {
     })) as Customer[];
   },
 
+  /**
+   * Un cliente con su flota y su historial completo.
+   *
+   * Las dos listas van con `fetchAll` por dos razones, y la segunda importa más que la
+   * primera. Una: la API corta en 1.000 filas sin avisar, y un cliente de flota con años
+   * de historial perdería órdenes en silencio justo en la pantalla donde se revisa lo que
+   * se le ha cobrado. Dos: `{ data: orders }` descartaba el `error`, así que una consulta
+   * caída se volvía `[]` y la pantalla decía "este cliente no tiene órdenes" — un dato
+   * falso en lugar de un error. `fetchAll` lanza.
+   */
   getCustomerDetail: async (customerId: string) => {
-    const [{ data: customer, error }, { data: vehicles }, { data: orders }] = await Promise.all([
+    const [{ data: customer, error }, vehicles, orders] = await Promise.all([
       supabase.from('clientes').select('*').eq('id', customerId).single(),
-      supabase.from('vehiculos').select('*').eq('cliente_id', customerId),
+      fetchAll<Vehicle>((from, to) =>
+        supabase
+          .from('vehiculos')
+          .select('*')
+          .eq('cliente_id', customerId)
+          .order('creado_en', { ascending: false })
+          .order('id')
+          .range(from, to)
+      ),
       // `montos` es solo admin (RLS): para un técnico llega en null.
-      supabase
-        .from('ordenes_trabajo')
-        .select('*, montos:orden_montos(total_general)')
-        .eq('cliente_id', customerId)
-        .order('creado_en', { ascending: false }),
+      fetchAll<WorkOrder>((from, to) =>
+        supabase
+          .from('ordenes_trabajo')
+          .select('*, montos:orden_montos(total_general)')
+          .eq('cliente_id', customerId)
+          .order('creado_en', { ascending: false })
+          .order('id')
+          .range(from, to)
+      ),
     ]);
     if (error) throw error;
-    return {
-      customer: customer as Customer,
-      vehicles: (vehicles || []) as Vehicle[],
-      orders: (orders || []) as WorkOrder[],
-    };
+    return { customer: customer as Customer, vehicles, orders };
   },
 
   createCustomer: async (input: CustomerInput) => {

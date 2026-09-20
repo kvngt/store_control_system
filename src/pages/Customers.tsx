@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import type { Customer, Vehicle, WorkOrder } from '../types/database';
 import { AlertError } from '../components/AlertError';
+import { money } from '../lib/money';
 
 export default function Customers() {
   const { t, language } = useLanguage();
@@ -324,7 +325,7 @@ export default function Customers() {
                         <td data-label={t('common.status')}><span className={`badge badge-${o.estatus}`}>{statusLabels[o.estatus]}</span></td>
                         {isAdmin && (
                           <td data-label={t('common.total')} style={{ fontWeight: 600 }}>
-                            ${Number(o.montos?.total_general ?? 0).toLocaleString()}
+                            {money(o.montos?.total_general)}
                           </td>
                         )}
                       </tr>

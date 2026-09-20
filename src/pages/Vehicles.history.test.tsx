@@ -83,6 +83,9 @@ describe('Historial del vehículo', () => {
     expect(await screen.findByRole('heading', { name: /2019 Toyota Camry/ })).toBeInTheDocument();
     expect(screen.getByText(/Historial de Servicios \(1\)/)).toBeInTheDocument();
     expect(screen.getByText('ORD-2026-001')).toBeInTheDocument();
+    // Con el formato de `lib/money`, para que la prueba del técnico de abajo busque el
+    // texto que un admin sí ve.
+    expect(screen.getByText('$1,200.00')).toBeInTheDocument();
     expect(mocks.getVehicleDetail).toHaveBeenCalledWith('v1');
   });
 
@@ -100,7 +103,17 @@ describe('Historial del vehículo', () => {
     await abrirDetalle();
 
     await screen.findByText('ORD-2026-001');
-    expect(screen.queryByText('$1,200')).not.toBeInTheDocument();
+    expect(screen.queryByText('$1,200.00')).not.toBeInTheDocument();
+  });
+
+  // Sin el error del detalle en la lista de errores de la página, un fallo de red pintaba
+  // "sin resultados": la pantalla afirmaba que el vehículo no existe.
+  it('un historial que no carga se dice, no se pinta como vehículo sin datos', async () => {
+    mocks.getVehicleDetail.mockRejectedValue(new Error('Se cayó la red'));
+    await abrirDetalle();
+
+    expect(await screen.findByText('Se cayó la red')).toBeInTheDocument();
+    expect(screen.queryByText('Sin resultados')).not.toBeInTheDocument();
   });
 
   it('un vehículo sin órdenes lo dice', async () => {

@@ -30,8 +30,7 @@ export const vehiclesService = {
    *
    * Es lo que sirve para responder "qué le hicimos la vez pasada". Las órdenes van con
    * `fetchAll`, no con un `select` suelto: un carro de flota puede pasar por el taller
-   * muchas veces, y la API corta en 1.000 filas sin avisar. (`getCustomerDetail` sí lee sin
-   * paginar; es deuda vieja y no vale copiarla.)
+   * muchas veces, y la API corta en 1.000 filas sin avisar.
    */
   getVehicleDetail: async (vehicleId: string) => {
     const [{ data: vehicle, error }, orders] = await Promise.all([

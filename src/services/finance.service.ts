@@ -174,13 +174,21 @@ export const financeService = {
 
   // Deletes every finanzas_movimientos row from a batch, then the batch
   // itself — used to fully undo an import if something was miscategorized.
+  /**
+   * Deshace una importación: borra sus movimientos y el lote, o no borra nada.
+   *
+   * Eran dos DELETE seguidos desde aquí. Si el segundo fallaba, el dinero ya estaba borrado
+   * y el lote seguía en la lista anunciando las transacciones que acababan de desaparecer.
+   * Ahora es una sola transacción en la base (`deshacer_importacion_estado_cuenta`), que
+   * además convierte en error el DELETE que la RLS rechaza en silencio.
+   *
+   * Devuelve cuántos movimientos se borraron.
+   */
   deleteImportBatch: async (importacionId: string) => {
-    const { error: rowsError } = await supabase
-      .from('finanzas_movimientos')
-      .delete()
-      .eq('importacion_id', importacionId);
-    if (rowsError) throw rowsError;
-    const { error } = await supabase.from('finanzas_importaciones').delete().eq('id', importacionId);
+    const { data, error } = await supabase.rpc('deshacer_importacion_estado_cuenta', {
+      p_importacion_id: importacionId,
+    });
     if (error) throw error;
+    return (data ?? 0) as number;
   },
 };

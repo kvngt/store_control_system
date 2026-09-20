@@ -29,6 +29,7 @@ const ARCHIVED = 'archivadas';
 import { checkUsPlate, checkVin } from '../lib/vin';
 import type { WorkOrder, Customer, Vehicle, UserProfile } from '../types/database';
 import { Plus, Search, Eye, Car, Calendar, Trash2, ChevronRight, ChevronDown, Wrench } from 'lucide-react';
+import { money } from '../lib/money';
 
 export default function WorkOrders() {
   const { t, language } = useLanguage();
@@ -409,7 +410,7 @@ export default function WorkOrders() {
                 {/* `montos` es null para un técnico: la base no se lo devuelve. */}
                 {order.montos && (
                   <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>
-                    ${Number(order.montos.total_general).toLocaleString()}
+                    {money(order.montos.total_general)}
                   </span>
                 )}
               </div>
@@ -480,7 +481,7 @@ export default function WorkOrders() {
                     {order.fecha_estimada_entrega}
                   </td>
                   {isAdmin && (
-                    <td style={{ fontWeight: 600 }}>${Number(order.montos?.total_general ?? 0).toLocaleString()}</td>
+                    <td style={{ fontWeight: 600 }}>{money(order.montos?.total_general)}</td>
                   )}
                   <td>
                     <div className="table-actions">

@@ -1,8 +1,9 @@
 -- ====================================================================================
 -- RESTORIFY — Pruebas de base de datos: revisión antes de salir a producción
 -- ====================================================================================
--- Qué cubre (migración 20260927000000): los totales del panel salen bien con más de
--- 1.000 movimientos y respetan RLS; importar un estado de cuenta es todo o nada;
+-- Qué cubre (migraciones 20260927000000 y 20261003000000): los totales del panel salen
+-- bien con más de 1.000 movimientos y respetan RLS; importar un estado de cuenta es todo o
+-- nada, y deshacerla también;
 -- pagar dos veces las mismas comisiones falla; una cuenta sin perfil no ve sedes; los
 -- índices y el search_path existen; el avance no pasa de 100.
 --
@@ -12,7 +13,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(22);
+SELECT plan(28);
 
 -- ------------------------------------------------------------------------------------
 -- Datos de prueba
@@ -124,6 +125,48 @@ SELECT is(
   (SELECT COUNT(*)::int FROM finanzas_movimientos f JOIN finanzas_importaciones i ON i.id = f.importacion_id WHERE i.hash_archivo = 'h-bueno'),
   2,
   'El lote y sus dos movimientos quedan juntos'
+);
+
+-- ------------------------------------------------------------------------------------
+-- 2b. Deshacer la importación: los movimientos y el lote se van juntos o no se van
+-- ------------------------------------------------------------------------------------
+-- Eran dos DELETE seguidos desde el navegador. Si el segundo no salía, el dinero ya estaba
+-- borrado y el lote seguía anunciando las transacciones que acababan de desaparecer.
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
+SELECT throws_ok(
+  $$ SELECT deshacer_importacion_estado_cuenta(
+       (SELECT id FROM finanzas_importaciones WHERE hash_archivo = 'h-bueno')) $$,
+  '42501', NULL,
+  'Un técnico no deshace una importación'
+);
+SELECT is(
+  (SELECT COUNT(*)::int FROM finanzas_movimientos WHERE descripcion IN ('uno', 'dos')),
+  0,
+  'El técnico tampoco los ve (la RLS del dinero es solo admin)'
+);
+
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000001';
+SELECT is(
+  (SELECT COUNT(*)::int FROM finanzas_movimientos WHERE descripcion IN ('uno', 'dos')),
+  2,
+  'Tras el intento del técnico los dos movimientos siguen ahí'
+);
+SELECT is(
+  (SELECT deshacer_importacion_estado_cuenta(
+     (SELECT id FROM finanzas_importaciones WHERE hash_archivo = 'h-bueno'))),
+  2,
+  'El admin deshace la importación y le dice cuántos movimientos borró'
+);
+SELECT is_empty(
+  $$ SELECT 1 FROM finanzas_movimientos WHERE descripcion IN ('uno', 'dos') $$,
+  'No quedan movimientos huérfanos con importacion_id en null'
+);
+-- Un DELETE que la RLS rechaza devuelve cero filas sin error: por eso la función mira el
+-- ROW_COUNT del lote y levanta 42501 en vez de reportar un borrado que no ocurrió.
+SELECT throws_ok(
+  $$ SELECT deshacer_importacion_estado_cuenta('11111111-1111-1111-1111-111111111111') $$,
+  '42501', NULL,
+  'Deshacer una importación que no existe falla en vez de decir que borró cero'
 );
 
 -- ------------------------------------------------------------------------------------

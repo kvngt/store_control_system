@@ -28,6 +28,7 @@ import {
   X,
   Trash2,
 } from 'lucide-react';
+import { money, moneySigned } from '../lib/money';
 
 export default function Finance() {
   const { t, language } = useLanguage();
@@ -270,7 +271,7 @@ export default function Finance() {
           <div className="stat-content">
             <div className="stat-label">{t('finance.income')}</div>
             <div className="stat-value" style={{ color: 'var(--color-success)' }}>
-              ${totalIncome.toLocaleString()}
+              {money(totalIncome)}
             </div>
           </div>
         </div>
@@ -282,7 +283,7 @@ export default function Finance() {
           <div className="stat-content">
             <div className="stat-label">{t('finance.expense')}</div>
             <div className="stat-value" style={{ color: 'var(--color-danger)' }}>
-              ${totalExpense.toLocaleString()}
+              {money(totalExpense)}
             </div>
           </div>
         </div>
@@ -294,7 +295,7 @@ export default function Finance() {
           <div className="stat-content">
             <div className="stat-label">{t('finance.balance')}</div>
             <div className="stat-value" style={{ color: balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
-              {balance >= 0 ? '+' : '-'}${Math.abs(balance).toLocaleString()}
+              {moneySigned(balance, balance >= 0)}
             </div>
           </div>
         </div>
@@ -311,8 +312,8 @@ export default function Finance() {
               return (
                 <div key={i} className="chart-bar-group">
                   <div className="chart-bar-pair">
-                    <div className="chart-bar income" style={{ height: `${(month.ingresos / monthlyMax) * 140}px` }} title={`${t('finance.income')}: $${month.ingresos.toLocaleString()}`}></div>
-                    <div className="chart-bar expense" style={{ height: `${(month.egresos / monthlyMax) * 140}px` }} title={`${t('finance.expense')}: $${month.egresos.toLocaleString()}`}></div>
+                    <div className="chart-bar income" style={{ height: `${(month.ingresos / monthlyMax) * 140}px` }} title={`${t('finance.income')}: ${money(month.ingresos)}`}></div>
+                    <div className="chart-bar expense" style={{ height: `${(month.egresos / monthlyMax) * 140}px` }} title={`${t('finance.expense')}: ${money(month.egresos)}`}></div>
                   </div>
                   <span className="chart-bar-label">{month.mes}</span>
                 </div>
@@ -419,7 +420,7 @@ export default function Finance() {
                   fontWeight: 600,
                   color: txn.tipo === 'ingreso' ? 'var(--color-success)' : 'var(--color-danger)',
                 }}>
-                  {txn.tipo === 'ingreso' ? '+' : '-'}${Number(txn.monto).toLocaleString()}
+                  {moneySigned(txn.monto, txn.tipo === 'ingreso')}
                 </td>
                 {user?.rol === 'admin' && (
                   <td data-label={t('common.actions')} style={{ textAlign: 'center' }}>

@@ -17,6 +17,12 @@ import { daysFromTodayLocal } from '../lib/dates';
 
 /** Desde cuándo una orden entregada deja el tablero y pasa al archivo. */
 const ARCHIVE_DAYS = 90;
+
+/**
+ * Cuántos clientes se resuelven al buscar en el archivo. Sus ids viajan en la URL, que
+ * tiene un largo máximo; buscar "a" no puede convertirse en una petición de 8 KB.
+ */
+const CLIENTES_EN_BUSQUEDA = 100;
 import { mediaService } from './media.service';
 import { quotesService } from './quotes.service';
 
@@ -87,7 +93,24 @@ export const workOrdersService = {
     if (termino) {
       // En el servidor: el archivo no está en memoria, así que filtrarlo en el cliente
       // solo buscaría dentro de la página que se pidió.
-      query = query.or(`numero_orden.ilike.%${termino}%,clientes.nombre.ilike.%${termino}%`);
+      //
+      // El nombre del cliente se resuelve ANTES, en su propia consulta. Un `or` de
+      // PostgREST no puede nombrar una tabla embebida — `clientes.nombre.ilike...` dentro
+      // de un `or` responde 400 "failed to parse logic tree" — pero `cliente_id` sí es
+      // columna de la orden, así que se filtra por los ids que casan.
+      const { data: clientes } = await supabase
+        .from('clientes')
+        .select('id')
+        .ilike('nombre', `%${termino}%`)
+        .limit(CLIENTES_EN_BUSQUEDA);
+      const ids = (clientes || []).map((c) => c.id);
+
+      // Dentro de un `or` los comodines son `*`, y una coma o un paréntesis en el término
+      // partirían el árbol lógico: un cliente llamado "Pérez, Juan" devolvía un 400.
+      const seguro = termino.replace(/[(),*%]/g, ' ').trim();
+      const partes = [`numero_orden.ilike.*${seguro}*`];
+      if (ids.length) partes.push(`cliente_id.in.(${ids.join(',')})`);
+      query = query.or(partes.join(','));
     }
     const { data, error } = await query.range(offset, offset + limit - 1);
     if (error) throw error;
@@ -181,8 +204,17 @@ export const workOrdersService = {
       : { estatus, fecha_finalizacion: null };
     if (estatus === 'espera_autorizacion') updates.motivo_autorizacion = motivo ?? null;
 
-    const { error } = await supabase.from('ordenes_trabajo').update(updates).eq('id', orderId);
+    // Con `.select('id')`: una política de RLS que no deja pasar la fila devuelve cero
+    // filas y **ningún error**, así que sin esto la pantalla pintaría el estado nuevo sobre
+    // una orden que no cambió. Las políticas de SELECT y de UPDATE de `ordenes_trabajo`
+    // tienen la misma condición, así que pedir la fila de vuelta nunca falla por sí solo.
+    const { data, error } = await supabase
+      .from('ordenes_trabajo')
+      .update(updates)
+      .eq('id', orderId)
+      .select('id');
     if (error) throw error;
+    assertAffected(data, 'la orden');
   },
 
   // Por RPC y no con un UPDATE: `orden_labor` es escritura solo de admin, y así sigue.
@@ -209,8 +241,13 @@ export const workOrdersService = {
   },
 
   updateWorkOrderProgress: async (orderId: string, porcentaje: number) => {
-    const { error } = await supabase.from('ordenes_trabajo').update({ porcentaje_avance: porcentaje }).eq('id', orderId);
+    const { data, error } = await supabase
+      .from('ordenes_trabajo')
+      .update({ porcentaje_avance: porcentaje })
+      .eq('id', orderId)
+      .select('id');
     if (error) throw error;
+    assertAffected(data, 'el avance de la orden');
   },
 
   deleteWorkOrder: async (orderId: string) => {
@@ -344,8 +381,13 @@ export const workOrdersService = {
   },
 
   updateAssignmentStatus: async (id: string, estatus: 'pendiente' | 'en_curso' | 'completada') => {
-    const { error } = await supabase.from('orden_asignaciones').update({ estatus_tarea: estatus }).eq('id', id);
+    const { data, error } = await supabase
+      .from('orden_asignaciones')
+      .update({ estatus_tarea: estatus })
+      .eq('id', id)
+      .select('id');
     if (error) throw error;
+    assertAffected(data, 'la tarea');
   },
 
   // ===== Progress updates ("Agregar Avance") =====
@@ -381,12 +423,19 @@ export const workOrdersService = {
     const path = mediaPath(order.sede_id, order.id, `firma-${Date.now()}.png`);
     await mediaService.uploadSmallFile(path, blob, 'image/png');
 
+    // El más importante de los `assertAffected` de este archivo. La imagen ya está en
+    // Storage; si el UPDATE se queda en cero filas sin error, esta función devolvía la ruta
+    // y la fecha como si todo hubiera ido bien: la pantalla decía "firmada", la orden se
+    // quedaba sin firma y — porque la primera firma es la que autoriza lo cotizado — el
+    // total seguía en cero. El cliente firma en la tableta y no queda registrado.
     const firmaFecha = new Date().toISOString();
-    const { error: updateError } = await supabase
+    const { data, error: updateError } = await supabase
       .from('ordenes_trabajo')
       .update({ firma_ruta: path, firma_fecha: firmaFecha })
-      .eq('id', order.id);
+      .eq('id', order.id)
+      .select('id');
     if (updateError) throw updateError;
+    assertAffected(data, 'la firma');
 
     return { ruta: path, fecha: firmaFecha };
   },

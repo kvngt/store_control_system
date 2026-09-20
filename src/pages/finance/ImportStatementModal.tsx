@@ -13,6 +13,7 @@ import type {
 } from '../../types/database';
 import { X, Upload, AlertTriangle } from 'lucide-react';
 import { AlertError } from '../../components/AlertError';
+import { moneySigned } from '../../lib/money';
 
 interface Props {
   onClose: () => void;
@@ -38,6 +39,10 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [warnings, setWarnings] = useState<string[]>([]);
+  // Las reglas asignan la categoría de cada línea. Si no cargan, todo entra con la
+  // categoría por omisión y el dinero queda en el rubro equivocado — callado, que es lo
+  // peor: quien importa no tiene forma de notar que faltaron.
+  const [rulesFailed, setRulesFailed] = useState(false);
   const [successCount, setSuccessCount] = useState<number | null>(null);
   const [bulkCategory, setBulkCategory] = useState<TransactionCategory | ''>('');
   // Set when this exact file (by content hash) was already imported here.
@@ -46,7 +51,13 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    supabaseService.getCategorizationRules().then(setRules).catch(() => {});
+    supabaseService
+      .getCategorizationRules()
+      .then((r) => {
+        setRules(r);
+        setRulesFailed(false);
+      })
+      .catch(() => setRulesFailed(true));
   }, []);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -214,6 +225,13 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
                 <div className="loading-state"><div className="spinner" /> <span>{t('finance.parsingStatement')}</span></div>
               )}
 
+              {rulesFailed && (
+                <div className="alert-error" role="alert" style={{ display: 'flex', gap: 8 }}>
+                  <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <span>{t('finance.rulesLoadFailed')}</span>
+                </div>
+              )}
+
               {alreadyImported.length > 0 && (
                 <div className="alert-error" role="alert" style={{ display: 'flex', gap: 8 }}>
                   <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
@@ -348,7 +366,7 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
                               textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 600,
                               color: row.tipo === 'ingreso' ? 'var(--color-success)' : 'var(--color-danger)',
                             }}>
-                              {row.tipo === 'ingreso' ? '+' : '-'}${row.monto.toFixed(2)}
+                              {moneySigned(row.monto, row.tipo === 'ingreso')}
                             </td>
                             <td>
                               <select
@@ -372,8 +390,8 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
 
                   <div style={{ display: 'flex', gap: 'var(--space-6)', marginTop: 'var(--space-3)', fontSize: 'var(--font-size-sm)' }}>
                     <span>{selectedRows.length} {t('common.results')}</span>
-                    <span style={{ color: 'var(--color-success)' }}>+${totalIngresos.toFixed(2)}</span>
-                    <span style={{ color: 'var(--color-danger)' }}>-${totalEgresos.toFixed(2)}</span>
+                    <span style={{ color: 'var(--color-success)' }}>{moneySigned(totalIngresos, true)}</span>
+                    <span style={{ color: 'var(--color-danger)' }}>{moneySigned(totalEgresos, false)}</span>
                   </div>
 
                   {hasUnresolvedSelection && (

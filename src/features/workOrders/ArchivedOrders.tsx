@@ -1,13 +1,24 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Archive, Calendar, Search } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { getErrorMessage } from '../../lib/errors';
 import { useIsMobile } from '../../lib/useMediaQuery';
 import { queryKeys } from '../../lib/queryClient';
 import { workOrdersService } from '../../services/workOrders.service';
 import type { WorkOrder } from '../../types/database';
+import { money } from '../../lib/money';
 
 const PAGE = 25;
+
+/**
+ * Cuánto se espera antes de mandar la búsqueda.
+ *
+ * Es la única búsqueda de la app que va al servidor, y cada tecla cuesta dos peticiones:
+ * la de las órdenes y la que resuelve los clientes por nombre. Escribir "Marta" serían
+ * diez viajes, casi todos a un término que la persona ya está corrigiendo.
+ */
+const BUSQUEDA_MS = 300;
 
 interface ArchivedOrdersProps {
   sedeId?: string;
@@ -30,13 +41,21 @@ export default function ArchivedOrders({ sedeId, isAdmin, onOpen }: ArchivedOrde
   const { t, language } = useLanguage();
   const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
+  const [termino, setTermino] = useState('');
   const [pages, setPages] = useState(1);
 
-  const { data, isPending } = useQuery({
-    queryKey: queryKeys.archivedWorkOrders(sedeId, search, pages),
-    queryFn: () => workOrdersService.getArchivedWorkOrders(sedeId, { search, limit: PAGE * pages }),
+  useEffect(() => {
+    const id = setTimeout(() => setTermino(search), BUSQUEDA_MS);
+    return () => clearTimeout(id);
+  }, [search]);
+
+  const { data, isPending, error: loadError } = useQuery({
+    queryKey: queryKeys.archivedWorkOrders(sedeId, termino, pages),
+    queryFn: () => workOrdersService.getArchivedWorkOrders(sedeId, { search: termino, limit: PAGE * pages }),
   });
 
+  // El error se guarda crudo y se traduce al pintar, como en el resto de las listas.
+  const error = loadError ? getErrorMessage(loadError, language) : '';
   const orders = data || [];
   // Una página completa puede significar que hay más; una incompleta, que no.
   const puedeHaberMas = orders.length === PAGE * pages;
@@ -66,9 +85,11 @@ export default function ArchivedOrders({ sedeId, isAdmin, onOpen }: ArchivedOrde
         />
       </div>
 
+      {error && <div className="alert-error">{error}</div>}
+
       {isPending ? (
         <div className="loading-state"><div className="spinner" /></div>
-      ) : orders.length === 0 ? (
+      ) : orders.length === 0 && !error ? (
         <p className="orders-section-empty">
           <Archive size={16} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />
           {t('workOrders.archivedEmpty')}
@@ -81,7 +102,7 @@ export default function ArchivedOrders({ sedeId, isAdmin, onOpen }: ArchivedOrde
                 <span className="workorder-card-number">{o.numero_orden}</span>
                 {isAdmin && o.montos && (
                   <span style={{ fontWeight: 600 }}>
-                    ${Number(o.montos.total_general ?? 0).toLocaleString()}
+                    {money(o.montos.total_general)}
                   </span>
                 )}
               </div>
@@ -121,7 +142,7 @@ export default function ArchivedOrders({ sedeId, isAdmin, onOpen }: ArchivedOrde
                   <td data-label={t('workOrders.deliveredOn')}>{fecha(o.fecha_finalizacion)}</td>
                   {isAdmin && (
                     <td data-label={t('common.total')} style={{ fontWeight: 600 }}>
-                      ${Number(o.montos?.total_general ?? 0).toLocaleString()}
+                      {money(o.montos?.total_general)}
                     </td>
                   )}
                 </tr>

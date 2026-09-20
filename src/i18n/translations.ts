@@ -415,8 +415,13 @@ const translations: Record<Language, Translations> = {
         orden_vencida: { title: 'Pasó la fecha de entrega · {numero_orden}', body: '{dias} día(s) de retraso. {vehiculo} — {cliente}' },
         orden_finalizada: { title: 'Lista para entregar · {numero_orden}', body: '{vehiculo} — {cliente}' },
         comision_generada: { title: 'Comisión generada · {numero_orden}', body: '{monto} por la mano de obra de {vehiculo}' },
-        // Sin título en español a propósito: el de la base ya dice si se autorizó o se rechazó.
+        // `presupuesto_respondido` no lleva título en español a propósito: el de la base
+        // ("Trabajos autorizados · ORD-…") dice más que cualquier frase genérica.
         presupuesto_respondido_cliente: { title: 'El cliente respondió el presupuesto · {numero_orden}' },
+        // Autorizar y no autorizar no son la misma noticia. La base ya ramifica el título;
+        // sin esta variante la plantilla de arriba lo tapaba y un rechazo se leía igual que
+        // una aprobación.
+        presupuesto_respondido_cliente_rechazo: { title: 'El cliente no autorizó el presupuesto · {numero_orden}' },
         presupuesto_sin_respuesta: { title: 'Presupuesto sin respuesta · {numero_orden}' },
       },
       push: {
@@ -584,6 +589,7 @@ const translations: Record<Language, Translations> = {
       uploadPdf: 'Sube el PDF del estado de cuenta bancario (por ahora solo Wells Fargo)',
       parsingStatement: 'Leyendo el PDF...',
       noTransactionsFound: 'No se encontraron transacciones en el PDF.',
+      rulesLoadFailed: 'No se pudieron cargar las reglas de categorización. Revisa la categoría de cada línea antes de importar.',
       reviewImport: 'Revisa las transacciones antes de importarlas',
       possibleDuplicate: 'Posible duplicado',
       internalTransfer: 'Transferencia interna — excluida',
@@ -1173,6 +1179,7 @@ const translations: Record<Language, Translations> = {
         comision_generada: { title: 'Commission earned · {numero_orden}', body: '{monto} for the labor on {vehiculo}' },
         presupuesto_respondido: { title: 'Quote answered · {numero_orden}' },
         presupuesto_respondido_cliente: { title: 'The customer answered the quote · {numero_orden}' },
+        presupuesto_respondido_cliente_rechazo: { title: 'The customer did not authorize the quote · {numero_orden}' },
         presupuesto_sin_respuesta: { title: 'Quote without a response · {numero_orden}' },
       },
       push: {
@@ -1339,6 +1346,7 @@ const translations: Record<Language, Translations> = {
       uploadPdf: 'Upload the bank statement PDF (Wells Fargo only for now)',
       parsingStatement: 'Reading the PDF...',
       noTransactionsFound: 'No transactions were found in the PDF.',
+      rulesLoadFailed: 'The categorization rules could not be loaded. Check the category of every line before importing.',
       reviewImport: 'Review the transactions before importing them',
       possibleDuplicate: 'Possible duplicate',
       internalTransfer: 'Internal transfer — excluded',

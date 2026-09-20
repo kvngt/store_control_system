@@ -43,6 +43,9 @@ describe('ArchivedOrders', () => {
 
     await user.click(await screen.findByText('ORD-2025-001'));
     expect(onOpen).toHaveBeenCalledWith('o1');
+    // El total, con el formato de `lib/money`. Está aquí para que la prueba de abajo —
+    // "un técnico no ve la columna" — no pase por buscar un texto que nadie pinta.
+    expect(screen.getByText('$500.00')).toBeInTheDocument();
   });
 
   it('sin nada archivado lo explica en vez de dejar la pantalla vacía', async () => {
@@ -80,11 +83,22 @@ describe('ArchivedOrders', () => {
     );
   });
 
+  // La regla 10 del proyecto: una consulta que falla no es "no hay datos". Esta pantalla
+  // decía "nada ha pasado al archivo todavía" cuando la petición devolvía 400, y así se
+  // esconde un error del servidor detrás de un dato falso.
+  it('una consulta que falla se dice, no se pinta como archivo vacío', async () => {
+    mocks.getArchived.mockRejectedValue(new Error('Se cayó la red'));
+    renderWithProviders(<ArchivedOrders sedeId="s1" isAdmin onOpen={vi.fn()} />);
+
+    expect(await screen.findByText('Se cayó la red')).toBeInTheDocument();
+    expect(screen.queryByText(/pasa aquí a los 90 días/)).not.toBeInTheDocument();
+  });
+
   it('un técnico no ve la columna de total', async () => {
     mocks.getArchived.mockResolvedValue([orden(1)]);
     renderWithProviders(<ArchivedOrders sedeId="s1" isAdmin={false} onOpen={vi.fn()} />);
 
     await screen.findByText('ORD-2025-001');
-    expect(screen.queryByText('$500')).not.toBeInTheDocument();
+    expect(screen.queryByText('$500.00')).not.toBeInTheDocument();
   });
 });

@@ -4,6 +4,7 @@ import { useLanguage } from '../../context/language.context';
 import type { LaborItem } from '../../types/database';
 import LineStateBadge from './LineStateBadge';
 import { isApproved } from './lineState';
+import { money } from '../../lib/money';
 
 interface LaborTableProps {
   items: LaborItem[];
@@ -150,7 +151,7 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                     )}
                     <span className="line-desc">{item.descripcion}</span> <LineStateBadge state={item.estado} />
                   </td>
-                  <td data-label={t('common.total')} style={{ textAlign: 'right', fontWeight: 600 }}>${item.costo.toFixed(2)}</td>
+                  <td data-label={t('common.total')} style={{ textAlign: 'right', fontWeight: 600 }}>{money(item.costo)}</td>
                   {canEdit && (
                     <td>
                       {/* Lo que espera la respuesta del cliente no se toca: él está
@@ -186,7 +187,7 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                 data-label={t('workOrders.totalLabor')}
                 style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-light)' }}
               >
-                ${total.toFixed(2)}
+                {money(total)}
               </td>
               {canEdit && <td className="desktop-only"></td>}
             </tr>
@@ -203,7 +204,7 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
               <tr>
                 <td className="desktop-only" style={{ color: 'var(--color-text-tertiary)' }}>{t('quotes.unauthorizedTotal')}</td>
                 <td data-label={t('quotes.unauthorizedTotal')} style={{ textAlign: 'right', color: 'var(--color-text-tertiary)' }}>
-                  ${unauthorized.toFixed(2)}
+                  {money(unauthorized)}
                 </td>
                 {canEdit && <td className="desktop-only"></td>}
               </tr>

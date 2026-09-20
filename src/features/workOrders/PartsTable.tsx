@@ -4,6 +4,7 @@ import { useLanguage } from '../../context/language.context';
 import type { WorkOrderPart } from '../../types/database';
 import LineStateBadge from './LineStateBadge';
 import { isApproved } from './lineState';
+import { money } from '../../lib/money';
 
 export interface PartInput {
   descripcion: string;
@@ -130,9 +131,9 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                       guardado usaba `Math.max(1, parseInt(...))`, así que
                       escribir cantidad 0 mostraba $0.00 y grababa 1. */}
                   <td data-label={t('common.subtotal')} style={{ textAlign: 'right', fontWeight: 600 }}>
-                    ${(() => {
+                    {(() => {
                       const draft = toInput(editDraft);
-                      return (draft.cantidad * draft.precio_venta_unitario).toFixed(2);
+                      return money(draft.cantidad * draft.precio_venta_unitario);
                     })()}
                   </td>
                   <td>
@@ -152,8 +153,8 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                     <span className="line-desc">{part.descripcion}</span> <LineStateBadge state={part.estado} />
                   </td>
                   <td data-label={t('common.quantity')}>{part.cantidad}</td>
-                  <td data-label={t('common.price')} style={{ textAlign: 'right' }}>${part.precio_venta_unitario.toFixed(2)}</td>
-                  <td data-label={t('common.subtotal')} style={{ textAlign: 'right', fontWeight: 600 }}>${part.subtotal.toFixed(2)}</td>
+                  <td data-label={t('common.price')} style={{ textAlign: 'right' }}>{money(part.precio_venta_unitario)}</td>
+                  <td data-label={t('common.subtotal')} style={{ textAlign: 'right', fontWeight: 600 }}>{money(part.subtotal)}</td>
                   <td>
                     {part.estado === 'pendiente' ? (
                       <span className="field-hint" title={t('quotes.lockedHint')}>🔒</span>
@@ -185,7 +186,7 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                 data-label={`Total ${t('workOrders.parts')}`}
                 style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-light)' }}
               >
-                ${totalSale.toFixed(2)}
+                {money(totalSale)}
               </td>
               <td className="desktop-only"></td>
             </tr>
@@ -195,7 +196,7 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                   {t('quotes.unauthorizedTotal')}
                 </td>
                 <td data-label={t('quotes.unauthorizedTotal')} style={{ textAlign: 'right', color: 'var(--color-text-tertiary)' }}>
-                  ${unauthorized.toFixed(2)}
+                  {money(unauthorized)}
                 </td>
                 <td className="desktop-only"></td>
               </tr>

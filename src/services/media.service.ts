@@ -5,7 +5,7 @@ import { MEDIA_BUCKET, RESUMABLE_THRESHOLD_BYTES } from '../lib/media/constants'
 import { baseMime } from '../lib/media/mime';
 import type { MediaUploader, UploadItem } from '../lib/media/uploadQueue';
 import type { OrderMedia } from '../types/database';
-import { assertDeleted } from './support';
+import { assertAffected, assertDeleted } from './support';
 
 /** Una hora. Las galerías las cachean 50 minutos y piden nuevas antes de que venzan. */
 export const SIGNED_URL_TTL_SECONDS = 60 * 60;
@@ -168,8 +168,16 @@ export const mediaService = {
 
   /** Publicar u ocultar un archivo en el reporte del cliente. Solo admin (RLS). */
   setVisibility: async (id: string, visible: boolean) => {
-    const { error } = await supabase.from('orden_media').update({ visible_cliente: visible }).eq('id', id);
+    // La política de UPDATE de `orden_media` exige `is_admin()`, y una política que no deja
+    // pasar la fila devuelve cero filas sin error (es lo que comprueba SEC-45): sin pedir la
+    // fila de vuelta, el interruptor se vería encendido sobre un archivo que sigue interno.
+    const { data, error } = await supabase
+      .from('orden_media')
+      .update({ visible_cliente: visible })
+      .eq('id', id)
+      .select('id');
     if (error) throw error;
+    assertAffected(data, 'el archivo');
   },
 
   /**

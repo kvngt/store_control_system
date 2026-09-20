@@ -204,6 +204,8 @@ const CASES = [
   anon({ id: 'SEC-63', desc: 'Sin sesión no se dispara el barrido de órdenes vencidas', method: 'POST', path: () => rpc('recordar_ordenes_vencidas'), expect: 'denied' }),
   tech({ id: 'SEC-64', desc: 'Un técnico no dispara el barrido de órdenes vencidas', method: 'POST', path: () => rpc('recordar_ordenes_vencidas'), expect: 'denied' }),
   admin({ id: 'SEC-65', desc: 'Ni un admin dispara el barrido de órdenes vencidas', method: 'POST', path: () => rpc('recordar_ordenes_vencidas'), expect: 'denied' }),
+  anon({ id: 'SEC-66', desc: 'Sin sesión no se deshace una importación bancaria', method: 'POST', path: () => rpc('deshacer_importacion_estado_cuenta'), body: { p_importacion_id: ZERO_UUID }, expect: 'denied' }),
+  tech({ id: 'SEC-67', desc: 'Un técnico no deshace una importación bancaria', method: 'POST', path: () => rpc('deshacer_importacion_estado_cuenta'), body: { p_importacion_id: ZERO_UUID }, expect: 'denied' }),
   admin({ id: 'SEC-60', desc: 'Ni un admin cambia el estado de una línea con un UPDATE', needs: ['ORDEN'], method: 'PATCH', path: (c) => `/rest/v1/orden_labor?orden_id=eq.${c.ORDEN}&estado=neq.rechazado`, body: { estado: 'rechazado' }, headers: { Prefer: 'return=representation' }, expect: 'denied' }),
   admin({ id: 'SEC-61', desc: 'Ni un admin sube PDFs al bucket de reportes', method: 'POST', path: () => '/storage/v1/object/reportes/prueba-qa-security.pdf', body: '%PDF-1.4', headers: { 'Content-Type': 'application/pdf' }, expect: 'denied' }),
   admin({ id: 'SEC-62', desc: 'Ni un admin revierte cobros por RPC', method: 'POST', path: () => rpc('reverse_order_delivery_finance'), body: { target_order_id: ZERO_UUID }, expect: 'denied' }),

@@ -32,6 +32,7 @@ import SignatureCard from './SignatureCard';
 import MediaCaptureBar from '../media/MediaCaptureBar';
 import MediaGallery from '../media/MediaGallery';
 import type { WorkOrderDetailApi } from './useWorkOrderDetail';
+import { money } from '../../lib/money';
 
 interface WorkOrderDetailProps {
   detail: WorkOrderDetailApi;
@@ -242,7 +243,7 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
                 <DollarSign size={16} style={{ color: 'var(--color-success)' }} />
                 <div>
                   <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>{t('workOrders.deposit')}</div>
-                  <div style={{ fontWeight: 600 }}>${Number(amounts.deposito_inicial).toLocaleString()}</div>
+                  <div style={{ fontWeight: 600 }}>{money(amounts.deposito_inicial)}</div>
                 </div>
               </div>
             )}
@@ -342,14 +343,14 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
             <div key={i} style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>{label as string}</div>
               <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600 }}>
-                {(value as number) < 0 ? '-' : ''}${Math.abs(value as number).toFixed(2)}
+                {money(value as number)}
               </div>
             </div>
           ))}
           <div style={{ textAlign: 'right', borderLeft: '2px solid var(--color-primary)', paddingLeft: 'var(--space-4)' }}>
             <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>{t('common.total')}</div>
             <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-primary-light)' }}>
-              ${(totalParts + totalLabor - Number(amounts.deposito_inicial)).toFixed(2)}
+              {money(totalParts + totalLabor - Number(amounts.deposito_inicial))}
             </div>
           </div>
         </div>
