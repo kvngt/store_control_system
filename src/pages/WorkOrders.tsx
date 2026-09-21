@@ -109,6 +109,18 @@ export default function WorkOrders() {
   // (`markCustomerCreated` / `markVehicleCreated`); la orden no.
   const createdOrderRef = useRef<WorkOrder | null>(null);
 
+  // Qué quedó guardado antes de que fallara la orden.
+  //
+  // No hay nada que deshacer: un cliente y un vehículo sin orden son filas válidas por sí
+  // solas — se crean igual desde Clientes y Vehículos — así que esto no es una escritura a
+  // medias. Lo que faltaba era decirlo. El formulario ya se pasa solo a "existente" para
+  // que un reintento los reutilice, pero quien lea "no se pudo crear la orden" y cierre el
+  // diálogo da por hecho que no se guardó nada, y acaba creando el mismo cliente otra vez.
+  //
+  // Se queda puesto mientras el diálogo siga abierto: en el segundo intento el cliente ya
+  // no se crea, y el aviso tiene que seguir siendo cierto.
+  const guardadoAntesDeFallar = useRef({ cliente: false, vehiculo: false });
+
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState('');
   // Held raw by the hook until here: an error translated at fetch time forces
@@ -165,11 +177,26 @@ export default function WorkOrders() {
     [vehicles, form.selectedCustomer]
   );
 
+  /** La frase que dice qué se salvó ya, o cadena vacía si no se creó nada. */
+  const avisoDeLoGuardado = () => {
+    const { cliente, vehiculo } = guardadoAntesDeFallar.current;
+    if (cliente && vehiculo) return t('workOrders.partialSaveBoth');
+    if (cliente) return t('workOrders.partialSaveCustomer');
+    if (vehiculo) return t('workOrders.partialSaveVehicle');
+    return '';
+  };
+
   const handleCloseCreateModal = () => {
-    if (form.isDirty && !confirm(t('workOrders.confirmDiscard'))) {
+    // Al cerrar es cuando se pierde el hilo: el formulario se vacía y el cliente recién
+    // creado deja de estar seleccionado, así que la confirmación tiene que decir que sigue
+    // guardado.
+    const aviso = avisoDeLoGuardado();
+    const texto = [t('workOrders.confirmDiscard'), aviso].filter(Boolean).join('\n\n');
+    if (form.isDirty && !confirm(texto)) {
       return;
     }
     createdOrderRef.current = null;
+    guardadoAntesDeFallar.current = { cliente: false, vehiculo: false };
     setShowCreateModal(false);
     form.reset();
   };
@@ -210,6 +237,7 @@ export default function WorkOrders() {
           sede_id: targetSedeId,
         });
         customerId = created.id;
+        guardadoAntesDeFallar.current.cliente = true;
         form.markCustomerCreated(created.id);
         // Put it in the picker straight away. `markCustomerCreated` switches
         // the form to "existing" so a retry cannot create the customer twice —
@@ -243,6 +271,7 @@ export default function WorkOrders() {
           color: v.color.trim(),
         });
         vehicleId = createdVehicle.id;
+        guardadoAntesDeFallar.current.vehiculo = true;
         form.markVehicleCreated(createdVehicle.id);
         queryClient.setQueryData<Vehicle[]>(queryKeys.vehicles(sedeId), (prev) =>
           prev ? [createdVehicle, ...prev] : [createdVehicle]
@@ -314,6 +343,7 @@ export default function WorkOrders() {
 
       const createdNewRecords = values.customerMode === 'new' || values.vehicleMode === 'new';
       createdOrderRef.current = null;
+      guardadoAntesDeFallar.current = { cliente: false, vehiculo: false };
       setShowCreateModal(false);
       form.reset();
       loadOrders();
@@ -322,7 +352,7 @@ export default function WorkOrders() {
       showToast('success', `${t('workOrders.orderCreatedSuccess')} (${order.numero_orden})`);
     } catch (err) {
       const message = getErrorMessage(err, language);
-      setActionError(message);
+      setActionError([message, avisoDeLoGuardado()].filter(Boolean).join(' '));
       showToast('error', t('workOrders.orderCreatedError'), message);
     } finally {
       setSaving(false);

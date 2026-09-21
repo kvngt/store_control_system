@@ -114,10 +114,12 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: 2 }}>
-                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={saveEdit} disabled={busy}>
+                      {/* Solo icono: sin `aria-label` un lector de pantalla anuncia "botón" y
+                          nada más, y el color del icono no dice nada a quien no lo ve. */}
+                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={saveEdit} disabled={busy} aria-label={t('common.save')} title={t('common.save')}>
                         <Check size={14} style={{ color: 'var(--color-success)' }} />
                       </button>
-                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => setEditingId(null)}>
+                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => setEditingId(null)} aria-label={t('common.cancel')} title={t('common.cancel')}>
                         <X size={14} />
                       </button>
                     </div>
@@ -164,11 +166,12 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                             type="button"
                             className="btn btn-ghost btn-sm btn-icon"
                             onClick={() => startEdit(item)}
-                            title={item.estado === 'rechazado' ? t('quotes.rejectedHint') : undefined}
+                            title={item.estado === 'rechazado' ? t('quotes.rejectedHint') : t('common.edit')}
+                            aria-label={t('common.edit')}
                           >
                             <Pencil size={14} />
                           </button>
-                          <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => onRemove(item.id, item.descripcion)}>
+                          <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => onRemove(item.id, item.descripcion)} aria-label={t('common.delete')} title={t('common.delete')}>
                             <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
                           </button>
                         </div>
@@ -240,6 +243,8 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
           className="btn btn-secondary"
           onClick={add}
           disabled={busy || !newDraft.descripcion.trim()}
+          aria-label={t('common.add')}
+          title={t('common.add')}
         >
           <Plus size={16} />
         </button>

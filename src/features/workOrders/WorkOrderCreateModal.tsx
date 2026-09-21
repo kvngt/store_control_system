@@ -447,12 +447,17 @@ export default function WorkOrderCreateModal({
             <p className="field-hint" style={{ marginTop: 'var(--space-3)' }}>{t('quotes.createHint')}</p>
             {/* Labor Items */}
             <div className="form-group" style={{ marginTop: 'var(--space-3)' }}>
-              <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+              {/* `div`, no `label`: no etiqueta a ningún campo (los de abajo son una lista
+                  que crece) y metía el botón dentro de la etiqueta, así que su nombre
+                  accesible salía "Descripción de Labor Agregar" — un lector de pantalla leía
+                  las dos cosas y `getByRole('button', { name: 'Agregar' })` no lo encontraba.
+                  La clase se queda: el estilo es el mismo. */}
+              <div className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>{t('workOrders.laborDescription')}</span>
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => form.labor.append({ descripcion: '', costo: '' })}>
                   <Plus size={14} /> {t('common.add')}
                 </button>
-              </label>
+              </div>
               {form.labor.fields.map((field, i) => (
                 <div key={field.id} style={{ marginBottom: 'var(--space-2)' }}>
                   <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
@@ -474,7 +479,7 @@ export default function WorkOrderCreateModal({
 
             {/* Parts */}
             <div className="form-group">
-              <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>{t('workOrders.partsDescription')}</span>
                 <button
                   type="button"
@@ -483,7 +488,7 @@ export default function WorkOrderCreateModal({
                 >
                   <Plus size={14} /> {t('common.add')}
                 </button>
-              </label>
+              </div>
               {form.parts.fields.map((field, i) => (
                 <div key={field.id} style={{ marginBottom: 'var(--space-2)' }}>
                   <div style={{ display: 'flex', gap: 'var(--space-2)' }}>

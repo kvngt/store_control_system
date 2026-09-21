@@ -29,6 +29,22 @@ describe('LaborTable con estados', () => {
     expect(screen.getByText('$380.00')).toBeInTheDocument();
   });
 
+  // Eran botones con solo un icono dentro: un lector de pantalla anunciaba "botón" y nada
+  // más, y el color del icono no dice nada a quien no lo ve.
+  it('los botones de solo icono se anuncian por su nombre', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<LaborTable items={items} canEdit busy={false} onAdd={noop} onUpdate={noop} onRemove={noop} canComplete={false} onToggleComplete={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Agregar' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Editar' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'Eliminar' }).length).toBeGreaterThan(0);
+
+    // Guardar y Cancelar solo existen mientras se edita una línea.
+    await user.click(screen.getAllByRole('button', { name: 'Editar' })[0]);
+    expect(screen.getByRole('button', { name: 'Guardar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancelar' })).toBeInTheDocument();
+  });
+
   it('marca cada estado y bloquea la edición de lo que espera al cliente', () => {
     renderWithProviders(<LaborTable items={items} canEdit busy={false} onAdd={noop} onUpdate={noop} onRemove={noop} canComplete={false} onToggleComplete={vi.fn()} />);
 

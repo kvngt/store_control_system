@@ -136,6 +136,11 @@ contra `app_schema_version()`), así que hasta que subas el nuevo la app muestra
 `SchemaDriftBanner` en estado "app-behind".
 
 **Aparte, y anterior a este cambio:** que `submitOrder` cree cliente y vehículo antes que la
-orden es deuda de la regla 8b — tres escrituras que pueden quedar a medias. No se tocó aquí
-para no mezclar, pero conviene meterlas en `create_work_order` o limpiar los huérfanos al
-fallar.
+orden. Lo dejé escrito como deuda de la regla 8b y **no lo es**: al mirarlo de cerca, un
+cliente y un vehículo sin orden son filas válidas por sí solas — se crean igual desde sus
+propias pantallas — y el formulario ya se pasa solo a "existente" para que un reintento las
+reutilice, con el comentario que lo explica. No hay nada que deshacer ni que meter en una
+transacción.
+
+Lo que sí faltaba, y se arregló el 21: **decirlo**. Ver
+[mejoras-2026-09-21.md](mejoras-2026-09-21.md).

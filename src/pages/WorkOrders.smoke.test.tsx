@@ -28,12 +28,21 @@ const mocks = vi.hoisted(() => ({
   getOperators: vi.fn(),
   getWorkOrderDetail: vi.fn(),
   createWorkOrder: vi.fn(),
+  createCustomer: vi.fn(),
+  createVehicle: vi.fn(),
   addLaborItem: vi.fn(),
   updateWorkOrderStatus: vi.fn(),
   uploadSignature: vi.fn(),
 }));
 
 vi.mock('../context/auth.context', () => ({ useAuth: () => mocks.auth.current }));
+
+// El formulario de vehículo decodifica el VIN y sugiere modelos contra una API externa.
+// Aquí no hay red, y no es lo que se está probando.
+vi.mock('../lib/vin', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/vin')>();
+  return { ...actual, decodeVin: vi.fn().mockResolvedValue(null), fetchModelsForMake: vi.fn().mockResolvedValue([]) };
+});
 
 // jsdom has no canvas, and the real signature pad reaches into one on mount.
 // The signature flow is not what these tests are about.
@@ -58,8 +67,8 @@ vi.mock('../services/supabaseService', () => {
     uploadSignature: mocks.uploadSignature,
     uploadOrderPhotos: vi.fn(),
   };
-  const customers = { getCustomers: mocks.getCustomers, createCustomer: vi.fn() };
-  const vehicles = { getVehicles: mocks.getVehicles, createVehicle: vi.fn() };
+  const customers = { getCustomers: mocks.getCustomers, createCustomer: mocks.createCustomer };
+  const vehicles = { getVehicles: mocks.getVehicles, createVehicle: mocks.createVehicle };
   const users = { getOperators: mocks.getOperators };
   return {
     workOrdersService: workOrders,
@@ -382,6 +391,79 @@ describe('WorkOrders — intake validation', () => {
 // The detail view used to be ~690 lines inside the page, with its handlers on
 // top of that. It is now `useWorkOrderDetail` plus five presentational cards;
 // these pin the seams between them.
+// Lo que se guarda antes que la orden no se deshace — un cliente y un vehículo sin orden
+// son filas válidas, se crean igual desde sus propias pantallas — pero hay que decirlo. Sin
+// el aviso, quien lee "no se pudo crear la orden" da por hecho que no quedó nada y vuelve a
+// dar de alta el mismo vehículo.
+describe('WorkOrders — el alta que falla a medio camino lo dice', () => {
+  const abrirConVehiculoNuevo = async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await screen.findAllByText('OT-2026-0042');
+    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
+    const dialog = (await screen.findByText('Nueva Orden', { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+
+    const selects = within(dialog).getAllByRole('combobox');
+    const clienteSelect = selects.find((el) => within(el).queryByText(CUSTOMER.nombre))!;
+    await user.selectOptions(clienteSelect, CUSTOMER.id);
+
+    const vehiculoSelect = within(dialog).getAllByRole('combobox').find((el) => within(el).queryByText(/\+ Nuevo Veh/i))!;
+    await user.selectOptions(vehiculoSelect, '__new__');
+
+    await user.type(document.getElementById('vehicle-brand') as HTMLInputElement, 'Toyota');
+    await user.type(document.getElementById('vehicle-model') as HTMLInputElement, 'Camry');
+    const anio = document.getElementById('vehicle-year') as HTMLSelectElement;
+    await user.selectOptions(anio, anio.options[1].value);
+    // El VIN es obligatorio para un vehículo nuevo (workOrderForm.schema: 17 caracteres).
+    await user.type(document.getElementById('vehicle-vin') as HTMLInputElement, '1HGCM82633A004352');
+
+    return { user, dialog };
+  };
+
+  it('avisa que el vehículo ya quedó guardado cuando la orden falla', async () => {
+    mocks.createVehicle.mockResolvedValue({ ...VEHICLE, id: 'veh-nuevo' });
+    mocks.createWorkOrder.mockRejectedValue(new Error('Se cayó la red'));
+
+    const { user, dialog } = await abrirConVehiculoNuevo();
+    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    expect(await within(dialog).findByText(/Se cayó la red/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/El vehículo nuevo ya quedó guardado/)).toBeInTheDocument();
+  });
+
+  // Los dos botones "Agregar" de la cotización vivían dentro de un `<label>`, así que su
+  // nombre accesible arrastraba el texto de la etiqueta: un lector de pantalla leía
+  // "Descripción de Labor Agregar" y este `getByRole` no los encontraba.
+  it('los botones de agregar línea se llaman solo "Agregar"', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await screen.findAllByText('OT-2026-0042');
+    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
+    const dialog = (await screen.findByText('Nueva Orden', { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+
+    expect(within(dialog).getAllByRole('button', { name: /^Agregar$/i })).toHaveLength(2);
+  });
+
+  it('no inventa el aviso cuando no se creó nada', async () => {
+    mocks.createWorkOrder.mockRejectedValue(new Error('Se cayó la red'));
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await screen.findAllByText('OT-2026-0042');
+    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
+    const dialog = (await screen.findByText('Nueva Orden', { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+
+    const selects = within(dialog).getAllByRole('combobox');
+    await user.selectOptions(selects.find((el) => within(el).queryByText(CUSTOMER.nombre))!, CUSTOMER.id);
+    await user.selectOptions(
+      within(dialog).getAllByRole('combobox').find((el) => within(el).queryByText(new RegExp(VEHICLE.modelo, 'i')))!,
+      VEHICLE.id
+    );
+    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+
+    expect(await within(dialog).findByText(/Se cayó la red/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/ya quedó guardado/)).not.toBeInTheDocument();
+  });
+});
+
 describe('WorkOrders — order detail', () => {
   it('shows the labor and parts the board never loads', async () => {
     const user = userEvent.setup();

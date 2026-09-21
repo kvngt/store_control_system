@@ -65,7 +65,11 @@ describe('CustomerLinkCard', () => {
     mocks.createLink.mockResolvedValue(LINK);
     renderWithProviders(<CustomerLinkCard order={order()} statusLabels={STATUS_LABELS} />);
 
-    await userEvent.click(await screen.findByRole('button', { name: /Crear enlace/ }));
+    // Con un timeout explícito: la tarjeta pinta un spinner hasta que resuelve
+    // `getActiveLink`, y con la suite entera en paralelo el segundo por omisión de `findBy`
+    // se queda corto en esta máquina. El componente está bien — el archivo solo pasa
+    // siempre — pero la prueba no debería depender de cuántos archivos corran a la vez.
+    await userEvent.click(await screen.findByRole('button', { name: /Crear enlace/ }, { timeout: 5000 }));
 
     expect(mocks.createLink).toHaveBeenCalledWith('ord-1');
     expect(await screen.findByDisplayValue(`https://reinventa.shop/r/${TOKEN}`)).toBeInTheDocument();

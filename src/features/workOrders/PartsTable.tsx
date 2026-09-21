@@ -138,10 +138,10 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: 2 }}>
-                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={saveEdit} disabled={busy}>
+                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={saveEdit} disabled={busy} aria-label={t('common.save')} title={t('common.save')}>
                         <Check size={14} style={{ color: 'var(--color-success)' }} />
                       </button>
-                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => setEditingId(null)}>
+                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => setEditingId(null)} aria-label={t('common.cancel')} title={t('common.cancel')}>
                         <X size={14} />
                       </button>
                     </div>
@@ -165,11 +165,12 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                           className="btn btn-ghost btn-sm btn-icon"
                           onClick={() => startEdit(part)}
                           disabled={!canEdit}
-                          title={part.estado === 'rechazado' ? t('quotes.rejectedHint') : undefined}
+                          title={part.estado === 'rechazado' ? t('quotes.rejectedHint') : t('common.edit')}
+                          aria-label={t('common.edit')}
                         >
                           <Pencil size={14} />
                         </button>
-                        <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => onRemove(part.id, part.descripcion)} disabled={!canEdit}>
+                        <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => onRemove(part.id, part.descripcion)} disabled={!canEdit} aria-label={t('common.delete')} title={t('common.delete')}>
                           <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
                         </button>
                       </div>
@@ -237,6 +238,8 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
         <button
           type="button"
           className="btn btn-secondary"
+          aria-label={t('common.add')}
+          title={t('common.add')}
           onClick={add}
           disabled={!canEdit || busy || !newDraft.descripcion.trim()}
         >
