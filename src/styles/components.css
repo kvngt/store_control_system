@@ -564,7 +564,18 @@ body.drawer-open {
 .card:hover {
   border-color: rgba(255, 255, 255, 0.15);
   box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
+}
+
+/* El levantón solo con un ratón de verdad. En el teléfono el `:hover` se queda pegado
+   después de tocar la tarjeta, y el `transform` la convertía en la caja de cualquier
+   `position: fixed` que llevara dentro: el grabador de video quedaba encajonado en la
+   tarjeta de Avances, bajo la barra inferior, con los botones fuera de la pantalla. Las
+   capas de pantalla completa ahora van en <body> (`BodyPortal`); esto es la segunda red,
+   y de paso quita el salto de 2 px que dejaba cada toque. */
+@media (hover: hover) {
+  .card:hover {
+    transform: translateY(-2px);
+  }
 }
 
 .card-glass {

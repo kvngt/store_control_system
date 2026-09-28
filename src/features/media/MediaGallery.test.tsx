@@ -122,4 +122,19 @@ describe('MediaGallery', () => {
     expect(video.getAttribute('src')).toBe('https://signed.test/sede-1/ord-1/m-2.mp4');
     expect(video.getAttribute('poster')).toBe('https://signed.test/sede-1/ord-1/m-2-thumb.jpg');
   });
+
+  // La galería vive dentro de una tarjeta, y en el teléfono el `:hover` pegado de la tarjeta
+  // encerraba al visor en ella, igual que al grabador de video.
+  it('el visor se abre en <body>, fuera de la tarjeta de la galería', async () => {
+    const { container } = renderWithProviders(
+      <div className="card">
+        <MediaGallery media={[VIDEO]} />
+      </div>
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Video' }));
+    const visor = document.querySelector('.lightbox-overlay') as HTMLElement;
+    expect(visor.parentElement).toBe(document.body);
+    expect(container.contains(visor)).toBe(false);
+  });
 });

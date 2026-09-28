@@ -186,6 +186,14 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
 - **Modales** controlados (`modal-overlay` + `modal`); los pesados con
   `LazyModal`. No uses `prompt` ni `alert`. `confirm` solo para confirmaciones
   destructivas, como hace el resto del código.
+- **Una capa de pantalla completa que no sea `modal-overlay` va en `<BodyPortal>`**
+  (`src/components/BodyPortal.tsx`), como el grabador de video y el visor de la galería. Un
+  `position: fixed` solo se mide contra la pantalla si ningún ancestro tiene `transform`, y
+  `.card` se levanta con uno al pasar el ratón. En el teléfono ese `:hover` se queda pegado
+  después de tocar, así que el grabador quedaba encerrado en la tarjeta de Avances, bajo la
+  barra inferior, con "Detener" y "Usar video" fuera de la pantalla. Por lo mismo, el
+  levantón de `.card` vive dentro de `@media (hover: hover)`; `src/styles/cardHover.test.ts`
+  lo fija. Pasó dos veces (diálogos en escritorio el 19/09, grabador en el teléfono el 28/09).
 - **Un error dentro de un diálogo se muestra dentro del diálogo** o con toast: el
   modal (z-index 400) tapa el recuadro de error de la página. Un `return` mudo
   parece un botón roto.

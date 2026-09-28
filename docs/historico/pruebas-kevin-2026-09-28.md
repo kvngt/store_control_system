@@ -1,6 +1,6 @@
 # Lo que salió de la prueba en el teléfono — 2026-09-28
 
-Kevin probó la app y dejó cinco observaciones. Dos eran correctas tal como estaban
+Kevin probó la app y dejó siete observaciones. Dos eran correctas tal como estaban
 (eliminar un empleado con órdenes asignadas se bloquea con un mensaje claro, y dar de alta
 empleados funciona). Las otras cinco se analizaron y se resolvieron así.
 
@@ -134,6 +134,51 @@ habría pasado cada vez; ahora un número con "+" se respeta tal cual.
 
 La búsqueda de clientes por teléfono también compara solo dígitos: "512-555" encuentra
 `+15125550100`.
+
+## 6. Al grabar un video en el teléfono, el botón quedaba bajo la barra inferior
+
+Reportado después, y **por segunda vez**: la bandeja de subidas ya se había arreglado para
+flotar sobre la barra, pero el botón seguía tapado. No era la misma pieza.
+
+**Se reprodujo antes de tocar nada**, en un Chromium de teléfono (390 × 844, táctil) con una
+cámara simulada: Avances → Video → Grabar. El resultado fue peor que lo reportado. No solo
+"Usar video" quedaba fuera de la pantalla (arriba en el píxel 853 de 844); **el botón para
+detener la grabación** también (822 de 844), bajo la barra: Playwright se negó a tocarlo
+porque *"bottom-nav intercepts pointer events"*. Un técnico no podía ni parar el video — se
+detenía solo a los 2 minutos — y luego no podía usarlo.
+
+**La causa.** El grabador es `position: fixed` a pantalla completa y está por encima de la
+barra (capa 500 contra 200). Pero se dibujaba **dentro** de la tarjeta de Avances, y `.card`
+se levanta 2 px con un `transform` al pasar el ratón. En un teléfono el `:hover` se queda
+pegado después de tocar "Video", y un ancestro con `transform` se vuelve la caja de sus
+`position: fixed` y su contexto de apilamiento. El grabador quedaba encerrado en la tarjeta:
+en la captura se ven sus márgenes, el encabezado arriba y la barra inferior encima de los
+botones. La tarjeta medía `matrix(1, 0, 0, 1, 0, -2)`.
+
+Es el mismo mecanismo que el 19/09 sacaba de pantalla los botones de los diálogos en la
+computadora. Aquel arreglo — `.card:has(.modal-overlay)` sin transform — solo cubría los
+diálogos, y el grabador usa `.recorder-overlay`.
+
+**El arreglo, en dos capas:**
+
+- El grabador de video y el visor de la galería (que tenía el mismo riesgo) se dibujan ahora
+  directamente en `<body>` con `BodyPortal`. Fuera del árbol de la tarjeta, ningún estilo de
+  un ancestro los puede volver a atrapar.
+- El levantón de `.card` solo existe con un ratón de verdad (`@media (hover: hover)`). En el
+  teléfono ya no hay `:hover` pegado que transforme nada, y de paso desaparece el salto de
+  2 px que dejaba cada toque.
+
+**Verificado con la misma prueba y toques normales:** el grabador ocupa toda la pantalla,
+"Detener" y "Usar video" se tocan, y el video llega al borrador del avance. El visor queda en
+`<body>`, a pantalla completa, con la X visible.
+
+**Tres pruebas nuevas**, porque ya pasó dos veces: el grabador y el visor se dibujan en
+`<body>` aunque los abra algo dentro de una tarjeta, y una guarda sobre el CSS que falla si
+`.card:hover` vuelve a llevar un `transform` fuera de `(hover: hover)`. Al escribir esa guarda
+salió una trampa: leer el CSS con `import ... from './components.css?raw'` **devuelve una
+cadena vacía dentro de vitest**, así que pasaba sin revisar nada. Ahora lee el archivo con
+`node:fs` y además afirma que la hoja de estilos llegó completa, para que no pueda volver a
+pasar en vacío. Se comprobó contra el CSS anterior que sí la habría atrapado.
 
 ---
 

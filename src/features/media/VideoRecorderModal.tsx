@@ -6,6 +6,7 @@ import { formatDuration } from '../../lib/media/mime';
 import { thumbFromVideoElement } from '../../lib/media/videoFrame';
 import type { PreparedMedia } from '../../types/database';
 import { useMediaRecorder } from './useMediaRecorder';
+import BodyPortal from '../../components/BodyPortal';
 
 interface VideoRecorderModalProps {
   onDone: (media: PreparedMedia) => void;
@@ -92,7 +93,10 @@ export default function VideoRecorderModal({ onDone, onClose }: VideoRecorderMod
 
   const timerClass = remaining <= 15 ? 'recorder-timer is-ending' : 'recorder-timer';
 
+  // En <body> y no dentro de la tarjeta que lo abre: con el `:hover` pegado del teléfono la
+  // tarjeta se transformaba y el grabador quedaba encajonado en ella, bajo la barra inferior.
   return (
+    <BodyPortal>
     <div className="recorder-overlay" role="dialog" aria-modal="true" aria-label={t('media.recordVideo')}>
       <div className="recorder-topbar">
         <button type="button" className="recorder-icon-btn" onClick={onClose} aria-label={t('common.close')}>
@@ -167,5 +171,6 @@ export default function VideoRecorderModal({ onDone, onClose }: VideoRecorderMod
       </div>
       {state === 'ready' && <p className="recorder-hint">{t('media.videoLimitHint')}</p>}
     </div>
+    </BodyPortal>
   );
 }

@@ -5,6 +5,7 @@ import { formatDuration } from '../../lib/media/mime';
 import type { UploadItem } from '../../lib/media/uploadQueue';
 import type { OrderMedia } from '../../types/database';
 import { useSignedUrls } from './useSignedUrls';
+import BodyPortal from '../../components/BodyPortal';
 
 interface MediaGalleryProps {
   media: OrderMedia[];
@@ -213,7 +214,10 @@ function MediaViewer({ media, src, poster, onClose, onPrev, onNext }: MediaViewe
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose, onPrev, onNext]);
 
+  // En <body>, por lo mismo que el grabador: la galería vive dentro de una tarjeta, y con el
+  // `:hover` pegado del teléfono el visor quedaba encerrado en ella.
   return (
+    <BodyPortal>
     <div className="lightbox-overlay" onClick={onClose}>
       <button className="lightbox-close" onClick={onClose} aria-label={t('common.close')}>
         <X size={20} />
@@ -254,5 +258,6 @@ function MediaViewer({ media, src, poster, onClose, onPrev, onNext }: MediaViewe
         </button>
       )}
     </div>
+    </BodyPortal>
   );
 }

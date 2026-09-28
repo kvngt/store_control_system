@@ -23,7 +23,7 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 426 pruebas, 58 archivos | ~30 s | Nada |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 432 pruebas, 60 archivos | ~30 s | Nada |
 | **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte y hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 223 aserciones, 9 archivos | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, 77 casos (76 pasan, 1 se salta) | 2–5 min | Credenciales de prueba |
 | **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 66 casos con las cuentas de prueba (66 PASS · 0 SKIP), todos de solo lectura | ~15 s | Nada; con cuentas de prueba cubre más |

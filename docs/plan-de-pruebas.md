@@ -362,6 +362,8 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 | MOV-07 | P2 | IA | Kanban: deslizar encaja una columna por pantalla; "Mover a" en fila con su etiqueta. |
 | MOV-08 | P2 | IA | Nueva orden a pantalla completa con Guardar y Cancelar visibles. |
 | MOV-09 | P2 | IA | La bandeja de subidas queda por encima de la barra inferior. |
+| MOV-10 | P0 | H | Teléfono, orden en proceso → **Avances → Video**: el grabador ocupa **toda la pantalla** (sin el encabezado arriba ni la barra inferior abajo). Grabar, **Detener** y **Usar video** se tocan sin desplazar; el video queda en el borrador del avance y **Agregar Avance** está visible. *(Se reportó dos veces: el grabador quedaba encerrado en la tarjeta, bajo la barra.)* |
+| MOV-11 | P1 | H | Teléfono: tocar una foto o un video de la galería → el visor ocupa toda la pantalla con la **X** visible; tocar una tarjeta cualquiera no la hace "saltar". |
 
 ### 4.12 App instalable (PWA)
 
