@@ -11,7 +11,13 @@ import { getErrorMessage } from '../lib/errors';
 import type { OrderStatus, WorkOrder } from '../types/database';
 import AuthorizationReasonModal from '../features/workOrders/AuthorizationReasonModal';
 import { orderDueState, type DueState } from '../lib/orderDue';
-import { Calendar, Gauge } from 'lucide-react';
+import { Archive, Calendar, Gauge } from 'lucide-react';
+
+/**
+ * Valor del <select> "Mover a" para archivar. No es un estado de la orden — una archivada
+ * sigue entregada para el cobro, el portal y las comisiones — así que va aparte de COLUMNS.
+ */
+const ARCHIVAR = '__archivar__';
 
 const COLUMNS: { status: OrderStatus; emoji: string }[] = [
   { status: 'recepcion', emoji: '📥' },
@@ -57,6 +63,28 @@ export default function KanbanBoard() {
       // Delivering an order books money and stamps a completion date by
       // trigger, so the row the board shows is not what the client guessed.
       queryClient.invalidateQueries({ queryKey: boardKey });
+    },
+  });
+
+  // Archivar saca una orden entregada del tablero sin esperar los 90 días. La tarjeta se
+  // quita al instante y vuelve si la base se niega.
+  const archive = useMutation({
+    mutationFn: (orderId: string) => workOrdersService.setArchived(orderId, true),
+    onMutate: async (orderId) => {
+      await queryClient.cancelQueries({ queryKey: boardKey });
+      const previous = queryClient.getQueryData<WorkOrder[]>(boardKey);
+      queryClient.setQueryData<WorkOrder[]>(boardKey, (prev) => (prev || []).filter((o) => o.id !== orderId));
+      return { previous };
+    },
+    onSuccess: () => showToast('success', t('workOrders.archivedToast')),
+    onError: (err, _orderId, context) => {
+      if (context?.previous) queryClient.setQueryData(boardKey, context.previous);
+      showToast('error', t('workOrders.archiveError'), getErrorMessage(err, language));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: boardKey });
+      // La lista del archivo tiene su propia clave, por sede, búsqueda y página.
+      queryClient.invalidateQueries({ queryKey: ['work-orders-archived'] });
     },
   });
 
@@ -132,6 +160,19 @@ export default function KanbanBoard() {
   // decisión de administración, no un paso del taller. Un técnico asignado podía
   // arrastrar su propia orden a "Entregado" y con eso acreditarse su comisión.
   const canDeliver = isAdmin;
+
+  // Solo lo entregado se archiva (la base lo impone con un CHECK), y solo un admin: un técnico
+  // no puede tocar una orden entregada.
+  const canArchive = (order: WorkOrder) => isAdmin && order.estatus === 'entregado';
+
+  const archiveOrder = (orderId: string) => {
+    if (!confirm(t('workOrders.archiveConfirm'))) {
+      // El <select> se quedó mostrando "Archivar": se remonta para que vuelva a "Entregado".
+      setMoveEpoch((n) => n + 1);
+      return;
+    }
+    archive.mutate(orderId);
+  };
 
   // Shared by dragging (desktop) and by the per-card selector (touch), so both
   // routes get the same delivery confirmation and the same optimistic update.
@@ -286,7 +327,10 @@ export default function KanbanBoard() {
                             className="form-input form-select"
                             value={order.estatus}
                             aria-label={`${t('kanban.moveTo')} — ${order.numero_orden}`}
-                            onChange={(e) => moveOrder(order.id, e.target.value as OrderStatus)}
+                            onChange={(e) => {
+                              if (e.target.value === ARCHIVAR) archiveOrder(order.id);
+                              else moveOrder(order.id, e.target.value as OrderStatus);
+                            }}
                           >
                             {COLUMNS
                               // Si la orden ya está entregada la opción se deja,
@@ -298,8 +342,22 @@ export default function KanbanBoard() {
                                   {statusLabels[c.status]}
                                 </option>
                               ))}
+                            {canArchive(order) && <option value={ARCHIVAR}>{t('workOrders.archive')}</option>}
                           </select>
                         </label>
+                      )}
+
+                      {/* En escritorio no hay selector — se arrastra —, y archivar no es una
+                          columna a la que arrastrar. */}
+                      {canArchive(order) && (
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm desktop-only kanban-card-archive"
+                          onClick={() => archiveOrder(order.id)}
+                          disabled={archive.isPending}
+                        >
+                          <Archive size={14} /> {t('workOrders.archive')}
+                        </button>
                       )}
 
                       <div className="kanban-card-footer">

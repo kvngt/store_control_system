@@ -5,6 +5,7 @@
 // escucha los nuevos en tiempo real.
 import { supabase } from '../lib/supabase';
 import type { AppNotification } from '../types/database';
+import { assertDeleted } from './support';
 
 export const notificationsService = {
   list: async (limit = 30) => {
@@ -41,6 +42,28 @@ export const notificationsService = {
       .from('notificaciones')
       .update({ leida_en: new Date().toISOString() })
       .is('leida_en', null);
+    if (error) throw error;
+  },
+
+  /**
+   * Borra un aviso. La política `notificaciones_delete` solo deja borrar los propios, y un
+   * DELETE que la RLS rechaza devuelve cero filas sin error: de ahí el `assertDeleted`.
+   */
+  remove: async (id: string) => {
+    const { data, error } = await supabase.from('notificaciones').delete().eq('id', id).select('id');
+    if (error) throw error;
+    assertDeleted(data, 'el aviso');
+  },
+
+  /**
+   * Vacía la campana: todos los avisos de la persona, no solo los 30 que se listan.
+   *
+   * El filtro por usuario es explícito aunque la RLS ya lo imponga. Un DELETE sin WHERE lo
+   * rechaza la base, y así además queda escrito qué se quiere borrar. Cero filas es un
+   * resultado válido (otra pestaña pudo vaciarla antes), por eso no se usa `assertDeleted`.
+   */
+  removeAll: async (userId: string) => {
+    const { error } = await supabase.from('notificaciones').delete().eq('usuario_id', userId);
     if (error) throw error;
   },
 

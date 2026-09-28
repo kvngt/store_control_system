@@ -31,6 +31,12 @@ export interface WorkOrder {
    * fijar ese estado y lo limpia al salir de él.
    */
   motivo_autorizacion?: string | null;
+  /**
+   * Cuándo un admin la mandó al archivo a mano. Solo una orden entregada puede tenerla, y
+   * sacarla de "Entregado" la limpia (ver 20261005000000). Las que nadie archiva salen solas
+   * del tablero a los 90 días de entregadas.
+   */
+  archivada_en?: string | null;
   creado_por: string;
   creado_en: string;
   // Virtual fields from joins

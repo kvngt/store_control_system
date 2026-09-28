@@ -6,6 +6,7 @@ import { useAuth } from '../../context/auth.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import { supabaseService } from '../../services/supabaseService';
 import NotificationBell from '../../features/notifications/NotificationBell';
+import { formatPhone } from '../../lib/phone';
 
 interface HeaderProps {
   sidebarCollapsed: boolean;
@@ -191,7 +192,7 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
                     <button key={c.id} className="search-dropdown-item" onClick={() => goToCustomer(c.id)}>
                       <Users size={14} />
                       <span className="search-dropdown-item-title">{c.nombre}</span>
-                      <span className="search-dropdown-item-sub">{c.telefono}</span>
+                      <span className="search-dropdown-item-sub">{formatPhone(c.telefono)}</span>
                     </button>
                   ))}
                 </div>

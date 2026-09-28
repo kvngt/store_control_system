@@ -72,9 +72,17 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
   interno hasta que un admin lo publique. Lo que **sigue** siendo cierto: al cliente no le
   llega el nombre de ningún técnico, y el archivo suelto lo publica solo un admin.
 - **La lista de órdenes no trae el histórico.** `getWorkOrders` excluye las entregadas de
-  más de 90 días; el archivo se pide con `getArchivedWorkOrders`, paginado y buscando en
-  el servidor. No le quites el filtro para "ver todo": es lo que evita descargar miles de
-  órdenes con sus relaciones embebidas.
+  más de 90 días **y las archivadas a mano** (`archivada_en`); el archivo se pide con
+  `getArchivedWorkOrders`, paginado y buscando en el servidor. Los dos filtros son
+  complementarios — toda entregada está en una sola de las dos listas — y lo fija
+  `workOrders.archive.test.ts`. Solo lo entregado se archiva (CHECK) y sacar una orden de
+  "Entregado" la desarchiva (trigger). No le quites el filtro para "ver todo": es lo que evita
+  descargar miles de órdenes con sus relaciones embebidas.
+- **El teléfono del cliente se guarda en formato internacional** (`+15551234567`) en
+  `clientes.telefono`, con `components/PhoneInput` (país + número). Los guardados antes, sin
+  "+", se leen como de EE. UU. y no se reescriben hasta que alguien los edita. Para mostrarlo,
+  `formatPhone`; para llamar o escribir, `telUrl` / `whatsAppUrl` de `lib/phone.ts`, que
+  respetan el "+" y no adivinan el país de un número que ya lo dice.
 - **El portal del cliente (`src/portal/`) es un paquete aparte.** No importes ahí
   nada que arrastre `lib/supabase`, `services/`, contextos de la app ni
   `i18n/translations.ts`: habla con la edge function `portal` por `fetch` y tiene
@@ -169,6 +177,8 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
 | Largo mínimo de contraseña | `src/lib/password.ts` (8), igual en `create-employee`, `update-employee` y el panel de Auth |
 | Traspaso, cuentas, operación y emergencias | [traspaso.md](traspaso.md); antes de publicar a clientes reales, [salida-a-produccion.md](salida-a-produccion.md) |
 | Formato del dinero | `src/lib/money.ts` (`money`, `moneySigned`); el portal y los correos tienen el suyo |
+| Teléfonos y país | `src/lib/phone.ts` (`PHONE_COUNTRIES`, `parsePhone`, `toE164`, `formatPhone`) y `src/components/PhoneInput.tsx` |
+| Color de la sede en el PDF | `src/lib/brandColor.ts`: el color tal cual para rayas y uno oscurecido para texto, que un amarillo claro no se lee sobre blanco |
 | Tipos de dominio | `src/types/domain/` |
 
 ## 4. Patrones de interfaz

@@ -8,6 +8,7 @@ import VehicleFields from '../vehicles/VehicleFields';
 import { ZONES } from './useIntakePhotos';
 import type { WorkOrderFormApi } from './useWorkOrderForm';
 import { AlertError } from '../../components/AlertError';
+import PhoneInput from '../../components/PhoneInput';
 
 /**
  * Refuses the keys that put a minus sign into a `type="number"` box.
@@ -169,11 +170,18 @@ export default function WorkOrderCreateModal({
                         <FieldError messageKey={errors.newCustomer?.nombre?.message} />
                       </div>
                       <div style={{ flex: 1 }}>
-                        <input
-                          className="form-input"
+                        {/* Controlado a mano en vez de `register`: el campo son dos controles
+                            (país y número) que juntos dan un solo valor. */}
+                        <PhoneInput
+                          value={watch('newCustomer.telefono')}
+                          onChange={(telefono) =>
+                            form.form.setValue('newCustomer.telefono', telefono, {
+                              shouldDirty: true,
+                              shouldValidate: formState.isSubmitted,
+                            })
+                          }
+                          invalid={!!errors.newCustomer?.telefono}
                           placeholder={t('common.phone')}
-                          aria-invalid={!!errors.newCustomer?.telefono}
-                          {...register('newCustomer.telefono')}
                         />
                         <FieldError messageKey={errors.newCustomer?.telefono?.message} />
                       </div>

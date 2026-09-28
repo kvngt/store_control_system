@@ -141,7 +141,7 @@ if (ctx.TOKEN_TECH) {
 // ------------------------------------------------------------------------------------
 // Los identificadores **SEC-70 en adelante están tomados** por los casos manuales de
 // plan-de-pruebas.md §5 (curl a mano contra Storage y órdenes ajenas). Para un caso nuevo
-// automatizado usa un hueco de abajo — quedan libres SEC-19, SEC-36, SEC-37 y SEC-38 — o
+// automatizado usa un hueco de abajo — quedan libres SEC-19, SEC-36 y SEC-37 — o
 // sigue desde SEC-71 solo si antes lo reservas en ese documento.
 const anon = (c) => ({ ...c, who: 'anon' });
 const tech = (c) => ({ ...c, who: 'tech', needs: ['TOKEN_TECH', ...(c.needs || [])] });
@@ -196,6 +196,9 @@ const CASES = [
   tech({ id: 'SEC-50', desc: 'Un técnico no asigna a otra persona', needs: ['ORDEN', 'OTRO_USUARIO'], method: 'POST', path: () => '/rest/v1/orden_asignaciones', body: (c) => ({ orden_id: c.ORDEN, usuario_id: c.OTRO_USUARIO, tipo_tarea: 'mecanica' }), expect: 'denied' }),
   tech({ id: 'SEC-51', desc: 'Un técnico no mueve el avance de una orden ajena', needs: ['ORDEN_AJENA'], method: 'PATCH', path: (c) => `/rest/v1/ordenes_trabajo?id=eq.${c.ORDEN_AJENA}`, body: { porcentaje_avance: 50 }, expect: 'denied' }),
   tech({ id: 'SEC-52', desc: 'Un técnico no agrega avances a una orden ajena', needs: ['ORDEN_AJENA'], method: 'POST', path: () => '/rest/v1/orden_avances', body: (c) => ({ orden_id: c.ORDEN_AJENA, descripcion: 'PRUEBA' }), expect: 'denied' }),
+  // Archivar a mano (20261005000000) es de administración. No hizo falta política nueva: la
+  // orden entregada ya le está cerrada al técnico y la columna nueva no está en su lista.
+  tech({ id: 'SEC-38', desc: 'Un técnico no archiva una orden entregada', needs: ['ORDEN_ENTREGADA'], method: 'PATCH', path: (c) => `/rest/v1/ordenes_trabajo?id=eq.${c.ORDEN_ENTREGADA}`, body: { archivada_en: '2026-01-01T00:00:00Z' }, headers: { Prefer: 'return=representation' }, expect: 'denied-or-empty' }),
   tech({ id: 'SEC-53', desc: 'Un técnico no saca una orden de Entregado', needs: ['ORDEN_ENTREGADA'], method: 'PATCH', path: (c) => `/rest/v1/ordenes_trabajo?id=eq.${c.ORDEN_ENTREGADA}`, body: { estatus: 'finalizado' }, expect: 'denied' }),
   tech({ id: 'SEC-54', desc: 'Un técnico no agrega avances a una orden entregada', needs: ['ORDEN_ENTREGADA'], method: 'POST', path: () => '/rest/v1/orden_avances', body: (c) => ({ orden_id: c.ORDEN_ENTREGADA, descripcion: 'PRUEBA' }), expect: 'denied' }),
 

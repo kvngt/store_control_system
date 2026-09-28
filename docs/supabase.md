@@ -140,7 +140,7 @@ Las 22 tienen **RLS activado**. Columnas y relaciones: [arquitectura.md §4](arq
 | | `perfiles` | Una fila por usuario de `auth.users`: nombre, rol, sede | Uno mismo, su sede, admin |
 | **Clientes** | `clientes` | Datos de contacto y preferencia de correos | Su sede, admin |
 | | `vehiculos` | VIN, placa, marca, modelo | Su sede, admin |
-| **Órdenes** | `ordenes_trabajo` | La orden: estado, avance, firma, total de mano de obra | Lee su sede; **abrirla, solo admin**; el UPDATE, su sede (y el trigger exige estar asignado) |
+| **Órdenes** | `ordenes_trabajo` | La orden: estado, avance, firma, total de mano de obra, `archivada_en` (archivo a mano, solo entregadas) | Lee su sede; **abrirla, solo admin**; el UPDATE, su sede (y el trigger exige estar asignado) |
 | | `orden_montos` | Total, repuestos y depósito (1:1 con la orden) | **Solo admin** |
 | | `orden_labor` | Líneas de mano de obra con su estado de autorización | Su sede, admin |
 | | `orden_repuestos` | Repuestos con precio | **Solo admin** (el técnico usa `repuestos_de_orden`) |
@@ -168,7 +168,7 @@ No hay vistas.
 
 ### 4.3 Funciones de `public`
 
-97 funciones, en cuatro grupos según **quién puede ejecutarlas**. Los grupos y los
+98 funciones, en cuatro grupos según **quién puede ejecutarlas**. Los grupos y los
 nombres salen del catálogo (`has_function_privilege('authenticated', …)`), no de una lista
 a mano: la anterior se quedó cinco funciones atrás sin que nadie lo notara.
 
@@ -177,7 +177,7 @@ a mano: la anterior se quedó cinco funciones atrás sin que nadie lo notara.
 | **RPC de la app** | 23 | `resumen_panel`, `importar_estado_cuenta` (migración 36), `deshacer_importacion_estado_cuenta`, `create_work_order`, `repuestos_de_orden`, `marcar_labor_completada`, `pay_commissions`, `sede_delete_impact`, `delete_sede_cascade`, `registrar_push`, `eliminar_push`, `probar_push`, `usuarios_con_push`, `crear_enlace_cliente`, `regenerar_enlace_cliente`, `revocar_enlace_cliente`, `notificar_cliente_avance`, `enviar_reporte_cliente`, `enviar_presupuesto`, `registrar_autorizacion`, `cancelar_presupuesto`, `ordenes_esperando_autorizacion`, `app_schema_version` | Usuarios con sesión (`authenticated`). Las de admin lo validan por dentro |
 | **Ayudantes de RLS** | 4 | `is_admin`, `current_user_role`, `current_user_sede_id`, `is_assigned_to_order` | Las usan las políticas; sin sesión devuelven vacío |
 | **Internas** | 27 | Dinero (`recalculate_order_totals`, `sync_order_commissions`, `sync_order_parts_expense`, `reverse_order_delivery_finance`); avisos (`notificar`, `admins_de_sede`, `datos_orden_aviso`); cola (`claim_outbox`, `finish_outbox`, `dispatch_outbox_if_due`, `invoke_edge_function`, `purge_old_notifications`, `archivos_huerfanos`); portal y correos (`datos_portal`, `datos_correo`, `encolar_correo_cliente`, `asegurar_enlace_orden`, `preferencia_correos_portal`, `responder_presupuesto_portal`, `marcar_estatus_enviado`, `es_correo_valido`); presupuestos (`_crear_presupuesto`, `_agregar_borradores`, `_lineas_pendientes`, `_resolver_presupuesto`, `recordar_presupuestos_sin_respuesta`); recordatorios (`recordar_ordenes_vencidas`) | Solo `service_role` (Edge Functions), triggers y pg_cron |
-| **De trigger** | 43 | `trg_*`, `handle_*`, `cleanup_order_finance` | Solo como trigger |
+| **De trigger** | 44 | `trg_*`, `handle_*`, `cleanup_order_finance` | Solo como trigger |
 
 Qué hace cada trigger, por tabla: [arquitectura.md §5](arquitectura.md#5-dónde-vive-la-lógica-de-negocio).
 

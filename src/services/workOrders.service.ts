@@ -49,6 +49,8 @@ export const workOrdersService = {
         asignaciones:orden_asignaciones(*, usuario:perfiles(*))
       `).order('creado_en', { ascending: false }).order('id');
       if (sedeId) query = query.eq('sede_id', sedeId);
+      // Lo que un admin archivó a mano sale del tablero en el acto, sin esperar los 90 días.
+      query = query.is('archivada_en', null);
       query = query.or(
         `estatus.neq.entregado,fecha_finalizacion.is.null,fecha_finalizacion.gte.${corte}`
       );
@@ -79,13 +81,17 @@ export const workOrdersService = {
     let query = supabase
       .from('ordenes_trabajo')
       .select(`
-        id, numero_orden, estatus, tipo_trabajo, fecha_finalizacion, fecha_estimada_entrega,
+        id, numero_orden, estatus, tipo_trabajo, fecha_finalizacion, fecha_estimada_entrega, archivada_en,
         montos:orden_montos(total_general),
         cliente:clientes(nombre),
         vehiculo:vehiculos(marca, modelo, anio, placa)
       `)
       .eq('estatus', 'entregado')
-      .lt('fecha_finalizacion', corte)
+      // Archivada a mano, o entregada hace más de 90 días. Es el complemento exacto del filtro
+      // del tablero: toda entregada está en una de las dos listas y en una sola. Si la búsqueda
+      // agrega su propio `or` más abajo, PostgREST combina los dos con AND (comprobado contra
+      // la API el 28/09).
+      .or(`archivada_en.not.is.null,fecha_finalizacion.lt.${corte}`)
       .order('fecha_finalizacion', { ascending: false })
       .order('id');
     if (sedeId) query = query.eq('sede_id', sedeId);
@@ -231,6 +237,23 @@ export const workOrdersService = {
     const { data, error } = await supabase.from('orden_avances').update(updates).eq('id', id).select('id');
     if (error) throw error;
     assertAffected(data, 'el avance');
+  },
+
+  /**
+   * Manda una orden entregada al archivo, o la devuelve al tablero con `null`.
+   *
+   * La base impone el resto: solo lo entregado se archiva (CHECK) y un técnico no toca una
+   * orden entregada. `assertAffected` por lo de siempre: un UPDATE que la RLS no deja pasar
+   * devuelve cero filas sin error.
+   */
+  setArchived: async (orderId: string, archivada: boolean) => {
+    const { data, error } = await supabase
+      .from('ordenes_trabajo')
+      .update({ archivada_en: archivada ? new Date().toISOString() : null })
+      .eq('id', orderId)
+      .select('id');
+    if (error) throw error;
+    assertAffected(data, 'la orden');
   },
 
   setLaborCompleted: async (laborId: string, completado: boolean) => {

@@ -26,6 +26,10 @@ import {
 import type { Customer, Vehicle, WorkOrder } from '../types/database';
 import { AlertError } from '../components/AlertError';
 import { money } from '../lib/money';
+import PhoneInput from '../components/PhoneInput';
+import { formatPhone } from '../lib/phone';
+
+const digitsOf = (v: string) => (v || '').replace(/\D/g, '');
 
 export default function Customers() {
   const { t, language } = useLanguage();
@@ -109,6 +113,9 @@ export default function Customers() {
       (c) =>
         c.nombre.toLowerCase().includes(searchLower) ||
         c.telefono.includes(search) ||
+        // Por dígitos también: el teléfono se guarda como "+15125550100", y quien busca
+        // escribe "512-555" o "(512) 555".
+        (!!digitsOf(search) && digitsOf(c.telefono).includes(digitsOf(search))) ||
         c.email.toLowerCase().includes(searchLower)
     );
   }, [customers, search]);
@@ -235,7 +242,7 @@ export default function Customers() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', fontSize: 'var(--font-size-sm)' }}>
                 <Phone size={16} style={{ color: 'var(--color-text-tertiary)' }} />
-                <span>{viewProfile.telefono}</span>
+                <span>{formatPhone(viewProfile.telefono)}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', fontSize: 'var(--font-size-sm)' }}>
                 <Mail size={16} style={{ color: 'var(--color-text-tertiary)' }} />
@@ -408,7 +415,7 @@ export default function Customers() {
                       <span style={{ fontWeight: 500 }}>{customer.nombre}</span>
                     </div>
                   </td>
-                  <td data-label={t('common.phone')}>{customer.telefono}</td>
+                  <td data-label={t('common.phone')}>{formatPhone(customer.telefono)}</td>
                   <td data-label={t('common.email')} style={{ color: 'var(--color-text-secondary)' }}>{customer.email}</td>
                   <td>
                     <span className="badge badge-en_proceso">{customer.vehiculos_count || 0}</span>
@@ -458,8 +465,8 @@ export default function Customers() {
                   <input className="form-input" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} id="customer-name" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">{t('common.phone')}</label>
-                  <input className="form-input" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} id="customer-phone" />
+                  <label className="form-label" htmlFor="customer-phone">{t('common.phone')}</label>
+                  <PhoneInput value={form.telefono} onChange={(telefono) => setForm({ ...form, telefono })} id="customer-phone" />
                 </div>
               </div>
               <div className="form-row">

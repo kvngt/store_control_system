@@ -13,7 +13,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(28);
+SELECT plan(31);
 
 -- ------------------------------------------------------------------------------------
 -- Datos de prueba
@@ -243,6 +243,28 @@ SELECT is(
   (SELECT recordar_ordenes_vencidas()),
   0,
   'El mismo día no vuelve a avisar'
+);
+
+-- Al día siguiente sí vuelve a avisar, pero reemplaza el aviso de ayer (20261005000001). Antes
+-- cada día dejaba una fila nueva, y una orden con una semana de retraso llenaba la campana
+-- con siete avisos casi iguales.
+UPDATE ordenes_trabajo SET recordado_entrega_en = NOW() - INTERVAL '21 hours'
+WHERE sede_id = '10000000-0000-0000-0000-000000000001';
+SELECT is(
+  (SELECT recordar_ordenes_vencidas()),
+  1,
+  'Al día siguiente vuelve a avisar'
+);
+SELECT is(
+  (SELECT MAX(n)::int FROM (SELECT COUNT(*) AS n FROM notificaciones
+     WHERE tipo = 'orden_vencida' GROUP BY usuario_id, orden_id) t),
+  1,
+  'Pero queda un solo aviso por orden y persona, no uno por día'
+);
+SELECT is(
+  (SELECT COUNT(*)::int FROM notificaciones WHERE tipo = 'orden_vencida' AND leida_en IS NULL),
+  (SELECT COUNT(*)::int FROM notificaciones WHERE tipo = 'orden_vencida'),
+  'Y el de hoy llega sin leer: el empujón diario sigue'
 );
 
 -- El trabajo se acabó: una orden entregada con la fecha pasada no es un retraso.

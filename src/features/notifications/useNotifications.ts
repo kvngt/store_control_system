@@ -88,11 +88,51 @@ export function useNotifications(options: { onArrive?: (notification: AppNotific
     }
   }, [queryClient, userId]);
 
+  // A diferencia de marcar como leído, borrar sí lanza si falla. Un aviso leído que vuelve a
+  // aparecer sin leer no confunde a nadie; uno que se borró y reaparece al recargar parece un
+  // botón roto, así que la campana tiene que poder decirlo.
+  const remove = useCallback(
+    async (id: string) => {
+      let wasUnread = false;
+      queryClient.setQueryData<AppNotification[]>(['notifications', userId], (prev) =>
+        (prev ?? []).filter((n) => {
+          if (n.id !== id) return true;
+          wasUnread = !n.leida_en;
+          return false;
+        })
+      );
+      if (wasUnread) queryClient.setQueryData<number>(['notifications-unread', userId], (c) => Math.max(0, (c ?? 1) - 1));
+      try {
+        await notificationsService.remove(id);
+      } catch (err) {
+        void queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+        void queryClient.invalidateQueries({ queryKey: ['notifications-unread', userId] });
+        throw err;
+      }
+    },
+    [queryClient, userId]
+  );
+
+  const removeAll = useCallback(async () => {
+    if (!userId) return;
+    queryClient.setQueryData<AppNotification[]>(['notifications', userId], []);
+    queryClient.setQueryData<number>(['notifications-unread', userId], 0);
+    try {
+      await notificationsService.removeAll(userId);
+    } catch (err) {
+      void queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+      void queryClient.invalidateQueries({ queryKey: ['notifications-unread', userId] });
+      throw err;
+    }
+  }, [queryClient, userId]);
+
   return {
     items: list.data ?? [],
     unreadCount: unread.data ?? 0,
     loading: list.isPending && !!userId,
     markRead,
     markAllRead,
+    remove,
+    removeAll,
   };
 }

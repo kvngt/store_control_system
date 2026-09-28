@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, CheckCheck, X } from 'lucide-react';
+import { Bell, CheckCheck, Trash2, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import type { AppNotification } from '../../types/database';
+import { getErrorMessage } from '../../lib/errors';
 import { relativeTime, renderNotification } from './renderNotification';
 import { useNotifications } from './useNotifications';
 
@@ -23,7 +24,7 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const { items, unreadCount, loading, markRead, markAllRead } = useNotifications({
+  const { items, unreadCount, loading, markRead, markAllRead, remove, removeAll } = useNotifications({
     onArrive: (notification) => {
       const { title, body } = renderNotification(notification, t);
       showToast('success', title, body);
@@ -55,6 +56,27 @@ export default function NotificationBell() {
 
   const badge = unreadCount > 99 ? '99+' : String(unreadCount);
 
+  // Los avisos se acumulaban: marcar como leído los apaga pero no los quita, y la base solo
+  // purga los de más de 60 días. Borrar es de cada quien sobre los suyos
+  // (`notificaciones_delete`), así que no necesita permisos nuevos.
+  const deleteOne = async (id: string) => {
+    try {
+      await remove(id);
+    } catch (err) {
+      showToast('error', t('notifications.deleteError'), getErrorMessage(err, language));
+    }
+  };
+
+  const deleteAll = async () => {
+    // Borra todos los avisos, no solo los que se ven: la lista muestra los 30 más recientes.
+    if (!confirm(t('notifications.deleteAllConfirm'))) return;
+    try {
+      await removeAll();
+    } catch (err) {
+      showToast('error', t('notifications.deleteError'), getErrorMessage(err, language));
+    }
+  };
+
   return (
     <div style={{ position: 'relative' }} ref={ref}>
       <button
@@ -79,6 +101,11 @@ export default function NotificationBell() {
                   <CheckCheck size={14} /> {t('notifications.markAllRead')}
                 </button>
               )}
+              {items.length > 0 && (
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => void deleteAll()} id="notifications-delete-all">
+                  <Trash2 size={14} /> {t('notifications.deleteAll')}
+                </button>
+              )}
               <button type="button" className="modal-close" onClick={() => setOpen(false)} aria-label={t('common.close')}>
                 <X size={16} />
               </button>
@@ -94,7 +121,7 @@ export default function NotificationBell() {
               {items.map((notification) => {
                 const { title, body } = renderNotification(notification, t);
                 return (
-                  <li key={notification.id}>
+                  <li key={notification.id} className="notif-item">
                     <button
                       type="button"
                       className={'notif-dropdown-item' + (notification.leida_en ? '' : ' is-unread')}
@@ -106,6 +133,17 @@ export default function NotificationBell() {
                         {body && <div className="notif-dropdown-item-sub">{body}</div>}
                         <div className="notif-time">{relativeTime(notification.creado_en, language)}</div>
                       </div>
+                    </button>
+                    {/* Hermano de la fila y no hijo: un botón dentro de otro botón no es HTML
+                        válido, y el clic de borrar abriría además la orden. */}
+                    <button
+                      type="button"
+                      className="notif-item-delete"
+                      onClick={() => void deleteOne(notification.id)}
+                      aria-label={t('notifications.delete')}
+                      title={t('notifications.delete')}
+                    >
+                      <X size={14} />
                     </button>
                   </li>
                 );

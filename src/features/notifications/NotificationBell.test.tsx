@@ -15,6 +15,8 @@ const mocks = vi.hoisted(() => ({
   unreadCount: vi.fn(),
   markRead: vi.fn(async () => {}),
   markAllRead: vi.fn(async () => {}),
+  remove: vi.fn(async () => {}),
+  removeAll: vi.fn(async () => {}),
   onInsert: null as null | ((n: AppNotification) => void),
   navigate: vi.fn(),
 }));
@@ -26,6 +28,8 @@ vi.mock('../../services/notifications.service', () => ({
     unreadCount: mocks.unreadCount,
     markRead: mocks.markRead,
     markAllRead: mocks.markAllRead,
+    remove: mocks.remove,
+    removeAll: mocks.removeAll,
     subscribe: (_userId: string, onInsert: (n: AppNotification) => void) => {
       mocks.onInsert = onInsert;
       return () => {
@@ -100,6 +104,69 @@ describe('NotificationBell', () => {
 
     expect(mocks.markAllRead).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: 'Notificaciones' })).toBeInTheDocument();
+  });
+
+  // Los avisos se acumulaban: marcar como leído los apaga pero no los quita.
+  it('borra un aviso sin abrirlo, y si estaba sin leer baja el contador', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<NotificationBell />);
+    await screen.findByText('1');
+
+    await user.click(screen.getByRole('button', { name: /sin leer/ }));
+    await screen.findByText('Nueva orden asignada · ORD-2026-014');
+    // El primero de la lista es ASSIGNED, que está sin leer.
+    await user.click(screen.getAllByRole('button', { name: 'Borrar aviso' })[0]);
+
+    expect(mocks.remove).toHaveBeenCalledWith('n-1');
+    // Borrar no es abrir: no marca como leído ni navega.
+    expect(mocks.markRead).not.toHaveBeenCalled();
+    expect(mocks.navigate).not.toHaveBeenCalled();
+    expect(screen.queryByText('Nueva orden asignada · ORD-2026-014')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Notificaciones' })).toBeInTheDocument();
+  });
+
+  it('borra todas después de confirmar', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const user = userEvent.setup();
+    renderWithProviders(<NotificationBell />);
+    await screen.findByText('1');
+
+    await user.click(screen.getByRole('button', { name: /sin leer/ }));
+    await user.click(await screen.findByRole('button', { name: /Borrar todas/ }));
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(mocks.removeAll).toHaveBeenCalledWith(MECHANIC_USER.id);
+    expect(await screen.findByText('No tienes avisos todavía.')).toBeInTheDocument();
+    confirmSpy.mockRestore();
+  });
+
+  it('si se cancela la confirmación, no borra nada', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const user = userEvent.setup();
+    renderWithProviders(<NotificationBell />);
+    await screen.findByText('1');
+
+    await user.click(screen.getByRole('button', { name: /sin leer/ }));
+    await user.click(await screen.findByRole('button', { name: /Borrar todas/ }));
+
+    expect(mocks.removeAll).not.toHaveBeenCalled();
+    expect(screen.getByText('Nueva orden asignada · ORD-2026-014')).toBeInTheDocument();
+    confirmSpy.mockRestore();
+  });
+
+  // Uno que se borró y reaparece al recargar parece un botón roto: hay que decirlo.
+  it('si no se pudo borrar, lo dice y el aviso vuelve', async () => {
+    mocks.remove.mockRejectedValueOnce(new Error('Se cayó la red'));
+    const user = userEvent.setup();
+    renderWithProviders(<NotificationBell />);
+    await screen.findByText('1');
+
+    await user.click(screen.getByRole('button', { name: /sin leer/ }));
+    await screen.findByText('Nueva orden asignada · ORD-2026-014');
+    await user.click(screen.getAllByRole('button', { name: 'Borrar aviso' })[0]);
+
+    expect(await screen.findByText('No se pudo borrar')).toBeInTheDocument();
+    expect(await screen.findByText('Nueva orden asignada · ORD-2026-014')).toBeInTheDocument();
   });
 
   it('un aviso que llega en tiempo real suma al contador y aparece como toast', async () => {

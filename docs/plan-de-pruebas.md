@@ -226,6 +226,9 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | CLI-06 | P0 | IA | **M** no ve el botón de eliminar en clientes ni vehículos. |
 | CLI-07 | P1 | IA | **A** elimina un cliente con órdenes → mensaje claro de que no se puede. |
 | CLI-08 | P2 | IA | Búsqueda global por nombre, teléfono, placa, VIN y número de orden → encuentra cada uno. |
+| CLI-09 | P1 | IA | **Nuevo Cliente** → el teléfono trae **Estados Unidos (+1)** elegido y **México (+52)** como segunda opción. Con México y `55 1234 5678`, guardar → la lista muestra `+52 55 1234 5678`; en una orden suya, **WhatsApp** abre `wa.me/525512345678`. |
+| CLI-10 | P2 | IA | Un cliente guardado antes del selector (número sin "+") → al editarlo aparece con EE. UU. y su número; guardar **sin tocar el teléfono** no lo cambia en la base. |
+| CLI-11 | P2 | IA | Número de EE. UU. con 9 dígitos → al salir del campo avisa "tiene 10 dígitos", pero deja guardar. Buscar un cliente por `512-555` lo encuentra aunque esté guardado como `+15125550100`. |
 
 ### 4.4 Órdenes de trabajo (ORD)
 
@@ -238,12 +241,14 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | ORD-05 | P0 | IA | **M** no ve el botón **Nueva orden**; **A** sí. Un POST directo a `/rest/v1/ordenes_trabajo` con la sesión de **M** responde 42501 (lo cubre `qa:security` SEC-55). |
 | ORD-06 | P0 | IA | **M** en el detalle de una orden asignada → no ve tarjeta de totales, depósito ni repuestos con precio; ve "Descripción de repuestos" sin ningún `$`; ve la mano de obra sin botones con "la cotiza administración"; ve **Tu comisión estimada** con la cuenta (mano de obra × % ÷ técnicos); no ve **Descargar PDF** ni **Enviar reporte**; el selector de estado no ofrece "Entregado". |
 | ORD-07 | P1 | IA | **M** mueve el avance en un estado no cerrado y captura la firma → ambos se ven al recargar. |
-| ORD-08 | P1 | IA | **N** abre una orden que no trabaja → aviso de solo lectura ("un administrador tiene que asignarte") y, donde estaba "Unirme a la orden", la frase "Administración asigna quién trabaja esta orden". El botón ya no existe para nadie: asignar se hace desde el selector de **A** en la tarjeta de técnicos. Un POST directo a `/rest/v1/orden_asignaciones` con su propio `usuario_id` responde 42501 (SEC-69 y SEC-70). |
+| ORD-08 | P1 | IA | **N** abre una orden que no trabaja → aviso de solo lectura ("un administrador tiene que asignarte") y, donde estaba "Unirme a la orden", la frase "Administración asigna quién trabaja esta orden". El botón ya no existe para nadie: asignar se hace desde el selector de **A** en la tarjeta de técnicos. Un POST directo a `/rest/v1/orden_asignaciones` con su propio `usuario_id` responde 42501 (SEC-69 y SEC-39). |
 | ORD-09 | P1 | IA | **A** elige "Entregado" y cancela la confirmación → el selector vuelve al estado real. |
 | ORD-10 | P1 | IA | **A** reabre una orden finalizada → se borra la fecha de finalización. |
 | ORD-11 | P1 | IA | Kanban: en computadora, arrastrar entre columnas; en teléfono, "Mover a" (cancelar la confirmación deja el selector como estaba). **M** en su tarjeta: sin "Entregado"; en tarjetas ajenas no hay selector. |
 | ORD-12 | P0 | IA | **A** crea una orden con mano de obra $1,000 **sin firmar** → la línea dice **Sin autorizar** y el total es $0. Firmar → **sin recargar**, la insignia desaparece, el total pasa a $1,000 y la tarjeta Presupuesto muestra "con la firma de recepción". *(AUD-06)* |
 | ORD-13 | P2 | IA | Crear una orden sin fecha estimada de entrega → la fecha es hoy + 5 días en la hora local, también si se crea después de las 7 p. m. *(AUD-13)* |
+| ORD-15 | P1 | IA | Teléfono, **A**, Kanban: en una orden **Entregada**, **Mover a → Archivar** → confirma → la tarjeta sale del tablero y la orden aparece en **Órdenes → Archivadas** con la insignia "Archivada". Abrirla → **Devolver al tablero** → vuelve. En computadora, el botón **Archivar** de la tarjeta hace lo mismo. |
+| ORD-16 | P1 | IA | Una orden que no está entregada no ofrece **Archivar**. **M** no ve la opción en ninguna. Por la API, archivar una no entregada responde 23514 y un técnico no archiva (SEC-38). Sacar de Entregado una orden archivada la devuelve sola al tablero. |
 | ORD-14 | P1 | IA | **A** con la **Sede B** elegida abre una orden de la **Sede A** (desde un aviso o `/work-orders?open=<id>`) → **Descargar PDF** trae logo, nombre y dirección de la Sede A; el mensaje de **Enviar reporte → WhatsApp** nombra la Sede A; la lista para asignar técnicos solo muestra personal de la Sede A. *(AUD-08)* |
 
 ### 4.5 Dinero automático (DIN)
@@ -315,7 +320,9 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 | NOT-06 | P1 | H | Android: Configuración → activar en este dispositivo → "Enviar prueba" llega en segundos; con Chrome **cerrado**, asignar una orden → llega y abre la orden; en Configuración → Usuarios (**A**) el técnico muestra la campana con "1". |
 | NOT-07 | P1 | H | iPhone: en Safari sin instalar, la tarjeta explica los 3 pasos; desde el ícono de inicio se activa; con la app cerrada, una asignación llega. |
 | NOT-08 | P2 | H | Tablet compartida: **M** activa push y cierra sesión; entra **P** en el mismo dispositivo → los avisos de **M** ya no llegan ahí; los de **P** sí. |
-| NOT-09 | P2 | IA | Build sin `VITE_VAPID_PUBLIC_KEY` → la tarjeta dice "no están configuradas en este servidor"; la campana funciona. |
+| NOT-09 | P2 | IA | Build sin `VITE_VAPID_PUBLIC_KEY` → `vite build` avisa; la tarjeta dice "no están configuradas en este servidor"; la campana funciona. |
+| NOT-10 | P1 | IA | Campana: la **X** de un aviso lo borra sin abrir la orden y, si estaba sin leer, baja el contador. **Borrar todas** pide confirmación; cancelar no borra nada; aceptar deja la campana vacía y no vuelven al recargar. |
+| NOT-11 | P2 | IA | Una orden atrasada varios días deja **un solo** aviso "Pasó la fecha de entrega" por persona, con los días al día — no uno por día. Verificar: `select count(*), count(distinct (usuario_id, orden_id)) from notificaciones where tipo = 'orden_vencida'` da el mismo número dos veces. |
 
 ### 4.9 Finanzas (FIN)
 
@@ -430,6 +437,8 @@ D-02, fotos de recepción, un avance con una foto publicada, otra interna y una 
 | REP-08 | P0 | IA | **Descargar PDF** → Network sin peticiones a `storage/v1/object/reportes`. El PDF lleva las fotos de recepción publicadas y la foto de avance publicada, agrupada por día; **no** lleva la foto interna, videos, el texto del avance ni los técnicos. |
 | REP-09 | P0 | IA | Los montos del PDF coinciden con el portal (solo lo autorizado); en una orden entregada el saldo es $0 con "Pagado al entregar"; el enlace del reporte se puede tocar. |
 | REP-10 | P2 | IA | Con más de 20 fotos publicadas el PDF pesa pocos MB. |
+| REP-11 | P1 | IA | **Descargar PDF** de una orden de una sede con color (ej. `#e8c64a`) → el nombre del taller y el enlace salen en ese color, **oscurecido** si hace falta para leerse sobre blanco, y las rayas de sección en el color tal cual. Una sede sin color sale con el dorado de la app. |
+| REP-12 | P1 | IA | PDF de una orden en **espera de autorización** → el estado dice "Esperando su autorización", igual que el portal, y no "Espera de Repuestos". |
 
 ---
 

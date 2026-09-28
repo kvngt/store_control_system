@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, UserPlus, X, Check, Phone, Mail } from 'lucide-react';
 import { useLanguage } from '../context/language.context';
 import type { Customer } from '../types/database';
+import PhoneInput from './PhoneInput';
+import { formatPhone } from '../lib/phone';
 
 export interface NewCustomerDraft {
   nombre: string;
@@ -112,7 +114,7 @@ export default function CustomerPicker({
           <div className="owner-card-name">{selected.nombre}</div>
           <div className="owner-card-meta">
             {selected.telefono && (
-              <span><Phone size={12} /> {selected.telefono}</span>
+              <span><Phone size={12} /> {formatPhone(selected.telefono)}</span>
             )}
             {selected.email && (
               <span><Mail size={12} /> {selected.email}</span>
@@ -169,7 +171,7 @@ export default function CustomerPicker({
               }}
             >
               <span className="combo-option-main">{c.nombre}</span>
-              <span className="combo-option-sub">{c.telefono}</span>
+              <span className="combo-option-sub">{formatPhone(c.telefono)}</span>
             </button>
           ))}
           {matches.length === 0 && (
@@ -204,11 +206,10 @@ export default function CustomerPicker({
             </div>
             <div className="form-group">
               <label className="form-label" htmlFor="owner-new-phone">{t('common.phone')}</label>
-              <input
-                className="form-input"
+              <PhoneInput
                 id="owner-new-phone"
                 value={draft.telefono}
-                onChange={(e) => setDraft({ ...draft, telefono: e.target.value })}
+                onChange={(telefono) => setDraft({ ...draft, telefono })}
               />
             </div>
           </div>

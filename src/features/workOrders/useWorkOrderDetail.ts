@@ -168,6 +168,11 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // mover la orden a "entregado" y con eso acreditarse su propia comisión.
   const canDeliver = isAdmin;
 
+  // Archivar saca una entregada del tablero sin esperar los 90 días. Solo lo entregado
+  // (CHECK en la base) y solo administración (un técnico no toca una orden entregada).
+  const canArchive = isAdmin && isDelivered;
+  const isArchived = !!order?.archivada_en;
+
   // Cotizar es de administración: mano de obra y repuestos solo los agrega o
   // cambia un admin. La base lo impone (RLS de `orden_labor` / `orden_repuestos`);
   // esto solo decide qué controles se dibujan.
@@ -416,6 +421,28 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // estaba haciendo el trabajo. Desde 20261004000000 la base lo rechaza
   // (`orden_asignaciones_insert` es `is_admin()`) y asignar se hace desde el selector de
   // administración, unas líneas más arriba en `WorkOrderDetail`.
+  /**
+   * Manda la orden al archivo o la devuelve al tablero. Desde el archivo es la única forma de
+   * traerla de vuelta sin reabrirla, por eso el mismo botón hace las dos cosas.
+   */
+  const toggleArchived = async () => {
+    if (!order || !canArchive) return;
+    const archivar = !isArchived;
+    if (archivar && !confirm(t('workOrders.archiveConfirm'))) return;
+    setBusy(true);
+    try {
+      await workOrdersService.setArchived(order.id, archivar);
+      // El tablero y el archivo son dos listas distintas: la orden sale de una y entra a la otra.
+      void queryClient.invalidateQueries({ queryKey: ['work-orders-archived'] });
+      await refresh();
+      showToast('success', t(archivar ? 'workOrders.archivedToast' : 'workOrders.unarchivedToast'));
+    } catch (err) {
+      showToast('error', t('workOrders.archiveError'), getErrorMessage(err, language));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const removeAssignment = async (id: string, nombre: string) => {
     if (!order) return;
     if (!confirm(`${t('common.delete')}: ${nombre}?`)) return;
@@ -599,6 +626,9 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     canResign,
     canEditProgress,
     canDeliver,
+    canArchive,
+    isArchived,
+    toggleArchived,
     canEditLines,
     canSendReport,
     estimatedCommission,

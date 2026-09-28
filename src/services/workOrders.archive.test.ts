@@ -14,7 +14,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 interface Consulta {
   table: string;
-  or?: string;
+  /** Todos los `or` de la consulta, en orden. PostgREST los combina con AND. */
+  ors: string[];
   filtros: [string, string, unknown][];
   ilike?: [string, string];
   limit?: number;
@@ -33,7 +34,7 @@ vi.mock('./quotes.service', () => ({
 
 vi.mock('../lib/supabase', () => {
   const from = (table: string) => {
-    const rec: Consulta = { table, filtros: [] };
+    const rec: Consulta = { table, ors: [], filtros: [] };
     mocks.consultas.push(rec);
     const filas = () => (table === 'clientes' ? mocks.clientes : mocks.ordenes);
     const chain: Record<string, unknown> = {};
@@ -53,7 +54,7 @@ vi.mock('../lib/supabase', () => {
       return chain;
     };
     chain.or = (expr: string) => {
-      rec.or = expr;
+      rec.ors.push(expr);
       return chain;
     };
     chain.range = (from_: number, to: number) => {
@@ -97,6 +98,8 @@ function terminos(expr: string): string[] {
 
 const deTabla = (t: string) => (mocks.consultas as Consulta[]).filter((c) => c.table === t);
 const archivo = () => deTabla('ordenes_trabajo')[0];
+/** El `or` de la búsqueda, distinto del que decide qué está archivado. */
+const busqueda = () => archivo().ors.find((o) => o.includes('numero_orden.'));
 
 beforeEach(() => {
   mocks.consultas = [];
@@ -107,7 +110,9 @@ beforeEach(() => {
 describe('getArchivedWorkOrders: la consulta que se manda', () => {
   it('sin término no filtra por texto', async () => {
     await workOrdersService.getArchivedWorkOrders('s1');
-    expect(archivo().or).toBeUndefined();
+    expect(busqueda()).toBeUndefined();
+    // Solo queda el `or` que decide qué está archivado.
+    expect(archivo().ors).toHaveLength(1);
     expect(deTabla('clientes')).toHaveLength(0);
   });
 
@@ -115,7 +120,7 @@ describe('getArchivedWorkOrders: la consulta que se manda', () => {
     mocks.clientes = [{ id: 'c1' }, { id: 'c2' }];
     await workOrdersService.getArchivedWorkOrders('s1', { search: 'Marta' });
 
-    const partes = terminos(archivo().or!);
+    const partes = terminos(busqueda()!);
     expect(partes).toEqual(['numero_orden.ilike.*Marta*', 'cliente_id.in.(c1,c2)']);
     for (const parte of partes) {
       const [col, op] = parte.split('.');
@@ -130,13 +135,13 @@ describe('getArchivedWorkOrders: la consulta que se manda', () => {
     await workOrdersService.getArchivedWorkOrders('s1', { search: 'Marta' });
     // `cliente_id.in.()` es un 400: buscar algo que no existe tiene que dar cero filas,
     // no un error.
-    expect(archivo().or).toBe('numero_orden.ilike.*Marta*');
+    expect(busqueda()).toBe('numero_orden.ilike.*Marta*');
   });
 
   it('una coma o un paréntesis en el término no parten el filtro', async () => {
     await workOrdersService.getArchivedWorkOrders('s1', { search: 'Pérez, Juan (padre) 100%' });
 
-    const partes = terminos(archivo().or!);
+    const partes = terminos(busqueda()!);
     expect(partes).toHaveLength(1);
     expect(partes[0]).toBe('numero_orden.ilike.*Pérez  Juan  padre  100*');
   });
@@ -158,20 +163,31 @@ describe('getArchivedWorkOrders: la consulta que se manda', () => {
 
 // Las dos listas tienen que partir las órdenes en dos: si los cortes se separan, una orden
 // entregada justo en la frontera no sale en ninguna de las dos y parece desaparecida.
-describe('el corte de 90 días es el mismo en las dos listas', () => {
+describe('el tablero y el archivo se reparten las órdenes sin huecos', () => {
   it('el tablero pide desde el corte y el archivo antes del corte', async () => {
     await workOrdersService.getWorkOrders('s1');
-    const tablero = archivo().or!;
+    const tablero = archivo();
     mocks.consultas = [];
     await workOrdersService.getArchivedWorkOrders('s1');
-    const corteArchivo = archivo().filtros.find(
-      ([op, col]) => op === 'lt' && col === 'fecha_finalizacion'
-    );
+    const [archivoOr] = archivo().ors;
 
-    expect(corteArchivo).toBeDefined();
-    expect(tablero).toContain(`fecha_finalizacion.gte.${corteArchivo![2]}`);
+    const corte = /fecha_finalizacion\.lt\.([0-9-]+)/.exec(archivoOr)?.[1];
+    expect(corte).toBeDefined();
+    expect(tablero.ors[0]).toContain(`fecha_finalizacion.gte.${corte}`);
     // Y una entregada sin fecha sigue en el tablero: existe, y sin esto no estaría en
     // ninguna de las dos listas.
-    expect(tablero).toContain('fecha_finalizacion.is.null');
+    expect(tablero.ors[0]).toContain('fecha_finalizacion.is.null');
+  });
+
+  // Archivar a mano (20261005000000): lo archivado sale del tablero y entra al archivo aunque
+  // no hayan pasado los 90 días. Si solo pasara una de las dos cosas, la orden se vería dos
+  // veces o ninguna.
+  it('lo archivado a mano sale del tablero y entra al archivo', async () => {
+    await workOrdersService.getWorkOrders('s1');
+    expect(archivo().filtros).toContainEqual(['is', 'archivada_en', null]);
+
+    mocks.consultas = [];
+    await workOrdersService.getArchivedWorkOrders('s1');
+    expect(archivo().ors[0]).toMatch(/^archivada_en\.not\.is\.null,fecha_finalizacion\.lt\./);
   });
 });

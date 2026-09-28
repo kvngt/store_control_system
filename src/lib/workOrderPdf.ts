@@ -2,6 +2,8 @@ import { jsPDF } from 'jspdf';
 import type { Sede, WorkOrder } from '../types/database';
 import { customerReportPhotos, groupByDay, reportImagePath } from './reportMedia';
 import { money } from './money';
+import { brandColors } from './brandColor';
+import { formatPhone } from './phone';
 
 export interface WorkOrderPdfOptions {
   /** El enlace personal del cliente, si la orden tiene: la versión web con videos. */
@@ -12,7 +14,6 @@ const MARGIN = 15;
 const LINE = 6;
 /** Clear space between the workshop's header block and the report title. */
 const HEADER_GAP = 8;
-const BRAND: [number, number, number] = [212, 160, 23]; // --color-primary
 const MUTED: [number, number, number] = [110, 110, 130];
 
 // Keeps the minus sign in front of the currency symbol: "-$100.00", not
@@ -21,7 +22,10 @@ const MUTED: [number, number, number] = [110, 110, 130];
 const STATUS_LABELS: Record<string, string> = {
   recepcion: 'Recepción',
   en_proceso: 'En Proceso',
-  espera_autorizacion: 'Espera de Repuestos',
+  // Era "Espera de Repuestos", el nombre del estado antes de que F1 lo convirtiera en la
+  // espera de la autorización del cliente. Este documento lo lee el cliente, así que dice lo
+  // mismo que su portal (`src/portal/strings.ts`).
+  espera_autorizacion: 'Esperando su autorización',
   finalizado: 'Finalizado',
   entregado: 'Entregado',
 };
@@ -111,6 +115,10 @@ async function buildWorkOrderPdf(
       .filter((u): u is string => !!u)
       .slice(0, limit);
 
+  // El color del taller de la orden — no el de la sede elegida arriba — igual que el logo.
+  // Las rayas lo llevan tal cual; el texto, oscurecido si hace falta para leerse en blanco.
+  const brand = brandColors(sede?.color_tema);
+
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -132,7 +140,7 @@ async function buildWorkOrderPdf(
     doc.setTextColor(30, 30, 40);
     doc.text(title, MARGIN, y);
     y += 2;
-    doc.setDrawColor(...BRAND);
+    doc.setDrawColor(...brand.accent);
     doc.setLineWidth(0.5);
     doc.line(MARGIN, y, MARGIN + contentWidth, y);
     y += LINE;
@@ -176,7 +184,7 @@ async function buildWorkOrderPdf(
 
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...BRAND);
+  doc.setTextColor(...brand.text);
   doc.text(sede?.nombre || 'RESTORIFY', headerX, y + 2);
 
   if (sede?.direccion || sede?.telefono) {
@@ -223,7 +231,7 @@ async function buildWorkOrderPdf(
     doc.setTextColor(...MUTED);
     doc.text('Vea este reporte en línea, con videos y el estado actualizado:', MARGIN, y);
     y += 4.5;
-    doc.setTextColor(...BRAND);
+    doc.setTextColor(...brand.text);
     doc.textWithLink(options.portalUrl, MARGIN, y, { url: options.portalUrl });
     y += LINE;
   }
@@ -232,7 +240,7 @@ async function buildWorkOrderPdf(
   sectionTitle('Cliente y Vehículo');
   const half = contentWidth / 2;
   label('Cliente', order.cliente?.nombre || '', MARGIN, half - 5);
-  label('Teléfono', order.cliente?.telefono || '', MARGIN + half, half - 5);
+  label('Teléfono', formatPhone(order.cliente?.telefono), MARGIN + half, half - 5);
   y += 11;
   label('Vehículo', `${order.vehiculo?.anio || ''} ${order.vehiculo?.marca || ''} ${order.vehiculo?.modelo || ''}`.trim(), MARGIN, half - 5);
   label('Placa', order.vehiculo?.placa || '', MARGIN + half, half - 5);

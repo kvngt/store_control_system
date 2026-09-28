@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   auth: { current: null as ReturnType<typeof import('../test/renderWithProviders').authValue> | null },
   getWorkOrders: vi.fn(),
   updateWorkOrderStatus: vi.fn(),
+  setArchived: vi.fn(),
 }));
 
 vi.mock('../context/auth.context', () => ({ useAuth: () => mocks.auth.current }));
@@ -35,6 +36,7 @@ vi.mock('../services/supabaseService', () => {
   const workOrders = {
     getWorkOrders: mocks.getWorkOrders,
     updateWorkOrderStatus: mocks.updateWorkOrderStatus,
+    setArchived: mocks.setArchived,
   };
   return { workOrdersService: workOrders, supabaseService: workOrders };
 });
@@ -87,6 +89,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   mocks.updateWorkOrderStatus.mockResolvedValue(undefined);
+  mocks.setArchived.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -195,5 +198,71 @@ describe('Kanban board without dragging', () => {
     // The optimistic update is rolled back and the reason is shown.
     expect(await screen.findByText(/no tienes permiso/i)).toBeVisible();
     await waitFor(() => expect(moveSelectFor('ORD-2026-001')).toHaveValue('recepcion'));
+  });
+});
+
+// Pedido del taller: en el teléfono, una orden entregada no se podía archivar. El archivo
+// era solo automático a los 90 días, así que "Entregado" se llenaba.
+describe('Archivar desde el tablero', () => {
+  const ENTREGADA = order({ id: 'ord-delivered', numero_orden: 'ORD-2026-009', estatus: 'entregado' });
+  const ARCHIVAR = '__archivar__';
+
+  it('un admin archiva una entregada desde "Mover a"', async () => {
+    mocks.auth.current = authValue(ADMIN_USER);
+    mocks.getWorkOrders.mockResolvedValue([ENTREGADA]);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    const user = userEvent.setup();
+    renderWithProviders(<KanbanBoard />);
+    await screen.findByText('ORD-2026-009');
+
+    await user.selectOptions(moveSelectFor('ORD-2026-009')!, ARCHIVAR);
+
+    await waitFor(() => expect(mocks.setArchived).toHaveBeenCalledWith('ord-delivered', true));
+    // No es un cambio de estado: una archivada sigue entregada.
+    expect(mocks.updateWorkOrderStatus).not.toHaveBeenCalled();
+  });
+
+  it('si cancela la confirmación no archiva y el selector vuelve a "Entregado"', async () => {
+    mocks.auth.current = authValue(ADMIN_USER);
+    mocks.getWorkOrders.mockResolvedValue([ENTREGADA]);
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    const user = userEvent.setup();
+    renderWithProviders(<KanbanBoard />);
+    await screen.findByText('ORD-2026-009');
+
+    await user.selectOptions(moveSelectFor('ORD-2026-009')!, ARCHIVAR);
+
+    expect(mocks.setArchived).not.toHaveBeenCalled();
+    await waitFor(() => expect(moveSelectFor('ORD-2026-009')).toHaveValue('entregado'));
+  });
+
+  // Solo lo entregado se archiva: la base lo rechaza con un CHECK, y ofrecerlo sería un error.
+  it('no ofrece archivar una orden que no está entregada', async () => {
+    mocks.auth.current = authValue(ADMIN_USER);
+    mocks.getWorkOrders.mockResolvedValue([MINE]);
+
+    renderWithProviders(<KanbanBoard />);
+    await screen.findByText('ORD-2026-001');
+
+    const opciones = Array.from((moveSelectFor('ORD-2026-001') as HTMLSelectElement).options).map((o) => o.value);
+    expect(opciones).not.toContain(ARCHIVAR);
+  });
+
+  it('si la base se niega, la tarjeta vuelve y lo dice', async () => {
+    mocks.auth.current = authValue(ADMIN_USER);
+    mocks.getWorkOrders.mockResolvedValue([ENTREGADA]);
+    mocks.setArchived.mockRejectedValue(new Error('Se cayó la red'));
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    const user = userEvent.setup();
+    renderWithProviders(<KanbanBoard />);
+    await screen.findByText('ORD-2026-009');
+
+    await user.selectOptions(moveSelectFor('ORD-2026-009')!, ARCHIVAR);
+
+    expect(await screen.findByText('No se pudo archivar la orden')).toBeInTheDocument();
+    expect(await screen.findByText('ORD-2026-009')).toBeInTheDocument();
   });
 });

@@ -59,17 +59,45 @@ function warnMissingSiteUrl(value: string | undefined): Plugin {
   }
 }
 
+/**
+ * Warns when a production bundle is built without `VITE_VAPID_PUBLIC_KEY`.
+ *
+ * Same trap as the site URL: Vite inlines it at build time, so a bundle built without it
+ * ships push with no key, and every phone reads "Las notificaciones push no están
+ * configuradas en este servidor" — even though the server side (the private key and the
+ * `process-outbox` function) is complete. That is exactly what the published site did in
+ * September 2026: the push code was in the bundle and the key was not.
+ */
+function warnMissingVapidKey(value: string | undefined): Plugin {
+  return {
+    name: 'restorify:warn-missing-vapid-key',
+    apply: 'build',
+    buildStart() {
+      if (value) return
+      this.warn(
+        'VITE_VAPID_PUBLIC_KEY no está definida: en este bundle las notificaciones push ' +
+          'dirán "no están configuradas en este servidor". Defínela antes de compilar para ' +
+          'producción (docs/multimedia-y-notificaciones.md).',
+      )
+    },
+  }
+}
+
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), 'VITE_')
+  return {
   define: {
     __SCHEMA_VERSION__: JSON.stringify(newestMigrationVersion()),
   },
   plugins: [
     react(),
-    warnMissingSiteUrl(loadEnv(mode, process.cwd(), 'VITE_').VITE_PUBLIC_SITE_URL),
+    warnMissingSiteUrl(env.VITE_PUBLIC_SITE_URL),
+    warnMissingVapidKey(env.VITE_VAPID_PUBLIC_KEY),
     sentryVitePlugin({
       org: "restorify",
       project: "restorify-frontend",
     })
   ],
-}))
+  }
+})

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import {
+  Archive,
+  ArchiveRestore,
   Camera,
   Car,
   ChevronLeft,
@@ -117,6 +119,7 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
             {[...laborList, ...partsList, ...(order.repuestos_resumen || [])].some((l) => l.estado === 'pendiente') && (
               <span className="badge badge-waiting-auth">{t('quotes.waitingBadge')}</span>
             )}
+            {detail.isArchived && <span className="badge badge-archived">{t('workOrders.archivedBadge')}</span>}
             {/* Solo administración: el reporte lleva precios y totales, y el
                 cliente pidió que los técnicos no lo manden desde su perfil. */}
             {detail.canSendReport && (
@@ -142,6 +145,18 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
                   <Send size={14} /> {detail.preparingShare ? t('common.loading') : t('workOrders.shareReport')}
                 </button>
               </>
+            )}
+            {detail.canArchive && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => void detail.toggleArchived()}
+                disabled={detail.busy}
+                id="order-archive-toggle"
+              >
+                {detail.isArchived ? <ArchiveRestore size={14} /> : <Archive size={14} />}{' '}
+                {detail.isArchived ? t('workOrders.unarchive') : t('workOrders.archive')}
+              </button>
             )}
           </h1>
           <p className="page-subtitle">{customer?.nombre} — {vehicle?.anio} {vehicle?.marca} {vehicle?.modelo}</p>

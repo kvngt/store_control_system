@@ -226,6 +226,18 @@ Los valores generados para este proyecto están en `supabase/.env.secrets.local`
 (ignorado por git). Si se pierden: nuevo par VAPID → todos deben volver a activar
 push en sus dispositivos.
 
+> **"Las notificaciones push no están configuradas en este servidor"** casi nunca es el
+> servidor. `VITE_VAPID_PUBLIC_KEY` se **incrusta al compilar**: un `dist/` armado sin ella
+> lleva el código de push pero no la llave, aunque los secretos de la función estén
+> completos. Pasó en septiembre de 2026 — el sitio publicado no traía la llave y la local
+> sí, y las dos coincidían con la del servidor. Se arregla recompilando y subiendo el
+> `dist/`; definirla después no cambia un bundle ya hecho. Desde entonces `vite build`
+> avisa si falta (`warnMissingVapidKey` en `vite.config.ts`).
+>
+> Para comprobar sin exponer la llave: la columna `value` de `supabase secrets list` es el
+> SHA-256 del secreto, así que basta comparar el SHA-256 de la llave de `.env.local` con el
+> de `VAPID_PUBLIC_KEY`.
+
 ### Tareas programadas (pg_cron)
 
 Estado actual de las tareas, de Vault y de los buckets en el proyecto real:

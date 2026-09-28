@@ -3859,6 +3859,39 @@ body.drawer-open {
   list-style: none;
 }
 
+/* La fila entera abre el aviso; la X de borrar va encima, a la derecha. */
+.notif-item {
+  position: relative;
+}
+
+.notif-item .notif-dropdown-item {
+  padding-right: calc(var(--space-4) + 32px);
+}
+
+.notif-item-delete {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 32 px: lo mínimo para acertarle con el dedo en un teléfono. */
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.notif-item-delete:hover,
+.notif-item-delete:focus-visible {
+  background: var(--color-bg-hover);
+  color: var(--color-danger);
+}
+
 .notif-dropdown-item {
   align-items: flex-start;
   background: transparent;
@@ -4192,4 +4225,33 @@ body.drawer-open {
     justify-content: center;
     min-height: 40px;
   }
+}
+
+/* ===== Teléfono con país (components/PhoneInput) =====
+   El país a la izquierda, angosto: en un teléfono la bandera y el prefijo bastan para
+   saber cuál está elegido, y el número se queda con el resto del ancho. */
+.phone-input {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.phone-input-country {
+  flex: 0 0 7.5rem;
+  min-width: 0;
+}
+
+.phone-input-number {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ===== Archivar una orden a mano (20261005000000) ===== */
+.badge-archived {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-surface-border);
+}
+
+.kanban-card-archive {
+  margin-top: var(--space-2);
 }

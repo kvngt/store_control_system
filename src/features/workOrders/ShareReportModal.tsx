@@ -9,6 +9,7 @@ import { queryKeys } from '../../lib/queryClient';
 import { customerPortalService } from '../../services/customerPortal.service';
 import { reportsService } from '../../services/reports.service';
 import type { WorkOrder } from '../../types/database';
+import { formatPhone } from '../../lib/phone';
 
 interface ShareReportModalProps {
   order: WorkOrder;
@@ -96,7 +97,7 @@ export default function ShareReportModal({ order, link, message, onClose, onDown
           </div>
           <div className="share-target">
             <div className="share-target-label">{t('common.phone')}</div>
-            <div className="share-target-value">{customer?.telefono || t('workOrders.shareNoPhone')}</div>
+            <div className="share-target-value">{formatPhone(customer?.telefono) || t('workOrders.shareNoPhone')}</div>
           </div>
           <div className="share-target">
             <div className="share-target-label">{t('common.email')}</div>

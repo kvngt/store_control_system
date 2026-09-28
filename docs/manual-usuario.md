@@ -215,6 +215,16 @@ cuántos vehículos tienen y cuántas órdenes han generado.
 2. Llena nombre y teléfono (obligatorios), y correo, dirección y notas si los tienes.
 3. **Crear**.
 
+**El teléfono lleva su país.** A la izquierda del número está el país, con
+**Estados Unidos (+1)** elegido de entrada y **México (+52)** justo después; el resto
+son los países más comunes de la clientela. Elige el del número del cliente y escribe
+el número sin el prefijo. Es el número que usa el sistema para **llamar** y para
+**WhatsApp**, así que un país equivocado marca a otro lado. Si a un número de EE. UU.
+le falta o le sobra un dígito, el campo te avisa al salir de él.
+
+> Los clientes que ya estaban registrados conservan su número como estaba y se leen
+> como de EE. UU. Si uno es de otro país, ábrelo, elige el país correcto y guarda.
+
 > Captura el **correo** siempre que el cliente lo tenga: ahí le llegan solos el
 > aviso de ingreso y los cambios de estado de su vehículo, con el enlace a su
 > reporte (sección 8, *Enlace del cliente*). Si lo escribes mal, el formulario te
@@ -294,7 +304,8 @@ su total.
 
 - **Mis Órdenes de Trabajo** — las que tienes asignadas. Es lo primero que ves.
 - **Otras Órdenes de Trabajo** — el resto de la sede, plegado. Se abre con un
-  toque si necesitas consultar el trabajo de un compañero o unirte para ayudar.
+  toque si necesitas consultar el trabajo de un compañero. Para trabajar en una,
+  pídele a un administrador que te asigne.
 
 <!-- IMAGEN: vista de órdenes de un mecánico, con "Mis Órdenes" arriba y la
      sección "Otras Órdenes" plegada abajo -->
@@ -364,12 +375,11 @@ Al guardar, el sistema genera el número de orden y abre su detalle. **No hace
 falta esperar a que suban las fotos**: siguen subiendo en segundo plano y puedes
 seguir usando la app (sección 9).
 
-### Si eres técnico y registras una recepción
+### Solo administración abre órdenes
 
-Registras lo que ves: cliente, vehículo, fotos, gasolina, millas y notas. No
-aparecen depósito, mano de obra ni repuestos: **la cotización la hace
-administración**. Al guardar, los administradores reciben el aviso «Recepción
-registrada · Falta cotizar».
+Un mecánico o pintor no ve el botón **Nueva Orden**: abrir una orden es recibir
+un vehículo y comprometer al taller, y asignar a alguien es decidir quién cobra
+comisión por ella. Las dos cosas las hace un administrador.
 
 ### El detalle de una orden
 
@@ -585,6 +595,22 @@ Queda cerrada para los técnicos: no pueden cambiar su estado, mano de obra,
 repuestos, asignaciones ni subir archivos. Un administrador sí puede corregirla;
 cada corrección de dinero se registra como un ajuste en Finanzas.
 
+### Archivar una orden
+
+Una orden entregada se queda en la lista y en la columna **Entregado** del tablero
+hasta 90 días. Para sacarla antes, un administrador la **archiva**:
+
+- **En el teléfono**, en su tarjeta del tablero: **Mover a → Archivar**.
+- **En la computadora**, con el botón **Archivar** de su tarjeta, o desde el
+  detalle de la orden.
+
+La orden pasa a la pestaña **Archivadas**. Sigue entregada: no cambia su cobro, sus
+comisiones ni el enlace del cliente. Para traerla de vuelta, ábrela desde
+Archivadas y presiona **Devolver al tablero**. Si alguien la saca de "Entregado",
+vuelve sola al tablero.
+
+Solo se archiva lo entregado, y solo lo hace un administrador.
+
 ### Eliminar una orden
 
 Solo un administrador. Borra también sus fotos y videos, sus comisiones y los
@@ -694,7 +720,11 @@ mientras la app está abierta, con un mensaje breve en pantalla.
 
 - Toca un aviso para abrir su orden; queda marcado como leído.
 - **Marcar todo leído** limpia el contador.
+- La **X** a la derecha de un aviso lo borra sin abrirlo.
+- **Borrar todas** vacía la campana, incluidos los avisos viejos que no alcanzan a
+  verse en la lista. Pide confirmación y no se puede deshacer.
 - Nunca recibes aviso de algo que hiciste tú.
+- Los avisos se borran solos a los 60 días.
 
 ### Qué avisos llegan
 
@@ -706,6 +736,7 @@ mientras la app está abierta, con un mensaje breve en pantalla.
 | **Nuevo avance** | Administradores, cuando un técnico agrega un avance |
 | **Lista para entregar** | Administradores, cuando una orden pasa a Finalizado |
 | **Comisión generada** | Cada técnico, cuando se entrega su orden, con su monto |
+| **Pasó la fecha de entrega** | Administradores y técnicos asignados, una vez al día por cada orden atrasada. **Reemplaza al del día anterior**: hay uno solo por orden, con los días de retraso al día |
 
 ### Notificaciones en el teléfono (push)
 
@@ -724,6 +755,10 @@ como los de cualquier otra aplicación.
 - Si negaste el permiso, la tarjeta te dice cómo activarlo en los ajustes del
   navegador.
 - Al **cerrar sesión**, ese dispositivo deja de recibir tus avisos.
+- Si la tarjeta dice **«Las notificaciones push no están configuradas en este
+  servidor»**, no es un problema de tu teléfono: la versión publicada de la app se
+  armó sin la llave de notificaciones. Avísale a quien administra el sistema; se
+  arregla publicando de nuevo la app (ver [deployment.md](deployment.md)).
 
 ---
 
