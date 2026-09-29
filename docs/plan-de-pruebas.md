@@ -110,7 +110,10 @@ que no son de la app (ver [deployment.md](deployment.md)).
 
 ### 2.2 Cuentas
 
-Créalas en Configuración → Personal:
+Créalas en **Empleados** (menú lateral). Las que había se borraron el 29/09/2026 con la
+limpieza del proyecto real; créalas de nuevo, idealmente en un proyecto de staging
+([mantenimiento.md P0-1](mantenimiento.md#5-plan-priorizado)), y **no** en el proyecto
+que usa el taller mientras dure su prueba:
 
 | Clave en el plan | Rol | Sede | Variables en `.env.test.local` |
 |---|---|---|---|
@@ -168,7 +171,7 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 - Borra como **A** las órdenes, clientes y vehículos con `PRUEBA` (primero deshaz los pagos
   de comisiones de prueba: una orden con comisiones pagadas no se borra, DIN-09).
 - Importaciones de prueba en Finanzas: **Revertir importación**.
-- Empleados de prueba: Configuración → Personal.
+- Empleados de prueba: Empleados → quitar.
 - Si una prueba e2e falló a medias: busca y borra `PWTEST`.
 
 ---
@@ -328,7 +331,7 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 | NOT-03 | P2 | IA | "Marcar todo leído" → contador en cero. |
 | NOT-04 | P2 | IA | Idioma inglés → los avisos se leen en inglés. |
 | NOT-05 | P1 | IA | Quién recibe cada evento: asignar → técnico; quitar → técnico ("Ya no estás asignado"); **M** registra recepción → admins; **M** agrega un avance con varios archivos → admins, **un** aviso; **M** finaliza → admins ("Lista para entregar"); **A** entrega → cada técnico ("Comisión generada" con su monto). Quien hace la acción nunca recibe su propio aviso. |
-| NOT-06 | P1 | H | Android: Configuración → activar en este dispositivo → "Enviar prueba" llega en segundos; con Chrome **cerrado**, asignar una orden → llega y abre la orden; en Configuración → Usuarios (**A**) el técnico muestra la campana con "1". |
+| NOT-06 | P1 | H | Android: Configuración → activar en este dispositivo → "Enviar prueba" llega en segundos; con Chrome **cerrado**, asignar una orden → llega y abre la orden; en Empleados (**A**) el técnico muestra la campana con "1". |
 | NOT-07 | P1 | H | iPhone: en Safari sin instalar, la tarjeta explica los 3 pasos; desde el ícono de inicio se activa; con la app cerrada, una asignación llega. |
 | NOT-08 | P2 | H | Tablet compartida: **M** activa push y cierra sesión; entra **P** en el mismo dispositivo → los avisos de **M** ya no llegan ahí; los de **P** sí. |
 | NOT-09 | P2 | IA | Build sin `VITE_VAPID_PUBLIC_KEY` → `vite build` avisa; la tarjeta dice "no están configuradas en este servidor"; la campana funciona. |

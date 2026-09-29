@@ -16,6 +16,8 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 | **Hacerte cargo del proyecto** sin poder preguntarle a quien lo hizo | [traspaso.md](traspaso.md) |
 | **Salir a producción**: bloqueantes, plan del día y vuelta atrás | [salida-a-produccion.md](salida-a-produccion.md) |
 | **Entender el sistema** antes de tocar código | [arquitectura.md](arquitectura.md) → [reglas-de-negocio.md](reglas-de-negocio.md) |
+| **Cambiar una parte concreta** (Finanzas, la entrega, el portal…) y no saber a dónde ir | [mapa-de-secciones.md](mapa-de-secciones.md) |
+| **Cambiar la base en producción** sin comprometer la operación, o saber qué deuda técnica queda | [mantenimiento.md](mantenimiento.md) |
 | **Probar la plataforma a mano** como tester, sin programar | [manual-de-pruebas.md](manual-de-pruebas.md) |
 | **Probar la plataforma** con casos técnicos (persona o agente de IA) | [plan-de-pruebas.md](plan-de-pruebas.md) |
 | Saber **qué cubren las pruebas automatizadas** y cómo correrlas | [pruebas.md](pruebas.md) |
@@ -27,7 +29,7 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 | Trabajar con el **portal del cliente o los correos** | [portal-y-correos.md](portal-y-correos.md) |
 | Trabajar con **presupuestos** o entender por qué un total no incluye algo | [presupuestos.md](presupuestos.md) |
 | Saber **cómo llegó el sistema a ser lo que es** y por qué se tomó cada decisión | [evolucion.md](evolucion.md) |
-| Entender **cómo se paga al personal** | [comisiones.md](comisiones.md) |
+| Entender **cómo se paga al personal** | [comisiones.md](comisiones.md) (hoy) y [pagos-a-empleados.md](pagos-a-empleados.md) (propuesta pendiente) |
 | Arreglar **correos de recuperación de contraseña** | [password-reset.md](password-reset.md) |
 | Ser un **agente de IA** que va a modificar el código | [ai-context.md](ai-context.md) primero |
 
@@ -52,6 +54,16 @@ seguridad vive en la base de datos), el mapa del repositorio, el modelo de datos
 los triggers, el frontend por dentro, cómo se escriben migraciones y las trampas
 que ya mordieron a alguien.
 
+**[mapa-de-secciones.md](mapa-de-secciones.md)** — Cada sección de la app (órdenes, entrega,
+presupuestos, comisiones y empleados, finanzas, portal, multimedia…) con su pantalla, sus
+módulos, su servicio, sus tablas y funciones, sus pruebas y su documento. Para cuando hay que
+cambiar una parte y no se sabe por dónde entrar.
+
+**[mantenimiento.md](mantenimiento.md)** — Revisión de la estructura antes de producción
+(29/09/2026): el estado de la base y del código con evidencia, qué hace riesgosa una
+migración, cómo cambiar la base sin cortar el servicio (en dos pasos, respaldo, staging,
+orden de publicación, vuelta atrás) y un plan priorizado de mejoras.
+
 **[reglas-de-negocio.md](reglas-de-negocio.md)** — Qué hace el sistema y por qué:
 el ciclo de vida de una orden, qué dinero se asienta solo y cuándo, qué puede ver
 y hacer cada rol, qué es visible para el cliente y quién recibe cada aviso. Es la
@@ -73,8 +85,8 @@ línea, las tres formas de autorizar (firma, enlace, registro del admin), qué c
 el dinero, qué ve cada quien y diagnóstico.
 
 **[evolucion.md](evolucion.md)** — La historia del proyecto: de la demo a las fases del
-cliente, las 36 migraciones con lo que hizo cada una, las decisiones que se
-reemplazaron y cómo creció la red de pruebas.
+cliente y los cambios de la reunión con el taller, las 54 migraciones con lo que hizo cada
+una, las decisiones que se reemplazaron y cómo creció la red de pruebas.
 
 **[manual-de-pruebas.md](manual-de-pruebas.md)** — Para la persona que prueba la
 plataforma desde la pantalla: qué preparar, una orden de ejemplo con los montos que deben
@@ -98,7 +110,7 @@ se comprueba y los riesgos que quedan abiertos.
 
 **[supabase.md](supabase.md)** — El inventario del proyecto de Supabase y de la plataforma
 completa: el mapa de servicios (Hostinger, Supabase, Resend, push, NHTSA), quién habla
-con qué y con qué llave, esquemas y tablas, las 92 funciones agrupadas por quién puede
+con qué y con qué llave, esquemas y tablas, las 111 funciones agrupadas por quién puede
 ejecutarlas, buckets y sus rutas, las 6 edge functions, nombres de secretos y de Vault,
 Auth, Realtime, tareas programadas, dónde está cada cosa en el panel, el Supabase local y
 lo que falta limpiar.
@@ -117,9 +129,14 @@ qué revisar después.
 **[manual-usuario.md](manual-usuario.md)** — La aplicación pantalla por pantalla,
 escrita para el personal del taller. Base en texto para el manual con capturas.
 
-**[comisiones.md](comisiones.md)** — El modelo de pago del personal: bolsa de
-comisión sobre la mano de obra, reparto, pagos con cheque y cómo se refleja en
-Finanzas.
+**[comisiones.md](comisiones.md)** — El modelo de pago del personal como funciona hoy:
+bolsas por especialidad, porcentaje de cada empleado, pagos con cheque y un egreso por orden
+en Finanzas.
+
+**[pagos-a-empleados.md](pagos-a-empleados.md)** — Propuesta para quitar la ambigüedad del
+pago al personal (comisión congelada al devengarse, ajustes, períodos, salarios, adelantos),
+cómo lo resuelven las plataformas grandes y las preguntas enviadas al taller. Pendiente de sus
+respuestas.
 
 **[password-reset.md](password-reset.md)** — Por qué los enlaces de recuperación
 apuntaban a `localhost` y qué hay que configurar en Supabase para que no pase.
@@ -130,6 +147,15 @@ decisiones pasadas; **no describen el estado actual**.
 ---
 
 ## Estado del proyecto (septiembre 2026)
+
+> **29 de septiembre de 2026: empieza la prueba del taller.** La base del proyecto real se
+> limpió: sin clientes, órdenes ni movimientos, una sede ("Taller principal", para
+> renombrar) y un solo administrador. 54 migraciones aplicadas y el `dist` publicado. Los
+> siete cambios de la reunión con el taller están hechos
+> ([historico/reunion-taller-2026-09.md](historico/reunion-taller-2026-09.md)). Pendiente
+> de decisión del taller: el pago a empleados ([pagos-a-empleados.md](pagos-a-empleados.md)).
+> Pendiente fuera del código: staging, plan Pro y Sentry
+> ([mantenimiento.md §5](mantenimiento.md#5-plan-priorizado)).
 
 Hay un plan de cambios pedido por el cliente en seis fases. Estado:
 
@@ -143,10 +169,10 @@ Hay un plan de cambios pedido por el cliente en seis fases. Estado:
 | 6 | Reporte como enlace web en vez de PDF | Implementada |
 
 Después de las fases hubo dos revisiones: una **auditoría** y una **revisión previa a
-producción** (migración 36, aplicada; el build que la acompaña falta subirlo a Hostinger).
-**Antes de atender clientes reales, completar
+producción** (migración 36). Siguieron las pruebas en el teléfono y los siete cambios de la
+reunión con el taller (migraciones 37 a 54). **Antes de atender clientes reales, completar
 [salida-a-produccion.md §2](salida-a-produccion.md#2-bloqueantes-fuera-del-código)**: el
-registro público de cuentas está abierto en el proyecto real y el plan no tiene respaldos.
+registro público ya está apagado; falta el plan con respaldos.
 
 La **auditoría completa** (septiembre 2026): 15
 hallazgos corregidos, entre ellos funciones internas de dinero que se podían llamar por
@@ -168,7 +194,7 @@ que la acompaña está publicado (15 de septiembre de 2026).
 |---|---|
 | **Sede** | Un taller físico. Casi todo pertenece a una sede y no se mezcla con otras. |
 | **Admin** | Rol con acceso a todo, en todas las sedes, incluido el dinero. |
-| **Técnico** | Mecánico o pintor. Mismos permisos; cambia el tipo de tarea. |
+| **Técnico** | Mecánico o pintor. Mismos permisos; cambia el tipo de tarea. Solo ve las órdenes que tiene asignadas. |
 | **Orden** | Un trabajo sobre un vehículo. Número `ORD-AAAA-###`. |
 | **Recepción** | El ingreso del vehículo: fotos 360°, notas, firma del cliente. |
 | **Avance** | Una entrada de la bitácora de trabajo, con nota y multimedia. |
@@ -177,7 +203,7 @@ que la acompaña está publicado (15 de septiembre de 2026).
 | **Presupuesto** | Trabajos que se le presentan al cliente para que los autorice línea por línea. |
 | **Línea autorizada** | Mano de obra o repuesto que el cliente aprobó. Solo eso se cobra. |
 | **Montos** | Totales, repuestos con precio y depósito. Solo los ve un admin. |
-| **Bolsa de comisión** | Porcentaje de la mano de obra que se reparte entre los técnicos. |
+| **Bolsa de comisión** | La mano de obra autorizada de una especialidad (mecánica o pintura), que se reparte entre quienes tienen esa tarea, cada uno a su porcentaje. |
 | **RLS** | Row Level Security de Postgres: la regla que decide qué filas ve cada quien. |
 | **Trigger** | Función de la base que corre sola cuando cambia una fila. Aquí vive la lógica de dinero y avisos. |
 | **Edge function** | Código en el servidor de Supabase (Deno) para lo que el navegador no debe hacer. |

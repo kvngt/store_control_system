@@ -1,8 +1,11 @@
 # Los siete cambios de la reunión con el taller — septiembre 2026
 
 En la reunión con el taller se acordaron siete cambios. Se hicieron en cinco fases, cada una
-con su migración y sus pruebas. **Ninguna de las cinco migraciones está aplicada todavía en
-el proyecto real**: ver [Qué falta](#qué-falta).
+con su migración y sus pruebas.
+
+> **29 de septiembre de 2026:** las cinco migraciones están aplicadas en el proyecto real y
+> el `dist` publicado. Ese mismo día la base se limpió para la prueba del taller. Queda
+> abierto lo de los puntos 2 a 4 de [Qué falta](#qué-falta).
 
 Al cierre: 480 pruebas unitarias (67 archivos), 330 aserciones pgTAP (13 archivos), lint
 sin avisos, build en verde. `qa:security` suma 19 casos nuevos (SEC-19, SEC-36, SEC-37 y

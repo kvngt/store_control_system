@@ -2,7 +2,9 @@
 
 Léelo antes de modificar Restorify. Es corto a propósito: dice qué no romper y
 dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md) y
-[reglas-de-negocio.md](reglas-de-negocio.md).
+[reglas-de-negocio.md](reglas-de-negocio.md). Para ubicar los archivos, tablas y pruebas
+de una sección, [mapa-de-secciones.md](mapa-de-secciones.md); antes de cambiar la base de
+un proyecto con datos reales, [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación).
 
 ---
 
@@ -17,7 +19,8 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
   idempotentes con signo. El frontend nunca calcula ni escribe un total.
 - **Los montos están separados.** `orden_montos` (total, repuestos, depósito) y
   `orden_repuestos` son solo admin. `ordenes_trabajo.total_labor` y `orden_labor`
-  los ve la sede, porque la comisión del técnico sale de la mano de obra. Un
+  los ve el técnico **asignado** (no toda la sede), porque su comisión sale de la mano de
+  obra. Un
   técnico lee repuestos por la RPC `repuestos_de_orden` (sin precios).
 - **Multi-sede.** Casi toda tabla tiene `sede_id`. Un admin ve todas las sedes. Helpers
   SQL: `is_admin()`, `current_user_sede_id()`, `is_assigned_to_order(orden_id)`,
@@ -62,7 +65,9 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
   vive solo en `_reparto_comisiones(orden)`: la usan `sync_order_commissions` y
   `comisiones_estimadas`. **No la repitas en el navegador.** La llave de `comisiones` es
   (orden, usuario, especialidad). El pago de cada quien va en `perfiles_pago`, nunca en
-  `perfiles` (los técnicos leen los perfiles de sus compañeros).
+  `perfiles` (los técnicos leen los perfiles de sus compañeros). **El pago a empleados
+  tiene decisiones abiertas con el taller** ([pagos-a-empleados.md](pagos-a-empleados.md)):
+  no agregues salarios, períodos ni recálculos sin leerlo.
 - **Un pago de comisiones asienta un egreso por orden** (`20261010000000`), dentro de
   `pay_commissions` y verificando que sumen el pago. El margen de una orden sale de
   `balance_orden` (comisiones devengadas; repuestos = el costo automático de las líneas,
@@ -140,8 +145,14 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
 3. **Prueba con pgTAP** (`supabase/tests/database/`) todo lo que toque dinero o
    permisos. Un cuerpo plpgsql roto se aplica sin error y falla en producción.
 4. **Si una migración elimina o renombra columnas**, la base y el `dist` se
-   despliegan juntos. Nunca ejecutes `supabase db push` ni despliegues funciones
-   sin que la persona responsable lo pida.
+   despliegan juntos; mejor aún, en dos pasos (expandir y contraer, ver
+   [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación)).
+   Nunca ejecutes `supabase db push` ni despliegues funciones sin que la persona
+   responsable lo pida.
+4b. **Una función SQL se reescribe entera** en cada migración que la cambia: la versión
+   vigente es la de la migración más nueva. Antes de reemitirla, búscala con
+   `npm run db:donde -- <nombre>` y parte de esa versión, no de la primera que encuentres.
+   Copiar una versión vieja deshace en silencio lo que cambiaron las posteriores.
 5. **Nunca pongas secretos en el repositorio ni en la documentación.** Viven en
    archivos `*.local` (ignorados por git), en `supabase secrets` y en Vault. Solo
    la llave **pública** VAPID va en el frontend.
@@ -191,7 +202,9 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
 | Consultas a Supabase | `src/services/<dominio>.service.ts`. Ningún componente llama `supabase.from` directo. `supabaseService.ts` es una fachada heredada; en código nuevo importa el servicio del dominio |
 | Lecturas y caché | TanStack Query; claves en `src/lib/queryClient.ts`. Tras mutar, **invalida** (la base cambia cosas que el cliente no predice) |
 | Formularios | react-hook-form + `zod/mini`; ejemplo en `src/features/workOrders/workOrderForm.schema.ts` |
-| Detalle de orden | `src/features/workOrders/useWorkOrderDetail.ts` (permisos derivados: `canEditLines`, `canSendReport`, `canDeliver`, `canJoin`…) y `WorkOrderDetail.tsx` |
+| Qué archivos, tablas, RPC y pruebas tiene cada sección | [mapa-de-secciones.md](mapa-de-secciones.md) |
+| La versión vigente de una función, trigger, política o tabla SQL | `npm run db:donde -- <nombre>` |
+| Detalle de orden | `src/features/workOrders/useWorkOrderDetail.ts` (permisos derivados: `canEditLines`, `canSendReport`, `canDeliver`, `canSign`…) y `WorkOrderDetail.tsx` |
 | Multimedia | `src/lib/media/` (compresión, grabación, conversión, cola TUS en IndexedDB) y `src/features/media/`. Detalle en [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md) |
 | Notificaciones | Triggers `trg_*_notify` → `notificar()` → `notificaciones` + `cola_envios`; edge function `process-outbox`; frontend en `src/features/notifications/`, `src/lib/push.ts`, `public/sw.js` |
 | Presupuestos | `quotes.service.ts`, `features/workOrders/QuoteCard.tsx`, `LineStateBadge.tsx`, `lineState.ts`; sección `QuoteSection` del portal. Detalle en [presupuestos.md](presupuestos.md) |

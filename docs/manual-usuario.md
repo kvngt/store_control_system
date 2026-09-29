@@ -104,7 +104,7 @@ La elección se recuerda para la próxima vez.
 Si el correo o la contraseña no son correctos, aparece un aviso rojo sobre el
 formulario y no se entra. Si el aviso dice **"Esta cuenta no tiene acceso al
 taller"**, la cuenta existe pero nadie la dio de alta en el sistema: pídele a un
-administrador que te cree desde Configuración → Personal.
+administrador que te dé de alta desde **Empleados**.
 
 ### Si olvidaste tu contraseña
 
@@ -320,7 +320,7 @@ por estado**.
 |---|---|
 | **Recepción** | El vehículo acaba de ingresar. Aún no se trabaja en él. |
 | **En Proceso** | Se está trabajando. |
-| **Espera Repuestos** | El trabajo está detenido esperando piezas. Genera alerta. |
+| **Espera Autorización** | El técnico encontró algo que hay que cotizar y la orden espera a que el cliente lo autorice. Hay que escribir el motivo; administración lo lee para armar el presupuesto. Cuando el cliente responde, la orden vuelve sola a En Proceso. |
 | **Finalizado** | El trabajo terminó. El avance pasa a 100 % y **se avisa a administración** que está lista para entregar. |
 | **Entregado** | El cliente se llevó el vehículo. **Solo un administrador** la marca. Registra el cobro en Finanzas y genera las comisiones (sección 17). |
 
@@ -432,9 +432,11 @@ debajo, aparte.
 **Totales y depósito.** Solo para administradores.
 
 **Tu comisión estimada** *(técnicos asignados)*. Cuánto te tocaría si la orden se
-entregara hoy, con la cuenta a la vista: *mano de obra × porcentaje de la sede ÷
-técnicos asignados*. Se confirma al entregar y cambia si cambia la mano de obra o
-el equipo.
+entregara hoy, con la cuenta a la vista por especialidad: *mano de obra de tu
+especialidad × tu porcentaje ÷ técnicos de esa especialidad*. Si estás en las dos
+(mecánica y pintura), ves una línea por cada una. Se confirma al entregar y cambia si
+cambia la mano de obra o el equipo. Si estás a salario, la tarjeta lo dice: la orden no
+te genera comisión.
 
 <!-- IMAGEN: detalle de la misma orden vista por un mecánico: sin totales, con
      repuestos sin precio y la tarjeta "Tu comisión estimada" -->
@@ -530,9 +532,8 @@ compartirlo antes, usa **Crear enlace**.
 
 | Correo | Cuándo llega |
 |---|---|
-| "Recibimos su vehículo" | ~2 minutos después de firmar la recepción |
+| "Recibimos su vehículo" | Al firmar la recepción, si la orden ya tiene una foto de recepción; si no, 30 segundos después |
 | "Estamos trabajando en su vehículo" | ~3 minutos después de pasar a En Proceso |
-| "Su vehículo espera repuestos" | ~3 minutos después de pasar a Espera Repuestos |
 | "Su vehículo está listo" | ~3 minutos después de pasar a Finalizado |
 | "Gracias por su visita" | ~3 minutos después de entregar |
 
@@ -1047,7 +1048,7 @@ actualizarla.
 | Ver precios de repuestos, totales y depósito | ✅ | ❌ (ve las piezas sin precio) |
 | Agregar o editar mano de obra y repuestos | ✅ | ❌ |
 | Ver su comisión estimada | — | ✅ en sus órdenes |
-| Cambiar estado y avance | ✅ | ✅ en sus órdenes, excepto Entregado |
+| Cambiar estado y avance | ✅ | ✅ en sus órdenes: solo En Proceso, Espera Autorización y Finalizado |
 | Marcar **Entregado** | ✅ | ❌ |
 | Tomar la firma del cliente en la recepción | ✅ | ❌ (la ve) |
 | Subir fotos, videos y notas de voz | ✅ | ✅ en sus órdenes no entregadas |

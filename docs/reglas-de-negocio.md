@@ -189,7 +189,8 @@ mismos permisos ("técnico"); cambia el tipo de tarea.
 | Cambiar de sede activa | ✅ | ❌ |
 | Finanzas, Comisiones y Empleados (esquema de pago de cada quien) | ✅ | ❌ (ve su propio esquema) |
 | Configuración: perfil, idioma, tema, push | ✅ | ✅ |
-| Configuración: sedes y personal | ✅ | ❌ |
+| Configuración: sedes | ✅ | ❌ |
+| Empleados: alta, edición y baja del personal, y cómo se le paga a cada quien | ✅ | ❌ |
 | Cambiar el rol o la sede de una persona | ✅ (de cualquiera) | ❌ (ni el propio) |
 | Editar correo y WhatsApp de contacto de la sede | ✅ | ❌ |
 
@@ -378,8 +379,8 @@ Lo **pagado** es la suma con signo de los movimientos "pago de cliente" de la or
 
 | Aviso | Cuándo | Espera |
 |---|---|---|
-| **Recepción** | La primera vez que se firma la recepción | 2 minutos |
-| **Cambio de estado** | Pasa a en proceso, espera de repuestos, finalizado ("listo para recoger") o entregado | 3 minutos |
+| **Recepción** | La primera vez que se firma la recepción | Inmediato si la orden ya tiene una foto de recepción; si no, 30 segundos |
+| **Cambio de estado** | Pasa a en proceso, finalizado ("listo para recoger") o entregado. Espera de autorización no se anuncia: el cliente se entera con el presupuesto | 3 minutos (una ráfaga de cambios es un solo correo, con la hora del primero) |
 | **Novedades** | Un admin pulsa "Avisar novedades" (después de publicar fotos o videos) | 1 minuto |
 | **Presupuesto** | Un admin pulsa "Enviar presupuesto" | 1 minuto (agrupa si se envía de nuevo) |
 | **Constancia de respuesta** | Se responde un presupuesto desde el enlace o lo registra un admin | Inmediato |
@@ -498,7 +499,8 @@ resolverlas con el cliente.
 3. **Recalcular comisiones con una parte ya pagada puede pagar de más.** Si se
    agrega un técnico a una orden entregada después de pagarle a uno, los
    pendientes se recalculan sobre la bolsa completa. Es el efecto de "lo pagado es
-   historia"; la suma pagada puede superar la bolsa.
+   historia"; la suma pagada puede superar la bolsa. *Propuesta:* ajustes que se
+   liquidan en el siguiente pago ([pagos-a-empleados.md](pagos-a-empleados.md)).
 4. **Videos WebM** (grabados en Chrome antiguo o Firefox) pueden no reproducirse en
    un iPhone antiguo.
 5. **La hora de las notificaciones push depende de la entrega del navegador**
@@ -517,11 +519,14 @@ resolverlas con el cliente.
     firma. Es el estándar para este flujo; si el taller necesita más, se puede pedir
     firma también ahí. La IP guardada es la primera de la cabecera `X-Forwarded-For`,
     que quien envía la petición puede escribir: sirve de apoyo, no de prueba.
-11. **PDFs viejos en el almacenamiento.** Los reportes que se subieron antes de la
-    fase 6 siguen en el bucket `reportes` (solo los ve un admin) y sus enlaces de 30
-    días ya vencieron o vencerán solos. Se pueden borrar desde el panel de Supabase.
-12. **Depósito mayor que lo autorizado.** Si el cliente dejó un depósito más alto que
-    lo que terminó autorizando, al entregar no se asienta un reembolso y el portal
-    muestra saldo $0. *Decisión pendiente:* ¿se reembolsa o queda a favor?
-13. **Órdenes sin paginar.** La lista carga todas las órdenes de la sede; a ~2.000 por
-    sede conviene paginar o esconder las entregadas antiguas.
+11. **Resuelto (29/09/2026): PDFs viejos en el almacenamiento.** Los buckets se
+    vaciaron con la limpieza del proyecto.
+12. **Resuelto (reunión con el taller): depósito mayor que lo autorizado.** Al entregar
+    se registra la devolución al cliente con su método (`entregar_orden`).
+13. **Resuelto: órdenes sin paginar.** La lista excluye las entregadas de más de 90 días
+    y las archivadas; el archivo se pide paginado.
+14. **El pago a empleados tiene ambigüedades** (lo ganado se recalcula al cambiar un
+    porcentaje, pasar a salario borra lo pendiente, sin períodos ni recibos). Propuesta y
+    preguntas al taller en [pagos-a-empleados.md](pagos-a-empleados.md).
+15. **El correo de "Entregado" espera 3 minutos** como cualquier cambio de estado, para
+    agrupar ráfagas. *Decisión pendiente:* si la entrega debe avisar al instante.

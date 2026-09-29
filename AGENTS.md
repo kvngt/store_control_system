@@ -3,7 +3,8 @@
 Restorify es un sistema en producción que maneja dinero, datos de clientes y permisos
 por rol. Antes de cambiar algo, lee **[docs/ai-context.md](docs/ai-context.md)**: son
 las reglas que no se pueden romper y dónde está cada cosa. Si vas a tomar el proyecto
-completo, empieza por **[docs/traspaso.md](docs/traspaso.md)**.
+completo, empieza por **[docs/traspaso.md](docs/traspaso.md)**. Para ubicar una sección
+(archivos, tablas, pruebas), **[docs/mapa-de-secciones.md](docs/mapa-de-secciones.md)**.
 
 ## Lo mínimo
 
@@ -12,7 +13,8 @@ completo, empieza por **[docs/traspaso.md](docs/traspaso.md)**.
   React. Esconder un botón no es un permiso.
 - **Todo cambio de esquema o permisos es una migración nueva** en
   `supabase/migrations/`. Nunca edites una migración aplicada ni cambies el esquema desde
-  el panel de Supabase.
+  el panel de Supabase. Para reemitir una función, parte de su versión vigente:
+  `npm run db:donde -- <nombre>`.
 - **Toda función nueva en `public` se revoca** (`REVOKE ALL ... FROM PUBLIC, anon,
   authenticated`) y se concede solo a quien la necesita.
 - **Nunca sumes dinero en el navegador ni leas listas sin paginar.** La API devuelve como

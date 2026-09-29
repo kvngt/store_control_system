@@ -32,7 +32,7 @@ Cómo probarlo: [plan-de-pruebas.md](plan-de-pruebas.md#413-portal-del-cliente-y
 Administración captura la firma de recepción
   └─ trg_order_portal (AFTER UPDATE OF firma_ruta)
        ├─ asegurar_enlace_orden()       → orden_enlaces (token nuevo)
-       └─ encolar_correo_cliente('recepcion', espera 2 min)
+       └─ encolar_correo_cliente('recepcion', al instante si ya hay una foto de recepción; si no, 30 s)
                                          → cola_envios (canal email)
 
 pg_cron cada minuto → dispatch_outbox_if_due() → pg_net → process-outbox
@@ -124,8 +124,8 @@ pondría el login del taller en el teléfono del cliente).
 
 | Plantilla | Cuándo | Espera | Clave de agrupación |
 |---|---|---|---|
-| `recepcion` | Primera firma de la orden | 2 min (que suban las fotos) | `recepcion:<orden>`; nunca se repite |
-| `estatus` | Pasa a en proceso, espera de repuestos, finalizado o entregado | 3 min | `estatus:<orden>` |
+| `recepcion` | Primera firma de la orden | Inmediato si ya hay una foto de recepción; si no, 30 s (que suba la primera) | `recepcion:<orden>`; nunca se repite |
+| `estatus` | Pasa a en proceso, finalizado o entregado. **Espera de autorización no se anuncia**: el cliente se entera con el correo del presupuesto (`ANNOUNCED_STATUSES` en `_shared/email/templates.ts` y `trg_portal_on_order_change`) | 3 min; una ráfaga es un correo con la hora del primero | `estatus:<orden>` |
 | `avance` | Un admin pulsa **Avisar novedades** | 1 min | `avance:<orden>` |
 | `presupuesto` | Un admin pulsa **Enviar presupuesto** (fase 5) | 1 min | `presupuesto:<presupuesto>`; se omite si ya se respondió o canceló |
 | `presupuesto_confirmacion` | Se responde un presupuesto desde el enlace o lo registra un admin | Inmediato | `presupuesto_confirmacion:<presupuesto>` |

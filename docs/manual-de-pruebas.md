@@ -8,6 +8,11 @@ qué tiene que pasar. Si pasa otra cosa, es un fallo que hay que reportar.
 > SQL, pruebas automáticas) pensados para programadores y agentes de IA. Este no los
 > necesita.
 
+> **Actualizado el 29 de septiembre de 2026** con los cambios de la reunión con el taller:
+> la comisión se reparte por especialidad, al entregar se registra cómo pagó el cliente, el
+> técnico solo ve sus órdenes (y ya no crea clientes ni vehículos), la firma es de
+> administración y el personal se administra en el menú **Empleados**.
+
 ---
 
 ## Índice
@@ -70,9 +75,10 @@ Todas las sesiones usan la misma orden. Los montos son redondos a propósito:
 | Depósito | **$300** |
 | Mano de obra al crear | **Frenos $1,000** |
 | Repuesto al crear | **Pastillas**, cantidad 2 × $100 = **$200** |
-| Agregado después (presupuesto) | **Alineación $150** (el cliente la autoriza) y **Pintura puerta $400** (la rechaza) |
-| Técnicos asignados | El mecánico y el pintor |
-| Porcentaje de comisión de la sede | **35 %** |
+| Especialidad de Frenos | **Mecánica** (la que trae por omisión) |
+| Agregado después (presupuesto) | **Retoque de pintura $150** (el cliente lo autoriza) y **Pintura puerta $400** (la rechaza), las dos con especialidad **Pintura** |
+| Técnicos asignados | El mecánico (hace mecánica) y el pintor (hace pintura) |
+| Porcentaje de comisión de la sede | **35 %**, sin porcentaje propio para ninguno de los dos |
 
 Lo que debe resultar al final, y que se va comprobando en cada sesión:
 
@@ -81,9 +87,15 @@ Lo que debe resultar al final, y que se va comprobando en cada sesión:
 | Total autorizado | 1,000 + 200 + 150 | **$1,350** |
 | Pago final al entregar | 1,350 − 300 de depósito | **$1,050** |
 | Costo de repuestos al entregar | | **$200** (egreso) |
-| Bolsa de comisión | (1,000 + 150) × 35 % | **$402.50** |
-| Comisión de cada técnico | 402.50 ÷ 2 | **$201.25** |
+| Comisión del mecánico | Mecánica: 1,000 × 35 % (es el único que hace mecánica) | **$350.00** |
+| Comisión del pintor | Pintura: 150 × 35 % (es el único que hace pintura) | **$52.50** |
+| Comisiones de la orden | 350 + 52.50 | **$402.50** |
+| Margen de la orden | 1,350 − 200 − 402.50 | **$747.50** |
 | Ingresos del mes | 300 + 1,050 | **$1,350** |
+
+> **La comisión va por especialidad.** Cada técnico cobra de la mano de obra de lo que hace,
+> no la mitad de todo: la mecánica se reparte entre los que hacen mecánica y la pintura entre
+> los que hacen pintura.
 
 ### 0.4 Cómo marcar
 
@@ -129,7 +141,8 @@ Cuenta: el administrador. Dispositivo: computadora.
 
 ## Sesión B — Sedes y personal
 
-Cuenta: administrador. Dispositivo: computadora. Menú: **Configuración**.
+Cuenta: administrador. Dispositivo: computadora. Menú: **Configuración** (sedes) y
+**Empleados** (personal).
 
 ### Sedes
 
@@ -138,21 +151,23 @@ Cuenta: administrador. Dispositivo: computadora. Menú: **Configuración**.
 | B-01 | 🟡 | Edita la sede: dirección, teléfono, **correo de contacto** (uno tuyo), **WhatsApp**, capacidad **5**, porcentaje de comisión **35** | Se guarda. Al recargar sigue igual |
 | B-02 | ⚪ | Sube un **logo** y cambia el **color de acento** | El logo y el color se ven en la app sin recargar |
 
-### Personal
+### Personal (menú Empleados)
 
 | # | Pri | Pasos | Debe pasar |
 |---|---|---|---|
-| B-03 | 🔴 | **Nuevo usuario**: nombre "Luis Mecánico", tu correo de mecánico, contraseña temporal `Temporal-2026`, rol **Mecánico**, la sede → **Crear** | "Empleado creado correctamente." Aparece en la lista |
+| B-03 | 🔴 | **Empleados → Nuevo Usuario**: nombre "Luis Mecánico", tu correo de mecánico, contraseña temporal `Temporal-2026`, rol **Mecánico**, la sede → **Crear** | "Empleado creado correctamente." Aparece en la lista |
 | B-04 | 🔴 | Igual con "Pedro Pintor", correo de pintor, rol **Pintor** | Aparece en la lista |
 | B-05 | 🟡 | Intenta crear otro con una contraseña de 5 caracteres | "La contraseña temporal debe tener al menos 8 caracteres." No lo crea |
 | B-06 | 🔴 | Intenta crear otro con **el mismo correo** del mecánico (cambia mayúsculas) | "Ya existe una cuenta con ese correo…". Nunca un texto en inglés como "non-2xx status code" |
 | B-07 | 🟡 | Intenta crear uno sin elegir sede | Te pide elegir la sede |
-| B-08 | 🔴 | En otra ventana **de incógnito**, entra como el mecánico con `Temporal-2026` | Entra. En el menú **no** aparecen Finanzas ni Comisiones |
-| B-09 | 🔴 | Como mecánico, abre Configuración | Ve su perfil, idioma, tema y notificaciones. **No** ve Sedes ni Personal |
+| B-08 | 🔴 | En otra ventana **de incógnito**, entra como el mecánico con `Temporal-2026` | Entra. En el menú **no** aparecen Finanzas, Comisiones, Empleados, Clientes ni Vehículos |
+| B-09 | 🔴 | Como mecánico, abre Configuración | Ve su perfil, idioma, tema y notificaciones. **No** ve Sedes |
 | B-10 | 🔴 | Como admin, edita al mecánico y ponle contraseña nueva `Mecanico-2026` → Guardar | "Usuario actualizado". En incógnito, la vieja ya no entra y la nueva sí |
 | B-11 | 🟡 | Como admin, edita **tu propia cuenta** y cambia tu rol a Mecánico (siendo el único admin) | Lo impide con un mensaje claro: no se puede quitar el rol al único administrador |
 | B-12 | 🟡 | Como mecánico, en Configuración cambia tu nombre y foto | Se guarda y se ve en el encabezado |
 | B-13 | ⚪ | Pide "¿Olvidaste tu contraseña?" para el correo del mecánico | Llega el correo (ver la nota de la sesión A si no llega) |
+| B-14 | 🔴 | **Empleados → Ver** en el mecánico y en el pintor | Pago **Comisión** con el porcentaje vacío: "Vacío = el de la sede (35%)". Déjalos así para que cuadren los números de [0.3](#03-el-caso-de-prueba-números-para-comprobar) |
+| B-15 | 🔴 | Como mecánico, escribe `reinventa.shop/employees` en la barra | No entra: lo manda al panel |
 
 > El **borrado** de un empleado se prueba al final, en la sesión M, para no perder al
 > mecánico que se usa en las demás sesiones.
@@ -172,7 +187,7 @@ Cuenta: administrador, luego mecánico. Dispositivo: computadora.
 | C-05 | 🟡 | Marca **Sin placa**, color Gris → Crear | En la lista aparece con la etiqueta «Sin placa» |
 | C-06 | 🟡 | Vuelve a Clientes | Cliente Prueba muestra **1 vehículo** |
 | C-07 | 🟡 | Abre el perfil del cliente (ojo) | Ve sus datos y su vehículo |
-| C-08 | 🔴 | Como **mecánico**: abre Clientes y Vehículos | Puede ver y crear, pero **no aparece el botón de eliminar** |
+| C-08 | 🔴 | Como **mecánico**: busca Clientes y Vehículos en el menú y escribe `reinventa.shop/customers` en la barra | No aparecen en el menú y la dirección lo manda al panel. Crear y editar clientes y vehículos es de administración |
 
 ---
 
@@ -190,10 +205,10 @@ Cuenta: administrador. Dispositivo: **teléfono Android** (para las fotos) o com
 | D-06 | 🔴 | Ve a **Finanzas** | Un ingreso **"Depósito inicial" $300** |
 | D-07 | 🔴 | Vuelve a la orden. **Firma del cliente**: firma con el dedo o el mouse → guardar | Las líneas dejan de decir *Sin autorizar*; total **$1,200** |
 | D-08 | 🟡 | Aparece la tarjeta **Enlace del cliente** con un enlace | Se puede **Copiar** y **Abrir** |
-| D-09 | 🟡 | A los ~2 minutos, revisa el correo de "cliente" | Llega "Recibimos su vehículo" con el nombre del taller y un botón al enlace |
+| D-09 | 🟡 | Al minuto, revisa el correo de "cliente" | Llega "Recibimos su vehículo" con el nombre del taller y un botón al enlace (sale en cuanto la orden tiene una foto de recepción; sin fotos, a los 30 segundos) |
 | D-10 | 🟡 | Firma **otra vez** | La firma nueva se guarda; nada cambia en lo autorizado |
 | D-11 | 🟡 | Cambia el estado a **En Proceso** | El selector cambia; a los ~3 minutos llega "Estamos trabajando en su vehículo" |
-| D-12 | ⚪ | Cambia rápido: Espera Repuestos → En Proceso → Espera Repuestos | Al cliente le llega **un solo** correo, con el último estado |
+| D-12 | ⚪ | Cambia a **Espera Autorización** (escribe un motivo) y, antes de un minuto, de vuelta a **En Proceso** | Al cliente **no** le llega ningún correo nuevo: Espera Autorización no se anuncia (se entera con el presupuesto) y En Proceso ya se le avisó en D-11 |
 | D-13 | 🟡 | **Descargar PDF** | Se descarga: datos, fotos de recepción, trabajos autorizados, totales y firma. Sin notas internas ni nombres de técnicos |
 
 ---
@@ -205,11 +220,11 @@ Cuenta: **mecánico**, en el teléfono. Deja la sesión del admin abierta en la 
 | # | Pri | Pasos | Debe pasar |
 |---|---|---|---|
 | E-01 | 🔴 | Panel principal | **Ningún monto**: sin ingresos, totales ni gráfico de dinero |
-| E-02 | 🔴 | Órdenes | La orden aparece en **Mis Órdenes de Trabajo**, **sin total** |
+| E-02 | 🔴 | Órdenes | La orden aparece en **Mis Órdenes de Trabajo**, **sin total**. No hay una lista de "otras órdenes" |
 | E-03 | 🔴 | Abre la orden | Ve la mano de obra (Frenos $1,000), los repuestos **sin precio**, **no** ve totales ni depósito |
-| E-04 | 🔴 | Tarjeta **Tu comisión estimada** | $1,000 × 35 % ÷ 2 = **$175.00** |
-| E-05 | 🔴 | Busca botones para editar mano de obra, repuestos, **Enviar reporte** o **Descargar PDF** | No existen |
-| E-06 | 🔴 | En el selector de estado | No aparece **Entregado** |
+| E-04 | 🔴 | Tarjeta **Tu comisión estimada** | Mecánica: mano de obra $1,000 × 35 % ÷ 1 técnico = **$350.00**. El pintor no entra en esa cuenta: no hace mecánica |
+| E-05 | 🔴 | Busca botones para editar mano de obra, repuestos, **Enviar reporte**, **Descargar PDF** o la **Firma del cliente** | No existen |
+| E-06 | 🔴 | En el selector de estado | Solo puede elegir **En Proceso**, **Espera Autorización** y **Finalizado**: ni Recepción ni Entregado |
 | E-07 | 🟡 | Mueve el **avance** a 40 % | Se guarda |
 | E-08 | 🔴 | **Avance del trabajo**: nota "Desarmé frenos" + **Foto** | Se agrega con tu nombre y la hora; la foto dice **Interno** |
 | E-09 | 🔴 | Otro avance con **Video** de 20 segundos grabado desde la app | Se sube y se reproduce al tocarlo |
@@ -219,9 +234,11 @@ Cuenta: **mecánico**, en el teléfono. Deja la sesión del admin abierta en la 
 | E-13 | 🟡 | Sube un video, y a mitad **cierra la app** y vuelve a abrirla | La subida continúa |
 | E-14 | 🟡 | Intenta borrar un avance del admin (si hay) | No puede; los suyos sí |
 | E-15 | 🟡 | En la computadora (admin): campana | Llegaron avisos "Nuevo avance" del mecánico |
-| E-16 | 🔴 | Como mecánico: buscar **Nueva Orden** en /work-orders | El botón no existe. Abrir una orden es de administración desde 20261004000000 |
+| E-16 | 🔴 | Como mecánico: buscar **Nueva Orden** en /work-orders | El botón no existe. Abrir una orden es de administración |
+| E-17 | 🔴 | Como admin, crea una orden rápida **sin asignar a nadie** y copia su dirección. Como mecánico, recarga Órdenes y el Tablero, y abre esa dirección | No la ve en ningún lado; la dirección dice que la orden no existe |
+| E-18 | 🟡 | Como mecánico, en tu orden elige **Espera Autorización** y deja el motivo vacío; luego escribe "La pastilla trasera también está gastada" | Vacío no deja: "Escribe por qué la orden necesita autorización." Con motivo se guarda y el admin lo ve en la orden. Devuélvela a **En Proceso** |
 
-> Borra la orden de E-16 al terminar (como admin), para que no altere los números.
+> Borra la orden de E-17 al terminar (como admin), para que no altere los números.
 
 ---
 
@@ -231,17 +248,18 @@ Cuenta: administrador (computadora) y el correo de "cliente" en el teléfono.
 
 | # | Pri | Pasos | Debe pasar |
 |---|---|---|---|
-| F-01 | 🔴 | En la orden, agrega mano de obra **Alineación $150** y **Pintura puerta $400** | Las dos dicen **Sin autorizar**; el total sigue en $1,200 |
+| F-01 | 🔴 | En la orden, agrega mano de obra **Retoque de pintura $150** y **Pintura puerta $400**, las dos con especialidad **Pintura** | Las dos dicen **Sin autorizar**; el total sigue en $1,200 |
 | F-02 | 🔴 | Tarjeta **Presupuesto → Enviar presupuesto** | Las líneas pasan a **Esperando al cliente** y no se pueden editar. La orden muestra "Esperando autorización" en la lista y el tablero |
 | F-03 | 🔴 | Intenta marcar la orden **Entregado** | No deja: hay un presupuesto esperando respuesta |
 | F-04 | 🔴 | En el teléfono, abre el correo del presupuesto y su botón | Abre el reporte con **Presupuesto por autorizar**, casillas por línea y el total |
-| F-05 | 🔴 | Marca **solo Alineación**, escribe tu nombre, un comentario → autorizar | Confirmación en pantalla |
-| F-06 | 🔴 | En la computadora, recarga la orden | Alineación autorizada; Pintura puerta **No realizar** (tachada). Total **$1,350** |
+| F-05 | 🔴 | Marca **solo Retoque de pintura**, escribe tu nombre, un comentario → autorizar | Confirmación en pantalla |
+| F-06 | 🔴 | En la computadora, recarga la orden | Retoque de pintura autorizado; Pintura puerta **No realizar** (tachada). Total **$1,350** |
 | F-07 | 🟡 | Campana del admin | "El cliente respondió el presupuesto" con el comentario |
 | F-08 | 🟡 | Campana del mecánico | "Trabajos autorizados · ORD-…" diciendo qué hacer y qué no |
 | F-09 | 🟡 | Tarjeta Presupuesto | Guarda la respuesta: cómo, quién, cuándo y cuánto |
 | F-10 | 🟡 | Agrega **Lavado $50**, **Registrar autorización**, **desmarca** Lavado, elige "Por teléfono" → Registrar | Lavado queda **No realizar**; el total sigue en $1,350; al cliente le llega la constancia |
 | F-11 | ⚪ | Agrega otra línea, envía presupuesto y luego **Cancelar presupuesto** | La línea vuelve a *Sin autorizar* y se puede editar. Bórrala para no alterar los números |
+| F-12 | 🔴 | Tarjeta **Reparto de la comisión** (admin) | Mecánica: mano de obra autorizada $1,000 → mecánico **$350.00**. Pintura: $150 → pintor **$52.50**. La Pintura puerta rechazada no cuenta |
 
 ---
 
@@ -273,20 +291,22 @@ Cuenta: administrador. Ten a mano la [tabla de resultados esperados](#03-el-caso
 | # | Pri | Pasos | Debe pasar |
 |---|---|---|---|
 | H-01 | 🔴 | Estado **Finalizado** | Avance 100 %; el admin recibe "Lista para entregar"; al cliente "Su vehículo está listo" |
-| H-02 | 🔴 | Estado **Entregado** y **cancela** la confirmación | El selector vuelve a Finalizado; no se registra nada |
-| H-03 | 🔴 | Estado **Entregado** y confirma | Queda entregada |
-| H-04 | 🔴 | **Finanzas** | Ingreso **"Pago final" $1,050** y egreso **"Costo de repuestos" $200**, además del depósito de $300 |
+| H-02 | 🔴 | Estado **Entregado**: se abre el diálogo **Entregar ORD-…**. Ciérralo con **Cancelar** | El selector vuelve a Finalizado; no se registra nada |
+| H-03 | 🔴 | Estado **Entregado** otra vez. Revisa el diálogo, elige **Cheque** sin número ni foto e intenta entregar; luego elige **Efectivo** → **Entregar y cobrar $1,050.00** | El diálogo muestra total autorizado $1,350, ya cobrado $300 y **falta cobrar $1,050**. Con cheque sin número no deja ("Anota el número del cheque o sube su foto."). Con efectivo: "Orden entregada." |
+| H-04 | 🔴 | **Finanzas** | Ingreso **"Pago final" $1,050 con método Efectivo** y egreso **"Costo de repuestos" $200**, además del depósito de $300 |
 | H-05 | 🔴 | **Panel principal** | Ingresos del mes **$1,350** |
-| H-06 | 🔴 | Campana del mecánico y del pintor | "Comisión generada · ORD-… **$201.25**" a cada uno |
-| H-07 | 🔴 | **Comisiones → Saldos pendientes** | Mecánico $201.25 y pintor $201.25 |
-| H-08 | 🔴 | Como mecánico: intenta cambiar el estado, subir una foto o unirte | No puede: la orden está cerrada para técnicos |
-| H-09 | 🔴 | **Pagar saldo** del mecánico: cheque número 1001 → Registrar pago | Pasa a **Pagos realizados**. En Finanzas, egreso "Pago de comisiones – Luis…" $201.25 |
+| H-06 | 🔴 | Campana del mecánico y del pintor | "Comisión generada · ORD-…": **$350.00** al mecánico y **$52.50** al pintor |
+| H-07 | 🔴 | **Comisiones → Saldos pendientes** | Mecánico $350.00 y pintor $52.50 |
+| H-08 | 🔴 | Como mecánico: intenta cambiar el estado o subir una foto | No puede: la orden está cerrada para técnicos |
+| H-09 | 🔴 | **Pagar saldo** del mecánico: cheque número 1001 → Registrar pago | Pasa a **Pagos realizados**. En Finanzas, un egreso **por orden**: "Comisión Luis Mecánico - ORD-AAAA-001" $350.00, vinculado a la orden |
 | H-10 | 🔴 | Abre Comisiones en **dos pestañas**. En las dos, **Pagar saldo** del pintor; confirma en una y después en la otra | Solo se registra **un** pago. La segunda dice "No hay comisiones pendientes para pagar en esta selección" |
-| H-11 | 🟡 | **Deshacer pago** del pintor | Vuelve a pendientes y desaparece **solo** su egreso en Finanzas |
-| H-12 | 🟡 | Edita la orden entregada: Frenos de $1,000 a $1,100 | Finanzas: ingreso "Ajuste por cargo adicional" $100. La comisión **pendiente** del pintor se recalcula; la **pagada** del mecánico no cambia |
-| H-13 | 🟡 | Devuelve Frenos a $1,000 | Se registra el reembolso por ajuste de $100 |
+| H-11 | 🟡 | **Deshacer pago** del pintor | Vuelve a pendientes y desaparecen **solo** sus egresos en Finanzas; el del mecánico sigue |
+| H-12 | 🟡 | Edita la orden entregada: Retoque de pintura de $150 a $250 | Finanzas: ingreso "Ajuste por cargo adicional" $100. La comisión **pendiente** del pintor pasa a $87.50; la **pagada** del mecánico no cambia |
+| H-13 | 🟡 | Devuelve el retoque a $150 | Se registra el reembolso por ajuste de $100 y la comisión del pintor vuelve a $52.50 |
 | H-14 | 🟡 | Saca la orden de **Entregado** (a Finalizado) y confirma | Finanzas: "Reversión de entrega" y "Reversión de costo de repuestos". La comisión pendiente se borra; la pagada del mecánico se conserva |
-| H-15 | 🟡 | Vuelve a marcarla **Entregado** | Se registra otra vez el cobro y el costo; el balance neto de la orden vuelve a cuadrar |
+| H-15 | 🟡 | Vuelve a marcarla **Entregado** (el diálogo pide otra vez el método) | Se registra otra vez el cobro y el costo; el balance neto de la orden vuelve a cuadrar |
+| H-16 | 🟡 | Tarjeta **Balance de la orden** en el detalle, y **Finanzas → Margen por orden** en este mes | Cobrado $1,350, repuestos $200, comisiones $402.50 ($350.00 ya pagadas), margen **$747.50**. La orden aparece en la lista del mes con ese margen |
+| H-17 | 🟡 | Orden rápida: depósito **$500**, mano de obra $300, firma, Finalizado y **Entregado** | El diálogo dice **Hay que devolver al cliente $200.00** y pide cómo se le devuelve. En Finanzas, egreso "Devolución al cliente" $200 con su método. Borra la orden al terminar |
 
 ---
 
@@ -318,7 +338,7 @@ Cuenta: mecánico en Android y, si hay, en iPhone. Admin en la computadora.
 | J-01 | 🟡 | **Android**: menú ⋮ → **Instalar app** y ábrela desde el ícono | Abre a pantalla completa con su ícono |
 | J-02 | 🔴 | Configuración → **Notificaciones en este dispositivo → Activar** → aceptar → **Enviar prueba** | Llega la notificación de prueba en segundos |
 | J-03 | 🔴 | **Cierra la app**. Como admin, crea una orden y asígnala al mecánico | Al teléfono le llega "Nueva orden asignada" con la app cerrada; al tocarla abre la orden |
-| J-04 | 🟡 | Configuración → Personal (admin) | Junto al mecánico, una campana con el número de dispositivos con push |
+| J-04 | 🟡 | **Empleados** (admin) | Junto al mecánico, una campana con el número de dispositivos con push |
 | J-05 | 🟡 | **iPhone**: Safari → Compartir → **Agregar a inicio** → abrir desde el ícono → activar notificaciones → prueba | Llega la prueba (iOS 16.4 o posterior) |
 | J-06 | 🟡 | En el mismo teléfono, **cierra sesión** del mecánico y asigna otra orden | Ya **no** le llega el push a ese teléfono |
 | J-07 | ⚪ | Campana con la app abierta: toca un aviso; **Marcar todo leído** | Abre la orden y se marca leído; el contador queda en cero |
@@ -334,7 +354,7 @@ Cuenta: mecánico en Android y, si hay, en iPhone. Admin en la computadora.
 |---|---|---|---|
 | K-01 | 🟡 | **Tablero Kanban** (computadora): arrastra una orden de columna | Cambia de estado; al recargar sigue ahí |
 | K-02 | 🟡 | Kanban en el teléfono: selector **Mover a** | Cambia de estado |
-| K-03 | 🔴 | Kanban como mecánico: una orden que **no** tiene asignada | No tiene selector para moverla |
+| K-03 | 🔴 | Kanban como mecánico, con una orden que **no** tiene asignada | No aparece en su tablero: solo ve las suyas |
 | K-04 | 🟡 | Ocupación arriba del tablero | Órdenes activas / capacidad 5 (B-01) |
 | K-05 | 🟡 | Panel: **Órdenes activas**, **Clientes nuevos del mes**, gráfico | Coinciden con lo creado en las pruebas |
 | K-06 | 🟡 | **Buscador** del encabezado: escribe "Prueba", luego parte del VIN y luego "ORD" | Encuentra el cliente, el vehículo y la orden, agrupados |
@@ -365,7 +385,7 @@ Hazla al final: borra lo que las otras sesiones usan.
 | M-02 | 🟡 | Deshaz ese pago en Comisiones y elimina la orden | Se borra; en Finanzas desaparecen sus movimientos automáticos |
 | M-03 | 🟡 | Elimina el **cliente** | Se borra con su vehículo (ya no tiene órdenes) |
 | M-04 | 🟡 | Elimina a un cliente **con** órdenes (crea una rápida antes) | No deja |
-| M-05 | 🔴 | Configuración → Personal: **elimina al pintor** | "Empleado eliminado". Si tiene la sesión abierta en otro dispositivo, al moverse lo saca al login |
+| M-05 | 🔴 | **Empleados**: elimina al pintor | "Empleado eliminado". Si tiene la sesión abierta en otro dispositivo, al moverse lo saca al login |
 | M-06 | 🔴 | Entra como el pintor borrado | "Correo o contraseña incorrectos" |
 | M-07 | 🟡 | Intenta eliminar a un técnico con órdenes asignadas | No deja: primero hay que reasignar |
 | M-08 | ⚪ | Busca el botón para eliminarte a ti mismo | No existe |
@@ -406,19 +426,19 @@ Copia esta tabla en una hoja de cálculo o imprímela.
 | Sesión | Casos | ✅ | ❌ | ⏭️ | Fecha | Dispositivos | Notas |
 |---|---|---|---|---|---|---|---|
 | A — Entrar y contraseñas | 17 | | | | | | |
-| B — Sedes y personal | 13 | | | | | | |
+| B — Sedes y personal | 15 | | | | | | |
 | C — Clientes y vehículos | 8 | | | | | | |
 | D — Orden (admin) | 13 | | | | | | |
-| E — Orden (técnico) | 16 | | | | | | |
-| F — Presupuestos | 11 | | | | | | |
+| E — Orden (técnico) | 18 | | | | | | |
+| F — Presupuestos | 12 | | | | | | |
 | G — Enlace del cliente | 10 | | | | | | |
-| H — Entregar y comisiones | 15 | | | | | | |
+| H — Entregar y comisiones | 17 | | | | | | |
 | I — Finanzas | 10 | | | | | | |
 | J — Notificaciones | 8 | | | | | | |
 | K — Tablero y panel | 7 | | | | | | |
 | L — Uso real | 6 | | | | | | |
 | M — Borrar | 8 | | | | | | |
-| **Total** | **142** | | | | | | |
+| **Total** | **149** | | | | | | |
 
 **Criterio para salir a producción:** todos los 🔴 en ✅. Los 🟡 en ❌ se revisan uno por uno
 antes de decidir; los ⚪ pueden quedar para después.

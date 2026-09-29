@@ -110,6 +110,10 @@ Se hace una vez por entorno. Si cambias de proyecto, repite todo.
   (migración `20260921000000`). Si algún día se sube el tope de la app, el límite
   global (Storage → Settings) tiene que ser igual o mayor, y en Free no pasa de 50 MB.
 - Los buckets y sus políticas los crean las migraciones; no se crean a mano.
+- **Para vaciar un bucket, usa el panel** (Storage → el bucket → seleccionar todo →
+  Delete). `npx supabase storage rm -r ss:///<bucket>` borra también el bucket: pasó el
+  29 de septiembre de 2026 con los ocho. Si falta uno, la app responde "Bucket not found"
+  al subir; el SQL para recrearlos está en [supabase.md §5](supabase.md#5-storage).
 
 ### 4.4 Extensiones
 
@@ -233,7 +237,20 @@ npx supabase db push --dry-run --linked
 
 **Avisa al taller** si la versión incluye migraciones que mueven columnas: hay
 unos minutos entre el paso 4 y el 6 en los que la app publicada no coincide con la
-base.
+base. Si una migración borra o renombra algo, o reescribe una función de dinero, sigue
+antes [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación)
+(expandir y contraer, qué revisar, cómo volver atrás).
+
+**Respaldo antes del paso 4** mientras el proyecto esté en el plan Free, que no guarda
+respaldos diarios:
+
+```bash
+# Fuera del repositorio: lleva datos de clientes. Tres archivos, porque `db dump` sin
+# opciones guarda solo el esquema.
+npx supabase db dump --linked --role-only -f <carpeta fuera del repo>/roles-AAAAMMDD.sql
+npx supabase db dump --linked -f <carpeta fuera del repo>/esquema-AAAAMMDD.sql
+npx supabase db dump --linked --data-only --use-copy -f <carpeta fuera del repo>/datos-AAAAMMDD.sql
+```
 
 ```bash
 # 4. Base de datos
@@ -288,18 +305,22 @@ Diez minutos. Es el nivel **humo** del plan de pruebas; si algo falla,
 
 - [ ] La app abre sin el banner de "esquema desactualizado".
 - [ ] Iniciar sesión como admin y como técnico.
-- [ ] Como técnico: una orden no muestra totales, depósito ni precios de repuestos.
+- [ ] Como técnico: solo aparecen las órdenes que tiene asignadas, y ninguna muestra totales,
+      depósito ni precios de repuestos. En el menú no están Clientes, Vehículos ni Empleados.
 - [ ] Crear una orden de prueba con una foto; la bandeja de subidas termina.
 - [ ] Grabar un video corto en un avance desde el teléfono; se reproduce.
 - [ ] Configuración → Notificaciones → **Enviar prueba** llega al teléfono.
 - [ ] Asignar un técnico a la orden: le llega "Nueva orden asignada" (campana y push).
-- [ ] Con un cliente de prueba con tu correo: firmar la recepción → en ~2 minutos
-      llega "Recibimos su…"; el botón abre `reinventa.shop/r/…` con la orden.
+- [ ] Con un cliente de prueba con tu correo: firmar la recepción → al minuto llega
+      "Recibimos su…" (al instante si la orden tiene foto de recepción; si no, a los 30 s); el
+      botón abre `reinventa.shop/r/…` con la orden.
 - [ ] La tarjeta **Enlace del cliente** muestra el correo como **Enviado**.
 - [ ] Agregar un trabajo a esa orden → **Enviar presupuesto** → llega el correo; autorizarlo desde
       el enlace → la orden suma el trabajo y llega "Recibimos su respuesta".
 - [ ] **Enviar reporte → Enviar por correo** → llega el correo del reporte; **Descargar PDF**
       baja un PDF con el enlace y sin notas internas.
+- [ ] Entregar la orden de prueba: el diálogo muestra lo que falta cobrar y pide el método;
+      Finanzas muestra el "Pago final" con ese método.
 - [ ] `curl -s "https://<ref>.supabase.co/functions/v1/portal?token=$(printf '0%.0s' {1..64})"`
       responde `{"estado_enlace":"no_encontrado"}` con HTTP 404.
 - [ ] `https://reinventa.shop/sw.js` responde con `Cache-Control: no-cache` (DevTools → Network).
@@ -307,11 +328,12 @@ Diez minutos. Es el nivel **humo** del plan de pruebas; si algo falla,
   ```sql
   SELECT jobname, schedule, active FROM cron.job WHERE jobname LIKE 'restorify-%';
   -- restorify-outbox (cada minuto), restorify-maintenance (09:00 UTC),
-  -- restorify-quote-reminders (15:00 UTC)
+  -- restorify-quote-reminders (15:00 UTC), restorify-due-reminders (15:15 UTC)
   ```
 - [ ] Firmar otra vez la orden de prueba (limpiar y firmar) después de agregar un trabajo →
       el trabajo sigue **Sin autorizar** (PRE-15).
-- [ ] Borrar la orden de prueba.
+- [ ] Borrar la orden de prueba (si ya está entregada con comisiones pagadas, deshacer antes
+      el pago en Comisiones).
 
 ---
 
@@ -332,8 +354,11 @@ Diez minutos. Es el nivel **humo** del plan de pruebas; si algo falla,
 - **Frontend:** conserva una copia del `dist` anterior antes de subir; volver es
   subirla de nuevo. Solo es seguro si la base no recibió migraciones nuevas.
 - **Base de datos:** las migraciones no tienen "down". Volver atrás es escribir una
-  migración nueva que revierta. Antes de migraciones destructivas, **respaldo**:
-  Database → Backups (Pro guarda 7 días) o `npx supabase db dump --linked -f respaldo.sql`.
+  migración nueva que revierta (detalle en
+  [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación)).
+  Antes de cada `db push`, **respaldo**: Database → Backups (Pro guarda 7 días) o los tres
+  archivos de la [sección 5](#5-publicar-una-versión). Ojo: `db dump` sin `--data-only`
+  guarda solo el esquema, no los datos.
 - **Edge function:** volver a desplegar la versión anterior desde git.
 
 ---

@@ -14,6 +14,9 @@
 --             en el panel → Storage, vaciar los buckets `orden_media`, `firmas`,
 --             `reportes`, `comprobantes`, `estados_cuenta_bancarios`, `vehiculos_fotos`
 --             y, de `avatares`, las carpetas de las cuentas borradas.
+--             **No uses `supabase storage rm -r ss:///<bucket>`**: además de los archivos
+--             borra el bucket (pasó el 29/09/2026 y hubo que recrearlos con su
+--             configuración: límite y formatos de `orden_media`, públicos o privados).
 --
 -- Cómo usarlo (panel → SQL Editor, o `npx supabase db query --linked -f` con permiso):
 --   1. Escribe en la lista los correos que se quedan. Al menos un administrador.

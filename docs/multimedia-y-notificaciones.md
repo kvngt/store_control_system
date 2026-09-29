@@ -39,7 +39,7 @@ Nota de voz           → MediaRecorder 48 kbps ────────┘    r
 | `src/lib/media/image.ts` | Comprime a JPEG 1920 px + miniatura 480 px. Quita EXIF/GPS al recodificar |
 | `src/lib/media/mime.ts` | Formatos que graba cada navegador (MP4 primero), extensiones, rutas |
 | `src/lib/media/galleryVideo.ts` | Convierte videos de galería a MP4 H.264 720p con WebCodecs (carga diferida) |
-| `src/lib/media/videoFrame.ts` | Duración, dimensiones y miniatura de un video |
+| `src/lib/media/videoFrame.ts` | Duración, dimensiones y miniatura de un video; descarta cuadros negros (`isBlackFrame`, `thumbTimes`) |
 | `src/lib/media/uploadQueue.ts` | La cola: estados, concurrencia, reintentos, reanudación. Sin React ni Supabase |
 | `src/lib/media/queueStore.ts` | Persistencia de la cola en IndexedDB (cae a memoria si no hay) |
 | `src/services/media.service.ts` | Transporte: subida normal o TUS, fila, URLs firmadas, borrado |
@@ -47,6 +47,8 @@ Nota de voz           → MediaRecorder 48 kbps ────────┘    r
 | `src/features/media/MediaCaptureBar.tsx` | Botones Foto / Video / Nota de voz / Galería |
 | `src/features/media/VideoRecorderModal.tsx`, `AudioRecorderModal.tsx` | Grabadores con corte a 2 min |
 | `src/features/media/MediaGallery.tsx` | Miniaturas, visor, visibilidad, borrado |
+| `src/features/media/MediaLightbox.tsx` | Visor a pantalla completa (en `BodyPortal`), compartido por la galería y el borrador |
+| `src/features/media/DraftMediaStrip.tsx` | Los archivos de un avance antes de guardarlo; tocar un video lo reproduce |
 | `src/features/media/UploadTray.tsx` | Bandeja flotante de subidas |
 | `supabase/migrations/20260919000000_order_media.sql` | Tabla, bucket, políticas, triggers |
 
@@ -95,6 +97,15 @@ mientras la orden sigue abierta; ya entregada, solo un admin. La regla está en 
 (`orden_media`) y, desde la auditoría de septiembre de 2026, también en el archivo de
 Storage (política `orden_media_delete`): antes el archivo se podía borrar por la API y
 la galería y el portal quedaban con imágenes rotas.
+
+**La miniatura de un video grabado sale del archivo, no de la cámara.** Antes se
+dibujaba el `<video>` de la cámara en vivo un instante antes de detener, y en varios
+teléfonos (sobre todo iPhone) ese dibujo sale negro. El taller lo vio como "el video
+queda en negro antes de guardarlo": la miniatura era negra y el ícono de Play del borrador
+no reproducía nada. Desde el 29 de septiembre de 2026 la miniatura sale del archivo ya
+grabado (`inspectVideo`), probando varios instantes y descartando los cuadros casi negros;
+la cámara en vivo queda como último recurso. En el borrador, tocar el video lo abre en
+`MediaLightbox` para revisar la toma antes de guardar el avance.
 
 **`proveedor` en cada fila.** Hoy siempre `supabase`. Si algún día los videos se
 mueven a un servicio de streaming (Cloudflare Stream), el modelo no cambia.
@@ -274,7 +285,7 @@ Recorre en orden; cada paso descarta una capa.
    SELECT tipo, titulo, creado_en FROM notificaciones
    WHERE usuario_id = '<uuid>' ORDER BY creado_en DESC LIMIT 10;
    ```
-2. **¿Tiene dispositivos?** Configuración → Usuarios muestra el ícono de campana con
+2. **¿Tiene dispositivos?** Empleados muestra el ícono de campana con
    la cantidad. Sin dispositivos no se encola push.
    ```sql
    SELECT endpoint, ultimo_error, actualizado_en FROM push_suscripciones WHERE usuario_id = '<uuid>';

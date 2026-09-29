@@ -2,8 +2,8 @@
 
 Restorify empezó como una demo de administración de talleres y, en unas seis semanas
 (agosto–septiembre de 2026), se convirtió en un sistema con reglas de dinero en la base
-de datos, multimedia, notificaciones, portal para el cliente y presupuestos con
-autorización.
+de datos, multimedia, notificaciones, portal para el cliente, presupuestos con
+autorización, cobro con método de pago y comisiones por especialidad y por empleado.
 
 Este documento cuenta **por qué** el sistema es como es: qué se construyó en cada
 etapa, qué problema resolvía y qué decisiones se reemplazaron después. Para saber
@@ -27,6 +27,7 @@ cómo funciona hoy, lee [arquitectura.md](arquitectura.md) y
 8. [Etapa 6 — Los pedidos del cliente, fases 1 a 6](#8-etapa-6--los-pedidos-del-cliente-fases-1-a-6)
 9. [Etapa 7 — Auditoría completa](#9-etapa-7--auditoría-completa)
 10. [Etapa 8 — Revisión previa a producción](#10-etapa-8--revisión-previa-a-producción)
+    - [Etapa 9 — Pruebas en el teléfono y la reunión con el taller](#etapa-9--pruebas-en-el-teléfono-y-la-reunión-con-el-taller)
 11. [Decisiones que cambiaron de rumbo](#11-decisiones-que-cambiaron-de-rumbo)
 12. [Todas las migraciones](#12-todas-las-migraciones)
 13. [Cómo creció la red de pruebas](#13-cómo-creció-la-red-de-pruebas)
@@ -57,6 +58,12 @@ sep 26    ── Etapa 7  Auditoría completa: funciones internas de dinero cerr
 sep 27    ── Etapa 8  Revisión previa a producción: totales y listas sin el corte de 1.000
                       filas, caché por usuario, importación atómica, pagos sin carrera,
                       índices, cabeceras de seguridad, CI, documento de traspaso
+sep 28–29 ── Etapa 9  Pruebas en el teléfono y la reunión con el taller: espera de
+                      autorización, trabajo tachado, avances al cliente, recordatorios,
+                      archivar, abrir y asignar solo admin; firma solo admin, técnico solo
+                      ve lo suyo, cobro con método, comisiones por especialidad y por
+                      empleado, egresos de comisión por orden y margen. Base limpia y
+                      empieza la prueba del taller
 ```
 
 ---
@@ -331,6 +338,29 @@ error típicos de un proyecto hecho con IA:
 
 Detalle, bloqueantes fuera del código y plan del día: [salida-a-produccion.md](salida-a-produccion.md).
 
+### Etapa 9 — Pruebas en el teléfono y la reunión con el taller
+
+**Migraciones 37 a 54** (28 y 29 de septiembre de 2026). Detalle en
+[historico/](historico/): pruebas en el teléfono, revisión de código, cambio de permisos,
+mejoras y la reunión con el taller.
+
+- **Lo que pidió el uso diario:** el estado "espera de repuestos" pasa a **espera de
+  autorización** con un motivo obligatorio; el técnico **tacha la mano de obra hecha**;
+  los **avances se pueden mostrar al cliente**; **recordatorio diario** de órdenes vencidas
+  que no se apila; **archivar** una orden entregada a mano.
+- **Abrir una orden y asignar a alguien, solo administración**: asignarse era concederse
+  una comisión.
+- **Los siete cambios de la reunión con el taller** (migraciones 50 a 54): la **firma** la
+  toma administración; **cada técnico ve solo sus órdenes** y ya no crea clientes ni
+  vehículos; **entregar pide cómo pagó el cliente** y registra la devolución; la comisión es
+  **por especialidad y por empleado**, con la sección **Empleados**; un pago de comisiones
+  deja **un egreso por orden** y cada orden muestra su **margen**.
+- **El 29 de septiembre la base del proyecto real se limpió** para la prueba del taller: un
+  administrador y una sede.
+- Quedó en propuesta, esperando al taller: el **pago a empleados** sin ambigüedad
+  ([pagos-a-empleados.md](pagos-a-empleados.md)). Y una revisión de mantenibilidad con su
+  plan ([mantenimiento.md](mantenimiento.md)).
+
 ---
 
 ## 11. Decisiones que cambiaron de rumbo
@@ -359,6 +389,12 @@ Detalle, bloqueantes fuera del código y plan del día: [salida-a-produccion.md]
 | Consultas sin `.range()` | `fetchAll` en toda lista que crece | Etapa 8: mismo motivo |
 | Importar con dos escrituras desde el navegador | `importar_estado_cuenta` en una transacción | Etapa 8: un fallo dejaba un lote vacío |
 | pgTAP solo en la máquina de quien tuviera Docker | CI con Supabase CLI en cada PR | Etapa 8: pruebas que nadie corre no protegen |
+| El técnico abría órdenes y se unía a ellas | Abrir y asignar, solo administración | Etapa 9: asignarse era concederse comisión |
+| El técnico veía todas las órdenes de su sede y creaba clientes | Ve solo las asignadas; clientes y vehículos, solo administración | Etapa 9, reunión con el taller |
+| El técnico podía tomar la firma en cualquier estado | La firma la toma administración | Etapa 9: la primera firma aprueba lo cotizado |
+| Entregar asentaba "Pago final" sin método; un depósito de más no se devolvía | Diálogo de entrega con método, cheque y comprobante; devolución registrada | Etapa 9, reunión con el taller |
+| Una bolsa de comisión por orden, en partes iguales, al % de la sede | Una bolsa por especialidad, al % de cada empleado | Etapa 9: el mecánico cobraba parte de la pintura |
+| Un egreso único por pago de comisiones | Un egreso por orden | Etapa 9: para ver el margen de cada trabajo |
 
 ---
 
@@ -400,8 +436,26 @@ Detalle, bloqueantes fuera del código y plan del día: [salida-a-produccion.md]
 | 32 | `20260923000000_customer_portal_and_emails` | **F4** Enlace, portal, correos |
 | 33 | `20260924000000_quotes_and_authorization` | **F5** Presupuestos por línea |
 | 34 | `20260925000000_web_report` | **F6** Reporte por correo desde el sistema; bucket de PDFs cerrado |
-| 36 | `20260927000000_production_hardening` | **Pre-producción** `resumen_panel`, `importar_estado_cuenta`, pagos con bloqueo, 14 índices, sesión sin perfil sin acceso |
 | 35 | `20260926000000_audit_hardening` | **Auditoría** Funciones internas cerradas, guard de inserción, primera firma, montos no negativos, borrado con comisiones pagadas |
+| 36 | `20260927000000_production_hardening` | **Pre-producción** `resumen_panel`, `importar_estado_cuenta`, pagos con bloqueo, 14 índices, sesión sin perfil sin acceso |
+| 37 | `20260928000000_estatus_permitidos_tecnico` | Estados que puede fijar un técnico; quién anula una firma |
+| 38 | `20260928000001_avisos_cliente_inmediatos` | Correo de recepción al firmar; ningún aviso se aplaza para siempre |
+| 39 | `20260929000000_espera_autorizacion` | "Espera de repuestos" → **espera de autorización**, con motivo obligatorio |
+| 40 | `20260929000001_avisos_autorizacion_resuelta` | Avisos cuando el cliente responde el presupuesto |
+| 41 | `20260930000000_labor_completada` | El técnico tacha la mano de obra hecha (`marcar_labor_completada`) |
+| 42 | `20260930000001_avances_visibles_al_cliente` | Avances que el técnico muestra al cliente, con sus archivos |
+| 43 | `20261001000000_recordatorio_fecha_entrega` | Aviso diario de órdenes vencidas |
+| 44 | `20261002000000_afinado_rls_e_indices` | Políticas que se calculan una vez por consulta; índices |
+| 45 | `20261002000001_revocar_funciones_internas` | Permisos sobrantes en funciones internas |
+| 46 | `20261003000000_deshacer_importacion_atomica` | Deshacer una importación en una transacción |
+| 47 | `20261004000000_crear_y_asignar_solo_admin` | Abrir una orden y asignar, solo administración |
+| 48 | `20261005000000_archivar_orden` | Archivar a mano una orden entregada |
+| 49 | `20261005000001_recordatorio_vencida_sin_apilar` | El recordatorio reemplaza el del día anterior |
+| 50 | `20261006000000_firma_solo_admin` | **Reunión** La firma de recepción, solo administración |
+| 51 | `20261007000000_tecnico_solo_sus_ordenes` | **Reunión** El técnico ve solo sus órdenes; clientes y vehículos solo admin |
+| 52 | `20261008000000_entrega_con_metodo_de_pago` | **Reunión** `saldo_orden`, `entregar_orden`, método de pago, devolución |
+| 53 | `20261009000000_comisiones_por_especialidad` | **Reunión** Comisiones por especialidad y por empleado; `perfiles_pago` |
+| 54 | `20261010000000_egresos_de_comision_por_orden` | **Reunión** Un egreso por orden al pagar comisiones; `balance_orden`, `margen_ordenes` |
 
 Las migraciones son la mejor documentación de cada decisión: cada una empieza con un
 comentario que explica el problema. Léelas en orden si quieres el detalle.
@@ -423,6 +477,8 @@ comentario que explica el problema. Léelas en orden si quieres el detalle.
 | Fase 6 | 265 (36 archivos) | 06 → 133 aserciones en 6 archivos | |
 | Auditoría | 274 (37 archivos) | 07 → 158 aserciones en 7 archivos | + `qa:security` (52 casos contra la API) |
 | Pre-producción | **303** (43 archivos) | 08 → **176 aserciones** en 8 archivos, en CI | `qa:security` 53 casos; integración contra la API local |
+| Pruebas en el teléfono | 432 (60 archivos) | 09 → 223 aserciones en 9 archivos | `qa:security` 66 casos; 76 e2e |
+| Reunión con el taller | **480** (67 archivos) | 10–13 → **330 aserciones** en 13 archivos | `qa:security` 85 casos |
 
 Las pruebas pgTAP se ejecutaron por primera vez con Docker el 15 de septiembre de 2026:
 **158 aserciones en verde** y las 35 migraciones aplicadas desde cero. Solo hubo que
@@ -434,13 +490,14 @@ temporales que luego se borraron.
 
 ## 14. Lo que viene
 
-- **Completar los bloqueantes de [salida-a-produccion.md §2](salida-a-produccion.md#2-bloqueantes-fuera-del-código)**
-  y subir el build nuevo (§4); la migración 36 ya está aplicada.
-- **Probar en teléfonos reales** con el `dist` nuevo publicado: el nivel "publicación" de
-  [plan-de-pruebas.md](plan-de-pruebas.md), con los casos H de portal, presupuestos,
-  reporte, video y push.
-- **Pendientes de datos**: correo de contacto y WhatsApp de cada sede.
+- **La prueba del taller**, que empezó el 29 de septiembre de 2026 con la base limpia.
+- **Pago a empleados**: esperar las respuestas del taller y hacer la fase 1
+  ([pagos-a-empleados.md](pagos-a-empleados.md)).
+- **Fuera del código**: staging, plan Pro y Sentry ([mantenimiento.md §5](mantenimiento.md#5-plan-priorizado)).
+- **Mantenibilidad**: esquema actual en un solo archivo, partir `useWorkOrderDetail`,
+  retirar la fachada `supabaseService` (mismo plan).
+- **Pendientes de datos**: nombre, logo, correo de contacto y WhatsApp de la sede.
 - **Pendientes de decisión** (ver [reglas-de-negocio.md](reglas-de-negocio.md#10-riesgos-conocidos-y-decisiones-abiertas)):
-  borrar movimientos automáticos de Finanzas, correos en inglés, pasar a Supabase Pro
-  antes de atender clientes reales, un proyecto de staging, qué hacer con un depósito
-  mayor que lo autorizado.
+  borrar movimientos automáticos de Finanzas, correos en inglés, si el correo de
+  "Entregado" sale al instante, traducir en el portal lo que escribe el taller
+  ([plan-de-mejora.md](plan-de-mejora.md#funciones-propuestas-pendientes-de-autorización-del-taller)).

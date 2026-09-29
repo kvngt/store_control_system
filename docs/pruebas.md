@@ -74,7 +74,7 @@ declaran `// @vitest-environment jsdom` y renderizan con los proveedores reales
 | Importación bancaria | `lib/bankStatementParser*`, `lib/categorizationRules`, `pages/finance/ImportStatementModal`, `pages/Finance.import` | Lectura del PDF de Wells Fargo, casos límite, categorización, carga diferida del importador |
 | Finanzas | `pages/Finance.linkorder` | Vincular un movimiento a una orden; errores visibles en el diálogo |
 | Multimedia | `lib/media/uploadQueue`, `lib/media/mime`, `lib/media/videoFrame`, `services/media.service`, `features/media/MediaGallery`, `features/media/VideoRecorderModal`, `features/media/DraftMediaStrip` | Cola: no re-subir tras fallar la fila, no reintentar permisos, reanudar tras recarga solo para el mismo usuario, concurrencia, sin conexión; formatos MP4 primero; galería: miniaturas firmadas, publicar solo admin, borrar solo lo propio, progreso, **video sin miniatura con ícono y no un cargando eterno**; **cuadro negro descartado** como miniatura; el grabador saca la miniatura del archivo grabado y revisa sin autoplay; **el video del borrador se abre y se reproduce** |
-| Órdenes | `pages/WorkOrders.smoke`, `features/workOrders/*` (incluye `workOrderForm.schema`) | Lista (una sola versión según ancho), alta y validación, detalle; **técnico sin totales ni precios**, comisión estimada ($1,000 × 35 % ÷ 2 = $175), alta de técnico sin depósito/labor/repuestos; fotos de recepción comprimidas y su ciclo de memoria; avance solo con nota de voz; **firmar vuelve a leer la orden** (la firma autoriza lo cotizado); la lista para asignar solo trae personal de la sede de la orden; **el técnico ve una sola lista, sin "Otras órdenes" ni catálogos de clientes y vehículos**, y abrir una orden que no es suya lo explica; **la firma solo la toma administración** (`SignatureCard`) |
+| Órdenes | `pages/WorkOrders.smoke`, `features/workOrders/*` (incluye `workOrderForm.schema`) | Lista (una sola versión según ancho), alta y validación, detalle; **técnico sin totales ni precios**, comisión estimada por especialidad (la calcula la base: mecánica $1,000 × 35 % ÷ 1 = $350), entregar abre el diálogo de pago, alta de técnico sin depósito/labor/repuestos; fotos de recepción comprimidas y su ciclo de memoria; avance solo con nota de voz; **firmar vuelve a leer la orden** (la firma autoriza lo cotizado); la lista para asignar solo trae personal de la sede de la orden; **el técnico ve una sola lista, sin "Otras órdenes" ni catálogos de clientes y vehículos**, y abrir una orden que no es suya lo explica; **la firma solo la toma administración** (`SignatureCard`) |
 | Kanban | `pages/KanbanBoard` | Mover tarjetas; **entregar abre el diálogo de cobro** y pasa por `entregar_orden`, nunca por un cambio de estatus suelto |
 | Comisión por especialidad | `features/workOrders/CommissionEstimateCard`, `features/workOrders/LaborTable` | El técnico ve su bolsa, su porcentaje y el total que da la base; a salario, que no genera; administración ve el reparto y el aviso de una bolsa sin nadie. En una orden combinada cada línea lleva especialidad y se manda al agregar y al editar; en las demás no se pide |
 | Empleados | `pages/Employees.pay`, `pages/Employees.users` | Pago de cada quien (el % de la sede, uno propio o salario); guardar un porcentaje; fuera de 0–100 se rechaza en el diálogo; pasar a salario con pendientes avisa con el monto. El alta y la edición del personal (antes en Configuración) |
@@ -123,7 +123,7 @@ PostgREST en cada petición.
 - Dos pagos iguales el mismo día; deshacer uno deja el egreso del otro.
 - Tres técnicos: $350.00 exactos con diferencia de un centavo.
 
-**`supabase/tests/database/02_multimedia_y_avisos.test.sql`** (21)
+**`supabase/tests/database/02_multimedia_y_avisos.test.sql`** (27)
 
 - Asignación → aviso al técnico con el número de orden; nadie más lo ve; solo se
   marca leído; nadie crea avisos por la API; el actor no se avisa a sí mismo.
@@ -133,7 +133,7 @@ PostgREST en cada petición.
 - Multimedia: recepción nace visible, avance nace interno aunque lo pida; una fila
   no apunta a otra orden; un técnico no asignado no sube.
 
-**`supabase/tests/database/03_permisos_tecnico.test.sql`** (23)
+**`supabase/tests/database/03_permisos_tecnico.test.sql`** (41)
 
 - Técnico no asignado: no ve la orden (desde `20261007000000`), y un UPDATE sobre ella
   afecta cero filas: no cambia estado, avance ni firma, ni agrega avances.
@@ -144,6 +144,78 @@ PostgREST en cada petición.
 - Orden entregada: el técnico no la saca de Entregado (la orden y su comisión
   siguen intactas) y no agrega ni borra avances; el admin sí puede sacarla.
 - Los buckets viejos `vehiculos_fotos` y `firmas` ya no son públicos.
+
+**`supabase/tests/database/04_portal_y_correos.test.sql`** (27)
+
+- Firmar crea el enlace (64 hexadecimales) y **un** correo de recepción con 2 min de
+  espera; volver a firmar no programa otro.
+- Un técnico no lee enlaces, no crea enlaces ni llama `datos_portal`.
+- Dos cambios de estatus seguidos quedan en un aviso con el último estado y 3 min.
+- Un cliente sin correo no genera correos.
+- `datos_correo` lee correo, estatus, enlace y vehículo actuales.
+- El portal: solo multimedia visible; total $400, pagado $100, saldo $300; sin
+  costos, comisiones, técnicos ni VIN completo; cuenta el acceso.
+- La baja cancela lo pendiente y evita correos nuevos.
+- Cambiar el enlace deja el anterior como `revocado`; entregar fija 90 días y
+  sacar de Entregado lo quita.
+
+**`supabase/tests/database/05_presupuestos.test.sql`** (32)
+
+- Lo cotizado nace en borrador y no suma; la firma de recepción lo aprueba y deja un
+  presupuesto "firma de recepción" como evidencia.
+- Una línea nueva nace en borrador aunque se pida "aprobado"; ni un admin la aprueba
+  con un UPDATE; un técnico no envía presupuestos ni los lee.
+- Enviar: líneas pendientes, presupuesto 2 por $880, correo programado; una línea
+  pendiente no se edita; no se entrega con el presupuesto abierto.
+- El cliente responde desde su enlace: rechazo si no vio todas las líneas, nombre
+  obligatorio, respuesta parcial (frenos y pastillas sí, pintura no), total $480,
+  evidencia (vía, nombre, IP, comentario, total), aviso al mecánico "Autorizado: …
+  No realizar: …", aviso al admin, correo del presupuesto omitido y constancia
+  programada, no se responde dos veces.
+- Corregir lo rechazado lo vuelve a borrador; cancelar devuelve a borrador; registrar
+  por teléfono aprueba; al entregar, el costo de repuestos cuenta solo lo aprobado.
+
+**`supabase/tests/database/06_reporte_web.test.sql`** (7)
+
+- Un técnico no manda el reporte (42501).
+- El admin lo manda a un cliente con correo (`encolado`); pulsarlo dos veces programa
+  **un** solo correo.
+- Un cliente sin correo no genera nada (`sin_correo`), pero el enlace se crea igual
+  para compartirlo por WhatsApp.
+- El bucket `reportes` ya no tiene políticas de INSERT ni UPDATE.
+
+**`supabase/tests/database/07_auditoria.test.sql`** (25)
+
+- Nadie con sesión ni sin ella ejecuta `reverse_order_delivery_finance`,
+  `sync_order_commissions`, `sync_order_parts_expense` ni `recalculate_order_totals`;
+  `anon` no ejecuta `pay_commissions`.
+- Un técnico que inserta directo una orden "entregada", con avance, total, firma ajena,
+  otro autor y número propio → nace en recepción, en cero, sin firma, con él como autor
+  y con número del sistema; el contador no salta.
+- Solo la primera firma autoriza: volver a firmar no aprueba lo agregado después, ni
+  cuando la primera firma no tenía nada que aprobar.
+- Mano de obra negativa, cantidad cero y precio negativo → rechazados (23514).
+- No se borra una orden con comisiones pagadas; deshecho el pago, sí.
+- Un aviso interrumpido 5 veces no se vuelve a tomar y queda en error.
+
+**`supabase/tests/database/08_produccion.test.sql`** (31)
+
+- `resumen_panel` con 1.500 movimientos del mes: suma los 1.500 (no 1.000), total histórico,
+  seis meses, órdenes activas y por estatus, clientes nuevos; un técnico recibe cero en dinero.
+- `importar_estado_cuenta`: un técnico no importa; un movimiento inválido hace fallar todo y
+  no queda lote vacío; uno válido deja lote y movimientos juntos.
+- Pagar otra vez las mismas comisiones falla (P0001).
+- Una cuenta de Auth sin perfil no lee sedes.
+- Existen los índices de las llaves foráneas más usadas; `create_work_order` tiene
+  `search_path` fijo.
+- El avance de una orden no puede pasar de 100.
+- Deshacer una importación bancaria es una sola transacción; el recordatorio de orden
+  vencida reemplaza el del día anterior en vez de apilar otro.
+
+**`supabase/tests/database/09_archivo.test.sql`** (8)
+
+- Un admin archiva una orden entregada; lo que no está entregado no se archiva (CHECK);
+  sacarla de Entregado la desarchiva; un técnico no archiva.
 
 **`supabase/tests/database/10_visibilidad_tecnico.test.sql`** (26)
 
@@ -199,76 +271,11 @@ PostgREST en cada petición.
 - Un técnico no ve balance ni margen; las funciones internas no son RPC y el egreso único
   se retiró.
 
-**`supabase/tests/database/04_portal_y_correos.test.sql`** (24)
-
-- Firmar crea el enlace (64 hexadecimales) y **un** correo de recepción con 2 min de
-  espera; volver a firmar no programa otro.
-- Un técnico no lee enlaces, no crea enlaces ni llama `datos_portal`.
-- Dos cambios de estatus seguidos quedan en un aviso con el último estado y 3 min.
-- Un cliente sin correo no genera correos.
-- `datos_correo` lee correo, estatus, enlace y vehículo actuales.
-- El portal: solo multimedia visible; total $400, pagado $100, saldo $300; sin
-  costos, comisiones, técnicos ni VIN completo; cuenta el acceso.
-- La baja cancela lo pendiente y evita correos nuevos.
-- Cambiar el enlace deja el anterior como `revocado`; entregar fija 90 días y
-  sacar de Entregado lo quita.
-
-**`supabase/tests/database/05_presupuestos.test.sql`** (31)
-
-- Lo cotizado nace en borrador y no suma; la firma de recepción lo aprueba y deja un
-  presupuesto "firma de recepción" como evidencia.
-- Una línea nueva nace en borrador aunque se pida "aprobado"; ni un admin la aprueba
-  con un UPDATE; un técnico no envía presupuestos ni los lee.
-- Enviar: líneas pendientes, presupuesto 2 por $880, correo programado; una línea
-  pendiente no se edita; no se entrega con el presupuesto abierto.
-- El cliente responde desde su enlace: rechazo si no vio todas las líneas, nombre
-  obligatorio, respuesta parcial (frenos y pastillas sí, pintura no), total $480,
-  evidencia (vía, nombre, IP, comentario, total), aviso al mecánico "Autorizado: …
-  No realizar: …", aviso al admin, correo del presupuesto omitido y constancia
-  programada, no se responde dos veces.
-- Corregir lo rechazado lo vuelve a borrador; cancelar devuelve a borrador; registrar
-  por teléfono aprueba; al entregar, el costo de repuestos cuenta solo lo aprobado.
-
-**`supabase/tests/database/06_reporte_web.test.sql`** (7)
-
-- Un técnico no manda el reporte (42501).
-- El admin lo manda a un cliente con correo (`encolado`); pulsarlo dos veces programa
-  **un** solo correo.
-- Un cliente sin correo no genera nada (`sin_correo`), pero el enlace se crea igual
-  para compartirlo por WhatsApp.
-- El bucket `reportes` ya no tiene políticas de INSERT ni UPDATE.
-
-**`supabase/tests/database/07_auditoria.test.sql`** (25)
-
-- Nadie con sesión ni sin ella ejecuta `reverse_order_delivery_finance`,
-  `sync_order_commissions`, `sync_order_parts_expense` ni `recalculate_order_totals`;
-  `anon` no ejecuta `pay_commissions`.
-- Un técnico que inserta directo una orden "entregada", con avance, total, firma ajena,
-  otro autor y número propio → nace en recepción, en cero, sin firma, con él como autor
-  y con número del sistema; el contador no salta.
-- Solo la primera firma autoriza: volver a firmar no aprueba lo agregado después, ni
-  cuando la primera firma no tenía nada que aprobar.
-- Mano de obra negativa, cantidad cero y precio negativo → rechazados (23514).
-- No se borra una orden con comisiones pagadas; deshecho el pago, sí.
-- Un aviso interrumpido 5 veces no se vuelve a tomar y queda en error.
-
-**`supabase/tests/database/08_produccion.test.sql`** (18)
-
-- `resumen_panel` con 1.500 movimientos del mes: suma los 1.500 (no 1.000), total histórico,
-  seis meses, órdenes activas y por estatus, clientes nuevos; un técnico recibe cero en dinero.
-- `importar_estado_cuenta`: un técnico no importa; un movimiento inválido hace fallar todo y
-  no queda lote vacío; uno válido deja lote y movimientos juntos.
-- Pagar otra vez las mismas comisiones falla (P0001).
-- Una cuenta de Auth sin perfil no lee sedes.
-- Existen los índices de las llaves foráneas más usadas; `create_work_order` tiene
-  `search_path` fijo.
-- El avance de una orden no puede pasar de 100.
-
 Las pruebas 01 y 02 firman la recepción antes de entregar: desde la fase 5, sin
 autorización no hay nada que cobrar ni comisión que generar.
 
-> **Estado:** **176 aserciones en verde** en los 8 archivos con las 36 migraciones
-> aplicadas desde cero, localmente y en CI. La primera corrida (158 aserciones en 7 archivos,
+> **Estado (29 de septiembre de 2026):** **330 aserciones en verde** en los 13 archivos con
+> las 54 migraciones aplicadas desde cero, localmente y en CI. La primera corrida (158 aserciones en 7 archivos,
 > 15 de septiembre de 2026, 35 migraciones) fue la primera vez que se ejecutaron. Esa primera
 > corrida encontró tres errores en los datos de prueba, no en la base: en 04, un video sin
 > duración ni avance que las restricciones de `orden_media` rechazan; en 05, un aviso
@@ -295,9 +302,11 @@ npm run test:e2e
 > que el sitio respondía y nadie se enteraba.
 
 > **Las cuentas de prueba son datos reales.** Si alguien borra un empleado desde
-> Configuración, las credenciales de `.env.test.local` dejan de servir y la mitad de
+> Empleados, las credenciales de `.env.test.local` dejan de servir y la mitad de
 > la suite falla en el login, lo que se lee como un fallo del producto. Comprueba las
-> cuentas antes de creer en una tanda roja.
+> cuentas antes de creer en una tanda roja. **El 29 de septiembre de 2026 se borraron todas**
+> con la limpieza del proyecto: hasta que se creen de nuevo (mejor en un proyecto de
+> staging), las pruebas que necesitan sesión se saltan.
 `playwright.config.ts` levanta `npm run dev` y corre en Chromium. Las pruebas que
 necesitan sesión **se saltan solas** si faltan credenciales:
 `E2E_ADMIN_EMAIL/PASSWORD`, `E2E_MECHANIC_EMAIL/PASSWORD`, `E2E_PAINTER_EMAIL/PASSWORD`.
@@ -310,7 +319,7 @@ necesitan sesión **se saltan solas** si faltan credenciales:
 | `qa-customers-vehicles.spec.ts` | CUST, VEH, SEARCH | CRUD autolimpiante, validaciones, VIN, sin placa, búsqueda |
 | `qa-workorders.spec.ts` | WORK-01…06 | Modal nueva orden, millas, filtros, detalle, botón PDF, Kanban, "Mover a" |
 | `qa-finance-payroll.spec.ts` | FIN-01…04, PAY-01…03 | Finanzas y validaciones; **Comisiones**: pestañas, % inválido rechazado, técnico sin acceso |
-| `qa-settings.spec.ts` | CFG-01…12 | Perfil, idioma, tema, sedes, alta de empleado |
+| `qa-settings.spec.ts` | CFG-01…12 | Perfil, idioma, tema, sedes, alta de empleado. **El alta se mudó a Empleados** el 29/09/2026: los casos de alta hay que apuntarlos a `/employees` |
 | `customer-crud.spec.ts` | 1 | Ejemplo de prueba que crea y borra datos (prefijo `PWTEST`) |
 
 Los identificadores de esta tabla (AUTH-, RBAC-, WORK-, FIN-, CFG-…) son los del código
@@ -326,7 +335,8 @@ Las pruebas **PAY-01/02** anteriores probaban la nómina por salario, eliminada 
 la migración `20260912000000`; fueron reemplazadas por las de comisiones.
 
 **Pendiente de cubrir con e2e** (cuando haya staging): técnico sin precios en el
-detalle, multimedia con archivos de prueba, campana en tiempo real.
+detalle, multimedia con archivos de prueba, campana en tiempo real, el diálogo de entrega,
+Empleados y que un técnico solo vea sus órdenes.
 
 ### 2.4 ¿Para qué hace falta Docker?
 
@@ -339,8 +349,8 @@ Se necesita para:
 
 | Tarea | Comando | Por qué no se puede sin Docker |
 |---|---|---|
-| **Correr las pruebas de base de datos** (las 176 aserciones pgTAP) | `npm run test:db` | Necesitan un Postgres real donde crear datos y deshacerlos |
-| **Probar que las migraciones aplican desde cero** | `npx supabase db reset` | Recrea la base local aplicando las 36 migraciones en orden: detecta una migración que solo funciona sobre la base actual |
+| **Correr las pruebas de base de datos** (las 330 aserciones pgTAP) | `npm run test:db` | Necesitan un Postgres real donde crear datos y deshacerlos |
+| **Probar que las migraciones aplican desde cero** | `npx supabase db reset` | Recrea la base local aplicando las 54 migraciones en orden: detecta una migración que solo funciona sobre la base actual |
 | **Probar una migración antes de producción** | `npx supabase start` y luego la app contra la base local | Hoy cada migración se aplica directo al proyecto enlazado |
 | Probar edge functions localmente | `npx supabase functions serve` | Corren en el contenedor de Supabase |
 
@@ -355,7 +365,7 @@ proyecto enlazado.
 
 ```bash
 npx supabase start       # la primera vez descarga las imágenes (varios minutos)
-npm run test:db          # 8 archivos pgTAP
+npm run test:db          # 13 archivos pgTAP
 npx supabase db reset    # opcional: recrear la base local desde cero
 npx supabase stop        # al terminar
 ```
@@ -388,10 +398,11 @@ Cada caso espera un rechazo o una lista vacía. Es la capa que atrapó el hallaz
 grave de la auditoría: funciones internas de dinero que pgTAP no probaba porque nadie
 había pensado en llamarlas desde fuera ([auditoria-2026-09.md](auditoria-2026-09.md)).
 
-- **Sin cuentas** corre los 18 casos sin sesión, incluidos SEC-17 (las 6 edge functions responden, no 404) y SEC-18 (el registro público está apagado).
+- **Sin cuentas** corre los 23 casos sin sesión, incluidos SEC-17 (las 6 edge functions responden, no 404) y SEC-18 (el registro público está apagado).
 - **Con cuentas** (`E2E_ADMIN_*` y `E2E_MECHANIC_*` de `.env.test.local`, o `QA_TECH_*` /
-  `QA_ADMIN_*`) inicia sesión, busca por su cuenta una orden asignada al técnico, una
-  ajena y una entregada, y corre los 53.
+  `QA_ADMIN_*`) inicia sesión, busca una orden asignada al técnico y una entregada con su
+  sesión, y una ajena con la del admin (el técnico ya no la ve), y corre los 85.
+- **Hoy no hay cuentas de prueba** (se borraron el 29/09/2026): corre solo los 23 sin sesión.
 - Lo que no puede preparar lo marca **SKIP**. Termina con código 1 si hay un **FAIL**.
 
 > Solo contra datos de prueba: si la base tiene un hueco, la petición que lo demuestra

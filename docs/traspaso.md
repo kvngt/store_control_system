@@ -35,7 +35,7 @@ de estados de cuenta de Wells Fargo, comisiones del personal y avisos push al te
 | **Frontend** | React 19 + TypeScript + Vite, sitio estático en Hostinger (`reinventa.shop`) |
 | **Backend** | Supabase (proyecto `dbstores`): Postgres con RLS y triggers, Auth, Storage, Realtime, 6 Edge Functions, pg_cron |
 | **Correo** | Resend, dominio `reinventa.shop` |
-| **Estado** | Las seis fases del cliente, una auditoría y una revisión previa a producción, todas hechas. Antes de atender clientes reales: [salida-a-produccion.md](salida-a-produccion.md) §2 |
+| **Estado** | Las seis fases del cliente, una auditoría, una revisión previa a producción y los siete cambios de la reunión con el taller, todos hechos. El 29 de septiembre de 2026 la base se limpió para la prueba del taller: un administrador y una sede. Antes de atender clientes reales: [salida-a-produccion.md](salida-a-produccion.md) §2 y [mantenimiento.md §5](mantenimiento.md#5-plan-priorizado) |
 | **Idioma** | La interfaz en español e inglés; la documentación y los comentarios del código, en español (algunos antiguos en inglés) |
 
 La decisión que explica todo: **no hay servidor propio**. El navegador habla directo con
@@ -71,7 +71,7 @@ Esto no se recupera clonando el repositorio. Si se pierde, hay que regenerarlo.
 | Qué | Dónde vive | Si se pierde |
 |---|---|---|
 | `.env.local` (URL y clave anónima de Supabase, llave pública VAPID, DSN de Sentry) | Máquina de desarrollo | Todo se vuelve a leer del panel de Supabase (Project Settings → API Keys) salvo la llave pública VAPID, que también está en `supabase/.env.secrets.local` |
-| `.env.test.local` (cuentas para pruebas e2e y `qa:security`) | Máquina de desarrollo | Crear cuentas de prueba nuevas ([plan-de-pruebas.md §2.2](plan-de-pruebas.md#22-cuentas)) |
+| `.env.test.local` (cuentas para pruebas e2e y `qa:security`) | Máquina de desarrollo. **Las cuentas que nombra se borraron el 29/09/2026** con la limpieza del proyecto: hay que crearlas de nuevo, idealmente en un proyecto de staging | Crear cuentas de prueba nuevas ([plan-de-pruebas.md §2.2](plan-de-pruebas.md#22-cuentas)) |
 | `supabase/.env.secrets.local` (secreto de funciones internas, par VAPID) | Máquina de desarrollo y, sin forma de leerlos de vuelta, en Supabase → Edge Functions → Secrets | Generar un juego nuevo ([deployment.md §7](deployment.md#7-rotar-secretos-y-llaves)): nuevo secreto en Supabase **y** en Vault; nuevo par VAPID en los secretos **y** en `VITE_VAPID_PUBLIC_KEY`, recompilar. Cada persona vuelve a activar el push en su teléfono |
 | Llave de Resend | Solo en Supabase → Edge Functions → Secrets | Crear otra en Resend y cargarla con `npx supabase secrets set` |
 | Configuración de Auth del proyecto real (registro apagado, SMTP, URL del sitio, largo de contraseña) | Panel de Supabase | `supabase/config.toml` describe la local, **no** la real. Ver [supabase.md §8](supabase.md#8-auth) |
@@ -105,7 +105,7 @@ npm run dev                          # http://localhost:5173
 ```bash
 npm run lint && npx tsc -b && npm test && npm run build
 npx supabase start && npm run test:db && npx supabase stop
-npm run qa:security
+npm run qa:security      # necesita las cuentas de .env.test.local (ver sección 3)
 ```
 
 Si todo pasa, la máquina está lista.
@@ -121,12 +121,13 @@ Si todo pasa, la máquina está lista.
 |---|---|---|
 | 1 | [README.md](README.md) | Mapa de la documentación |
 | 1 | [arquitectura.md](arquitectura.md) | Cómo está construido y por qué |
+| 1 | [mapa-de-secciones.md](mapa-de-secciones.md) | Dónde está cada parte de la app |
 | 1 | [supabase.md](supabase.md) | Qué hay en el backend y dónde se ve |
 | 2 | [reglas-de-negocio.md](reglas-de-negocio.md) | Qué hace el sistema; para decidir si algo es un error |
 | 2 | [salida-a-produccion.md](salida-a-produccion.md) y [auditoria-2026-09.md](auditoria-2026-09.md) | Qué se rompió, cómo se arregló, qué queda abierto |
-| 3 | [deployment.md](deployment.md) | Publicar, rotar llaves, volver atrás |
+| 3 | [deployment.md](deployment.md) y [mantenimiento.md](mantenimiento.md) | Publicar, rotar llaves, volver atrás; cambiar la base sin cortar el servicio |
 | 3 | [pruebas.md](pruebas.md) y [plan-de-pruebas.md](plan-de-pruebas.md) | Qué está probado y cómo probar lo que cambies |
-| Cuando toque | [presupuestos.md](presupuestos.md), [portal-y-correos.md](portal-y-correos.md), [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md), [comisiones.md](comisiones.md) | Cada subsistema a fondo |
+| Cuando toque | [presupuestos.md](presupuestos.md), [portal-y-correos.md](portal-y-correos.md), [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md), [comisiones.md](comisiones.md), [pagos-a-empleados.md](pagos-a-empleados.md) | Cada subsistema a fondo |
 | Cuando toque | [evolucion.md](evolucion.md) | Por qué algo es como es (decisiones que se reemplazaron) |
 | Para el taller | [manual-usuario.md](manual-usuario.md) | La app pantalla por pantalla |
 
@@ -137,13 +138,15 @@ Si todo pasa, la máquina está lista.
 ### Ramas y revisión
 
 - `main` es lo publicado. Trabaja en una rama y abre una pull request.
-- La integración continua corre en cada PR: lint, tipos, 303 pruebas, build, y las 36
-  migraciones desde cero con las 176 aserciones pgTAP. **No fusiones con CI en rojo.**
+- La integración continua corre en cada PR: lint, tipos, 480 pruebas, build, y las 54
+  migraciones desde cero con las 330 aserciones pgTAP. **No fusiones con CI en rojo.**
 
 ### Un cambio que toca la base
 
 1. Migración nueva `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca editar una
-   aplicada. Comentario al inicio con el problema que resuelve.
+   aplicada. Comentario al inicio con el problema que resuelve. **Si reescribe una función,
+   parte de su versión vigente**: `npm run db:donde -- <nombre>` dice en qué migración está
+   (partir de una vieja deshace arreglos sin avisar).
 2. Toda función nueva: `REVOKE ALL ... FROM PUBLIC, anon, authenticated` y conceder solo lo
    necesario. Si es `SECURITY DEFINER`: `SET search_path = public` y validar rol por dentro.
 3. Si protege algo, protegerlo en `INSERT` **y** en `UPDATE`.
@@ -151,6 +154,8 @@ Si todo pasa, la máquina está lista.
 5. `npx supabase start && npm run test:db`.
 6. Si agrega una RPC o función interna que no debe ser pública, sumar su caso a
    `scripts/qa/api-security.mjs`.
+7. Si borra o renombra algo que usa la app, en dos pasos (expandir y contraer), y respaldo
+   antes de aplicar: [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación).
 
 ### Un cambio en el frontend
 
@@ -170,7 +175,8 @@ Reglas completas: [ai-context.md](ai-context.md) (sirven igual para personas).
 |---|---|
 | **Publicar una versión** | [deployment.md §5](deployment.md#5-publicar-una-versión): migraciones → funciones que cambiaron → build → subir `dist/` → [§6](deployment.md#6-verificación-después-de-publicar) |
 | **Volver atrás** | [deployment.md §8](deployment.md#8-volver-atrás) y [salida-a-produccion.md §5](salida-a-produccion.md#5-volver-atrás) |
-| **Crear o dar de baja a un empleado** | En la app: Configuración → Personal. Nunca desde Authentication → Users |
+| **Crear o dar de baja a un empleado** | En la app: **Empleados** (menú lateral). Nunca desde Authentication → Users |
+| **Cambiar cómo se le paga a alguien** (su porcentaje o salario) | Empleados → Ver. Recalcula sus comisiones pendientes: ver [comisiones.md](comisiones.md) |
 | **Un empleado olvidó la contraseña** | "¿Olvidaste tu contraseña?" en el login, o un admin le asigna una nueva editando su ficha |
 | **Agregar una sede** | En la app: Configuración → Sedes. Cargar correo de contacto y WhatsApp |
 | **Rotar llaves** (Resend, VAPID, secreto interno) | [deployment.md §7](deployment.md#7-rotar-secretos-y-llaves) |
@@ -178,7 +184,8 @@ Reglas completas: [ai-context.md](ai-context.md) (sirven igual para personas).
 | **Restaurar un respaldo** | Supabase → Database → Backups (Pro). Restaura el proyecto entero a esa fecha: se pierde lo posterior |
 | **Exportar datos** | Finanzas → Exportar CSV; o `npx supabase db dump --linked --data-only -f datos.sql` (tiene datos personales: no a git) |
 | **Revisar la salud** | [salida-a-produccion.md §6](salida-a-produccion.md#6-la-primera-semana) |
-| **Dejar la plataforma sin datos de prueba** | [scripts/admin/limpiar-datos.sql](../scripts/admin/limpiar-datos.sql): conserva los correos que indiques (al menos un admin) y las sedes; termina en `ROLLBACK` hasta que lo cambies. Después, vaciar los buckets que dice el script |
+| **Dejar la plataforma sin datos de prueba** | [scripts/admin/limpiar-datos.sql](../scripts/admin/limpiar-datos.sql): conserva los correos que indiques (al menos un admin) y las sedes; termina en `ROLLBACK` hasta que lo cambies. Después, vaciar los buckets **desde el panel**: `supabase storage rm -r ss:///<bucket>` borra también el bucket (pasó el 29/09/2026) |
+| **Encontrar dónde cambiar una parte** | [mapa-de-secciones.md](mapa-de-secciones.md); para una función de la base, `npm run db:donde -- <nombre>` |
 | **Probar la plataforma a mano** | [manual-de-pruebas.md](manual-de-pruebas.md) (142 casos por sesiones) |
 
 ---
@@ -191,7 +198,8 @@ Reglas completas: [ai-context.md](ai-context.md) (sirven igual para personas).
 | Aviso "esquema desactualizado" | `npm run db:check`: faltan migraciones o el `dist/` es viejo | [deployment.md §5](deployment.md#5-publicar-una-versión) |
 | Nadie puede iniciar sesión | Supabase → Authentication → Providers: **Email** encendido | [salida-a-produccion.md PRD-16](salida-a-produccion.md#prd-16--media--un-config-push-habría-dejado-a-todos-sin-poder-entrar) |
 | **No queda ningún administrador** (se borró, o la base quedó sin usuarios) | Nadie puede crear cuentas desde la app y el registro público está apagado a propósito | Crear la cuenta en Authentication → Users → Add user y correr [scripts/admin/crear-primer-admin.sql](../scripts/admin/crear-primer-admin.sql) |
-| "Esta cuenta no tiene acceso al taller" | La cuenta existe en Auth pero no tiene fila en `perfiles` (se creó en el panel, no en la app) | Borrarla en Authentication → Users y crearla desde Configuración → Personal |
+| "Esta cuenta no tiene acceso al taller" | La cuenta existe en Auth pero no tiene fila en `perfiles` (se creó en el panel, no en la app) | Borrarla en Authentication → Users y crearla desde **Empleados** |
+| Fotos, logos o comprobantes no suben ("Bucket not found") | Storage → ¿existen los 8 buckets? | Recrearlos con su configuración: [supabase.md §5](supabase.md#5-storage) |
 | No llega el correo de "¿Olvidaste tu contraseña?" | Authentication → Logs; ¿hay SMTP propio? El correo de fábrica de Supabase manda muy pocos por hora y solo a correos del equipo del proyecto | [salida-a-produccion.md PRD-05](salida-a-produccion.md#2-bloqueantes-fuera-del-código) |
 | Una pantalla dice "no tienes permiso" | Rol de la cuenta; política RLS de la tabla | [reglas-de-negocio.md §3](reglas-de-negocio.md#3-qué-puede-hacer-cada-rol) |
 | No llegan correos al cliente | Tarjeta "Enlace del cliente" de la orden; `cola_envios` | [portal-y-correos.md §9](portal-y-correos.md#9-diagnóstico) |
@@ -240,3 +248,5 @@ aparecieron aquí y que conviene buscar en cualquier cambio nuevo:
 | **Pruebas escritas y nunca ejecutadas** | 158 aserciones pgTAP sin correr durante semanas (AUD-24) | CI con Docker |
 | **Documentación optimista** | Varias veces "listo" antes de probarlo en el entorno real | Cada afirmación de estado con la fecha y cómo se comprobó |
 | **PRs automáticas repetidas** | El bot Bolt propuso 6 veces la misma optimización | Revisarlas contra el código actual o desconectar el bot |
+| **Reescribir una función desde una versión vieja** | Una función de dinero va por su quinta versión; copiar una anterior deshace arreglos sin error | `npm run db:donde`; pgTAP del flujo |
+| **Un comando que borra más de lo que dice** | Vaciar Storage con `supabase storage rm -r` borró también los 8 buckets (29/09/2026) | Probar primero en local o en staging; para Storage, el panel |

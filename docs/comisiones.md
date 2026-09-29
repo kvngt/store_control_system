@@ -3,6 +3,12 @@
 Reemplaza el modelo anterior de salario base + bonos + deducciones, que no
 describía cómo se paga a nadie en el taller.
 
+> **Hay decisiones abiertas con el taller** sobre cómo se paga a los empleados (qué pasa
+> con lo ya ganado al cambiar un porcentaje o pasar a salario, períodos de pago, recibos,
+> salarios en Finanzas). El análisis, la propuesta por fases y las preguntas enviadas el
+> 29 de septiembre de 2026 están en [pagos-a-empleados.md](pagos-a-empleados.md). No
+> cambies el cálculo sin leerlo.
+
 ## Cómo se calcula
 
 Desde la reunión con el taller de septiembre de 2026 (migración `20261009000000`) la
@@ -169,7 +175,9 @@ El porcentaje **de la sede** es el de todos los que no tienen uno propio. Se edi
 
 El de **cada empleado** se edita en **Empleados → Ver**: comisión con su propio porcentaje
 (vacío = el de la sede) o salario (monto y periodo). El salario es informativo por ahora:
-no se asienta en Finanzas. Vive en la tabla `perfiles_pago` y no en `perfiles`, porque un
+no se asienta en Finanzas (ver [pagos-a-empleados.md](pagos-a-empleados.md)).
+Cambiar el porcentaje recalcula las comisiones **pendientes** de esa persona; las pagadas
+no cambian. Vive en la tabla `perfiles_pago` y no en `perfiles`, porque un
 técnico lee los perfiles de sus compañeros de sede.
 
 ## Lo que se eliminó

@@ -41,11 +41,12 @@ Para **por qué** está construido así: [arquitectura.md](arquitectura.md). Par
 | **Región** | `ca-central-1` (Canadá Central) |
 | **Plan** | Free: 500 MB de base, 1 GB de Storage, 50 MB por archivo. Pasar a **Pro** antes de atender clientes reales ([deployment.md §4.1](deployment.md#41-plan-y-límites-de-gasto)) |
 | **Postgres** | 17.6 |
-| **Tamaño de la base** | ~15 MB |
-| **Migraciones aplicadas** | 36 (la última, `20260927000000_production_hardening`, aplicada el 15 de septiembre de 2026) |
+| **Tamaño de la base** | ~19 MB (29 de septiembre de 2026, recién limpiada) |
+| **Migraciones aplicadas** | 54 (la última, `20261010000000_egresos_de_comision_por_orden`, aplicada el 29 de septiembre de 2026) |
 | **Max rows de la API** | 1.000 (valor por defecto; Project Settings → API). **No bajarlo**: `fetchAll` asume páginas de 1.000 |
 | **Enlace con este repositorio** | `supabase/.temp/project-ref` (lo crea `npx supabase link`) |
-| **Entornos** | Solo este. No hay staging |
+| **Entornos** | Solo este. No hay staging: es la primera recomendación de [mantenimiento.md](mantenimiento.md#5-plan-priorizado) |
+| **Datos** | Limpiado el 29 de septiembre de 2026 para la prueba del taller: 1 administrador, 1 sede ("Taller principal"), sin clientes, órdenes, movimientos ni archivos |
 
 ---
 
@@ -190,8 +191,12 @@ Qué hace cada trigger, por tabla: [arquitectura.md §5](arquitectura.md#5-dónd
 
 Viven en `supabase/migrations/` y se aplican con `npx supabase db push --linked`. **No se
 cambia el esquema desde el panel**: lo que no está en una migración no existe en otro
-entorno y lo borra el próximo `db reset`. Historia de las 36:
+entorno y lo borra el próximo `db reset`. Historia de las 54:
 [evolucion.md §12](evolucion.md#12-todas-las-migraciones).
+
+Una función se reescribe entera en cada migración que la cambia. Para saber cuál es la
+versión vigente: `npm run db:donde -- <nombre>`. Antes de aplicar una migración a este
+proyecto: [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación).
 
 ---
 
@@ -201,19 +206,37 @@ Ocho buckets. Todo lo que no es logo ni avatar es **privado** y se lee con URLs 
 
 | Bucket | Público | Límite y tipos | Rutas | Quién escribe | Quién lee | Estado |
 |---|:---:|---|---|---|---|---|
-| `orden_media` | no | 50 MB; JPEG, PNG, MP4, WebM, audio MP4/WebM/MPEG/OGG | `<sede>/<orden>/<uuid>.<ext>`, miniaturas `…-thumb.jpg`, firmas `firma-<fecha>.png` | Admin, o técnico asignado con la orden sin entregar | Su sede, admin; el cliente con URLs firmadas de 2 h que emite `portal` | **En uso** |
+| `orden_media` | no | 50 MB; JPEG, PNG, MP4, WebM, audio MP4/WebM/MPEG/OGG | `<sede>/<orden>/<uuid>.<ext>`, miniaturas `…-thumb.jpg`, firmas `firma-<fecha>.png` | Admin, o técnico asignado con la orden sin entregar | Admin; un técnico, solo las carpetas de sus órdenes asignadas; el cliente con URLs firmadas de 2 h que emite `portal` | **En uso** |
 | `sede_logos` | **sí** | — | por sede | Admin | Cualquiera (va en correos y portal) | En uso |
 | `avatares` | **sí** | — | `<usuario>/…` | Cada quien el suyo | Cualquiera | En uso |
-| `comprobantes` | no | — | `<sede>/cheque-<fecha>-<nombre>` | Admin | Admin (URL firmada de 5 min) | En uso |
+| `comprobantes` | no | — | `<sede>/cheque-<fecha>-<nombre>` (pagos de comisiones) y `<sede>/entrega-<orden>-<fecha>.<ext>` (cobro al entregar) | Admin | Admin (URL firmada de 5 min) | En uso |
 | `estados_cuenta_bancarios` | no | — | PDFs importados | Admin | Admin | En uso |
 | `reportes` | no | — | PDFs de antes de la fase 6 | **Nadie** | Admin | Cerrado: solo lectura y borrado |
 | `vehiculos_fotos` | no | — | Fotos del modelo anterior a la fase 2 | **Nadie** | Admin | Cerrado |
 | `firmas` | no | — | Firmas del modelo anterior | **Nadie** | Admin | Cerrado |
 
-Uso al 15 de septiembre de 2026: `vehiculos_fotos` 69 archivos (78 MB), `sede_logos` 5
-(8.8 MB), `estados_cuenta_bancarios` 4 (2.4 MB), `reportes` 3 (2 MB), `firmas` 7,
-`avatares` 2; `orden_media` y `comprobantes` vacíos. Los tres buckets cerrados guardan
-**datos de prueba de antes de las fases** que se pueden borrar (sección 14).
+Uso al 29 de septiembre de 2026: **todos vacíos**, tras la limpieza para la prueba del
+taller. Ese día `supabase storage rm -r ss:///<bucket>` vació los archivos **y borró los
+buckets**; se recrearon con la configuración de esta tabla. Si alguna vez falta uno, la app
+responde "Bucket not found" al subir. Se recrea así, con los mismos valores:
+
+```sql
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES
+  ('orden_media', 'orden_media', false, 52428800,
+   ARRAY['image/jpeg','image/png','video/mp4','video/webm','audio/mp4','audio/webm','audio/mpeg','audio/ogg']),
+  ('sede_logos', 'sede_logos', true, NULL, NULL),
+  ('avatares', 'avatares', true, NULL, NULL),
+  ('comprobantes', 'comprobantes', false, NULL, NULL),
+  ('estados_cuenta_bancarios', 'estados_cuenta_bancarios', false, NULL, NULL),
+  ('reportes', 'reportes', false, NULL, NULL),
+  ('vehiculos_fotos', 'vehiculos_fotos', false, NULL, NULL),
+  ('firmas', 'firmas', false, NULL, NULL)
+ON CONFLICT (id) DO NOTHING;
+```
+
+Las políticas no hay que recrearlas: viven en `storage.objects` y apuntan al bucket por
+nombre. **Para vaciar un bucket, usar el panel** (Storage → el bucket → seleccionar todo →
+Delete), no la CLI.
 
 - El tope de 50 MB está en el bucket **y** en la app (`MAX_UPLOAD_BYTES`); el plan Free no
   permite más.
@@ -230,14 +253,14 @@ Uso al 15 de septiembre de 2026: `vehiculos_fotos` 69 archivos (78 MB), `sede_lo
 Deno 2. Código en `supabase/functions/`; se despliegan con
 `npx supabase functions deploy <nombre>`.
 
-| Función | JWT verificado por Supabase | Quién la llama | Cómo se protege | Usa | Versión (15 sep 2026) |
+| Función | JWT verificado por Supabase | Quién la llama | Cómo se protege | Usa | Versión (29 sep 2026) |
 |---|:---:|---|---|---|---|
 | `portal` | no | Portal del cliente (`/r/<token>`) | Token de 64 hex; `datos_portal` decide campo por campo | Llave de servicio | v2 |
 | `process-outbox` | no | La base (`pg_net`) al crear un aviso, y pg_cron cada minuto | Secreto `x-restorify-secret` | Llave de servicio, Resend, VAPID | v5 |
 | `cleanup-storage` | no | pg_cron a las 09:00 UTC | Secreto `x-restorify-secret` | Llave de servicio | v2 |
-| `create-employee` | sí | Configuración → Personal → Nuevo empleado | JWT + rol admin | Admin API de Auth | v4 (contraseña mínima de 8, 15 sep 2026) |
-| `update-employee` | sí | Configuración → Personal → editar | JWT + rol admin; no degrada al último admin | Admin API de Auth | v2 (contraseña mínima de 8, 15 sep 2026) |
-| `delete-employee` | sí | Configuración → Personal → quitar | JWT + rol admin; nadie se borra a sí mismo, ni a quien tiene órdenes asignadas o pagos de comisión | Admin API de Auth | v4 |
+| `create-employee` | sí | Empleados → Nuevo usuario | JWT + rol admin | Admin API de Auth | v6 |
+| `update-employee` | sí | Empleados → editar | JWT + rol admin; no degrada al último admin | Admin API de Auth | v4 |
+| `delete-employee` | sí | Empleados → quitar | JWT + rol admin; nadie se borra a sí mismo, ni a quien tiene órdenes asignadas o pagos de comisión | Admin API de Auth | v5 |
 
 `verify_jwt = false` para las tres primeras está declarado en `supabase/config.toml`, y
 igual se despliegan con `--no-verify-jwt` para que quede explícito.
@@ -302,12 +325,12 @@ En `.env.local`. Vite las **incrusta al compilar**, así que son públicas. Deta
 | | |
 |---|---|
 | **Método** | Correo y contraseña. Sin proveedores externos, sin SMS, sin MFA |
-| **Registro público** | **Abierto en el proyecto real** (comprobado el 15 de septiembre de 2026 en `/auth/v1/settings`, `disable_signup: false`). Debe apagarse: Authentication → Sign In / Providers → Allow new users to sign up ([salida-a-produccion.md PRD-01](salida-a-produccion.md#2-bloqueantes-fuera-del-código)). Las cuentas las crea un admin con `create-employee`, que funciona igual con el registro apagado. `qa:security` SEC-18 lo vigila |
+| **Registro público** | **Apagado** (comprobado el 29 de septiembre de 2026 en `/auth/v1/settings`, `disable_signup: true`). Las cuentas las crea un admin con `create-employee`, que funciona igual con el registro apagado. `qa:security` SEC-18 lo vigila |
 | **Largo mínimo de contraseña** | La app y las funciones exigen 8; en el panel sigue en 6 hasta aplicar PRD-07 |
 | **Confirmación de correo** | No se pide: el admin crea la cuenta ya confirmada |
 | **Duración del token** | 1 hora; supabase-js lo renueva solo |
 | **Site URL y redirecciones** | `https://reinventa.shop` y `https://reinventa.shop/reset-password` |
-| **Usuarios** | 5 en `auth.users`, cada uno con su fila en `perfiles`: 2 admin, 1 mecánico, 2 pintores |
+| **Usuarios** | 1 en `auth.users` desde la limpieza del 29 de septiembre de 2026: el administrador del taller, con su fila en `perfiles`. El personal lo da de alta desde Empleados |
 | **Correo de Auth** | El de Supabase (~2 por hora). Recomendado: SMTP de Resend ([deployment.md §4.2](deployment.md#42-auth)) |
 
 > **`supabase/config.toml` describe el Supabase local, no el real.** Los ajustes de Auth del
@@ -342,8 +365,9 @@ TABLE …`), no un clic en el panel.
 | `restorify-outbox` | cada minuto | `dispatch_outbox_if_due()`: si hay avisos o correos vencidos en `cola_envios`, llama a `process-outbox` |
 | `restorify-maintenance` | 09:00 | `purge_old_notifications()` y `cleanup-storage` (archivos huérfanos de más de 7 días) |
 | `restorify-quote-reminders` | 15:00 | `recordar_presupuestos_sin_respuesta()`: aviso a admins por presupuestos sin respuesta de más de 24 h |
+| `restorify-due-reminders` | 15:15 | `recordar_ordenes_vencidas()`: aviso por órdenes que pasaron su fecha de entrega; reemplaza el del día anterior en vez de apilar otro |
 
-Las tres están activas; la de cada minuto termina en `succeeded`. Historial:
+Las cuatro están activas; la de cada minuto termina en `succeeded`. Historial:
 
 ```sql
 SELECT j.jobname, d.status, d.start_time, d.return_message
@@ -396,7 +420,7 @@ nombres del menú; busca el más parecido.
 
 ## 12. El Supabase local (Docker)
 
-`npx supabase start` levanta en Docker una copia vacía del proyecto con las 36
+`npx supabase start` levanta en Docker una copia vacía del proyecto con las 54
 migraciones. Sirve para las pruebas pgTAP y para probar una migración antes de aplicarla.
 **No toca el proyecto real.** Cómo instalar Docker: [pruebas.md §2.4](pruebas.md#24-para-qué-hace-falta-docker).
 
@@ -410,7 +434,7 @@ migraciones. Sirve para las pruebas pgTAP y para probar una migración antes de 
 ```bash
 npx supabase start     # levantar (la primera vez descarga varios GB)
 npx supabase status    # direcciones y llaves locales
-npm run test:db        # 8 archivos pgTAP, 176 aserciones
+npm run test:db        # 13 archivos pgTAP, 330 aserciones
 npx supabase db reset  # recrear la base local desde cero
 npx supabase stop      # apagar
 ```
@@ -448,11 +472,8 @@ ORDER BY 2 DESC, 3 DESC, 1;
 
 | Qué | Por qué importa | Cómo |
 |---|---|---|
-| **Apagar el registro público** | Está abierto: cualquiera crea cuentas por la API y gasta el cupo de correos de Auth | Authentication → Sign In / Providers. SEC-18 en PASS |
-| **Pasar a Pro** | Free no tiene respaldos diarios, pausa proyectos inactivos y limita Storage a 1 GB | Organization → Billing |
-| **Staging** | Hoy las pruebas e2e y `qa:security` corren contra el único proyecto | Un segundo proyecto con las mismas migraciones y secretos propios |
-| **Vaciar los buckets cerrados** | `vehiculos_fotos` (78 MB), `firmas` y `reportes` guardan datos de prueba de antes de las fases y ocupan cuota | Storage → el bucket → seleccionar todo → Delete. Las políticas quedan; no rompe nada |
-| **`VITE_PUBLIC_SITE_URL`** | Enlaces de recuperación de contraseña confiables | Definirla en `.env.local` y recompilar |
+| **Pasar a Pro** | Free no tiene respaldos diarios, pausa proyectos inactivos y limita Storage a 1 GB | Organization → Billing. Mientras tanto, respaldo manual antes de cada `db push` ([mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación)) |
+| **Staging** | Hoy las pruebas e2e y `qa:security` corren contra el único proyecto, y sus cuentas de prueba se borraron el 29/09/2026 | Un segundo proyecto con las mismas migraciones, secretos propios y cuentas de prueba |
 | **Sentry** | Hoy nadie se entera de un error en el teléfono de un técnico | Crear el proyecto en Sentry, `VITE_SENTRY_DSN` y recompilar |
 | **SMTP de Auth con Resend** | El correo de Supabase permite ~2 por hora | [deployment.md §4.2](deployment.md#42-auth) |
 | **`[inbucket]` en `config.toml`** | La CLI avisa que la sección es obsoleta; solo afecta al local | Renombrarla cuando se actualice la configuración local |

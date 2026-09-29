@@ -6,9 +6,16 @@ cómo publicar sin romper nada. Complementa la [auditoría de septiembre](audito
 
 > Revisión del **15 de septiembre de 2026**. Todo lo marcado "corregido" está en el código
 > y probado. **Desplegado el mismo día:** la migración 36 y las funciones `create-employee` (v4)
-> y `update-employee` (v2). **Falta subir el build nuevo** a Hostinger
-> ([sección 4](#4-el-día-de-la-salida)): hasta entonces el sitio publicado sigue sumando los
-> totales en el navegador.
+> y `update-employee` (v2).
+
+> **Estado al 29 de septiembre de 2026.** Publicados la base (54 migraciones) y el build con
+> los cambios de la reunión con el taller. El taller empezó ese día una prueba de varios días
+> con el proyecto limpio. De la sección 2: **hechos** PRD-01 (registro apagado, comprobado en
+> `/auth/v1/settings`), PRD-04 (queda solo el administrador del taller; no hay cuentas ni datos
+> de prueba) y PRD-08 (buckets vaciados). **Pendientes:** PRD-02 (Pro, sin respaldos
+> automáticos hasta entonces) y PRD-06 (Sentry). **Sin confirmar:** PRD-03, PRD-05 y PRD-07.
+> Antes de atender clientes reales conviene además lo P0 de [mantenimiento.md](mantenimiento.md#5-plan-priorizado):
+> staging y un respaldo antes de cada `db push`.
 
 ---
 
@@ -61,10 +68,10 @@ Nadie más que quien administra las cuentas puede hacer esto. Marca cada uno.
 
 | ID | Severidad | Qué | Por qué | Cómo |
 |---|---|---|---|---|
-| **PRD-01** | **Crítica** | **Apagar el registro público** | El proyecto real tiene `disable_signup: false` (comprobado en `/auth/v1/settings`). Cualquiera se crea una cuenta por la API. Sin perfil no ve datos (la migración 36 lo asegura), pero gasta el cupo de correos de Auth —el mismo que usan los técnicos para recuperar la contraseña— y llena `auth.users` | Panel → Authentication → Sign In / Providers → **Allow new users to sign up: apagado**. Las cuentas se siguen creando desde Configuración → Personal. Comprobar: `npm run qa:security` → SEC-18 en PASS |
+| **PRD-01** | **Crítica** | **Apagar el registro público** | El proyecto real tiene `disable_signup: false` (comprobado en `/auth/v1/settings`). Cualquiera se crea una cuenta por la API. Sin perfil no ve datos (la migración 36 lo asegura), pero gasta el cupo de correos de Auth —el mismo que usan los técnicos para recuperar la contraseña— y llena `auth.users` | Panel → Authentication → Sign In / Providers → **Allow new users to sign up: apagado**. Las cuentas se siguen creando desde Empleados. Comprobar: `npm run qa:security` → SEC-18 en PASS |
 | **PRD-02** | **Crítica** | **Plan Pro** | Free no hace respaldos diarios y pausa el proyecto tras una semana sin uso. Un error humano o un borrado en cascada no tendría vuelta atrás | Organization → Billing → Pro. Después, Database → Backups muestra los respaldos diarios |
 | **PRD-03** | Alta | **Rotar la llave de Resend** | La llave de envío se compartió en una conversación con una IA. La de acceso total que se usó para verificar el dominio puede seguir viva | Resend → API Keys: crear una de solo envío para `reinventa.shop`, `npx supabase secrets set RESEND_API_KEY=<nueva>`, borrar las anteriores. Comprobar con un correo de prueba (plan de pruebas POR-07) |
-| **PRD-04** | Alta | **Cuentas y datos de prueba** | Hay 5 cuentas (2 nunca iniciaron sesión, varias con dominio `restorify.com`), las credenciales de una admin están en `.env.test.local` y las pruebas e2e escriben datos `PWTEST` en este mismo proyecto | Configuración → Personal: dejar solo personal real, cambiar la contraseña de toda cuenta cuyas credenciales estén en un archivo. No correr `test:e2e` contra producción (`qa:security` ya no escribe nada) |
+| **PRD-04** | Alta | **Cuentas y datos de prueba** | Hay 5 cuentas (2 nunca iniciaron sesión, varias con dominio `restorify.com`), las credenciales de una admin están en `.env.test.local` y las pruebas e2e escriben datos `PWTEST` en este mismo proyecto | Empleados: dejar solo personal real, cambiar la contraseña de toda cuenta cuyas credenciales estén en un archivo. No correr `test:e2e` contra producción (`qa:security` ya no escribe nada) |
 | **PRD-05** | **Alta** | **SMTP de Auth con Resend** | El correo propio de Supabase permite unos 2 por hora y, según la política de Supabase para ese servidor de fábrica, solo entrega a correos del equipo de la organización: el "¿Olvidaste tu contraseña?" de un técnico puede no llegarle nunca. Comprobar con un correo que no sea del equipo (manual-de-pruebas A-08, B-13) | [deployment.md §4.2](deployment.md#42-auth) |
 | **PRD-06** | Media | **Sentry** | `VITE_SENTRY_DSN` está vacía: un error en el teléfono de un técnico no llega a nadie | Crear el proyecto en Sentry (org `restorify`, proyecto `restorify-frontend`, ya configurados en `vite.config.ts`), poner el DSN en `.env.local` y recompilar |
 | **PRD-07** | Media | **Contraseñas de 8 caracteres en Auth** | La app y las funciones ya exigen 8; Auth en el panel sigue en 6 y aceptaría una de 6 desde la recuperación de contraseña | Authentication → Sign In / Providers → Email → Minimum password length: 8 |
@@ -294,9 +301,9 @@ migración.
 
 - [ ] Sección 2 completa, sobre todo PRD-01 y PRD-02.
 - [ ] `git pull`, `npm ci`, y todo en verde: `npm run lint && npx tsc -b && npm test && npm run build`.
-- [ ] Con Docker: `npx supabase start && npm run test:db` (176 en verde).
+- [ ] Con Docker: `npx supabase start && npm run test:db` (330 en verde al 29/09/2026).
 - [ ] Guardar una copia del `public_html/` actual de Hostinger (para volver atrás).
-- [ ] Respaldo manual: Database → Backups (Pro) o `npx supabase db dump --linked -f respaldo-antes-de-salida.sql` (contiene datos personales: no subirlo a git ni compartirlo).
+- [ ] Respaldo manual: Database → Backups (Pro) o los tres `db dump` de [deployment.md §5](deployment.md#5-publicar-una-versión) (roles, esquema y datos; el de datos contiene datos personales: no subirlo a git ni compartirlo). `db dump` sin `--data-only` guarda solo el esquema.
 
 **Publicar:**
 
@@ -398,9 +405,10 @@ No bloquea la salida, pero conviene planearla:
 
 | Qué | Cuándo importa | Idea |
 |---|---|---|
-| El tablero y la lista de órdenes cargan **todas** las órdenes de la sede, entregadas incluidas | Con miles de órdenes, la carga en teléfono se vuelve lenta (ahora completa, pero pesada) | Mostrar activas + entregadas de los últimos 90 días; buscar las demás |
+| ~~El tablero y la lista de órdenes cargan **todas** las órdenes de la sede~~ | — | **Resuelto:** la lista excluye las entregadas de más de 90 días y las archivadas; el archivo se pide paginado (`getArchivedWorkOrders`) |
 | Finanzas carga todos los movimientos para la tabla | Igual que arriba | Paginar la tabla por mes |
 | No hay Content-Security-Policy | Mitigaría un XSS | Definirla probando en navegador (Supabase, Google Fonts, Sentry, `blob:` para video, workers de PDF) |
 | No hay staging | Cada migración se prueba en local y va directo a producción | Segundo proyecto de Supabase |
 | Pruebas e2e contra producción | Con staging | Apuntarlas a staging |
-| Depósito mayor que lo autorizado sin reembolso | Primer caso real | Decisión de negocio (AUD-20) |
+| ~~Depósito mayor que lo autorizado sin reembolso~~ | — | **Resuelto:** `entregar_orden` registra la devolución con su método (`20261008000000`) |
+| Sin respaldo antes de migrar y sin staging | Cada `db push` | Ver [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación) |
