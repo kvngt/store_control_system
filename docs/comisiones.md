@@ -5,26 +5,49 @@ describía cómo se paga a nadie en el taller.
 
 ## Cómo se calcula
 
+Desde la reunión con el taller de septiembre de 2026 (migración `20261009000000`) la
+comisión es **por especialidad** y **por empleado**:
+
 ```
-base de ganancia = total de la orden − total de repuestos   (solo lo autorizado)
-bolsa            = base × (porcentaje de comisión de la sede / 100)
-por mecánico     = bolsa / número de mecánicos asignados
+bolsa de cada especialidad = mano de obra autorizada de esa especialidad (mecánica o pintura)
+parte de cada quien        = bolsa ÷ personas asignadas con esa tarea
+comisión de cada quien     = su parte × (su porcentaje / 100)
+su porcentaje              = el suyo (Empleados) o, si no tiene, el de la sede
 ```
 
-Con el ejemplo del taller: un cliente gasta **$1,200**, de los cuales **$200**
-son repuestos. La ganancia del taller sobre ese trabajo es **$1,000**; al 35% la
-bolsa de comisión es **$350**.
+- **Cada línea de mano de obra tiene especialidad.** En una orden de mecánica o de pintura
+  es la del tipo de orden; en una orden **combinado** la elige el administrador por línea
+  (mecánica por omisión), al crear la orden o en la tabla de mano de obra.
+- **Cada bolsa se reparte entre quienes tienen esa tarea** en la orden
+  (`orden_asignaciones.tipo_tarea`). Quien trabaja las dos cobra de las dos.
+- **Quien está a salario** cuenta para el reparto, pero no cobra comisión: **su parte se
+  queda en el taller** (no se reparte entre los demás).
+- **Una bolsa sin nadie asignado** no la cobra nadie. La orden lo avisa en la tarjeta
+  **Reparto de la comisión** (administración).
 
-| Mecánicos asignados | Le toca a cada uno |
+El ejemplo de la reunión: pintura **$1,000**, mecánica **$200**, al 35 %.
+
+| | Antes (toda la mano de obra, partes iguales) | Ahora (por especialidad) |
+|---|---|---|
+| Pintora | $210.00 | **$350.00** (35 % de $1,000) |
+| Mecánico | $210.00 | **$70.00** (35 % de $200) |
+
+Varios en la misma bolsa, al mismo porcentaje, siguen repartiéndose al centavo:
+
+| Pintores asignados a $1,000 de pintura | Le toca a cada uno |
 | --- | --- |
 | 1 | $350.00 |
 | 2 | $175.00 |
 | 3 | $116.67 · $116.67 · $116.66 |
 
-El reparto se hace en centavos y el residuo se le da a los primeros, ordenados
-por identificador para que salga igual cada vez que se recalcula. Antes se
-redondeaba la misma cifra para todos, así que tres mecánicos cobraban $116.67
-cada uno: **$350.01**, un centavo que no cuadraba contra el egreso.
+El reparto se hace en centavos exactos y el sobrante del redondeo va a las fracciones más
+grandes (en empate, por identificador), así que sale igual cada vez que se recalcula y la
+suma siempre cuadra con la bolsa. Con porcentajes distintos cada quien cobra su
+porcentaje sobre su parte.
+
+La cuenta vive en una sola función, `_reparto_comisiones(orden)`: la usan el devengo al
+entregar (`sync_order_commissions`) y la estimación que muestra la orden
+(`comisiones_estimadas`).
 
 ## Los repuestos ahora son de traspaso
 
@@ -63,11 +86,14 @@ interfaz.
 Se recalcula sola cuando:
 
 - Cambian los totales de una orden ya entregada.
-- Se agrega o se quita un mecánico de una orden ya entregada (cambia el reparto
-  de todos).
+- Se agrega o se quita un técnico, o se cambia su tarea, en una orden ya entregada.
+- Cambia la especialidad de una línea de mano de obra.
 - Un administrador cambia el porcentaje de la sede.
+- Un administrador cambia el esquema o el porcentaje de un empleado (en **Empleados**).
+  Pasar a alguien a salario le quita las comisiones pendientes: la pantalla lo avisa con
+  el monto antes de guardar.
 
-En los tres casos **solo se recalcula lo que sigue pendiente de pago**. Lo ya
+En todos los casos **solo se recalcula lo que sigue pendiente de pago**. Lo ya
 pagado es historia y no se toca: repartir de nuevo una comisión ya cobrada
 significaría que al taller le cuadran los números pero a la persona no.
 
@@ -93,15 +119,18 @@ depósitos (tabla `orden_montos`, solo admin). Sí ven la mano de obra, porque e
 la base de su pago:
 
 - En el detalle de cada orden asignada, la tarjeta **Tu comisión estimada**
-  muestra la cuenta: mano de obra × porcentaje de la sede ÷ técnicos asignados.
-  Es una estimación en el navegador; el monto real lo calcula la base al entregar.
+  muestra la cuenta de cada bolsa suya: mano de obra de la especialidad × su porcentaje
+  ÷ compañeros de esa tarea, y el total. La calcula la base (`comisiones_estimadas`,
+  la misma cuenta que al entregar). A quien está a salario le dice que la orden no le
+  genera comisión.
+- No ve el porcentaje ni el sueldo de sus compañeros (`perfiles_pago` es de
+  administración; cada quien lee solo el suyo).
 - Al entregarse la orden, cada técnico recibe el aviso **Comisión generada** con
   su monto (trigger `trg_commission_notify`).
 - La pantalla **Comisiones** es solo para administradores.
 
-La estimación usa la mano de obra, y la comisión real usa total − repuestos.
-Coinciden porque el total es mano de obra + repuestos y los repuestos son de
-traspaso.
+La comisión usa la mano de obra autorizada de cada especialidad; los repuestos no
+entran (son de traspaso).
 
 ## Pagar un saldo
 
@@ -115,13 +144,15 @@ Pantalla **Comisiones → Saldos pendientes → Pagar saldo**.
   se puede conciliar después contra el estado de cuenta.
 - La foto va a un bucket **privado** (`comprobantes`) y se abre con un enlace
   firmado temporal, porque un cheque escaneado lleva número de cuenta.
-- El pago se registra automáticamente como **egreso** en Finanzas, categoría
-  "planilla".
+- El pago se registra automáticamente en Finanzas, categoría "planilla", como **un
+  egreso por cada orden** que cubre, vinculado a la orden y con el número de cheque
+  (migración `20261010000000`). La suma de esos egresos es exactamente el pago: la base lo
+  comprueba. Así el margen de cada orden (`balance_orden`) sale de Finanzas.
 - **Un pago no se registra dos veces.** Si dos administradores (o dos pestañas) pagan las
   mismas comisiones a la vez, el segundo termina con "No hay comisiones pendientes para
   pagar en esta selección": la base bloquea las comisiones mientras registra el primero.
-- **Deshacer un pago** devuelve las comisiones a pendientes y elimina el egreso
-  de Finanzas. El movimiento guarda a qué pago pertenece (`comision_pago_id`),
+- **Deshacer un pago** devuelve las comisiones a pendientes y elimina sus egresos
+  de Finanzas (todos los de ese pago). El movimiento guarda a qué pago pertenece (`comision_pago_id`),
   así que se borra por referencia. Antes se buscaba por sede, fecha, monto y
   descripción, y dos mecánicos cobrando $175 el mismo día — el reparto normal de
   una bolsa de $350 — se borraban los dos.
@@ -133,15 +164,13 @@ Pantalla **Comisiones → Saldos pendientes → Pagar saldo**.
 
 ## Configurar el porcentaje
 
-Es **por sede**, no global — el reparto es un acuerdo con la gente de un taller
-concreto, y el negocio espera abrir más locales.
+El porcentaje **de la sede** es el de todos los que no tienen uno propio. Se edita en
+**Configuración → Sedes / Talleres** o en **Comisiones**. Valor por defecto: **35%**.
 
-Se edita en dos lugares, ambos solo para administradores:
-
-- **Configuración → Sedes / Talleres**, junto a la capacidad.
-- **Comisiones**, en la tarjeta de arriba a la derecha.
-
-Valor por defecto: **35%**.
+El de **cada empleado** se edita en **Empleados → Ver**: comisión con su propio porcentaje
+(vacío = el de la sede) o salario (monto y periodo). El salario es informativo por ahora:
+no se asienta en Finanzas. Vive en la tabla `perfiles_pago` y no en `perfiles`, porque un
+técnico lee los perfiles de sus compañeros de sede.
 
 ## Lo que se eliminó
 

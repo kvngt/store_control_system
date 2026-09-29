@@ -29,7 +29,7 @@ Cómo probarlo: [plan-de-pruebas.md](plan-de-pruebas.md#413-portal-del-cliente-y
 ## 1. El recorrido
 
 ```
-El técnico captura la firma de recepción
+Administración captura la firma de recepción
   └─ trg_order_portal (AFTER UPDATE OF firma_ruta)
        ├─ asegurar_enlace_orden()       → orden_enlaces (token nuevo)
        └─ encolar_correo_cliente('recepcion', espera 2 min)

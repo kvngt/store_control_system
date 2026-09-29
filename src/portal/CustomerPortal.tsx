@@ -16,6 +16,7 @@ import {
   Phone,
   Play,
   Receipt,
+  Video,
   Wrench,
   X,
 } from 'lucide-react';
@@ -680,7 +681,15 @@ function PortalMediaGrid({ media, s, fmt, showDates = false }: { media: PortalMe
             return (
               <div key={m.id} className="media-cell">
                 <button type="button" className="media-tile" onClick={() => setOpenIndex(i)} aria-label={m.tipo === 'video' ? s.video : s.photo}>
-                  {thumb ? <img src={thumb} alt="" loading="lazy" /> : <span className="media-tile-placeholder" />}
+                  {thumb ? (
+                    <img src={thumb} alt="" loading="lazy" />
+                  ) : m.tipo === 'video' ? (
+                    // Un video cuyo cuadro salió negro llega sin miniatura: el ícono, no un
+                    // "cargando" que no termina nunca.
+                    <Video size={24} className="media-tile-icon" />
+                  ) : (
+                    <span className="media-tile-placeholder" />
+                  )}
                   {m.tipo === 'video' && (
                     <span className="media-tile-badge">
                       <Play size={12} fill="currentColor" /> {formatDuration(m.duracion_seg)}

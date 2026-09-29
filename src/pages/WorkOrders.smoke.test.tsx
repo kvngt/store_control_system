@@ -33,6 +33,8 @@ const mocks = vi.hoisted(() => ({
   addLaborItem: vi.fn(),
   updateWorkOrderStatus: vi.fn(),
   uploadSignature: vi.fn(),
+  getBalance: vi.fn(),
+  getEstimate: vi.fn(),
 }));
 
 vi.mock('../context/auth.context', () => ({ useAuth: () => mocks.auth.current }));
@@ -66,11 +68,17 @@ vi.mock('../services/supabaseService', () => {
     updateWorkOrderStatus: mocks.updateWorkOrderStatus,
     uploadSignature: mocks.uploadSignature,
     uploadOrderPhotos: vi.fn(),
+    getBalance: mocks.getBalance,
+    deliver: vi.fn(),
+    uploadDeliveryReceipt: vi.fn(),
+    removeDeliveryReceipt: vi.fn(),
   };
   const customers = { getCustomers: mocks.getCustomers, createCustomer: mocks.createCustomer };
   const vehicles = { getVehicles: mocks.getVehicles, createVehicle: mocks.createVehicle };
   const users = { getOperators: mocks.getOperators };
+  const commissions = { getEstimate: mocks.getEstimate };
   return {
+    commissionsService: commissions,
     workOrdersService: workOrders,
     customersService: customers,
     vehiclesService: vehicles,
@@ -305,11 +313,33 @@ describe('WorkOrders — abrir una orden es de administración', () => {
   it('un mecánico no ve el botón de nueva orden', async () => {
     mocks.auth.current = authValue(MECHANIC_USER);
     renderWithProviders(<WorkOrders />);
-    // Un técnico no asignado ve la orden en la sección colapsada "Otras", así
-    // que se espera al tablero y no a la orden.
-    await screen.findByRole('button', { name: /Otras/i });
+    await screen.findByRole('heading', { name: /Mis Órdenes de Trabajo/i });
 
     expect(screen.queryByRole('button', { name: /Nueva Orden/i })).not.toBeInTheDocument();
+  });
+
+  // Desde 20261007000000 la base solo le entrega sus órdenes, así que ya no hay una sección
+  // "Otras órdenes" que se quedaría vacía, ni se descargan clientes y vehículos para un alta
+  // que no puede hacer.
+  it('un técnico ve sus órdenes en una sola lista, sin "Otras" ni catálogos', async () => {
+    mocks.auth.current = authValue(MECHANIC_USER);
+    renderWithProviders(<WorkOrders />);
+    await screen.findAllByText('OT-2026-0042');
+
+    expect(screen.queryByRole('button', { name: /Otras/i })).not.toBeInTheDocument();
+    expect(mocks.getCustomers).not.toHaveBeenCalled();
+    expect(mocks.getVehicles).not.toHaveBeenCalled();
+  });
+
+  // Un aviso o un enlace viejos a una orden que ya no es suya: la base contesta "no existe"
+  // (la RLS la esconde) y la pantalla volvía a la lista sin decir nada.
+  it('abrir una orden que no es suya lo explica en vez de volver callado a la lista', async () => {
+    mocks.auth.current = authValue(MECHANIC_USER);
+    mocks.getWorkOrderDetail.mockRejectedValueOnce({ code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned' });
+    renderWithProviders(<WorkOrders />, { route: '/work-orders?open=ord-ajena' });
+
+    expect(await screen.findByText(/no está entre las tuyas/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Mis Órdenes de Trabajo/i })).toBeInTheDocument();
   });
 
   // La negativa de arriba solo significa algo si el botón existe para alguien.
@@ -587,27 +617,37 @@ describe('WorkOrders — order detail', () => {
         { id: 'asg-2', orden_id: ORDER.id, usuario_id: PAINTER.id, tipo_tarea: 'pintura', estatus_tarea: 'pendiente' },
       ],
     });
+    // Desde 20261009000000 la cuenta la hace la base, por especialidad: la pintora no comparte
+    // la bolsa de mecánica, así que $1,000 al 35 % son del mecánico solo.
+    mocks.getEstimate.mockResolvedValue({
+      bolsas: [{ especialidad: 'mecanica', base: 1000, tecnicos: 1 }],
+      reparto: [{ usuario_id: MECHANIC_USER.id, especialidad: 'mecanica', esquema: 'comision', porcentaje: 35, tecnicos: 1, monto: 350 }],
+      mi_total: 350,
+    });
     const user = userEvent.setup();
     renderWithProviders(<WorkOrders />);
     await openDetail(user);
 
-    // El ejemplo de docs/comisiones.md: $1,000 de labor al 35 % entre 2.
     const card = (await screen.findByText(/Tu comisión estimada/i)).closest('.card') as HTMLElement;
-    expect(within(card).getByText('$175.00')).toBeInTheDocument();
-    expect(within(card).getByText(/\$1,000\.00 × 35% ÷ 2/)).toBeInTheDocument();
+    expect(within(card).getByText('$350.00')).toBeInTheDocument();
+    expect(within(card).getByText(/Mecánica: mano de obra \$1,000\.00 × 35% ÷ 1/)).toBeInTheDocument();
+    expect(mocks.getEstimate).toHaveBeenCalledWith(ORDER.id);
   });
 
-  it('confirms before marking an order delivered', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+  it('asks how the customer paid before marking an order delivered', async () => {
+    mocks.getBalance.mockResolvedValue({ total: 1200, cobrado: 1200, saldo: 0 });
     const user = userEvent.setup();
     renderWithProviders(<WorkOrders />);
     await openDetail(user);
 
     await user.selectOptions(screen.getByDisplayValue('En Proceso'), 'entregado');
 
-    expect(confirmSpy).toHaveBeenCalled();
-    // Cancelled, so nothing was sent.
+    expect(await screen.findByRole('dialog', { name: /Entregar/ })).toBeInTheDocument();
+    expect(await screen.findByText('No hay nada pendiente de cobro.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    // Cancelled, so nothing was sent and the selector shows the real status again.
     expect(mocks.updateWorkOrderStatus).not.toHaveBeenCalled();
-    confirmSpy.mockRestore();
+    expect(screen.getByDisplayValue('En Proceso')).toBeInTheDocument();
   });
 });

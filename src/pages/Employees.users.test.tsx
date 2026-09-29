@@ -18,9 +18,10 @@
 // showToast() at z-index 500 and therefore does surface above the modal.
 //
 // Since then the dialog has moved out of the Talleres card into its own
-// Usuarios section (nobody could find it where it was), and grown an edit mode.
-// The failure modes above are properties of the dialog, not of where it lives,
-// so the tests move with it.
+// Usuarios section (nobody could find it where it was), grown an edit mode, and
+// — after the September 2026 meeting with the shop — moved again, to the
+// Empleados page, next to each person's pay scheme. The failure modes above are
+// properties of the dialog, not of where it lives, so the tests move with it.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
@@ -56,6 +57,10 @@ vi.mock('../context/auth.context', () => ({
   useAuth: () => mocks.auth.current,
 }));
 
+vi.mock('../services/employees.service', () => ({
+  employeesService: { getPaySchemes: vi.fn().mockResolvedValue([]) },
+}));
+
 vi.mock('../services/supabaseService', () => {
   const sedes = {
     getSedes: mocks.getSedes,
@@ -78,16 +83,23 @@ vi.mock('../services/supabaseService', () => {
   return { sedesService: sedes, usersService: users, supabaseService: { ...sedes, ...users } };
 });
 
-const { default: Settings } = await import('./Settings');
+const { default: Employees } = await import('./Employees');
 
-/** Opens Settings as an admin and clicks through to the new-user dialog. */
+/** La fila del empleado en la tarjeta de usuarios (su nombre también sale en la de pago). */
+const userRow = (name: string) =>
+  screen
+    .getAllByText(name)
+    .map((el) => el.closest('tr'))
+    .find((tr) => tr && within(tr).queryByRole('button', { name: /Editar usuario/i })) as HTMLElement;
+
+/** Opens Empleados as an admin and clicks through to the new-user dialog. */
 async function openEmployeeDialog(sedes = [SEDE_CENTRO, SEDE_NORTE], users = [ADMIN_USER]) {
   mocks.auth.current = authValue(ADMIN_USER);
   mocks.getSedes.mockResolvedValue(sedes);
   mocks.getUsers.mockResolvedValue(users);
 
   const user = userEvent.setup();
-  renderWithProviders(<Settings />);
+  renderWithProviders(<Employees />);
 
   const openButton = await screen.findByRole('button', { name: /Nuevo Usuario/i });
   await user.click(openButton);
@@ -210,10 +222,10 @@ describe('User administration dialog', () => {
     mocks.getUsers.mockResolvedValue([ADMIN_USER, MECHANIC]);
 
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<Employees />);
 
-    await screen.findByText(MECHANIC.nombre_completo);
-    const row = screen.getByText(MECHANIC.nombre_completo).closest('tr') as HTMLElement;
+    await screen.findAllByText(MECHANIC.nombre_completo);
+    const row = userRow(MECHANIC.nombre_completo);
     await user.click(within(row).getByRole('button', { name: /Editar usuario/i }));
 
     const dialog = (await screen.findByText('Editar usuario', { selector: '.modal-title' }))
@@ -230,10 +242,10 @@ describe('User administration dialog', () => {
     mocks.updateEmployee.mockResolvedValue({ ...MECHANIC, nombre_completo: 'Luis Mejía' });
 
     const user = userEvent.setup();
-    renderWithProviders(<Settings />);
+    renderWithProviders(<Employees />);
 
-    await screen.findByText(MECHANIC.nombre_completo);
-    const row = screen.getByText(MECHANIC.nombre_completo).closest('tr') as HTMLElement;
+    await screen.findAllByText(MECHANIC.nombre_completo);
+    const row = userRow(MECHANIC.nombre_completo);
     await user.click(within(row).getByRole('button', { name: /Editar usuario/i }));
     const dialog = (await screen.findByText('Editar usuario', { selector: '.modal-title' }))
       .closest('.modal') as HTMLElement;

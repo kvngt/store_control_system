@@ -10,7 +10,7 @@ import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
 import { isOptionalEmailValid } from '../lib/email';
 import type { SedeDeleteImpact } from '../services/sedes.service';
-import UsersCard from '../features/settings/UsersCard';
+import { Link } from 'react-router-dom';
 import PushSettingsCard from '../features/notifications/PushSettingsCard';
 import type { Sede, UserProfile } from '../types/database';
 import { AlertError } from '../components/AlertError';
@@ -704,18 +704,14 @@ export default function Settings() {
         </div>
         )}
 
-        {/* Staff. Its own section rather than a button inside the Talleres
-            card: that is where it used to live, and it read as part of editing
-            a workshop — the admin never found it and assumed accounts had to be
-            created straight in the database. */}
+        {/* El personal se mudó a Empleados (reunión con el taller, sept. 2026), junto al
+            esquema de pago de cada quien. Aquí queda el camino, porque aquí lo buscaban. */}
         {user?.rol === 'admin' && (
-          <UsersCard
-            users={users}
-            sedes={sedes}
-            currentUserId={user?.id}
-            loading={loading}
-            onChanged={loadData}
-          />
+          <div className="card">
+            <h3 className="card-title">{t('employees.title')}</h3>
+            <p className="field-hint" style={{ margin: 'var(--space-2) 0 var(--space-3)' }}>{t('employees.movedHint')}</p>
+            <Link to="/employees" className="btn btn-secondary btn-sm">{t('employees.goTo')}</Link>
+          </div>
         )}
       </div>
 

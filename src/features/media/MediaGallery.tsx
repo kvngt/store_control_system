@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Mic, Play, Trash2, X } from 'lucide-react';
+import { Eye, EyeOff, Mic, Play, Trash2, Video } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { formatDuration } from '../../lib/media/mime';
 import type { UploadItem } from '../../lib/media/uploadQueue';
 import type { OrderMedia } from '../../types/database';
 import { useSignedUrls } from './useSignedUrls';
-import BodyPortal from '../../components/BodyPortal';
+import MediaLightbox from './MediaLightbox';
 
 interface MediaGalleryProps {
   media: OrderMedia[];
@@ -42,7 +42,13 @@ function PendingTile({ item }: { item: UploadItem }) {
 
   return (
     <div className={'media-tile is-pending' + (item.estado === 'error' ? ' has-error' : '')} title={t('media.uploading')}>
-      {url ? <img src={url} alt="" /> : <Mic size={24} className="media-tile-icon" />}
+      {url ? (
+        <img src={url} alt="" />
+      ) : item.tipo === 'video' ? (
+        <Video size={24} className="media-tile-icon" />
+      ) : (
+        <Mic size={24} className="media-tile-icon" />
+      )}
       <div className="media-tile-pending">
         <span>{label}</span>
         <div className="progress-bar" style={{ height: 4, width: '80%' }}>
@@ -129,7 +135,15 @@ export default function MediaGallery({
             return (
               <div key={m.id} className="media-cell">
                 <button type="button" className="media-tile" onClick={() => setOpenIndex(i)} aria-label={t('media.kind.' + m.tipo)}>
-                  {thumb ? <img src={thumb} alt="" loading="lazy" /> : <span className="media-tile-placeholder" />}
+                  {thumb ? (
+                    <img src={thumb} alt="" loading="lazy" />
+                  ) : m.tipo === 'video' && !m.ruta_miniatura ? (
+                    // Sin miniatura (el cuadro salió negro y se descartó): el ícono, no un
+                    // "cargando" que no termina nunca.
+                    <Video size={24} className="media-tile-icon" />
+                  ) : (
+                    <span className="media-tile-placeholder" />
+                  )}
                   {m.tipo === 'video' && (
                     <span className="media-tile-badge">
                       <Play size={12} fill="currentColor" /> {formatDuration(m.duracion_seg)}
@@ -179,8 +193,9 @@ export default function MediaGallery({
       )}
 
       {opened && (
-        <MediaViewer
-          media={opened}
+        <MediaLightbox
+          tipo={opened.tipo === 'video' ? 'video' : 'foto'}
+          itemKey={opened.id}
           src={urls[opened.ruta]}
           poster={opened.ruta_miniatura ? urls[opened.ruta_miniatura] : undefined}
           onClose={() => setOpenIndex(null)}
@@ -189,75 +204,5 @@ export default function MediaGallery({
         />
       )}
     </div>
-  );
-}
-
-interface MediaViewerProps {
-  media: OrderMedia;
-  src?: string;
-  poster?: string;
-  onClose: () => void;
-  onPrev?: () => void;
-  onNext?: () => void;
-}
-
-function MediaViewer({ media, src, poster, onClose, onPrev, onNext }: MediaViewerProps) {
-  const { t } = useLanguage();
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-      if (e.key === 'ArrowLeft') onPrev?.();
-      if (e.key === 'ArrowRight') onNext?.();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose, onPrev, onNext]);
-
-  // En <body>, por lo mismo que el grabador: la galería vive dentro de una tarjeta, y con el
-  // `:hover` pegado del teléfono el visor quedaba encerrado en ella.
-  return (
-    <BodyPortal>
-    <div className="lightbox-overlay" onClick={onClose}>
-      <button className="lightbox-close" onClick={onClose} aria-label={t('common.close')}>
-        <X size={20} />
-      </button>
-      {onPrev && (
-        <button
-          className="lightbox-nav is-prev"
-          onClick={(e) => {
-            e.stopPropagation();
-            onPrev();
-          }}
-          aria-label={t('common.previous')}
-        >
-          <ChevronLeft size={24} />
-        </button>
-      )}
-      <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
-        {!src ? (
-          <div className="spinner" />
-        ) : media.tipo === 'video' ? (
-          // `key`: al pasar de un video a otro, el elemento se vuelve a montar en
-          // vez de seguir reproduciendo el anterior con otro `src`.
-          <video key={media.id} src={src} poster={poster} controls autoPlay playsInline preload="metadata" />
-        ) : (
-          <img src={src} alt={t('media.kind.foto')} />
-        )}
-      </div>
-      {onNext && (
-        <button
-          className="lightbox-nav is-next"
-          onClick={(e) => {
-            e.stopPropagation();
-            onNext();
-          }}
-          aria-label={t('common.next')}
-        >
-          <ChevronRight size={24} />
-        </button>
-      )}
-    </div>
-    </BodyPortal>
   );
 }

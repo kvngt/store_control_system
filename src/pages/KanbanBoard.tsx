@@ -9,6 +9,7 @@ import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
 import type { OrderStatus, WorkOrder } from '../types/database';
+import DeliveryModal from '../features/workOrders/DeliveryModal';
 import AuthorizationReasonModal from '../features/workOrders/AuthorizationReasonModal';
 import { orderDueState, type DueState } from '../lib/orderDue';
 import { Archive, Calendar, Gauge } from 'lucide-react';
@@ -99,6 +100,8 @@ export default function KanbanBoard() {
   // Qué orden está esperando que alguien escriba su motivo. El tablero es la ruta táctil
   // del taller, así que pedir autorización tiene que poder hacerse desde aquí.
   const [askingReasonFor, setAskingReasonFor] = useState<string | null>(null);
+  // Entregar abre el diálogo de cobro: método, cheque y comprobante (reunión con el taller).
+  const [deliveringOrder, setDeliveringOrder] = useState<WorkOrder | null>(null);
   // Un rótulo accesible además del color: el color solo no es información.
   const dueLabel = (state: DueState) =>
     state === 'vencida' ? t('workOrders.dueOverdue') : state === 'hoy' ? t('workOrders.dueToday') : t('workOrders.dueSoon');
@@ -188,8 +191,8 @@ export default function KanbanBoard() {
       showToast('error', t('workOrders.deliverAdminOnly'));
       return;
     }
-    if (status === 'entregado' && !confirm(t('workOrders.confirmDeliver'))) {
-      discard();
+    if (status === 'entregado') {
+      setDeliveringOrder(order);
       return;
     }
     if (order.estatus === 'entregado' && !confirm(t('workOrders.confirmUndeliver'))) {
@@ -413,6 +416,19 @@ export default function KanbanBoard() {
           );
         })}
       </div>
+      {deliveringOrder && (
+        <DeliveryModal
+          order={deliveringOrder}
+          onCancel={() => {
+            setDeliveringOrder(null);
+            setMoveEpoch((n) => n + 1);
+          }}
+          onDelivered={() => {
+            setDeliveringOrder(null);
+            void queryClient.invalidateQueries({ queryKey: boardKey });
+          }}
+        />
+      )}
       {askingReasonFor && (
         <AuthorizationReasonModal
           saving={move.isPending}

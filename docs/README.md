@@ -105,7 +105,9 @@ lo que falta limpiar.
 
 **[plan-de-mejora.md](plan-de-mejora.md)** — Análisis de desempeño, deuda técnica y plan de
 acción posterior a la auditoría. Es una foto anterior a la revisión previa a producción:
-lo que se resolvió de ahí está marcado al principio del documento.
+lo que se resolvió de ahí está marcado al principio del documento. Al final están las
+**funciones propuestas que esperan la autorización del taller** (hoy: traducir en el portal lo
+que escribe el taller).
 
 **[deployment.md](deployment.md)** — Cómo se pone en producción: Supabase
 (migraciones, secretos, Vault, edge functions, límites de Storage), Hostinger,

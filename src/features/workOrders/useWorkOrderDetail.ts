@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/auth.context';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
-import { workOrdersService } from '../../services/supabaseService';
+import { commissionsService, workOrdersService } from '../../services/supabaseService';
 import { mediaService } from '../../services/media.service';
 import { useMediaUploads } from '../media/mediaUploads.context';
 // Statically imported, unlike the PDF renderer below: ShareReportModal already
@@ -13,7 +13,7 @@ import { customerPortalService } from '../../services/customerPortal.service';
 import { reportAssetPaths } from '../../lib/reportMedia';
 import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';
-import type { LaborItem, OrderMedia, OrderProgressUpdate, OrderStatus, PreparedMedia, UserProfile, WorkOrder } from '../../types/database';
+import type { LaborItem, OrderMedia, OrderProgressUpdate, OrderStatus, PreparedMedia, Specialty, UserProfile, WorkOrder } from '../../types/database';
 
 interface UseWorkOrderDetailOptions {
   /**
@@ -65,6 +65,8 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // Pedir autorización necesita un motivo, así que el cambio de estado se parte en dos:
   // el <select> abre el diálogo y el diálogo hace el UPDATE.
   const [askingAuthReason, setAskingAuthReason] = useState(false);
+  // Entregar abre el diálogo de cobro (método, cheque, comprobante) en vez de un `confirm`.
+  const [delivering, setDelivering] = useState(false);
   // El avance que está por publicarse. El diálogo muestra su texto como lo verá el cliente.
   const [publishingProgress, setPublishingProgress] = useState<OrderProgressUpdate | null>(null);
 
@@ -85,8 +87,11 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // otro porcentaje.
   const orderSede = (order && allSedes.find((s) => s.id === order.sede_id)) || currentSede;
   const loading = !!openOrderId && detailQuery.isPending;
-  const error =
-    mutationError || (detailQuery.error ? getErrorMessage(detailQuery.error, language) : '');
+  const loadError = detailQuery.error ? getErrorMessage(detailQuery.error, language) : '';
+  const error = mutationError || loadError;
+  // La orden pedida no llegó: borrada, o — para un técnico — de otra persona. La RLS contesta
+  // lo mismo en los dos casos (PGRST116), y la lista lo explica según quién mira.
+  const notFound = !!openOrderId && (detailQuery.error as { code?: string } | null)?.code === 'PGRST116';
 
   const fail = useCallback(
     (err: unknown) => setMutationError(getErrorMessage(err, language)),
@@ -117,6 +122,9 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
       // vencimiento del enlace: la tarjeta del enlace (solo admin) se entera aquí.
       void queryClient.invalidateQueries({ queryKey: queryKeys.customerLink(openOrderId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.customerEmails(openOrderId) });
+      // La mano de obra, su especialidad y el equipo mueven el reparto de la comisión.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.commissionEstimate(openOrderId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.orderFinancialBalance(openOrderId) });
       if (alsoBoard) onBoardChanged();
     },
     [onBoardChanged, openOrderId, queryClient]
@@ -154,6 +162,11 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // firma de un toque.
   const canResign = isAdmin && order?.estatus === 'recepcion';
 
+  // Tomar la firma también es de administración (acordado con el taller, sept. 2026): la
+  // primera firma aprueba lo cotizado, y el técnico podía capturarla en cualquier estado.
+  // La base lo impone en `trg_guard_order_technician`; el técnico ve la tarjeta sin el pad.
+  const canSign = isAdmin;
+
   // Antes exigía `en_proceso`, lo que dejaba trabada una orden reabierta desde
   // `finalizado`: llegaba con el avance en 100 y el control bloqueado en todo
   // estatus que no fuera `en_proceso`, así que nadie podía bajarlo.
@@ -182,17 +195,17 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // administración lo mande. El bucket `reportes` también es solo admin.
   const canSendReport = isAdmin;
 
-  // Lo que el técnico ve de dinero, y la razón por la que lo ve: su parte de la
-  // mano de obra. Es la misma cuenta que `sync_order_commissions` hace al
-  // entregar (base × porcentaje de la sede ÷ técnicos asignados), así que es una
-  // estimación que cambia si cambia la labor o el equipo, no una promesa.
-  // Un admin no la necesita — ve la bolsa entera en Comisiones.
-  const crew = new Set((order?.asignaciones || []).map((a) => a.usuario_id)).size;
-  const commissionRate = orderSede?.comision_porcentaje ?? 0;
-  const estimatedCommission =
-    !isAdmin && isAssignedToMe && crew > 0
-      ? Math.round(((order?.total_labor || 0) * commissionRate) / crew) / 100
-      : null;
+  // Lo que el técnico ve de dinero, y la razón por la que lo ve: su parte de la mano de
+  // obra. Desde 20261009000000 la cuenta es por especialidad y con el porcentaje de cada
+  // quien, así que ya no se hace aquí: la base la devuelve (`comisiones_estimadas`, la misma
+  // que devenga al entregar). Administración recibe el reparto entero para avisar de una
+  // bolsa que nadie cobra.
+  const estimateQuery = useQuery({
+    queryKey: queryKeys.commissionEstimate(order?.id ?? ''),
+    queryFn: () => commissionsService.getEstimate(order!.id),
+    enabled: !!order && (isAdmin || isAssignedToMe),
+  });
+  const commissionEstimate = estimateQuery.data ?? null;
 
   // ----- status & progress ---------------------------------------------------
 
@@ -208,8 +221,10 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
       showToast('error', t('workOrders.deliverAdminOnly'));
       return;
     }
-    if (status === 'entregado' && !confirm(t('workOrders.confirmDeliver'))) {
-      discard();
+    // Entregar asienta dinero: pasa por el diálogo y por `entregar_orden`, que cobra con su
+    // método (o devuelve) y marca la orden en una sola transacción.
+    if (status === 'entregado') {
+      setDelivering(true);
       return;
     }
     // Sacar una orden de "entregado" revierte en Finanzas el pago final y el
@@ -245,6 +260,18 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     } finally {
       setBusy(false);
     }
+  };
+
+  // Cancelar deja el <select> mostrando el estado real.
+  const cancelDelivery = () => {
+    setDelivering(false);
+    setStatusEpoch((n) => n + 1);
+  };
+
+  const finishDelivery = async () => {
+    setDelivering(false);
+    if (order) void queryClient.invalidateQueries({ queryKey: queryKeys.orderBalance(order.id) });
+    await refresh();
   };
 
   // Cancelar deja el <select> mostrando el estado real, no el que no llegó a guardarse.
@@ -315,7 +342,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
 
   // ----- labor ---------------------------------------------------------------
 
-  const addLabor = async (item: { descripcion: string; costo: number }) => {
+  const addLabor = async (item: { descripcion: string; costo: number; especialidad?: Specialty }) => {
     if (!order) return;
     setBusy(true);
     try {
@@ -328,7 +355,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     }
   };
 
-  const updateLabor = async (id: string, item: { descripcion: string; costo: number }) => {
+  const updateLabor = async (id: string, item: { descripcion: string; costo: number; especialidad?: Specialty }) => {
     if (!order) return;
     setBusy(true);
     try {
@@ -619,11 +646,14 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   return {
     order,
     loading,
+    loadError,
+    notFound,
     busy,
     error,
     canEdit,
     canCompleteLabor,
     canResign,
+    canSign,
     canEditProgress,
     canDeliver,
     canArchive,
@@ -631,13 +661,14 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     toggleArchived,
     canEditLines,
     canSendReport,
-    estimatedCommission,
-    commissionRate,
-    crew,
+    commissionEstimate,
     isComplete,
     isDelivered,
     statusEpoch,
     askingAuthReason,
+    delivering,
+    cancelDelivery,
+    finishDelivery,
     publishingProgress,
     toggleProgressVisibility,
     confirmPublishProgress,

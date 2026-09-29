@@ -20,6 +20,9 @@ const stringField = z.string();
 const laborRow = z.object({
   descripcion: stringField,
   costo: stringField,
+  // A qué bolsa de comisión va. Solo se elige en una orden "combinado"; en las demás manda
+  // el tipo de orden y la base la pone sola.
+  especialidad: z.enum(['mecanica', 'pintura']),
 });
 
 // One money column, not two. A part is billed on at what it cost the shop, so

@@ -69,7 +69,7 @@ Para **por qué** está construido así: [arquitectura.md](arquitectura.md). Par
 │                   create-employee · update-employee · delete-employee                  │
 │                                                                                        │
 │  PostgreSQL 17                                                                         │
-│   ├─ public: 22 tablas, 92 funciones, triggers del dinero y los avisos                 │
+│   ├─ public: 23 tablas, 111 funciones, triggers del dinero y los avisos                │
 │   ├─ pg_cron ── cada minuto / 09:00 / 15:00 UTC                                        │
 │   ├─ pg_net ─── llama a las Edge Functions internas                                    │
 │   └─ Vault ──── URL del proyecto y secreto de las funciones internas                   │
@@ -98,7 +98,7 @@ Para **por qué** está construido así: [arquitectura.md](arquitectura.md). Par
 
 | Quién | Con qué llave | Qué usa | Qué lo limita |
 |---|---|---|---|
-| **App del taller** (admin, mecánico, pintor) | Clave anónima + token de la sesión del usuario | Auth, PostgREST (tablas y 21 RPC), Storage (subidas TUS al host `lendsiqkxhvbxxkaadrt.storage.supabase.co`), Realtime, funciones de empleados | RLS, triggers de guarda, políticas de Storage, `is_admin()` dentro de cada RPC |
+| **App del taller** (admin, mecánico, pintor) | Clave anónima + token de la sesión del usuario | Auth, PostgREST (tablas y 29 RPC), Storage (subidas TUS al host `lendsiqkxhvbxxkaadrt.storage.supabase.co`), Realtime, funciones de empleados | RLS, triggers de guarda, políticas de Storage, `is_admin()` dentro de cada RPC |
 | **Portal del cliente** | Ninguna del navegador: solo `fetch` a `functions/v1/portal` | La función `portal` | El token de 64 hexadecimales; la función arma la respuesta campo por campo |
 | **La base misma** | Secreto compartido leído de Vault | `pg_net` → `process-outbox`, `cleanup-storage` | `x-restorify-secret` comparado en la función |
 | **Edge Functions** | `SUPABASE_SERVICE_ROLE_KEY` (inyectada por Supabase) | Todo, sin RLS | Cada función valida por su cuenta: JWT + rol admin, token del cliente o secreto interno |
@@ -132,28 +132,29 @@ Supabase local, para las pruebas.
 
 ### 4.2 Tablas de `public`
 
-Las 22 tienen **RLS activado**. Columnas y relaciones: [arquitectura.md §4](arquitectura.md#4-modelo-de-datos).
+Las 23 tienen **RLS activado**. Columnas y relaciones: [arquitectura.md §4](arquitectura.md#4-modelo-de-datos).
 
 | Dominio | Tabla | Qué guarda | Quién lee |
 |---|---|---|---|
 | **Organización** | `sedes` | Talleres: nombre, marca, capacidad, % de comisión, correo y WhatsApp de contacto | Todo usuario con sesión |
 | | `perfiles` | Una fila por usuario de `auth.users`: nombre, rol, sede | Uno mismo, su sede, admin |
-| **Clientes** | `clientes` | Datos de contacto y preferencia de correos | Su sede, admin |
-| | `vehiculos` | VIN, placa, marca, modelo | Su sede, admin |
-| **Órdenes** | `ordenes_trabajo` | La orden: estado, avance, firma, total de mano de obra, `archivada_en` (archivo a mano, solo entregadas) | Lee su sede; **abrirla, solo admin**; el UPDATE, su sede (y el trigger exige estar asignado) |
+| | `perfiles_pago` | Esquema de pago de cada empleado: comisión (su % o el de la sede) o salario | **Admin**; cada quien el suyo |
+| **Clientes** | `clientes` | Datos de contacto y preferencia de correos | Admin; un técnico, los de sus órdenes. **Crear y editar, solo admin** |
+| | `vehiculos` | VIN, placa, marca, modelo | Admin; un técnico, los de sus órdenes. **Crear y editar, solo admin** |
+| **Órdenes** | `ordenes_trabajo` | La orden: estado, avance, firma, total de mano de obra, `archivada_en` (archivo a mano, solo entregadas) | Admin; un técnico, **solo las que tiene asignadas** (`mis_ordenes_asignadas`). **Abrirla, solo admin**; el trigger decide qué columnas cambia el técnico |
 | | `orden_montos` | Total, repuestos y depósito (1:1 con la orden) | **Solo admin** |
-| | `orden_labor` | Líneas de mano de obra con su estado de autorización | Su sede, admin |
+| | `orden_labor` | Líneas de mano de obra con su estado de autorización y su `especialidad` (bolsa de comisión) | Admin; un técnico, las de sus órdenes |
 | | `orden_repuestos` | Repuestos con precio | **Solo admin** (el técnico usa `repuestos_de_orden`) |
-| | `orden_asignaciones` | Técnicos de la orden — y por lo tanto quién cobra comisión | Lee su sede; **asignar y desasignar, solo admin**; cada quien mueve el `estatus_tarea` de su propia fila |
-| | `orden_avances` | Bitácora del técnico | Su sede, admin |
-| | `orden_media` | Fotos, videos y audio: ruta en Storage, visible al cliente o no | Su sede, admin |
+| | `orden_asignaciones` | Técnicos de la orden y su tarea — y por lo tanto quién cobra de qué bolsa | Admin; un técnico, las de sus órdenes; **asignar y desasignar, solo admin**; cada quien mueve el `estatus_tarea` de su propia fila |
+| | `orden_avances` | Bitácora del técnico | Admin; un técnico, los de sus órdenes |
+| | `orden_media` | Fotos, videos y audio: ruta en Storage, visible al cliente o no | Admin; un técnico, los de sus órdenes (también en Storage) |
 | | `numero_orden_contadores` | Último folio por año | Nadie directamente (RLS sin políticas); la usa un trigger |
 | **Cliente final** | `orden_enlaces` | Token del portal, vencimiento, visitas | **Solo admin** |
 | | `presupuestos` | Cada presupuesto y su evidencia (vía, nombre, IP) | **Solo admin** |
-| **Dinero** | `finanzas_movimientos` | Ingresos y egresos, automáticos e importados | **Solo admin** |
+| **Dinero** | `finanzas_movimientos` | Ingresos y egresos, automáticos e importados; el cobro al entregar lleva `metodo_pago` y `comprobante_ruta` | **Solo admin** |
 | | `finanzas_importaciones` | Estados de cuenta importados y su huella | **Solo admin** |
 | | `finanzas_reglas_categorizacion` | 56 reglas para categorizar movimientos del banco | **Solo admin** |
-| | `comisiones` | Comisión por técnico y orden entregada | Cada técnico las suyas, admin |
+| | `comisiones` | Comisión por técnico, orden entregada y especialidad | Cada técnico las suyas, admin |
 | | `comision_pagos` | Pagos (cheques) de comisiones | Cada técnico los suyos, admin |
 | **Avisos** | `notificaciones` | La campana de cada persona | Cada quien las suyas |
 | | `push_suscripciones` | Dispositivos con push activo | Cada quien las suyas |
@@ -168,16 +169,16 @@ No hay vistas.
 
 ### 4.3 Funciones de `public`
 
-98 funciones, en cuatro grupos según **quién puede ejecutarlas**. Los grupos y los
+111 funciones, en cuatro grupos según **quién puede ejecutarlas**. Los grupos y los
 nombres salen del catálogo (`has_function_privilege('authenticated', …)`), no de una lista
 a mano: la anterior se quedó cinco funciones atrás sin que nadie lo notara.
 
 | Grupo | Cuántas | Cuáles | Quién |
 |---|---|---|---|
-| **RPC de la app** | 23 | `resumen_panel`, `importar_estado_cuenta` (migración 36), `deshacer_importacion_estado_cuenta`, `create_work_order`, `repuestos_de_orden`, `marcar_labor_completada`, `pay_commissions`, `sede_delete_impact`, `delete_sede_cascade`, `registrar_push`, `eliminar_push`, `probar_push`, `usuarios_con_push`, `crear_enlace_cliente`, `regenerar_enlace_cliente`, `revocar_enlace_cliente`, `notificar_cliente_avance`, `enviar_reporte_cliente`, `enviar_presupuesto`, `registrar_autorizacion`, `cancelar_presupuesto`, `ordenes_esperando_autorizacion`, `app_schema_version` | Usuarios con sesión (`authenticated`). Las de admin lo validan por dentro |
-| **Ayudantes de RLS** | 4 | `is_admin`, `current_user_role`, `current_user_sede_id`, `is_assigned_to_order` | Las usan las políticas; sin sesión devuelven vacío |
-| **Internas** | 27 | Dinero (`recalculate_order_totals`, `sync_order_commissions`, `sync_order_parts_expense`, `reverse_order_delivery_finance`); avisos (`notificar`, `admins_de_sede`, `datos_orden_aviso`); cola (`claim_outbox`, `finish_outbox`, `dispatch_outbox_if_due`, `invoke_edge_function`, `purge_old_notifications`, `archivos_huerfanos`); portal y correos (`datos_portal`, `datos_correo`, `encolar_correo_cliente`, `asegurar_enlace_orden`, `preferencia_correos_portal`, `responder_presupuesto_portal`, `marcar_estatus_enviado`, `es_correo_valido`); presupuestos (`_crear_presupuesto`, `_agregar_borradores`, `_lineas_pendientes`, `_resolver_presupuesto`, `recordar_presupuestos_sin_respuesta`); recordatorios (`recordar_ordenes_vencidas`) | Solo `service_role` (Edge Functions), triggers y pg_cron |
-| **De trigger** | 44 | `trg_*`, `handle_*`, `cleanup_order_finance` | Solo como trigger |
+| **RPC de la app** | 29 | `resumen_panel`, `saldo_orden`, `entregar_orden` (migración `20261008000000`), `comisiones_estimadas`, `resumen_empleado` (migración `20261009000000`), `balance_orden`, `margen_ordenes` (migración `20261010000000`), `importar_estado_cuenta` (migración 36), `deshacer_importacion_estado_cuenta`, `create_work_order`, `repuestos_de_orden`, `marcar_labor_completada`, `pay_commissions`, `sede_delete_impact`, `delete_sede_cascade`, `registrar_push`, `eliminar_push`, `probar_push`, `usuarios_con_push`, `crear_enlace_cliente`, `regenerar_enlace_cliente`, `revocar_enlace_cliente`, `notificar_cliente_avance`, `enviar_reporte_cliente`, `enviar_presupuesto`, `registrar_autorizacion`, `cancelar_presupuesto`, `ordenes_esperando_autorizacion`, `app_schema_version` | Usuarios con sesión (`authenticated`). Las de admin lo validan por dentro |
+| **Ayudantes de RLS** | 5 | `is_admin`, `current_user_role`, `current_user_sede_id`, `is_assigned_to_order`, `mis_ordenes_asignadas` (migración `20261007000000`: qué órdenes ve un técnico) | Las usan las políticas; sin sesión devuelven vacío |
+| **Internas** | 30 | Dinero (`_saldo_orden`, `_reparto_comisiones`, `_balance_orden`, `recalculate_order_totals`, `sync_order_commissions`, `sync_order_parts_expense`, `reverse_order_delivery_finance`); avisos (`notificar`, `admins_de_sede`, `datos_orden_aviso`); cola (`claim_outbox`, `finish_outbox`, `dispatch_outbox_if_due`, `invoke_edge_function`, `purge_old_notifications`, `archivos_huerfanos`); portal y correos (`datos_portal`, `datos_correo`, `encolar_correo_cliente`, `asegurar_enlace_orden`, `preferencia_correos_portal`, `responder_presupuesto_portal`, `marcar_estatus_enviado`, `es_correo_valido`); presupuestos (`_crear_presupuesto`, `_agregar_borradores`, `_lineas_pendientes`, `_resolver_presupuesto`, `recordar_presupuestos_sin_respuesta`); recordatorios (`recordar_ordenes_vencidas`) | Solo `service_role` (Edge Functions), triggers y pg_cron |
+| **De trigger** | 47 | `trg_*`, `handle_*`, `cleanup_order_finance` | Solo como trigger |
 
 Qué hace cada trigger, por tabla: [arquitectura.md §5](arquitectura.md#5-dónde-vive-la-lógica-de-negocio).
 

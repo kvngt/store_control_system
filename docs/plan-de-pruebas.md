@@ -223,9 +223,9 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | CLI-03 | P1 | IA | VIN de 17 caracteres → marca, modelo y año se llenan solos. |
 | CLI-04 | P2 | IA | VIN con I, O o Q → aviso. |
 | CLI-05 | P2 | IA | "Sin placa" → campos de placa desactivados; la lista muestra "Sin placa". |
-| CLI-06 | P0 | IA | **M** no ve el botón de eliminar en clientes ni vehículos. |
+| CLI-06 | P0 | IA | **M** no tiene **Clientes** ni **Vehículos** en el menú (ORD-17); por la API no crea ni edita ninguno (SEC-37, SEC-75, SEC-76). **A** los crea, edita y elimina. |
 | CLI-07 | P1 | IA | **A** elimina un cliente con órdenes → mensaje claro de que no se puede. |
-| CLI-08 | P2 | IA | Búsqueda global por nombre, teléfono, placa, VIN y número de orden → encuentra cada uno. |
+| CLI-08 | P2 | IA | **A**: búsqueda global por nombre, teléfono, placa, VIN y número de orden → encuentra cada uno. **M**: solo encuentra sus órdenes por número. |
 | CLI-09 | P1 | IA | **Nuevo Cliente** → el teléfono trae **Estados Unidos (+1)** elegido y **México (+52)** como segunda opción. Con México y `55 1234 5678`, guardar → la lista muestra `+52 55 1234 5678`; en una orden suya, **WhatsApp** abre `wa.me/525512345678`. |
 | CLI-10 | P2 | IA | Un cliente guardado antes del selector (número sin "+") → al editarlo aparece con EE. UU. y su número; guardar **sin tocar el teléfono** no lo cambia en la base. |
 | CLI-11 | P2 | IA | Número de EE. UU. con 9 dígitos → al salir del campo avisa "tiene 10 dígitos", pero deja guardar. Buscar un cliente por `512-555` lo encuentra aunque esté guardado como `+15125550100`. |
@@ -240,11 +240,15 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | ORD-04 | P1 | IA | Millas negativas → rechazado (el campo no acepta el signo menos). |
 | ORD-05 | P0 | IA | **M** no ve el botón **Nueva orden**; **A** sí. Un POST directo a `/rest/v1/ordenes_trabajo` con la sesión de **M** responde 42501 (lo cubre `qa:security` SEC-55). |
 | ORD-06 | P0 | IA | **M** en el detalle de una orden asignada → no ve tarjeta de totales, depósito ni repuestos con precio; ve "Descripción de repuestos" sin ningún `$`; ve la mano de obra sin botones con "la cotiza administración"; ve **Tu comisión estimada** con la cuenta (mano de obra × % ÷ técnicos); no ve **Descargar PDF** ni **Enviar reporte**; el selector de estado no ofrece "Entregado". |
-| ORD-07 | P1 | IA | **M** mueve el avance en un estado no cerrado y captura la firma → ambos se ven al recargar. |
-| ORD-08 | P1 | IA | **N** abre una orden que no trabaja → aviso de solo lectura ("un administrador tiene que asignarte") y, donde estaba "Unirme a la orden", la frase "Administración asigna quién trabaja esta orden". El botón ya no existe para nadie: asignar se hace desde el selector de **A** en la tarjeta de técnicos. Un POST directo a `/rest/v1/orden_asignaciones` con su propio `usuario_id` responde 42501 (SEC-69 y SEC-39). |
-| ORD-09 | P1 | IA | **A** elige "Entregado" y cancela la confirmación → el selector vuelve al estado real. |
+| ORD-07 | P1 | IA | **M** mueve el avance en un estado no cerrado → se ve al recargar. En la tarjeta **Firma del Cliente** **M** ve la firma (o "todavía no tiene la firma"), **sin lienzo ni "Volver a firmar"**. Por la API, cambiar `firma_ruta` o `firma_fecha` responde 42501 "La firma del cliente la toma administración en la recepción." (SEC-19). **A** sí firma. |
+| ORD-08 | P1 | IA | **N** no ve en **Órdenes**, **Tablero**, el **buscador** ni el **Panel** las órdenes que no trabaja: solo **Mis Órdenes de Trabajo**, sin sección "Otras". Abrir `/work-orders?open=<orden de M>` → aviso "Esa orden no está entre las tuyas…" y vuelve a su lista. En sus órdenes, la tarjeta de técnicos dice "Administración asigna quién trabaja esta orden" (no hay "Unirme"). Un POST directo a `/rest/v1/orden_asignaciones` con su propio `usuario_id` responde 42501 (SEC-69 y SEC-39); un GET de la orden ajena devuelve `[]` (SEC-36). |
+| ORD-17 | P0 | IA | **M** (teléfono y computadora): el menú y la barra inferior no tienen **Clientes** ni **Vehículos**; `/customers` y `/vehicles` lo devuelven al Panel. En el detalle de su orden sí ve el cliente (nombre, teléfono, correo) y el vehículo. El buscador del encabezado solo trae órdenes. El Panel no muestra **Tasa de Ocupación** y la primera tarjeta dice **Mis Órdenes Activas**. **A** sigue viendo todo. |
+| ORD-09 | P1 | IA | **A** elige "Entregado" y cancela el **diálogo de entrega** → el selector vuelve al estado real y no se asienta nada. |
+| ORD-18 | P0 | IA | Diálogo de entrega, con la orden de ORD-01 antes de DIN-02: muestra total $1,200, cobrado $200, **falta cobrar $1,000**. Sin método → "Elige cómo pagó el cliente." Cheque sin número ni foto → "Anota el número del cheque o sube su foto." Cheque 1042 + foto → **Entregar y cobrar $1,000.00** → en Finanzas el "Pago final" dice **Cheque**, **#1042** y **Ver comprobante** abre la foto. En el teléfono, la foto se puede tomar con la cámara. |
+| ORD-19 | P0 | IA | Orden con depósito $800 y mano de obra $500 autorizada → el diálogo dice **Hay que devolver al cliente $300.00**; entregar con efectivo → egreso "Devolución al cliente" $300 en Finanzas con método. Sacarla de Entregado → ingreso "Reversión de devolución" $300: lo cobrado vuelve a $800. |
+| ORD-20 | P1 | IA | Orden con un presupuesto **esperando** al cliente → el diálogo muestra el error "La orden tiene un presupuesto esperando respuesta…", la orden no se entrega y en Finanzas no quedó ningún "Pago final". |
 | ORD-10 | P1 | IA | **A** reabre una orden finalizada → se borra la fecha de finalización. |
-| ORD-11 | P1 | IA | Kanban: en computadora, arrastrar entre columnas; en teléfono, "Mover a" (cancelar la confirmación deja el selector como estaba). **M** en su tarjeta: sin "Entregado"; en tarjetas ajenas no hay selector. |
+| ORD-11 | P1 | IA | Kanban: en computadora, arrastrar entre columnas; en teléfono, "Mover a" (cancelar el diálogo de entrega deja el selector como estaba). **M** solo ve sus tarjetas, y en ellas no hay "Entregado". |
 | ORD-12 | P0 | IA | **A** crea una orden con mano de obra $1,000 **sin firmar** → la línea dice **Sin autorizar** y el total es $0. Firmar → **sin recargar**, la insignia desaparece, el total pasa a $1,000 y la tarjeta Presupuesto muestra "con la firma de recepción". *(AUD-06)* |
 | ORD-13 | P2 | IA | Crear una orden sin fecha estimada de entrega → la fecha es hoy + 5 días en la hora local, también si se crea después de las 7 p. m. *(AUD-13)* |
 | ORD-15 | P1 | IA | Teléfono, **A**, Kanban: en una orden **Entregada**, **Mover a → Archivar** → confirma → la tarjeta sale del tablero y la orden aparece en **Órdenes → Archivadas** con la insignia "Archivada". Abrirla → **Devolver al tablero** → vuelve. En computadora, el botón **Archivar** de la tarjeta hace lo mismo. |
@@ -260,7 +264,7 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 | ID | P | Ejecuta | Acción (**A**) | Movimientos esperados | Comisiones |
 |---|---|---|---|---|---|
 | DIN-01 | P0 | IA | Crear y **firmar la recepción** | +$200 "Depósito inicial" | — |
-| DIN-02 | P0 | IA | Entregar | +$1,000 "Pago final", −$200 "Costo de repuestos" | 2 × $175.00 |
+| DIN-02 | P0 | IA | Entregar (diálogo: efectivo) | +$1,000 "Pago final" **con método Efectivo**, −$200 "Costo de repuestos" | 2 × $175.00 |
 | DIN-03 | P0 | IA | Agregar mano de obra $100 (queda **sin autorizar**, nada cambia) y **Registrar autorización** → en persona | +$100 "Ajuste por cargo adicional" | 2 × $192.50 |
 | DIN-04 | P0 | IA | Sacar de Entregado (confirmar la advertencia) | −$1,100 "Reversión de entrega", +$200 "Reversión de costo de repuestos" | ninguna |
 | DIN-05 | P0 | IA | Volver a entregar | +$1,100 "Pago final", −$200 "Costo de repuestos" | 2 × $192.50 |
@@ -279,10 +283,15 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 
 | ID | P | Ejecuta | Pasos → Esperado |
 |---|---|---|---|
-| COM-01 | P0 | IA | Tres técnicos en una orden de mano de obra $1,000 al 35 %, entregada → $116.67 + $116.67 + $116.66. |
+| COM-01 | P0 | IA | Tres **pintores** en una orden de pintura $1,000 al 35 %, entregada → $116.67 + $116.67 + $116.66. |
+| COM-07 | P0 | IA | El ejemplo de la reunión: orden **Combinado** con "Pintura general" $1,000 (**Pintura**) y "Cambio de aceite" $200 (**Mecánica**), un mecánico y una pintora, entregada → la pintora **$350.00**, el mecánico **$70.00** (antes, $210 cada uno). La tarjeta **Reparto de la comisión** lo muestra antes de entregar; la del mecánico dice "Mecánica: mano de obra $200.00 × 35% ÷ 1 técnico(s)". |
+| COM-08 | P0 | IA | Orden de pintura con solo un mecánico asignado → la tarjeta de **A** avisa "Nadie tiene asignada la pintura…"; al entregar no se genera ninguna comisión. |
+| COM-09 | P1 | IA | En una orden **Combinado** entregada, cambiar una línea de Mecánica a Pintura (editar la línea) → las comisiones pendientes se mueven a quien tiene pintura; una ya **pagada** no cambia. |
+| COM-10 | P1 | IA | **Empleados → Ver** un mecánico: porcentaje propio 40 % → su comisión pendiente se recalcula; en **Comisiones** aparece con 40 %. Vacío → vuelve al de la sede. |
+| COM-11 | P1 | IA | Pasar a salario a alguien con comisiones pendientes → aviso con el monto; aceptar → sus pendientes desaparecen y en las órdenes siguientes no cobra; en la tarjeta de la orden figura "Salario — su parte queda en el taller" y su compañero de bolsa **no** cobra de más. |
 | COM-02 | P1 | IA | **Pagar saldo** con cheque sin número ni foto → pide uno de los dos. |
-| COM-03 | P0 | IA | Pagar a dos técnicos $192.50 el mismo día → dos egresos "Pago de comisiones". |
-| COM-04 | P0 | IA | **Deshacer** el pago de uno → sus comisiones vuelven a pendientes y **solo su** egreso desaparece. |
+| COM-03 | P0 | IA | Pagar a dos técnicos $192.50 el mismo día → en Finanzas, un egreso "Comisión *nombre* - ORD-…" por técnico y orden, vinculado a la orden. Pagarle a uno comisiones de **dos** órdenes en un cheque → **dos** egresos, uno por orden, que suman el cheque. |
+| COM-04 | P0 | IA | **Deshacer** el pago de uno → sus comisiones vuelven a pendientes y **solo sus** egresos desaparecen. |
 | COM-05 | P2 | IA | La foto del cheque se abre con un enlace temporal. |
 | COM-06 | P1 | IA | Porcentaje de comisión fuera de 0–100 → rechazado. |
 
@@ -307,6 +316,8 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 | MED-15 | P1 | H | Abrir un video → se reproduce en el visor; flechas al siguiente. Un video grabado en Android se reproduce en iPhone y al revés. |
 | MED-16 | P1 | H | Un video de 2 minutos grabado con **Video** → sube completo (~24 MB). |
 | MED-17 | P2 | IA | Elegir un archivo de más de 50 MB que no se pueda convertir → "pesa más de 50 MB"; no se intenta subir. |
+| MED-18 | P0 | H | **En el teléfono donde se vio el video negro** (anota modelo y navegador): **Video** → grabar 5 s → **Detener**. La revisión muestra un cuadro de la toma, **no negro**, y se reproduce al tocar ▶. **Usar video** → la miniatura del borrador tampoco es negra. **Tocar la miniatura** → el video se abre a pantalla completa y se reproduce con sonido. Guardar el avance → la galería y el portal muestran la misma miniatura. Repetir apuntando a algo oscuro: sin cuadro útil, el borrador muestra el **ícono de video**, no un cuadro negro. |
+| MED-19 | P1 | IA | Teléfono (390 px, cámara simulada): grabar, **Usar video**, tocar la miniatura del borrador → visor en `<body>` con el video reproduciéndose; Escape o la X cierran y el borrador sigue. Una nota de voz del borrador no abre visor. |
 
 ### 4.8 Notificaciones y push (NOT)
 
@@ -335,6 +346,8 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 | FIN-05 | P1 | IA | Importar **el mismo** archivo otra vez (aunque tenga otro nombre) → aviso rojo con la fecha anterior. |
 | FIN-06 | P1 | IA | Revertir la importación → desaparecen solo sus movimientos. |
 | FIN-07 | P2 | IA | Un PDF escaneado o de otro banco → mensaje que lo explica. |
+| FIN-09 | P0 | IA | **Margen por orden** en Finanzas, con el mes de la orden de ORD-01 entregada (total $1,200, repuestos $200, comisiones $350) → cobrado $1,200, repuestos $200, comisiones $350, margen **$650**; el total del mes cuadra con la suma de las filas. Cambiar de mes → la lista cambia. Con más de 25 órdenes, **Siguiente** trae la página 2. |
+| FIN-10 | P1 | IA | En el detalle de la misma orden, **Balance de la orden** muestra los mismos números. Vincular a la orden una compra manual de $40 → aparece en "Otros movimientos vinculados" y el margen **no** cambia. **M** no ve la tarjeta ni el margen en ningún lado (SEC-88, SEC-89). |
 | FIN-08 | P0 | IA | Importar un estado de cuenta con DevTools → Network en **Offline** justo al confirmar → error visible; en Finanzas no aparece un lote vacío y el mismo archivo se puede volver a importar sin el aviso de "ya importado". *(PRD-14.)* |
 
 ### 4.10 Configuración y personal (CFG)
@@ -342,8 +355,8 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 | ID | P | Ejecuta | Pasos → Esperado |
 |---|---|---|---|
 | CFG-01 | P2 | IA | Perfil: foto, nombre, teléfono; idioma y tema siguen igual tras recargar. |
-| CFG-02 | P1 | IA | Alta de empleado sin nombre, con contraseña de menos de 6 o con un correo repetido → error visible dentro del diálogo. |
-| CFG-03 | P1 | IA | **M** en Configuración → perfil, idioma, tema y notificaciones; nada de sedes ni personal. |
+| CFG-02 | P1 | IA | **Empleados**: alta de empleado sin nombre, con contraseña de menos de 8 o con un correo repetido → error visible dentro del diálogo. |
+| CFG-03 | P1 | IA | **M** en Configuración → perfil, idioma, tema y notificaciones; nada de sedes ni personal. `/employees` lo devuelve al Panel. **A** en Configuración ve el enlace **Ir a Empleados**. |
 | CFG-04 | P1 | IA | **A** edita un empleado: cambia su correo → la persona entra con el nuevo. Quitar el rol admin al único admin → rechazado. |
 | CFG-05 | P1 | IA | Eliminar un empleado con órdenes asignadas → "todavía tiene órdenes asignadas"; sigue en la lista. |
 | CFG-06 | P2 | IA | Eliminar un empleado al que ya se le pagaron comisiones (y sin órdenes asignadas) → "tiene pagos de comisiones registrados"; sigue en la lista. *(AUD-14)* |
@@ -379,7 +392,7 @@ Reglas: [portal-y-correos.md](portal-y-correos.md).
 
 | ID | P | Ejecuta | Pasos → Esperado |
 |---|---|---|---|
-| POR-01 | P0 | IA | Orden sin firma: la tarjeta **Enlace del cliente** (**A**) dice que se crea al firmar y ofrece **Crear enlace**. **M** firma → la tarjeta de **A** muestra el enlace sin recargar. **M** no ve la tarjeta. |
+| POR-01 | P0 | IA | Orden sin firma: la tarjeta **Enlace del cliente** (**A**) dice que se crea al firmar y ofrece **Crear enlace**. **A** firma → la tarjeta muestra el enlace sin recargar. **M** no ve la tarjeta (ni firma: ORD-07). |
 | POR-02 | P0 | IA | **Copiar** el enlace → abrirlo en otro navegador sin sesión → abre el reporte. |
 | POR-03 | P1 | IA | **Enviar por WhatsApp** → `wa.me/1<teléfono>` con el mensaje y el enlace. |
 | POR-04 | P2 | IA | Tras abrir el enlace, la tarjeta dice "Abierto 1 veces · última vez hace …". |
@@ -460,17 +473,23 @@ npm run qa:security -- --json   # para un agente
 
 Inicia sesión solo con las cuentas de `.env.test.local` (o `QA_TECH_EMAIL`/`QA_TECH_PASSWORD`,
 `QA_ADMIN_EMAIL`/`QA_ADMIN_PASSWORD`) y busca por su cuenta una orden asignada, una ajena y
-una entregada. Lo que no encuentra lo marca SKIP.
+una entregada. La ajena la busca con la sesión del admin, porque el técnico ya no la ve. Lo
+que no encuentra lo marca SKIP.
 
 | Grupo | Casos | Qué se espera |
 |---|---|---|
 | Sin sesión | SEC-01 a SEC-18 | Registro público apagado (SEC-18); las 6 edge functions desplegadas (SEC-17); sin datos, sin funciones internas (`reverse_order_delivery_finance`, `sync_*`, `recalculate_order_totals`, `claim_outbox`, `datos_portal`, `responder_presupuesto_portal`, `pay_commissions`), `process-outbox` 401, portal 404 con token falso, buckets privados |
 | Técnico: lectura | SEC-20 a SEC-35 | No ve montos, repuestos con precio, Finanzas, enlaces, presupuestos, cola de correos, pagos ni avisos ajenos, ni datos de otra sede |
-| Técnico: escritura | SEC-40 a SEC-54 | No cotiza, no entrega, no escribe totales ni datos de recepción, no firma con archivos ajenos, no publica al cliente, no manda enlaces, presupuestos, reportes ni avisos, no asigna a otros; en órdenes ajenas o entregadas no toca nada |
+| Técnico: solo lo suyo | SEC-36, SEC-77, SEC-78 | No ve una orden de su sede que no tiene asignada, ni sus archivos, ni su cliente (`20261007000000`) |
+| Técnico: clientes y vehículos | SEC-37, SEC-75, SEC-76 | No da de alta clientes ni vehículos, ni edita el cliente de su propia orden |
+| Técnico: escritura | SEC-19, SEC-40 a SEC-54 | No cotiza, no entrega, no escribe totales ni datos de recepción, **no toma ni cambia la firma de recepción** (SEC-19, sobre una orden ya firmada para que un fallo no apruebe lo cotizado), no firma con archivos ajenos, no publica al cliente, no manda enlaces, presupuestos, reportes ni avisos, no asigna a otros; en órdenes ajenas o entregadas no toca nada |
 | Técnico: alta y asignación | SEC-55, SEC-69, SEC-39 | No abre una orden por la API (42501) y no se asigna a ninguna — ni a una ajena ni a la que ya trabaja. Asignar reparte la comisión de la mano de obra |
 | Sin sesión: alta | SEC-68 | Tampoco se abre una orden sin sesión |
 | Importación bancaria | SEC-66, SEC-67 | Ni sin sesión ni un técnico deshacen una importación |
-| Admin | SEC-60 a SEC-62 | Ni un admin aprueba una línea con un UPDATE, sube PDFs a `reportes` ni llama funciones internas |
+| Admin | SEC-60 a SEC-62, SEC-82 | Ni un admin aprueba una línea con un UPDATE, sube PDFs a `reportes` ni llama funciones internas (`_saldo_orden` incluida) |
+| Entregar | SEC-79 a SEC-81 | Un técnico no entrega por `entregar_orden` ni consulta `saldo_orden`; sin sesión tampoco se entrega (`20261008000000`) |
+| Margen por orden | SEC-88 a SEC-90 | Un técnico no ve el balance de una orden ni el margen; ni un admin llama `_balance_orden` (`20261010000000`) |
+| Comisiones y pago | SEC-83 a SEC-87 | Un técnico no se pone su propio porcentaje, no ve el pago de sus compañeros, ni el resumen de un empleado, ni la comisión de una orden ajena; ni un admin llama `_reparto_comisiones` (`20261009000000`) |
 
 **Cualquier FAIL es P0.**
 

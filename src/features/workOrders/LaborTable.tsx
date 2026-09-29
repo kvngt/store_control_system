@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Check, CheckCircle2, Circle, Pencil, Plus, Trash2, Wrench, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
-import type { LaborItem } from '../../types/database';
+import { SPECIALTIES, type LaborItem, type Specialty } from '../../types/database';
 import LineStateBadge from './LineStateBadge';
 import { isApproved } from './lineState';
 import { money } from '../../lib/money';
@@ -10,8 +10,13 @@ interface LaborTableProps {
   items: LaborItem[];
   canEdit: boolean;
   busy: boolean;
-  onAdd: (item: { descripcion: string; costo: number }) => Promise<void>;
-  onUpdate: (id: string, item: { descripcion: string; costo: number }) => Promise<void>;
+  onAdd: (item: { descripcion: string; costo: number; especialidad?: Specialty }) => Promise<void>;
+  onUpdate: (id: string, item: { descripcion: string; costo: number; especialidad?: Specialty }) => Promise<void>;
+  /**
+   * Si cada línea dice a qué bolsa de comisión va. Solo en órdenes "combinado": en las demás
+   * la especialidad es la del tipo de orden y no hay nada que elegir (20261009000000).
+   */
+  specialties?: boolean;
   onRemove: (id: string, descripcion: string) => Promise<void>;
   /**
    * Si se ofrece tachar el trabajo hecho. Es del técnico asignado, no solo del admin: por
@@ -27,11 +32,26 @@ interface LaborTableProps {
  * The row drafts live here rather than on the page: they are keystrokes in one
  * card, and nothing outside it ever needs to read them.
  */
-export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRemove, canComplete, onToggleComplete }: LaborTableProps) {
+export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRemove, canComplete, onToggleComplete, specialties = false }: LaborTableProps) {
   const { t } = useLanguage();
-  const [newDraft, setNewDraft] = useState({ descripcion: '', costo: '' });
+  const [newDraft, setNewDraft] = useState<{ descripcion: string; costo: string; especialidad: Specialty }>({ descripcion: '', costo: '', especialidad: 'mecanica' });
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState({ descripcion: '', costo: '' });
+  const [editDraft, setEditDraft] = useState<{ descripcion: string; costo: string; especialidad: Specialty }>({ descripcion: '', costo: '', especialidad: 'mecanica' });
+  const specialtyLabel = (s?: Specialty) => (s === 'pintura' ? t('workOrders.painting') : t('workOrders.mechanical'));
+  // El mismo selector en la fila de alta y en la de edición.
+  const specialtySelect = (value: Specialty, onChange: (s: Specialty) => void, id: string) => (
+    <select
+      id={id}
+      className="form-input form-select labor-specialty-select"
+      value={value}
+      onChange={(e) => onChange(e.target.value as Specialty)}
+      aria-label={t('commission.specialty')}
+    >
+      {SPECIALTIES.map((s) => (
+        <option key={s} value={s}>{specialtyLabel(s)}</option>
+      ))}
+    </select>
+  );
 
   // Solo lo autorizado se cobra; lo demás se muestra aparte para que se vea cuánto
   // falta que el cliente autorice.
@@ -53,7 +73,7 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
 
   const startEdit = (item: LaborItem) => {
     setEditingId(item.id);
-    setEditDraft({ descripcion: item.descripcion, costo: String(item.costo) });
+    setEditDraft({ descripcion: item.descripcion, costo: String(item.costo), especialidad: item.especialidad ?? 'mecanica' });
   };
 
   const saveEdit = async () => {
@@ -61,14 +81,19 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
     await onUpdate(editingId, {
       descripcion: editDraft.descripcion,
       costo: toCost(editDraft.costo),
+      ...(specialties ? { especialidad: editDraft.especialidad } : {}),
     });
     setEditingId(null);
   };
 
   const add = async () => {
     if (!newDraft.descripcion.trim()) return;
-    await onAdd({ descripcion: newDraft.descripcion, costo: toCost(newDraft.costo) });
-    setNewDraft({ descripcion: '', costo: '' });
+    await onAdd({
+      descripcion: newDraft.descripcion,
+      costo: toCost(newDraft.costo),
+      ...(specialties ? { especialidad: newDraft.especialidad } : {}),
+    });
+    setNewDraft({ descripcion: '', costo: '', especialidad: newDraft.especialidad });
   };
 
   return (
@@ -99,6 +124,8 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                       value={editDraft.descripcion}
                       onChange={(e) => setEditDraft({ ...editDraft, descripcion: e.target.value })}
                     />
+                    {specialties &&
+                      specialtySelect(editDraft.especialidad, (s) => setEditDraft({ ...editDraft, especialidad: s }), `labor-specialty-${item.id}`)}
                   </td>
                   <td>
                     <input
@@ -152,6 +179,7 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                       </button>
                     )}
                     <span className="line-desc">{item.descripcion}</span> <LineStateBadge state={item.estado} />
+                    {specialties && <span className="labor-specialty-tag">{specialtyLabel(item.especialidad)}</span>}
                   </td>
                   <td data-label={t('common.total')} style={{ textAlign: 'right', fontWeight: 600 }}>{money(item.costo)}</td>
                   {canEdit && (
@@ -227,6 +255,7 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
           value={newDraft.descripcion}
           onChange={(e) => setNewDraft({ ...newDraft, descripcion: e.target.value })}
         />
+        {specialties && specialtySelect(newDraft.especialidad, (s) => setNewDraft({ ...newDraft, especialidad: s }), 'labor-new-specialty')}
         <input
           className="form-input"
           type="number"

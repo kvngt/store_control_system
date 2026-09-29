@@ -26,6 +26,8 @@ const mocks = vi.hoisted(() => ({
   getWorkOrders: vi.fn(),
   updateWorkOrderStatus: vi.fn(),
   setArchived: vi.fn(),
+  getBalance: vi.fn(),
+  deliver: vi.fn(),
 }));
 
 vi.mock('../context/auth.context', () => ({ useAuth: () => mocks.auth.current }));
@@ -37,6 +39,10 @@ vi.mock('../services/supabaseService', () => {
     getWorkOrders: mocks.getWorkOrders,
     updateWorkOrderStatus: mocks.updateWorkOrderStatus,
     setArchived: mocks.setArchived,
+    getBalance: mocks.getBalance,
+    deliver: mocks.deliver,
+    uploadDeliveryReceipt: vi.fn(),
+    removeDeliveryReceipt: vi.fn(),
   };
   return { workOrdersService: workOrders, supabaseService: workOrders };
 });
@@ -165,12 +171,12 @@ describe('Kanban board without dragging', () => {
     expect(moveSelectFor('ORD-2026-002')).toBeTruthy();
   });
 
-  it('asks for confirmation before marking an order delivered', async () => {
+  it('opens the delivery dialog instead of marking the order delivered', async () => {
     // Delivering books the customer payment and the parts cost, so it must not
-    // happen from a stray tap on a phone.
+    // happen from a stray tap on a phone — and it asks how the customer paid.
     mocks.auth.current = authValue(ADMIN_USER);
     mocks.getWorkOrders.mockResolvedValue([MINE]);
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    mocks.getBalance.mockResolvedValue({ total: 500, cobrado: 100, saldo: 400 });
 
     const user = userEvent.setup();
     renderWithProviders(<KanbanBoard />);
@@ -178,7 +184,34 @@ describe('Kanban board without dragging', () => {
     await screen.findByText('ORD-2026-001');
     await user.selectOptions(moveSelectFor('ORD-2026-001')!, 'entregado');
 
-    expect(confirmSpy).toHaveBeenCalled();
+    expect(await screen.findByRole('dialog', { name: /Entregar ORD-2026-001/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Entregar y cobrar \$400\.00/ })).toBeInTheDocument();
+
+    // Cancelling sends nothing and puts the selector back.
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mocks.updateWorkOrderStatus).not.toHaveBeenCalled();
+    expect(mocks.deliver).not.toHaveBeenCalled();
+    expect((moveSelectFor('ORD-2026-001') as HTMLSelectElement).value).toBe('recepcion');
+  });
+
+  it('delivers through the delivery RPC, never through a plain status update', async () => {
+    mocks.auth.current = authValue(ADMIN_USER);
+    mocks.getWorkOrders.mockResolvedValue([MINE]);
+    mocks.getBalance.mockResolvedValue({ total: 500, cobrado: 100, saldo: 400 });
+    mocks.deliver.mockResolvedValue({ saldo: 400, tipo: 'ingreso', movimiento_id: 'mov-1' });
+
+    const user = userEvent.setup();
+    renderWithProviders(<KanbanBoard />);
+
+    await screen.findByText('ORD-2026-001');
+    await user.selectOptions(moveSelectFor('ORD-2026-001')!, 'entregado');
+    await user.selectOptions(await screen.findByLabelText('Cómo pagó el cliente'), 'transferencia');
+    await user.click(screen.getByRole('button', { name: /Entregar y cobrar/ }));
+
+    await waitFor(() =>
+      expect(mocks.deliver).toHaveBeenCalledWith({ orderId: MINE.id, metodo: 'transferencia', numeroCheque: null, comprobanteRuta: null })
+    );
     expect(mocks.updateWorkOrderStatus).not.toHaveBeenCalled();
   });
 

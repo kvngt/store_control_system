@@ -95,3 +95,54 @@ describe('LaborTable con estados', () => {
     expect(toggle).toHaveBeenCalledWith(hechas[0]);
   });
 });
+
+// Comisión por especialidad (reunión con el taller, sept. 2026): en una orden "combinado"
+// cada línea dice a qué bolsa va, pintura o mecánica. En las demás no hay nada que elegir.
+describe('LaborTable: especialidad de cada línea', () => {
+  const combined: LaborItem[] = [
+    { id: 'p1', orden_id: 'o', descripcion: 'Pintura general', costo: 1000, estado: 'aprobado', especialidad: 'pintura' },
+    { id: 'm1', orden_id: 'o', descripcion: 'Cambio de aceite', costo: 200, estado: 'aprobado', especialidad: 'mecanica' },
+  ];
+
+  it('en una orden combinada muestra la especialidad y la manda al agregar', async () => {
+    const user = userEvent.setup();
+    const onAdd = vi.fn(async () => {});
+    renderWithProviders(<LaborTable items={combined} specialties canEdit busy={false} onAdd={onAdd} onUpdate={noop} onRemove={noop} canComplete={false} onToggleComplete={vi.fn()} />);
+
+    const pintura = screen.getByText('Pintura general').closest('tr') as HTMLElement;
+    expect(within(pintura).getByText('Pintura')).toBeInTheDocument();
+
+    await user.type(screen.getByPlaceholderText('Descripción'), 'Pulido');
+    await user.type(screen.getByPlaceholderText('$'), '150');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Especialidad' }), 'pintura');
+    await user.click(screen.getByRole('button', { name: 'Agregar' }));
+
+    expect(onAdd).toHaveBeenCalledWith({ descripcion: 'Pulido', costo: 150, especialidad: 'pintura' });
+  });
+
+  it('al editar se puede cambiar de bolsa', async () => {
+    const user = userEvent.setup();
+    const onUpdate = vi.fn(async () => {});
+    renderWithProviders(<LaborTable items={combined} specialties canEdit busy={false} onAdd={noop} onUpdate={onUpdate} onRemove={noop} canComplete={false} onToggleComplete={vi.fn()} />);
+
+    const aceite = screen.getByText('Cambio de aceite').closest('tr') as HTMLElement;
+    await user.click(within(aceite).getByRole('button', { name: 'Editar' }));
+    // El de la fila en edición; el otro es el de la fila de alta.
+    const editRow = screen.getByDisplayValue('Cambio de aceite').closest('tr') as HTMLElement;
+    await user.selectOptions(within(editRow).getByRole('combobox', { name: 'Especialidad' }), 'pintura');
+    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    expect(onUpdate).toHaveBeenCalledWith('m1', { descripcion: 'Cambio de aceite', costo: 200, especialidad: 'pintura' });
+  });
+
+  it('en una orden de un solo tipo no pide especialidad', async () => {
+    const user = userEvent.setup();
+    const onAdd = vi.fn(async () => {});
+    renderWithProviders(<LaborTable items={combined} canEdit busy={false} onAdd={onAdd} onUpdate={noop} onRemove={noop} canComplete={false} onToggleComplete={vi.fn()} />);
+
+    expect(screen.queryByRole('combobox', { name: 'Especialidad' })).not.toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText('Descripción'), 'Pulido');
+    await user.click(screen.getByRole('button', { name: 'Agregar' }));
+    expect(onAdd).toHaveBeenCalledWith({ descripcion: 'Pulido', costo: 0 });
+  });
+});

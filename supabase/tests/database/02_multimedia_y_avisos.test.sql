@@ -270,11 +270,16 @@ SELECT throws_ok(
   'Una fila no puede apuntar a un archivo de la carpeta de otra orden'
 );
 
+-- Desde 20261007000000 un técnico no asignado ni siquiera ve la orden, así que el id se
+-- guarda antes, con una sesión que sí la ve: el INSERT tiene que chocar con la política, no
+-- quedarse sin filas.
+CREATE TEMP TABLE t_orden_ajena AS
+  SELECT id FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002';
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000004';
 SELECT throws_ok(
   $$ INSERT INTO orden_media (orden_id, tipo, origen, ruta, mime, bytes)
      SELECT id, 'foto', 'recepcion', '10000000-0000-0000-0000-000000000001/' || id || '/foto-2.jpg', 'image/jpeg', 1000
-     FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002' $$,
+     FROM t_orden_ajena $$,
   '42501', NULL,
   'Un técnico no asignado no puede subir archivos a la orden'
 );

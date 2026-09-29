@@ -26,6 +26,7 @@ const WorkOrders = lazy(() => import('./pages/WorkOrders'));
 const KanbanBoard = lazy(() => import('./pages/KanbanBoard'));
 const Finance = lazy(() => import('./pages/Finance'));
 const Payroll = lazy(() => import('./pages/Payroll'));
+const Employees = lazy(() => import('./pages/Employees'));
 const Settings = lazy(() => import('./pages/Settings'));
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
@@ -82,8 +83,25 @@ function AppRoutes() {
         }
       >
         <Route path="/" element={<Dashboard />} />
-        <Route path="/customers" element={<Customers />} />
-        <Route path="/vehicles" element={<Vehicles />} />
+        {/* Clientes y vehículos son de administración (reunión con el taller, sept. 2026):
+            un técnico ve el cliente y el vehículo de sus órdenes dentro de la orden, y la
+            base no le deja crear ni editar ninguno. */}
+        <Route
+          path="/customers"
+          element={
+            <ProtectedRoute adminOnly>
+              <Customers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vehicles"
+          element={
+            <ProtectedRoute adminOnly>
+              <Vehicles />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/work-orders" element={<WorkOrders />} />
         <Route path="/kanban" element={<KanbanBoard />} />
         <Route
@@ -99,6 +117,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute adminOnly>
               <Payroll />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employees"
+          element={
+            <ProtectedRoute adminOnly>
+              <Employees />
             </ProtectedRoute>
           }
         />

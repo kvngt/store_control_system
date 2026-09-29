@@ -18,6 +18,7 @@ import {
   Wrench,
   Building2,
   Hexagon,
+  UserCog,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -51,10 +52,16 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
     logout();
   };
 
+  // Clientes y Vehículos son de administración: un técnico ve el cliente y el vehículo de
+  // sus órdenes dentro de la orden (la base le esconde los demás).
   const mainLinks = [
     { to: '/', icon: LayoutDashboard, label: t('nav.dashboard') },
-    { to: '/customers', icon: Users, label: t('nav.customers') },
-    { to: '/vehicles', icon: Car, label: t('nav.vehicles') },
+    ...(isAdmin
+      ? [
+          { to: '/customers', icon: Users, label: t('nav.customers') },
+          { to: '/vehicles', icon: Car, label: t('nav.vehicles') },
+        ]
+      : []),
     { to: '/work-orders', icon: ClipboardList, label: t('nav.workOrders') },
     { to: '/kanban', icon: Kanban, label: t('nav.kanban') },
   ];
@@ -63,6 +70,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
     ? [
         { to: '/finance', icon: DollarSign, label: t('nav.finance') },
         { to: '/payroll', icon: CreditCard, label: t('nav.payroll') },
+        { to: '/employees', icon: UserCog, label: t('nav.employees') },
       ]
     : [];
 

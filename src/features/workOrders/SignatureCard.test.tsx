@@ -30,8 +30,8 @@ const SIGNED = {
 afterEach(cleanup);
 
 describe('SignatureCard: volver a firmar', () => {
-  it('no ofrece volver a firmar a quien no puede, aunque pueda editar', () => {
-    render(<SignatureCard {...SIGNED} canEdit canResign={false} />);
+  it('no ofrece volver a firmar a quien no puede, aunque pueda firmar', () => {
+    render(<SignatureCard {...SIGNED} canSign canResign={false} />);
 
     expect(screen.queryByText('workOrders.resign')).not.toBeInTheDocument();
     expect(screen.getByAltText('workOrders.customerSignature')).toBeInTheDocument();
@@ -39,7 +39,7 @@ describe('SignatureCard: volver a firmar', () => {
 
   it('volver a firmar abre el lienzo sin tocar la firma guardada', async () => {
     const onSave = vi.fn();
-    render(<SignatureCard {...SIGNED} canEdit canResign onSave={onSave} />);
+    render(<SignatureCard {...SIGNED} canSign canResign onSave={onSave} />);
 
     await userEvent.click(screen.getByText('workOrders.resign'));
 
@@ -49,7 +49,7 @@ describe('SignatureCard: volver a firmar', () => {
   });
 
   it('cancelar devuelve la firma anterior', async () => {
-    render(<SignatureCard {...SIGNED} canEdit canResign />);
+    render(<SignatureCard {...SIGNED} canSign canResign />);
 
     await userEvent.click(screen.getByText('workOrders.resign'));
     await userEvent.click(screen.getByText('common.cancel'));
@@ -59,9 +59,28 @@ describe('SignatureCard: volver a firmar', () => {
   });
 
   it('la primera captura no ofrece cancelar: no hay a qué volver', () => {
-    render(<SignatureCard signaturePath={null} canEdit canResign saving={false} onSave={vi.fn()} />);
+    render(<SignatureCard signaturePath={null} canSign canResign saving={false} onSave={vi.fn()} />);
 
     expect(screen.getByTestId('signature-pad')).toBeInTheDocument();
     expect(screen.queryByText('common.cancel')).not.toBeInTheDocument();
+  });
+});
+
+// La reunión con el taller (sept. 2026): el técnico podía firmar en cualquier estado, y la
+// primera firma aprueba lo cotizado. La firma la toma administración.
+describe('SignatureCard: quien no firma', () => {
+  it('sin firma todavía, ve el aviso y no el lienzo', () => {
+    render(<SignatureCard signaturePath={null} canSign={false} canResign={false} saving={false} onSave={vi.fn()} />);
+
+    expect(screen.queryByTestId('signature-pad')).not.toBeInTheDocument();
+    expect(screen.getByText('workOrders.noSignature')).toBeInTheDocument();
+  });
+
+  it('con firma, la ve y no puede cambiarla', () => {
+    render(<SignatureCard {...SIGNED} canSign={false} canResign={false} />);
+
+    expect(screen.getByAltText('workOrders.customerSignature')).toBeInTheDocument();
+    expect(screen.queryByText('workOrders.resign')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('signature-pad')).not.toBeInTheDocument();
   });
 });

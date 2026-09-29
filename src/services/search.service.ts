@@ -3,7 +3,12 @@ import { supabase } from '../lib/supabase';
 import type { OrderStatus } from '../types/database';
 
 export const searchService = {
-  globalSearch: async (query: string, sedeId?: string) => {
+  /**
+   * `directory`: buscar también clientes y vehículos. Solo administración; un técnico solo
+   * busca entre sus órdenes (las pantallas de Clientes y Vehículos no son suyas y la base
+   * solo le enseña los de sus órdenes).
+   */
+  globalSearch: async (query: string, sedeId?: string, { directory = true }: { directory?: boolean } = {}) => {
     const q = query.trim();
     if (q.length < 2) return { customers: [], vehicles: [], orders: [] };
     // `,` and `(`/`)` are structural in PostgREST's .or() filter syntax (clause
@@ -32,9 +37,10 @@ export const searchService = {
       .limit(5);
     if (sedeId) orderQuery = orderQuery.eq('sede_id', sedeId);
 
+    const none = Promise.resolve({ data: [] as unknown[] });
     const [{ data: customers }, { data: vehicles }, { data: orders }] = await Promise.all([
-      customerQuery,
-      vehicleQuery,
+      directory ? customerQuery : none,
+      directory ? vehicleQuery : none,
       orderQuery,
     ]);
 

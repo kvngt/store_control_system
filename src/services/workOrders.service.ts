@@ -3,10 +3,13 @@
 import { supabase } from '../lib/supabase';
 import type {
   LaborItem,
+  OrderBalance,
   OrderMedia,
   OrderProgressUpdate,
   OrderStatus,
   PartSummary,
+  PaymentMethod,
+  Specialty,
   WorkOrder,
   WorkOrderInput,
   WorkOrderPart,
@@ -224,6 +227,53 @@ export const workOrdersService = {
     assertAffected(data, 'la orden');
   },
 
+  // ===== Entregar =====
+  // Entregar asienta dinero, así que va por la RPC `entregar_orden` y no por
+  // `updateWorkOrderStatus`: en una transacción asienta el pago final con su método (o la
+  // devolución) y marca la orden entregada, y rechaza una segunda entrega.
+
+  /** Lo que falta cobrar, o devolver si es negativo. Lo calcula la base (regla 0). */
+  getBalance: async (orderId: string) => {
+    const { data, error } = await supabase.rpc('saldo_orden', { p_orden_id: orderId });
+    if (error) throw error;
+    return data as OrderBalance;
+  },
+
+  /**
+   * Foto del cheque o de la transferencia. Bucket privado `comprobantes`, en la carpeta de la
+   * sede de la orden (la RPC lo comprueba). Del nombre original solo se usa la extensión.
+   */
+  uploadDeliveryReceipt: async (sedeId: string, numeroOrden: string, file: File) => {
+    const ext = (file.name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+    const path = `${sedeId}/entrega-${numeroOrden}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage
+      .from('comprobantes')
+      .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type || undefined });
+    if (error) throw error;
+    return path;
+  },
+
+  /** Si la entrega falló después de subir el comprobante, que no quede huérfano. */
+  removeDeliveryReceipt: async (path: string) => {
+    await supabase.storage.from('comprobantes').remove([path]);
+  },
+
+  deliver: async (input: {
+    orderId: string;
+    metodo: PaymentMethod | null;
+    numeroCheque?: string | null;
+    comprobanteRuta?: string | null;
+  }) => {
+    const { data, error } = await supabase.rpc('entregar_orden', {
+      p_orden_id: input.orderId,
+      p_metodo: input.metodo,
+      p_numero_cheque: input.numeroCheque ?? null,
+      p_comprobante_ruta: input.comprobanteRuta ?? null,
+    });
+    if (error) throw error;
+    return data as { saldo: number; tipo: 'ingreso' | 'egreso' | null; movimiento_id: string | null };
+  },
+
   // Por RPC y no con un UPDATE: `orden_labor` es escritura solo de admin, y así sigue.
   // La función comprueba por dentro la asignación y toca dos columnas, nada más.
   // El texto y la visibilidad viajan juntos porque el diálogo deja corregir la nota antes
@@ -313,7 +363,7 @@ export const workOrdersService = {
   // Totals are recomputed by database triggers whenever these rows change:
   // `total_labor` on the order, `total_repuestos` / `total_general` on
   // `orden_montos`. All four writers below are admin-only by RLS.
-  addLaborItem: async (orderId: string, item: { descripcion: string; costo: number }) => {
+  addLaborItem: async (orderId: string, item: { descripcion: string; costo: number; especialidad?: Specialty }) => {
     const { data, error } = await supabase
       .from('orden_labor')
       .insert({ ...item, orden_id: orderId })
@@ -323,7 +373,7 @@ export const workOrdersService = {
     return data as LaborItem;
   },
 
-  updateLaborItem: async (id: string, item: { descripcion: string; costo: number }) => {
+  updateLaborItem: async (id: string, item: { descripcion: string; costo: number; especialidad?: Specialty }) => {
     const { data, error } = await supabase
       .from('orden_labor')
       .update(item)

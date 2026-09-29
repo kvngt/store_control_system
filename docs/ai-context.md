@@ -19,11 +19,21 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
   `orden_repuestos` son solo admin. `ordenes_trabajo.total_labor` y `orden_labor`
   los ve la sede, porque la comisión del técnico sale de la mano de obra. Un
   técnico lee repuestos por la RPC `repuestos_de_orden` (sin precios).
-- **Multi-sede.** Casi toda tabla tiene `sede_id`. Un técnico ve solo su sede; un
-  admin, todas. Helpers SQL: `is_admin()`, `current_user_sede_id()`,
-  `is_assigned_to_order(orden_id)`.
+- **Multi-sede.** Casi toda tabla tiene `sede_id`. Un admin ve todas las sedes. Helpers
+  SQL: `is_admin()`, `current_user_sede_id()`, `is_assigned_to_order(orden_id)`,
+  `mis_ordenes_asignadas()`.
+- **Un técnico ve solo las órdenes que tiene asignadas** (`20261007000000`), no toda su
+  sede: las políticas de SELECT de `ordenes_trabajo` y de sus hijas, y la de Storage de
+  `orden_media`, comparan con `mis_ordenes_asignadas()` (un arreglo, envuelto en
+  `(SELECT …)::uuid[]` para que se calcule una vez por consulta). `clientes` y `vehiculos`
+  los lee solo si cuelgan de una orden suya, y **crearlos o editarlos es de admin**. Una
+  tabla hija nueva de la orden lleva la misma política; una RPC `SECURITY DEFINER` que
+  devuelva datos de una orden, la misma condición por dentro (`repuestos_de_orden`). Para
+  un técnico, una orden ajena **no existe** (PGRST116, cero filas en un UPDATE), no da 42501.
 - **Un técnico modifica una orden solo si está asignado y no está entregada**, y
-  solo estado, avance y firma (`trg_order_technician_guard`). Si agregas una
+  solo estado y avance (`trg_order_technician_guard`). **La firma de recepción es de
+  administración** (`20261006000000`): la primera firma aprueba lo cotizado, y el técnico
+  podía capturarla en cualquier estado. Si agregas una
   acción de técnico que cambie otra columna de `ordenes_trabajo`, añádela a la
   lista permitida de ese trigger en una migración nueva. **Tampoco elige cualquier estado**: solo
   `en_proceso`, `espera_autorizacion` y `finalizado`; devolver una orden a recepción y
@@ -35,8 +45,7 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
   quien sí trabajó la orden. `create_work_order` es `SECURITY INVOKER`, así que la política
   la cubre sin tocarla. `trg_guard_order_insert` (que bajaba a recepción la orden de un
   no-admin) se queda como red, pero su cuerpo ya no es alcanzable desde la API. Un técnico
-  sigue **viendo** las órdenes de su sede y moviendo el `estatus_tarea` de su propia
-  asignación, que no toca el reparto.
+  sigue moviendo el `estatus_tarea` de su propia asignación, que no toca el reparto.
 - **Pedir autorización exige un motivo.** `espera_autorizacion` (antes "espera de
   repuestos") es donde el técnico dice que encontró algo que hay que cotizar, y la base
   rechaza el estado sin `ordenes_trabajo.motivo_autorizacion`. Al salir del estado el
@@ -47,6 +56,24 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
   `completado_en`/`completado_por` y solo sobre una línea `aprobado`. Si necesitas que un
   técnico escriba algo más de una tabla de dinero, otra RPC estrecha, nunca una política
   más laxa.
+- **La comisión es por especialidad y por empleado** (`20261009000000`). Cada línea de
+  `orden_labor` tiene `especialidad`; cada bolsa se reparte entre los asignados con esa
+  `tipo_tarea`, al porcentaje de cada quien (`perfiles_pago`, o el de la sede). La cuenta
+  vive solo en `_reparto_comisiones(orden)`: la usan `sync_order_commissions` y
+  `comisiones_estimadas`. **No la repitas en el navegador.** La llave de `comisiones` es
+  (orden, usuario, especialidad). El pago de cada quien va en `perfiles_pago`, nunca en
+  `perfiles` (los técnicos leen los perfiles de sus compañeros).
+- **Un pago de comisiones asienta un egreso por orden** (`20261010000000`), dentro de
+  `pay_commissions` y verificando que sumen el pago. El margen de una orden sale de
+  `balance_orden` (comisiones devengadas; repuestos = el costo automático de las líneas,
+  lo demás vinculado aparte). Si agregas un movimiento automático de una orden, decide si
+  entra en esa cuenta.
+- **Entregar es `entregar_orden`, no un UPDATE de estatus.** La RPC bloquea la orden,
+  asienta el pago final **con su método** (o la devolución si el depósito supera el
+  total) y la marca entregada en una transacción (`20261008000000`). La pantalla abre
+  `DeliveryModal` y el saldo lo da `saldo_orden`. `handle_order_delivery_payment` se queda
+  como red para otra vía (asienta sin método), y `reverse_order_delivery_finance` revierte
+  en los dos sentidos: al sacar de Entregado, lo cobrado vuelve al depósito.
 - **Solo la primera firma de la orden autoriza lo cotizado** (`trg_quote_on_signature`).
   Volver a firmar no aprueba nada: lo agregado después pasa por presupuesto o por
   "Registrar autorización".

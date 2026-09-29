@@ -1,8 +1,9 @@
 -- ====================================================================================
 -- RESTORIFY — Pruebas de base de datos: lo que un técnico puede tocar de una orden
 -- ====================================================================================
--- Qué cubre (migración 20260922000000): un técnico modifica una orden solo si está
--- asignado y la orden no está entregada, y aun así solo estado, avance y firma;
+-- Qué cubre (migración 20260922000000): un técnico ve y modifica una orden solo si está
+-- asignado (verla, desde 20261007000000) y la orden no está entregada, y aun así solo estado y avance (la firma de
+-- recepción es de administración desde 20261006000000);
 -- no puede sacar una orden de Entregado; los avances siguen la misma regla; ni un
 -- avance ni una asignación cambian de orden; la firma apunta a la carpeta de su
 -- orden; los buckets del modelo anterior quedan cerrados.
@@ -13,7 +14,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(39);
+SELECT plan(41);
 
 -- ------------------------------------------------------------------------------------
 -- Datos de prueba: un admin, un mecánico asignado y uno que no lo está
@@ -61,41 +62,46 @@ CREATE TEMP VIEW t_orden AS
   SELECT * FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
 GRANT SELECT ON t_orden TO authenticated;
 
+-- El id, guardado con la sesión del admin: el técnico no asignado ya no ve la orden
+-- (20261007000000), y el INSERT de abajo tiene que chocar con la política, no quedarse sin
+-- filas.
+CREATE TEMP TABLE t_orden_id AS SELECT id FROM t_orden;
+
 -- ------------------------------------------------------------------------------------
--- 1. Técnico NO asignado: consulta, pero no modifica
+-- 1. Técnico NO asignado: ni la ve, ni la modifica
 -- ------------------------------------------------------------------------------------
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000004';
 
-SELECT isnt_empty('SELECT * FROM t_orden', 'Un técnico no asignado sí ve la orden de su sede');
+-- Acordado con el taller (sept. 2026): cada técnico ve su trabajo y nada más. Antes veía
+-- todas las órdenes de su sede en solo lectura.
+SELECT is_empty('SELECT * FROM t_orden', 'Un técnico no asignado no ve la orden de su sede');
 
-SELECT throws_ok(
-  $$ UPDATE ordenes_trabajo SET estatus = 'en_proceso' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
-  '42501', NULL,
+-- La RLS la esconde, así que un UPDATE no llega ni al guardia: cero filas, sin cambios.
+SELECT is_empty(
+  $$ UPDATE ordenes_trabajo SET estatus = 'en_proceso' WHERE id = (SELECT id FROM t_orden_id) RETURNING id $$,
   'Un técnico no asignado no puede cambiar el estado'
 );
 
-SELECT throws_ok(
-  $$ UPDATE ordenes_trabajo SET porcentaje_avance = 50 WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
-  '42501', NULL,
+SELECT is_empty(
+  $$ UPDATE ordenes_trabajo SET porcentaje_avance = 50 WHERE id = (SELECT id FROM t_orden_id) RETURNING id $$,
   'Un técnico no asignado no puede mover el avance'
 );
 
-SELECT throws_ok(
+SELECT is_empty(
   $$ UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma-1.png', firma_fecha = NOW()
-     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
-  '42501', NULL,
+     WHERE id = (SELECT id FROM t_orden_id) RETURNING id $$,
   'Un técnico no asignado no puede capturar la firma'
 );
 
 SELECT throws_ok(
   $$ INSERT INTO orden_avances (orden_id, usuario_id, descripcion)
-     SELECT id, 'a0000000-0000-0000-0000-000000000004', 'Intento' FROM t_orden $$,
+     SELECT id, 'a0000000-0000-0000-0000-000000000004', 'Intento' FROM t_orden_id $$,
   '42501', NULL,
   'Un técnico no asignado no puede agregar avances'
 );
 
 -- ------------------------------------------------------------------------------------
--- 2. Técnico asignado: estado, avance y firma, nada más
+-- 2. Técnico asignado: estado y avance, nada más
 -- ------------------------------------------------------------------------------------
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
 
@@ -110,18 +116,38 @@ SELECT lives_ok(
   'El técnico asignado mueve el avance'
 );
 
+-- La primera firma aprueba lo cotizado (trg_quote_on_signature): una firma tomada por el
+-- técnico fuera de su momento autorizaba dinero. Es de mostrador, aunque esté asignado.
+SELECT throws_ok(
+  $$ UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma-1.png', firma_fecha = NOW()
+     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
+  '42501', 'La firma del cliente la toma administración en la recepción.',
+  'El técnico asignado no captura la firma de recepción'
+);
+
+SELECT throws_ok(
+  $$ UPDATE ordenes_trabajo SET firma_fecha = NOW()
+     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
+  '42501', NULL,
+  'Ni cambia solo la fecha de la firma'
+);
+
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000001';
+
 SELECT lives_ok(
   $$ UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma-1.png', firma_fecha = NOW()
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
-  'El técnico asignado captura la firma en la carpeta de la orden'
+  'Administración captura la firma en la carpeta de la orden'
 );
 
 SELECT throws_ok(
   $$ UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/otra-orden/firma.png'
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
   '42501', NULL,
-  'La firma no puede apuntar a la carpeta de otra orden'
+  'La firma no puede apuntar a la carpeta de otra orden, tampoco para un admin'
 );
+
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
 
 -- Volver a recepción es donde se captura la firma y donde la primera firma
 -- autoriza lo cotizado: es una decisión de administración, no del taller.
@@ -216,11 +242,13 @@ SELECT is(
   'Desmarcar borra la marca'
 );
 
--- Un técnico de la misma sede que no está en la orden no decide qué se hizo en ella.
+-- Un técnico de la misma sede que no está en la orden no decide qué se hizo en ella. El id se
+-- toma antes: él ya no ve la línea, y con un NULL la RPC fallaría por otra razón.
+CREATE TEMP TABLE t_frenos AS SELECT id FROM orden_labor WHERE descripcion = 'Frenos';
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000004';
 SELECT throws_ok(
-  $$ SELECT marcar_labor_completada((SELECT id FROM orden_labor WHERE descripcion = 'Frenos')) $$,
-  '42501', NULL,
+  $$ SELECT marcar_labor_completada((SELECT id FROM t_frenos)) $$,
+  '42501', 'Solo el personal asignado puede marcar el trabajo de esta orden. Pide a administración que te asigne.',
   'Un técnico no asignado no marca el trabajo de esa orden'
 );
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';

@@ -101,13 +101,14 @@ Nadie registra a mano el dinero de una orden. Estos movimientos los crea la base
 |---|---|---|
 | Se fija un depósito al crear la orden | **Ingreso** "Depósito inicial" | pago_cliente |
 | Un admin corrige el depósito antes de entregar | Ingreso o egreso "Ajuste de depósito" por la diferencia | pago_cliente |
-| Se **entrega** la orden | **Ingreso** "Pago final" = total − lo ya cobrado | pago_cliente |
+| Se **entrega** la orden | **Ingreso** "Pago final" = total − lo ya cobrado, **con su método** (efectivo, cheque o transferencia), número de cheque y comprobante | pago_cliente |
+| Se **entrega** una orden cuyo depósito **supera** el total | **Egreso** "Devolución al cliente" por la diferencia, con su método | pago_cliente |
 | Se **entrega** la orden | **Egreso** "Costo de repuestos" | compra_repuesto |
 | Cambia el total de una orden **ya entregada** | Ingreso "Ajuste por cargo adicional" o egreso "Reembolso por ajuste" por la diferencia | pago_cliente |
 | Cambian los repuestos de una orden ya entregada | Egreso o ingreso de ajuste por la diferencia de costo | compra_repuesto |
-| Se **saca de Entregado** | Egreso "Reversión de entrega" y ingreso "Reversión de costo de repuestos" | pago_cliente / compra_repuesto |
-| Un admin **paga comisiones** | **Egreso** "Pago de comisiones – nombre" | planilla |
-| Se **deshace** un pago de comisiones | Se elimina **ese** egreso (y solo ese) | — |
+| Se **saca de Entregado** | Egreso "Reversión de entrega" (o ingreso "Reversión de devolución") e ingreso "Reversión de costo de repuestos" | pago_cliente / compra_repuesto |
+| Un admin **paga comisiones** | Un **egreso** por orden, "Comisión nombre – ORD-…", vinculado a la orden | planilla |
+| Se **deshace** un pago de comisiones | Se eliminan **los** egresos de ese pago (y solo esos) | — |
 
 ### Reglas que sostienen los números
 
@@ -128,12 +129,31 @@ Nadie registra a mano el dinero de una orden. Estos movimientos los crea la base
 - **Negativos no.** Mano de obra, precios y depósito no aceptan valores negativos, ni
   un repuesto cantidad cero (formulario y base).
 
+### Entregar
+
+Entregar es de administración y pasa por el diálogo de entrega (reunión con el taller,
+septiembre de 2026; migración `20261008000000`). La base calcula el saldo (`saldo_orden`:
+total autorizado − lo cobrado neto) y `entregar_orden` hace todo en una transacción:
+
+- Si **falta cobrar**, asienta el "Pago final" por el saldo con el **método** que se eligió,
+  el número de cheque y la foto del comprobante (bucket privado `comprobantes`, carpeta de
+  la sede). Un cheque exige número o foto.
+- Si el depósito **supera** el total, asienta la **devolución** al cliente como egreso, con
+  su método.
+- Si no hay nada pendiente, no asienta nada y no pide método.
+- Marca la orden entregada. Si algo lo impide (un presupuesto esperando al cliente), el
+  pago tampoco queda. Una segunda entrega se rechaza: nunca se cobra dos veces.
+
+Una entrega por otra vía (un UPDATE directo, una pestaña con la versión anterior) sigue
+asentando el pago final o la devolución, pero **sin método**.
+
 ### Des-entregar
 
 Sacar una orden de Entregado deja la contabilidad como si nunca se hubiera
 entregado:
 
-- Lo cobrado al cliente vuelve al depósito (se asienta la reversión del pago final).
+- Lo cobrado al cliente vuelve al depósito (se asienta la reversión del pago final, o la
+  de la devolución si el depósito era mayor que el total).
 - Se revierte el costo de repuestos.
 - Se eliminan las comisiones **pendientes**. Las **ya pagadas** se conservan: ese
   cheque existe.
@@ -162,11 +182,12 @@ mismos permisos ("técnico"); cambia el tipo de tarea.
 
 | | Admin | Técnico |
 |---|:---:|:---:|
-| Ver clientes y vehículos de su sede | ✅ (todas las sedes) | ✅ |
-| Crear y editar clientes y vehículos | ✅ | ✅ |
+| Ver clientes y vehículos | ✅ (todas las sedes) | Solo los de sus órdenes, dentro de la orden ² |
+| Crear y editar clientes y vehículos | ✅ | ❌ ² |
+| Abrir una orden o asignar a alguien | ✅ | ❌ |
 | **Eliminar** clientes, vehículos u órdenes | ✅ | ❌ |
 | Cambiar de sede activa | ✅ | ❌ |
-| Finanzas y Comisiones | ✅ | ❌ |
+| Finanzas, Comisiones y Empleados (esquema de pago de cada quien) | ✅ | ❌ (ve su propio esquema) |
 | Configuración: perfil, idioma, tema, push | ✅ | ✅ |
 | Configuración: sedes y personal | ✅ | ❌ |
 | Cambiar el rol o la sede de una persona | ✅ (de cualquiera) | ❌ (ni el propio) |
@@ -176,30 +197,29 @@ mismos permisos ("técnico"); cambia el tipo de tarea.
 
 | | Admin | Técnico asignado | Técnico no asignado |
 |---|:---:|:---:|:---:|
-| Ver la orden | ✅ | ✅ | ✅ (solo lectura) |
-| Ver **mano de obra** (montos) | ✅ | ✅ | ✅ |
+| Ver la orden | ✅ | ✅ | ❌ (no le aparece) ² |
+| Ver **mano de obra** (montos) | ✅ | ✅ | ❌ |
 | Ver **repuestos con precio**, totales y depósito | ✅ | ❌ | ❌ |
-| Ver qué repuestos lleva (sin precio) | ✅ | ✅ | ✅ |
+| Ver qué repuestos lleva (sin precio) | ✅ | ✅ | ❌ |
 | Ver **su comisión estimada** | — | ✅ | ❌ |
 | Agregar / editar mano de obra o repuestos | ✅ | ❌ | ❌ |
 | Registrar depósito | ✅ | ❌ | ❌ |
 | Cambiar estado (excepto a o desde Entregado) | ✅ | ✅ | ❌ |
 | Marcar **Entregado** | ✅ | ❌ | ❌ |
 | Mover el avance | ✅ | ✅ (orden no cerrada ¹) | ❌ |
-| Capturar la firma del cliente | ✅ | ✅ (orden no entregada) | ❌ |
-| Volver a firmar (la nueva firma **no** autoriza nada) | ✅ | ✅ (orden no entregada) | ❌ |
+| Capturar la firma del cliente ³ | ✅ | ❌ (la ve) | ❌ |
+| Volver a firmar (la nueva firma **no** autoriza nada) | ✅ (en recepción) | ❌ | ❌ |
 | Subir fotos, videos y notas de voz | ✅ | ✅ (orden no entregada) | ❌ |
 | **Publicar** multimedia al cliente | ✅ | ❌ | ❌ |
 | Borrar un archivo | ✅ cualquiera | ✅ los suyos, orden no entregada | ❌ |
 | Agregar avances | ✅ | ✅ (orden no entregada) | ❌ |
 | Borrar avances | ✅ cualquiera | ✅ los suyos, orden no entregada | ❌ |
 | Asignar a otras personas (solo personal de la sede de la orden) | ✅ | ❌ | ❌ |
-| Unirse a la orden | — | — | ✅ si no está entregada |
 | **Enviar el reporte** al cliente (correo, WhatsApp, copiar enlace) | ✅ | ❌ | ❌ |
 | Descargar el PDF de la orden | ✅ | ❌ | ❌ |
 | Ver, crear, cambiar o desactivar el **enlace del cliente** | ✅ | ❌ | ❌ |
 | **Avisar novedades** al cliente por correo | ✅ | ❌ | ❌ |
-| Ver el **estado de cada línea** (sin autorizar, esperando, autorizada, no realizar) | ✅ | ✅ | ✅ |
+| Ver el **estado de cada línea** (sin autorizar, esperando, autorizada, no realizar) | ✅ | ✅ | ❌ |
 | **Enviar presupuesto**, **registrar autorización**, cancelar presupuesto | ✅ | ❌ | ❌ |
 | Cambiar el estado de una línea con un UPDATE directo | ❌ | ❌ | ❌ |
 | Mover su tarjeta en el Kanban | ✅ todas | ✅ (excepto a o desde Entregado) | ❌ |
@@ -208,8 +228,18 @@ mismos permisos ("técnico"); cambia el tipo de tarea.
 una sola diferencia: ¹ en una orden **Finalizada** la interfaz bloquea el avance
 (queda en 100 %), pero la base lo permite mientras la orden no esté entregada.
 
-De una orden, un técnico asignado solo puede cambiar **estado, fecha de
-finalización, avance y firma**. Cliente, vehículo, millas, gasolina, notas de
+² **Cada técnico ve solo su trabajo** (acordado con el taller en septiembre de 2026,
+migración `20261007000000`): la base le entrega únicamente las órdenes donde está
+asignado, y de ellas su mano de obra, avances, archivos, compañeros de equipo, cliente y
+vehículo. Las de sus compañeros no le aparecen ni pidiéndolas por su id, y sus fotos
+tampoco se pueden descargar por la ruta. Clientes y Vehículos salen de su menú; los ve
+dentro de sus órdenes, sin poder crearlos ni editarlos.
+
+³ **La firma de recepción la toma administración** (migración `20261006000000`): la
+primera firma aprueba lo cotizado, y el técnico podía capturarla en cualquier estado.
+
+De una orden, un técnico asignado solo puede cambiar **estado (con su motivo al pedir
+autorización), fecha de finalización y avance**. Cliente, vehículo, millas, gasolina, notas de
 recepción, fechas y creador solo los cambia un admin. La regla se comprueba
 contra la fila completa, así que una columna nueva queda protegida sin tocar el
 trigger (`trg_order_technician_guard`). Ni un avance ni una asignación pueden
@@ -226,15 +256,26 @@ crean de nuevo.
 
 Resumen; el detalle está en [comisiones.md](comisiones.md).
 
+Por especialidad y por empleado (reunión con el taller, septiembre de 2026; migración
+`20261009000000`):
+
 ```
-base       = total general − total repuestos      (= mano de obra)
-bolsa      = base × porcentaje de la sede          (35 % por defecto)
-por técnico = bolsa ÷ técnicos asignados, en centavos, residuo a los primeros
+bolsa de cada especialidad = mano de obra autorizada de mecánica, o de pintura
+parte de cada quien        = bolsa ÷ asignados con esa tarea
+comisión                   = parte × su porcentaje   (el suyo, o el de la sede: 35 % por defecto)
 ```
 
-- Se generan **al entregar**. Se recalculan si cambian los totales, el equipo
-  asignado o el porcentaje de la sede — **solo lo pendiente**; lo pagado no se toca.
-- El reparto suma la bolsa exacta: $350 entre 3 = $116.67 + $116.67 + $116.66.
+- Cada línea de mano de obra tiene especialidad: la del tipo de orden, o en una orden
+  **combinado** la que elija el admin (mecánica por omisión).
+- **A salario** no se cobra comisión; su parte se queda en el taller. Una bolsa sin nadie
+  asignado no la cobra nadie (la orden lo avisa). Quien trabaja las dos cobra de las dos.
+- Se generan **al entregar**. Se recalculan si cambian los totales, la especialidad de una
+  línea, el equipo asignado, el porcentaje de la sede o el esquema de un empleado —
+  **solo lo pendiente**; lo pagado no se toca. Pasar a alguien a salario le quita lo
+  pendiente (la pantalla avisa con el monto).
+- El reparto se hace en centavos exactos: tres al mismo porcentaje sobre $1,000 al 35 % =
+  $116.67 + $116.67 + $116.66.
+- El esquema de pago (`perfiles_pago`) es de administración; cada técnico ve el suyo.
 - Al pagar, el monto lo calcula el servidor. Un pago mezcla comisiones de una sola
   sede.
 - Cheque: se pide número o foto del comprobante (en la interfaz).

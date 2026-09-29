@@ -117,7 +117,8 @@ export default function Dashboard() {
             <ClipboardList size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-label">{t('dashboard.activeOrders')}</div>
+            {/* Para un técnico el panel cuenta sus órdenes: la base no le enseña otras. */}
+            <div className="stat-label">{isAdmin ? t('dashboard.activeOrders') : t('dashboard.myActiveOrders')}</div>
             <div className="stat-value">{stats.ordenes_activas}</div>
             <div className="stat-change positive">
               +{stats.ordenes_finalizadas_mes} {t('dashboard.completedThisMonth')}
@@ -143,6 +144,9 @@ export default function Dashboard() {
           </button>
         )}
 
+        {/* La ocupación es del taller entero, y con las órdenes de un solo técnico daría un
+            número falso: es de administración. */}
+        {isAdmin && (
         <button
           type="button"
           className="stat-card stat-card-link stagger-3 animate-fade-in-up"
@@ -165,6 +169,7 @@ export default function Dashboard() {
           </div>
           <ChevronRight size={18} className="stat-card-arrow" />
         </button>
+        )}
 
         {isAdmin && (
           <button

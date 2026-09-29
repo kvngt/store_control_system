@@ -23,10 +23,10 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 432 pruebas, 60 archivos | ~30 s | Nada |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte y hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 223 aserciones, 9 archivos | ~1 min | Docker |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 480 pruebas, 67 archivos | ~30 s | Nada |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte y hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 330 aserciones, 13 archivos | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, 77 casos (76 pasan, 1 se salta) | 2–5 min | Credenciales de prueba |
-| **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 66 casos con las cuentas de prueba (66 PASS · 0 SKIP), todos de solo lectura | ~15 s | Nada; con cuentas de prueba cubre más |
+| **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 85 casos con las cuentas de prueba, todos de solo lectura. Los 66 anteriores, 66 PASS · 0 SKIP; los 19 de las migraciones `20261006000000` a `20261010000000` pasan solo con ellas aplicadas | ~15 s | Nada; con cuentas de prueba cubre más |
 | **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
 
 Por qué hacen falta todas: **Vitest simula la base**, así que no puede detectar una
@@ -73,21 +73,24 @@ declaran `// @vitest-environment jsdom` y renderizan con los proveedores reales
 | Funciones de empleados | `services/users.service` | El motivo del rechazo de la función llega a la pantalla (no "non-2xx status code"); correo repetido en español; sin cuerpo se conserva el error original |
 | Importación bancaria | `lib/bankStatementParser*`, `lib/categorizationRules`, `pages/finance/ImportStatementModal`, `pages/Finance.import` | Lectura del PDF de Wells Fargo, casos límite, categorización, carga diferida del importador |
 | Finanzas | `pages/Finance.linkorder` | Vincular un movimiento a una orden; errores visibles en el diálogo |
-| Multimedia | `lib/media/uploadQueue`, `lib/media/mime`, `services/media.service`, `features/media/MediaGallery` | Cola: no re-subir tras fallar la fila, no reintentar permisos, reanudar tras recarga solo para el mismo usuario, concurrencia, sin conexión; formatos MP4 primero; galería: miniaturas firmadas, publicar solo admin, borrar solo lo propio, progreso |
-| Órdenes | `pages/WorkOrders.smoke`, `features/workOrders/*` (incluye `workOrderForm.schema`) | Lista (una sola versión según ancho), alta y validación, detalle; **técnico sin totales ni precios**, comisión estimada ($1,000 × 35 % ÷ 2 = $175), alta de técnico sin depósito/labor/repuestos; fotos de recepción comprimidas y su ciclo de memoria; avance solo con nota de voz; **firmar vuelve a leer la orden** (la firma autoriza lo cotizado); la lista para asignar solo trae personal de la sede de la orden |
-| Kanban | `pages/KanbanBoard` | Mover tarjetas, confirmación al entregar |
+| Multimedia | `lib/media/uploadQueue`, `lib/media/mime`, `lib/media/videoFrame`, `services/media.service`, `features/media/MediaGallery`, `features/media/VideoRecorderModal`, `features/media/DraftMediaStrip` | Cola: no re-subir tras fallar la fila, no reintentar permisos, reanudar tras recarga solo para el mismo usuario, concurrencia, sin conexión; formatos MP4 primero; galería: miniaturas firmadas, publicar solo admin, borrar solo lo propio, progreso, **video sin miniatura con ícono y no un cargando eterno**; **cuadro negro descartado** como miniatura; el grabador saca la miniatura del archivo grabado y revisa sin autoplay; **el video del borrador se abre y se reproduce** |
+| Órdenes | `pages/WorkOrders.smoke`, `features/workOrders/*` (incluye `workOrderForm.schema`) | Lista (una sola versión según ancho), alta y validación, detalle; **técnico sin totales ni precios**, comisión estimada ($1,000 × 35 % ÷ 2 = $175), alta de técnico sin depósito/labor/repuestos; fotos de recepción comprimidas y su ciclo de memoria; avance solo con nota de voz; **firmar vuelve a leer la orden** (la firma autoriza lo cotizado); la lista para asignar solo trae personal de la sede de la orden; **el técnico ve una sola lista, sin "Otras órdenes" ni catálogos de clientes y vehículos**, y abrir una orden que no es suya lo explica; **la firma solo la toma administración** (`SignatureCard`) |
+| Kanban | `pages/KanbanBoard` | Mover tarjetas; **entregar abre el diálogo de cobro** y pasa por `entregar_orden`, nunca por un cambio de estatus suelto |
+| Comisión por especialidad | `features/workOrders/CommissionEstimateCard`, `features/workOrders/LaborTable` | El técnico ve su bolsa, su porcentaje y el total que da la base; a salario, que no genera; administración ve el reparto y el aviso de una bolsa sin nadie. En una orden combinada cada línea lleva especialidad y se manda al agregar y al editar; en las demás no se pide |
+| Empleados | `pages/Employees.pay`, `pages/Employees.users` | Pago de cada quien (el % de la sede, uno propio o salario); guardar un porcentaje; fuera de 0–100 se rechaza en el diálogo; pasar a salario con pendientes avisa con el monto. El alta y la edición del personal (antes en Configuración) |
+| Margen por orden | `features/finance/OrderBalanceCard`, `features/finance/OrderMarginCard` | El balance muestra lo que da la base y lista aparte lo vinculado; la lista del mes pide el mes en curso, muestra las sumas del servidor, pagina pidiendo la siguiente página y avisa si no hubo entregas; el rango del mes cruza diciembre |
+| Entregar | `features/workOrders/DeliveryModal` | Saldo según la base (cobrar, devolver o nada); método obligatorio con saldo; cheque con número o foto; el comprobante sube a la carpeta de la sede y se borra si la entrega falla; error dentro del diálogo; sin saldo calculado no deja entregar |
 | Clientes | `services/customers.service` | Conteos embebidos de vehículos y órdenes (`vehiculos(count)`), con cero para quien no tiene; los arreglos de conteo no quedan en el cliente |
 | Listas completas | `services/support` | `fetchAll`: 2.500 filas en tres páginas, una sola consulta si caben en una, una página más si la anterior llegó llena, error de cualquier página |
 | Panel y Finanzas | `services/dashboard.service` | Llama `resumen_panel` con el día y la zona del navegador, arma tarjetas y ocupación, capacidad cero sin dividir entre cero, un error de la base no se vuelve ceros, etiqueta del mes sin correrla por UTC |
 | Borrados en la orden | `services/workOrders.service` | Quitar mano de obra, un repuesto o una asignación falla con mensaje si la base no borró nada (RLS), en vez de fingir éxito |
 | Importación bancaria | `pages/finance/ImportStatementModal` | El lote y sus movimientos viajan en una sola llamada; si falla se borra el PDF subido |
 | Notificaciones | `features/notifications/*`, `lib/push` | Campana: conteo, marcar leído, navegar, aviso en tiempo real con toast; traducción de avisos; detección de iPhone sin instalar; tarjeta de push: activar, permiso negado, prueba, desactivar |
-| Configuración | `pages/Settings.employee` | Alta de empleado: errores visibles |
 | Portal del cliente | `portal/CustomerPortal`, `lib/emailTemplates`, `lib/phone` | Estado, vehículo, multimedia publicada y cuenta; visor de video; WhatsApp y llamar; "pagado en su totalidad"; enlace vencido con teléfono; ruta sin token no consulta; reintento; **la baja se confirma con botón, nunca al abrir**; inglés. Plantillas: asunto por estado, fecha DATE sin correrse un día, **HTML escapado**, logo solo https y color solo hexadecimal, Reply-To solo si hay correo de contacto |
 | Presupuestos | `features/workOrders/QuoteCard`, `features/workOrders/LaborTable`, `portal/CustomerPortal` (sección presupuesto), `lib/emailTemplates` | Tarjeta: se oculta sin nada que autorizar; enviar tras confirmar; aviso si el cliente no tiene correo; registrar autorización (todo marcado, se desmarca lo rechazado, vía y nombre); cancelar con confirmación; historial con vía, conteos y comentario. Tabla: total solo autorizado, "sin autorizar" aparte, insignias, línea pendiente sin controles. Portal: nada marcado, exige nombre, manda lo marcado **y todas las líneas vistas**, confirmación que sobrevive a la recarga, "el taller actualizó el presupuesto", lo no autorizado aparte. Correos: presupuesto solo con lo pendiente, constancia con lo autorizado y la vía |
 | Enlace del cliente (admin) | `features/workOrders/CustomerLinkCard` | Crear enlace; visitas; WhatsApp con el enlace; cambiar enlace pide confirmación; historial de correos con estado y motivo; avisar novedades; sin correo o con baja no ofrece avisar |
 | Reporte (fase 6) | `features/workOrders/ShareReportModal`, `lib/reportMedia`, `lib/emailTemplates` (plantilla `reporte`) | Enviar por correo desde el sistema y cerrar; sin correo o con baja el botón está apagado; WhatsApp al teléfono del cliente con el enlace; Abrir; Descargar PDF. El PDF lleva **solo fotos publicadas** (miniaturas), sin videos ni archivos internos, y firma la ruta de la firma. Correo del reporte con el enlace |
-| Layout | `components/layout/BottomNav`, `components/LazyModal` | Barra inferior; modales diferidos |
+| Layout y búsqueda | `components/layout/BottomNav`, `components/LazyModal`, `services/search.service` | Barra inferior (**sin Clientes ni Vehículos para un técnico**); modales diferidos; **el buscador de un técnico solo consulta órdenes** |
 | Datos remotos | `lib/queryClient` | Reintentos y claves de caché |
 
 **Límites:** no hay navegador ni base reales. No prueba cámara, micrófono,
@@ -132,14 +135,69 @@ PostgREST en cada petición.
 
 **`supabase/tests/database/03_permisos_tecnico.test.sql`** (23)
 
-- Técnico no asignado: ve la orden, pero no cambia estado, avance ni firma, ni
-  agrega avances.
-- Técnico asignado: cambia estado, avance y firma; la firma no apunta a otra
-  orden; no cambia cliente ni millas; no mueve un avance ni pasa su asignación a
-  otra persona.
+- Técnico no asignado: no ve la orden (desde `20261007000000`), y un UPDATE sobre ella
+  afecta cero filas: no cambia estado, avance ni firma, ni agrega avances.
+- Técnico asignado: cambia estado y avance; **no captura ni cambia la firma**
+  (es de administración desde `20261006000000`); la firma no apunta a otra orden,
+  tampoco para un admin; no cambia cliente ni millas; no mueve un avance ni pasa su
+  asignación a otra persona.
 - Orden entregada: el técnico no la saca de Entregado (la orden y su comisión
   siguen intactas) y no agrega ni borra avances; el admin sí puede sacarla.
 - Los buckets viejos `vehiculos_fotos` y `firmas` ya no son públicos.
+
+**`supabase/tests/database/10_visibilidad_tecnico.test.sql`** (26)
+
+- Un técnico ve su orden y ninguna otra de la sede, ni pidiéndola por su id; de la ajena no
+  ve mano de obra, avances, fotos, archivos en Storage, asignaciones ni repuestos (la RPC
+  tampoco se los da), ni su aviso de presupuesto.
+- Ve a su compañera de la misma orden, el cliente y el vehículo de su orden y ningún otro;
+  su panel cuenta sus órdenes; sigue moviendo el avance de la suya.
+- No da de alta ni edita clientes ni vehículos, ni los de su propia orden.
+- Un admin ve todo. Un técnico que cambia de sede deja de ver las órdenes de la anterior.
+  `mis_ordenes_asignadas()` no se ejecuta sin sesión.
+
+**`supabase/tests/database/11_entrega.test.sql`** (31)
+
+- La base calcula el saldo (falta cobrar, devolver o nada) y solo administración lo
+  consulta o entrega.
+- Entregar con saldo exige método (uno de los tres); un cheque, número o foto; el
+  comprobante, en la carpeta de la sede. Ningún intento rechazado entrega la orden.
+- El "Pago final" queda una sola vez, con método, cheque, comprobante y quién lo registró; lo
+  cobrado es el total; una segunda entrega se rechaza.
+- Depósito mayor que el total → egreso "Devolución al cliente" con su método. Nada
+  pendiente → no pide método ni asienta nada.
+- Con un presupuesto esperando al cliente no se entrega, y el pago que alcanzó a asentar se
+  deshace con ella.
+- Sacar de Entregado deja lo cobrado igual al depósito, también después de una devolución
+  ("Reversión de devolución"); una entrega por UPDATE directo asienta la devolución sin
+  método.
+
+**`supabase/tests/database/12_comisiones_especialidad.test.sql`** (32)
+
+- El ejemplo de la reunión: pintura $1,000 y mecánica $200 → la pintora $350, el mecánico
+  $70 (antes, $210 cada uno).
+- Porcentaje propio: recalcula lo pendiente; lo pagado se queda como se pagó.
+- Un segundo mecánico parte la bolsa; a salario deja de cobrar y su mitad se queda en el
+  taller.
+- "Combinado" sin especialidad va a mecánica; cambiar la línea a pintura mueve la comisión.
+- Una bolsa sin nadie no la cobra nadie y la estimación lo avisa; quien hizo las dos cobra
+  de las dos.
+- Cambiar solo la especialidad de una línea pendiente se permite y no toca su estado;
+  cambiarle el precio, no.
+- Un mecánico no se pone porcentaje, no ve el de su compañera, ve solo lo suyo en la
+  estimación (con su total sumado en la base) y no ve el resumen de otro; administración
+  sí. Las funciones internas no son RPC.
+
+**`supabase/tests/database/13_margen_por_orden.test.sql`** (16)
+
+- El balance de una orden: cobrado 1300 − repuestos 100 − comisiones 420 = margen 780.
+- Un pago de comisiones de dos órdenes → dos egresos `planilla`, uno por orden, con su
+  cheque, que suman exactamente el pago; el margen no cambia al pagar (cuenta lo devengado).
+  Deshacerlo borra los dos.
+- Una compra manual vinculada aparece en `otros` y no se resta otra vez.
+- El margen del periodo: filas, sumas, paginación y un periodo vacío.
+- Un técnico no ve balance ni margen; las funciones internas no son RPC y el egreso único
+  se retiró.
 
 **`supabase/tests/database/04_portal_y_correos.test.sql`** (24)
 

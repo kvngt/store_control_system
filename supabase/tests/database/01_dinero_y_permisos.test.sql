@@ -61,8 +61,10 @@ SELECT lives_ok(
          'creado_por', 'a0000000-0000-0000-0000-000000000001'),
        '[{"descripcion":"Frenos","costo":1000}]'::jsonb,
        '[{"descripcion":"Pastillas","cantidad":2,"precio_venta_unitario":100}]'::jsonb,
+       -- Los dos en mecánica: desde 20261009000000 cada bolsa (mecánica, pintura) se reparte
+       -- entre los de esa tarea, y esta orden solo tiene mano de obra de mecánica.
        '[{"usuario_id":"a0000000-0000-0000-0000-000000000002","tipo_tarea":"mecanica"},
-         {"usuario_id":"a0000000-0000-0000-0000-000000000003","tipo_tarea":"pintura"}]'::jsonb);
+         {"usuario_id":"a0000000-0000-0000-0000-000000000003","tipo_tarea":"mecanica"}]'::jsonb);
      -- Desde la fase 5 lo cotizado se cobra cuando el cliente lo autoriza: la firma
      -- de recepción lo aprueba.
      UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma.png'
@@ -228,9 +230,9 @@ SELECT lives_ok(
          'tipo_trabajo', 'combinado', 'millas_ingreso', 1, 'nivel_gasolina', '1/4',
          'deposito_inicial', 0, 'inspeccion_360_notas', '', 'fecha_estimada_entrega', '2026-10-01',
          'creado_por', 'a0000000-0000-0000-0000-000000000001'),
-       '[{"descripcion":"Pintura","costo":1000}]'::jsonb, '[]'::jsonb,
-       '[{"usuario_id":"a0000000-0000-0000-0000-000000000001","tipo_tarea":"mecanica"},
-         {"usuario_id":"a0000000-0000-0000-0000-000000000002","tipo_tarea":"mecanica"},
+       '[{"descripcion":"Pintura","costo":1000,"especialidad":"pintura"}]'::jsonb, '[]'::jsonb,
+       '[{"usuario_id":"a0000000-0000-0000-0000-000000000001","tipo_tarea":"pintura"},
+         {"usuario_id":"a0000000-0000-0000-0000-000000000002","tipo_tarea":"pintura"},
          {"usuario_id":"a0000000-0000-0000-0000-000000000003","tipo_tarea":"pintura"}]'::jsonb);
      UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma.png'
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002';

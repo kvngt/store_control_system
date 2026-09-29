@@ -37,8 +37,24 @@ export type {
   CategorizationRule,
   ParsedStatementTransaction,
   ReviewableTransaction,
+  PaymentMethod,
+  OrderBalance,
+  OrderFinancialBalance,
+  OrderMarginPage,
 } from './domain/finance.types';
-export type { Commission, CommissionPayment, CommissionBalance } from './domain/payroll.types';
+export { PAYMENT_METHODS } from './domain/finance.types';
+export type {
+  Commission,
+  CommissionPayment,
+  CommissionBalance,
+  CommissionEstimate,
+  EmployeeSummary,
+  PayKind,
+  PayScheme,
+  SalaryPeriod,
+  Specialty,
+} from './domain/payroll.types';
+export { SPECIALTIES } from './domain/payroll.types';
 export type { DashboardStats } from './domain/dashboard.types';
 
 export type { MediaKind, MediaOrigin, OrderMedia, PreparedMedia } from './domain/media.types';

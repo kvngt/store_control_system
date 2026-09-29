@@ -659,3 +659,86 @@ Y después, en otra migración y en el frontend:
 6. Clase `.badge-*` y `.kanban-column-header.*`, con su variable de color.
 
 Estimado: una migración y unas 2 horas de interfaz.
+---
+
+## Funciones propuestas, pendientes de autorización del taller
+
+Ideas ya analizadas y listas para construir que esperan el visto bueno del cliente antes de
+tocar código.
+
+### Traducir en el portal lo que escribe el taller
+
+**Estado:** analizada el 28/09/2026. En espera de que el taller la autorice: suma un servicio
+externo con costo y hace salir a Google textos de las órdenes de sus clientes.
+
+**El problema.** La app y el portal del cliente cambian entre español e inglés, pero lo que
+**escribe el taller** se queda en el idioma en que se escribió. Un cliente que lee su portal en
+inglés ve "Cambio de balatas delanteras" en el presupuesto que tiene que autorizar. Al cliente le
+llegan cuatro textos libres, todos por `datos_portal()`:
+
+| Texto | Tabla y columna | Dónde lo pinta el portal |
+|---|---|---|
+| Mano de obra | `orden_labor.descripcion` | presupuesto y cuenta |
+| Repuestos | `orden_repuestos.descripcion` | presupuesto y cuenta |
+| Avances publicados | `orden_avances.descripcion` (con `visible_cliente`) | tarjetas de avance |
+| Notas de recepción | `ordenes_trabajo.inspeccion_360_notas` | bloque de recepción |
+
+Los correos y el PDF son solo en español, así que el alcance es **solo el portal**.
+
+**Por qué no hay una forma gratis y automática.** La traducción del navegador ("Traducir
+página") la tiene que pedir el cliente y traduce la página entera a ciegas. La API de traducción
+integrada de Chrome solo existe en Chrome de escritorio, no en un iPhone. Un traductor propio de
+código abierto necesitaría un servidor, y Restorify no tiene uno. Hace falta un servicio.
+
+**Opciones evaluadas:**
+
+| Opción | Costo | Jerga del taller | Datos de los clientes |
+|---|---|---|---|
+| **Gemini API, capa de pago** (recomendada) | Menos de 1–2 USD al mes con un modelo Flash-Lite, al volumen de un taller | Buena: el glosario va en las instrucciones y detecta solo el idioma | Google no los usa para mejorar sus productos (los guarda un tiempo limitado solo para detectar abusos) |
+| Gemini API, capa gratuita | 0 | Igual | Google los usa para mejorar sus productos, pueden leerlos revisores humanos y sus términos piden no mandar información personal. **Descartada** |
+| Cloud Translation Basic (v2) | 0 hasta 500,000 caracteres al mes (Basic y Advanced sumados) | Genérica y sin glosario: "calavera" sale *skull*. Los glosarios son de la edición Advanced (v3), con archivo en Cloud Storage y cuenta de servicio | No revisado |
+
+Las dos exigen una cuenta de facturación activa de Google Cloud. Conviene un proyecto propio de
+Restorify, porque los límites se cuentan por proyecto y no por llave.
+
+**Diseño propuesto** (no depende del motor):
+
+1. **Las traducciones van en una tabla aparte, nunca en las filas de dinero.** Una tabla
+   `traducciones` por sede y por md5 del texto, con RLS activa y sin políticas. Escribirlas en
+   `orden_labor` / `orden_repuestos` rompería los presupuestos: `trg_guard_linea_presupuesto`
+   haría fallar la escritura sobre una línea **pendiente** (justo las que el cliente lee para
+   autorizar) y devolvería **en silencio a borrador** una rechazada, borrando la respuesta del
+   cliente.
+2. **Es una memoria.** En un taller las descripciones se repiten ("Cambio de aceite",
+   "Alineación"), así que cada frase se traduce una vez. Editar una descripción da otra clave; la
+   entrada vieja deja de usarse y no hay nada que invalidar.
+3. **Se traduce cada vez que se guarda un texto que ve el cliente**, no solo al crear la orden:
+   las líneas del presupuesto y los avances llegan después. Los triggers encolan **un trabajo por
+   orden** en `cola_envios` (canal nuevo `traduccion`, deduplicado por orden, con unos segundos
+   de espera) y `process-outbox` hace una sola llamada por orden. Envueltos para que traducir
+   nunca impida guardar una línea. Mientras tanto, el portal muestra el original.
+4. **Solo textos que ve el cliente**, con una sola definición (`_textos_cliente(orden)`) que
+   usan quien decide qué traducir y quien entrega al portal. Nunca un avance interno.
+5. **El portal recibe un diccionario por una RPC aparte**, `traducciones_portal(p_token)`, que la
+   edge function `portal` llama en paralelo, sin reescribir `datos_portal`. Muestra
+   "Traducción automática · Ver original".
+6. **Un glosario de términos regionales** ("calavera" → luz trasera, "balatas" → pastillas de
+   freno, "mofle" → silenciador, "cofre" → capó…), aplicado solo a lo que se envía: el texto
+   guardado nunca cambia. Una traducción corregida a mano (`origen = 'manual'`) no se pisa.
+7. **La llave va en `supabase secrets`.** Toda función nueva, revocada y con `GRANT` solo a
+   `service_role`.
+
+**Lo que decide el taller:** si la quiere, y con qué opción de la tabla.
+
+**Estimado:** una migración, cambios en dos edge functions (`process-outbox` y `portal`), el
+portal y sus pruebas (pgTAP, Vitest y un caso de `qa:security`): unos dos días.
+
+**Fuentes consultadas (septiembre 2026):**
+
+- [Precios de Cloud Translation](https://cloud.google.com/translate/pricing) — capa gratuita de 500,000 caracteres al mes
+- [Configuración de Cloud Translation](https://docs.cloud.google.com/translate/docs/setup) — "You must enable billing to use Cloud Translation"
+- [Traducir texto con Basic (v2)](https://docs.cloud.google.com/translate/docs/basic/translating-text) — detección del idioma y varios textos por solicitud
+- [Glosarios (Advanced)](https://docs.cloud.google.com/translate/docs/advanced/glossary)
+- [Precios de la API de Gemini](https://ai.google.dev/gemini-api/docs/pricing)
+- [Límites de uso de la API de Gemini](https://ai.google.dev/gemini-api/docs/rate-limits) — por proyecto, no por llave
+- [Términos de la API de Gemini](https://ai.google.dev/gemini-api/terms) — uso de los datos en la capa gratuita y en la de pago

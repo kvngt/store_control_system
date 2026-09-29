@@ -324,6 +324,7 @@ export default function Payroll() {
                         <thead>
                           <tr>
                             <th>{t('workOrders.orderNumber')}</th>
+                            <th>{t('commission.specialty')}</th>
                             <th style={{ textAlign: 'right' }}>{t('payroll.profitBase')}</th>
                             <th style={{ textAlign: 'right' }}>{t('payroll.rate')}</th>
                             <th style={{ textAlign: 'right' }}>{t('payroll.technicians')}</th>
@@ -336,6 +337,7 @@ export default function Payroll() {
                               <td data-label={t('workOrders.orderNumber')} style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>
                                 {c.orden?.numero_orden || '—'}
                               </td>
+                              <td data-label={t('commission.specialty')}>{c.especialidad === 'pintura' ? t('workOrders.painting') : t('workOrders.mechanical')}</td>
                               <td data-label={t('payroll.profitBase')} style={{ textAlign: 'right' }}>{money(Number(c.base_ganancia))}</td>
                               <td data-label={t('payroll.rate')} style={{ textAlign: 'right' }}>{Number(c.porcentaje)}%</td>
                               <td data-label={t('payroll.technicians')} style={{ textAlign: 'right' }}>{c.tecnicos}</td>
@@ -361,6 +363,7 @@ export default function Payroll() {
               <tr>
                 <th>{t('payroll.employee')}</th>
                 <th>{t('workOrders.orderNumber')}</th>
+                <th>{t('commission.specialty')}</th>
                 <th style={{ textAlign: 'right' }}>{t('payroll.profitBase')}</th>
                 <th style={{ textAlign: 'right' }}>{t('payroll.rate')}</th>
                 <th style={{ textAlign: 'right' }}>{t('payroll.technicians')}</th>
@@ -375,6 +378,7 @@ export default function Payroll() {
                   <td data-label={t('workOrders.orderNumber')} style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>
                     {c.orden?.numero_orden || '—'}
                   </td>
+                  <td data-label={t('commission.specialty')}>{c.especialidad === 'pintura' ? t('workOrders.painting') : t('workOrders.mechanical')}</td>
                   <td data-label={t('payroll.profitBase')} style={{ textAlign: 'right' }}>{money(Number(c.base_ganancia))}</td>
                   <td data-label={t('payroll.rate')} style={{ textAlign: 'right' }}>{Number(c.porcentaje)}%</td>
                   <td data-label={t('payroll.technicians')} style={{ textAlign: 'right' }}>{c.tecnicos}</td>

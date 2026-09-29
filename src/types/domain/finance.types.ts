@@ -1,5 +1,9 @@
 import type { TransactionCategory, TransactionType } from './enums';
 
+/** Cómo pagó el cliente al entregar (o cómo se le devolvió). CHECK en la base. */
+export type PaymentMethod = 'efectivo' | 'cheque' | 'transferencia';
+export const PAYMENT_METHODS: PaymentMethod[] = ['efectivo', 'cheque', 'transferencia'];
+
 export interface FinancialTransaction {
   id: string;
   sede_id: string;
@@ -13,8 +17,59 @@ export interface FinancialTransaction {
   descripcion: string;
   fecha: string;
   numero_cheque?: string | null;
+  /** Solo en el pago final o la devolución al entregar (20261008000000). */
+  metodo_pago?: PaymentMethod | null;
+  /** Foto del cheque o de la transferencia, en el bucket privado `comprobantes`. */
+  comprobante_ruta?: string | null;
   registrado_por?: string;
   creado_en: string;
+}
+
+/**
+ * Lo que devuelve `balance_orden` (20261010000000): cuánto dejó una orden. El margen resta
+ * las comisiones devengadas y el costo automático de las líneas; lo demás vinculado a la
+ * orden va en `otros`, sin restarse, para no contar dos veces una misma pieza.
+ */
+export interface OrderFinancialBalance {
+  total_orden: number;
+  cobrado: number;
+  costo_repuestos: number;
+  comisiones: number;
+  comisiones_pagadas: number;
+  margen: number;
+  otros: {
+    id: string;
+    fecha: string;
+    tipo: TransactionType;
+    categoria: TransactionCategory;
+    descripcion: string;
+    monto: number;
+    importado: boolean;
+  }[];
+}
+
+/** Una página de `margen_ordenes`, con las sumas de todo el periodo. */
+export interface OrderMarginPage {
+  total_filas: number;
+  sumas: { cobrado: number; costo_repuestos: number; comisiones: number; margen: number };
+  filas: {
+    id: string;
+    numero_orden: string;
+    cliente: string | null;
+    fecha_finalizacion: string;
+    total_orden: number;
+    cobrado: number;
+    costo_repuestos: number;
+    comisiones: number;
+    margen: number;
+  }[];
+}
+
+/** Lo que devuelve `saldo_orden`: la base hace la cuenta. `saldo` < 0 es una devolución. */
+export interface OrderBalance {
+  total: number;
+  cobrado: number;
+  saldo: number;
 }
 
 // ===== Bank statement import =====

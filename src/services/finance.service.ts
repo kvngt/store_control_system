@@ -4,6 +4,8 @@ import type {
   BankStatementImport,
   CategorizationRule,
   FinancialTransaction,
+  OrderFinancialBalance,
+  OrderMarginPage,
   ParsedStatementTransaction,
   TransactionCategory,
   TransactionType,
@@ -21,6 +23,30 @@ export interface StatementRowInput {
 }
 
 export const financeService = {
+  /** Cuánto dejó una orden: cobrado, repuestos, comisiones y margen. La cuenta es de la base. */
+  getOrderBalance: async (orderId: string) => {
+    const { data, error } = await supabase.rpc('balance_orden', { p_orden_id: orderId });
+    if (error) throw error;
+    return data as OrderFinancialBalance;
+  },
+
+  /**
+   * Las órdenes entregadas de un periodo con su margen, de a páginas, y las sumas del periodo.
+   * `desde` incluido, `hasta` excluido, en la zona del taller.
+   */
+  getOrderMargins: async (input: { sedeId?: string; desde: string; hasta: string; limit: number; offset: number; tz: string }) => {
+    const { data, error } = await supabase.rpc('margen_ordenes', {
+      p_sede_id: input.sedeId ?? null,
+      p_desde: input.desde,
+      p_hasta: input.hasta,
+      p_limite: input.limit,
+      p_desplazamiento: input.offset,
+      p_tz: input.tz,
+    });
+    if (error) throw error;
+    return data as OrderMarginPage;
+  },
+
   // Todos, de a páginas: con la importación bancaria una sede pasa de 1.000 movimientos
   // en pocos meses. Los totales no se calculan con esta lista (ver `resumen_panel`).
   getTransactions: async (sedeId?: string) =>

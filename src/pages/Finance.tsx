@@ -4,7 +4,7 @@ import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { useToast } from '../context/toast.context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { dashboardService, financeService, workOrdersService } from '../services/supabaseService';
+import { commissionsService, dashboardService, financeService, workOrdersService } from '../services/supabaseService';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { todayLocal } from '../lib/dates';
@@ -15,6 +15,7 @@ import type { FinancialTransaction, TransactionType, TransactionCategory, Dashbo
 // bundle for users who never open the import dialog.
 const ImportStatementModal = lazy(() => import('./finance/ImportStatementModal'));
 import LazyModal from '../components/LazyModal';
+import OrderMarginCard from '../features/finance/OrderMarginCard';
 import { AlertError } from '../components/AlertError';
 import {
   DollarSign,
@@ -27,6 +28,7 @@ import {
   FileUp,
   X,
   Trash2,
+  Paperclip,
 } from 'lucide-react';
 import { money, moneySigned } from '../lib/money';
 
@@ -34,6 +36,16 @@ export default function Finance() {
   const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
   const { showToast } = useToast();
+
+  // El comprobante vive en un bucket privado: se abre con una URL firmada de pocos minutos.
+  const openReceipt = async (path: string) => {
+    try {
+      const url = await commissionsService.signComprobante(path);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      showToast('error', t('payroll.chequeOpenError'), getErrorMessage(err, language));
+    }
+  };
   const navigate = useNavigate();
   const sedeId = user?.rol === 'admin' ? currentSede?.id : user?.sede_id;
 
@@ -370,6 +382,9 @@ export default function Finance() {
         </div>
       )}
 
+      {/* Cuánto dejó cada trabajo del mes (reunión con el taller, sept. 2026). */}
+      <OrderMarginCard sedeId={sedeId} />
+
       {/* Transactions Table */}
       <div className="table-container cards-on-mobile animate-fade-in">
         <table className="table">
@@ -400,7 +415,27 @@ export default function Finance() {
                 <td data-label={t('common.category')} style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
                   {categoryLabels[txn.categoria]}
                 </td>
-                <td data-label={t('common.description')}>{txn.descripcion}</td>
+                <td data-label={t('common.description')}>
+                  {txn.descripcion}
+                  {/* El cobro al entregar lleva cómo pagó el cliente y, si hay, la foto del
+                      cheque o de la transferencia (20261008000000). */}
+                  {(txn.metodo_pago || txn.numero_cheque || txn.comprobante_ruta) && (
+                    <div className="finance-payment-meta">
+                      {txn.metodo_pago && <span className="finance-payment-method">{t('delivery.methods.' + txn.metodo_pago)}</span>}
+                      {txn.numero_cheque && <span>#{txn.numero_cheque}</span>}
+                      {txn.comprobante_ruta && (
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '2px 6px' }}
+                          onClick={() => void openReceipt(txn.comprobante_ruta as string)}
+                        >
+                          <Paperclip size={14} /> {t('delivery.receiptOpen')}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </td>
                 <td data-label={t('finance.linkedOrder')}>
                   {txn.referencia_orden_id ? (
                     <button

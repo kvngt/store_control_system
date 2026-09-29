@@ -462,7 +462,7 @@ export default function WorkOrderCreateModal({
                   La clase se queda: el estilo es el mismo. */}
               <div className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>{t('workOrders.laborDescription')}</span>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => form.labor.append({ descripcion: '', costo: '' })}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => form.labor.append({ descripcion: '', costo: '', especialidad: 'mecanica' })}>
                   <Plus size={14} /> {t('common.add')}
                 </button>
               </div>
@@ -476,6 +476,17 @@ export default function WorkOrderCreateModal({
                       {...register(`laborItems.${i}.descripcion`)}
                     />
                     <input className="form-input" type="number" placeholder="$" style={{ maxWidth: 110 }} {...register(`laborItems.${i}.costo`)} />
+                    {/* Solo en una orden combinada hay que decir a qué bolsa de comisión va. */}
+                    {watch('workType') === 'combinado' && (
+                      <select
+                        className="form-input form-select labor-specialty-select"
+                        aria-label={t('commission.specialty')}
+                        {...register(`laborItems.${i}.especialidad`)}
+                      >
+                        <option value="mecanica">{t('workOrders.mechanical')}</option>
+                        <option value="pintura">{t('workOrders.painting')}</option>
+                      </select>
+                    )}
                     <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => form.labor.remove(i)}>
                       <Trash2 size={14} />
                     </button>

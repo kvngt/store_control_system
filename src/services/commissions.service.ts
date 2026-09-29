@@ -5,7 +5,7 @@
 // (see the 20260912000000 migration), so nothing here creates a commission —
 // this module reads balances and records payments.
 import { supabase } from '../lib/supabase';
-import type { Commission, CommissionBalance, CommissionPayment } from '../types/database';
+import type { Commission, CommissionBalance, CommissionEstimate, CommissionPayment } from '../types/database';
 import { fetchAll } from './support';
 
 const COMMISSION_SELECT = `
@@ -15,6 +15,16 @@ const COMMISSION_SELECT = `
 `;
 
 export const commissionsService = {
+  /**
+   * El reparto estimado de una orden (`comisiones_estimadas`): la misma cuenta que hace la
+   * base al entregar. Administración recibe a todos; un técnico asignado, lo suyo.
+   */
+  getEstimate: async (orderId: string) => {
+    const { data, error } = await supabase.rpc('comisiones_estimadas', { p_orden_id: orderId });
+    if (error) throw error;
+    return data as CommissionEstimate;
+  },
+
   /** Every accrual for a sede, newest first. */
   getCommissions: async (sedeId?: string) =>
     fetchAll<Commission>((from, to) => {

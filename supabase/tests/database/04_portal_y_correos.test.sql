@@ -93,12 +93,14 @@ SELECT id, 'e0000000-0000-0000-0000-000000000001', 'video', 'avance', sede_id ||
 SELECT is((SELECT COUNT(*)::int FROM t_enlace), 0, 'Antes de firmar la orden no tiene enlace');
 
 SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
+-- La firma la toma administración (20261006000000); el técnico solo mira.
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000001';
 SELECT lives_ok(
   $$ UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma-1.png', firma_fecha = NOW()
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
-  'El técnico asignado captura la firma'
+  'Administración captura la firma'
 );
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
 SELECT is_empty('SELECT * FROM orden_enlaces', 'Un técnico no puede leer los enlaces del cliente');
 SELECT throws_ok(
   $$ SELECT crear_enlace_cliente((SELECT id FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001')) $$,

@@ -72,3 +72,10 @@ export function daysFromTodayLocal(days: number): string {
   const day = String(now.getDate()).padStart(2, '0');
   return `${now.getFullYear()}-${month}-${day}`;
 }
+
+/** "2026-09" → ["2026-09-01", "2026-10-01"]: el mes, con el fin excluido. Sin `Date`: es texto. */
+export function monthRange(month: string): [string, string] {
+  const [y, m] = month.split('-').map(Number);
+  const next = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+  return [`${month}-01`, `${next}-01`];
+}

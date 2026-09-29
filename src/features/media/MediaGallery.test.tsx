@@ -137,4 +137,14 @@ describe('MediaGallery', () => {
     expect(visor.parentElement).toBe(document.body);
     expect(container.contains(visor)).toBe(false);
   });
+
+  // Un video cuyo cuadro salió negro se sube sin miniatura. Antes quedaba un "cargando"
+  // animado para siempre; ahora el ícono de video, y se sigue pudiendo abrir.
+  it('un video sin miniatura muestra el ícono, no un cargando eterno', () => {
+    renderWithProviders(<MediaGallery media={[{ ...VIDEO, ruta_miniatura: null }]} />);
+
+    const tile = screen.getByRole('button', { name: 'Video' });
+    expect(tile.querySelector('.media-tile-placeholder')).toBeNull();
+    expect(tile.querySelector('svg.lucide-video')).not.toBeNull();
+  });
 });

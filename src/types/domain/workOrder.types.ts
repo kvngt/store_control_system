@@ -99,6 +99,8 @@ export interface LaborItem {
   orden_id: string;
   descripcion: string;
   costo: number;
+  /** La bolsa de comisión a la que va (20261009000000). Por omisión, la del tipo de orden. */
+  especialidad?: 'mecanica' | 'pintura';
   /** Solo `aprobado` se cobra. Ausente en datos anteriores a la fase 5 = aprobado. */
   estado?: LineState;
   presupuesto_id?: string | null;

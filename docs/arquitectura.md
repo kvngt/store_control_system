@@ -280,7 +280,7 @@ técnico.
 | | `trg_numero_orden` | Genera `ORD-AAAA-###` de forma atómica |
 | | `trg_orden_sede_coherente` | Rechaza órdenes que mezclan sedes |
 | | `trg_order_money_guard` | Técnico: no entrega, no cambia sede/número, no escribe `total_labor` |
-| | `trg_order_technician_guard` | Técnico: solo asignado, orden sin entregar, y solo estado, avance y firma. Firma en la carpeta de su orden (para todos) |
+| | `trg_order_technician_guard` | Técnico: solo asignado, orden sin entregar, y solo estado y avance; la firma es de administración (`20261006000000`). Firma en la carpeta de su orden (para todos) |
 | | `trg_order_quote_delivery_guard` | No se entrega con un presupuesto esperando respuesta |
 | | `trg_order_portal` | Firma → enlace del cliente y correo de recepción; estatus → correo con espera y vencimiento del enlace |
 | | `trg_order_quote_signature` | La **primera** firma de la orden aprueba los borradores; volver a firmar no |
@@ -330,8 +330,14 @@ permiten cambiar totales con esa bandera: un `PATCH` directo a la API no la tien
 
 | Función | Quién | Para qué |
 |---|---|---|
-| `create_work_order` | todos | Alta transaccional de orden, labor, repuestos y asignaciones. Ignora depósito/labor/repuestos si no es admin |
-| `repuestos_de_orden` | todos | Repuestos sin precio (lo que ve un técnico) |
+| `create_work_order` | admin | Alta transaccional de orden, labor, repuestos y asignaciones (la RLS de `ordenes_trabajo_insert` la cierra a un técnico) |
+| `repuestos_de_orden` | todos | Repuestos sin precio (lo que ve un técnico, solo de sus órdenes) |
+| `saldo_orden` | admin | Lo que falta cobrar (o devolver) de una orden: total autorizado − cobrado neto |
+| `entregar_orden` | admin | Diálogo de entrega: asienta el pago final con su método (o la devolución) y marca la orden entregada, en una transacción; rechaza una segunda entrega |
+| `comisiones_estimadas` | admin y técnico asignado | Bolsas por especialidad y reparto de la orden (el técnico recibe lo suyo y su total) |
+| `resumen_empleado` | admin | Comisiones pendientes y pagadas, órdenes activas y entregadas de un empleado |
+| `balance_orden` | admin | Cobrado, costo de repuestos, comisiones devengadas y margen de una orden; lo demás vinculado, aparte |
+| `margen_ordenes` | admin | Órdenes entregadas de un periodo con su margen, paginadas, y las sumas del periodo |
 | `pay_commissions` | admin | Paga comisiones; el monto lo suma el servidor |
 | `sede_delete_impact`, `delete_sede_cascade` | admin | Borrado de sede con vista previa |
 | `registrar_push`, `eliminar_push`, `probar_push` | todos | Push del dispositivo |

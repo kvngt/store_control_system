@@ -43,6 +43,12 @@ VALUES
   ('19000000-0000-0000-0000-000000000001', 'c9000000-0000-0000-0000-000000000001', 'd9000000-0000-0000-0000-000000000002',
    'mecanica', 'en_proceso', 10, '1/2', '2026-10-01', 'a9000000-0000-0000-0000-000000000001');
 
+-- El mecánico está asignado a la entregada: sin eso ni la vería (20261007000000) y la prueba
+-- de abajo pasaría por no encontrar la fila, no por la regla.
+INSERT INTO orden_asignaciones (orden_id, usuario_id, tipo_tarea)
+SELECT id, 'a9000000-0000-0000-0000-000000000002', 'mecanica'
+FROM ordenes_trabajo WHERE vehiculo_id = 'd9000000-0000-0000-0000-000000000001';
+
 CREATE TEMP VIEW t_entregada AS SELECT id FROM ordenes_trabajo WHERE vehiculo_id = 'd9000000-0000-0000-0000-000000000001';
 CREATE TEMP VIEW t_en_proceso AS SELECT id FROM ordenes_trabajo WHERE vehiculo_id = 'd9000000-0000-0000-0000-000000000002';
 GRANT SELECT ON t_entregada, t_en_proceso TO authenticated;
@@ -55,8 +61,8 @@ SET LOCAL request.jwt.claim.role = 'authenticated';
 -- ------------------------------------------------------------------------------------
 -- 1. Un técnico no archiva
 -- ------------------------------------------------------------------------------------
--- La orden entregada ya le está cerrada por `trg_guard_order_technician`, y la columna nueva
--- no está en su lista de permitidas: no hizo falta nada nuevo para esto.
+-- La orden entregada ya le está cerrada por `trg_guard_order_technician` aunque esté asignado,
+-- y la columna nueva no está en su lista de permitidas: no hizo falta nada nuevo para esto.
 SET LOCAL request.jwt.claim.sub = 'a9000000-0000-0000-0000-000000000002';
 SELECT throws_ok(
   $$ UPDATE ordenes_trabajo SET archivada_en = NOW() WHERE id = (SELECT id FROM t_entregada) $$,

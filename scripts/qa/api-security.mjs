@@ -107,31 +107,49 @@ if (ctx.TOKEN_TECH) {
 
     const orders = await call(
       'GET',
-      '/rest/v1/ordenes_trabajo?select=id,estatus,cliente_id,vehiculo_id,asignaciones:orden_asignaciones(usuario_id)&order=creado_en.desc&limit=200',
+      '/rest/v1/ordenes_trabajo?select=id,estatus,cliente_id,vehiculo_id,firma_ruta,asignaciones:orden_asignaciones(usuario_id)&order=creado_en.desc&limit=200',
       { token: ctx.TOKEN_TECH }
     );
     const list = Array.isArray(orders.json) ? orders.json : [];
     const mine = (o) => (o.asignaciones || []).some((a) => a.usuario_id === ctx.TECH_ID);
     ctx.ORDEN ||= list.find((o) => mine(o) && o.estatus !== 'entregado')?.id;
     ctx.ORDEN_ENTREGADA ||= list.find((o) => mine(o) && o.estatus === 'entregado')?.id;
-    ctx.ORDEN_AJENA ||= list.find((o) => !mine(o) && o.estatus !== 'entregado')?.id;
+    // Desde 20261007000000 el técnico no ve las órdenes de sus compañeros, así que la ajena se
+    // busca con la sesión del admin: una de su sede, sin entregar, donde él no está.
+    if (!ctx.ORDEN_AJENA && ctx.TOKEN_ADMIN && ctx.TECH_SEDE) {
+      const ajenas = await call(
+        'GET',
+        `/rest/v1/ordenes_trabajo?select=id,cliente_id,asignaciones:orden_asignaciones(usuario_id)&sede_id=eq.${ctx.TECH_SEDE}&estatus=neq.entregado&order=creado_en.desc&limit=200`,
+        { token: ctx.TOKEN_ADMIN }
+      );
+      const ajena = (Array.isArray(ajenas.json) ? ajenas.json : []).find((o) => !mine(o));
+      ctx.ORDEN_AJENA = ajena?.id;
+      // Un cliente que no sea también de alguna orden del técnico: ese sí lo vería.
+      const clientesPropios = new Set(list.map((o) => o.cliente_id));
+      if (ajena && !clientesPropios.has(ajena.cliente_id)) ctx.CLIENTE_AJENO = ajena.cliente_id;
+    }
+    // SEC-19 usa una orden **ya firmada**: si la regla fallara, lo único que cambiaría es la
+    // fecha de la firma. En una sin firmar, la primera firma aprobaría lo cotizado.
+    ctx.ORDEN_FIRMADA ||= list.find((o) => mine(o) && o.estatus !== 'entregado' && o.firma_ruta)?.id;
     // SEC-55 solo necesita un `cliente_id` y un `vehiculo_id` reales, para que lo único que
     // pueda tumbar su POST sea la política y no una clave foránea inventada. Cae a cualquier
     // orden visible: si el técnico de prueba no tiene ninguna asignada, el caso se saltaba
     // sin necesidad.
     ctx.ORDEN_ROW = list.find((o) => o.id === ctx.ORDEN) ?? list[0];
+    ctx.CLIENTE ||= ctx.ORDEN_ROW?.cliente_id;
 
-    const lineaDe = async (ordenId) => {
-      if (!ordenId) return undefined;
+    const lineaDe = async (ordenId, token = ctx.TOKEN_TECH) => {
+      if (!ordenId || !token) return undefined;
       const r = await call(
         'GET',
         `/rest/v1/orden_labor?select=id&estado=eq.aprobado&orden_id=eq.${ordenId}&limit=1`,
-        { token: ctx.TOKEN_TECH }
+        { token }
       );
       return r.json?.[0]?.id;
     };
     ctx.LABOR ||= await lineaDe(ctx.ORDEN);
-    ctx.LABOR_AJENA ||= await lineaDe(ctx.ORDEN_AJENA);
+    // La línea de la orden ajena tampoco la ve el técnico: la lee el admin.
+    ctx.LABOR_AJENA ||= await lineaDe(ctx.ORDEN_AJENA, ctx.TOKEN_ADMIN);
     ctx.LABOR_ENTREGADA ||= await lineaDe(ctx.ORDEN_ENTREGADA);
   }
 }
@@ -141,8 +159,8 @@ if (ctx.TOKEN_TECH) {
 // ------------------------------------------------------------------------------------
 // Los identificadores **SEC-70 en adelante están tomados** por los casos manuales de
 // plan-de-pruebas.md §5 (curl a mano contra Storage y órdenes ajenas). Para un caso nuevo
-// automatizado usa un hueco de abajo — quedan libres SEC-19, SEC-36 y SEC-37 — o
-// sigue desde SEC-71 solo si antes lo reservas en ese documento.
+// automatizado usa un hueco de abajo o sigue desde SEC-91, y anótalo en §5 de ese documento
+// (SEC-75 a SEC-90 ya son automatizados).
 const anon = (c) => ({ ...c, who: 'anon' });
 const tech = (c) => ({ ...c, who: 'tech', needs: ['TOKEN_TECH', ...(c.needs || [])] });
 const admin = (c) => ({ ...c, who: 'admin', needs: ['TOKEN_ADMIN', ...(c.needs || [])] });
@@ -187,6 +205,9 @@ const CASES = [
   tech({ id: 'SEC-41', desc: 'Un técnico no entrega la orden', needs: ['ORDEN'], method: 'PATCH', path: (c) => `/rest/v1/ordenes_trabajo?id=eq.${c.ORDEN}`, body: { estatus: 'entregado' }, expect: 'denied' }),
   tech({ id: 'SEC-42', desc: 'Un técnico no escribe totales', needs: ['ORDEN'], method: 'PATCH', path: (c) => `/rest/v1/ordenes_trabajo?id=eq.${c.ORDEN}`, body: { total_labor: 99999 }, expect: 'denied' }),
   tech({ id: 'SEC-43', desc: 'Un técnico no cambia datos de recepción', needs: ['ORDEN'], method: 'PATCH', path: (c) => `/rest/v1/ordenes_trabajo?id=eq.${c.ORDEN}`, body: { millas_ingreso: 1 }, expect: 'denied' }),
+  // La firma de recepción la toma administración (20261006000000): la primera firma aprueba
+  // lo cotizado, y el técnico podía capturarla en cualquier estado.
+  tech({ id: 'SEC-19', desc: 'Un técnico asignado no cambia la firma de recepción', needs: ['ORDEN_FIRMADA'], method: 'PATCH', path: (c) => `/rest/v1/ordenes_trabajo?id=eq.${c.ORDEN_FIRMADA}`, body: { firma_fecha: '2000-01-01T00:00:00Z' }, expect: 'denied' }),
   tech({ id: 'SEC-44', desc: 'Nadie firma con un archivo de otra orden', needs: ['ORDEN'], method: 'PATCH', path: (c) => `/rest/v1/ordenes_trabajo?id=eq.${c.ORDEN}`, body: { firma_ruta: 'otra/orden/firma.png' }, expect: 'denied' }),
   tech({ id: 'SEC-45', desc: 'Un técnico no publica archivos al cliente', needs: ['ORDEN'], method: 'PATCH', path: (c) => `/rest/v1/orden_media?orden_id=eq.${c.ORDEN}`, body: { visible_cliente: true }, headers: { Prefer: 'return=representation' }, expect: 'empty' }),
   tech({ id: 'SEC-46', desc: 'Un técnico no crea el enlace del cliente', needs: ['ORDEN'], method: 'POST', path: () => rpc('crear_enlace_cliente'), body: (c) => ({ p_orden_id: c.ORDEN }), expect: 'denied' }),
@@ -194,7 +215,17 @@ const CASES = [
   tech({ id: 'SEC-48', desc: 'Un técnico no envía el reporte', needs: ['ORDEN'], method: 'POST', path: () => rpc('enviar_reporte_cliente'), body: (c) => ({ p_orden_id: c.ORDEN }), expect: 'denied' }),
   tech({ id: 'SEC-49', desc: 'Un técnico no avisa novedades al cliente', needs: ['ORDEN'], method: 'POST', path: () => rpc('notificar_cliente_avance'), body: (c) => ({ p_orden_id: c.ORDEN }), expect: 'denied' }),
   tech({ id: 'SEC-50', desc: 'Un técnico no asigna a otra persona', needs: ['ORDEN', 'OTRO_USUARIO'], method: 'POST', path: () => '/rest/v1/orden_asignaciones', body: (c) => ({ orden_id: c.ORDEN, usuario_id: c.OTRO_USUARIO, tipo_tarea: 'mecanica' }), expect: 'denied' }),
-  tech({ id: 'SEC-51', desc: 'Un técnico no mueve el avance de una orden ajena', needs: ['ORDEN_AJENA'], method: 'PATCH', path: (c) => `/rest/v1/ordenes_trabajo?id=eq.${c.ORDEN_AJENA}`, body: { porcentaje_avance: 50 }, expect: 'denied' }),
+  // Desde 20261007000000 la orden ajena ni aparece: el PATCH afecta cero filas en vez de chocar
+  // con el guardia. Lo que importa es que no la cambie.
+  tech({ id: 'SEC-51', desc: 'Un técnico no mueve el avance de una orden ajena', needs: ['ORDEN_AJENA'], method: 'PATCH', path: (c) => `/rest/v1/ordenes_trabajo?id=eq.${c.ORDEN_AJENA}`, body: { porcentaje_avance: 50 }, headers: { Prefer: 'return=representation' }, expect: 'denied-or-empty' }),
+  // Reunión con el taller (sept. 2026): un técnico ve solo sus órdenes, y clientes y vehículos
+  // son de administración (20261007000000).
+  tech({ id: 'SEC-36', desc: 'Un técnico no ve una orden que no tiene asignada', needs: ['ORDEN_AJENA'], method: 'GET', path: (c) => `/rest/v1/ordenes_trabajo?select=id&id=eq.${c.ORDEN_AJENA}`, expect: 'empty' }),
+  tech({ id: 'SEC-77', desc: 'Ni los archivos de esa orden', needs: ['ORDEN_AJENA'], method: 'GET', path: (c) => `/rest/v1/orden_media?select=ruta&orden_id=eq.${c.ORDEN_AJENA}`, expect: 'empty' }),
+  tech({ id: 'SEC-78', desc: 'Ni el cliente de esa orden', needs: ['CLIENTE_AJENO'], method: 'GET', path: (c) => `/rest/v1/clientes?select=id,telefono&id=eq.${c.CLIENTE_AJENO}`, expect: 'empty' }),
+  tech({ id: 'SEC-37', desc: 'Un técnico no da de alta un cliente', needs: ['TECH_SEDE'], method: 'POST', path: () => '/rest/v1/clientes', body: (c) => ({ sede_id: c.TECH_SEDE, nombre: 'PRUEBA qa:security', telefono: '+15550000000', email: '', direccion: 'PRUEBA' }), expect: 'denied' }),
+  tech({ id: 'SEC-75', desc: 'Ni edita el cliente de su propia orden', needs: ['CLIENTE'], method: 'PATCH', path: (c) => `/rest/v1/clientes?id=eq.${c.CLIENTE}`, body: { direccion: 'PRUEBA qa:security' }, headers: { Prefer: 'return=representation' }, expect: 'denied-or-empty' }),
+  tech({ id: 'SEC-76', desc: 'Un técnico no da de alta un vehículo', needs: ['CLIENTE'], method: 'POST', path: () => '/rest/v1/vehiculos', body: (c) => ({ cliente_id: c.CLIENTE, marca: 'PRUEBA', modelo: 'qa:security', anio: 2020, vin: '1HGCM82633A004352', color: 'Gris' }), expect: 'denied' }),
   tech({ id: 'SEC-52', desc: 'Un técnico no agrega avances a una orden ajena', needs: ['ORDEN_AJENA'], method: 'POST', path: () => '/rest/v1/orden_avances', body: (c) => ({ orden_id: c.ORDEN_AJENA, descripcion: 'PRUEBA' }), expect: 'denied' }),
   // Archivar a mano (20261005000000) es de administración. No hizo falta política nueva: la
   // orden entregada ya le está cerrada al técnico y la columna nueva no está en su lista.
@@ -237,6 +268,24 @@ const CASES = [
   admin({ id: 'SEC-60', desc: 'Ni un admin cambia el estado de una línea con un UPDATE', needs: ['ORDEN'], method: 'PATCH', path: (c) => `/rest/v1/orden_labor?orden_id=eq.${c.ORDEN}&estado=neq.rechazado`, body: { estado: 'rechazado' }, headers: { Prefer: 'return=representation' }, expect: 'denied' }),
   admin({ id: 'SEC-61', desc: 'Ni un admin sube PDFs al bucket de reportes', method: 'POST', path: () => '/storage/v1/object/reportes/prueba-qa-security.pdf', body: '%PDF-1.4', headers: { 'Content-Type': 'application/pdf' }, expect: 'denied' }),
   admin({ id: 'SEC-62', desc: 'Ni un admin revierte cobros por RPC', method: 'POST', path: () => rpc('reverse_order_delivery_finance'), body: { target_order_id: ZERO_UUID }, expect: 'denied' }),
+  // Entregar con método de pago (20261008000000): solo administración entrega y consulta el
+  // saldo; la cuenta interna no es una RPC. Con un id inexistente: aunque la regla fallara,
+  // no hay orden que entregar.
+  tech({ id: 'SEC-79', desc: 'Un técnico no entrega por la RPC de entrega', method: 'POST', path: () => rpc('entregar_orden'), body: { p_orden_id: ZERO_UUID, p_metodo: 'efectivo' }, expect: 'denied' }),
+  tech({ id: 'SEC-80', desc: 'Un técnico no consulta el saldo de una orden', method: 'POST', path: () => rpc('saldo_orden'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-81', desc: 'Sin sesión no se entrega una orden', method: 'POST', path: () => rpc('entregar_orden'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  admin({ id: 'SEC-82', desc: 'Ni un admin llama la cuenta interna del saldo', method: 'POST', path: () => rpc('_saldo_orden'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  // Comisiones por especialidad y por empleado (20261009000000): el pago de cada quien es de
+  // administración, y un técnico no se sube su propio porcentaje.
+  tech({ id: 'SEC-83', desc: 'Un técnico no se pone su propio porcentaje de comisión', needs: ['TECH_ID'], method: 'POST', path: () => '/rest/v1/perfiles_pago', body: (c) => ({ usuario_id: c.TECH_ID, esquema: 'comision', comision_porcentaje: 99 }), expect: 'denied' }),
+  tech({ id: 'SEC-84', desc: 'Un técnico no ve el pago de sus compañeros', needs: ['TECH_ID'], method: 'GET', path: (c) => `/rest/v1/perfiles_pago?select=*&usuario_id=neq.${c.TECH_ID}`, expect: 'empty' }),
+  tech({ id: 'SEC-85', desc: 'Un técnico no ve el resumen de un empleado', needs: ['OTRO_USUARIO'], method: 'POST', path: () => rpc('resumen_empleado'), body: (c) => ({ p_usuario_id: c.OTRO_USUARIO }), expect: 'denied' }),
+  tech({ id: 'SEC-86', desc: 'Un técnico no ve la comisión de una orden ajena', needs: ['ORDEN_AJENA'], method: 'POST', path: () => rpc('comisiones_estimadas'), body: (c) => ({ p_orden_id: c.ORDEN_AJENA }), expect: 'denied' }),
+  admin({ id: 'SEC-87', desc: 'Ni un admin llama el reparto interno de comisiones', method: 'POST', path: () => rpc('_reparto_comisiones'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  // El margen por orden (20261010000000) es dinero de administración.
+  tech({ id: 'SEC-88', desc: 'Un técnico no ve el balance de una orden', needs: ['ORDEN'], method: 'POST', path: () => rpc('balance_orden'), body: (c) => ({ p_orden_id: c.ORDEN }), expect: 'denied' }),
+  tech({ id: 'SEC-89', desc: 'Un técnico no ve el margen de las órdenes', method: 'POST', path: () => rpc('margen_ordenes'), body: { p_sede_id: null, p_desde: '2020-01-01', p_hasta: '2100-01-01' }, expect: 'denied' }),
+  admin({ id: 'SEC-90', desc: 'Ni un admin llama la cuenta interna del balance', method: 'POST', path: () => rpc('_balance_orden'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
 ];
 
 function evaluate(expect, r) {

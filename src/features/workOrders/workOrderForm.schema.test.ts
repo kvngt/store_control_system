@@ -81,8 +81,8 @@ describe('work order intake schema', () => {
     const found = issues(
       form({
         laborItems: [
-          { descripcion: 'Alineación', costo: '80' },
-          { descripcion: '   ', costo: '40' },
+          { descripcion: 'Alineación', costo: '80', especialidad: 'mecanica' },
+          { descripcion: '   ', costo: '40', especialidad: 'mecanica' },
         ],
       })
     );

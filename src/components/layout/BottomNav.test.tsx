@@ -5,13 +5,17 @@
 // reach the Kanban board, which is shop-floor navigation and exactly what the
 // phone is used for.
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '../../test/renderWithProviders';
 import BottomNav from './BottomNav';
 
+const auth = vi.hoisted(() => ({ rol: 'admin' as 'admin' | 'mecanico' }));
+vi.mock('../../context/auth.context', () => ({ useAuth: () => ({ user: { rol: auth.rol } }) }));
+
 beforeEach(() => {
   localStorage.clear();
+  auth.rol = 'admin';
 });
 
 describe('BottomNav', () => {
@@ -20,6 +24,16 @@ describe('BottomNav', () => {
 
     const hrefs = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
     expect(hrefs).toEqual(['/', '/work-orders', '/kanban', '/customers', '/vehicles']);
+  });
+
+  // Reunión con el taller (sept. 2026): Clientes y Vehículos son de administración. Un
+  // técnico ve el cliente y el vehículo dentro de sus órdenes.
+  it('a technician gets no Customers or Vehicles tab', () => {
+    auth.rol = 'mecanico';
+    renderWithProviders(<BottomNav />);
+
+    const hrefs = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
+    expect(hrefs).toEqual(['/', '/work-orders', '/kanban']);
   });
 
   it('translates every label, including the orders tab', () => {

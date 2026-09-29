@@ -166,7 +166,7 @@ Se puede plegar con la flecha para ganar espacio en pantalla.
   la izquierda. Ahí están el selector de sede y **Cerrar sesión**.
 - El buscador se abre con la **lupa** del encabezado y ocupa toda la pantalla.
 - Aparece una **barra inferior** con los accesos más usados: Panel, Órdenes,
-  Tablero, Clientes y Vehículos.
+  Tablero y, para administración, Clientes y Vehículos.
 - Las tablas se transforman en tarjetas, más fáciles de tocar con el dedo.
 - Los formularios grandes (como Nueva Orden) se abren a pantalla completa.
 
@@ -203,6 +203,8 @@ muestran únicamente **sus propias órdenes**.
 ---
 
 ## 6. Clientes
+
+*(Solo administradores. Un técnico ve el cliente dentro de sus órdenes.)*
 
 Lista de todas las personas registradas en la sede, con su teléfono, correo,
 cuántos vehículos tienen y cuántas órdenes han generado.
@@ -252,6 +254,8 @@ cliente tiene órdenes de trabajo, el sistema impide borrarlo.
 
 ## 7. Vehículos
 
+*(Solo administradores. Un técnico ve el vehículo dentro de sus órdenes.)*
+
 Todos los autos registrados en la sede, con marca, modelo, año, VIN, placa,
 color y dueño.
 
@@ -300,18 +304,15 @@ El módulo más grande. Aquí vive el trabajo del taller.
 **Si eres administrador**, ves una sola lista con todas las órdenes de la sede y
 su total.
 
-**Si eres técnico**, la pantalla se divide en dos:
+**Si eres técnico**, ves **Mis Órdenes de Trabajo**: solo las que tienes
+asignadas. Las de tus compañeros no aparecen, ni en la lista, ni en el tablero, ni en
+el buscador. Si te toca trabajar una que no ves, pide a un administrador que te asigne.
+Si abres un aviso o un enlace de una orden que ya no es tuya, la app te lo dice.
 
-- **Mis Órdenes de Trabajo** — las que tienes asignadas. Es lo primero que ves.
-- **Otras Órdenes de Trabajo** — el resto de la sede, plegado. Se abre con un
-  toque si necesitas consultar el trabajo de un compañero. Para trabajar en una,
-  pídele a un administrador que te asigne.
-
-<!-- IMAGEN: vista de órdenes de un mecánico, con "Mis Órdenes" arriba y la
-     sección "Otras Órdenes" plegada abajo -->
+<!-- IMAGEN: vista de órdenes de un mecánico, con "Mis Órdenes de Trabajo" -->
 
 Arriba hay un **buscador** (por número de orden o nombre de cliente) y **filtros
-por estado**, que aplican a las dos secciones a la vez.
+por estado**.
 
 ### Los cinco estados de una orden
 
@@ -391,8 +392,13 @@ Es la pantalla donde se sigue el trabajo día a día.
 botones **Descargar PDF** y **Enviar reporte**.
 
 **Estado.** Un selector con los cinco estados.
-- Al elegir **Entregado** el sistema pide confirmación, porque registra dinero.
-  Si cancelas, el selector vuelve al estado real.
+- Al elegir **Entregado** se abre el **diálogo de entrega**, porque registra dinero:
+  muestra el total autorizado, lo ya cobrado y **lo que falta cobrar** (o lo que hay que
+  **devolver** si el depósito fue mayor). Elige **cómo pagó el cliente** — efectivo,
+  cheque o transferencia —, el número del cheque si aplica y, si quieres, la **foto del
+  comprobante**. El botón dice exactamente qué va a pasar: *Entregar y cobrar $400.00*,
+  *Entregar y devolver $300.00* o *Entregar*. Si cancelas, el selector vuelve al estado
+  real. El cobro queda en Finanzas con su método, y la foto se abre desde ahí.
 - Al sacar una orden de **Entregado** también pide confirmación: se revierten el
   cobro y el costo de repuestos, y se borran las comisiones no pagadas.
 - Los técnicos no ven la opción Entregado.
@@ -450,13 +456,15 @@ avances, pero no los de un compañero.
 
 <!-- IMAGEN: sección de avances con una entrada con fotos y una nota de voz -->
 
-**Firma del cliente.** El cliente firma con el dedo sobre el recuadro. Queda
+**Firma del cliente** *(la toma un administrador)*. El cliente firma con el dedo sobre el recuadro. Queda
 guardada con fecha y aparece en el reporte del cliente y en el PDF. **La primera firma
 autoriza los trabajos que ya estaban cotizados**: al guardarla, las líneas dejan de
 decir *Sin autorizar* y el total se actualiza en la pantalla. Se puede limpiar y volver
 a firmar (si salió mal); las firmas anteriores quedan como historial, pero **volver a
 firmar no autoriza nada nuevo**: lo que agregaste después de la recepción se presenta
-con un presupuesto o se registra la autorización.
+con un presupuesto o se registra la autorización. Los técnicos ven si la orden ya está
+firmada, pero no toman ni cambian la firma: como la primera firma autoriza dinero, es un
+paso de la recepción, en el mostrador.
 
 **Enlace del cliente** *(solo administradores)*. Ver la sección siguiente.
 
@@ -635,7 +643,7 @@ orden y desde **Avance del trabajo** después.
 | Botón | Qué hace | Límite |
 |---|---|---|
 | **Foto** | Abre la cámara. La foto se reduce antes de subir | — |
-| **Video** | Graba dentro de la app, en calidad adecuada para el teléfono. En los últimos 15 segundos el contador se pone rojo y **a los 2 minutos se detiene solo**. Puedes cambiar de cámara antes de grabar, repetir o usar el video | 2 min |
+| **Video** | Graba dentro de la app, en calidad adecuada para el teléfono. En los últimos 15 segundos el contador se pone rojo y **a los 2 minutos se detiene solo**. Puedes cambiar de cámara antes de grabar, revisar la toma (se reproduce al tocarla), repetir o usar el video. Antes de guardar el avance, **toca la miniatura del video para verlo** | 2 min |
 | **Nota de voz** | Graba audio. Puedes escucharla antes de usarla | 2 min |
 | **Galería** | Elige una foto o un video ya grabado. Los videos se convierten a un tamaño manejable («Convirtiendo video N %») | 2 min, 50 MB |
 
@@ -705,7 +713,7 @@ Un administrador puede mover cualquier orden. Un técnico solo las que tiene
 asignadas, y nunca a **Entregado**. En las tarjetas que no puedes mover, el
 selector no aparece.
 
-Mover una orden a Entregado pide la misma confirmación que en el detalle.
+Mover una orden a Entregado abre el mismo diálogo de entrega que en el detalle.
 
 ---
 
@@ -773,7 +781,20 @@ movimientos con filtros por tipo.
 
 Muchos movimientos **los crea el sistema solo** (depósitos, cobros al entregar,
 costo de repuestos, pagos de comisiones; sección 17). No los registres a mano o
-quedarán duplicados.
+quedarán duplicados. Un pago de comisiones aparece como **un egreso por cada orden** que
+cubre ("Comisión Mario Mecánico - ORD-2026-014"), todos con el mismo número de cheque.
+
+### Margen por orden
+
+Entre las tarjetas y la tabla, **Margen por orden** lista las órdenes entregadas en el mes
+que elijas: cuánto se **cobró**, cuánto costaron sus **repuestos**, cuánto generó en
+**comisiones** y el **margen** que quedó, con los totales del mes. Las comisiones cuentan
+desde que se generan, estén pagadas o no. Si una orden tiene vinculada una compra del banco
+o un movimiento a mano, se ve en el **Balance** de la orden pero no se resta otra vez: el
+costo de las piezas ya viene de sus líneas.
+
+En el detalle de una orden entregada, la tarjeta **Balance de la orden** muestra lo mismo
+para esa orden.
 
 ### Registrar un movimiento a mano
 
@@ -863,16 +884,27 @@ de obra de las órdenes que entrega. El detalle técnico está en
 
 ### Cómo se calcula
 
+Cada especialidad es una **bolsa**: la mano de obra autorizada de mecánica y la de
+pintura, por separado. Cada bolsa se reparte entre quienes tienen **esa tarea** en la
+orden, y cada quien cobra **su porcentaje** (el suyo, o el de la sede si no tiene uno):
+
 ```
-bolsa        = mano de obra de la orden × porcentaje de la sede
-por técnico  = bolsa ÷ técnicos asignados
+parte de cada quien  = bolsa de su especialidad ÷ compañeros con esa tarea
+su comisión          = su parte × su porcentaje
 ```
 
-Ejemplo: mano de obra $1,000 al 35 % = bolsa de $350. Con dos técnicos, $175 cada
-uno. Con tres, $116.67 + $116.67 + $116.66 (el reparto suma la bolsa exacta).
+Ejemplo (el de la reunión con el taller): pintura $1,000 y mecánica $200, al 35 %. La
+pintora cobra **$350** y el mecánico **$70**. Antes, con toda la mano de obra en una
+sola bolsa, cobraban $210 cada uno.
 
-La comisión **se genera al entregar** la orden y se recalcula sola si cambia la
-mano de obra, el equipo asignado o el porcentaje. **Lo ya pagado nunca se
+- En una orden **Combinado**, cada línea de mano de obra dice a qué bolsa va: se elige
+  al crear la orden o en la tabla de mano de obra (mecánica por omisión).
+- Quien está **a salario** no cobra comisión; su parte se queda en el taller.
+- Si una bolsa no tiene a nadie con esa tarea, nadie la cobra. La tarjeta **Reparto de
+  la comisión** de la orden lo avisa.
+
+La comisión **se genera al entregar** la orden y se recalcula sola si cambia la mano de
+obra (o su especialidad), el equipo asignado o un porcentaje. **Lo ya pagado nunca se
 recalcula.**
 
 ### Las tres pestañas
@@ -899,8 +931,28 @@ elimina su egreso de Finanzas (solo el de ese pago).
 
 ### Cambiar el porcentaje
 
-En la tarjeta de arriba a la derecha, o en Configuración → Sedes. Es por sede, de
-0 a 100; por defecto 35 %. Cambiarlo recalcula solo lo pendiente.
+El **de la sede**, en la tarjeta de arriba a la derecha o en Configuración → Sedes: de 0
+a 100, por defecto 35 %. El **de una persona**, en **Empleados**. Cambiar cualquiera
+recalcula solo lo pendiente.
+
+### Empleados
+
+*(Menú lateral, solo administradores.)* Quién trabaja en el taller, cómo se le paga y qué
+ha hecho.
+
+- **Pago de cada empleado**: la lista de mecánicos y pintores con su esquema —
+  *Comisión · 35 % (el de la sede)*, *Comisión · 40 %* o *Salario · $900.00 quincenal*.
+- **Ver** abre a la persona: comisiones pendientes y pagadas, órdenes activas y
+  entregadas, sus órdenes y avances recientes, y su **pago**:
+  - **Comisión**: su propio porcentaje, o vacío para usar el de la sede.
+  - **Salario**: monto y periodo. Es informativo (no se registra en Finanzas) y a salario
+    no se genera comisión. Si tiene comisiones pendientes, la app te avisa con el monto
+    antes de guardar: al pasarlo a salario dejan de contar, así que págalas antes si se
+    las debes.
+- Debajo está la administración del **personal** (alta, edición y baja), que antes
+  estaba en Configuración.
+
+<!-- IMAGEN: Empleados, con la lista de pago y el detalle de un mecánico -->
 
 ---
 
@@ -936,9 +988,10 @@ El logo y el color de la sede también se usan en el enlace y en los correos.
 Un administrador también puede **unirse a una sede** para formar parte de su
 personal. Al borrar una sede, el sistema muestra antes todo lo que se va a borrar.
 
-**Personal.** Cada sede muestra su lista. Junto a cada persona, un ícono de
-campana indica en cuántos dispositivos tiene push activo: si alguien dice que
-no le llegan los avisos, empieza por ahí.
+**Personal.** Se mudó a **Empleados** (sección 13), junto al pago de cada quien.
+Configuración deja un enlace. Junto a cada persona, un ícono de campana indica en
+cuántos dispositivos tiene push activo: si alguien dice que no le llegan los avisos,
+empieza por ahí.
 
 Con **Nuevo Empleado** se da de alta a alguien:
 
@@ -986,17 +1039,17 @@ actualizarla.
 
 | | Administrador | Técnico (mecánico / pintor) |
 |---|:---:|:---:|
-| Panel principal | Todo, incluido dinero | Sin dinero, solo sus órdenes |
-| Clientes y vehículos: ver, crear, editar | ✅ | ✅ |
-| Clientes y vehículos: **eliminar** | ✅ | ❌ |
-| Órdenes: ver todas las de la sede | ✅ | ✅ (en «Otras órdenes») |
-| Órdenes: crear | ✅ completa | ✅ solo recepción, se autoasigna |
+| Panel principal | Todo, incluido dinero y ocupación | Sin dinero ni ocupación, solo sus órdenes |
+| Clientes y vehículos: ver | ✅ | Solo los de sus órdenes, dentro de la orden |
+| Clientes y vehículos: crear, editar, **eliminar** | ✅ | ❌ |
+| Órdenes: ver | ✅ todas las de la sede | Solo las suyas |
 | Ver mano de obra | ✅ | ✅ |
 | Ver precios de repuestos, totales y depósito | ✅ | ❌ (ve las piezas sin precio) |
 | Agregar o editar mano de obra y repuestos | ✅ | ❌ |
 | Ver su comisión estimada | — | ✅ en sus órdenes |
 | Cambiar estado y avance | ✅ | ✅ en sus órdenes, excepto Entregado |
 | Marcar **Entregado** | ✅ | ❌ |
+| Tomar la firma del cliente en la recepción | ✅ | ❌ (la ve) |
 | Subir fotos, videos y notas de voz | ✅ | ✅ en sus órdenes no entregadas |
 | Publicar archivos al cliente | ✅ | ❌ |
 | Abrir una orden de trabajo | ✅ | ❌ |
@@ -1007,7 +1060,7 @@ actualizarla.
 | Enviar presupuestos, registrar autorizaciones, cancelar | ✅ | ❌ |
 | Órdenes: **eliminar** | ✅ | ❌ |
 | Kanban: mover tarjetas | Todas | Solo las suyas, excepto a Entregado |
-| Finanzas y Comisiones | ✅ | ❌ |
+| Finanzas, Comisiones y Empleados | ✅ | ❌ |
 | Configuración: perfil, idioma, tema, notificaciones | ✅ | ✅ |
 | Configuración: sedes y personal | ✅ | ❌ |
 | Cambiar de sede | ✅ | ❌ |

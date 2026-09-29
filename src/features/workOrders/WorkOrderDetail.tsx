@@ -26,6 +26,8 @@ import CommissionEstimateCard from './CommissionEstimateCard';
 import ProgressLog from './ProgressLog';
 import ShareReportModal from './ShareReportModal';
 import AuthorizationReasonModal from './AuthorizationReasonModal';
+import DeliveryModal from './DeliveryModal';
+import OrderBalanceCard from '../finance/OrderBalanceCard';
 import PublishProgressModal from './PublishProgressModal';
 import CustomerLinkCard from './CustomerLinkCard';
 import QuoteCard from './QuoteCard';
@@ -299,7 +301,7 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
           signaturePath={order.firma_ruta}
           signedAt={order.firma_fecha}
           customerName={customer?.nombre}
-          canEdit={detail.canEdit}
+          canSign={detail.canSign}
           canResign={detail.canResign}
           saving={detail.savingSignature}
           onSave={detail.saveSignature}
@@ -307,6 +309,7 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
 
         <LaborTable
           items={laborList}
+          specialties={order.tipo_trabajo === 'combinado'}
           canEdit={detail.canEditLines}
           busy={detail.busy}
           onAdd={detail.addLabor}
@@ -336,12 +339,15 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
       {/* Presupuesto: lo que falta autorizar y lo que espera al cliente. Solo admin. */}
       {isAdmin && <QuoteCard order={order} />}
 
-      {detail.estimatedCommission !== null && (
+      {/* Cuánto dejó el trabajo: solo tiene sentido ya entregado, y es de administración. */}
+      {isAdmin && detail.isDelivered && <OrderBalanceCard orderId={order.id} />}
+
+      {detail.commissionEstimate && (
         <CommissionEstimateCard
-          laborTotal={order.total_labor}
-          rate={detail.commissionRate}
-          crew={detail.crew}
-          amount={detail.estimatedCommission}
+          estimate={detail.commissionEstimate}
+          isAdmin={isAdmin}
+          userId={detail.userId}
+          names={Object.fromEntries((order.asignaciones || []).map((a) => [a.usuario_id, a.usuario?.nombre_completo ?? '—']))}
         />
       )}
 
@@ -476,6 +482,9 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
         onDeleteMedia={detail.deleteMedia}
       />
 
+      {detail.delivering && (
+        <DeliveryModal order={order} onCancel={detail.cancelDelivery} onDelivered={detail.finishDelivery} />
+      )}
       {detail.askingAuthReason && (
         <AuthorizationReasonModal
           saving={detail.busy}

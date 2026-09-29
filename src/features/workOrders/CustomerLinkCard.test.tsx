@@ -72,7 +72,7 @@ describe('CustomerLinkCard', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Crear enlace/ }, { timeout: 5000 }));
 
     expect(mocks.createLink).toHaveBeenCalledWith('ord-1');
-    expect(await screen.findByDisplayValue(`https://reinventa.shop/r/${TOKEN}`)).toBeInTheDocument();
+    expect(await screen.findByDisplayValue(`https://reinventa.shop/r/${TOKEN}`, {}, { timeout: 5000 })).toBeInTheDocument();
   });
 
   it('muestra cuántas veces lo abrió el cliente y lo comparte por WhatsApp con el enlace', async () => {

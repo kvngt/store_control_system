@@ -3,7 +3,7 @@ import { Check, RefreshCw, RotateCcw, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { MAX_MEDIA_SECONDS } from '../../lib/media/constants';
 import { formatDuration } from '../../lib/media/mime';
-import { thumbFromVideoElement } from '../../lib/media/videoFrame';
+import { inspectVideo, thumbFromVideoElement } from '../../lib/media/videoFrame';
 import type { PreparedMedia } from '../../types/database';
 import { useMediaRecorder } from './useMediaRecorder';
 import BodyPortal from '../../components/BodyPortal';
@@ -21,13 +21,38 @@ interface Poster {
 
 const NO_POSTER: Poster = { thumb: null, width: null, height: null };
 
+/**
+ * Cuánto espera "Usar video" a la miniatura sacada del archivo. Casi siempre ya está
+ * cuando el técnico termina de revisar la toma; si no, se sigue con la de la cámara en
+ * vivo en vez de dejarlo esperando.
+ */
+const FILE_POSTER_WAIT_MS = 4000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), ms);
+    void promise.then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    });
+  });
+}
+
 /** Pantalla completa de grabación: vista previa, tope de 2 minutos, revisar y usar. */
 export default function VideoRecorderModal({ onDone, onClose }: VideoRecorderModalProps) {
   const { t } = useLanguage();
   const recorder = useMediaRecorder('video');
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
   const previewRef = useRef<HTMLVideoElement>(null);
-  const posterRef = useRef<Poster>(NO_POSTER);
+  // Dos miniaturas posibles. La del archivo es lo que de verdad quedó grabado; la de la
+  // cámara en vivo es el respaldo. En la reunión con el taller el video salía negro antes
+  // de guardarlo: la miniatura venía solo de la cámara en vivo, y en varios teléfonos
+  // dibujar la cámara en un canvas da un cuadro negro. Las dos descartan un cuadro negro.
+  const livePosterRef = useRef<Poster>(NO_POSTER);
+  const [liveThumb, setLiveThumb] = useState<Blob | null>(null);
+  const filePosterRef = useRef<Promise<Poster> | null>(null);
+  const [filePoster, setFilePoster] = useState<Poster | null>(null);
+  const [finishing, setFinishing] = useState(false);
 
   const { openDevice, stream, recording, state, elapsed } = recorder;
 
@@ -47,19 +72,46 @@ export default function VideoRecorderModal({ onDone, onClose }: VideoRecorderMod
     [playbackUrl]
   );
 
+  // En cuanto hay grabación se busca su miniatura, mientras el técnico la revisa.
+  useEffect(() => {
+    setFilePoster(null);
+    if (!recording) {
+      filePosterRef.current = null;
+      return;
+    }
+    let current = true;
+    const pending = inspectVideo(recording.blob)
+      .then(({ thumb, width, height }): Poster => ({ thumb, width, height }))
+      .catch(() => NO_POSTER);
+    filePosterRef.current = pending;
+    void pending.then((poster) => {
+      if (current) setFilePoster(poster);
+    });
+    return () => {
+      current = false;
+    };
+  }, [recording]);
+
+  const shownThumb = filePoster?.thumb ?? liveThumb;
+  const posterUrl = useMemo(() => (shownThumb ? URL.createObjectURL(shownThumb) : null), [shownThumb]);
+  useEffect(
+    () => () => {
+      if (posterUrl) URL.revokeObjectURL(posterUrl);
+    },
+    [posterUrl]
+  );
+
   const grabPoster = async () => {
     const video = previewRef.current;
     if (!video) return;
-    posterRef.current = {
-      thumb: await thumbFromVideoElement(video),
-      width: video.videoWidth || null,
-      height: video.videoHeight || null,
-    };
+    const thumb = await thumbFromVideoElement(video);
+    livePosterRef.current = { thumb, width: video.videoWidth || null, height: video.videoHeight || null };
+    setLiveThumb(thumb);
   };
 
-  // La miniatura sale de la vista previa en vivo, un instante antes de detener:
-  // es más confiable que buscar un fotograma dentro del archivo recién grabado,
-  // que en algunos navegadores todavía no tiene índice.
+  // La miniatura en vivo se toma un instante antes de detener. Es el respaldo: en algunos
+  // navegadores el archivo recién grabado todavía no tiene índice y buscar en él tarda o
+  // falla, y en otros la cámara en vivo da un cuadro negro.
   const captureAndStop = async () => {
     await grabPoster();
     recorder.stop();
@@ -69,25 +121,29 @@ export default function VideoRecorderModal({ onDone, onClose }: VideoRecorderMod
   const remaining = MAX_MEDIA_SECONDS - elapsed;
   const nearLimit = state === 'recording' && remaining <= 1.5;
   useEffect(() => {
-    if (nearLimit && !posterRef.current.thumb) void grabPoster();
+    if (nearLimit && !livePosterRef.current.thumb) void grabPoster();
   }, [nearLimit]);
 
-  const use = () => {
-    if (!recording) return;
+  const use = async () => {
+    if (!recording || finishing) return;
+    setFinishing(true);
+    const fromFile = await withTimeout(filePosterRef.current ?? Promise.resolve(NO_POSTER), FILE_POSTER_WAIT_MS, NO_POSTER);
+    const live = livePosterRef.current;
     onDone({
       tipo: 'video',
       blob: recording.blob,
       mime: recording.mime,
-      thumb: posterRef.current.thumb,
+      thumb: fromFile.thumb ?? live.thumb,
       duracionSeg: recording.duration,
-      ancho: posterRef.current.width,
-      alto: posterRef.current.height,
+      ancho: fromFile.width ?? live.width,
+      alto: fromFile.height ?? live.height,
     });
   };
 
   const retake = () => {
     recorder.reset();
-    posterRef.current = NO_POSTER;
+    livePosterRef.current = NO_POSTER;
+    setLiveThumb(null);
     void openDevice(facing);
   };
 
@@ -113,7 +169,17 @@ export default function VideoRecorderModal({ onDone, onClose }: VideoRecorderMod
 
       <div className="recorder-stage">
         {state === 'recorded' && playbackUrl ? (
-          <video className="recorder-video" src={playbackUrl} controls playsInline autoPlay />
+          // Sin `autoPlay`: con sonido el navegador lo bloquea y el iPhone deja el cuadro en
+          // negro hasta que se toca. Con póster y `preload="metadata"` se ve la toma y se
+          // reproduce al tocarla.
+          <video
+            className="recorder-video"
+            src={playbackUrl}
+            poster={posterUrl ?? undefined}
+            controls
+            playsInline
+            preload="metadata"
+          />
         ) : (
           <video className="recorder-video" ref={previewRef} muted playsInline autoPlay />
         )}
@@ -127,11 +193,11 @@ export default function VideoRecorderModal({ onDone, onClose }: VideoRecorderMod
       <div className="recorder-controls">
         {state === 'recorded' ? (
           <>
-            <button type="button" className="btn btn-secondary" onClick={retake}>
+            <button type="button" className="btn btn-secondary" onClick={retake} disabled={finishing}>
               <RotateCcw size={18} /> {t('media.retake')}
             </button>
-            <button type="button" className="btn btn-primary" onClick={use}>
-              <Check size={18} /> {t('media.useVideo')}
+            <button type="button" className="btn btn-primary" onClick={() => void use()} disabled={finishing}>
+              <Check size={18} /> {finishing ? t('media.preparingVideo') : t('media.useVideo')}
             </button>
           </>
         ) : (

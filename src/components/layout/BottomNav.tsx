@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../../context/auth.context';
 import { useLanguage } from '../../context/language.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import {
@@ -11,7 +12,9 @@ import {
 
 export default function BottomNav() {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const { confirmNavigation } = useUnsavedChanges();
+  const isAdmin = user?.rol === 'admin';
 
   // La barra lateral y el encabezado ya preguntaban antes de salir de un
   // formulario a medias; esta barra no, y es la navegación real del teléfono.
@@ -28,8 +31,13 @@ export default function BottomNav() {
     { to: '/', icon: LayoutDashboard, label: t('nav.dashboardShort') },
     { to: '/work-orders', icon: ClipboardList, label: t('nav.workOrdersShort') },
     { to: '/kanban', icon: Kanban, label: t('nav.kanbanShort') },
-    { to: '/customers', icon: Users, label: t('nav.customers') },
-    { to: '/vehicles', icon: Car, label: t('nav.vehicles') },
+    // Solo administración: un técnico ve el cliente y el vehículo dentro de sus órdenes.
+    ...(isAdmin
+      ? [
+          { to: '/customers', icon: Users, label: t('nav.customers') },
+          { to: '/vehicles', icon: Car, label: t('nav.vehicles') },
+        ]
+      : []),
   ];
 
   return (

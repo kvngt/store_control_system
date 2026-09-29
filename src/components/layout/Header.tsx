@@ -60,13 +60,13 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
     setSearching(true);
     const handle = setTimeout(() => {
       supabaseService
-        .globalSearch(query, sedeId)
+        .globalSearch(query, sedeId, { directory: isAdmin })
         .then(setResults)
         .catch(() => setResults(EMPTY_RESULTS))
         .finally(() => setSearching(false));
     }, 300);
     return () => clearTimeout(handle);
-  }, [query, sedeId]);
+  }, [query, sedeId, isAdmin]);
 
   // Close dropdowns on outside click
   useEffect(() => {

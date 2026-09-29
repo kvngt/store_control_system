@@ -11,7 +11,11 @@ interface SignatureCardProps {
   signaturePath?: string | null;
   signedAt?: string | null;
   customerName?: string;
-  canEdit: boolean;
+  /**
+   * Si se muestra el lienzo para tomar la firma. Solo administración: la primera firma
+   * aprueba lo cotizado (`trg_quote_on_signature`) y la base se lo niega al técnico.
+   */
+  canSign: boolean;
   /**
    * Si se ofrece volver a firmar sobre una firma existente. Es admin y solo en
    * recepción: pasada esa etapa, la firma es el respaldo de lo autorizado.
@@ -40,7 +44,7 @@ export default function SignatureCard({
   signaturePath,
   signedAt,
   customerName,
-  canEdit,
+  canSign,
   canResign,
   saving,
   onSave,
@@ -56,7 +60,7 @@ export default function SignatureCard({
   const signatureUrl = signaturePath ? urls[signaturePath] : undefined;
 
   const resigning = capturing && !!signaturePath;
-  const showPad = capturing || (canEdit && !signaturePath);
+  const showPad = capturing || (canSign && !signaturePath);
 
   useEffect(() => {
     const el = wrapRef.current;

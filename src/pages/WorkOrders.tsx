@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
@@ -28,7 +28,7 @@ import ArchivedOrders from '../features/workOrders/ArchivedOrders';
 const ARCHIVED = 'archivadas';
 import { checkUsPlate, checkVin } from '../lib/vin';
 import type { WorkOrder, Customer, Vehicle, UserProfile } from '../types/database';
-import { Plus, Search, Eye, Car, Calendar, Trash2, ChevronRight, ChevronDown, Wrench } from 'lucide-react';
+import { Plus, Search, Eye, Car, Calendar, Trash2, ChevronRight, Wrench } from 'lucide-react';
 import { money } from '../lib/money';
 
 export default function WorkOrders() {
@@ -41,9 +41,7 @@ export default function WorkOrders() {
   const sedeId = isAdmin ? currentSede?.id : user?.sede_id;
 
   // Se renderiza una sola versión de la lista, no las dos escondiéndose con
-  // CSS: para un técnico `renderOrderList` corre dos veces (mis órdenes y el
-  // resto del tablero), así que el teléfono cargaba cuatro copias del marcado
-  // para mostrar dos.
+  // CSS: el teléfono cargaba dos copias del marcado para mostrar una.
   const isMobile = useIsMobile();
   // Un rótulo accesible además del color: el color solo no es información.
   const dueLabel = (state: DueState) =>
@@ -70,14 +68,17 @@ export default function WorkOrders() {
 
   // The pickers behind the create dialog, each its own cache entry so a
   // failure to load one never blanks the board — and so Clientes and Vehículos
-  // reuse them rather than asking again.
+  // reuse them rather than asking again. Solo administración abre órdenes, así
+  // que un técnico no los descarga.
   const customersQuery = useQuery({
     queryKey: queryKeys.customers(sedeId),
     queryFn: () => customersService.getCustomers(sedeId),
+    enabled: isAdmin,
   });
   const vehiclesQuery = useQuery({
     queryKey: queryKeys.vehicles(sedeId),
     queryFn: () => vehiclesService.getVehicles(sedeId),
+    enabled: isAdmin,
   });
   // Solo la consume interfaz de administración (el selector del alta y el de la tarjeta de
   // técnicos), así que en el teléfono de un mecánico era una descarga que nadie mira.
@@ -126,11 +127,22 @@ export default function WorkOrders() {
   // Held raw by the hook until here: an error translated at fetch time forces
   // `language` into the loader's dependencies, and every language toggle then
   // re-queries the whole board.
-  const error = actionError || (loadError ? getErrorMessage(loadError, language) : '');
+  // Una orden que no se pudo abrir (un enlace o un aviso viejos) se decía solo dentro del
+  // detalle, que no llega a pintarse: la pantalla volvía a la lista sin explicar nada.
+  const openError = !detail.order && !detail.notFound ? detail.loadError : '';
+  const error = actionError || (loadError ? getErrorMessage(loadError, language) : '') || openError;
+
+  // "No existe" se avisa una vez y se suelta la orden pedida. A un técnico la base le contesta
+  // lo mismo cuando la orden es de otra persona (20261007000000), así que a él se le dice eso.
+  useEffect(() => {
+    if (!detail.notFound) return;
+    showToast('error', t(isAdmin ? 'workOrders.orderNotFound' : 'workOrders.notYourOrder'));
+    detail.close();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail.notFound]);
 
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [showOtherOrders, setShowOtherOrders] = useState(false);
   // Every field of the create dialog lives in `useWorkOrderForm`; everything
   // about the open order lives in `useWorkOrderDetail`. What is left here is
   // the board itself.
@@ -161,16 +173,8 @@ export default function WorkOrders() {
     });
   }, [orders, search, filterStatus]);
 
-  // A mechanic/painter opens this screen to work, not to browse: their own
-  // orders come first, and the rest of the sede's board is a second section
-  // they can expand when they need it. Admins keep the single combined list.
-  const isMine = useCallback(
-    (order: WorkOrder) => (order.asignaciones || []).some((a) => a.usuario_id === user?.id),
-    [user?.id]
-  );
-
-  const myOrders = useMemo(() => filtered.filter(isMine), [filtered, isMine]);
-  const otherOrders = useMemo(() => filtered.filter((o) => !isMine(o)), [filtered, isMine]);
+  // Un técnico solo recibe sus órdenes (la RLS le esconde las de sus compañeros desde
+  // 20261007000000), así que su lista ya no se parte en "mis órdenes" y "otras".
 
   const vehiclesForCustomer = useMemo(
     () => vehicles.filter((v) => v.cliente_id === form.selectedCustomer),
@@ -307,6 +311,8 @@ export default function WorkOrders() {
         labor_items: (isAdmin ? values.laborItems : []).map((l) => ({
           descripcion: l.descripcion,
           costo: Math.max(0, parseFloat(l.costo) || 0),
+          // En una orden de un solo tipo la especialidad la pone la base con el tipo de orden.
+          ...(values.workType === 'combinado' ? { especialidad: l.especialidad } : {}),
         })),
         // No separate cost: a part is billed on at what it cost the shop, and
         // the database mirrors the price into `costo_unitario` so Finanzas
@@ -394,13 +400,10 @@ export default function WorkOrders() {
 
 
   // One list of orders, drawn as a table on desktop and as cards on mobile.
-  // Extracted so the technician view can render it twice — once for the
-  // orders assigned to them, once for the rest of the sede's board.
   //
   // `isMobile` elige cuál de las dos se monta. Antes se emitían ambas y el CSS
-  // escondía una, lo que para un técnico significaba cuatro copias del marcado
-  // en el DOM del teléfono — con sus iconos y sus barras de avance — para
-  // mostrar dos.
+  // escondía una: dos copias del marcado en el DOM del teléfono — con sus iconos
+  // y sus barras de avance — para mostrar una.
   const renderOrderList = (list: WorkOrder[]) =>
     isMobile ? (
         <div className="workorder-card-list animate-fade-in">
@@ -600,47 +603,20 @@ export default function WorkOrders() {
       ) : isAdmin ? (
         renderOrderList(filtered)
       ) : (
-        <>
-          {/* A technician lands on their own work first. */}
-          <section className="orders-section">
-            <h2 className="orders-section-title">
-              <Wrench size={18} />
-              {t('workOrders.myOrders')}
-              <span className="orders-section-count">{myOrders.length}</span>
-            </h2>
-            {myOrders.length === 0 ? (
-              <p className="orders-section-empty">{t('workOrders.myOrdersEmpty')}</p>
-            ) : (
-              renderOrderList(myOrders)
-            )}
-          </section>
-
-          {/* The rest of the board stays one click away, never in the way. */}
-          <section className="orders-section">
-            <button
-              type="button"
-              className="orders-section-toggle"
-              onClick={() => setShowOtherOrders((v) => !v)}
-              aria-expanded={showOtherOrders}
-            >
-              {showOtherOrders ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-              <span className="orders-section-title">
-                {t('workOrders.otherOrders')}
-                <span className="orders-section-count">{otherOrders.length}</span>
-              </span>
-            </button>
-            {showOtherOrders && (
-              <>
-                <p className="orders-section-hint">{t('workOrders.otherOrdersHint')}</p>
-                {otherOrders.length === 0 ? (
-                  <p className="orders-section-empty">{t('common.noResults')}</p>
-                ) : (
-                  renderOrderList(otherOrders)
-                )}
-              </>
-            )}
-          </section>
-        </>
+        <section className="orders-section">
+          <h2 className="orders-section-title">
+            <Wrench size={18} />
+            {t('workOrders.myOrders')}
+            <span className="orders-section-count">{filtered.length}</span>
+          </h2>
+          {filtered.length === 0 ? (
+            <p className="orders-section-empty">
+              {orders.length === 0 ? t('workOrders.myOrdersEmpty') : t('common.noResults')}
+            </p>
+          ) : (
+            renderOrderList(filtered)
+          )}
+        </section>
       )}
 
       {isAdmin && showCreateModal && (

@@ -92,12 +92,16 @@ INSERT INTO ordenes_trabajo (sede_id, cliente_id, vehiculo_id, tipo_trabajo, mil
 VALUES ('10000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000001',
   'd0000000-0000-0000-0000-000000000002', 'mecanica', 10, '1/2', '2026-10-01',
   'a0000000-0000-0000-0000-000000000001');
+-- El técnico no ve una orden que no es suya (20261007000000): el id se guarda antes, para que
+-- el INSERT choque con la política en vez de quedarse sin filas.
+CREATE TEMP TABLE t_orden_sin_asignar AS
+  SELECT id FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002';
 
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
 SELECT throws_ok(
   $$ INSERT INTO orden_asignaciones (orden_id, usuario_id, tipo_tarea)
      SELECT id, 'a0000000-0000-0000-0000-000000000002', 'mecanica'
-     FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002' $$,
+     FROM t_orden_sin_asignar $$,
   '42501', NULL,
   'Un técnico no se asigna a una orden'
 );
