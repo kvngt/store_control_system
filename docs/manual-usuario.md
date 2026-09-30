@@ -86,7 +86,7 @@ cuando la orden se entrega.
 
 ## 3. Entrar al sistema
 
-Abre la dirección del sistema en el navegador (`reinventa.shop`). Verás la
+Abre la dirección del sistema en el navegador (`restorifyauto.net`). Verás la
 pantalla de acceso.
 
 1. Escribe tu **correo electrónico**.
@@ -498,7 +498,7 @@ en tu equipo.
 ### Enlace del cliente y avisos por correo
 
 Cada orden tiene un **enlace personal** para el cliente, por ejemplo
-`reinventa.shop/r/3f9a…`. Al abrirlo, el cliente ve **sin crear una cuenta**:
+`restorifyauto.net/r/3f9a…`. Al abrirlo, el cliente ve **sin crear una cuenta**:
 
 - En qué va su vehículo (recibido, en proceso, listo, entregado), el avance y la
   fecha estimada.
@@ -1018,12 +1018,12 @@ con su ícono, y en iPhone es **obligatorio** para recibir notificaciones.
 
 ### Android (Chrome)
 
-1. Abre `reinventa.shop` en Chrome.
+1. Abre `restorifyauto.net` en Chrome.
 2. Menú ⋮ → **Instalar app** (o **Agregar a pantalla de inicio**).
 
 ### iPhone (Safari, iOS 16.4 o posterior)
 
-1. Abre `reinventa.shop` en **Safari** (no en Chrome ni en otra app).
+1. Abre `restorifyauto.net` en **Safari** (no en Chrome ni en otra app).
 2. Toca el botón **Compartir** (el cuadro con la flecha).
 3. Elige **Agregar a inicio**.
 4. Abre Restorify **desde el ícono nuevo**, inicia sesión y activa las

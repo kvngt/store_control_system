@@ -43,18 +43,19 @@ Ver [`src/lib/siteUrl.ts`](../src/lib/siteUrl.ts).
 
 ## Lo que hay que definir al compilar
 
-`VITE_PUBLIC_SITE_URL` no está en `.env.local` por defecto, y sin ella el código
-cae en el origen del navegador: un `dist/` compilado así sigue emitiendo enlaces a
-localhost por más correcto que esté el panel.
+`VITE_PUBLIC_SITE_URL` no viene definida por defecto, y sin ella el código cae en el
+origen del navegador: un `dist/` compilado así sigue emitiendo enlaces a localhost por
+más correcto que esté el panel. En producción está en las variables del sitio en
+Hostinger.
 
 ```bash
-# .env.local, en la máquina que compila
-VITE_PUBLIC_SITE_URL=https://reinventa.shop
+# En producción: variables de entorno del sitio en Hostinger. En desarrollo: .env.local
+VITE_PUBLIC_SITE_URL=https://restorifyauto.net
 ```
 
-Vite **incrusta** el valor en el bundle, no lo lee al ejecutar. Después de definirla
-hay que recompilar y volver a subir `dist/` (ver [deployment.md](deployment.md)); el
-`dist/` que ya está publicado conserva el comportamiento viejo. `npm run build`
+Vite **incrusta** el valor en el bundle, no lo lee al ejecutar. Después de cambiarla
+hay que volver a desplegar (ver [deployment.md](deployment.md)); lo que ya está publicado
+conserva el comportamiento viejo. `npm run build`
 avisa cuando la variable falta, pero no falla: un preview desechable no lo merece.
 
 ## Lo que hay que configurar en el panel de Supabase
@@ -64,8 +65,8 @@ Ningún cambio en el código sustituye estos dos pasos.
 
 | Campo | Valor |
 | --- | --- |
-| **Site URL** | `https://reinventa.shop` (el dominio de producción, nunca localhost) |
-| **Redirect URLs** | `https://reinventa.shop/reset-password`<br>`https://reinventa.shop/**`<br>`http://localhost:5173/reset-password` |
+| **Site URL** | `https://restorifyauto.net` (el dominio de producción, nunca localhost) |
+| **Redirect URLs** | `https://restorifyauto.net/reset-password`<br>`https://restorifyauto.net/**`<br>`http://localhost:5173/reset-password` |
 
 Notas:
 
@@ -112,7 +113,7 @@ No es la plantilla, sino el **envío**:
 - Los correos salen desde una dirección de Supabase, no desde el dominio del
   taller, así que es más probable que caigan en spam.
 
-Ambas cosas se resuelven con **SMTP propio**. El dominio `reinventa.shop` ya está
+Ambas cosas se resuelven con **SMTP propio**. El dominio `restorifyauto.net` ya está
 verificado en **Resend** (registros DNS en Hostinger), que es también el
 proveedor elegido para los correos al cliente de la fase 4.
 
@@ -123,8 +124,8 @@ proveedor elegido para los correos al cliente de la fase 4.
 | Host | `smtp.resend.com` |
 | Puerto | `465` |
 | Usuario | `resend` |
-| Contraseña | Una API key de Resend **de solo envío** para `reinventa.shop` |
-| Remitente | `notificaciones@reinventa.shop`, nombre `Restorify` |
+| Contraseña | Una API key de Resend **de solo envío** para `restorifyauto.net` |
+| Remitente | `notificaciones@restorifyauto.net`, nombre `Restorify` |
 
 Crea en Resend una llave nueva con permiso *Sending access* limitada al dominio;
 no uses una llave de acceso completo. La llave vive solo en el panel de Supabase

@@ -35,7 +35,7 @@ const TIME_BUDGET_MS = 50_000;
 function vapidDetails() {
   const publicKey = Deno.env.get('VAPID_PUBLIC_KEY');
   const privateKey = Deno.env.get('VAPID_PRIVATE_KEY');
-  const subject = Deno.env.get('VAPID_SUBJECT') || 'mailto:notificaciones@reinventa.shop';
+  const subject = Deno.env.get('VAPID_SUBJECT') || 'mailto:notificaciones@restorifyauto.net';
   if (!publicKey || !privateKey) return null;
   return { subject, publicKey, privateKey };
 }
@@ -160,7 +160,7 @@ function displayName(name: string): string {
 async function sendEmail(job: OutboxJob): Promise<JobResult> {
   const apiKey = Deno.env.get('RESEND_API_KEY');
   const siteUrl = (Deno.env.get('PUBLIC_SITE_URL') || '').replace(/\/+$/, '');
-  const fromAddress = Deno.env.get('EMAIL_FROM_ADDRESS') || 'notificaciones@reinventa.shop';
+  const fromAddress = Deno.env.get('EMAIL_FROM_ADDRESS') || 'notificaciones@restorifyauto.net';
   // Falta configuración: se reintenta, porque arreglarla no requiere volver a
   // generar el aviso.
   if (!apiKey) throw new Error('RESEND_API_KEY no configurada.');

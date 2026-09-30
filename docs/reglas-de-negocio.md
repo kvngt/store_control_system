@@ -350,7 +350,7 @@ Detalle técnico: [portal-y-correos.md](portal-y-correos.md).
 
 ### El enlace
 
-- Cada orden tiene **un enlace personal activo** (`reinventa.shop/r/<token>`). El
+- Cada orden tiene **un enlace personal activo** (`restorifyauto.net/r/<token>`). El
   cliente no crea cuenta.
 - **Nace al firmar la recepción.** Un admin también puede crearlo antes.
 - Solo un **admin** lo ve, lo copia, lo manda por WhatsApp, lo cambia (el anterior

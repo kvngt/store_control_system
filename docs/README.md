@@ -198,7 +198,7 @@ que la acompaña está publicado (15 de septiembre de 2026).
 | **Orden** | Un trabajo sobre un vehículo. Número `ORD-AAAA-###`. |
 | **Recepción** | El ingreso del vehículo: fotos 360°, notas, firma del cliente. |
 | **Avance** | Una entrada de la bitácora de trabajo, con nota y multimedia. |
-| **Enlace del cliente** | `reinventa.shop/r/<token>`: el reporte web de una orden, sin cuenta. |
+| **Enlace del cliente** | `restorifyauto.net/r/<token>`: el reporte web de una orden, sin cuenta. |
 | **Portal** | La página que abre ese enlace. |
 | **Presupuesto** | Trabajos que se le presentan al cliente para que los autorice línea por línea. |
 | **Línea autorizada** | Mano de obra o repuesto que el cliente aprobó. Solo eso se cobra. |

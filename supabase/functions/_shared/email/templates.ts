@@ -20,7 +20,7 @@ export const ANNOUNCED_STATUSES = ['en_proceso', 'finalizado', 'entregado'] as c
 export type AnnouncedStatus = (typeof ANNOUNCED_STATUSES)[number];
 
 export interface EmailContext {
-  /** Enlace personal del cliente: https://reinventa.shop/r/<token> */
+  /** Enlace personal del cliente: https://restorifyauto.net/r/<token> */
   portalUrl: string;
   cliente: { nombre: string | null };
   taller: {

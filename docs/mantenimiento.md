@@ -163,8 +163,10 @@ Dos inconsistencias menores:
 2. **Staging** (cuando exista): aplicar ahí, correr `npm run qa:security` y las e2e.
 3. En local: `npx supabase db reset && npm run test:db`. CI lo repite en cada cambio.
 4. `npm run db:check`: qué se va a aplicar.
-5. **Publicar en este orden:** `db push` → funciones que cambiaron → subir el `dist` →
-   `npm run qa:security` → prueba de humo ([deployment.md](deployment.md)).
+5. **Publicar en este orden:** `db push` → funciones que cambiaron →
+   `git push origin main:produccion` (Hostinger compila y publica) → `npm run qa:security`
+   → prueba de humo ([deployment.md](deployment.md)). El push a `produccion` nunca va antes
+   del `db push`: publica solo.
 6. Fuera del horario del taller si la migración toca políticas o dinero.
 
 ### Si algo sale mal

@@ -27,18 +27,22 @@ Inventario completo de lo que hay dentro y dónde se ve en el panel: [supabase.m
 
 | Pieza | Dónde vive | Cómo se publica |
 |---|---|---|
-| Frontend (`dist/`) | Hostinger, hosting compartido Apache, `reinventa.shop` | Subir el contenido de `dist/` a `public_html/` |
+| Frontend | Hostinger, sitio `restorifyauto.net` conectado al repositorio de GitHub | Hostinger compila y publica la rama **`produccion`** en cada push ([sección 5](#5-publicar-una-versión)) |
 | Esquema de base de datos | Supabase (proyecto enlazado en `supabase/.temp/project-ref`) | `npx supabase db push --linked` |
 | Edge functions | Supabase | `npx supabase functions deploy <nombre>` |
 | Secretos de funciones | Supabase → Edge Functions → Secrets | `npx supabase secrets set` |
 | Secretos que usa la base | Supabase Vault | SQL una vez (sección 4.6) |
-| Correo transaccional | Resend, dominio `reinventa.shop` | DNS en Hostinger (ya verificado) |
-| DNS | Hostinger (`ns1/ns2.dns-parking.com`) | hPanel → Dominios → DNS |
+| Correo transaccional | Resend, dominio `restorifyauto.net` | DNS en Hostinger ([sección 4.8](#48-correo-resend)) |
+| DNS | Hostinger (`pixel.dns-parking.com`, `byte.dns-parking.com`) | hPanel → Dominios → restorifyauto.net → DNS |
+
+> **Dominio.** `restorifyauto.net` desde el 30 de septiembre de 2026. Antes el sitio vivía en
+> `reinventa.shop`, un dominio provisional que se dio de baja: los enlaces viejos ya no abren.
 
 > **La base y el frontend se publican juntos.** Varias migraciones eliminan o
 > mueven columnas (`20260918` mueve los montos; `20260919` cambia fotos y firma).
 > Un `dist` viejo contra una base nueva —o al revés— rompe pantallas. El banner de
-> "esquema desactualizado" lo avisa, pero no lo arregla.
+> "esquema desactualizado" lo avisa, pero no lo arregla. Como un push a `produccion`
+> publica solo, **ese push va siempre después del `db push`**.
 
 ---
 
@@ -49,26 +53,33 @@ configuración de push y correo se prueban contra datos reales.
 
 **Recomendado** antes de la fase 4: un segundo proyecto de Supabase como
 *staging*, con las mismas migraciones y secretos propios (otra llave VAPID, otro
-secreto de funciones), y un subdominio (`staging.reinventa.shop`) apuntando a otro
-`dist` compilado contra ese proyecto. El flujo sería: migrar y probar en staging →
-repetir en producción.
+secreto de funciones), y un subdominio (`staging.restorifyauto.net`) con otro sitio de
+Hostinger que publique una rama `staging`, con las variables de ese proyecto. El flujo
+sería: migrar y probar en staging → repetir en producción.
 
 ---
 
 ## 3. Variables del frontend
 
-En `.env.local` (nunca se sube a git). Vite las **incrusta al compilar**: cambiar
-una exige volver a compilar y subir `dist/`.
+- **Producción:** en Hostinger, en los ajustes de compilación del sitio → **Variables de
+  entorno**. Hostinger compila con esas, no con `.env.local`.
+- **Desarrollo:** en `.env.local` (nunca se sube a git). Plantilla en `.env.example`.
+
+Vite las **incrusta al compilar**: cambiar una exige un despliegue nuevo. Por lo mismo son
+**públicas** (terminan dentro del JavaScript): nunca pongas ahí la llave de servicio, la de
+Resend ni la VAPID privada.
 
 | Variable | Obligatoria | Qué es |
 |---|:---:|---|
 | `VITE_SUPABASE_URL` | ✅ | `https://<ref>.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | ✅ | Clave anónima (pública por diseño) |
-| `VITE_PUBLIC_SITE_URL` | recomendada | `https://reinventa.shop`. Base de los enlaces de recuperación de contraseña |
-| `VITE_VAPID_PUBLIC_KEY` | para push | Llave **pública** VAPID. Sin ella, la tarjeta de push dice "no configurado" |
-| `VITE_SENTRY_DSN` | opcional | Monitoreo de errores |
+| `VITE_PUBLIC_SITE_URL` | recomendada | `https://restorifyauto.net`, sin barra final. Base del enlace del cliente y de la recuperación de contraseña |
+| `VITE_VAPID_PUBLIC_KEY` | para push | Llave **pública** VAPID, pareja de la privada de los secretos. Sin ella, la tarjeta de push dice "no configurado" |
+| `VITE_SENTRY_DSN` | opcional | Monitoreo de errores. Vacía mientras no exista el proyecto en Sentry; nunca el valor de ejemplo |
 
-Plantilla en `.env.example`.
+Para comprobar con qué se compiló lo publicado, se busca en los archivos de
+`https://restorifyauto.net/assets/`: el dominio, la URL del proyecto y la versión de esquema
+(la migración más nueva) aparecen tal cual.
 
 ---
 
@@ -85,8 +96,8 @@ Se hace una vez por entorno. Si cambias de proyecto, repite todo.
 
 ### 4.2 Auth
 
-- **Site URL**: `https://reinventa.shop`.
-- **Redirect URLs**: `https://reinventa.shop/reset-password` y el origen de
+- **Site URL**: `https://restorifyauto.net`.
+- **Redirect URLs**: `https://restorifyauto.net/**` (cubre `/reset-password`) y el origen de
   desarrollo que uses. Detalle en [password-reset.md](password-reset.md).
 - **Registro público apagado**: Authentication → Sign In / Providers → **Allow new users
   to sign up** apagado. Las cuentas las crea un admin con la edge function
@@ -98,10 +109,13 @@ Se hace una vez por entorno. Si cambias de proyecto, repite todo.
 - **`supabase/config.toml` no se aplica solo.** Describe el Supabase local. Si alguna vez
   usas `npx supabase config push`, revisa el diff antes de confirmar: sobrescribe la
   configuración de Auth del proyecto real.
-- **SMTP (recomendado)**: el correo propio de Supabase permite ~2 correos por hora.
-  Authentication → Emails → SMTP Settings con Resend:
-  host `smtp.resend.com`, puerto `465`, usuario `resend`, contraseña = una API key
-  de Resend de solo envío, remitente `notificaciones@reinventa.shop`.
+- **SMTP propio con Resend** (configurado el 30 de septiembre de 2026, con el dominio
+  definitivo). Sin él, el correo de fábrica de Supabase permite ~2 correos por hora y solo
+  entrega a miembros del equipo del proyecto: el "¿Olvidaste tu contraseña?" de un técnico
+  no le llega. Authentication → Emails → SMTP Settings: host `smtp.resend.com`, puerto
+  `465`, usuario `resend`, contraseña = una API key de Resend de solo envío (una aparte de
+  `RESEND_API_KEY`, para poder cambiar una sin romper la otra), remitente
+  `notificaciones@restorifyauto.net`. Se guarda solo con el dominio ya verificado en Resend.
 
 ### 4.3 Storage
 
@@ -129,7 +143,7 @@ Los valores de este proyecto están generados en `supabase/.env.secrets.local`
 RESTORIFY_FUNCTIONS_SECRET=…   # secreto compartido base ↔ funciones internas
 VAPID_PUBLIC_KEY=…             # par VAPID para push
 VAPID_PRIVATE_KEY=…
-VAPID_SUBJECT=mailto:notificaciones@reinventa.shop
+VAPID_SUBJECT=mailto:notificaciones@restorifyauto.net
 ```
 
 ```bash
@@ -137,8 +151,8 @@ npx supabase secrets set --env-file supabase/.env.secrets.local
 npx supabase secrets list          # comprobar (muestra nombres, no valores)
 ```
 
-La **pública** VAPID también va en `.env.local` como `VITE_VAPID_PUBLIC_KEY` (ya
-agregada en la máquina de desarrollo).
+La **pública** VAPID también va como `VITE_VAPID_PUBLIC_KEY` en las variables del sitio en
+Hostinger (producción) y en `.env.local` (desarrollo); las dos ya están.
 
 Para generar un juego nuevo en otro entorno:
 
@@ -151,13 +165,13 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"   # sec
 
 ```bash
 npx supabase secrets set RESEND_API_KEY=<llave de Resend de solo envío> \
-  PUBLIC_SITE_URL=https://reinventa.shop \
-  EMAIL_FROM_ADDRESS=notificaciones@reinventa.shop
+  PUBLIC_SITE_URL=https://restorifyauto.net \
+  EMAIL_FROM_ADDRESS=notificaciones@restorifyauto.net
 # opcional; por defecto America/Chicago
 npx supabase secrets set SHOP_TIMEZONE=America/Chicago
 ```
 
-La llave de Resend debe ser de **solo envío** y restringida a `reinventa.shop`. La
+La llave de Resend debe ser de **solo envío** y restringida a `restorifyauto.net`. La
 de acceso total que se usó para verificar el dominio debe borrarse de Resend.
 Detalle en [portal-y-correos.md](portal-y-correos.md#7-configuración).
 
@@ -200,22 +214,32 @@ hace explícito.
 
 ### 4.8 Correo (Resend)
 
-- Dominio `reinventa.shop` **verificado** (septiembre 2026). Registros en Hostinger:
+- Dominio `restorifyauto.net`; registros agregados en Hostinger el 30 de septiembre de 2026
+  (antes el dominio era `reinventa.shop`). Resend usa el formato nuevo: el SPF va con **dos
+  CNAME**, no con un MX y un TXT en `send`:
 
 | Tipo | Nombre | Valor |
 |---|---|---|
-| TXT | `resend._domainkey` | llave DKIM (ver panel de Resend) |
-| MX | `send` | `feedback-smtp.us-east-1.amazonses.com` (prioridad 10) |
-| TXT | `send` | `v=spf1 include:amazonses.com ~all` |
-| CNAME | `rsend` | `send.forge.rmta.net` |
+| TXT | `resend._domainkey` | Llave DKIM (`p=MIGf…`), copiada completa del panel de Resend |
+| CNAME | `rsend` | `rsend.forge.rmta.net` |
+| CNAME | `send` | `send.forge.rmta.net` |
 | TXT | `_dmarc` | `v=DMARC1; p=none;` |
 
+- En el editor de Hostinger el nombre va **sin el dominio** (`send`, no
+  `send.restorifyauto.net`). Un CNAME no convive con otros registros del mismo nombre: no
+  agregues un MX ni un TXT en `send`.
+- Los demás registros del dominio son del sitio y no se tocan: `ALIAS @` y `CNAME www` (al
+  CDN de Hostinger) y `A ftp`.
+- Para comprobarlos sin esperar a la caché, preguntar directo al DNS de Hostinger:
+  `dig CNAME send.restorifyauto.net @byte.dns-parking.com`, o en PowerShell
+  `Resolve-DnsName send.restorifyauto.net -Type CNAME -Server byte.dns-parking.com`.
 - Si se activa el correo de Hostinger en el mismo dominio, sus registros van en la
   raíz (MX, SPF) y no chocan con estos. El único que no puede duplicarse es `_dmarc`.
-- Remitente: `"Nombre del taller" <notificaciones@reinventa.shop>`, con *Reply-To*
+- Remitente: `"Nombre del taller" <notificaciones@restorifyauto.net>`, con *Reply-To*
   al correo de contacto de la sede (Configuración → Sedes).
-- Llave de solo envío cargada como `RESEND_API_KEY` (septiembre 2026). Plan gratuito:
-  3.000 correos al mes, 100 por día.
+- Dos llaves de solo envío: `RESEND_API_KEY` (los correos al cliente, en los secretos de las
+  funciones) y la del SMTP de Auth (en el panel de Supabase). Las de `reinventa.shop` se
+  borraron. Plan gratuito: 3.000 correos al mes, 100 por día.
 
 ---
 
@@ -236,8 +260,8 @@ npx supabase db push --dry-run --linked
 ```
 
 **Avisa al taller** si la versión incluye migraciones que mueven columnas: hay
-unos minutos entre el paso 4 y el 6 en los que la app publicada no coincide con la
-base. Si una migración borra o renombra algo, o reescribe una función de dinero, sigue
+unos minutos entre el paso 4 y el 6 (lo que tarda Hostinger en compilar) en los que la app
+publicada no coincide con la base. Si una migración borra o renombra algo, o reescribe una función de dinero, sigue
 antes [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación)
 (expandir y contraer, qué revisar, cómo volver atrás).
 
@@ -258,13 +282,24 @@ npx supabase db push --linked
 
 # 5. Edge functions que hayan cambiado (sección 4.7)
 
-# 6. Frontend
-npm run build          # compila con .env.local → dist/
+# 6. Frontend: Hostinger compila y publica lo que llega a `produccion`
+git push origin main:produccion
 ```
 
-Sube el **contenido** de `dist/` (no la carpeta) a `public_html/` en Hostinger
-(hPanel → Administrador de archivos, o FTP), reemplazando lo anterior. Verifica
-que `.htaccess`, `sw.js`, `manifest.webmanifest` e `icons/` quedaron en la raíz.
+**Cómo publica Hostinger.** El sitio `restorifyauto.net` está conectado al repositorio de
+GitHub y publica **solo la rama `produccion`**, sola, en cada push: instala con Node 22,
+corre `npm run build` (que incluye `tsc -b`: un error de tipos frena el despliegue) y sirve
+`dist/`, con su `.htaccess`. Las variables `VITE_*` salen de su panel
+([sección 3](#3-variables-del-frontend)). `main` es la rama de trabajo: nada de lo que llega
+a `main` se publica hasta el push a `produccion`.
+
+- **Hostinger no espera al CI.** Empuja a `produccion` solo un commit con el CI de GitHub en
+  verde.
+- `git push origin main:produccion` es un avance rápido. Si Git lo rechaza, alguien subió
+  algo directo a `produccion`: revisa qué es antes de forzar nada.
+- Revisa en el panel del sitio que la rama configurada sea `produccion` y no `main`.
+- Para volver a compilar sin cambios en el código (por ejemplo, tras cambiar una variable),
+  vuelve a desplegar desde el panel de Hostinger.
 
 ```bash
 # 7. Seguridad contra la API ya desplegada (0 FAIL)
@@ -274,7 +309,8 @@ npm run qa:security
 **Un build siempre espera todas las migraciones del código.** La app compara la
 migración más nueva de su carpeta con la de la base y, si la base está atrasada,
 muestra el aviso de "esquema desactualizado". Por eso el paso 4 va antes que el 6,
-aunque la migración no cambie columnas.
+aunque la migración no cambie columnas: con el despliegue automático, una migración que
+llega a `produccion` antes de aplicarse ya está publicada.
 
 ### Auditoría de septiembre 2026
 
@@ -287,7 +323,7 @@ horario de trabajo.
 npx supabase db push --linked                    # la migración
 npx supabase functions deploy delete-employee    # mensaje al borrar empleados con pagos
 npx supabase functions deploy update-employee    # editar empleados (faltaba desplegar: AUD-26)
-npm run build                                    # y subir dist/
+npm run build                                    # y subir dist/ (hoy: git push origin main:produccion)
 npm run qa:security                              # SEC-05 a SEC-08 pasan a PASS
 ```
 
@@ -313,7 +349,7 @@ Diez minutos. Es el nivel **humo** del plan de pruebas; si algo falla,
 - [ ] Asignar un técnico a la orden: le llega "Nueva orden asignada" (campana y push).
 - [ ] Con un cliente de prueba con tu correo: firmar la recepción → al minuto llega
       "Recibimos su…" (al instante si la orden tiene foto de recepción; si no, a los 30 s); el
-      botón abre `reinventa.shop/r/…` con la orden.
+      botón abre `restorifyauto.net/r/…` con la orden.
 - [ ] La tarjeta **Enlace del cliente** muestra el correo como **Enviado**.
 - [ ] Agregar un trabajo a esa orden → **Enviar presupuesto** → llega el correo; autorizarlo desde
       el enlace → la orden suma el trabajo y llega "Recibimos su respuesta".
@@ -323,7 +359,10 @@ Diez minutos. Es el nivel **humo** del plan de pruebas; si algo falla,
       Finanzas muestra el "Pago final" con ese método.
 - [ ] `curl -s "https://<ref>.supabase.co/functions/v1/portal?token=$(printf '0%.0s' {1..64})"`
       responde `{"estado_enlace":"no_encontrado"}` con HTTP 404.
-- [ ] `https://reinventa.shop/sw.js` responde con `Cache-Control: no-cache` (DevTools → Network).
+- [ ] `https://restorifyauto.net/sw.js` responde con `Cache-Control: no-cache` (DevTools → Network).
+- [ ] `curl -sI https://www.restorifyauto.net/work-orders` responde `301` a
+      `https://restorifyauto.net/work-orders` (una sola dirección: con `www` sería otra sesión,
+      otra app instalada y otro push).
 - [ ] Tareas programadas activas:
   ```sql
   SELECT jobname, schedule, active FROM cron.job WHERE jobname LIKE 'restorify-%';
@@ -342,17 +381,19 @@ Diez minutos. Es el nivel **humo** del plan de pruebas; si algo falla,
 | Qué | Cómo | Efecto |
 |---|---|---|
 | `RESTORIFY_FUNCTIONS_SECRET` | Nuevo valor en `secrets set` **y** en Vault (`vault.update_secret`) | Ninguno si ambos cambian juntos; si no, los envíos quedan pendientes (401) |
-| Par VAPID | Nuevas llaves en secrets y en `VITE_VAPID_PUBLIC_KEY` → recompilar | **Todos** deben volver a activar push; conviene borrar `push_suscripciones` |
+| Par VAPID | Nuevas llaves en secrets y en `VITE_VAPID_PUBLIC_KEY` (Hostinger y `.env.local`) → volver a desplegar | **Todos** deben volver a activar push; conviene borrar `push_suscripciones` |
 | Clave de servicio de Supabase | Panel de Supabase | Las edge functions la reciben sola |
-| API key de Resend | Crear nueva de solo envío → `secrets set RESEND_API_KEY` → borrar la vieja | Ninguno |
-| Clave anónima | Panel de Supabase → recompilar | Sesiones abiertas se cierran |
+| API key de Resend | Crear nueva de solo envío → `secrets set RESEND_API_KEY` → borrar la vieja. La del SMTP de Auth es otra: se cambia en Authentication → Emails → SMTP | Ninguno |
+| Clave anónima | Panel de Supabase → `VITE_SUPABASE_ANON_KEY` en Hostinger → volver a desplegar | Sesiones abiertas se cierran |
 
 ---
 
 ## 8. Volver atrás
 
-- **Frontend:** conserva una copia del `dist` anterior antes de subir; volver es
-  subirla de nuevo. Solo es seguro si la base no recibió migraciones nuevas.
+- **Frontend:** `git revert` del commit que falló, en `main`, y
+  `git push origin main:produccion`: Hostinger publica la versión corregida. Solo es seguro
+  si la base no recibió migraciones que esa versión necesite. No reescribas `produccion` con
+  un push forzado.
 - **Base de datos:** las migraciones no tienen "down". Volver atrás es escribir una
   migración nueva que revierta (detalle en
   [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación)).

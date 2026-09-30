@@ -64,6 +64,9 @@ sep 28–29 ── Etapa 9  Pruebas en el teléfono y la reunión con el taller:
                       ve lo suyo, cobro con método, comisiones por especialidad y por
                       empleado, egresos de comisión por orden y margen. Base limpia y
                       empieza la prueba del taller
+sep 30    ──          Dominio definitivo restorifyauto.net (reinventa.shop dado de baja);
+                      Hostinger publica desde GitHub (rama produccion); Resend y el SMTP
+                      de Auth con el dominio nuevo
 ```
 
 ---
@@ -357,6 +360,9 @@ mejoras y la reunión con el taller.
   deja **un egreso por orden** y cada orden muestra su **margen**.
 - **El 29 de septiembre la base del proyecto real se limpió** para la prueba del taller: un
   administrador y una sede.
+- **El 30 de septiembre el sitio pasó al dominio definitivo, `restorifyauto.net`.** Hostinger
+  dejó de recibir `dist/` a mano y ahora compila y publica la rama `produccion` de GitHub.
+  Resend y el SMTP de Auth pasaron al dominio nuevo; `reinventa.shop` se dio de baja.
 - Quedó en propuesta, esperando al taller: el **pago a empleados** sin ambigüedad
   ([pagos-a-empleados.md](pagos-a-empleados.md)). Y una revisión de mantenibilidad con su
   plan ([mantenimiento.md](mantenimiento.md)).

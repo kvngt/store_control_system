@@ -1,4 +1,4 @@
-/** Prefijo del enlace personal del cliente: reinventa.shop/r/<token>. */
+/** Prefijo del enlace personal del cliente: restorifyauto.net/r/<token>. */
 export const CUSTOMER_PORTAL_PREFIX = '/r/';
 
 export function isCustomerPortalPath(pathname: string): boolean {

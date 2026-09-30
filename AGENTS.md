@@ -23,7 +23,8 @@ completo, empieza por **[docs/traspaso.md](docs/traspaso.md)**. Para ubicar una 
 - **Nunca pongas secretos** en el repositorio, la documentación o tu memoria. Viven en
   archivos `*.local`, en `supabase secrets` y en Vault.
 - **No despliegues ni apliques migraciones al proyecto real** (`supabase db push`,
-  `functions deploy`, subir `dist/`) sin que la persona responsable lo pida.
+  `functions deploy`, un push a la rama `produccion`) sin que la persona responsable lo
+  pida. Hostinger publica solo lo que llega a `produccion`: un push ahí es un despliegue.
 - **Commits solo cuando se piden.**
 
 ## Verificar un cambio

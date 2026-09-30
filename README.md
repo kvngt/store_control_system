@@ -37,7 +37,7 @@ Toda la documentación vigente está en **[docs/](docs/README.md)**:
 | Backend | Supabase: Postgres 17 + RLS, Auth, Storage (TUS), Realtime, Edge Functions (Deno), pg_cron, pg_net, Vault |
 | Multimedia | MediaRecorder, WebCodecs (Mediabunny), tus-js-client |
 | Push | Web Push (VAPID) con service worker y manifest PWA |
-| Correo | Resend (dominio `reinventa.shop`) |
+| Correo | Resend (dominio `restorifyauto.net`) |
 | Estilos | CSS plano con variables, sin framework de UI |
 | i18n | Español / Inglés |
 | Calidad | oxlint, Vitest, pgTAP, Playwright, Sentry |

@@ -13,19 +13,19 @@ afterEach(() => {
 
 describe('getPublicSiteUrl', () => {
   it('uses the configured site URL over the current origin', () => {
-    vi.stubEnv('VITE_PUBLIC_SITE_URL', 'https://reinventa.shop');
-    expect(getPublicSiteUrl()).toBe('https://reinventa.shop');
+    vi.stubEnv('VITE_PUBLIC_SITE_URL', 'https://restorifyauto.net');
+    expect(getPublicSiteUrl()).toBe('https://restorifyauto.net');
   });
 
   it('drops a trailing slash', () => {
     // Supabase matches Redirect URLs exactly, so a stray slash is a silent
     // rejection that falls back to the panel's Site URL.
-    vi.stubEnv('VITE_PUBLIC_SITE_URL', 'https://reinventa.shop/');
-    expect(getPublicSiteUrl()).toBe('https://reinventa.shop');
+    vi.stubEnv('VITE_PUBLIC_SITE_URL', 'https://restorifyauto.net/');
+    expect(getPublicSiteUrl()).toBe('https://restorifyauto.net');
   });
 
   it('ignores a value without a scheme', () => {
-    vi.stubEnv('VITE_PUBLIC_SITE_URL', 'reinventa.shop');
+    vi.stubEnv('VITE_PUBLIC_SITE_URL', 'restorifyauto.net');
     expect(getPublicSiteUrl()).toBe(window.location.origin);
   });
 
@@ -37,7 +37,7 @@ describe('getPublicSiteUrl', () => {
 
 describe('getPasswordResetRedirect', () => {
   it('points at /reset-password on the configured site', () => {
-    vi.stubEnv('VITE_PUBLIC_SITE_URL', 'https://reinventa.shop');
-    expect(getPasswordResetRedirect()).toBe('https://reinventa.shop/reset-password');
+    vi.stubEnv('VITE_PUBLIC_SITE_URL', 'https://restorifyauto.net');
+    expect(getPasswordResetRedirect()).toBe('https://restorifyauto.net/reset-password');
   });
 });

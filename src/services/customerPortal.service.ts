@@ -6,7 +6,7 @@ import { CUSTOMER_PORTAL_PREFIX } from '../portal/path';
 import type { CustomerEmail, CustomerLink } from '../types/database';
 
 export const customerPortalService = {
-  /** reinventa.shop/r/<token> */
+  /** restorifyauto.net/r/<token> */
   portalUrl: (token: string) => `${getPublicSiteUrl()}${CUSTOMER_PORTAL_PREFIX}${token}`,
 
   /** El enlace activo de la orden, o null si todavía no tiene. */

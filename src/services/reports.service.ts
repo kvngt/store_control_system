@@ -1,6 +1,6 @@
 // Compartir el reporte de una orden con su cliente.
 //
-// Desde la fase 6 el reporte es el enlace web del cliente (reinventa.shop/r/<token>):
+// Desde la fase 6 el reporte es el enlace web del cliente (restorifyauto.net/r/<token>):
 // estado, fotos y videos publicados, presupuesto y cuenta, sin crear cuenta. Ya no
 // se sube un PDF: el PDF se genera en el navegador solo para imprimir o archivar
 // (`lib/workOrderPdf.ts`). El enlace se manda por correo desde el sistema

@@ -21,7 +21,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../services/customerPortal.service', () => ({
   customerPortalService: {
     ...mocks,
-    portalUrl: (token: string) => `https://reinventa.shop/r/${token}`,
+    portalUrl: (token: string) => `https://restorifyauto.net/r/${token}`,
   },
 }));
 
@@ -72,7 +72,7 @@ describe('CustomerLinkCard', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Crear enlace/ }, { timeout: 5000 }));
 
     expect(mocks.createLink).toHaveBeenCalledWith('ord-1');
-    expect(await screen.findByDisplayValue(`https://reinventa.shop/r/${TOKEN}`, {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByDisplayValue(`https://restorifyauto.net/r/${TOKEN}`, {}, { timeout: 5000 })).toBeInTheDocument();
   });
 
   it('muestra cuántas veces lo abrió el cliente y lo comparte por WhatsApp con el enlace', async () => {
@@ -81,7 +81,7 @@ describe('CustomerLinkCard', () => {
 
     expect(await screen.findByText(/Abierto 3 veces/)).toBeInTheDocument();
     const whatsapp = screen.getByRole('link', { name: /Enviar por WhatsApp/ });
-    expect(decodeURIComponent(whatsapp.getAttribute('href')!)).toContain(`https://reinventa.shop/r/${TOKEN}`);
+    expect(decodeURIComponent(whatsapp.getAttribute('href')!)).toContain(`https://restorifyauto.net/r/${TOKEN}`);
     expect(whatsapp.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/15125550100/);
   });
 

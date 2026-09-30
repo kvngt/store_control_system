@@ -13,7 +13,7 @@ import { formatPhone } from '../../lib/phone';
 
 interface ShareReportModalProps {
   order: WorkOrder;
-  /** El enlace personal del cliente (reinventa.shop/r/<token>) y el mensaje de WhatsApp. */
+  /** El enlace personal del cliente (restorifyauto.net/r/<token>) y el mensaje de WhatsApp. */
   link: string;
   message: string;
   onClose: () => void;

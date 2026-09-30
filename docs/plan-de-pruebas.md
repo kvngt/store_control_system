@@ -200,7 +200,7 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | ACC-01 | P0 | IA | Entrar con una contraseña incorrecta → "Correo o contraseña incorrectos…", sigue en el login. |
 | ACC-02 | P0 | IA | **A** entra → el menú tiene Panel Principal, Clientes, Vehículos, Órdenes de Trabajo, Tablero Kanban, Finanzas, Comisiones y Configuración. |
 | ACC-03 | P0 | IA | **M** entra → no ve Finanzas ni Comisiones; escribir `/finance` o `/payroll` en la URL lo regresa al panel. |
-| ACC-04 | P1 | H | "¿Olvidaste tu contraseña?" → llega el correo; el enlace abre `reinventa.shop/reset-password` (no `localhost`); la contraseña nueva funciona. |
+| ACC-04 | P1 | H | "¿Olvidaste tu contraseña?" → llega el correo; el enlace abre `restorifyauto.net/reset-password` (no `localhost`); la contraseña nueva funciona. |
 | ACC-05 | P1 | IA | Recargar la página → sigue con sesión en la misma pantalla. |
 | ACC-06 | P1 | IA | Cerrar sesión → login; el botón Atrás del navegador no muestra datos. |
 | ACC-07 | P0 | IA | En el mismo navegador: **A** abre Panel, Órdenes (con totales) y Finanzas; cierra sesión; entra **M** → en ningún momento aparece un monto ni un total de **A** (tampoco un instante mientras carga). Repetir sin cerrar sesión, cambiando de cuenta desde otra pestaña. *(PRD-13; automatizado en `AuthContext.test.tsx`.)* |
@@ -387,7 +387,7 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 |---|---|---|---|
 | PWA-01 | P2 | H | Android: Chrome ofrece "Instalar app"; abre sin barra de navegador, con el ícono dorado. |
 | PWA-02 | P2 | H | iPhone: "Agregar a inicio" usa el ícono y el nombre "Restorify"; el encabezado no queda bajo la barra de estado. |
-| PWA-03 | P2 | IA | `https://reinventa.shop/sw.js` responde con `Cache-Control: no-cache`; tras publicar, la app instalada muestra la versión nueva al reabrir. |
+| PWA-03 | P2 | IA | `https://restorifyauto.net/sw.js` responde con `Cache-Control: no-cache`; tras publicar, la app instalada muestra la versión nueva al reabrir. |
 
 ### 4.13 Portal del cliente y correos (POR)
 

@@ -17,6 +17,14 @@ cómo publicar sin romper nada. Complementa la [auditoría de septiembre](audito
 > Antes de atender clientes reales conviene además lo P0 de [mantenimiento.md](mantenimiento.md#5-plan-priorizado):
 > staging y un respaldo antes de cada `db push`.
 
+> **30 de septiembre de 2026: dominio definitivo `restorifyauto.net`.** `reinventa.shop` se dio
+> de baja. Hostinger publica ahora desde GitHub (rama `produccion`), no subiendo `dist/` a
+> `public_html/`. Con el cambio se hicieron **PRD-03** (llaves de Resend nuevas para el dominio
+> nuevo, las viejas borradas) y **PRD-05** (SMTP de Auth con Resend). Las secciones 4 y 5
+> se escribieron para la subida manual: donde dicen subir `dist/`, hoy es
+> `git push origin main:produccion`, y la copia de `public_html/` para volver atrás es el
+> commit anterior ([deployment.md §8](deployment.md#8-volver-atrás)).
+
 ---
 
 ## Índice
@@ -73,7 +81,7 @@ Nadie más que quien administra las cuentas puede hacer esto. Marca cada uno.
 | **PRD-03** | Alta | **Rotar la llave de Resend** | La llave de envío se compartió en una conversación con una IA. La de acceso total que se usó para verificar el dominio puede seguir viva | Resend → API Keys: crear una de solo envío para `reinventa.shop`, `npx supabase secrets set RESEND_API_KEY=<nueva>`, borrar las anteriores. Comprobar con un correo de prueba (plan de pruebas POR-07) |
 | **PRD-04** | Alta | **Cuentas y datos de prueba** | Hay 5 cuentas (2 nunca iniciaron sesión, varias con dominio `restorify.com`), las credenciales de una admin están en `.env.test.local` y las pruebas e2e escriben datos `PWTEST` en este mismo proyecto | Empleados: dejar solo personal real, cambiar la contraseña de toda cuenta cuyas credenciales estén en un archivo. No correr `test:e2e` contra producción (`qa:security` ya no escribe nada) |
 | **PRD-05** | **Alta** | **SMTP de Auth con Resend** | El correo propio de Supabase permite unos 2 por hora y, según la política de Supabase para ese servidor de fábrica, solo entrega a correos del equipo de la organización: el "¿Olvidaste tu contraseña?" de un técnico puede no llegarle nunca. Comprobar con un correo que no sea del equipo (manual-de-pruebas A-08, B-13) | [deployment.md §4.2](deployment.md#42-auth) |
-| **PRD-06** | Media | **Sentry** | `VITE_SENTRY_DSN` está vacía: un error en el teléfono de un técnico no llega a nadie | Crear el proyecto en Sentry (org `restorify`, proyecto `restorify-frontend`, ya configurados en `vite.config.ts`), poner el DSN en `.env.local` y recompilar |
+| **PRD-06** | Media | **Sentry** | `VITE_SENTRY_DSN` está vacía: un error en el teléfono de un técnico no llega a nadie | Crear el proyecto en Sentry (org `restorify`, proyecto `restorify-frontend`, ya configurados en `vite.config.ts`), poner el DSN en `VITE_SENTRY_DSN` en las variables del sitio en Hostinger y volver a desplegar |
 | **PRD-07** | Media | **Contraseñas de 8 caracteres en Auth** | La app y las funciones ya exigen 8; Auth en el panel sigue en 6 y aceptaría una de 6 desde la recuperación de contraseña | Authentication → Sign In / Providers → Email → Minimum password length: 8 |
 | **PRD-08** | Baja | **Vaciar los buckets de prueba** | `vehiculos_fotos` (78 MB), `firmas` y `reportes` guardan datos de antes de las fases | [supabase.md §14](supabase.md#14-pendientes-y-limpieza) |
 
@@ -318,8 +326,8 @@ npm run build                                      # 3. PENDIENTE: el frontend �
 
 **Comprobar (15 minutos):**
 
-- [ ] `https://reinventa.shop` abre (si responde **500**, ver sección 5: es el `.htaccess`).
-- [ ] `curl -sI https://reinventa.shop/ | grep -iE "x-frame|nosniff|strict-transport"` muestra las tres cabeceras.
+- [ ] `https://restorifyauto.net` abre (si responde **500**, ver sección 5: es el `.htaccess`).
+- [ ] `curl -sI https://restorifyauto.net/ | grep -iE "x-frame|nosniff|strict-transport"` muestra las tres cabeceras.
 - [ ] Sin el aviso de "esquema desactualizado".
 - [ ] `npm run qa:security` → **0 FAIL** (SEC-18 en PASS si ya se hizo PRD-01).
 - [ ] Panel: los ingresos del mes coinciden con `SELECT SUM(monto) FROM finanzas_movimientos WHERE tipo = 'ingreso' AND fecha >= date_trunc('month', CURRENT_DATE)` (por sede).

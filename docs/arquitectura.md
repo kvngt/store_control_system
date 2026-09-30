@@ -35,11 +35,11 @@ avisos), el complemento es [reglas-de-negocio.md](reglas-de-negocio.md).
 | **Estilos** | CSS plano con variables, sin framework de UI |
 | **Multimedia** | MediaRecorder, WebCodecs vía Mediabunny, subidas reanudables TUS |
 | **Push** | Web Push (VAPID) con service worker; app instalable (PWA) |
-| **Correo** | Resend (dominio `reinventa.shop` verificado): avisos automáticos al cliente |
+| **Correo** | Resend (dominio `restorifyauto.net` verificado): avisos automáticos al cliente |
 | **Portal del cliente** | Paquete aparte en `/r/<token>`, sin cuenta; datos por una edge function pública |
 | **Presupuestos** | Estado por línea (borrador → pendiente → aprobado/rechazado); solo lo aprobado se cobra |
 | **Pruebas** | Vitest (unitarias y componentes), pgTAP (base de datos), Playwright (e2e) |
-| **Hosting** | Sitio estático en Hostinger (Apache), dominio `reinventa.shop` |
+| **Hosting** | Sitio estático en Hostinger, dominio `restorifyauto.net`; Hostinger compila y publica la rama `produccion` de GitHub |
 
 Unas 33 000 líneas de TypeScript (con pruebas), 5 500 de CSS, 54 migraciones y 23 tablas.
 Cómo se llegó hasta aquí, etapa por etapa: [evolucion.md](evolucion.md). Qué tocar para
@@ -630,12 +630,14 @@ npm run dev          # http://localhost:5173
 ```
 VITE_SUPABASE_URL=https://<proyecto>.supabase.co
 VITE_SUPABASE_ANON_KEY=<clave anónima>
-VITE_PUBLIC_SITE_URL=https://reinventa.shop
+VITE_PUBLIC_SITE_URL=https://restorifyauto.net
 VITE_VAPID_PUBLIC_KEY=<llave pública VAPID>      # opcional: sin ella no hay push
 VITE_SENTRY_DSN=<dsn>                            # opcional
 ```
 
-Vite **incrusta** estas variables en el build: cambiarlas exige recompilar.
+Vite **incrusta** estas variables en el build: cambiarlas exige recompilar. En producción
+no salen de `.env.local` sino del panel de Hostinger, que compila la rama `produccion`
+([deployment.md §3](deployment.md#3-variables-del-frontend)).
 
 ```bash
 npm run build     # tsc -b && vite build → dist/

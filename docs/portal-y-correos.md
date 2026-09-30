@@ -1,7 +1,7 @@
 # Portal del cliente y correos automáticos
 
 La fase 4: el cliente sigue su vehículo sin crear una cuenta. Cada orden tiene un
-**enlace personal** (`reinventa.shop/r/<token>`) que abre un reporte web, y el
+**enlace personal** (`restorifyauto.net/r/<token>`) que abre un reporte web, y el
 sistema le **manda correos** cuando hay algo nuevo. Los correos no traen los datos:
 traen el enlace.
 
@@ -41,7 +41,7 @@ pg_cron cada minuto → dispatch_outbox_if_due() → pg_net → process-outbox
   └─ Resend API        Idempotency-Key = id de la fila
   └─ finish_outbox()   enviado / omitido / reintentar
 
-El cliente toca el botón del correo → reinventa.shop/r/<token>
+El cliente toca el botón del correo → restorifyauto.net/r/<token>
   └─ main.tsx ve /r/ y carga solo el portal (sin la app del taller)
   └─ GET functions/v1/portal?token=…
        └─ datos_portal(token)  JSON armado campo por campo
@@ -157,7 +157,7 @@ el cliente no se enteraba de nada.
 
 ### Resend
 
-- `from`: `"<Nombre del taller>" <notificaciones@reinventa.shop>`.
+- `from`: `"<Nombre del taller>" <notificaciones@restorifyauto.net>`.
 - `reply_to`: el correo de contacto de la sede, si está configurado. Sin él, el pie
   no ofrece responder.
 - `Idempotency-Key`: el id de la fila. Si la función muere después de que Resend
@@ -254,8 +254,8 @@ panel: [supabase.md](supabase.md#7-secretos-y-variables).
 
 ```bash
 npx supabase secrets set RESEND_API_KEY=<llave de solo envío> \
-  PUBLIC_SITE_URL=https://reinventa.shop \
-  EMAIL_FROM_ADDRESS=notificaciones@reinventa.shop
+  PUBLIC_SITE_URL=https://restorifyauto.net \
+  EMAIL_FROM_ADDRESS=notificaciones@restorifyauto.net
 # Opcional (por defecto America/Chicago): zona horaria de las fechas del correo
 npx supabase secrets set SHOP_TIMEZONE=America/Chicago
 ```
@@ -269,7 +269,7 @@ La llave de Resend **nunca** va en un archivo del repositorio ni en
 npx supabase db push --linked
 npx supabase functions deploy portal --no-verify-jwt
 npx supabase functions deploy process-outbox --no-verify-jwt
-npm run build   # y subir dist/ a Hostinger
+git push origin main:produccion   # Hostinger compila y publica
 ```
 
 `public/.htaccess` ya reescribe `/r/...` a `index.html`; no hace falta nada en

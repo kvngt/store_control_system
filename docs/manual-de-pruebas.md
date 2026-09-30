@@ -113,7 +113,7 @@ Cuenta: el administrador. Dispositivo: computadora.
 
 | # | Pri | Pasos | Debe pasar |
 |---|---|---|---|
-| A-01 | 🔴 | Abre `reinventa.shop` sin haber entrado antes | Aparece la pantalla de inicio de sesión. No hay ningún botón de "registrarse" |
+| A-01 | 🔴 | Abre `restorifyauto.net` sin haber entrado antes | Aparece la pantalla de inicio de sesión. No hay ningún botón de "registrarse" |
 | A-02 | 🔴 | Entra con el correo y la contraseña correctos | Entra al **Panel principal** |
 | A-03 | 🔴 | Cierra sesión. Entra con la contraseña equivocada | Aviso rojo: "Correo o contraseña incorrectos…". No entra |
 | A-04 | 🟡 | Entra con un correo que no existe | El mismo aviso que A-03 (no revela si el correo existe) |
@@ -121,7 +121,7 @@ Cuenta: el administrador. Dispositivo: computadora.
 | A-06 | 🟡 | Cierra la pestaña, ábrela otra vez | Sigue dentro |
 | A-07 | 🔴 | Cierra sesión y presiona el botón **Atrás** del navegador | No se ven datos; vuelve al login |
 | A-08 | 🔴 | **¿Olvidaste tu contraseña?** → tu correo → **Enviar enlace** | Mensaje: "Si existe una cuenta con ese correo, te enviamos un enlace…" |
-| A-09 | 🔴 | Abre el correo que llegó (revisa también no deseado) y toca el enlace | Abre **Nueva contraseña** en `reinventa.shop/reset-password` (no `localhost`) |
+| A-09 | 🔴 | Abre el correo que llegó (revisa también no deseado) y toca el enlace | Abre **Nueva contraseña** en `restorifyauto.net/reset-password` (no `localhost`) |
 | A-10 | 🟡 | Escribe una contraseña de 5 letras en los dos campos → **Guardar contraseña** | "La contraseña debe tener al menos 8 caracteres." |
 | A-11 | 🟡 | Escribe dos contraseñas distintas | "Las dos contraseñas no coinciden." |
 | A-12 | 🔴 | Escribe la misma contraseña nueva (8+) dos veces → Guardar → **Entrar al sistema** | "Tu contraseña se cambió correctamente." y luego entra al Panel |
@@ -167,7 +167,7 @@ Cuenta: administrador. Dispositivo: computadora. Menú: **Configuración** (sede
 | B-12 | 🟡 | Como mecánico, en Configuración cambia tu nombre y foto | Se guarda y se ve en el encabezado |
 | B-13 | ⚪ | Pide "¿Olvidaste tu contraseña?" para el correo del mecánico | Llega el correo (ver la nota de la sesión A si no llega) |
 | B-14 | 🔴 | **Empleados → Ver** en el mecánico y en el pintor | Pago **Comisión** con el porcentaje vacío: "Vacío = el de la sede (35%)". Déjalos así para que cuadren los números de [0.3](#03-el-caso-de-prueba-números-para-comprobar) |
-| B-15 | 🔴 | Como mecánico, escribe `reinventa.shop/employees` en la barra | No entra: lo manda al panel |
+| B-15 | 🔴 | Como mecánico, escribe `restorifyauto.net/employees` en la barra | No entra: lo manda al panel |
 
 > El **borrado** de un empleado se prueba al final, en la sesión M, para no perder al
 > mecánico que se usa en las demás sesiones.
@@ -187,7 +187,7 @@ Cuenta: administrador, luego mecánico. Dispositivo: computadora.
 | C-05 | 🟡 | Marca **Sin placa**, color Gris → Crear | En la lista aparece con la etiqueta «Sin placa» |
 | C-06 | 🟡 | Vuelve a Clientes | Cliente Prueba muestra **1 vehículo** |
 | C-07 | 🟡 | Abre el perfil del cliente (ojo) | Ve sus datos y su vehículo |
-| C-08 | 🔴 | Como **mecánico**: busca Clientes y Vehículos en el menú y escribe `reinventa.shop/customers` en la barra | No aparecen en el menú y la dirección lo manda al panel. Crear y editar clientes y vehículos es de administración |
+| C-08 | 🔴 | Como **mecánico**: busca Clientes y Vehículos en el menú y escribe `restorifyauto.net/customers` en la barra | No aparecen en el menú y la dirección lo manda al panel. Crear y editar clientes y vehículos es de administración |
 
 ---
 
@@ -316,7 +316,7 @@ Cuenta: administrador.
 
 | # | Pri | Pasos | Debe pasar |
 |---|---|---|---|
-| I-01 | 🔴 | Como **mecánico**, escribe `reinventa.shop/finance` en la barra | No entra: lo manda al panel |
+| I-01 | 🔴 | Como **mecánico**, escribe `restorifyauto.net/finance` en la barra | No entra: lo manda al panel |
 | I-02 | 🟡 | **Nueva Transacción**: egreso, Gasto Operativo, $50, hoy, "Prueba luz" → Crear | Aparece en la tabla; las tarjetas de egresos y balance cambian $50 |
 | I-03 | 🟡 | Otra transacción **vinculada a la orden** | La columna de orden lleva a la orden |
 | I-04 | 🟡 | Borra la transacción de I-02 | Desaparece y los totales vuelven |

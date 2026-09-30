@@ -11,6 +11,6 @@ describe('resumableEndpoint', () => {
 
   it('usa la URL tal cual con un dominio propio o en local', () => {
     expect(resumableEndpoint('http://127.0.0.1:54321')).toBe('http://127.0.0.1:54321/storage/v1/upload/resumable');
-    expect(resumableEndpoint('https://api.reinventa.shop')).toBe('https://api.reinventa.shop/storage/v1/upload/resumable');
+    expect(resumableEndpoint('https://api.restorifyauto.net')).toBe('https://api.restorifyauto.net/storage/v1/upload/resumable');
   });
 });

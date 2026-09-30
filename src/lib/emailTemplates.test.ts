@@ -4,13 +4,13 @@ import { describe, it, expect } from 'vitest';
 import { escapeHtml, renderEmail, type EmailContext } from '../../supabase/functions/_shared/email/templates.ts';
 
 const base: EmailContext = {
-  portalUrl: 'https://reinventa.shop/r/' + 'a'.repeat(64),
+  portalUrl: 'https://restorifyauto.net/r/' + 'a'.repeat(64),
   cliente: { nombre: 'Marta Ruiz' },
   taller: {
     nombre: 'Reinventa Norte',
     direccion: 'Oak 12',
     telefono: '555-0100',
-    email: 'taller@reinventa.shop',
+    email: 'taller@restorifyauto.net',
     logoUrl: 'https://cdn.example/logo.png',
     color: '#1E40AF',
   },

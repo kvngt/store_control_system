@@ -17,7 +17,7 @@ vi.mock('../../services/customerPortal.service', () => ({
 
 const { default: ShareReportModal } = await import('./ShareReportModal');
 
-const LINK = `https://reinventa.shop/r/${'e'.repeat(64)}`;
+const LINK = `https://restorifyauto.net/r/${'e'.repeat(64)}`;
 
 function order(customer: Record<string, unknown> = {}): WorkOrder {
   return {

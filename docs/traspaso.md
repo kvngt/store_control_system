@@ -32,9 +32,9 @@ de estados de cuenta de Wells Fargo, comisiones del personal y avisos push al te
 |---|---|
 | **Usuarios** | Personal del taller (admin, mecánico, pintor) y clientes finales (solo el portal) |
 | **Escala esperada** | 2 talleres, ~8 personas cada uno, ~120 órdenes al mes |
-| **Frontend** | React 19 + TypeScript + Vite, sitio estático en Hostinger (`reinventa.shop`) |
+| **Frontend** | React 19 + TypeScript + Vite, sitio estático en Hostinger (`restorifyauto.net`), publicado desde la rama `produccion` de GitHub |
 | **Backend** | Supabase (proyecto `dbstores`): Postgres con RLS y triggers, Auth, Storage, Realtime, 6 Edge Functions, pg_cron |
-| **Correo** | Resend, dominio `reinventa.shop` |
+| **Correo** | Resend, dominio `restorifyauto.net` (correos al cliente y SMTP de Auth) |
 | **Estado** | Las seis fases del cliente, una auditoría, una revisión previa a producción y los siete cambios de la reunión con el taller, todos hechos. El 29 de septiembre de 2026 la base se limpió para la prueba del taller: un administrador y una sede. Antes de atender clientes reales: [salida-a-produccion.md](salida-a-produccion.md) §2 y [mantenimiento.md §5](mantenimiento.md#5-plan-priorizado) |
 | **Idioma** | La interfaz en español e inglés; la documentación y los comentarios del código, en español (algunos antiguos en inglés) |
 
@@ -53,7 +53,7 @@ de Hostinger no se puede publicar nada.
 |---|---|---|---|
 | **GitHub** — `kvngt/store_control_system` | El código, las pull requests, la integración continua (`.github/workflows/ci.yml`) | Colaborador con escritura, o ser dueño | No puedes publicar cambios versionados |
 | **Supabase** — proyecto `dbstores` (`lendsiqkxhvbxxkaadrt`, región `ca-central-1`) | Base de datos, Auth, Storage, Edge Functions, secretos, Vault, tareas programadas | Miembro **Owner** o **Administrator** de la organización | No puedes aplicar migraciones, desplegar funciones ni ver logs. Nadie puede recuperar el proyecto sin el dueño de la organización |
-| **Hostinger** | El hosting de `reinventa.shop` (`public_html/`) y el **DNS del dominio**, incluidos los registros que verifican Resend | Acceso a hPanel (o acceso delegado de Hostinger) | No puedes publicar el frontend; si el dominio vence, cae todo |
+| **Hostinger** | El sitio `restorifyauto.net` (conectado a GitHub, con las variables `VITE_*` de producción) y el **DNS del dominio**, incluidos los registros que verifican Resend | Acceso a hPanel (o acceso delegado de Hostinger) | No puedes publicar el frontend; si el dominio vence, cae todo |
 | **Resend** | Envío de correos al cliente, dominio verificado, llaves | Miembro del equipo | No puedes rotar la llave ni ver rebotes |
 | **Sentry** (org `restorify`, proyecto `restorify-frontend`) | Errores del frontend. **Hoy sin DSN configurado** | Miembro | No ves errores en producción |
 | **Google Jules** (bot "Bolt" en GitHub) | Abre pull requests automáticas de rendimiento | Quien lo conectó al repositorio | Sigue abriendo PRs; revisarlas o desconectarlo |
@@ -173,7 +173,7 @@ Reglas completas: [ai-context.md](ai-context.md) (sirven igual para personas).
 
 | Tarea | Cómo |
 |---|---|
-| **Publicar una versión** | [deployment.md §5](deployment.md#5-publicar-una-versión): migraciones → funciones que cambiaron → build → subir `dist/` → [§6](deployment.md#6-verificación-después-de-publicar) |
+| **Publicar una versión** | [deployment.md §5](deployment.md#5-publicar-una-versión): CI en verde → respaldo → migraciones → funciones que cambiaron → `git push origin main:produccion` (Hostinger compila y publica) → [§6](deployment.md#6-verificación-después-de-publicar) |
 | **Volver atrás** | [deployment.md §8](deployment.md#8-volver-atrás) y [salida-a-produccion.md §5](salida-a-produccion.md#5-volver-atrás) |
 | **Crear o dar de baja a un empleado** | En la app: **Empleados** (menú lateral). Nunca desde Authentication → Users |
 | **Cambiar cómo se le paga a alguien** (su porcentaje o salario) | Empleados → Ver. Recalcula sus comisiones pendientes: ver [comisiones.md](comisiones.md) |

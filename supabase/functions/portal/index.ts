@@ -1,4 +1,4 @@
-// El reporte web del cliente: reinventa.shop/r/<token> lo pide aquí.
+// El reporte web del cliente: restorifyauto.net/r/<token> lo pide aquí.
 //
 // Pública (verify_jwt = false): el cliente no tiene cuenta. Lo que la protege es el
 // token — 64 hexadecimales imposibles de adivinar, revocable, con vencimiento — y

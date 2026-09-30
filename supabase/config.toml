@@ -157,9 +157,8 @@ enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails — the password-recovery link is built from this, so pointing it at
 # localhost would email people a link they cannot open.
-# NOTE: reinventa.shop is a temporary domain; update this and the list below
-# when the shop moves to its final one.
-site_url = "https://reinventa.shop"
+# Dominio definitivo desde el 30/09/2026 (antes reinventa.shop, ya dado de baja).
+site_url = "https://restorifyauto.net"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post
@@ -167,8 +166,8 @@ site_url = "https://reinventa.shop"
 # redirect, so whatever domain the app is served from has to appear here or
 # Supabase silently drops the link. localhost is for `npm run dev`.
 additional_redirect_urls = [
-  "https://reinventa.shop",
-  "https://reinventa.shop/",
+  "https://restorifyauto.net",
+  "https://restorifyauto.net/",
   "http://localhost:5173",
   # Con ruta y cualquier puerto: el enlace de recuperación apunta a /reset-password.
   # Sin esta entrada el Supabase local descarta el redirectTo y manda el enlace a

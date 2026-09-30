@@ -268,7 +268,10 @@ agregues pruebas que entreguen órdenes o paguen comisiones mientras no exista s
 
 - Errores del frontend en Sentry (`@sentry/react`), si `VITE_SENTRY_DSN` está
   definida.
-- Producción: `dist/` en Hostinger (Apache, `public/.htaccess` reescribe a
-  `index.html`), dominio `reinventa.shop`; Supabase (hoy en plan Free: 50 MB por archivo; pasar a
-  Pro antes de atender clientes reales). Pasos en
-  [deployment.md](deployment.md).
+- Producción: dominio `restorifyauto.net` (antes `reinventa.shop`, dado de baja). Hostinger
+  compila y publica **la rama `produccion`** de GitHub en cada push, con las variables
+  `VITE_*` de su panel (no las de `.env.local`); `public/.htaccess` reescribe a `index.html`
+  y manda `www` al dominio sin `www`. **Un push a `produccion` es un despliegue**: va después
+  del `db push` y solo con el CI en verde, y nunca sin que la persona responsable lo pida.
+  Supabase (hoy en plan Free: 50 MB por archivo; pasar a Pro antes de atender clientes
+  reales). Pasos en [deployment.md](deployment.md).

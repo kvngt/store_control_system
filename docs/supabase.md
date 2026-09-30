@@ -53,7 +53,7 @@ Para **por qué** está construido así: [arquitectura.md](arquitectura.md). Par
 ## 2. La plataforma completa
 
 ```
-                         reinventa.shop (Hostinger, Apache)
+                         restorifyauto.net (Hostinger, publica la rama produccion)
                          └─ dist/: app del taller + portal del cliente (/r/<token>)
                                         │
           ┌─────────────────────────────┼─────────────────────────────────────┐
@@ -79,15 +79,15 @@ Para **por qué** está construido así: [arquitectura.md](arquitectura.md). Par
           ▼                                  ▼                           ▼
    Resend (api.resend.com)       Servicios push del navegador     NHTSA vPIC
    correos al cliente,           (Google, Apple, Mozilla)         (vpic.nhtsa.dot.gov)
-   dominio reinventa.shop        avisos al teléfono               decodifica el VIN
+   dominio restorifyauto.net     avisos al teléfono               decodifica el VIN
 ```
 
 **Fuera de Supabase:**
 
 | Servicio | Para qué | Dónde se configura |
 |---|---|---|
-| **Hostinger** | Sirve `dist/` en `reinventa.shop`; DNS del dominio (incluidos los registros de Resend) | hPanel |
-| **Resend** | Envía los correos al cliente desde `notificaciones@reinventa.shop` | resend.com; la llave va en los secretos de las funciones |
+| **Hostinger** | Compila la rama `produccion` de GitHub y sirve `dist/` en `restorifyauto.net`; DNS del dominio (incluidos los registros de Resend) | hPanel |
+| **Resend** | Envía los correos al cliente y los de Auth (SMTP) desde `notificaciones@restorifyauto.net` | resend.com; una llave en los secretos de las funciones y otra en el SMTP de Auth |
 | **Servicios push** (Google, Apple, Mozilla) | Entregan los avisos al teléfono con la app cerrada | Nada: el navegador elige el servicio; las llaves VAPID van en los secretos |
 | **NHTSA vPIC** | Llena marca, modelo y año a partir del VIN, desde el navegador | Nada (API pública) |
 | **Google Fonts** | Tipografía Outfit de la app | Nada |
@@ -287,8 +287,8 @@ no valores).
 | `RESTORIFY_FUNCTIONS_SECRET` | Nosotros | Secreto compartido base ↔ funciones internas (el mismo valor que en Vault) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Nosotros | Firmar y cifrar los push |
 | `RESEND_API_KEY` | Nosotros | Enviar correos. Llave **de solo envío** |
-| `PUBLIC_SITE_URL` | Nosotros | Base de los enlaces en los correos (`https://reinventa.shop`) |
-| `EMAIL_FROM_ADDRESS` | Nosotros | Remitente (`notificaciones@reinventa.shop`) |
+| `PUBLIC_SITE_URL` | Nosotros | Base de los enlaces en los correos (`https://restorifyauto.net` desde el 30/09/2026) |
+| `EMAIL_FROM_ADDRESS` | Nosotros | Remitente (`notificaciones@restorifyauto.net`) |
 | `SHOP_TIMEZONE` | Opcional (no está puesto) | Zona de las fechas en los correos; sin ella, `America/Chicago` |
 
 Copia local de los que generamos nosotros: `supabase/.env.secrets.local` (ignorado por git).
@@ -308,15 +308,16 @@ correo: esperan en `cola_envios`.
 
 ### 7.3 Variables del frontend
 
-En `.env.local`. Vite las **incrusta al compilar**, así que son públicas. Detalle en
+En producción, en el panel de Hostinger (el sitio compila con esas); en desarrollo, en
+`.env.local`. Vite las **incrusta al compilar**, así que son públicas. Detalle en
 [deployment.md §3](deployment.md#3-variables-del-frontend).
 
-| Variable | Estado en la máquina de desarrollo |
+| Variable | En el sitio publicado (comprobado en su JavaScript el 30/09/2026) |
 |---|---|
-| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Definidas |
-| `VITE_VAPID_PUBLIC_KEY` | Definida (sin ella no hay push) |
-| `VITE_PUBLIC_SITE_URL` | **Vacía**: los enlaces de recuperación de contraseña usan la dirección desde donde se pidió. Conviene fijarla en `https://reinventa.shop` ([password-reset.md](password-reset.md)) |
-| `VITE_SENTRY_DSN` | **Vacía**: Sentry no registra errores |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Las del proyecto `lendsiqkxhvbxxkaadrt` |
+| `VITE_VAPID_PUBLIC_KEY` | Definida, la misma que en `.env.local` (sin ella no hay push) |
+| `VITE_PUBLIC_SITE_URL` | `https://restorifyauto.net` |
+| `VITE_SENTRY_DSN` | **Vacía**: Sentry no registra errores (PRD-06) |
 
 ---
 
@@ -329,9 +330,9 @@ En `.env.local`. Vite las **incrusta al compilar**, así que son públicas. Deta
 | **Largo mínimo de contraseña** | La app y las funciones exigen 8; en el panel sigue en 6 hasta aplicar PRD-07 |
 | **Confirmación de correo** | No se pide: el admin crea la cuenta ya confirmada |
 | **Duración del token** | 1 hora; supabase-js lo renueva solo |
-| **Site URL y redirecciones** | `https://reinventa.shop` y `https://reinventa.shop/reset-password` |
+| **Site URL y redirecciones** | `https://restorifyauto.net` y `https://restorifyauto.net/**` (desde el 30/09/2026) |
 | **Usuarios** | 1 en `auth.users` desde la limpieza del 29 de septiembre de 2026: el administrador del taller, con su fila en `perfiles`. El personal lo da de alta desde Empleados |
-| **Correo de Auth** | El de Supabase (~2 por hora). Recomendado: SMTP de Resend ([deployment.md §4.2](deployment.md#42-auth)) |
+| **Correo de Auth** | SMTP propio con Resend desde `notificaciones@restorifyauto.net` (30/09/2026; [deployment.md §4.2](deployment.md#42-auth)) |
 
 > **`supabase/config.toml` describe el Supabase local, no el real.** Los ajustes de Auth del
 > proyecto real (Site URL, redirecciones, registro, SMTP) se cambian en el panel:
@@ -474,6 +475,6 @@ ORDER BY 2 DESC, 3 DESC, 1;
 |---|---|---|
 | **Pasar a Pro** | Free no tiene respaldos diarios, pausa proyectos inactivos y limita Storage a 1 GB | Organization → Billing. Mientras tanto, respaldo manual antes de cada `db push` ([mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación)) |
 | **Staging** | Hoy las pruebas e2e y `qa:security` corren contra el único proyecto, y sus cuentas de prueba se borraron el 29/09/2026 | Un segundo proyecto con las mismas migraciones, secretos propios y cuentas de prueba |
-| **Sentry** | Hoy nadie se entera de un error en el teléfono de un técnico | Crear el proyecto en Sentry, `VITE_SENTRY_DSN` y recompilar |
+| **Sentry** | Hoy nadie se entera de un error en el teléfono de un técnico | Crear el proyecto en Sentry, poner `VITE_SENTRY_DSN` en las variables del sitio en Hostinger y volver a desplegar |
 | **SMTP de Auth con Resend** | El correo de Supabase permite ~2 por hora | [deployment.md §4.2](deployment.md#42-auth) |
 | **`[inbucket]` en `config.toml`** | La CLI avisa que la sección es obsoleta; solo afecta al local | Renombrarla cuando se actualice la configuración local |
