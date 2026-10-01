@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { supabaseService } from '../services/supabaseService';
-import { getAuthErrorMessage } from '../lib/errors';
+import { getAuthErrorMessage, getRecoveryErrorMessage } from '../lib/errors';
 import { getPasswordResetRedirect } from '../lib/siteUrl';
 import { ArrowLeft } from 'lucide-react';
 import PasswordInput from '../components/PasswordInput';
@@ -48,7 +48,7 @@ export default function Login() {
       // different one would let anyone probe which emails are registered.
       setNotice(t('auth.recoverySent'));
     } catch (err) {
-      setError(getAuthErrorMessage(err, language));
+      setError(getRecoveryErrorMessage(err, language));
     } finally {
       setLoading(false);
     }

@@ -147,3 +147,38 @@ de Hostinger sirven para **recibir** (por ejemplo, como dirección de respuesta)
    el dominio de producción y no con `localhost`.
 5. Ábrelo desde otro dispositivo. Debe cargar la pantalla de "elige una
    contraseña nueva".
+
+## Si el correo no sale
+
+**Síntoma (30 de septiembre de 2026):** "Enviar enlace" se quedaba cargando unos 30 segundos
+y después mostraba un error. Desde ese día la pantalla dice "No se pudo enviar el correo de
+recuperación…" (`getRecoveryErrorMessage`, `src/lib/errors.ts`). Antes decía "No se pudo
+iniciar sesión. Revisa tu conexión", que mandaba a buscar el problema en el lugar equivocado.
+
+**Causa:** el puerto del SMTP estaba en `464` en lugar de `465`. Supabase intentaba
+conectarse a un puerto donde Resend no atiende, esperaba hasta agotar el tiempo y respondía
+`504 upstream request timeout`.
+
+**Cómo distinguir dónde está el problema sin entrar al panel:**
+
+```bash
+# Pide la recuperación de un correo que NO existe: si responde 200 al instante, Auth
+# funciona; no envía nada a nadie.
+curl -s -o /dev/null -w "%{http_code} %{time_total}s\n" -X POST "$VITE_SUPABASE_URL/auth/v1/recover" \
+  -H "apikey: $VITE_SUPABASE_ANON_KEY" -H "Content-Type: application/json" \
+  -d '{"email":"no-existe@ejemplo.com"}'
+
+# La configuración real de Auth, comparada con supabase/config.toml. Solo lee: muestra
+# Site URL, Redirect URLs y el host, puerto, usuario y remitente del SMTP, nunca la contraseña.
+npx supabase config diff
+```
+
+| Lo que pasa | Qué revisar |
+|---|---|
+| Tarda ~30 s y falla (504) con un correo que sí existe | Host y **puerto** del SMTP: `smtp.resend.com`, `465` (o `587`). Un puerto equivocado no da error, se cuelga |
+| Falla al instante con un correo que sí existe | Llave de Resend (contraseña del SMTP) o remitente de un dominio que Resend no tiene verificado. El detalle está en Supabase → Logs → Auth |
+| Llega, pero el enlace abre otro dominio | Site URL y Redirect URLs (arriba). Si el `redirect_to` no está en la lista, Supabase usa la Site URL |
+| "Ya se envió un correo hace poco" | Es el intervalo mínimo por persona (60 s). Esperar |
+
+**Nunca uses `supabase config push` para corregirlo**: subiría todo `config.toml` (la copia
+local) encima de la configuración real de Auth. Se corrige en el panel.

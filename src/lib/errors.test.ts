@@ -1,5 +1,24 @@
 import { describe, it, expect } from 'vitest';
-import { getErrorMessage } from './errors';
+import { getAuthErrorMessage, getErrorMessage, getRecoveryErrorMessage } from './errors';
+
+describe('getRecoveryErrorMessage', () => {
+  // Así respondía Auth con el puerto del SMTP mal escrito: 30 s de espera y un 504
+  // sin código. La pantalla decía "No se pudo iniciar sesión", que no era el problema.
+  it('un fallo del envío del correo no se presenta como un problema de inicio de sesión', () => {
+    const timeout = { name: 'AuthRetryableFetchError', status: 504, message: 'upstream request timeout' };
+    expect(getRecoveryErrorMessage(timeout, 'es')).toMatch(/No se pudo enviar el correo de recuperación/);
+    expect(getRecoveryErrorMessage(timeout, 'en')).toMatch(/recovery email could not be sent/);
+    expect(getAuthErrorMessage(timeout, 'es')).toMatch(/No se pudo iniciar sesión/);
+  });
+
+  it('sin red dice que revise la conexión', () => {
+    expect(getRecoveryErrorMessage(new TypeError('Failed to fetch'), 'es')).toMatch(/Revisa tu conexión/);
+  });
+
+  it('los errores conocidos de Auth conservan su mensaje', () => {
+    expect(getRecoveryErrorMessage({ code: 'over_email_send_rate_limit' }, 'es')).toMatch(/Ya se envió un correo hace poco/);
+  });
+});
 
 describe('getErrorMessage', () => {
   it('translates a foreign key violation to a friendly Spanish message', () => {

@@ -137,6 +137,37 @@ const AUTH_BY_MESSAGE: [RegExp, string][] = [
  * screen reads as a bug to the person trying to get in.
  */
 export function getAuthErrorMessage(err: unknown, language: Language): string {
+  return (
+    knownAuthMessage(err, language) ??
+    (language === 'es'
+      ? 'No se pudo iniciar sesión. Revisa tu conexión e intenta de nuevo.'
+      : 'Could not sign in. Check your connection and try again.')
+  );
+}
+
+/**
+ * The same for "¿Olvidaste tu contraseña?". An unrecognised failure here is almost
+ * never the requester's connection: it is Auth failing to send the email. With the
+ * SMTP port mistyped in the dashboard (464 instead of 465, September 2026), Auth
+ * waited 30 s and answered 504, and the screen said "No se pudo iniciar sesión.
+ * Revisa tu conexión", which sent everyone looking in the wrong place.
+ */
+export function getRecoveryErrorMessage(err: unknown, language: Language): string {
+  const known = knownAuthMessage(err, language);
+  if (known) return known;
+
+  if (/failed to fetch|networkerror|load failed/i.test((err as ErrorLike)?.message || '')) {
+    return language === 'es'
+      ? 'No se pudo conectar. Revisa tu conexión e intenta de nuevo.'
+      : 'Could not connect. Check your connection and try again.';
+  }
+
+  return language === 'es'
+    ? 'No se pudo enviar el correo de recuperación. Intenta de nuevo en unos minutos; si sigue fallando, avisa al administrador.'
+    : 'The recovery email could not be sent. Try again in a few minutes; if it keeps failing, tell your administrator.';
+}
+
+function knownAuthMessage(err: unknown, language: Language): string | null {
   const e = err as ErrorLike;
 
   const byCode = e?.code ? AUTH_BY_CODE[e.code] : undefined;
@@ -146,10 +177,7 @@ export function getAuthErrorMessage(err: unknown, language: Language): string {
   for (const [pattern, key] of AUTH_BY_MESSAGE) {
     if (pattern.test(message)) return AUTH_BY_CODE[key][language];
   }
-
-  return language === 'es'
-    ? 'No se pudo iniciar sesión. Revisa tu conexión e intenta de nuevo.'
-    : 'Could not sign in. Check your connection and try again.';
+  return null;
 }
 
 function isShopSentence(message?: string): boolean {

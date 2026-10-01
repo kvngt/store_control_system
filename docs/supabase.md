@@ -330,9 +330,9 @@ En producción, en el panel de Hostinger (el sitio compila con esas); en desarro
 | **Largo mínimo de contraseña** | La app y las funciones exigen 8; en el panel sigue en 6 hasta aplicar PRD-07 |
 | **Confirmación de correo** | No se pide: el admin crea la cuenta ya confirmada |
 | **Duración del token** | 1 hora; supabase-js lo renueva solo |
-| **Site URL y redirecciones** | `https://restorifyauto.net` y `https://restorifyauto.net/**` (desde el 30/09/2026) |
+| **Site URL y redirecciones** | Redirect URLs: `https://restorifyauto.net/**`, `https://restorifyauto.net/reset-password` y `http://localhost:5173/reset-password`. **La Site URL seguía en `https://reinventa.shop`** el 30/09/2026 (comprobado con `npx supabase config diff`): hay que cambiarla a `https://restorifyauto.net`. Hoy no rompe la recuperación, porque el enlace pide un `redirect_to` que está en la lista, pero es el respaldo de Supabase |
 | **Usuarios** | 1 en `auth.users` desde la limpieza del 29 de septiembre de 2026: el administrador del taller, con su fila en `perfiles`. El personal lo da de alta desde Empleados |
-| **Correo de Auth** | SMTP propio con Resend desde `notificaciones@restorifyauto.net` (30/09/2026; [deployment.md §4.2](deployment.md#42-auth)) |
+| **Correo de Auth** | SMTP propio con Resend: `smtp.resend.com`, puerto `465`, usuario `resend`, remitente "Restorify" `notificaciones@restorifyauto.net` ([deployment.md §4.2](deployment.md#42-auth)). Funciona desde el 30/09/2026; ese mismo día estuvo en el puerto `464` y la recuperación de contraseña se colgaba ([password-reset.md](password-reset.md#si-el-correo-no-sale)) |
 
 > **`supabase/config.toml` describe el Supabase local, no el real.** Los ajustes de Auth del
 > proyecto real (Site URL, redirecciones, registro, SMTP) se cambian en el panel:
