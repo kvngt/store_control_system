@@ -4,17 +4,27 @@ import {
   ArchiveRestore,
   Camera,
   Car,
+  CheckCircle2,
   ChevronLeft,
   DollarSign,
   FileDown,
+  FileSignature,
   Fuel,
+  Link2,
+  MessageSquarePlus,
+  Package,
   Send,
   Paintbrush,
+  PenLine,
   Plus,
+  Receipt,
+  Scale,
   User,
+  Wallet,
   Wrench,
   X,
 } from 'lucide-react';
+import MobileSection from '../../components/MobileSection';
 import { useAuth } from '../../context/auth.context';
 import { useLanguage } from '../../context/language.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
@@ -225,8 +235,11 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
         </div>
       </div>
 
+      {/* En el teléfono cada tarjeta va en una `MobileSection` plegable: la orden
+          apila una docena y había que recorrerlas todas. En escritorio no cambia nada. */}
       <div className="responsive-grid-2">
         {/* Vehicle Info */}
+        <MobileSection title={t('workOrders.vehicleServiceRepair')} icon={<Car size={18} />} summary={vehicle?.placa || undefined}>
         <div className="card">
           <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>
             <Car size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
@@ -266,8 +279,10 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
             )}
           </div>
         </div>
+        </MobileSection>
 
         {/* Inspection 360 */}
+        <MobileSection title={t('workOrders.inspection360')} icon={<Camera size={18} />} summary={receptionMedia.length || undefined}>
         <div className="card">
           <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>
             <Camera size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
@@ -296,7 +311,13 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
             </div>
           )}
         </div>
+        </MobileSection>
 
+        <MobileSection
+          title={t('workOrders.customerSignature')}
+          icon={<PenLine size={18} />}
+          summary={order.firma_ruta ? <CheckCircle2 size={16} style={{ color: 'var(--color-success)', verticalAlign: 'middle' }} /> : undefined}
+        >
         <SignatureCard
           signaturePath={order.firma_ruta}
           signedAt={order.firma_fecha}
@@ -306,7 +327,9 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
           saving={detail.savingSignature}
           onSave={detail.saveSignature}
         />
+        </MobileSection>
 
+        <MobileSection title={t('workOrders.laborDescription')} icon={<Wrench size={18} />} summary={laborList.length || undefined}>
         <LaborTable
           items={laborList}
           specialties={order.tipo_trabajo === 'combinado'}
@@ -318,10 +341,16 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
           canComplete={detail.canCompleteLabor}
           onToggleComplete={detail.toggleLaborComplete}
         />
+        </MobileSection>
 
         {/* Un técnico no ve precios de repuestos: la tabla con montos es solo
             admin (y la base no se la devuelve). Ve qué piezas lleva la orden,
             que es lo que necesita para hacer el trabajo. */}
+        <MobileSection
+          title={t('workOrders.partsDescription')}
+          icon={isAdmin ? <Paintbrush size={18} /> : <Package size={18} />}
+          summary={(isAdmin ? partsList.length : (order.repuestos_resumen || []).length) || undefined}
+        >
         {isAdmin ? (
           <PartsTable
             items={partsList}
@@ -334,25 +363,44 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
         ) : (
           <PartsSummaryCard items={order.repuestos_resumen || []} />
         )}
+        </MobileSection>
       </div>
 
       {/* Presupuesto: lo que falta autorizar y lo que espera al cliente. Solo admin. */}
-      {isAdmin && <QuoteCard order={order} />}
+      {isAdmin && (
+        <MobileSection title={t('quotes.title')} icon={<FileSignature size={18} />}>
+          <QuoteCard order={order} />
+        </MobileSection>
+      )}
 
       {/* Cuánto dejó el trabajo: solo tiene sentido ya entregado, y es de administración. */}
-      {isAdmin && detail.isDelivered && <OrderBalanceCard orderId={order.id} />}
+      {isAdmin && detail.isDelivered && (
+        <MobileSection title={t('orderBalance.title')} icon={<Scale size={18} />}>
+          <OrderBalanceCard orderId={order.id} />
+        </MobileSection>
+      )}
 
       {detail.commissionEstimate && (
+        <MobileSection
+          title={isAdmin ? t('commission.splitTitle') : t('workOrders.estimatedCommission')}
+          icon={<Wallet size={18} />}
+        >
         <CommissionEstimateCard
           estimate={detail.commissionEstimate}
           isAdmin={isAdmin}
           userId={detail.userId}
           names={Object.fromEntries((order.asignaciones || []).map((a) => [a.usuario_id, a.usuario?.nombre_completo ?? '—']))}
         />
+        </MobileSection>
       )}
 
       {/* Totals Summary — solo cuando la base devolvió los montos (admin). */}
       {amounts && (
+      <MobileSection
+        title={t('workOrders.totalsTitle')}
+        icon={<Receipt size={18} />}
+        summary={money(totalParts + totalLabor - Number(amounts.deposito_inicial))}
+      >
       <div className="card" style={{ marginTop: 'var(--space-4)' }}>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-8)', flexWrap: 'wrap' }}>
           {[
@@ -376,12 +424,18 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
           </div>
         </div>
       </div>
+      </MobileSection>
       )}
 
       {/* El enlace abre precios y totales: solo administración lo comparte. */}
-      {isAdmin && <CustomerLinkCard order={order} statusLabels={statusLabels} />}
+      {isAdmin && (
+        <MobileSection title={t('customerLink.title')} icon={<Link2 size={18} />}>
+          <CustomerLinkCard order={order} statusLabels={statusLabels} />
+        </MobileSection>
+      )}
 
       {/* Assigned Technicians */}
+      <MobileSection title={t('workOrders.assignedTechnician')} icon={<User size={18} />} summary={assignments.length || undefined}>
       <div className="card" style={{ marginTop: 'var(--space-4)' }}>
         <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>
           <User size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
@@ -466,7 +520,15 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
           </p>
         )}
       </div>
+      </MobileSection>
 
+      {/* Para un técnico es la tarjeta de trabajo: abre ya desplegada. */}
+      <MobileSection
+        title={t('workOrders.progressLog')}
+        icon={<MessageSquarePlus size={18} />}
+        summary={(order.avances || []).length || undefined}
+        defaultOpen={!isAdmin}
+      >
       <ProgressLog
         entries={order.avances || []}
         media={order.media || []}
@@ -481,6 +543,7 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
         onToggleEntryVisibility={detail.toggleProgressVisibility}
         onDeleteMedia={detail.deleteMedia}
       />
+      </MobileSection>
 
       {detail.delivering && (
         <DeliveryModal order={order} onCancel={detail.cancelDelivery} onDelivered={detail.finishDelivery} />
