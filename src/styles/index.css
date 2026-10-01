@@ -1,45 +1,50 @@
 /* ===================================================
    RESTORIFY — Design System
-   Premium dark theme with golden amber accents
-   Derived from Restorify brand identity
+   Paleta del logo (src/assets/restorify-logo.webp): amarillo #EBC334,
+   gris #5E5E5E y negro. Neutros sin tinte (grises puros, no azulados)
+   y el amarillo como único acento.
    =================================================== */
 
 /* ===== CSS Custom Properties / Design Tokens ===== */
 :root {
-  /* Brand Colors - extracted from logo.
-     These five are overwritten at runtime when a sede defines its own
+  /* Brand Colors — el amarillo del logo.
+     These are overwritten at runtime when a sede defines its own
      color_tema (see src/lib/branding.ts), so every surface that references
-     them re-themes automatically. */
-  --color-primary: #D4A017;
-  --color-primary-light: #F0C040;
-  --color-primary-dark: #B8860B;
-  --color-primary-glow: rgba(212, 160, 23, 0.25);
-  --color-primary-subtle: rgba(212, 160, 23, 0.08);
+     them re-themes automatically.
+     --color-primary       : relleno de botones y avatares (texto --color-text-inverse encima)
+     --color-primary-light : acento como *texto*
+     --color-primary-dark  : final del degradado y relleno al pasar el ratón */
+  --color-primary: #EBC334;
+  --color-primary-light: #F3D467;
+  --color-primary-dark: #C9A227;
+  --color-primary-glow: rgba(235, 195, 52, 0.25);
+  --color-primary-subtle: rgba(235, 195, 52, 0.08);
 
   /* Brand fills. On dark the gradient reads as premium metal; on light it
      collapses to a solid colour because the dark stop turns muddy on white. */
   --gradient-primary: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
   --gradient-primary-hover: linear-gradient(135deg, var(--color-primary-light), var(--color-primary));
 
-  /* Neutral Palette */
-  --color-bg-primary: #0A0A0F;
-  --color-bg-secondary: #111118;
-  --color-bg-tertiary: #1A1A24;
-  --color-bg-elevated: #22222E;
-  --color-bg-hover: #2A2A38;
-  --color-bg-active: #32324A;
+  /* Neutral Palette — negros y grises puros, como el fondo del logo */
+  --color-bg-primary: #0A0A0A;
+  --color-bg-secondary: #111111;
+  --color-bg-tertiary: #1A1A1A;
+  --color-bg-elevated: #222222;
+  --color-bg-hover: #2A2A2A;
+  --color-bg-active: #333333;
 
   /* Surface / Cards */
-  --color-surface: rgba(26, 26, 36, 0.8);
-  --color-surface-hover: rgba(34, 34, 46, 0.9);
-  --color-surface-border: rgba(255, 255, 255, 0.06);
-  --color-surface-glass: rgba(26, 26, 36, 0.6);
+  --color-surface: rgba(26, 26, 26, 0.8);
+  --color-surface-hover: rgba(34, 34, 34, 0.9);
+  --color-surface-border: rgba(255, 255, 255, 0.07);
+  --color-surface-glass: rgba(26, 26, 26, 0.6);
 
-  /* Text */
-  --color-text-primary: #F0F0F5;
-  --color-text-secondary: #9A9AB0;
-  --color-text-tertiary: #6A6A80;
-  --color-text-inverse: #0A0A0F;
+  /* Text. Contraste: primario 15.6:1, secundario 6.9:1 y terciario 4.7:1 sobre una
+     tarjeta #1A1A1A. El inverso va sobre el amarillo (11.7:1). */
+  --color-text-primary: #F2F2F2;
+  --color-text-secondary: #A3A3A3;
+  --color-text-tertiary: #858585;
+  --color-text-inverse: #0A0A0A;
 
   /* Semantic Colors */
   --color-success: #10B981;
@@ -60,7 +65,7 @@
   --color-due-hoy: #F59E0B;
   --color-due-proxima: #FBBF24;
   --color-status-finalizado: #10B981;
-  --color-status-entregado: #6B7280;
+  --color-status-entregado: #737373;
 
   /* Typography */
   --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -130,39 +135,45 @@
 
 /* ===== Light Theme ===== */
 :root[data-theme='light'] {
-  /* Solid, accessible gold for white backgrounds — no gradient.
-     --color-primary       : fill colour for buttons/avatars (dark text on top)
-     --color-primary-light : accent *text* colour; must pass AA on white, so on
-                             light it is a deep gold (4.9:1), not a pale one
-     --color-primary-dark  : hover/pressed fill */
-  --color-primary: #C08A0E;
-  --color-primary-light: #A16207;
-  --color-primary-dark: #8A6410;
-  --color-primary-glow: rgba(192, 138, 14, 0.18);
-  --color-primary-subtle: rgba(192, 138, 14, 0.10);
+  /* El amarillo del logo sobre blanco da 1.7:1: como relleno de un botón con texto oscuro
+     se lee de sobra (10.6:1), pero un borde de foco o una pestaña activa casi no se verían.
+     Por eso en claro se separan: el relleno es el amarillo del logo y lo que es línea o
+     indicador usa un dorado del mismo matiz, oscurecido lo justo. Sin degradado.
+     --color-primary       : #A78610 — bordes, indicadores y fondos pequeños (3.5:1 sobre
+                             blanco, el mínimo de WCAG para componentes; texto oscuro
+                             encima 5.2:1). También es el borde del botón principal
+     --color-primary-light : acento como *texto* sobre blanco (5.1:1, AA)
+     --color-primary-dark  : barras de progreso y de gráficos
+     --gradient-primary    : relleno de botones y avatares (el amarillo del logo) */
+  --color-primary: #A78610;
+  --color-primary-light: #8A6A06;
+  --color-primary-dark: #9E7F10;
+  --color-primary-glow: rgba(167, 134, 16, 0.18);
+  --color-primary-subtle: rgba(167, 134, 16, 0.10);
 
-  --gradient-primary: var(--color-primary);
-  --gradient-primary-hover: var(--color-primary-dark);
+  --gradient-primary: #EBC334;
+  --gradient-primary-hover: #DDB42A;
 
-  /* Premium White Backgrounds */
-  --color-bg-primary: #F9FAFB;
+  /* Blancos y grises puros */
+  --color-bg-primary: #FAFAFA;
   --color-bg-secondary: #FFFFFF;
-  --color-bg-tertiary: #F3F4F6;
+  --color-bg-tertiary: #F4F4F4;
   --color-bg-elevated: #FFFFFF;
-  --color-bg-hover: #F3F4F6;
-  --color-bg-active: #E5E7EB;
+  --color-bg-hover: #F2F2F2;
+  --color-bg-active: #E6E6E6;
 
   /* Surfaces with crisp borders */
   --color-surface: #FFFFFF;
-  --color-surface-hover: #F9FAFB;
-  --color-surface-border: rgba(17, 24, 39, 0.08);
+  --color-surface-hover: #FAFAFA;
+  --color-surface-border: rgba(23, 23, 23, 0.09);
   --color-surface-glass: rgba(255, 255, 255, 0.85);
 
-  /* High contrast text */
-  --color-text-primary: #111827;
-  --color-text-secondary: #4B5563;
-  --color-text-tertiary: #6B7280;
-  --color-text-inverse: #FFFFFF;
+  /* Texto: 17.9:1, 7.8:1 y 5.3:1 sobre blanco. El inverso es oscuro porque va sobre el
+     dorado; en blanco no pasaba de 3:1. */
+  --color-text-primary: #171717;
+  --color-text-secondary: #525252;
+  --color-text-tertiary: #6B6B6B;
+  --color-text-inverse: #171717;
 
   /* Status background slightly stronger */
   --color-success-bg: rgba(16, 185, 129, 0.15);
@@ -171,10 +182,10 @@
   --color-info-bg: rgba(59, 130, 246, 0.15);
 
   /* Cleaner shadows */
-  --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(17, 24, 39, 0.08), 0 2px 4px -2px rgba(17, 24, 39, 0.08);
-  --shadow-lg: 0 10px 15px -3px rgba(17, 24, 39, 0.1), 0 4px 6px -4px rgba(17, 24, 39, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(17, 24, 39, 0.1), 0 8px 10px -6px rgba(17, 24, 39, 0.1);
+  --shadow-sm: 0 1px 2px rgba(23, 23, 23, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(23, 23, 23, 0.08), 0 2px 4px -2px rgba(23, 23, 23, 0.08);
+  --shadow-lg: 0 10px 15px -3px rgba(23, 23, 23, 0.1), 0 4px 6px -4px rgba(23, 23, 23, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(23, 23, 23, 0.1), 0 8px 10px -6px rgba(23, 23, 23, 0.1);
 }
 
 :root[data-theme='light'] .badge-recepcion { color: #7C3AED; }
@@ -183,11 +194,11 @@
 :root[data-theme='light'] .badge-espera_autorizacion,
 :root[data-theme='light'] .badge-warn { color: #B45309; }
 :root[data-theme='light'] .badge-finalizado { color: #059669; }
-:root[data-theme='light'] .badge-entregado { color: #4B5563; }
+:root[data-theme='light'] .badge-entregado { color: #525252; }
 :root[data-theme='light'] .badge-pintura { color: #DB2777; }
 :root[data-theme='light'] .badge-combinado { color: #7C3AED; }
 :root[data-theme='light'] .chart-bar.expense {
-  background: linear-gradient(to top, #4B5563, #6B7280);
+  background: linear-gradient(to top, #525252, #737373);
 }
 
 /* ===== Reset & Base ===== */
@@ -211,8 +222,8 @@ body {
   color: var(--color-text-primary);
   background-color: var(--color-bg-primary);
   /* Add subtle radial gradient for depth */
-  background-image: radial-gradient(circle at top right, rgba(212, 160, 23, 0.03), transparent 40%), 
-                    radial-gradient(circle at bottom left, rgba(212, 160, 23, 0.03), transparent 40%);
+  background-image: radial-gradient(circle at top right, rgba(235, 195, 52, 0.03), transparent 40%),
+                    radial-gradient(circle at bottom left, rgba(235, 195, 52, 0.03), transparent 40%);
   background-attachment: fixed;
   line-height: 1.6;
   overflow-x: hidden;

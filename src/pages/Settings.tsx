@@ -173,7 +173,7 @@ export default function Settings() {
           {
             nombre: s.nombre,
             direccion: s.direccion,
-            color_tema: s.color_tema || '#D4A017',
+            color_tema: s.color_tema || '#EBC334',
             email_contacto: s.email_contacto || '',
             whatsapp: s.whatsapp || '',
           },
@@ -587,7 +587,7 @@ export default function Settings() {
                         <input
                           type="color"
                           className="color-input"
-                          value={brandDrafts[sede.id]?.color_tema ?? '#D4A017'}
+                          value={brandDrafts[sede.id]?.color_tema ?? '#EBC334'}
                           onChange={(e) => setBrandDrafts((p) => ({ ...p, [sede.id]: { ...p[sede.id], color_tema: e.target.value } }))}
                           title={t('settings.themeColor')}
                         />

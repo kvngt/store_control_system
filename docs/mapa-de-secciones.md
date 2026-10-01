@@ -171,6 +171,7 @@ egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
 | | |
 |---|---|
 | Pantalla | `pages/Settings.tsx` (perfil, idioma, tema, push; sedes para administración) |
+| Colores | Paleta por defecto en `styles/index.css` (tema oscuro y claro, del logo: amarillo `#EBC334`, grises puros). El color propio de una sede la reemplaza en tiempo real con `lib/branding.ts`; el PDF usa `lib/brandColor.ts` y los correos su propio valor por defecto |
 | Servicios | `sedes.service.ts`, `users.service.ts` |
 | Base | `sedes`, `perfiles` (guardia `trg_perfil_privilegios`), buckets `sede_logos` y `avatares` |
 
@@ -178,7 +179,7 @@ egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
 
 | | |
 |---|---|
-| Frontend | `pages/Login.tsx`, `pages/ResetPassword.tsx`, `context/AuthContext.tsx`, `App.tsx` (rutas y `adminOnly`) |
+| Frontend | `pages/Login.tsx`, `pages/ResetPassword.tsx`, `context/AuthContext.tsx`, `App.tsx` (rutas y `adminOnly`). El logo es `assets/restorify-logo.webp` (recortado del logo del taller, fondo transparente) |
 | Documento | [password-reset.md](password-reset.md), [supabase.md §8](supabase.md#8-auth) |
 
 ## Menú y navegación

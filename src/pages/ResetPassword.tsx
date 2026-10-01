@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MIN_PASSWORD_LENGTH } from '../lib/password';
-import { Hexagon, Wrench } from 'lucide-react';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { supabaseService } from '../services/supabaseService';
 import { getAuthErrorMessage } from '../lib/errors';
 import loginBg from '../assets/login-bg.webp';
+import logo from '../assets/restorify-logo.webp';
 
 /**
  * Shown when the session came from a password-recovery email link.
@@ -73,10 +73,7 @@ export default function ResetPassword() {
       <div className="login-form-side">
         <div className="login-card">
           <div className="login-logo">
-            <div className="login-logo-icon" style={{ boxShadow: 'var(--shadow-glow)', position: 'relative' }}>
-              <Hexagon size={48} color="#0A0A0F" strokeWidth={1.5} style={{ position: 'absolute' }} />
-              <Wrench size={24} color="#0A0A0F" style={{ position: 'relative', zIndex: 1 }} />
-            </div>
+            <img src={logo} alt="Restorify" className="login-logo-img" width={900} height={290} />
             <h1 className="login-title">{t('auth.newPasswordTitle')}</h1>
             <p className="login-subtitle">{t('auth.newPasswordSubtitle')}</p>
           </div>

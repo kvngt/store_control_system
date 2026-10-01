@@ -150,12 +150,12 @@ function MissingConfigScreen() {
         gap: 'var(--space-4)',
         padding: 'var(--space-6)',
         textAlign: 'center',
-        background: '#0A0A0F',
-        color: '#F0F0F5',
+        background: 'var(--color-bg-primary)',
+        color: 'var(--color-text-primary)',
       }}
     >
       <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Configuración incompleta</h1>
-      <p style={{ color: '#9A9AB0', maxWidth: 480 }}>
+      <p style={{ color: 'var(--color-text-secondary)', maxWidth: 480 }}>
         Faltan las variables de entorno de Supabase (<code>VITE_SUPABASE_URL</code> y{' '}
         <code>VITE_SUPABASE_ANON_KEY</code>). Agrégalas en la configuración de tu hosting
         y vuelve a compilar el proyecto — Vite las incrusta en el build, no las lee en

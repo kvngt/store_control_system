@@ -158,7 +158,14 @@ un proyecto con datos reales, [mantenimiento.md §4](mantenimiento.md#4-cambiar-
    la llave **pública** VAPID va en el frontend.
 6. **Sin framework de UI ni Tailwind.** CSS plano: variables en
    `src/styles/index.css`, componentes en `src/styles/components.css`. Nunca un
-   color literal.
+   color literal. **El color de marca son tres tokens, no uno:** un relleno con texto
+   encima (botón, avatar, ficha elegida) va con `--gradient-primary` y `--color-text-inverse`;
+   un borde o indicador, con `--color-primary`; un texto de acento, con
+   `--color-primary-light`. En el tema claro no son el mismo color: el amarillo del logo
+   (`#EBC334`) rellena bien pero como borde sobre blanco no se ve, así que la línea es un
+   dorado más oscuro. El color de una sede los recalcula `brandPalette`
+   (`lib/branding.ts`), que garantiza el contraste para cualquier color
+   (`branding.test.ts`).
 7. **Todo texto visible pasa por i18n** (`src/i18n/translations.ts`, español e
    inglés, `useLanguage().t(key)`). `Translations` es una firma de índice, así que
    TypeScript no compara los dos árboles y `getTranslation` devuelve **la clave** cuando

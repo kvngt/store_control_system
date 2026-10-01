@@ -13,8 +13,8 @@
 
 export type Rgb = [number, number, number];
 
-/** El dorado de la app (`--color-primary`), para la sede que no eligió color. */
-export const DEFAULT_BRAND: Rgb = [212, 160, 23];
+/** El amarillo del logo (`--color-primary` del tema oscuro), para la sede que no eligió color. */
+export const DEFAULT_BRAND: Rgb = [235, 195, 52];
 
 /** `#rrggbb` → `[r, g, b]`, o `null` si no es un color de seis dígitos. */
 export function parseHex(color: string | null | undefined): Rgb | null {
@@ -36,6 +36,12 @@ function luminance([r, g, b]: Rgb): number {
 /** Contraste contra blanco, de 1 (blanco) a 21 (negro). */
 export function contrastOnWhite(rgb: Rgb): number {
   return 1.05 / (luminance(rgb) + 0.05);
+}
+
+/** Contraste WCAG entre dos colores, de 1 (iguales) a 21 (negro sobre blanco). */
+export function contrast(a: Rgb, b: Rgb): number {
+  const [claro, oscuro] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (claro + 0.05) / (oscuro + 0.05);
 }
 
 /**

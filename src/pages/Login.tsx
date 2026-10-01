@@ -5,9 +5,10 @@ import { useAuth } from '../context/auth.context';
 import { supabaseService } from '../services/supabaseService';
 import { getAuthErrorMessage } from '../lib/errors';
 import { getPasswordResetRedirect } from '../lib/siteUrl';
-import { Hexagon, Wrench, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import PasswordInput from '../components/PasswordInput';
 import loginBg from '../assets/login-bg.webp';
+import logo from '../assets/restorify-logo.webp';
 
 export default function Login() {
   const { t, language, setLanguage } = useLanguage();
@@ -76,10 +77,7 @@ export default function Login() {
       <div className="login-form-side">
         <div className="login-card">
           <div className="login-logo">
-            <div className="login-logo-icon" style={{ boxShadow: 'var(--shadow-glow)', position: 'relative' }}>
-              <Hexagon size={48} color="#0A0A0F" strokeWidth={1.5} style={{ position: 'absolute' }} />
-              <Wrench size={24} color="#0A0A0F" style={{ position: 'relative', zIndex: 1 }} />
-            </div>
+            <img src={logo} alt="Restorify" className="login-logo-img" width={900} height={290} />
             <h1 className="login-title" style={{ textShadow: '0 0 20px var(--color-primary-glow)' }}>
               {mode === 'login' ? t('auth.welcomeTitle') : t('auth.recoverTitle')}
             </h1>

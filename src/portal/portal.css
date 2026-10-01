@@ -187,7 +187,7 @@
 .portal-steps li.is-done .portal-step-dot {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  color: #FFFFFF;
+  color: var(--color-text-inverse);
 }
 
 .portal-steps li.is-current {

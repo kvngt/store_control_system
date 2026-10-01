@@ -63,7 +63,7 @@ export interface RenderedEmail {
   text: string;
 }
 
-const DEFAULT_COLOR = '#D4A017';
+const DEFAULT_COLOR = '#EBC334';
 
 export function escapeHtml(value: unknown): string {
   return String(value ?? '')

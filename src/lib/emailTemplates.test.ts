@@ -63,7 +63,7 @@ describe('renderEmail', () => {
     })!;
     expect(email.html).not.toContain('javascript:');
     expect(email.html).not.toContain('url(x)');
-    expect(email.html).toContain('#D4A017');
+    expect(email.html).toContain('#EBC334');
   });
 
   it('ofrece responder solo si el taller tiene correo de contacto, y siempre la baja', () => {

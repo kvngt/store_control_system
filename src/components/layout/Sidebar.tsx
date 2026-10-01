@@ -109,8 +109,8 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                 position: 'relative'
               }}
             >
-              <Hexagon size={28} color="#0A0A0F" strokeWidth={1.5} style={{ position: 'absolute' }} />
-              <Wrench size={14} color="#0A0A0F" style={{ position: 'relative', zIndex: 1 }} />
+              <Hexagon size={28} color="var(--color-text-inverse)" strokeWidth={1.5} style={{ position: 'absolute' }} />
+              <Wrench size={14} color="var(--color-text-inverse)" style={{ position: 'relative', zIndex: 1 }} />
             </div>
           )}
           <span className="logo-text" style={{ textShadow: '0 0 20px var(--color-primary-glow)' }}>{currentSede?.nombre || 'RESTORIFY'}</span>

@@ -30,6 +30,7 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 | Trabajar con **presupuestos** o entender por qué un total no incluye algo | [presupuestos.md](presupuestos.md) |
 | Saber **cómo llegó el sistema a ser lo que es** y por qué se tomó cada decisión | [evolucion.md](evolucion.md) |
 | Entender **cómo se paga al personal** | [comisiones.md](comisiones.md) (hoy) y [pagos-a-empleados.md](pagos-a-empleados.md) (propuesta pendiente) |
+| Evaluar **un login y una dirección propios para otro taller** | [marca-por-dominio.md](marca-por-dominio.md) (propuesta pendiente) |
 | Arreglar **correos de recuperación de contraseña** | [password-reset.md](password-reset.md) |
 | Ser un **agente de IA** que va a modificar el código | [ai-context.md](ai-context.md) primero |
 
@@ -138,6 +139,12 @@ pago al personal (comisión congelada al devengarse, ajustes, períodos, salario
 cómo lo resuelven las plataformas grandes y las preguntas enviadas al taller. Pendiente de sus
 respuestas.
 
+**[marca-por-dominio.md](marca-por-dominio.md)** — Propuesta para que cada taller tenga su propio
+login, su dominio, sus correos y su app instalada sin un segundo proyecto de Supabase: por qué no
+hace falta otro proyecto (costos y operación), cómo funcionaría, qué cambia en la base, los
+correos y el frontend, el orden de despliegue, las limitaciones y las alternativas descartadas.
+Pendiente de evaluar.
+
 **[password-reset.md](password-reset.md)** — Por qué los enlaces de recuperación
 apuntaban a `localhost` y qué hay que configurar en Supabase para que no pase.
 
@@ -154,6 +161,8 @@ decisiones pasadas; **no describen el estado actual**.
 > siete cambios de la reunión con el taller están hechos
 > ([historico/reunion-taller-2026-09.md](historico/reunion-taller-2026-09.md)). Pendiente
 > de decisión del taller: el pago a empleados ([pagos-a-empleados.md](pagos-a-empleados.md)).
+> En evaluación: login y dominio propios para un segundo taller
+> ([marca-por-dominio.md](marca-por-dominio.md)).
 > Pendiente fuera del código: staging, plan Pro y Sentry
 > ([mantenimiento.md §5](mantenimiento.md#5-plan-priorizado)).
 

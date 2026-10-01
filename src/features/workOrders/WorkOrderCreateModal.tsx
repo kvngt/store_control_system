@@ -335,7 +335,7 @@ export default function WorkOrderCreateModal({
                         style={{
                           display: 'flex', alignItems: 'center', gap: '6px',
                           padding: '6px 12px', borderRadius: 'var(--radius-full)',
-                          background: picked ? 'var(--color-primary)' : 'var(--color-bg-tertiary)',
+                          background: picked ? 'var(--gradient-primary)' : 'var(--color-bg-tertiary)',
                           color: picked ? 'var(--color-text-inverse)' : 'var(--color-text-secondary)',
                           fontSize: 'var(--font-size-sm)', cursor: 'pointer',
                         }}
