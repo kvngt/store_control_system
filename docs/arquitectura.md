@@ -39,9 +39,9 @@ avisos), el complemento es [reglas-de-negocio.md](reglas-de-negocio.md).
 | **Portal del cliente** | Paquete aparte en `/r/<token>`, sin cuenta; datos por una edge function pública |
 | **Presupuestos** | Estado por línea (borrador → pendiente → aprobado/rechazado); solo lo aprobado se cobra |
 | **Pruebas** | Vitest (unitarias y componentes), pgTAP (base de datos), Playwright (e2e) |
-| **Hosting** | Sitio estático en Hostinger, dominio `restorifyauto.net`; Hostinger compila y publica la rama `produccion` de GitHub |
+| **Hosting** | Sitio estático en Hostinger, dominio `restorifyauto.net`; Hostinger compila y publica desde GitHub en cada push. El diseño es la rama `produccion`; hoy publica `main` ([evaluacion-2026-10.md](evaluacion-2026-10.md#5-operación-y-despliegue)) |
 
-Unas 33 000 líneas de TypeScript (con pruebas), 5 500 de CSS, 54 migraciones y 23 tablas.
+Unas 33 600 líneas de TypeScript (con pruebas), 5 600 de CSS, 54 migraciones y 23 tablas (1/10/2026).
 Cómo se llegó hasta aquí, etapa por etapa: [evolucion.md](evolucion.md). Qué tocar para
 cambiar cada parte: [mapa-de-secciones.md](mapa-de-secciones.md). Estado de la estructura y
 deuda técnica: [mantenimiento.md](mantenimiento.md).
@@ -136,6 +136,7 @@ src/
     layout/                      AppLayout (monta la cola de subidas), Sidebar, Header, BottomNav
     SchemaDriftBanner.tsx        avisa si la base está atrasada respecto al build
     BodyPortal.tsx               capas de pantalla completa fuera de las tarjetas
+    MobileSection.tsx            pliega una tarjeta en el teléfono (detalle de la orden)
     Combobox, CustomerPicker, LazyModal, PasswordInput, PhoneInput, ErrorBoundary
 
   context/                       estado global, uno por preocupación
@@ -160,7 +161,8 @@ src/
     vin.ts, bankStatementParser.ts, categorizationRules.ts, workOrderPdf.ts,
     signature.ts, branding.ts, brandColor.ts, schemaVersion.ts, queryClient.ts,
     siteUrl.ts, orderDue.ts, phone.ts (país, formato, WhatsApp y tel:),
-    email.ts (formato de correo), reportMedia.ts (qué fotos lleva el PDF)
+    email.ts (formato de correo), reportMedia.ts (qué fotos lleva el PDF),
+    staleChunk.ts (recarga sola si una página es de una versión anterior)
 
   types/                         database.ts reexporta domain/*.types.ts
   i18n/translations.ts           español e inglés
@@ -169,8 +171,9 @@ src/
 
 public/
   sw.js                          service worker: solo push, sin caché
-  manifest.webmanifest, icons/   app instalable (PWA)
-  .htaccess                      reescritura SPA + tipos PWA para Apache
+  manifest.webmanifest, icons/   app instalable (PWA); íconos generados del logo del login
+  .htaccess                      reescritura SPA (assets/ inexistente → 404), www → sin www,
+                                 cabeceras de seguridad y caché
 
 supabase/
   migrations/                    54 migraciones, en orden cronológico (historia en evolucion.md;
@@ -544,6 +547,15 @@ mensaje genérico. `lib/media/errors.ts` hace lo mismo con los errores
 de cámara, micrófono y conversión de video. **Nunca muestres el mensaje crudo del
 backend.**
 
+**Archivos de una versión anterior.** Las páginas se descargan al abrirlas
+(`React.lazy`), con un hash en el nombre. Quien tiene la app abierta cuando se publica
+pide archivos que ya no existen. `lib/staleChunk.ts` reconoce ese error (el evento
+`vite:preloadError` y los mensajes de Chrome, Safari y Firefox) y recarga la página una
+vez; el `ErrorBoundary` de la raíz hace lo mismo antes de mostrar "Algo salió mal". Si a
+los 10 s vuelve a fallar, ya no es una versión vieja y se muestra el error. El
+`.htaccess` responde 404 a un archivo inexistente de `assets/` en vez de servir
+`index.html`. Los diálogos diferidos tienen además su propio aviso (`LazyModal`).
+
 ### Fechas
 
 `lib/dates.ts`. Una columna `DATE` llega como `'2026-09-01'`, y
@@ -567,6 +579,11 @@ algo con un diálogo abierto.
   en algo que tiene que seguir siendo flex, el `!important` le quita el `gap`.
 - `useIsMobile()` cuando conviene renderizar una sola versión en vez de esconder
   la otra.
+- `<MobileSection>` (`components/MobileSection.tsx`) pliega una tarjeta en el teléfono:
+  encabezado con ícono, título y un dato corto (fotos, total, líneas), y el contenido
+  escondido con `hidden` para no perder lo que se está escribiendo. En escritorio
+  devuelve la tarjeta tal cual. Lo usa el detalle de la orden; los estilos están al final
+  de `components.css`.
 - Inputs a 16 px bajo 768 px: Safari de iOS hace zoom en cualquier campo menor.
 - `100dvh` junto a `100vh`, y `env(safe-area-inset-*)` con `viewport-fit=cover`.
 
@@ -574,7 +591,14 @@ algo con un diálogo abierto.
 
 `public/sw.js` **solo** maneja push y el toque en la notificación. No tiene
 manejador de `fetch` y no cachea la app: un despliegue nuevo llega siempre, sin
-versiones viejas atrapadas en caché.
+versiones viejas atrapadas en caché. Chrome la considera instalable sin él.
+
+Los íconos de `public/icons/` (192, 512, maskable, el de iPhone y el favicon) se generan
+del logo del login con `node scripts/generate-pwa-icons.mjs`; el maskable va más chico
+para caber en el recorte del launcher. Hostinger guarda los íconos 7 días, así que las
+URLs llevan versión (`?v=2` en `index.html`, el manifiesto y `sw.js`): **súbela si
+cambias el logo**. iPhone no actualiza el ícono de una app ya instalada; hay que
+reinstalarla.
 
 ---
 
@@ -593,7 +617,10 @@ npx supabase db push --linked             # aplicar
 Antes de aplicar a producción: respaldo, staging y orden de publicación en
 [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación).
 
-Nombre: `AAAAMMDDHHMMSS_descripcion_en_ingles.sql`. El build estampa la migración
+Nombre: `AAAAMMDDHHMMSS_descripcion.sql`, **posterior a la última migración**. Once
+migraciones aplicadas tienen fecha futura (`20261002…` a `20261010000000`): hasta que la
+fecha real las pase, una migración nueva con la fecha de hoy quedaría antes de ellas y
+`db push` no la aplica sin `--include-all`. Usa `20261011000000_…` o posterior. El build estampa la migración
 más nueva (`__SCHEMA_VERSION__`) y la app la compara con `app_schema_version()`:
 si la base está atrasada, `SchemaDriftBanner` lo dice en pantalla.
 
@@ -636,7 +663,7 @@ VITE_SENTRY_DSN=<dsn>                            # opcional
 ```
 
 Vite **incrusta** estas variables en el build: cambiarlas exige recompilar. En producción
-no salen de `.env.local` sino del panel de Hostinger, que compila la rama `produccion`
+no salen de `.env.local` sino del panel de Hostinger, que compila la rama configurada (hoy `main`)
 ([deployment.md §3](deployment.md#3-variables-del-frontend)).
 
 ```bash

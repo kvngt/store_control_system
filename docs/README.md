@@ -17,6 +17,7 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 | **Salir a producción**: bloqueantes, plan del día y vuelta atrás | [salida-a-produccion.md](salida-a-produccion.md) |
 | **Entender el sistema** antes de tocar código | [arquitectura.md](arquitectura.md) → [reglas-de-negocio.md](reglas-de-negocio.md) |
 | **Cambiar una parte concreta** (Finanzas, la entrega, el portal…) y no saber a dónde ir | [mapa-de-secciones.md](mapa-de-secciones.md) |
+| Saber **qué tan sano está el proyecto hoy**: estructura, base de datos, operación y qué hacer primero | [evaluacion-2026-10.md](evaluacion-2026-10.md) |
 | **Cambiar la base en producción** sin comprometer la operación, o saber qué deuda técnica queda | [mantenimiento.md](mantenimiento.md) |
 | **Probar la plataforma a mano** como tester, sin programar | [manual-de-pruebas.md](manual-de-pruebas.md) |
 | **Probar la plataforma** con casos técnicos (persona o agente de IA) | [plan-de-pruebas.md](plan-de-pruebas.md) |
@@ -59,6 +60,12 @@ que ya mordieron a alguien.
 presupuestos, comisiones y empleados, finanzas, portal, multimedia…) con su pantalla, sus
 módulos, su servicio, sus tablas y funciones, sus pruebas y su documento. Para cuando hay que
 cambiar una parte y no se sabe por dónde entrar.
+
+**[evaluacion-2026-10.md](evaluacion-2026-10.md)** — Evaluación del 1/10/2026, la noche antes de
+la prueba en vivo: inventario y revisión de la base de datos (23 tablas, RLS, tipos, índices),
+cifras y riesgos del código, hallazgos de operación (Hostinger publica `main`, Sentry inactivo,
+sin cuentas de prueba, migraciones con fecha futura), secuelas del cambio de dominio y el plan
+actualizado.
 
 **[mantenimiento.md](mantenimiento.md)** — Revisión de la estructura antes de producción
 (29/09/2026): el estado de la base y del código con evidencia, qué hace riesgosa una
@@ -163,8 +170,9 @@ decisiones pasadas; **no describen el estado actual**.
 > de decisión del taller: el pago a empleados ([pagos-a-empleados.md](pagos-a-empleados.md)).
 > En evaluación: login y dominio propios para un segundo taller
 > ([marca-por-dominio.md](marca-por-dominio.md)).
-> Pendiente fuera del código: staging, plan Pro y Sentry
-> ([mantenimiento.md §5](mantenimiento.md#5-plan-priorizado)).
+> Plan Pro activo desde el 30/09. Pendiente fuera del código: staging, Sentry en producción,
+> la rama que publica Hostinger (hoy `main`) y limpiar las suscripciones push del dominio
+> viejo ([evaluacion-2026-10.md](evaluacion-2026-10.md#7-plan-priorizado)).
 
 Hay un plan de cambios pedido por el cliente en seis fases. Estado:
 

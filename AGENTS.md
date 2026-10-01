@@ -23,8 +23,13 @@ completo, empieza por **[docs/traspaso.md](docs/traspaso.md)**. Para ubicar una 
 - **Nunca pongas secretos** en el repositorio, la documentación o tu memoria. Viven en
   archivos `*.local`, en `supabase secrets` y en Vault.
 - **No despliegues ni apliques migraciones al proyecto real** (`supabase db push`,
-  `functions deploy`, un push a la rama `produccion`) sin que la persona responsable lo
-  pida. Hostinger publica solo lo que llega a `produccion`: un push ahí es un despliegue.
+  `functions deploy`, un push a `main` o a `produccion`) sin que la persona responsable lo
+  pida. **Hoy Hostinger publica la rama `main`** (verificado el 30/09/2026; la
+  documentación decía `produccion`, ver [docs/evaluacion-2026-10.md](docs/evaluacion-2026-10.md#5-operación-y-despliegue)):
+  un push a `main` sale en vivo en uno o dos minutos, sin esperar al CI.
+- **Migraciones nuevas: nómbralas después de `20261010000000`** mientras la fecha real sea
+  anterior. Hay migraciones aplicadas con fecha futura y una más vieja que la última no se
+  aplica con `db push`.
 - **Commits solo cuando se piden.**
 
 ## Verificar un cambio

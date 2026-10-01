@@ -100,7 +100,7 @@ Ejemplo con la identidad del taller:
 <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta.</p>
 <p><a href="{{ .ConfirmationURL }}">Elegir una contraseña nueva</a></p>
 <p>El enlace vence en una hora. Si no fuiste tú, puedes ignorar este mensaje.</p>
-<p>— Taller Reinventa</p>
+<p>— Restorify</p>
 ```
 
 ### Lo que sí está limitado sin SMTP propio

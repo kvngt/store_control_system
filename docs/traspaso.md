@@ -32,7 +32,7 @@ de estados de cuenta de Wells Fargo, comisiones del personal y avisos push al te
 |---|---|
 | **Usuarios** | Personal del taller (admin, mecánico, pintor) y clientes finales (solo el portal) |
 | **Escala esperada** | 2 talleres, ~8 personas cada uno, ~120 órdenes al mes |
-| **Frontend** | React 19 + TypeScript + Vite, sitio estático en Hostinger (`restorifyauto.net`), publicado desde la rama `produccion` de GitHub |
+| **Frontend** | React 19 + TypeScript + Vite, sitio estático en Hostinger (`restorifyauto.net`), publicado desde GitHub en cada push (el diseño es la rama `produccion`; **hoy publica `main`**, ver [evaluacion-2026-10.md](evaluacion-2026-10.md#5-operación-y-despliegue)) |
 | **Backend** | Supabase (proyecto `dbstores`): Postgres con RLS y triggers, Auth, Storage, Realtime, 6 Edge Functions, pg_cron |
 | **Correo** | Resend, dominio `restorifyauto.net` (correos al cliente y SMTP de Auth) |
 | **Estado** | Las seis fases del cliente, una auditoría, una revisión previa a producción y los siete cambios de la reunión con el taller, todos hechos. El 29 de septiembre de 2026 la base se limpió para la prueba del taller: un administrador y una sede. Antes de atender clientes reales: [salida-a-produccion.md](salida-a-produccion.md) §2 y [mantenimiento.md §5](mantenimiento.md#5-plan-priorizado) |
@@ -75,7 +75,7 @@ Esto no se recupera clonando el repositorio. Si se pierde, hay que regenerarlo.
 | `supabase/.env.secrets.local` (secreto de funciones internas, par VAPID) | Máquina de desarrollo y, sin forma de leerlos de vuelta, en Supabase → Edge Functions → Secrets | Generar un juego nuevo ([deployment.md §7](deployment.md#7-rotar-secretos-y-llaves)): nuevo secreto en Supabase **y** en Vault; nuevo par VAPID en los secretos **y** en `VITE_VAPID_PUBLIC_KEY`, recompilar. Cada persona vuelve a activar el push en su teléfono |
 | Llave de Resend | Solo en Supabase → Edge Functions → Secrets | Crear otra en Resend y cargarla con `npx supabase secrets set` |
 | Configuración de Auth del proyecto real (registro apagado, SMTP, URL del sitio, largo de contraseña) | Panel de Supabase | `supabase/config.toml` describe la local, **no** la real. Ver [supabase.md §8](supabase.md#8-auth) |
-| Respaldos de la base | Supabase (solo en plan Pro) | Sin Pro no hay respaldos |
+| Respaldos de la base | Supabase, plan Pro desde el 30/09/2026 (Database → Backups) | Respaldo diario automático; antes de una migración riesgosa, además uno manual |
 
 ---
 

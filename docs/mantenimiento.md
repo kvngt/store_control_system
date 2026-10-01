@@ -7,6 +7,11 @@ clientes reales. Pregunta de partida: **cuando haya que cambiar una parte en pro
 Dónde está cada parte: [mapa-de-secciones.md](mapa-de-secciones.md). Reglas que no se rompen:
 [ai-context.md](ai-context.md).
 
+> **Actualización:** la revisión del 1 de octubre de 2026 está en
+> [evaluacion-2026-10.md](evaluacion-2026-10.md): qué cambió desde esta, el estado del plan
+> (P0-2 hecho) y riesgos nuevos (migraciones con fecha futura, Hostinger publicando `main`,
+> Sentry inactivo). Las secciones 4 y 5 de este documento siguen vigentes.
+
 ---
 
 ## Índice
@@ -80,7 +85,7 @@ prefijo que fije el orden (`trg_10_…`, `trg_20_…`) en esa misma migración.
 desde la limpieza del 29 de septiembre las cuentas de prueba ya no existen, así que hoy no
 corren. Toda migración va de la base local directo al taller.
 
-**R-B4. No hay respaldos.** El plan Free no los hace. Un error en una migración de datos o un
+**R-B4. No hay respaldos.** *(Resuelto el 30/09/2026: el proyecto pasó a Pro, con respaldo diario.)* El plan Free no los hace. Un error en una migración de datos o un
 borrado en cascada no tiene vuelta atrás.
 
 **R-B5. Un admin puede borrar movimientos automáticos de Finanzas.** Borrar un "Pago final"

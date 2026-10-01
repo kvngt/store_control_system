@@ -36,7 +36,7 @@ la base sin comprometer la operación: [mantenimiento.md §4](mantenimiento.md#4
 | | |
 |---|---|
 | Pantalla | `pages/WorkOrders.tsx` (lista y archivo; para un técnico, solo "Mis órdenes") |
-| Detalle | `features/workOrders/WorkOrderDetail.tsx` (dibuja) y `useWorkOrderDetail.ts` (estado, permisos derivados como `canEdit`, `canSign`, `canDeliver`, y todas las acciones) |
+| Detalle | `features/workOrders/WorkOrderDetail.tsx` (dibuja) y `useWorkOrderDetail.ts` (estado, permisos derivados como `canEdit`, `canSign`, `canDeliver`, y todas las acciones). En el teléfono cada tarjeta va en un `MobileSection` plegable (`components/MobileSection.tsx`) |
 | Alta | `features/workOrders/WorkOrderCreateModal.tsx`, `useWorkOrderForm.ts`, `workOrderForm.schema.ts` |
 | Tarjetas del detalle | `LaborTable`, `PartsTable`, `PartsSummaryCard`, `SignatureCard`, `ProgressLog`, `QuoteCard`, `CustomerLinkCard`, `CommissionEstimateCard`, `DeliveryModal`, `AuthorizationReasonModal`, `ShareReportModal`, `ArchivedOrders` |
 | Servicio | `services/workOrders.service.ts` |

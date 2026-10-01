@@ -65,8 +65,11 @@ sep 28–29 ── Etapa 9  Pruebas en el teléfono y la reunión con el taller:
                       empleado, egresos de comisión por orden y margen. Base limpia y
                       empieza la prueba del taller
 sep 30    ──          Dominio definitivo restorifyauto.net (reinventa.shop dado de baja);
-                      Hostinger publica desde GitHub (rama produccion); Resend y el SMTP
-                      de Auth con el dominio nuevo
+                      Hostinger publica desde GitHub; Resend y el SMTP de Auth con el
+                      dominio nuevo. Supabase Pro. Antes de la prueba en vivo: secciones
+                      plegables en el detalle de la orden (teléfono), ícono de la app con
+                      el logo del login, recarga sola tras una publicación. Evaluación
+                      del proyecto (evaluacion-2026-10.md)
 ```
 
 ---
@@ -485,6 +488,7 @@ comentario que explica el problema. Léelas en orden si quieres el detalle.
 | Pre-producción | **303** (43 archivos) | 08 → **176 aserciones** en 8 archivos, en CI | `qa:security` 53 casos; integración contra la API local |
 | Pruebas en el teléfono | 432 (60 archivos) | 09 → 223 aserciones en 9 archivos | `qa:security` 66 casos; 76 e2e |
 | Reunión con el taller | **480** (67 archivos) | 10–13 → **330 aserciones** en 13 archivos | `qa:security` 85 casos |
+| Antes de la prueba en vivo | **504** (71 archivos) | 330 aserciones, en CI | `qa:security` 85 casos (62 saltados sin cuentas de prueba) |
 
 Las pruebas pgTAP se ejecutaron por primera vez con Docker el 15 de septiembre de 2026:
 **158 aserciones en verde** y las 35 migraciones aplicadas desde cero. Solo hubo que
@@ -499,7 +503,8 @@ temporales que luego se borraron.
 - **La prueba del taller**, que empezó el 29 de septiembre de 2026 con la base limpia.
 - **Pago a empleados**: esperar las respuestas del taller y hacer la fase 1
   ([pagos-a-empleados.md](pagos-a-empleados.md)).
-- **Fuera del código**: staging, plan Pro y Sentry ([mantenimiento.md §5](mantenimiento.md#5-plan-priorizado)).
+- **Fuera del código**: staging, Sentry en producción y la rama que publica Hostinger (el plan
+  Pro ya está) ([evaluacion-2026-10.md](evaluacion-2026-10.md#7-plan-priorizado)).
 - **Mantenibilidad**: esquema actual en un solo archivo, partir `useWorkOrderDetail`,
   retirar la fachada `supabaseService` (mismo plan).
 - **Pendientes de datos**: nombre, logo, correo de contacto y WhatsApp de la sede.

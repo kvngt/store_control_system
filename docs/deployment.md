@@ -27,7 +27,7 @@ Inventario completo de lo que hay dentro y dónde se ve en el panel: [supabase.m
 
 | Pieza | Dónde vive | Cómo se publica |
 |---|---|---|
-| Frontend | Hostinger, sitio `restorifyauto.net` conectado al repositorio de GitHub | Hostinger compila y publica la rama **`produccion`** en cada push ([sección 5](#5-publicar-una-versión)) |
+| Frontend | Hostinger, sitio `restorifyauto.net` conectado al repositorio de GitHub | Hostinger compila y publica la rama **`produccion`** en cada push ([sección 5](#5-publicar-una-versión)). **Hoy el panel tiene `main`**: ver el aviso de la sección 5 |
 | Esquema de base de datos | Supabase (proyecto enlazado en `supabase/.temp/project-ref`) | `npx supabase db push --linked` |
 | Edge functions | Supabase | `npx supabase functions deploy <nombre>` |
 | Secretos de funciones | Supabase → Edge Functions → Secrets | `npx supabase secrets set` |
@@ -265,8 +265,9 @@ publicada no coincide con la base. Si una migración borra o renombra algo, o re
 antes [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación)
 (expandir y contraer, qué revisar, cómo volver atrás).
 
-**Respaldo antes del paso 4** mientras el proyecto esté en el plan Free, que no guarda
-respaldos diarios:
+**Respaldo antes del paso 4.** Desde el 30/09/2026 el proyecto está en el plan **Pro**, que
+guarda un respaldo diario (Database → Backups). Antes de una migración que mueva o borre
+datos conviene además un respaldo manual del momento:
 
 ```bash
 # Fuera del repositorio: lleva datos de clientes. Tres archivos, porque `db dump` sin
@@ -298,6 +299,14 @@ a `main` se publica hasta el push a `produccion`.
 - `git push origin main:produccion` es un avance rápido. Si Git lo rechaza, alguien subió
   algo directo a `produccion`: revisa qué es antes de forzar nada.
 - Revisa en el panel del sitio que la rama configurada sea `produccion` y no `main`.
+
+> **Estado al 30/09/2026: el panel publica `main`.** El sitio cambió uno o dos minutos
+> después de cada uno de tres pushes a `main`, y `produccion` no se movió desde el 29/09.
+> Mientras no se cambie la rama en hPanel → Sitios web → restorifyauto.net → GitHub,
+> **un push a `main` es un despliegue**, antes de que termine el CI y antes de cualquier
+> `db push`. Para volver al flujo de esta sección, cambia la rama a `produccion` y haz
+> `git push origin main:produccion` para ponerla al día. Ver
+> [evaluacion-2026-10.md](evaluacion-2026-10.md#5-operación-y-despliegue).
 - Para volver a compilar sin cambios en el código (por ejemplo, tras cambiar una variable),
   vuelve a desplegar desde el panel de Hostinger.
 

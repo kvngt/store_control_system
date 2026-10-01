@@ -131,7 +131,10 @@ un proyecto con datos reales, [mantenimiento.md §4](mantenimiento.md#4-cambiar-
    embebidos (`select('*, hijos(count)')`) o una RPC.
 1. **Todo cambio de esquema o permisos es una migración nueva** en
    `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca edites una migración
-   ya aplicada ni cambies tablas desde el panel.
+   ya aplicada ni cambies tablas desde el panel. **El nombre va después de la última
+   migración, no de la fecha de hoy:** hay migraciones aplicadas fechadas hasta
+   `20261010000000`, y una con fecha anterior a la última aplicada no entra con `db push`
+   ([evaluacion-2026-10.md](evaluacion-2026-10.md#4-base-de-datos), B-1).
 2. **Una función nueva en `public` es una RPC pública.** Postgres da `EXECUTE` a
    `PUBLIC` y Supabase a `anon` y `authenticated` al crearla. Revócala siempre:
    `REVOKE ALL ON FUNCTION ... FROM PUBLIC, anon, authenticated;` y concede solo lo
@@ -248,6 +251,11 @@ un proyecto con datos reales, [mantenimiento.md §4](mantenimiento.md#4-cambiar-
   mientras corre.
 - **Móvil primero.** Tablas con `cards-on-mobile` y `data-label`; inputs de 16 px;
   `useIsMobile()` para renderizar una sola versión; respeta `env(safe-area-inset-*)`.
+- **Una pantalla larga en el teléfono se pliega con `<MobileSection>`**
+  (`src/components/MobileSection.tsx`), como el detalle de la orden. En escritorio no hace
+  nada. Envuelve la tarjeta entera: la sección le quita marco y `.card-title` y pone el
+  suyo. El contenido se esconde con `hidden`, no se desmonta, para no perder lo que se estaba
+  escribiendo o firmando; si la tarjeta devuelve `null`, la sección desaparece por CSS.
 - **Un `<select>` controlado que se cancela con `confirm`** se remonta con una `key`
   (`statusEpoch`).
 - **Un `DELETE` o un `UPDATE` rechazado por RLS devuelve éxito sin filas**: usa
@@ -274,11 +282,19 @@ agregues pruebas que entreguen órdenes o paguen comisiones mientras no exista s
 ## 6. Observabilidad y despliegue
 
 - Errores del frontend en Sentry (`@sentry/react`), si `VITE_SENTRY_DSN` está
-  definida.
+  definida. **Al 1/10/2026 no lo está en Hostinger**: un error en producción no queda
+  registrado ([evaluacion-2026-10.md](evaluacion-2026-10.md), O-2).
 - Producción: dominio `restorifyauto.net` (antes `reinventa.shop`, dado de baja). Hostinger
-  compila y publica **la rama `produccion`** de GitHub en cada push, con las variables
-  `VITE_*` de su panel (no las de `.env.local`); `public/.htaccess` reescribe a `index.html`
-  y manda `www` al dominio sin `www`. **Un push a `produccion` es un despliegue**: va después
-  del `db push` y solo con el CI en verde, y nunca sin que la persona responsable lo pida.
-  Supabase (hoy en plan Free: 50 MB por archivo; pasar a Pro antes de atender clientes
-  reales). Pasos en [deployment.md](deployment.md).
+  compila y publica en cada push, con las variables `VITE_*` de su panel (no las de
+  `.env.local`); `public/.htaccess` reescribe a `index.html` (salvo `assets/`, que da 404 si
+  falta) y manda `www` al dominio sin `www`. El diseño es que publique la rama `produccion`,
+  pero **hoy publica `main`** (verificado el 30/09: el sitio cambió con tres pushes a `main`;
+  `produccion` no se movió). Mientras no se cambie en el panel, **un push a `main` es un
+  despliegue**, sale antes de que termine el CI, y nunca va sin que la persona responsable
+  lo pida ni antes del `db push` que necesite. Supabase en plan **Pro** desde el 30/09
+  (respaldos diarios; los buckets siguen con 50 MB por archivo). Pasos en
+  [deployment.md](deployment.md).
+- **Una publicación deja pestañas con archivos viejos.** `lib/staleChunk.ts` reconoce la
+  descarga fallida de una página diferida y recarga una vez (con un candado de 10 s contra el
+  ciclo); el `ErrorBoundary` hace lo mismo. No lo quites: sin él, quien tenía la app abierta
+  veía "Algo salió mal" al entrar a una sección después de cada publicación.

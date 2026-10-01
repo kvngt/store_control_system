@@ -23,9 +23,9 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 480 pruebas, 67 archivos | ~30 s | Nada |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 504 pruebas, 71 archivos (1/10/2026) | ~30 s | Nada |
 | **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte y hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 330 aserciones, 13 archivos | ~1 min | Docker |
-| **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, 77 casos (76 pasan, 1 se salta) | 2–5 min | Credenciales de prueba |
+| **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, 77 casos (76 pasan, 1 se salta) | 2–5 min | Credenciales de prueba (**al 1/10/2026 no existen**: se borraron el 29/09) |
 | **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 85 casos con las cuentas de prueba, todos de solo lectura. Los 66 anteriores, 66 PASS · 0 SKIP; los 19 de las migraciones `20261006000000` a `20261010000000` pasan solo con ellas aplicadas | ~15 s | Nada; con cuentas de prueba cubre más |
 | **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
 

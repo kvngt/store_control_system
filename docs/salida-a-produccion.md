@@ -18,7 +18,8 @@ cómo publicar sin romper nada. Complementa la [auditoría de septiembre](audito
 > staging y un respaldo antes de cada `db push`.
 
 > **30 de septiembre de 2026: dominio definitivo `restorifyauto.net`.** `reinventa.shop` se dio
-> de baja. Hostinger publica ahora desde GitHub (rama `produccion`), no subiendo `dist/` a
+> de baja. Hostinger publica ahora desde GitHub (el diseño es la rama `produccion`; hoy publica `main`, ver
+> [evaluacion-2026-10.md](evaluacion-2026-10.md#5-operación-y-despliegue)), no subiendo `dist/` a
 > `public_html/`. Con el cambio se hicieron **PRD-03** (llaves de Resend nuevas para el dominio
 > nuevo, las viejas borradas) y **PRD-05** (SMTP de Auth con Resend). Las secciones 4 y 5
 > se escribieron para la subida manual: donde dicen subir `dist/`, hoy es
@@ -45,7 +46,7 @@ cómo publicar sin romper nada. Complementa la [auditoría de septiembre](audito
 
 **No salir a producción sin completar la sección 2.** Hay dos bloqueantes que no se
 arreglan con código: el registro público de cuentas está **abierto** en el proyecto real, y
-el plan gratuito de Supabase **no tiene respaldos**.
+el plan gratuito de Supabase **no tiene respaldos**. *(Al 30/09/2026 el proyecto pasó a Pro: los respaldos diarios ya están.)*
 
 | | Críticos | Altos | Medios | Bajos |
 |---|---|---|---|---|

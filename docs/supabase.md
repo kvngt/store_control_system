@@ -39,7 +39,7 @@ Para **por qué** está construido así: [arquitectura.md](arquitectura.md). Par
 | **Nombre en Supabase** | `dbstores` (el nombre del proyecto no es el de la app) |
 | **Referencia** | `lendsiqkxhvbxxkaadrt` → `https://lendsiqkxhvbxxkaadrt.supabase.co` |
 | **Región** | `ca-central-1` (Canadá Central) |
-| **Plan** | Free: 500 MB de base, 1 GB de Storage, 50 MB por archivo. Pasar a **Pro** antes de atender clientes reales ([deployment.md §4.1](deployment.md#41-plan-y-límites-de-gasto)) |
+| **Plan** | **Pro** desde el 30 de septiembre de 2026: respaldos diarios (Database → Backups). Los buckets siguen con 50 MB por archivo, que es lo que la app permite ([deployment.md §4.1](deployment.md#41-plan-y-límites-de-gasto)) |
 | **Postgres** | 17.6 |
 | **Tamaño de la base** | ~19 MB (29 de septiembre de 2026, recién limpiada) |
 | **Migraciones aplicadas** | 54 (la última, `20261010000000_egresos_de_comision_por_orden`, aplicada el 29 de septiembre de 2026) |
@@ -53,7 +53,7 @@ Para **por qué** está construido así: [arquitectura.md](arquitectura.md). Par
 ## 2. La plataforma completa
 
 ```
-                         restorifyauto.net (Hostinger, publica la rama produccion)
+                         restorifyauto.net (Hostinger, publica desde GitHub: hoy main)
                          └─ dist/: app del taller + portal del cliente (/r/<token>)
                                         │
           ┌─────────────────────────────┼─────────────────────────────────────┐
@@ -86,7 +86,7 @@ Para **por qué** está construido así: [arquitectura.md](arquitectura.md). Par
 
 | Servicio | Para qué | Dónde se configura |
 |---|---|---|
-| **Hostinger** | Compila la rama `produccion` de GitHub y sirve `dist/` en `restorifyauto.net`; DNS del dominio (incluidos los registros de Resend) | hPanel |
+| **Hostinger** | Compila la rama configurada de GitHub (el diseño es `produccion`; hoy `main`, ver [evaluacion-2026-10.md](evaluacion-2026-10.md#5-operación-y-despliegue)) y sirve `dist/` en `restorifyauto.net`; DNS del dominio (incluidos los registros de Resend) | hPanel |
 | **Resend** | Envía los correos al cliente y los de Auth (SMTP) desde `notificaciones@restorifyauto.net` | resend.com; una llave en los secretos de las funciones y otra en el SMTP de Auth |
 | **Servicios push** (Google, Apple, Mozilla) | Entregan los avisos al teléfono con la app cerrada | Nada: el navegador elige el servicio; las llaves VAPID van en los secretos |
 | **NHTSA vPIC** | Llena marca, modelo y año a partir del VIN, desde el navegador | Nada (API pública) |
