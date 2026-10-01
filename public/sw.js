@@ -31,7 +31,7 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Restorify';
   const options = {
     body: data.body || '',
-    icon: '/icons/icon-192.png',
+    icon: '/icons/icon-192.png?v=2',
     badge: '/icons/badge-72.png',
     // El mismo tag reemplaza al aviso anterior en vez de apilar otro igual.
     tag: data.tag || undefined,
