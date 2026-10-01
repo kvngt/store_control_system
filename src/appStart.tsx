@@ -3,6 +3,7 @@ import type { Root } from 'react-dom/client'
 import * as Sentry from '@sentry/react'
 import App from './App'
 import { registerServiceWorker } from './lib/push'
+import { installStaleChunkReload } from './lib/staleChunk'
 
 /** La app del taller. El portal del cliente arranca aparte (ver main.tsx). */
 export function start(root: Root) {
@@ -21,6 +22,9 @@ export function start(root: Root) {
 
   // Solo para push (ver public/sw.js): no cachea la app.
   registerServiceWorker()
+
+  // Tras publicar una versión, una pestaña abierta pide archivos que ya no existen.
+  installStaleChunkReload()
 
   root.render(
     <StrictMode>

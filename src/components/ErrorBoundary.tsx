@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { isStaleChunkError, reloadForStaleChunk } from '../lib/staleChunk';
 
 interface Props {
   children: ReactNode;
@@ -8,20 +9,35 @@ interface Props {
 interface State {
   hasError: boolean;
   message: string;
+  /** Se está recargando para traer la versión publicada (ver `lib/staleChunk.ts`). */
+  reloading: boolean;
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false, message: '' };
+  state: State = { hasError: false, message: '', reloading: false };
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, message: error.message };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    // Un archivo de una versión anterior no es un error de la app: se recarga sola
+    // en vez de mostrar la pantalla de error.
+    if (isStaleChunkError(error) && reloadForStaleChunk()) {
+      this.setState({ reloading: true });
+      return;
+    }
     console.error('Restorify crashed:', error, info.componentStack);
   }
 
   render() {
+    if (this.state.reloading) {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-primary)' }}>
+          <div className="spinner" />
+        </div>
+      );
+    }
     if (this.state.hasError) {
       return (
         <div
