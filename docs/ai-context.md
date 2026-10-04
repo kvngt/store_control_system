@@ -89,8 +89,9 @@ comisiones, el alta de la orden o la "espera de autorización".
   misma RPC, así que avisa también desde el Kanban). Las líneas de antes
   (`reparto_heredado = true`, el default de la columna) siguen con el reparto por
   especialidad, solo entre los asignados `origen = 'manual'`. **La app manda
-  `reparto_heredado: false` en cada línea que crea**, y al asignarle técnico a una heredada
-  también (`setLaborTechnician`, fijado en `workOrders.service.test.ts`): queda fuera del
+  `reparto_heredado: false` en cada línea que crea** —también en el alta, con su
+  `especialidad`— y al asignarle técnico a una heredada también (`setLaborTechnician`,
+  fijado en `workOrders.service.test.ts` y `WorkOrders.smoke.test.tsx`): queda fuera del
   reparto para siempre. Quien recibe una tarea entra solo a la orden (`origen = 'tarea'`);
   quitarlo de la orden con tareas se rechaza, pero administración lo saca del reparto (o mete
   a quien entró por una tarea) cambiando el `origen` de su asignación, salvo que esa bolsa ya
@@ -103,6 +104,13 @@ comisiones, el alta de la orden o la "espera de autorización".
   `balance_orden` (comisiones devengadas; repuestos = el costo automático de las líneas,
   lo demás vinculado aparte). Si agregas un movimiento automático de una orden, decide si
   entra en esa cuenta.
+- **El alta es `create_work_order` y lee claves con nombre exacto.** El depósito va dentro de
+  `p_order` como `deposito_metodo`, `deposito_numero_cheque` y `deposito_comprobante_ruta`
+  (`20261010000007`); una clave con otro nombre **se ignora sin error**. Pasó: del 04/10/2026
+  hasta el arreglo, el alta mandaba `deposito_cheque`/`deposito_comprobante` y el número de
+  cheque y el comprobante se perdían. Lo fija `workOrders.service.test.ts`. El alta va en
+  cuatro pasos (`INTAKE_STEPS` en `workOrderForm.schema.ts`); un campo nuevo del formulario
+  va en uno de ellos (lo exige `workOrderForm.schema.test.ts`).
 - **Entregar es `entregar_orden`, no un UPDATE de estatus.** La RPC bloquea la orden,
   asienta el pago final **con su método** (o la devolución si el depósito supera el
   total) y la marca entregada en una transacción (`20261008000000`). La pantalla abre
@@ -147,6 +155,13 @@ comisiones, el alta de la orden o la "espera de autorización".
   `workOrders.archive.test.ts`. Solo lo entregado se archiva (CHECK) y sacar una orden de
   "Entregado" la desarchiva (trigger). No le quites el filtro para "ver todo": es lo que evita
   descargar miles de órdenes con sus relaciones embebidas.
+- **Órdenes y Kanban son una sola página** (F7): `pages/WorkOrders.tsx` con dos vistas
+  (`?vista=lista|tablero`, recordada en el navegador) y la misma búsqueda; `KanbanBoard` va
+  embebido y `/kanban` redirige. **Lo que espera a la oficina lo cuenta la base**: la tarjeta
+  "Requiere atención" del panel sale de `requiere_atencion` (`20261010000012`, solo admin).
+  Un pendiente nuevo para la oficina se agrega a esa RPC (y a `23_requiere_atencion`), no se
+  cuenta con la lista del navegador, que no trae el histórico. "Mis tareas" del técnico es
+  `getMyTasks` (sus líneas en órdenes sin entregar).
 - **El teléfono del cliente se guarda en formato internacional** (`+15551234567`) en
   `clientes.telefono`, con `components/PhoneInput` (país + número). Los guardados antes, sin
   "+", se leen como de EE. UU. y no se reescriben hasta que alguien los edita. Para mostrarlo,

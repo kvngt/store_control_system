@@ -146,9 +146,10 @@ montos.
 
 ### Barra lateral (izquierda)
 
-El menú principal: Panel principal, Clientes, Vehículos, Órdenes de Trabajo y
-Tablero Kanban. Los administradores ven además **Finanzas** y **Comisiones**.
-Abajo está Configuración y el botón de cerrar sesión.
+El menú principal, en tres grupos: **Taller** (Panel principal, Clientes, Vehículos y
+Órdenes de Trabajo), **Finanzas** (Finanzas, Comisiones y Empleados, solo administradores)
+y **Sistema** (Configuración). Abajo está el botón de cerrar sesión. El tablero Kanban ya no
+tiene entrada propia: está dentro de Órdenes de Trabajo (sección 10).
 
 Se puede plegar con la flecha para ganar espacio en pantalla.
 
@@ -187,6 +188,18 @@ Es la pantalla de inicio. Resume cómo va el taller.
 
 ### Lo que ve un administrador
 
+- **Requiere atención**, arriba de todo: lo que espera una decisión de la oficina, con el
+  número de cada cosa y las órdenes a las que lleva:
+  - **Trabajo adicional por revisar**: lo que reportó un técnico y nadie ha cotizado ni
+    descartado. Abre la orden en Resumen.
+  - **Presupuestos sin respuesta del cliente.** Abre la orden en Trabajos.
+  - **Tareas sin técnico**: nadie cobra su comisión hasta que se les asigne uno. Abre la
+    orden en Trabajos.
+  - **Órdenes con la entrega vencida** (las finalizadas no cuentan).
+  - **Correos al cliente con error** en las últimas 72 horas: **Revisar** lleva a
+    Configuración, donde se reintentan.
+
+  Si no hay nada, dice «Todo al día». Se actualiza solo cuando alguien cambia una orden.
 - **Órdenes activas** y cuántas se terminaron este mes.
 - **Ingresos del mes.**
 - **Tasa de ocupación**: cuántos espacios del taller están ocupados respecto a la
@@ -201,6 +214,12 @@ Es la pantalla de inicio. Resume cómo va el taller.
 La misma pantalla, sin nada de dinero: no aparecen ingresos, totales, clientes
 nuevos ni el gráfico financiero. Las **alertas** y las **órdenes recientes**
 muestran únicamente **sus propias órdenes**.
+
+Arriba de todo está **Mis tareas**: los trabajos que tiene asignados en todas sus órdenes
+sin entregar y que todavía no marca como hechos. Primero los que ya se pueden hacer (la
+orden que vence antes, primero); al final, los que esperan la autorización del cliente. Al
+tocar uno se abre su orden en la pestaña **Tareas**, donde se marca **Realizado** y se
+agregan avances. Las tareas hechas no se listan, solo se cuentan.
 
 <!-- IMAGEN: panel principal de un mecánico, para contrastar con el anterior -->
 
@@ -330,21 +349,21 @@ por estado**.
 
 ### Crear una orden
 
-Presiona **Nueva Orden**. El formulario permite registrar todo de una vez,
-incluso si el cliente y el vehículo son nuevos.
+Presiona **Nueva Orden**. El alta va en **cuatro pasos**, con los nombres arriba:
+**Cliente**, **Vehículo y recepción**, **Depósito** y **Trabajos**. **Siguiente** revisa
+el paso antes de pasar al otro y marca en el campo lo que falta; **Anterior** (o el nombre de
+un paso ya visto) vuelve sin perder lo escrito. Enter en un campo también pasa al siguiente
+paso: la orden solo se crea con el botón **Crear** del último.
 
-**1 — Cliente y vehículo.** Elige de las listas, o selecciona «+ Nuevo cliente» /
-«+ Nuevo vehículo» para capturarlos en el mismo formulario.
+**Paso 1 — Cliente.** Elige de la lista, o «+ Nuevo cliente» para capturarlo ahí mismo
+(nombre y teléfono son obligatorios).
 
-**2 — Tipo de trabajo.** Mecánica, Pintura o Combinado.
-
-**3 — Estado de ingreso del vehículo.**
+**Paso 2 — Vehículo y recepción.** El vehículo (o «+ Nuevo vehículo», con el mismo
+formulario de VIN que la pantalla de Vehículos), y el estado en que llega:
 - **Nivel de gasolina**: E (vacío), 1/4, 1/2, 3/4 o F (lleno).
 - **Millas de ingreso**: la lectura del odómetro. Solo números enteros positivos.
-- **Depósito** *(solo administradores)*: el anticipo que dejó el cliente.
-- **Fecha estimada de entrega.**
 
-**4 — Inspección 360°.** Seis zonas fijas para fotografiar el estado del auto al
+**Inspección 360°.** Seis zonas fijas para fotografiar el estado del auto al
 entrar: **Frontal, Trasera, Izquierda, Derecha, Interior y Tablero**. Toca cada
 recuadro para tomar la foto o elegirla de la galería.
 
@@ -355,7 +374,7 @@ cosa aparece como miniatura (una foto o un video se abren al tocarlos) y la ✕ 
 quita. Todo se sube junto con las fotos al crear la orden.
 
 Las fotos se reducen en el teléfono antes de subirse y un video de la galería se
-convierte a un tamaño liviano; mientras tanto el botón **Crear** dice
+convierte a un tamaño liviano; mientras tanto el botón **Siguiente** dice
 «Procesando…» y espera. Así suben rápido aunque la señal sea mala, y se les quita
 la ubicación GPS que guarda la cámara.
 
@@ -368,18 +387,28 @@ la ubicación GPS que guarda la cámara.
 
 <!-- IMAGEN: cuadrícula de las seis zonas de inspección, algunas ya con foto -->
 
-**5 — Notas de inspección.** Texto libre sobre el estado del vehículo.
+**Notas de la inspección.** Texto libre sobre el estado del vehículo.
 
-**6 — Técnicos asignados.** Un administrador elige quién trabajará la orden. Asignar
-es dinero (decide quién ve la orden y, en los trabajos del alta, quién reparte su
-comisión), así que **solo administración asigna**: un mecánico o pintor no puede ponerse
-en una orden por su cuenta ni quitarse de una en la que está. Después, dentro de la orden,
-cada trabajo se le asigna a su técnico (abajo, **Mano de obra**).
+**Paso 3 — Depósito.** El anticipo que deja el cliente (0 si no deja nada). Con monto, elige
+**cómo pagó** (efectivo, transferencia o cheque); con cheque, su **número**; y si quieres, la
+**foto del comprobante**. Queda en Finanzas con el movimiento «Depósito inicial».
 
-**7 — Mano de obra y repuestos** *(solo administradores)*. Cada línea de mano de
-obra lleva descripción y costo. Cada repuesto lleva descripción, cantidad y
-precio. Los repuestos se cobran a lo que costaron: el taller gana en la mano de
-obra.
+**Paso 4 — Trabajos.**
+- **Tipo de trabajo** de la orden (Mecánica, Pintura o Combinado) y **fecha estimada de
+  entrega**.
+- **Agregar trabajo** (botón verde): tipo, descripción, precio y **técnico** de cada tarea,
+  igual que dentro de la orden. La comisión de cada tarea es de su técnico; una tarea **sin
+  técnico** no le paga a nadie hasta que se le asigne. Si el tipo no es del oficio del técnico
+  (pintura a un mecánico), pregunta antes. Cada tarea agregada aparece en la lista con su
+  tipo, precio y técnico, y la papelera la quita.
+- **Repuestos**: descripción, cantidad y precio. Se cobran a lo que costaron: el taller gana
+  en la mano de obra.
+
+Los técnicos de la orden salen de las tareas: quien recibe una, entra a la orden. **Solo
+administración asigna**, porque asignar es dinero (decide quién ve la orden y quién cobra).
+
+Si escribiste una tarea y no tocaste **Agregar**, **Crear** no sigue: te avisa para que la
+agregues o la canceles, así no se pierde.
 
 Lo que cotizas aquí queda **sin autorizar** hasta que el cliente **firme la
 recepción**: con su firma queda autorizado y empieza a contar en el total.
@@ -780,7 +809,10 @@ su enlace (sección 8, *Enlace del cliente*).
 ## 10. Tablero Kanban
 
 La misma información que la lista de órdenes, vista como un tablero con una
-columna por estado.
+columna por estado. Está dentro de **Órdenes de Trabajo**: arriba a la derecha, el
+selector **Lista | Tablero** cambia de vista. La app recuerda la última que usaste, así que
+quien trabaja con el tablero lo encuentra al volver. El buscador de órdenes filtra también
+las tarjetas, y el **número de la orden** en cada tarjeta la abre.
 
 <!-- IMAGEN: tablero Kanban con tarjetas repartidas en las columnas -->
 

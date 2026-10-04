@@ -3,6 +3,7 @@
 import { supabase } from '../lib/supabase';
 import type {
   LaborItem,
+  MyTask,
   OrderBalance,
   OrderHistoryEntry,
   OrderMedia,
@@ -204,6 +205,31 @@ export const workOrdersService = {
     } as WorkOrder;
   },
 
+  /**
+   * "Mis tareas" del panel del técnico (F7): las tareas que tiene asignadas en órdenes sin
+   * entregar, con su orden y vehículo. La RLS ya le deja ver solo sus órdenes; el filtro por
+   * `asignado_a` saca las de compañeros en una orden compartida. Las rechazadas por el
+   * cliente no se hacen y no aparecen.
+   */
+  getMyTasks: async (userId: string): Promise<MyTask[]> => {
+    type Row = Omit<MyTask, 'orden'> & { ordenes_trabajo: MyTask['orden'] };
+    const rows = await fetchAll<Row>((from, to) =>
+      supabase
+        .from('orden_labor')
+        // `!inner`: filtrar por el estatus de la orden deja fuera la línea, no solo el embebido.
+        .select('id, orden_id, descripcion, especialidad, estado, completado_en, ordenes_trabajo!inner(id, numero_orden, estatus, fecha_estimada_entrega, vehiculo:vehiculos(marca, modelo, anio))')
+        .eq('asignado_a', userId)
+        .neq('estado', 'rechazado')
+        .neq('ordenes_trabajo.estatus', 'entregado')
+        .order('creado_en', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to)
+        // Sin tipos generados, supabase-js infiere cada embebido como arreglo; son uno a uno.
+        .overrideTypes<Row[], { merge: false }>()
+    );
+    return rows.map(({ ordenes_trabajo, ...task }) => ({ ...task, orden: ordenes_trabajo }));
+  },
+
   createWorkOrder: async (input: WorkOrderInput & { creado_por: string }) => {
     // numero_orden is generated atomically by a DB trigger (trg_numero_orden) to
     // avoid duplicate order numbers when two orders are created concurrently.
@@ -215,9 +241,12 @@ export const workOrdersService = {
       millas_ingreso: input.millas_ingreso,
       nivel_gasolina: input.nivel_gasolina,
       deposito_inicial: input.deposito_inicial,
+      // Los nombres que lee `create_work_order` (20261010000007). Hasta el 04/10/2026 iban como
+      // `deposito_cheque` y `deposito_comprobante`, la base no los reconocía y el número de
+      // cheque y el comprobante del alta se perdían sin error.
       deposito_metodo: input.deposito_metodo || null,
-      deposito_cheque: input.deposito_cheque || null,
-      deposito_comprobante: input.deposito_comprobante || null,
+      deposito_numero_cheque: input.deposito_cheque || null,
+      deposito_comprobante_ruta: input.deposito_comprobante || null,
       inspeccion_360_notas: input.inspeccion_360_notas,
       fecha_estimada_entrega: input.fecha_estimada_entrega,
       creado_por: input.creado_por,

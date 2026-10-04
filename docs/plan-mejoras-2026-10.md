@@ -11,11 +11,11 @@
 | F0 | Configuración: llave de Resend, DSN de Sentry, push pendiente, diagnóstico de la orden de la pintora | **Pendiente (lo hace el usuario)** |
 | F1 | Trazabilidad (historial de la orden, Sentry en el código, reportar problema) y reintentar correos | **Publicado** (commit `ead2a17` en `main` y `db push` de `20261010000004` a `20261010000007` el 04/10/2026; el push a `main` salió antes que el `db push` y el sitio estuvo ~1 h con la base atrasada). Migraciones `20261010000004` (historial) y `20261010000005` (reintentar correos), pgTAP 17 y 18, Sentry en `lib/monitoring.ts`, "Reportar un problema" y "Correos al cliente" en Configuración, botón Reintentar, pestaña Historial. `process-outbox` cambiado: **falta desplegarla** |
 | F2 | Detalle de la orden con pestañas, textos "Mano de obra"/"Tareas", botones verdes, avisos | **Publicado** (`ead2a17`). `components/Tabs.tsx`, encabezado fijo, pestañas por rol, enlace `?open=&tab=`, `.btn-success`, avisos al agregar (con "falta la autorización" si la orden ya está firmada). Revisado con capturas contra el Supabase local en escritorio y teléfono |
-| F3 | Tareas con técnico y comisión por tarea | **Publicado** (`ead2a17` y `db push` del 04/10/2026; revisión adversarial corregida el 04/10/2026). Migración `20261010000006` (pgTAP 19 con 68 aserciones, ajuste de la 03, SEC-99 a SEC-105). Pantalla: editor de tareas `TaskEditor` (reutilizable para F4), tipo y técnico por fila con el diálogo de oficio distinto (también al cambiar el tipo), "Sin técnico", candado y Borrar apagado en lo ya pagado, reparto por tarea en la tarjeta de comisión, avisos en Resumen y al entregar (el diálogo los lee de la base, así que salen también desde el Kanban), "Por tarea" / "En el reparto" con Sacar/Sumar al reparto en la tarjeta de técnicos, avisos `tarea_*`, campos `tecnico` y `reparto` del historial. La red de seguridad compara la fórmula vieja contra la nueva sin reescribir comisiones. **Pendiente:** (1) confirmar con el taller que asignar técnico a una línea heredada la saca del reparto para siempre ([pagos-a-empleados.md](pagos-a-empleados.md#5-preguntas-enviadas-al-taller)); (2) ~~publicar: commit, `db push` de `20261010000004` a `20261010000006`~~ hecho el 04/10/2026; falta el deploy de `process-outbox` y correr `npm run qa:security` con `TOKEN_ADMIN`/`TOKEN_TECH` (SEC-91 a SEC-105 quedaron en SKIP); (3) **una migración posterior que contrae** (`ALTER TABLE orden_labor ALTER COLUMN reparto_heredado SET DEFAULT false`) cuando la app nueva esté publicada y ya nadie use la anterior. **Queda para F4:** que `create_work_order` acepte `asignado_a` y `reparto_heredado` en `p_labor` (hoy las líneas del alta nacen heredadas) y usar `TaskEditor` en el alta |
-| F4 | Nueva orden en 4 secciones y depósito con método | **Publicado** (migraciones, pruebas Vitest y UI de asistente completas). |
-| F5 | "Tareas por hacer" del técnico | **Completada en local** (migraciones, pruebas db y UI implementada). |
-| F6 | Hallazgos y nueva "espera de autorización" | **Publicado** (04/10/2026: app en `main`; `db push` de `009`, `010` y `011` por el usuario). Detalle completo en [hallazgos.md](hallazgos.md). Migraciones `20261010000010` y `20261010000011`; pgTAP 22 (44) y ajuste de la 03; SEC-106 a SEC-112. **Pendiente:** `qa:security` con tokens; la migración que contrae (guardia del técnico, [hallazgos.md §6](hallazgos.md#6-lo-que-falta-en-orden)); casos HAL en un teléfono real; adaptar las 11 pruebas Vitest del alta (rotas desde F4) |
-| F7 | Navegación del sitio | Pendiente |
+| F3 | Tareas con técnico y comisión por tarea | **Publicado** (`ead2a17` y `db push` del 04/10/2026; revisión adversarial corregida el 04/10/2026). Migración `20261010000006` (pgTAP 19 con 68 aserciones, ajuste de la 03, SEC-99 a SEC-105). Pantalla: editor de tareas `TaskEditor` (reutilizable para F4), tipo y técnico por fila con el diálogo de oficio distinto (también al cambiar el tipo), "Sin técnico", candado y Borrar apagado en lo ya pagado, reparto por tarea en la tarjeta de comisión, avisos en Resumen y al entregar (el diálogo los lee de la base, así que salen también desde el Kanban), "Por tarea" / "En el reparto" con Sacar/Sumar al reparto en la tarjeta de técnicos, avisos `tarea_*`, campos `tecnico` y `reparto` del historial. La red de seguridad compara la fórmula vieja contra la nueva sin reescribir comisiones. **Pendiente:** (1) confirmar con el taller que asignar técnico a una línea heredada la saca del reparto para siempre ([pagos-a-empleados.md](pagos-a-empleados.md#5-preguntas-enviadas-al-taller)); (2) ~~publicar: commit, `db push` de `20261010000004` a `20261010000006`~~ hecho el 04/10/2026; falta el deploy de `process-outbox` y correr `npm run qa:security` con `TOKEN_ADMIN`/`TOKEN_TECH` (SEC-91 a SEC-105 quedaron en SKIP); (3) ~~una migración posterior que contrae (`ALTER TABLE orden_labor ALTER COLUMN reparto_heredado SET DEFAULT false`)~~ hecha en `20261010000008`; queda el respaldo de `create_work_order` (sin `reparto_heredado`, una línea sin técnico nace heredada), que ya no importa porque la app lo manda siempre desde el 04/10/2026 (noche). **Queda para F4:** que `create_work_order` acepte `asignado_a` y `reparto_heredado` en `p_labor` (hoy las líneas del alta nacen heredadas) y usar `TaskEditor` en el alta |
+| F4 | Nueva orden en 4 secciones y depósito con método | **Publicado** (`370bf12`, `e6bfced`; migración `20261010000007`). **Revisado el 04/10/2026 (noche), correcciones sin publicar:** el servicio mandaba el número de cheque y el comprobante con nombres que la base no lee (se perdían sin error), las tareas perdían su tipo en órdenes de un solo tipo y las sin técnico nacían en el reparto heredado; además Enter o doble clic creaban la orden a medio asistente, una tarea escrita sin agregar se perdía y había textos sin i18n. Las 11 pruebas rotas, adaptadas, y 7 nuevas. Detalle y consulta para revisar lo afectado en producción: [bitácora](#04102026-noche-2--claude-code-alta-y-f7) |
+| F5 | "Tareas por hacer" del técnico | **Publicado** (`2ce08c0`, `cbdf995` en `main`; `db push` de `20261010000009` el 04/10/2026). Pantalla en `TechnicianTaskList.tsx`; pgTAP 21 |
+| F6 | Hallazgos y nueva "espera de autorización" | **Publicado** (04/10/2026: app en `main`; `db push` de `009`, `010` y `011` por el usuario). Detalle completo en [hallazgos.md](hallazgos.md). Migraciones `20261010000010` y `20261010000011`; pgTAP 22 (44) y ajuste de la 03; SEC-106 a SEC-112. **Pendiente:** `qa:security` con tokens; la migración que contrae (guardia del técnico, [hallazgos.md §6](hallazgos.md#6-lo-que-falta-en-orden)); casos HAL en un teléfono real; ~~adaptar las 11 pruebas Vitest del alta~~ hecho el 04/10/2026 (noche) |
+| F7 | Navegación del sitio | **Hecho en local, sin publicar** (04/10/2026, noche). Órdenes y Kanban en una página (Lista \| Tablero, misma búsqueda, vista recordada, `/kanban` redirige); grupos del menú traducidos (Taller / Finanzas / Sistema); "Requiere atención" en el panel del admin (migración `20261010000012`, RPC `requiere_atencion`, pgTAP 23 con 15 aserciones, SEC-113 y SEC-114); "Mis tareas" en el panel del técnico. **Para publicar:** `db push` de la `012` y después push a `main` (si llega antes la app, la tarjeta no se muestra; no rompe). Casos NAV en [plan-de-pruebas.md](plan-de-pruebas.md) |
 
 Nada se publica sin que la persona responsable lo pida: cada `db push`, `functions deploy`,
 push a `main` y commit se piden aparte.
@@ -456,6 +456,92 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 04/10/2026, noche (2) — Claude Code (alta y F7)
+
+- **Encontrado al llegar:** árbol limpio en `e95ea58` (= `origin/main`); `npm run db:check` ✓
+  (65 migraciones, producción al día hasta la `011`). Vitest: 11 pruebas del alta en rojo desde
+  F4; todo lo demás en verde. La base local no tenía la `011` aplicada (se aplicó con
+  `npx supabase migration up --local`).
+- **El alta de F4 tenía errores reales** (además de las pruebas). Corregidos, **sin publicar**:
+  1. **Dinero, ya en producción:** `createWorkOrder` mandaba `deposito_cheque` y
+     `deposito_comprobante`; `create_work_order` lee `deposito_numero_cheque` y
+     `deposito_comprobante_ruta`. Desde el push de F4 (`370bf12`, 04/10 13:41) el
+     "Depósito inicial" del alta quedó **con método pero sin número de cheque ni
+     comprobante**, y la foto subida quedó huérfana en el bucket `comprobantes`. Arreglado en
+     `workOrders.service.ts`, fijado en `workOrders.service.test.ts` y comprobado contra la base
+     local (el movimiento queda con "Cheque · 1042").
+  2. Una tarea del alta en una orden de un solo tipo perdía su tipo (solo se mandaba la
+     especialidad en "combinado"): una de pintura en una orden de mecánica quedaba mecánica.
+  3. Las tareas del alta **sin técnico** nacían con `reparto_heredado = true` (el respaldo de
+     `create_work_order`): entraban al reparto por especialidad en vez de quedar "Sin técnico".
+     Ahora el alta manda `reparto_heredado: false`, como `addLaborItem`.
+  4. Pantalla: Enter en el depósito (paso 3) creaba la orden; un doble clic en "Siguiente" caía
+     en "Crear"; una tarea escrita sin tocar "Agregar" se perdía al crear; un error de un paso
+     anterior no se veía desde el paso 4; el comprobante se volvía a subir en cada reintento y
+     no se borraba si la base rechazaba la orden; textos fijos sin i18n ("Paso X de 4",
+     "Siguiente", "-- Seleccionar Cliente --", "Notas de la Inspección 360°"…); `$${costo}` en
+     vez de `money()`; botones sin nombre accesible; comentarios explicativos borrados.
+  Archivos: `WorkOrderCreateModal.tsx` (reescrito: lista de pasos, Enter avanza), `useWorkOrderForm.ts`
+  (`goToStep`, `furthestStep`), `workOrderForm.schema.ts` (`INTAKE_STEPS`, `firstStepWithErrors`),
+  `TaskEditor.tsx` (`onPendingChange`), `pages/WorkOrders.tsx` (envío), `workOrders.service.ts`,
+  `translations.ts` (espacio `intake`), `components.css`; e2e del alta (`goToIntakeVehicleStep`).
+- **Para la persona responsable — revisar lo que dejó el error en producción** (solo lectura,
+  desde el SQL Editor del panel):
+
+  ```sql
+  -- Depósitos del alta con cheque que perdieron el número (y comprobantes que quedaron sueltos)
+  SELECT o.numero_orden, m.fecha, m.monto, m.metodo_pago, m.numero_cheque, m.comprobante_ruta
+  FROM finanzas_movimientos m JOIN ordenes_trabajo o ON o.id = m.referencia_orden_id
+  WHERE m.descripcion LIKE 'Depósito inicial - %' AND m.creado_en >= '2026-10-04'
+  ORDER BY m.creado_en;
+  SELECT name, created_at FROM storage.objects
+  WHERE bucket_id = 'comprobantes' AND name LIKE '%/comprobante-alta-%' ORDER BY created_at;
+
+  -- Tareas del alta sin técnico que quedaron en el reparto heredado
+  SELECT o.numero_orden, l.descripcion, l.costo, l.especialidad, l.estado
+  FROM orden_labor l JOIN ordenes_trabajo o ON o.id = l.orden_id
+  WHERE l.reparto_heredado AND l.asignado_a IS NULL AND l.creado_en >= '2026-10-04';
+
+  -- Tareas cuyo tipo no coincide con el oficio de su técnico (posible tipo perdido)
+  SELECT o.numero_orden, o.tipo_trabajo, l.descripcion, l.especialidad, p.nombre_completo, p.rol
+  FROM orden_labor l JOIN ordenes_trabajo o ON o.id = l.orden_id JOIN perfiles p ON p.id = l.asignado_a
+  WHERE l.creado_en >= '2026-10-04' AND o.tipo_trabajo <> 'combinado'
+    AND l.especialidad <> CASE p.rol WHEN 'pintor' THEN 'pintura' ELSE 'mecanica' END;
+  ```
+
+  Lo que salga se corrige desde la app, sin SQL: el técnico y el tipo de una tarea se cambian en
+  Trabajos (asignar técnico a una heredada la saca del reparto); el número de cheque y el
+  comprobante de un depósito, a mano en Finanzas si hace falta.
+- **F7, hecho en local, sin publicar:** migración `20261010000012_requiere_atencion.sql` (RPC
+  `requiere_atencion`, SECURITY INVOKER, solo admin, con `REVOKE`); pgTAP
+  `23_requiere_atencion.test.sql` (15); SEC-113 y SEC-114 en `api-security.mjs`. Pantalla:
+  `pages/WorkOrders.tsx` con Lista | Tablero (`?vista=`, recordada en `localStorage`
+  `restorify_orders_view`, la búsqueda compartida en `features/workOrders/orderSearch.ts`);
+  `KanbanBoard` con `embedded`, `search` y `onOpen`; `/kanban` redirige (`App.tsx`); el menú sin
+  "Tablero Kanban" y con grupos Taller / Finanzas / Sistema; la barra inferior sin "Tablero";
+  `features/dashboard/AttentionCard.tsx` (reemplaza en el panel a `FindingsAlert`, que miraba
+  solo las cinco órdenes recientes) y `MyTasksCard.tsx` (`workOrdersService.getMyTasks`).
+  `useOrderSync` invalida las dos tarjetas. Revisado con capturas contra el Supabase local
+  (escritorio y teléfono, admin y técnico; sin scroll horizontal ni errores de consola) y la
+  consulta de "Mis tareas" probada contra PostgREST con la RLS del técnico.
+- **Verificación:** `npm run lint` ✓, `npx tsc -b` ✓, `npm test` 80 archivos / 649 pruebas ✓,
+  `npm run build` ✓, `npm run test:db` 23 archivos / 551 aserciones ✓. No corrí `qa:security`
+  (sin `TOKEN_ADMIN`/`TOKEN_TECH`) ni las e2e (corren contra producción).
+- **Usuarios de prueba (pregunta del usuario):** no los creé. `qa:security` y las e2e corren
+  contra el proyecto de `.env.local`, que es producción: crear cuentas ahí es un cambio en la
+  base del taller y necesita su aprobación. Opciones en el mensaje al usuario (lo recomendado:
+  un proyecto de staging, P0-1).
+- **Sin commit:** todo lo de esta entrada (código, migración `012`, pruebas y documentación:
+  `ai-context.md`, `pruebas.md`, `plan-de-pruebas.md`, `mapa-de-secciones.md`,
+  `manual-usuario.md`, `manual-de-pruebas.md`, `arquitectura.md`, `hallazgos.md`, este archivo).
+- **Siguiente:** (1) que el usuario revise y pida el commit; (2) publicar en orden: `db push` de
+  la `012` → push a `main` (las correcciones del alta no necesitan migración; el arreglo del
+  depósito conviene publicarlo cuanto antes); (3) correr las consultas de arriba en producción;
+  (4) `qa:security` con tokens (SEC-91 a SEC-114 siguen en SKIP); (5) las migraciones que
+  contraen: el guardia del técnico ([hallazgos.md §6](hallazgos.md#6-lo-que-falta-en-orden)) y,
+  opcional, el respaldo `asignado_a IS NULL` de `create_work_order`; (6) casos ALT, NAV y HAL en
+  un teléfono real.
 
 ### 04/10/2026, noche — Claude Code (F6)
 

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { login, ADMIN_EMAIL, ADMIN_PASSWORD, MECHANIC_EMAIL, MECHANIC_PASSWORD, hasAdminCredentials, hasMechanicCredentials } from './fixtures.js';
+import { login, goToIntakeVehicleStep, ADMIN_EMAIL, ADMIN_PASSWORD, MECHANIC_EMAIL, MECHANIC_PASSWORD, hasAdminCredentials, hasMechanicCredentials } from './fixtures.js';
 
 test('shows an error and stays on /login for invalid credentials', async ({ page }) => {
   await page.goto('/login');
@@ -94,6 +94,7 @@ test.describe('intake form (admin session)', () => {
     await page.goto('/work-orders');
     await page.waitForSelector('#new-order-btn', { timeout: 10000 });
     await page.click('#new-order-btn');
+    test.skip(!(await goToIntakeVehicleStep(page)), 'La sede no tiene clientes');
 
     const miles = page.locator('#order-miles-in');
     await miles.pressSequentially('-250');

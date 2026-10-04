@@ -16,6 +16,7 @@ import { emptyList } from '../lib/emptyList';
 import { useIsMobile } from '../lib/useMediaQuery';
 import { useMediaUploads } from '../features/media/mediaUploads.context';
 import { useWorkOrderForm } from '../features/workOrders/useWorkOrderForm';
+import { firstStepWithErrors } from '../features/workOrders/workOrderForm.schema';
 import { useWorkOrderDetail } from '../features/workOrders/useWorkOrderDetail';
 import WorkOrderCreateModal from '../features/workOrders/WorkOrderCreateModal';
 import WorkOrderDetail from '../features/workOrders/WorkOrderDetail';
@@ -24,12 +25,39 @@ import { daysFromTodayLocal } from '../lib/dates';
 import { orderDueState, type DueState } from '../lib/orderDue';
 import ArchivedOrders from '../features/workOrders/ArchivedOrders';
 import FindingsAlert from '../features/workOrders/FindingsAlert';
+import { matchesOrderSearch } from '../features/workOrders/orderSearch';
+import KanbanBoard from './KanbanBoard';
 
 /** El archivo no es un estatus: es otra vista de la misma pantalla. */
 const ARCHIVED = 'archivadas';
+
+/**
+ * Lista y tablero son dos vistas de esta página (F7, reunión con el taller del 03/10/2026).
+ * La vista va en la URL (`?vista=tablero`, a donde redirige `/kanban`) y se recuerda en el
+ * navegador: quien vive en el tablero vuelve al tablero. Es una comodidad de cada quien, así
+ * que si el navegador no deja guardar, simplemente se abre la lista.
+ */
+type OrdersView = 'lista' | 'tablero';
+const VIEW_KEY = 'restorify_orders_view';
+
+function savedView(): OrdersView {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'tablero' ? 'tablero' : 'lista';
+  } catch {
+    return 'lista';
+  }
+}
+
+function saveView(view: OrdersView) {
+  try {
+    localStorage.setItem(VIEW_KEY, view);
+  } catch {
+    // Sin almacenamiento (modo privado, datos bloqueados): la próxima vez abre la lista.
+  }
+}
 import { checkUsPlate, checkVin } from '../lib/vin';
 import type { WorkOrder, Customer, Vehicle, UserProfile, PaymentMethod } from '../types/database';
-import { Plus, Search, Eye, Car, Calendar, Trash2, ChevronRight, Wrench } from 'lucide-react';
+import { Plus, Search, Eye, Car, Calendar, Trash2, ChevronRight, Wrench, List, Kanban } from 'lucide-react';
 import { money } from '../lib/money';
 
 export default function WorkOrders() {
@@ -111,6 +139,9 @@ export default function WorkOrders() {
   // (`markCustomerCreated` / `markVehicleCreated`); la orden no.
   const createdOrderRef = useRef<WorkOrder | null>(null);
 
+  // La ruta del comprobante del depósito ya subido, para no subirlo otra vez al reintentar.
+  const receiptPathRef = useRef<string | null>(null);
+
   // Qué quedó guardado antes de que fallara la orden.
   //
   // No hay nada que deshacer: un cliente y un vehículo sin orden son filas válidas por sí
@@ -144,6 +175,31 @@ export default function WorkOrders() {
 
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  // La vista de la URL manda (un enlace, la redirección de /kanban); si no trae, la última usada.
+  const urlView = searchParams.get('vista');
+  const [view, setView] = useState<OrdersView>(() =>
+    urlView === 'tablero' || urlView === 'lista' ? urlView : savedView()
+  );
+  useEffect(() => {
+    if (urlView === 'tablero' || urlView === 'lista') {
+      setView(urlView);
+      saveView(urlView);
+    }
+  }, [urlView]);
+  const changeView = (next: OrdersView) => {
+    setView(next);
+    saveView(next);
+    // El archivo no está en el tablero: con él elegido, el tablero filtraría todo.
+    if (next === 'tablero' && filterStatus === ARCHIVED) setFilterStatus('all');
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        params.set('vista', next);
+        return params;
+      },
+      { replace: true }
+    );
+  };
   // Every field of the create dialog lives in `useWorkOrderForm`; everything
   // about the open order lives in `useWorkOrderDetail`. What is left here is
   // the board itself.
@@ -163,16 +219,13 @@ export default function WorkOrders() {
     entregado: t('workOrders.delivered'),
   };
 
-  const filtered = useMemo(() => {
-    const searchLower = search.toLowerCase();
-    return orders.filter((o) => {
-      const matchSearch =
-        o.numero_orden.toLowerCase().includes(searchLower) ||
-        (o.cliente?.nombre || '').toLowerCase().includes(searchLower);
-      const matchStatus = filterStatus === 'all' || o.estatus === filterStatus;
-      return matchSearch && matchStatus;
-    });
-  }, [orders, search, filterStatus]);
+  const filtered = useMemo(
+    () =>
+      orders.filter(
+        (o) => matchesOrderSearch(o, search) && (filterStatus === 'all' || o.estatus === filterStatus)
+      ),
+    [orders, search, filterStatus]
+  );
 
   // Un técnico solo recibe sus órdenes (la RLS le esconde las de sus compañeros desde
   // 20261007000000), así que su lista ya no se parte en "mis órdenes" y "otras".
@@ -201,6 +254,7 @@ export default function WorkOrders() {
       return;
     }
     createdOrderRef.current = null;
+    receiptPathRef.current = null;
     guardadoAntesDeFallar.current = { cliente: false, vehiculo: false };
     setShowCreateModal(false);
     form.reset();
@@ -283,59 +337,82 @@ export default function WorkOrders() {
         );
       }
 
-      // F4: Los técnicos salen de las tareas (laborItems) asignadas
-      const uniqueTechnicianIds = Array.from(new Set(values.laborItems.map(l => l.asignado_a).filter(Boolean))) as string[];
+      // Los técnicos salen de las tareas (F4). La base ya los mete a la orden al guardar cada
+      // tarea (origen 'tarea') y `create_work_order` no los duplica; mandarlos también aquí es
+      // lo que la app anterior a F3 hacía y no cambia nada.
+      const uniqueTechnicianIds = Array.from(new Set(values.laborItems.map((l) => l.asignado_a).filter(Boolean)));
       const asignaciones = uniqueTechnicianIds.map((id) => {
         const op = operators.find((o) => o.id === id);
         return { usuario_id: id, tipo_tarea: (op?.rol === 'pintor' ? 'pintura' : 'mecanica') as 'mecanica' | 'pintura' };
       });
 
-      let uploadedReceipt: string | null = null;
-      if (isAdmin && parseFloat(values.deposit) > 0 && values.paymentMethod) {
-        if (form.receiptFile && !createdOrderRef.current) {
-          // El número de orden no existe todavía, usamos 'alta'
-          uploadedReceipt = await workOrdersService.uploadReceipt(targetSedeId, 'alta', form.receiptFile);
-        }
+      // El comprobante del depósito sube antes que la orden (la ruta va dentro de la misma
+      // llamada) y se guarda la ruta: un reintento no lo vuelve a subir.
+      const deposito = isAdmin ? parseFloat(values.deposit) || 0 : 0;
+      const conComprobante = deposito > 0 && !!values.paymentMethod && !!form.receiptFile;
+      if (conComprobante && !receiptPathRef.current && !createdOrderRef.current) {
+        receiptPathRef.current = await workOrdersService.uploadReceipt(targetSedeId, 'alta', form.receiptFile as File);
       }
 
-      const order = createdOrderRef.current ?? await workOrdersService.createWorkOrder({
-        sede_id: targetSedeId,
-        cliente_id: customerId,
-        vehiculo_id: vehicleId,
-        tipo_trabajo: values.workType,
-        millas_ingreso: Math.max(0, parseInt(values.milesIn, 10) || 0),
-        nivel_gasolina: values.fuelLevel,
-        // Desde que abrir una orden es solo de admin, estas guardas son redundantes por
-        // arriba. Se quedan porque `create_work_order` también ignora el dinero que le
-        // mande quien no es admin: dos capas diciendo lo mismo, y ninguna que haya que
-        // recordar si algún día la pantalla cambia.
-        deposito_inicial: isAdmin ? parseFloat(values.deposit) || 0 : 0,
-        deposito_metodo: isAdmin && values.paymentMethod ? (values.paymentMethod as PaymentMethod) : null,
-        deposito_cheque: isAdmin && values.paymentMethod === 'cheque' ? values.checkNumber || null : null,
-        deposito_comprobante: uploadedReceipt,
-        inspeccion_360_notas: values.inspectionNotes,
-        fecha_estimada_entrega: values.estimatedDate || daysFromTodayLocal(5),
-        // `Math.max(0, ...)` igual que en los repuestos. La labor era la única
-        // cifra de dinero que aceptaba un negativo, y sobre una orden entregada
-        // un total que baja lo asienta Finanzas como reembolso al cliente.
-        labor_items: (isAdmin ? values.laborItems : []).map((l) => ({
-          descripcion: l.descripcion,
-          costo: Math.max(0, parseFloat(l.costo) || 0),
-          // En una orden de un solo tipo la especialidad la pone la base con el tipo de orden.
-          ...(values.workType === 'combinado' ? { especialidad: l.especialidad } : {}),
-          asignado_a: l.asignado_a || null,
-        })),
-        // No separate cost: a part is billed on at what it cost the shop, and
-        // the database mirrors the price into `costo_unitario` so Finanzas
-        // books the expense and the commission base subtracts it.
-        repuestos: (isAdmin ? values.parts : []).map((p) => ({
-          descripcion: p.descripcion,
-          cantidad: Math.max(1, parseInt(p.cantidad, 10) || 1),
-          precio_venta_unitario: Math.max(0, parseFloat(p.precio_venta_unitario) || 0),
-        })),
-        asignaciones,
-        creado_por: user.id,
-      });
+      const crear = async () => {
+        try {
+          return await workOrdersService.createWorkOrder({
+            sede_id: targetSedeId,
+            cliente_id: customerId,
+            vehiculo_id: vehicleId,
+            tipo_trabajo: values.workType,
+            millas_ingreso: Math.max(0, parseInt(values.milesIn, 10) || 0),
+            nivel_gasolina: values.fuelLevel,
+            // Desde que abrir una orden es solo de admin, estas guardas son redundantes por
+            // arriba. Se quedan porque `create_work_order` también ignora el dinero que le
+            // mande quien no es admin: dos capas diciendo lo mismo, y ninguna que haya que
+            // recordar si algún día la pantalla cambia.
+            deposito_inicial: deposito,
+            deposito_metodo: deposito > 0 && values.paymentMethod ? (values.paymentMethod as PaymentMethod) : null,
+            deposito_cheque: deposito > 0 && values.paymentMethod === 'cheque' ? values.checkNumber.trim() || null : null,
+            deposito_comprobante: conComprobante ? receiptPathRef.current : null,
+            inspeccion_360_notas: values.inspectionNotes,
+            fecha_estimada_entrega: values.estimatedDate || daysFromTodayLocal(5),
+            // `Math.max(0, ...)` igual que en los repuestos. La labor era la única
+            // cifra de dinero que aceptaba un negativo, y sobre una orden entregada
+            // un total que baja lo asienta Finanzas como reembolso al cliente.
+            labor_items: (isAdmin ? values.laborItems : []).map((l) => ({
+              descripcion: l.descripcion,
+              costo: Math.max(0, parseFloat(l.costo) || 0),
+              // El tipo que se eligió en la tarea, también en una orden de un solo tipo: una
+              // tarea de pintura en una orden de mecánica se guardaba como mecánica.
+              especialidad: l.especialidad,
+              asignado_a: l.asignado_a || null,
+              // Como `addLaborItem`: una tarea de la app nunca entra al reparto por especialidad.
+              // Sin técnico no le paga a nadie hasta que se le asigne (decisión del taller,
+              // 03/10/2026). Sin esto, `create_work_order` la dejaba heredada.
+              reparto_heredado: false,
+            })),
+            // No separate cost: a part is billed on at what it cost the shop, and
+            // the database mirrors the price into `costo_unitario` so Finanzas
+            // books the expense and the commission base subtracts it.
+            repuestos: (isAdmin ? values.parts : []).map((p) => ({
+              descripcion: p.descripcion,
+              cantidad: Math.max(1, parseInt(p.cantidad, 10) || 1),
+              precio_venta_unitario: Math.max(0, parseFloat(p.precio_venta_unitario) || 0),
+            })),
+            asignaciones,
+            creado_por: user.id,
+          });
+        } catch (err) {
+          // La base contestó que no (traía código): la orden no existe y el comprobante sobra.
+          // Sin código fue la red, y la orden pudo crearse aunque la respuesta no llegara; ahí el
+          // archivo se queda, porque borrarlo dejaría la orden apuntando a nada.
+          const code = (err as { code?: unknown } | null)?.code;
+          if (receiptPathRef.current && typeof code === 'string' && code !== '') {
+            const path = receiptPathRef.current;
+            receiptPathRef.current = null;
+            void workOrdersService.removeDeliveryReceipt(path).catch(() => {});
+          }
+          throw err;
+        }
+      };
+      const order = createdOrderRef.current ?? await crear();
 
       // De aquí en adelante un fallo no debe volver a crear la orden.
       createdOrderRef.current = order;
@@ -360,6 +437,7 @@ export default function WorkOrders() {
 
       const createdNewRecords = values.customerMode === 'new' || values.vehicleMode === 'new';
       createdOrderRef.current = null;
+      receiptPathRef.current = null;
       guardadoAntesDeFallar.current = { cliente: false, vehiculo: false };
       setShowCreateModal(false);
       form.reset();
@@ -374,6 +452,11 @@ export default function WorkOrders() {
     } finally {
       setSaving(false);
     }
+  }, (errors) => {
+    // "Crear" está en el paso 4 y valida todo: un error de un paso anterior no se vería desde
+    // ahí, así que se abre ese paso.
+    const step = firstStepWithErrors(errors);
+    if (step) form.goToStep(step);
   });
 
   const handleDeleteOrder = async (order: WorkOrder, e: React.MouseEvent) => {
@@ -393,7 +476,16 @@ export default function WorkOrders() {
     const openId = searchParams.get('open');
     if (openId) {
       detail.open(openId, searchParams.get('tab'));
-      setSearchParams({}, { replace: true });
+      // Se quitan solo los de la orden: la vista se queda en la URL.
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          params.delete('open');
+          params.delete('tab');
+          return params;
+        },
+        { replace: true }
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -572,10 +664,29 @@ export default function WorkOrders() {
         <div>
           <h1 className="page-title">{t('workOrders.title')}</h1>
           {/* En el archivo el conteo de la lista activa no significa nada: diría 0 aunque
-              hubiera cincuenta archivadas. Esa sección lleva su propio conteo. */}
-          {filterStatus !== ARCHIVED && (
+              hubiera cincuenta archivadas. Esa sección lleva su propio conteo. El tablero
+              lleva la ocupación. */}
+          {view === 'lista' && filterStatus !== ARCHIVED && (
             <p className="page-subtitle">{filtered.length} {t('common.results')}</p>
           )}
+        </div>
+        <div className="view-switch" role="group" aria-label={t('ordersView.label')}>
+          <button
+            type="button"
+            className={`view-switch-option ${view === 'lista' ? 'active' : ''}`}
+            aria-pressed={view === 'lista'}
+            onClick={() => changeView('lista')}
+          >
+            <List size={16} aria-hidden="true" /> {t('ordersView.list')}
+          </button>
+          <button
+            type="button"
+            className={`view-switch-option ${view === 'tablero' ? 'active' : ''}`}
+            aria-pressed={view === 'tablero'}
+            onClick={() => changeView('tablero')}
+          >
+            <Kanban size={16} aria-hidden="true" /> {t('ordersView.board')}
+          </button>
         </div>
         {/* Abrir una orden es recibir un vehículo y comprometer al taller: es de
             administración. La base lo impone con `ordenes_trabajo_insert`; esconder el
@@ -590,14 +701,17 @@ export default function WorkOrders() {
       {error && <div className="alert-error">{error}</div>}
 
       {/* Findings Alert */}
-      {isAdmin && filterStatus !== ARCHIVED && <FindingsAlert orders={filtered} />}
+      {/* En el tablero no hay filtro de estado: el aviso mira todas las órdenes. */}
+      {isAdmin && filterStatus !== ARCHIVED && <FindingsAlert orders={view === 'tablero' ? orders : filtered} />}
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: 1, maxWidth: 320 }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)' }} />
-          <input className="form-input" placeholder={t('common.search')} value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 36 }} />
+          <input className="form-input" placeholder={t('common.search')} aria-label={t('common.search')} value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 36 }} />
         </div>
+        {/* En el tablero las columnas ya son los estados, y el archivo no va en el tablero. */}
+        {view === 'lista' && (
         <div style={{ display: 'flex', gap: 'var(--space-1)', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 }}>
           {['all', 'recepcion', 'en_proceso', 'espera_autorizacion', 'finalizado', 'entregado', ARCHIVED].map((status) => (
             <button
@@ -610,9 +724,12 @@ export default function WorkOrders() {
             </button>
           ))}
         </div>
+        )}
       </div>
 
-      {filterStatus === ARCHIVED ? (
+      {view === 'tablero' ? (
+        <KanbanBoard embedded search={search} onOpen={detail.open} />
+      ) : filterStatus === ARCHIVED ? (
         <>
           <p className="field-hint" style={{ marginBottom: 'var(--space-3)' }}>{t('workOrders.archivedHint')}</p>
           <ArchivedOrders sedeId={sedeId} isAdmin={isAdmin} onOpen={detail.open} />

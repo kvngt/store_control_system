@@ -11,6 +11,7 @@ import { getErrorMessage } from '../lib/errors';
 import type { OrderStatus, WorkOrder } from '../types/database';
 import DeliveryModal from '../features/workOrders/DeliveryModal';
 import { orderDueState, type DueState } from '../lib/orderDue';
+import { matchesOrderSearch } from '../features/workOrders/orderSearch';
 import { Archive, Calendar, Gauge } from 'lucide-react';
 
 /**
@@ -27,7 +28,19 @@ const COLUMNS: { status: OrderStatus; emoji: string }[] = [
   { status: 'entregado', emoji: '🚗' },
 ];
 
-export default function KanbanBoard() {
+interface KanbanBoardProps {
+  /**
+   * Dentro de la página de órdenes (F7), que ya pone el título, la búsqueda y el botón de
+   * nueva orden: el tablero dibuja solo la ocupación y las columnas.
+   */
+  embedded?: boolean;
+  /** La búsqueda de la página: la misma que filtra la lista. */
+  search?: string;
+  /** Abre la orden en la misma página. Sin esto, el número de la tarjeta es solo texto. */
+  onOpen?: (orderId: string) => void;
+}
+
+export default function KanbanBoard({ embedded = false, search = '', onOpen }: KanbanBoardProps = {}) {
   const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
   const { showToast } = useToast();
@@ -40,6 +53,8 @@ export default function KanbanBoard() {
     queryKey: boardKey,
     queryFn: () => workOrdersService.getWorkOrders(sedeId),
   });
+  // La búsqueda solo esconde tarjetas: la ocupación sigue contando todo el taller.
+  const shown = useMemo(() => (search ? orders.filter((o) => matchesOrderSearch(o, search)) : orders), [orders, search]);
 
   // The card moves the moment it is dropped and snaps back if the server
   // refuses, so a drag on shop wifi feels immediate. React Query holds the
@@ -129,11 +144,11 @@ export default function KanbanBoard() {
     };
     let active = 0;
     for (const order of orders) {
-      grouped[order.estatus]?.push(order);
       if (order.estatus !== 'finalizado' && order.estatus !== 'entregado') active += 1;
     }
+    for (const order of shown) grouped[order.estatus]?.push(order);
     return { ordersByStatus: grouped, totalActive: active };
-  }, [orders]);
+  }, [orders, shown]);
 
   const isAdmin = user?.rol === 'admin';
 
@@ -226,14 +241,20 @@ export default function KanbanBoard() {
     return <div className="loading-state"><div className="spinner" /></div>;
   }
 
+  const occupancyText = `${t('kanban.occupancy')}: ${totalActive}/${capacity} (${occupancy}%)`;
+
   return (
     <div>
-      <div className="page-header">
+      <div className={embedded ? 'kanban-occupancy' : 'page-header'}>
         <div>
-          <h1 className="page-title">{t('kanban.title')}</h1>
-          <p className="page-subtitle">
-            {t('kanban.occupancy')}: {totalActive}/{capacity} ({occupancy}%)
-          </p>
+          {embedded ? (
+            <p className="page-subtitle">{occupancyText}</p>
+          ) : (
+            <>
+              <h1 className="page-title">{t('kanban.title')}</h1>
+              <p className="page-subtitle">{occupancyText}</p>
+            </>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
           <Gauge size={18} style={{ color: occupancy > 80 ? 'var(--color-danger)' : 'var(--color-primary-light)' }} />
@@ -288,7 +309,20 @@ export default function KanbanBoard() {
                       }}
                     >
                       <div className="kanban-card-header">
-                        <span className="kanban-card-order">{order.numero_orden}</span>
+                        {/* El número abre la orden, como en la lista. Un botón y no la tarjeta
+                            entera: la tarjeta se arrastra, y en el teléfono lleva su selector. */}
+                        {onOpen ? (
+                          <button
+                            type="button"
+                            className="link-button kanban-card-order"
+                            onClick={() => onOpen(order.id)}
+                            aria-label={t('kanban.openOrder').replace('{numero}', order.numero_orden)}
+                          >
+                            {order.numero_orden}
+                          </button>
+                        ) : (
+                          <span className="kanban-card-order">{order.numero_orden}</span>
+                        )}
                         {order.esperando_autorizacion && (
                           <span className="badge badge-waiting-auth" style={{ fontSize: '10px' }}>{t('quotes.waitingBadge')}</span>
                         )}

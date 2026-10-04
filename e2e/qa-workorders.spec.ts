@@ -13,6 +13,7 @@
 import { test, expect } from '@playwright/test';
 import {
   login,
+  goToIntakeVehicleStep,
   ADMIN_EMAIL, ADMIN_PASSWORD, hasAdminCredentials,
   MECHANIC_EMAIL, MECHANIC_PASSWORD, hasMechanicCredentials,
 } from './fixtures.js';
@@ -68,6 +69,7 @@ test.describe('WORK-02 | Validación millas negativas', () => {
     await page.goto('/work-orders');
     await page.waitForSelector('#new-order-btn', { timeout: 10000 });
     await page.click('#new-order-btn');
+    test.skip(!(await goToIntakeVehicleStep(page)), 'La sede no tiene clientes');
 
     const milesField = page.locator('#order-miles-in');
     await milesField.pressSequentially('-250');
@@ -81,7 +83,9 @@ test.describe('WORK-02 | Validación millas negativas', () => {
     await page.click('#new-order-btn');
 
     const modal = page.locator('.modal');
+    test.skip(!(await goToIntakeVehicleStep(page)), 'La sede no tiene clientes');
     await modal.locator('#order-miles-in').fill('-250');
+    // En el paso 2 el botón de enviar es "Siguiente": valida el paso antes de avanzar.
     await modal.locator('.modal-footer button[type="submit"]').click();
 
     await expect(modal).toContainText(

@@ -6,7 +6,13 @@
 
 import { describe, it, expect } from 'vitest';
 import * as z from 'zod/mini';
-import { emptyWorkOrderForm, workOrderFormSchema, type WorkOrderFormValues } from './workOrderForm.schema';
+import {
+  emptyWorkOrderForm,
+  firstStepWithErrors,
+  INTAKE_STEPS,
+  workOrderFormSchema,
+  type WorkOrderFormValues,
+} from './workOrderForm.schema';
 
 /** A form with everything the happy path needs, plus whatever the test changes. */
 function form(overrides: Partial<WorkOrderFormValues> = {}): WorkOrderFormValues {
@@ -111,5 +117,30 @@ describe('work order intake schema', () => {
     for (const message of Object.values(found)) {
       expect(message).toMatch(/^workOrders\.validation\./);
     }
+  });
+
+  it('pide método de pago (y número si es cheque) cuando hay depósito', () => {
+    expect(issues(form({ deposit: '100' }))).toEqual({ paymentMethod: 'delivery.methodRequired' });
+    expect(issues(form({ deposit: '100', paymentMethod: 'cheque' }))).toEqual({ checkNumber: 'delivery.checkRequired' });
+    expect(issues(form({ deposit: '100', paymentMethod: 'efectivo' }))).toEqual({});
+  });
+});
+
+// El alta va en cuatro pasos: un campo que no esté en ninguno nunca se validaría al pulsar
+// "Siguiente", y su error al crear no mandaría a ningún paso.
+describe('pasos del alta', () => {
+  it('cada campo del formulario está en un paso, y en uno solo', () => {
+    const fields = INTAKE_STEPS.flatMap((step) => [...step.fields]);
+    expect(new Set(fields).size).toBe(fields.length);
+    expect([...fields].sort()).toEqual(
+      Object.keys(emptyWorkOrderForm()).filter((k) => k !== 'customerMode' && k !== 'vehicleMode').sort()
+    );
+  });
+
+  it('el primer paso con error es el que se muestra', () => {
+    expect(firstStepWithErrors({})).toBeNull();
+    expect(firstStepWithErrors({ laborItems: [{}] })).toBe(4);
+    expect(firstStepWithErrors({ paymentMethod: {}, parts: [] })).toBe(3);
+    expect(firstStepWithErrors({ milesIn: {}, newCustomer: { nombre: {} } })).toBe(1);
   });
 });

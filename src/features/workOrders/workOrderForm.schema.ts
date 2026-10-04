@@ -157,6 +157,24 @@ export const workOrderFormSchema = baseShape.check((ctx) => {
   });
 });
 
+/**
+ * Los cuatro pasos del alta (F4, reunión con el taller del 03/10/2026) y los campos de cada
+ * uno. "Siguiente" valida solo los del paso que se deja; al crear se valida todo, y un error
+ * de un paso anterior manda de vuelta a ese paso, porque en el paso 4 no se vería.
+ */
+export const INTAKE_STEPS = [
+  { key: 'customer', fields: ['selectedCustomer', 'newCustomer'] },
+  { key: 'vehicle', fields: ['selectedVehicle', 'newVehicle', 'fuelLevel', 'milesIn', 'inspectionNotes'] },
+  { key: 'deposit', fields: ['deposit', 'paymentMethod', 'checkNumber'] },
+  { key: 'work', fields: ['workType', 'estimatedDate', 'laborItems', 'parts', 'selectedOperators'] },
+] as const satisfies readonly { key: string; fields: readonly (keyof WorkOrderFormValues)[] }[];
+
+/** El primer paso (1–4) que tiene un error, o `null` si no hay ninguno. */
+export function firstStepWithErrors(errors: Partial<Record<keyof WorkOrderFormValues, unknown>>): number | null {
+  const index = INTAKE_STEPS.findIndex((step) => step.fields.some((field) => errors[field]));
+  return index === -1 ? null : index + 1;
+}
+
 /** A blank intake. */
 export function emptyWorkOrderForm(): WorkOrderFormValues {
   return {

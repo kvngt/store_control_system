@@ -54,6 +54,9 @@ import { useWorkOrderForm } from './useWorkOrderForm';
 
 const mockSubmit = vi.fn();
 
+/** El paso abierto, según la lista de pasos del encabezado. */
+const currentStep = () => document.querySelector('[aria-current="step"]')?.textContent ?? '';
+
 function TestWrapper() {
   const form = useWorkOrderForm();
   return (
@@ -100,13 +103,13 @@ describe('WorkOrderCreateModal - Assistant (Wizard)', () => {
     renderModal();
 
     // Paso 1: Cliente
-    expect(await screen.findByText('Nueva Orden - Paso 1 de 4', { selector: '.modal-title' })).toBeInTheDocument();
+    await waitFor(() => expect(currentStep()).toMatch(/Cliente/));
     const customerSelect = screen.getByRole('combobox');
     await user.selectOptions(customerSelect, CUSTOMER.id);
     await user.click(screen.getByRole('button', { name: /Siguiente/ }));
 
     // Paso 2: Vehículo
-    expect(await screen.findByText('Nueva Orden - Paso 2 de 4', { selector: '.modal-title' })).toBeInTheDocument();
+    await waitFor(() => expect(currentStep()).toMatch(/Vehículo/));
     const vehicleSelect = screen.getAllByRole('combobox')[0];
     await user.selectOptions(vehicleSelect, VEHICLE.id);
     const milesIn = document.getElementById('order-miles-in') as HTMLInputElement;
@@ -114,7 +117,7 @@ describe('WorkOrderCreateModal - Assistant (Wizard)', () => {
     await user.click(screen.getByRole('button', { name: /Siguiente/ }));
 
     // Paso 3: Depósito
-    expect(await screen.findByText('Nueva Orden - Paso 3 de 4', { selector: '.modal-title' })).toBeInTheDocument();
+    await waitFor(() => expect(currentStep()).toMatch(/Depósito/));
     const depositInput = document.getElementById('order-deposit') as HTMLInputElement;
     await user.type(depositInput, '100');
     const paymentMethodSelect = document.getElementById('payment-method') as HTMLSelectElement;
@@ -122,7 +125,7 @@ describe('WorkOrderCreateModal - Assistant (Wizard)', () => {
     await user.click(screen.getByRole('button', { name: /Siguiente/ }));
 
     // Paso 4: Trabajos
-    expect(await screen.findByText('Nueva Orden - Paso 4 de 4', { selector: '.modal-title' })).toBeInTheDocument();
+    await waitFor(() => expect(currentStep()).toMatch(/Trabajos/));
     
     // Fill Labor using TaskEditor
     await user.click(document.getElementById('create-order-open') as HTMLElement);
@@ -145,11 +148,11 @@ describe('WorkOrderCreateModal - Assistant (Wizard)', () => {
     const user = userEvent.setup();
     renderModal();
 
-    expect(await screen.findByText('Nueva Orden - Paso 1 de 4', { selector: '.modal-title' })).toBeInTheDocument();
+    await waitFor(() => expect(currentStep()).toMatch(/Cliente/));
     await user.click(screen.getByRole('button', { name: /Siguiente/ }));
     
     // Should show validation error and stay on Step 1
     expect(await screen.findByText(/Selecciona un cliente/)).toBeInTheDocument();
-    expect(screen.getByText('Nueva Orden - Paso 1 de 4', { selector: '.modal-title' })).toBeInTheDocument();
+    expect(currentStep()).toMatch(/Cliente/);
   });
 });

@@ -23,8 +23,8 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 619 pruebas, 78 archivos (4/10/2026) | ~30 s | Nada |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte y hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 536 aserciones, 22 archivos | ~1 min | Docker |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 649 pruebas, 80 archivos (4/10/2026, noche) | ~30 s | Nada |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención" y los hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 551 aserciones, 23 archivos | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, 77 casos (76 pasan, 1 se salta) | 2–5 min | Credenciales de prueba (**al 1/10/2026 no existen**: se borraron el 29/09) |
 | **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 100 casos con las cuentas de prueba, todos de solo lectura (los que escriben, escriben el valor que ya hay). Los 66 anteriores, 66 PASS · 0 SKIP; los de las migraciones `20261006000000` a `20261010000006` pasan solo con ellas aplicadas (SEC-91 a SEC-105, verificados contra el Supabase local el 4/10/2026) | ~15 s | Nada; con cuentas de prueba cubre más |
 | **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
@@ -76,6 +76,9 @@ declaran `// @vitest-environment jsdom` y renderizan con los proveedores reales
 | Multimedia | `lib/media/uploadQueue`, `lib/media/mime`, `lib/media/videoFrame`, `services/media.service`, `features/media/MediaGallery`, `features/media/VideoRecorderModal`, `features/media/DraftMediaStrip` | Cola: no re-subir tras fallar la fila, no reintentar permisos, reanudar tras recarga solo para el mismo usuario, concurrencia, sin conexión; formatos MP4 primero; galería: miniaturas firmadas, publicar solo admin, borrar solo lo propio, progreso, **video sin miniatura con ícono y no un cargando eterno**; **cuadro negro descartado** como miniatura; el grabador saca la miniatura del archivo grabado y revisa sin autoplay; **el video del borrador se abre y se reproduce** |
 | Órdenes | `pages/WorkOrders.smoke`, `features/workOrders/*` (incluye `workOrderForm.schema`) | Lista (una sola versión según ancho), alta y validación, detalle; **técnico sin totales ni precios**, comisión estimada por especialidad (la calcula la base: mecánica $1,000 × 35 % ÷ 1 = $350), entregar abre el diálogo de pago, alta de técnico sin depósito/labor/repuestos; fotos de recepción comprimidas y su ciclo de memoria; avance solo con nota de voz; **firmar vuelve a leer la orden** (la firma autoriza lo cotizado); la lista para asignar solo trae personal de la sede de la orden; **el técnico ve una sola lista, sin "Otras órdenes" ni catálogos de clientes y vehículos**, y abrir una orden que no es suya lo explica; **la firma solo la toma administración** (`SignatureCard`) |
 | Kanban | `pages/KanbanBoard` | Mover tarjetas; **entregar abre el diálogo de cobro** y pasa por `entregar_orden`, nunca por un cambio de estatus suelto |
+| Lista y tablero (F7) | `pages/WorkOrders.smoke` ("lista y tablero"), `components/layout/BottomNav` | Órdenes tiene dos vistas: cambiar al tablero, **recordarlo** al volver, `?vista=tablero`, la búsqueda filtra también el tablero, el número de la tarjeta abre la orden; la barra inferior ya no tiene pestaña de tablero |
+| Panel (F7) | `features/dashboard/AttentionCard`, `features/dashboard/MyTasksCard`, `services/dashboard.service`, `services/workOrders.service` (`getMyTasks`) | "Requiere atención": solo los grupos con algo, tres órdenes y "+n más", cada una abre su pestaña, los correos llevan a Configuración, "todo al día", **si la RPC aún no existe no se muestra**; "Mis tareas": primero lo autorizado y la orden que vence antes, las hechas solo se cuentan, abre la orden en Tareas; la consulta filtra por técnico, estado y orden sin entregar |
+| Alta en cuatro pasos (F4) | `pages/WorkOrders.smoke` ("intake validation", "el alta en cuatro pasos"), `features/workOrders/WorkOrderCreateModal`, `features/workOrders/workOrderForm.schema`, `services/workOrders.service` (`createWorkOrder`) | "Siguiente" valida solo su paso y dice qué falta en el campo; **Enter avanza de paso, no crea la orden**; un doble clic no cae en "Crear"; volver a un paso visto sin perder lo escrito; **cada tarea va con su tipo, su técnico y `reparto_heredado: false`**; una tarea escrita sin agregar frena "Crear"; depósito con método obligatorio, cheque y comprobante; **el servicio manda `deposito_numero_cheque` y `deposito_comprobante_ruta`** (los nombres que lee la base); el comprobante se borra si la base rechaza la orden y se reutiliza si se cayó la red; cada campo del formulario está en un paso |
 | Comisión por especialidad | `features/workOrders/CommissionEstimateCard`, `features/workOrders/LaborTable` | El técnico ve su bolsa, su porcentaje y el total que da la base; a salario, que no genera; administración ve el reparto y el aviso de una bolsa sin nadie. En una orden combinada cada línea lleva especialidad y se manda al agregar y al editar; en las demás no se pide |
 | Comisión por tarea (F3) | `features/workOrders/TaskEditor`, `features/workOrders/LaborTable`, `features/workOrders/CommissionEstimateCard`, `features/workOrders/DeliveryModal`, `services/workOrders.service`, `pages/WorkOrders.smoke` ("tareas con técnico"), `features/workOrders/historyFormat`, `styles/laborMobile` | Agregar trabajo con tipo, precio y técnico (el tipo nace del de la orden, el técnico de la primera tarea; **el foco vuelve a Descripción**); preguntar antes de un cruce de oficio, **también al cambiar el tipo de una fila con técnico**; "Sin técnico" y el aviso en Resumen; **el servicio manda `reparto_heredado: false` al crear y al dar técnico** (y solo el técnico al quitarlo); candado y **Borrar deshabilitado** con la comisión pagada; una línea heredada no se ofrece a una bolsa pagada; el diálogo de entrega lee las tareas sin técnico de la base (sale también desde el Kanban); la tarjeta de técnicos distingue "Por tarea" de "En el reparto" y los mete o saca del reparto; **abrir otra orden en el teléfono empieza el editor de cero**; en el teléfono tipo y técnico bajan a su renglón (CSS) |
 | Empleados | `pages/Employees.pay`, `pages/Employees.users` | Pago de cada quien (el % de la sede, uno propio o salario); guardar un porcentaje; fuera de 0–100 se rechaza en el diálogo; pasar a salario con pendientes avisa con el monto. El alta y la edición del personal (antes en Configuración) |
@@ -343,6 +346,39 @@ inyectado en la fórmula, o una comisión reescrita antes de la red, aborta y se
 Las pruebas 01 y 02 firman la recepción antes de entregar: desde la fase 5, sin
 autorización no hay nada que cobrar ni comisión que generar.
 
+**`supabase/tests/database/20_alta_con_deposito.test.sql`** (25)
+
+- El movimiento "Depósito inicial" lleva el método, el número de cheque y el comprobante que
+  manda el alta (`deposito_metodo`, `deposito_numero_cheque`, `deposito_comprobante_ruta` en
+  `p_order`); cheque y comprobante opcionales; un número de cheque en otro método se descarta.
+- Método inválido, comprobante sin método o en la carpeta de otra sede: rechazados.
+- La configuración de la transacción no se queda puesta; un ajuste posterior queda sin método.
+- Las líneas con técnico nacen fuera del reparto y meten al técnico con origen `tarea`, una
+  vez; el técnico tiene que ser de la sede; la llamada de la app anterior da lo mismo que antes.
+
+**`supabase/tests/database/21_tareas_del_tecnico.test.sql`** (3)
+
+- Un avance se puede ligar a una tarea de su orden, no a la de otra (`trg_avance_labor_match`).
+
+**`supabase/tests/database/22_hallazgos.test.sql`** (44)
+
+- Trabajo adicional reportado (F6): quién reporta, la pausa, el avance interno, el aviso único,
+  cotizar y descartar solo admin, el presupuesto, la salida de la espera, el correo y el portal.
+  Detalle en [hallazgos.md](hallazgos.md#5-pruebas).
+
+**`supabase/tests/database/23_requiere_atencion.test.sql`** (15)
+
+- `requiere_atencion` (F7): anon no la llama; un técnico recibe 42501.
+- Cuenta los hallazgos sin decidir (pendientes y cotizados sin presupuesto), los presupuestos
+  enviados, las tareas nuevas sin técnico (no las heredadas) y las órdenes vencidas con la
+  fecha local que recibe (no las finalizadas); nada de una orden entregada.
+- Correos: uno por clave, sin los que ya tienen otro pendiente, los de más de 72 h, los push ni
+  los de otra sede (como los reintentaría `reintentar_correos_fallidos`).
+- Filtra por sede, o todas sin sede; los grupos vacíos llegan en cero con la misma forma.
+
+> **Estado (4 de octubre de 2026, madrugada del 5):** 551 aserciones en verde en los 23 archivos,
+> localmente (F7: `23_requiere_atencion.test.sql`, 15 aserciones).
+>
 > **Estado (4 de octubre de 2026, noche):** 536 aserciones en verde en los 22 archivos, localmente
 > (F6: `22_hallazgos.test.sql`, 44 aserciones).
 >

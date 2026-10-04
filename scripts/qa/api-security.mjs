@@ -328,6 +328,10 @@ const CASES = [
   tech({ id: 'SEC-110', desc: 'Un técnico no escribe orden_hallazgos', needs: ['ORDEN', 'TECH_ID'], method: 'POST', path: () => '/rest/v1/orden_hallazgos', body: (c) => ({ orden_id: c.ORDEN, sede_id: ZERO_UUID, reportado_por: c.TECH_ID, descripcion: 'PRUEBA qa:security' }), expect: 'denied' }),
   admin({ id: 'SEC-111', desc: 'Ni un admin llama _salir_de_espera como RPC', method: 'POST', path: () => rpc('_salir_de_espera'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
   admin({ id: 'SEC-112', desc: 'Ni un admin llama el guardia del avance de un hallazgo como RPC', method: 'POST', path: () => rpc('trg_avance_hallazgo_interno'), body: {}, expect: 'denied' }),
+
+  // ── F7: "Requiere atención" del panel (20261010000012) ──
+  anon({ id: 'SEC-113', desc: 'Sin sesión no se pide lo que requiere atención', method: 'POST', path: () => rpc('requiere_atencion'), body: { p_sede_id: null, p_hoy: null }, expect: 'denied' }),
+  tech({ id: 'SEC-114', desc: 'Un técnico no ve lo que requiere atención de la oficina', method: 'POST', path: () => rpc('requiere_atencion'), body: { p_sede_id: null, p_hoy: null }, expect: 'denied' }),
 ];
 
 function evaluate(expect, r) {

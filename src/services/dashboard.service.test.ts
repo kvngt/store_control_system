@@ -69,3 +69,24 @@ describe('monthLabel', () => {
     expect(monthLabel('2026-09-01')).toBe(new Date(2026, 8, 1).toLocaleDateString('es', { month: 'short' }));
   });
 });
+
+// "Requiere atención" (F7): lo cuenta la base con la fecha local de quien mira, para que de
+// noche no cuente vencida una orden de hoy.
+describe('dashboardService.getAttention', () => {
+  it('pide requiere_atencion con la sede y el día del navegador', async () => {
+    const summary = { hallazgos: { total: 1, ordenes: [] }, correos: { total: 0 } };
+    mocks.rpc.mockResolvedValue({ data: summary, error: null });
+
+    await expect(dashboardService.getAttention('sede-1')).resolves.toBe(summary);
+    const [name, params] = mocks.rpc.mock.calls[0];
+    expect(name).toBe('requiere_atencion');
+    expect(params.p_sede_id).toBe('sede-1');
+    expect(params.p_hoy).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('un error de la base llega a la pantalla', async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: { code: '42501', message: 'Solo administración' } });
+    await expect(dashboardService.getAttention(undefined)).rejects.toMatchObject({ code: '42501' });
+    expect(mocks.rpc.mock.calls[0][1].p_sede_id).toBeNull();
+  });
+});

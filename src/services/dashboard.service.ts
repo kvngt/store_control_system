@@ -1,6 +1,6 @@
 // Aggregated KPIs for the dashboard and the finance summary cards.
 import { supabase } from '../lib/supabase';
-import type { DashboardStats, OrderStatus } from '../types/database';
+import type { AttentionSummary, DashboardStats, OrderStatus } from '../types/database';
 import { todayLocal } from '../lib/dates';
 
 /** Capacidad que se asume cuando una sede no tiene una configurada. */
@@ -67,5 +67,19 @@ export const dashboardService = {
         egresos: Number(m.egresos),
       })),
     };
+  },
+
+  /**
+   * Lo que espera una decisión de la oficina (`requiere_atencion`, 20261010000012): hallazgos,
+   * presupuestos sin respuesta, tareas sin técnico, órdenes vencidas y correos con error.
+   * Lo cuenta la base; la lista de órdenes del navegador no trae el histórico. Solo admin.
+   */
+  getAttention: async (sedeId?: string): Promise<AttentionSummary> => {
+    const { data, error } = await supabase.rpc('requiere_atencion', {
+      p_sede_id: sedeId ?? null,
+      p_hoy: todayLocal(),
+    });
+    if (error) throw error;
+    return data as AttentionSummary;
   },
 };

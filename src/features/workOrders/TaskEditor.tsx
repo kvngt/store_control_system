@@ -25,6 +25,11 @@ interface TaskEditorProps {
    * cada pedido, para precargar otra vez aunque el texto sea el mismo.
    */
   prefill?: { text: string; nonce: number } | null;
+  /**
+   * Avisa si hay una tarea escrita que todavía no se agregó. En el alta, "Crear" la perdería
+   * sin decir nada y la orden saldría sin esa mano de obra.
+   */
+  onPendingChange?: (pending: boolean) => void;
 }
 
 interface Draft {
@@ -46,7 +51,7 @@ interface Draft {
  * Si el tipo no es del oficio del técnico (pintura a un mecánico), pregunta antes de guardar:
  * la comisión de la tarea va a esa persona.
  */
-export default function TaskEditor({ workType, technicians, defaultTechnicianId, busy = false, onAdd, idPrefix = 'task-editor', prefill }: TaskEditorProps) {
+export default function TaskEditor({ workType, technicians, defaultTechnicianId, busy = false, onAdd, idPrefix = 'task-editor', prefill, onPendingChange }: TaskEditorProps) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(!!prefill);
   // En un "combinado" el tipo que se usó la última vez: casi siempre se agregan seguidas varias
@@ -71,6 +76,13 @@ export default function TaskEditor({ workType, technicians, defaultTechnicianId,
       setDraft((d) => ({ ...d, descripcion: prefill.text }));
     }
   }, [prefill]);
+
+  const pending = open && (draft.descripcion.trim() !== '' || draft.costo.trim() !== '');
+  useEffect(() => {
+    onPendingChange?.(pending);
+    // Al desmontarse (el alta pasa a otro paso) ya no queda nada escrito.
+    return () => onPendingChange?.(false);
+  }, [pending, onPendingChange]);
 
   useEffect(() => {
     if (!disabled && refocus.current) {

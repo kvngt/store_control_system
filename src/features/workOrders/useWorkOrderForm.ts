@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import { useIntakePhotos } from './useIntakePhotos';
-import { emptyWorkOrderForm, workOrderFormSchema, type WorkOrderFormValues } from './workOrderForm.schema';
+import { emptyWorkOrderForm, INTAKE_STEPS, workOrderFormSchema, type WorkOrderFormValues } from './workOrderForm.schema';
 
 export type { WorkOrderFormValues } from './workOrderForm.schema';
 
@@ -36,6 +36,9 @@ export function useWorkOrderForm() {
   const parts = useFieldArray({ control: form.control, name: 'parts' });
 
   const [step, setStep] = useState(1);
+  // El paso más lejano al que se llegó con "Siguiente": hasta ahí se puede saltar sin validar.
+  const [furthestStep, setFurthestStep] = useState(1);
+  // La foto del comprobante del depósito. Fuera de RHF, como las fotos de la inspección.
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
   const customerMode = form.watch('customerMode');
@@ -56,7 +59,11 @@ export function useWorkOrderForm() {
         form.setValue('selectedCustomer', '');
         form.setValue('selectedVehicle', '');
       } else {
-        form.setValue('selectedCustomer', value, { shouldDirty: true });
+        // Si "Siguiente" ya marcó el campo, elegir apaga el aviso en el momento.
+        form.setValue('selectedCustomer', value, {
+          shouldDirty: true,
+          shouldValidate: form.getFieldState('selectedCustomer').invalid,
+        });
         // A vehicle belongs to one customer; keeping it selected would attach
         // the order to a unit the new customer does not own.
         form.setValue('selectedVehicle', '');
@@ -71,7 +78,10 @@ export function useWorkOrderForm() {
         form.setValue('vehicleMode', 'new');
         form.setValue('selectedVehicle', '');
       } else {
-        form.setValue('selectedVehicle', value, { shouldDirty: true });
+        form.setValue('selectedVehicle', value, {
+          shouldDirty: true,
+          shouldValidate: form.getFieldState('selectedVehicle').invalid,
+        });
       }
     },
     [form]
@@ -127,26 +137,29 @@ export function useWorkOrderForm() {
     form.reset(emptyWorkOrderForm());
     photos.reset();
     setStep(1);
+    setFurthestStep(1);
     setReceiptFile(null);
   }, [form, photos]);
 
+  // "Siguiente" valida solo lo del paso que se deja. El esquema ya ignora la rama que no se
+  // usa (cliente existente o nuevo), así que se pasan los dos lados del paso tal cual.
   const nextStep = useCallback(async () => {
-    let fieldsToValidate: string[] = [];
-    if (step === 1) {
-      if (customerMode === 'existing') fieldsToValidate = ['selectedCustomer'];
-      else fieldsToValidate = ['newCustomer.nombre', 'newCustomer.telefono', 'newCustomer.email', 'newCustomer.direccion'];
-    } else if (step === 2) {
-      if (vehicleMode === 'existing') fieldsToValidate = ['selectedVehicle', 'fuelLevel', 'milesIn', 'inspectionNotes'];
-      else fieldsToValidate = ['newVehicle.marca', 'newVehicle.modelo', 'newVehicle.vin', 'newVehicle.placa', 'newVehicle.placa_estado', 'newVehicle.color', 'fuelLevel', 'milesIn', 'inspectionNotes'];
-    } else if (step === 3) {
-      fieldsToValidate = ['deposit', 'paymentMethod', 'checkNumber'];
+    const current = INTAKE_STEPS[step - 1];
+    if (!current || step >= INTAKE_STEPS.length) return;
+    const valid = await form.trigger([...current.fields]);
+    if (valid) {
+      setStep(step + 1);
+      setFurthestStep((f) => Math.max(f, step + 1));
     }
-
-    const isValid = await form.trigger(fieldsToValidate as any);
-    if (isValid) setStep((s) => Math.min(s + 1, 4));
-  }, [form, step, customerMode, vehicleMode]);
+  }, [form, step]);
 
   const prevStep = useCallback(() => setStep((s) => Math.max(s - 1, 1)), []);
+
+  /** Volver a un paso ya visto (la lista de pasos, o un error al crear). Nunca a uno sin validar. */
+  const goToStep = useCallback(
+    (target: number) => setStep(Math.min(Math.max(target, 1), furthestStep)),
+    [furthestStep]
+  );
 
   // RHF's own `isDirty` covers the fields; the photos, videos and voice notes are state it never sees.
   const isDirty = form.formState.isDirty || photos.hasMedia;
@@ -165,11 +178,13 @@ export function useWorkOrderForm() {
     errors: form.formState.errors,
     isDirty,
     step,
+    furthestStep,
     receiptFile,
     setReceiptFile,
     // actions
     nextStep,
     prevStep,
+    goToStep,
     selectCustomer,
     selectVehicle,
     backToExistingCustomer,

@@ -23,7 +23,6 @@ import Dashboard from './pages/Dashboard';
 const Customers = lazy(() => import('./pages/Customers'));
 const Vehicles = lazy(() => import('./pages/Vehicles'));
 const WorkOrders = lazy(() => import('./pages/WorkOrders'));
-const KanbanBoard = lazy(() => import('./pages/KanbanBoard'));
 const Finance = lazy(() => import('./pages/Finance'));
 const Payroll = lazy(() => import('./pages/Payroll'));
 const Employees = lazy(() => import('./pages/Employees'));
@@ -103,7 +102,8 @@ function AppRoutes() {
           }
         />
         <Route path="/work-orders" element={<WorkOrders />} />
-        <Route path="/kanban" element={<KanbanBoard />} />
+        {/* El tablero es una vista de Órdenes desde F7: los enlaces y marcadores viejos llegan ahí. */}
+        <Route path="/kanban" element={<Navigate to="/work-orders?vista=tablero" replace />} />
         <Route
           path="/finance"
           element={

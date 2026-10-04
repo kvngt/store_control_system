@@ -58,7 +58,13 @@ export type {
   Specialty,
 } from './domain/payroll.types';
 export { SPECIALTIES } from './domain/payroll.types';
-export type { DashboardStats } from './domain/dashboard.types';
+export type {
+  AttentionGroup,
+  AttentionOrder,
+  AttentionSummary,
+  DashboardStats,
+  MyTask,
+} from './domain/dashboard.types';
 
 export type { MediaKind, MediaOrigin, OrderMedia, PreparedMedia } from './domain/media.types';
 export type { AppNotification } from './domain/notification.types';

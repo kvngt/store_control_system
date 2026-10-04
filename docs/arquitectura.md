@@ -112,7 +112,7 @@ src/
     Dashboard.tsx                panel principal
     Customers.tsx, Vehicles.tsx  clientes y vehículos (VIN, placa); solo administración
     WorkOrders.tsx               lista de órdenes + alta (delegada a features/)
-    KanbanBoard.tsx              tablero por estado
+    KanbanBoard.tsx              tablero por estado (desde F7, vista de WorkOrders)
     Finance.tsx                  movimientos, margen por orden e importación bancaria
       finance/ImportStatementModal.tsx
     Payroll.tsx                  comisiones y pagos (ruta /payroll)
@@ -125,6 +125,7 @@ src/
                                  entrega (DeliveryModal), enlace del cliente
                                  (CustomerLinkCard), presupuesto (QuoteCard) e insignia de
                                  estado de línea
+    dashboard/                   tarjetas del panel: Requiere atención (admin) y Mis tareas (técnico)
     media/                       captura, grabadores, galería, visor, cola de subida, bandeja
     notifications/               campana, push del dispositivo
     vehicles/                    formulario de vehículo con VIN

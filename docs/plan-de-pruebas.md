@@ -198,7 +198,7 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | ID | P | Ejecuta | Pasos → Esperado |
 |---|---|---|---|
 | ACC-01 | P0 | IA | Entrar con una contraseña incorrecta → "Correo o contraseña incorrectos…", sigue en el login. |
-| ACC-02 | P0 | IA | **A** entra → el menú tiene Panel Principal, Clientes, Vehículos, Órdenes de Trabajo, Tablero Kanban, Finanzas, Comisiones y Configuración. |
+| ACC-02 | P0 | IA | **A** entra → el menú tiene, en el grupo **Taller**, Panel Principal, Clientes, Vehículos y Órdenes de Trabajo; en **Finanzas**, Finanzas, Comisiones y Empleados; en **Sistema**, Configuración. Sin "Tablero Kanban" (es una vista de Órdenes desde F7). En inglés los grupos dicen Workshop, Finance y System. |
 | ACC-03 | P0 | IA | **M** entra → no ve Finanzas ni Comisiones; escribir `/finance` o `/payroll` en la URL lo regresa al panel. |
 | ACC-04 | P1 | H | "¿Olvidaste tu contraseña?" → llega el correo; el enlace abre `restorifyauto.net/reset-password` (no `localhost`); la contraseña nueva funciona. |
 | ACC-05 | P1 | IA | Recargar la página → sigue con sesión en la misma pantalla. |
@@ -237,9 +237,9 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 
 | ID | P | Ejecuta | Pasos → Esperado |
 |---|---|---|---|
-| ORD-01 | P0 | IA | **A** crea una orden con cliente y vehículo nuevos, 6 fotos de recepción, depósito $200, mano de obra $1,000, repuesto 2 × $100 y dos técnicos (**M** y **P**) → se crea sin esperar a las fotos; la bandeja muestra el progreso; se abre el detalle. |
+| ORD-01 | P0 | IA | **A** crea una orden con cliente y vehículo nuevos (paso 1 y 2), 6 fotos de recepción (paso 2), depósito $200 en efectivo (paso 3), y en el paso 4 una tarea de mano de obra $1,000 para **M**, otra para **P** y un repuesto 2 × $100 → se crea sin esperar a las fotos; la bandeja muestra el progreso; se abre el detalle con **M** y **P** en la orden, cada uno con su tarea. |
 | ORD-02 | P1 | IA | El número es el siguiente consecutivo `ORD-AAAA-###`. |
-| ORD-03 | P2 | IA | Mientras una foto se comprime, el botón dice "Procesando…" y no deja crear. |
+| ORD-03 | P2 | IA | Mientras una foto se comprime, el botón **Siguiente** del paso 2 dice "Procesando…" y no deja seguir. |
 | ORD-04 | P1 | IA | Millas negativas → rechazado (el campo no acepta el signo menos). |
 | ORD-05 | P0 | IA | **M** no ve el botón **Nueva orden**; **A** sí. Un POST directo a `/rest/v1/ordenes_trabajo` con la sesión de **M** responde 42501 (lo cubre `qa:security` SEC-55). |
 | ORD-06 | P0 | IA | **M** en el detalle de una orden asignada → no ve tarjeta de totales, depósito ni repuestos con precio; ve "Descripción de repuestos" sin ningún `$`; ve la mano de obra sin botones con "la cotiza administración"; ve **Tu comisión estimada** con la cuenta (mano de obra × % ÷ técnicos); no ve **Descargar PDF** ni **Enviar reporte**; el selector de estado no ofrece "Entregado". |
@@ -251,12 +251,28 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | ORD-19 | P0 | IA | Orden con depósito $800 y mano de obra $500 autorizada → el diálogo dice **Hay que devolver al cliente $300.00**; entregar con efectivo → egreso "Devolución al cliente" $300 en Finanzas con método. Sacarla de Entregado → ingreso "Reversión de devolución" $300: lo cobrado vuelve a $800. |
 | ORD-20 | P1 | IA | Orden con un presupuesto **esperando** al cliente → el diálogo muestra el error "La orden tiene un presupuesto esperando respuesta…", la orden no se entrega y en Finanzas no quedó ningún "Pago final". |
 | ORD-10 | P1 | IA | **A** reabre una orden finalizada → se borra la fecha de finalización. |
-| ORD-11 | P1 | IA | Kanban: en computadora, arrastrar entre columnas; en teléfono, "Mover a" (cancelar el diálogo de entrega deja el selector como estaba). **M** solo ve sus tarjetas, y en ellas no hay "Entregado". |
+| ORD-11 | P1 | IA | **Órdenes → Tablero**: en computadora, arrastrar entre columnas; en teléfono, "Mover a" (cancelar el diálogo de entrega deja el selector como estaba). **M** solo ve sus tarjetas, y en ellas no hay "Entregado". |
 | ORD-12 | P0 | IA | **A** crea una orden con mano de obra $1,000 **sin firmar** → la línea dice **Sin autorizar** y el total es $0. Firmar → **sin recargar**, la insignia desaparece, el total pasa a $1,000 y la tarjeta Presupuesto muestra "con la firma de recepción". *(AUD-06)* |
 | ORD-13 | P2 | IA | Crear una orden sin fecha estimada de entrega → la fecha es hoy + 5 días en la hora local, también si se crea después de las 7 p. m. *(AUD-13)* |
 | ORD-15 | P1 | IA | Teléfono, **A**, Kanban: en una orden **Entregada**, **Mover a → Archivar** → confirma → la tarjeta sale del tablero y la orden aparece en **Órdenes → Archivadas** con la insignia "Archivada". Abrirla → **Devolver al tablero** → vuelve. En computadora, el botón **Archivar** de la tarjeta hace lo mismo. |
 | ORD-16 | P1 | IA | Una orden que no está entregada no ofrece **Archivar**. **M** no ve la opción en ninguna. Por la API, archivar una no entregada responde 23514 y un técnico no archiva (SEC-38). Sacar de Entregado una orden archivada la devuelve sola al tablero. |
 | ORD-14 | P1 | IA | **A** con la **Sede B** elegida abre una orden de la **Sede A** (desde un aviso o `/work-orders?open=<id>`) → **Descargar PDF** trae logo, nombre y dirección de la Sede A; el mensaje de **Enviar reporte → WhatsApp** nombra la Sede A; la lista para asignar técnicos solo muestra personal de la Sede A. *(AUD-08)* |
+
+### 4.4b Alta en cuatro pasos y navegación (ALT, NAV; F4 y F7)
+
+El alta va en cuatro pasos desde F4 y Órdenes tiene dos vistas desde F7 (migración
+`20261010000012`, `requiere_atencion`). Probar en computadora y en un teléfono.
+
+| ID | P | Ejecuta | Pasos → Esperado |
+|---|---|---|---|
+| ALT-01 | P0 | IA | **A** → **Nueva orden** → **Siguiente** sin cliente → "Selecciona un cliente" en el campo y sigue en el paso 1; elegir uno borra el aviso. En el paso 2, Enter en **Millas** pasa a **Depósito** sin crear nada. Los pasos ya vistos se abren tocando su nombre, con lo escrito intacto. |
+| ALT-02 | P0 | IA | Paso 3: depósito $200 sin método → "Elige cómo pagó el cliente." Con **Cheque**, número 1042 y foto → crear → en **Finanzas**, el "Depósito inicial" de la orden dice Cheque, **N.º 1042**, y el comprobante abre. *(Hasta el 4/10/2026 el número y el comprobante del alta se perdían.)* |
+| ALT-03 | P0 | IA | Paso 4, orden de **Mecánica**: **Agregar trabajo** de tipo **Pintura** para **P** y otro sin técnico → crear → en Trabajos la primera fila dice Pintura y **P**; la segunda, "Sin técnico", y Resumen avisa "1 tarea(s) sin técnico". |
+| ALT-04 | P1 | IA | Paso 4: escribir una descripción en **Agregar trabajo** sin tocar **Agregar** y tocar **Crear** → aviso "Hay un trabajo escrito sin agregar…"; no se crea la orden hasta agregarla o cancelarla. |
+| NAV-01 | P1 | IA | **Órdenes → Tablero** → salir al Panel y volver a Órdenes → abre el tablero. `/kanban` lleva al tablero. Escribir en el buscador filtra las tarjetas (la ocupación no cambia); el número de una tarjeta abre la orden. **Lista** vuelve a la lista. |
+| NAV-02 | P0 | IA | Panel de **A** con un hallazgo pendiente, un presupuesto enviado, una tarea sin técnico, una orden vencida y un correo con error → **Requiere atención** muestra los cinco con su número; cada orden abre su pestaña (hallazgo → Resumen, presupuesto y tarea → Trabajos); **Revisar** de correos → Configuración. Al asignar la tarea desde otra pestaña, el número baja sin recargar. Sin pendientes: "Todo al día". |
+| NAV-03 | P0 | IA | Panel de **M**: **Mis tareas** lista sus tareas sin hacer de todas sus órdenes sin entregar (primero las autorizadas; las demás con "Esperando autorización"), nunca las de **P**. Tocar una abre la orden en **Tareas**; marcarla **Realizado** → al volver al panel ya no está y cuenta como hecha. |
+| NAV-04 | P1 | IA | Teléfono: la barra inferior de **M** tiene Panel y Órdenes; la de **A**, además Clientes y Vehículos. Ninguna tiene "Tablero". El selector **Lista \| Tablero** cabe sin scroll horizontal. |
 
 ### 4.5 Dinero automático (DIN)
 
@@ -459,7 +475,7 @@ asignado. Probar en un teléfono real (las fotos del reporte suben por la cola).
 | HAL-04 | P0 | IA | **A** → **Cotizar al cliente** → abre Trabajos con "Nuevo trabajo" precargado; agregar precio y técnico → **Enviar presupuesto** → el cliente autoriza en el portal → la orden vuelve sola a **En proceso** y el cliente no recibe otro correo de "en proceso". |
 | HAL-05 | P0 | IA | Otro reporte de **M** → **A** → **Descartar…**, marcar "Mostrarlo en el reporte del cliente", reescribir el texto → la orden vuelve a **En proceso**; el portal y el PDF muestran "Observaciones del taller" con el texto de **A**, nunca el de **M**. |
 | HAL-06 | P1 | IA | Descartar sin marcar el reporte → no aparece en el portal. Con un hallazgo pendiente y un presupuesto enviado, cancelar el presupuesto → la orden **sigue** en espera hasta resolver el hallazgo. |
-| HAL-07 | P1 | IA | La lista de órdenes y el panel de **A** muestran "Trabajo adicional por revisar" con **Revisar**, que abre la orden en Resumen. |
+| HAL-07 | P1 | IA | La lista de órdenes de **A** muestra "Trabajo adicional por revisar" con **Revisar**, que abre la orden en Resumen. En el panel sale en **Requiere atención** (NAV-02), con el número de la orden que la abre en Resumen. |
 
 ### 4.15 Reporte (REP)
 
@@ -624,6 +640,8 @@ Según lo que toca el cambio:
 | Portal, correos o `datos_portal` | POR, REP y SEC-01 a SEC-26 |
 | Líneas, totales o presupuestos | DIN, PRE y SEC-40, SEC-60 |
 | La espera de autorización o los hallazgos | HAL, PRE-04 a PRE-14 y SEC-106 a SEC-112 |
+| El alta de la orden | ALT, ORD-01 a ORD-04 y DIN-01 |
+| El panel, el menú o la vista de Órdenes | NAV, ACC-02, ORD-08, ORD-11 y SEC-113, SEC-114 |
 | La firma | ORD-07, ORD-12, PRE-02, PRE-15, POR-07 |
 | Sesión o sedes | ACC, SES, SED |
 | Estilos | MOV en un teléfono real |

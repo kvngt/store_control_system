@@ -49,6 +49,10 @@ export const queryKeys = {
    * are genuinely different results.
    */
   dashboardStats: (sedeId?: string, capacity?: number) => ['dashboard-stats', sedeId, capacity] as const,
+  /** "Requiere atención" del panel de administración (`requiere_atencion`). */
+  attention: (sedeId?: string) => ['attention', sedeId] as const,
+  /** "Mis tareas" del panel del técnico: sus tareas en todas sus órdenes abiertas. */
+  myTasks: (userId?: string) => ['my-tasks', userId] as const,
 } as const;
 
 /**

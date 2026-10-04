@@ -36,3 +36,20 @@ export async function waitForDashboard(page: Page) {
   await page.waitForSelector('.spinner', { state: 'detached', timeout: 15000 }).catch(() => {});
   await page.waitForSelector('.page-title, .dashboard-title, h1', { timeout: 10000 });
 }
+
+/**
+ * El alta de la orden va en cuatro pasos desde F4 (octubre 2026): las millas y la inspección
+ * están en el paso 2. Elige el primer cliente que haya y pasa con "Siguiente". No crea nada.
+ * Devuelve `false` si la sede no tiene clientes (la prueba se salta).
+ */
+export async function goToIntakeVehicleStep(page: Page): Promise<boolean> {
+  const customer = page.locator('#intake-customer');
+  await customer.waitFor({ timeout: 10000 });
+  // Las dos primeras opciones son "Seleccionar" y "+ Nuevo cliente".
+  const first = customer.locator('option').nth(2);
+  if ((await first.count()) === 0) return false;
+  await customer.selectOption((await first.getAttribute('value')) ?? '');
+  await page.locator('.modal-footer button[type="submit"]').click();
+  await page.locator('#order-miles-in').waitFor({ timeout: 10000 });
+  return true;
+}

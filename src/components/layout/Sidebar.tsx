@@ -8,7 +8,6 @@ import {
   Users,
   Car,
   ClipboardList,
-  Kanban,
   DollarSign,
   CreditCard,
   Settings,
@@ -62,8 +61,9 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
           { to: '/vehicles', icon: Car, label: t('nav.vehicles') },
         ]
       : []),
+    // Lista y tablero son dos vistas de la misma página (F7): una sola entrada, que abre la
+    // vista que cada quien usó la última vez.
     { to: '/work-orders', icon: ClipboardList, label: t('nav.workOrders') },
-    { to: '/kanban', icon: Kanban, label: t('nav.kanban') },
   ];
 
   const financeLinks = isAdmin
@@ -143,7 +143,8 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
         )}
 
         <nav className="sidebar-nav">
-          <div className="sidebar-section-label">MENU</div>
+          {/* Las mayúsculas las pone el CSS: el texto va como se lee en cada idioma. */}
+          <div className="sidebar-section-label">{t('nav.sectionWorkshop')}</div>
           {mainLinks.map((link) => (
             <NavLink
               key={link.to}
@@ -162,7 +163,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
           {financeLinks.length > 0 && (
             <>
               <div className="sidebar-section-label" style={{ marginTop: 'var(--space-2)' }}>
-                {t('nav.finance').toUpperCase()}
+                {t('nav.finance')}
               </div>
               {financeLinks.map((link) => (
                 <NavLink
@@ -181,7 +182,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
           {settingsLinks.length > 0 && (
             <>
               <div className="sidebar-section-label" style={{ marginTop: 'var(--space-2)' }}>
-                SYSTEM
+                {t('nav.sectionSystem')}
               </div>
               {settingsLinks.map((link) => (
                 <NavLink

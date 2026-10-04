@@ -12,12 +12,22 @@ const mocks = vi.hoisted(() => ({
   bindings: [] as { event: string; table: string; handler: (payload: unknown) => void }[],
   onStatus: null as ((status: string) => void) | null,
   removed: 0,
+  // Las RPC que se llaman, con sus argumentos.
+  rpcs: [] as { fn: string; args: Record<string, unknown> }[],
+  // Los filtros de cada consulta (`eq`, `neq`) y lo que pide (`select`).
+  filters: [] as unknown[][],
 }));
 
 vi.mock('../lib/supabase', () => {
   const builder = (table: string) => {
     const chain: Record<string, unknown> = {};
-    for (const method of ['delete', 'eq', 'select', 'single']) chain[method] = () => chain;
+    for (const method of ['delete', 'single', 'order', 'range', 'overrideTypes']) chain[method] = () => chain;
+    for (const method of ['eq', 'neq', 'select']) {
+      chain[method] = (...args: unknown[]) => {
+        mocks.filters.push([method, ...args]);
+        return chain;
+      };
+    }
     for (const method of ['insert', 'update']) {
       chain[method] = (payload: unknown) => {
         mocks.writes.push({ table, method, payload });
@@ -50,6 +60,10 @@ vi.mock('../lib/supabase', () => {
       },
       removeChannel: async () => {
         mocks.removed += 1;
+      },
+      rpc: async (fn: string, args: Record<string, unknown>) => {
+        mocks.rpcs.push({ fn, args });
+        return { data: { id: 'o1', numero_orden: 'OT-1' }, error: null };
       },
     },
   };
@@ -253,5 +267,76 @@ describe('workOrdersService: tareas con técnico', () => {
   ])('%s falla si la base no escribió nada (RLS), en vez de fingir éxito', async (_nombre, llamar) => {
     mocks.deleted = [];
     await expect(llamar()).rejects.toThrow(/No se pudo guardar/);
+  });
+});
+
+// El alta manda el depósito dentro de `p_order`, con los nombres que lee `create_work_order`
+// (20261010000007). Con otro nombre la base lo ignora sin error: hasta el 04/10/2026 el número
+// de cheque y el comprobante del alta se perdían así.
+describe('workOrdersService: createWorkOrder', () => {
+  beforeEach(() => {
+    mocks.rpcs = [];
+  });
+
+  it('manda el método, el número de cheque y el comprobante con los nombres de la base', async () => {
+    await workOrdersService.createWorkOrder({
+      sede_id: 's1',
+      cliente_id: 'c1',
+      vehiculo_id: 'v1',
+      tipo_trabajo: 'mecanica',
+      millas_ingreso: 1000,
+      nivel_gasolina: '1/2',
+      deposito_inicial: 200,
+      deposito_metodo: 'cheque',
+      deposito_cheque: '1042',
+      deposito_comprobante: 's1/comprobante-alta-1.jpg',
+      inspeccion_360_notas: '',
+      fecha_estimada_entrega: '2026-10-09',
+      labor_items: [{ descripcion: 'Puerta', costo: 500, especialidad: 'pintura', asignado_a: 'u1', reparto_heredado: false }],
+      repuestos: [],
+      asignaciones: [],
+      creado_por: 'a1',
+    });
+
+    expect(mocks.rpcs).toHaveLength(1);
+    const { fn, args } = mocks.rpcs[0];
+    expect(fn).toBe('create_work_order');
+    expect(args.p_order).toMatchObject({
+      deposito_inicial: 200,
+      deposito_metodo: 'cheque',
+      deposito_numero_cheque: '1042',
+      deposito_comprobante_ruta: 's1/comprobante-alta-1.jpg',
+    });
+    expect(args.p_order).not.toHaveProperty('deposito_cheque');
+    expect(args.p_order).not.toHaveProperty('deposito_comprobante');
+    expect(args.p_labor).toEqual([
+      { descripcion: 'Puerta', costo: 500, especialidad: 'pintura', asignado_a: 'u1', reparto_heredado: false },
+    ]);
+  });
+});
+
+// "Mis tareas" del panel del técnico (F7): solo las suyas, sin las rechazadas ni las de órdenes
+// entregadas, y con la orden embebida como un objeto.
+describe('workOrdersService: getMyTasks', () => {
+  beforeEach(() => {
+    mocks.filters = [];
+  });
+
+  it('filtra por técnico, estado y orden sin entregar, y entrega la orden como `orden`', async () => {
+    const orden = { id: 'o1', numero_orden: 'OT-1', estatus: 'en_proceso', fecha_estimada_entrega: null, vehiculo: null };
+    mocks.deleted = [{ id: 'l1', orden_id: 'o1', descripcion: 'Frenos', ordenes_trabajo: orden }] as never;
+
+    const tasks = await workOrdersService.getMyTasks('u1');
+
+    expect(tasks).toEqual([{ id: 'l1', orden_id: 'o1', descripcion: 'Frenos', orden }]);
+    expect(mocks.filters).toEqual(
+      expect.arrayContaining([
+        ['eq', 'asignado_a', 'u1'],
+        ['neq', 'estado', 'rechazado'],
+        ['neq', 'ordenes_trabajo.estatus', 'entregado'],
+      ])
+    );
+    const select = mocks.filters.find(([method]) => method === 'select')?.[1] as string;
+    expect(select).toContain('ordenes_trabajo!inner(');
   });
 });

@@ -20,7 +20,8 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { money } from '../lib/money';
-import FindingsAlert from '../features/workOrders/FindingsAlert';
+import AttentionCard from '../features/dashboard/AttentionCard';
+import MyTasksCard from '../features/dashboard/MyTasksCard';
 
 const EMPTY_STATS: DashboardStats = {
   ordenes_activas: 0,
@@ -106,8 +107,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Findings Alert */}
-      {isAdmin && <FindingsAlert orders={recentOrders} />}
+      {/* Lo que espera a la oficina (F7). Antes aquí iba el aviso de hallazgos, sacado de las
+          cinco órdenes recientes: uno en la sexta no salía. Ahora lo cuenta la base. */}
+      {isAdmin && <AttentionCard sedeId={sedeId} />}
+      {/* El técnico empieza el día por lo que le falta hacer, en todas sus órdenes. */}
+      {!isAdmin && userId && <MyTasksCard userId={userId} />}
 
       {/* KPI Stats — each card is a shortcut into the section it summarises.
           Money-related KPIs are admin-only. */}
@@ -154,7 +158,7 @@ export default function Dashboard() {
         <button
           type="button"
           className="stat-card stat-card-link stagger-3 animate-fade-in-up"
-          onClick={() => navigate('/kanban')}
+          onClick={() => navigate('/work-orders?vista=tablero')}
         >
           <div className="stat-icon warning">
             <Gauge size={24} />

@@ -4695,6 +4695,323 @@ td .labor-specialty-select {
   margin-top: var(--space-2);
 }
 
+/* El alta de la orden en cuatro pasos (F4). Arriba, los pasos: el actual con el color de
+   marca como borde, los ya vistos con su palomita y se pueden volver a abrir. */
+.intake-steps {
+  display: flex;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+}
+
+.intake-step {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.intake-step-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2);
+  border: 0;
+  border-bottom: 3px solid var(--color-surface-border);
+  background: none;
+  color: var(--color-text-tertiary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  text-align: left;
+}
+
+button.intake-step-button {
+  cursor: pointer;
+}
+
+button.intake-step-button:hover:not(:disabled) {
+  color: var(--color-text-primary);
+}
+
+.intake-step-current .intake-step-button {
+  border-bottom-color: var(--color-primary);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.intake-step-done .intake-step-button {
+  color: var(--color-text-secondary);
+}
+
+.intake-step-number {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.intake-step-current .intake-step-number,
+.intake-step-done .intake-step-number {
+  background: var(--gradient-primary);
+  color: var(--color-text-inverse);
+}
+
+.intake-step-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.intake-step-title {
+  margin-bottom: var(--space-3);
+}
+
+.intake-inline-panel {
+  padding: var(--space-3);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-surface-border);
+}
+
+.intake-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.intake-task {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.intake-task-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+}
+
+.intake-task-text span {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.intake-footer {
+  justify-content: space-between;
+}
+
+.intake-footer-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* Órdenes: lista y tablero son dos vistas de la misma página (F7). */
+.view-switch {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+}
+
+.view-switch-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.view-switch-option:hover {
+  color: var(--color-text-primary);
+}
+
+.view-switch-option.active {
+  background: var(--gradient-primary);
+  color: var(--color-text-inverse);
+  font-weight: 600;
+}
+
+/* La ocupación del tablero cuando va dentro de Órdenes, que ya pone el título. */
+.kanban-occupancy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+
+/* `.link-button` hereda la letra del padre; el número de la tarjeta va chico y en una línea
+   (con la etiqueta "Esperando autorización" al lado se partía en dos). */
+.link-button.kanban-card-order {
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+/* Panel del admin: "Requiere atención" (F7). */
+.attention-card,
+.my-tasks-card {
+  margin-bottom: var(--space-4);
+}
+
+.attention-card .card-title {
+  margin-bottom: var(--space-3);
+}
+
+.attention-clear {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.attention-clear svg {
+  color: var(--color-success);
+}
+
+.attention-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attention-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg);
+}
+
+.attention-icon {
+  flex-shrink: 0;
+  color: var(--color-warning);
+}
+
+.attention-label {
+  flex: 1 1 220px;
+  font-size: var(--font-size-sm);
+}
+
+.attention-count {
+  margin-left: var(--space-1);
+}
+
+.attention-orders {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.attention-order {
+  font-size: var(--font-size-sm);
+}
+
+/* Panel del técnico: "Mis tareas" (F7). */
+.my-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.my-task {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.my-task:hover {
+  border-color: var(--color-primary);
+}
+
+.my-task-icon {
+  flex-shrink: 0;
+  color: var(--color-warning);
+}
+
+.my-task-waiting {
+  color: var(--color-text-tertiary);
+}
+
+.my-task-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.my-task-meta {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.my-task-arrow {
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+}
+
+.my-tasks-done {
+  margin-top: var(--space-3);
+}
+
+/* En el teléfono los pasos no caben con su nombre: queda el número y el nombre del actual
+   va en el título de abajo. */
+@media (max-width: 768px) {
+  .intake-step:not(.intake-step-current) .intake-step-label {
+    display: none;
+  }
+
+  .intake-step-button {
+    justify-content: center;
+  }
+}
+
 /* En el teléfono: tipo y precio en una fila, descripción y técnico a lo ancho. */
 @media (max-width: 768px) {
   .task-editor-fields {

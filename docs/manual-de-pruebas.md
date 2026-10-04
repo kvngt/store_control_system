@@ -352,7 +352,7 @@ Cuenta: mecánico en Android y, si hay, en iPhone. Admin en la computadora.
 
 | # | Pri | Pasos | Debe pasar |
 |---|---|---|---|
-| K-01 | 🟡 | **Tablero Kanban** (computadora): arrastra una orden de columna | Cambia de estado; al recargar sigue ahí |
+| K-01 | 🟡 | **Órdenes → Tablero** (computadora): arrastra una orden de columna | Cambia de estado; al recargar sigue ahí |
 | K-02 | 🟡 | Kanban en el teléfono: selector **Mover a** | Cambia de estado |
 | K-03 | 🔴 | Kanban como mecánico, con una orden que **no** tiene asignada | No aparece en su tablero: solo ve las suyas |
 | K-04 | 🟡 | Ocupación arriba del tablero | Órdenes activas / capacidad 5 (B-01) |

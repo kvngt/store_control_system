@@ -26,6 +26,9 @@ const translations: Record<Language, Translations> = {
       employees: 'Empleados',
       settings: 'Configuración',
       logout: 'Cerrar Sesión',
+      // Los grupos de la barra lateral (decían "MENU" y "SYSTEM" en inglés en las dos versiones).
+      sectionWorkshop: 'Taller',
+      sectionSystem: 'Sistema',
     },
     // Common
     common: {
@@ -453,6 +456,26 @@ const translations: Record<Language, Translations> = {
       inheritedShare: 'reparto ÷ {crew}',
       unassignedTitle: 'Tareas sin técnico: nadie cobrará su comisión hasta que se la asignes.',
     },
+    // El alta de la orden en cuatro pasos (F4, reunión con el taller del 03/10/2026)
+    intake: {
+      stepOf: 'Paso {step} de {total}',
+      steps: {
+        customer: 'Cliente',
+        vehicle: 'Vehículo y recepción',
+        deposit: 'Depósito',
+        work: 'Trabajos',
+      },
+      selectCustomer: '-- Seleccionar cliente --',
+      selectVehicle: '-- Seleccionar vehículo --',
+      inspectionNotes: 'Notas de la inspección 360°',
+      inspectionNotesPlaceholder: 'Rayones, abolladuras previas o el estado general del vehículo...',
+      depositHint: 'Si el cliente deja depósito, di cómo lo pagó. Si no deja nada, sigue con 0.',
+      taskPending: 'Hay un trabajo escrito sin agregar. Toca "Agregar" para sumarlo a la orden o "Cancelar" para descartarlo.',
+      removeTask: 'Quitar {task}',
+      removePart: 'Quitar repuesto',
+      receiptChosen: 'Comprobante: {name}',
+      noTasksYet: 'Todavía no hay trabajos. Agrégalos ahora o después, desde la orden.',
+    },
     // Tareas de mano de obra con técnico (comisión por tarea, 20261010000006)
     tasks: {
       add: 'Agregar trabajo',
@@ -808,6 +831,34 @@ const translations: Record<Language, Translations> = {
       occupancy: 'Ocupación del taller',
       moveTo: 'Mover a',
       emptyColumn: 'Sin órdenes',
+      openOrder: 'Abrir la orden {numero}',
+    },
+    // Órdenes y tablero son dos vistas de la misma página (F7)
+    ordersView: {
+      label: 'Vista',
+      list: 'Lista',
+      board: 'Tablero',
+    },
+    // Panel del admin: lo que espera una decisión de la oficina (F7, `requiere_atencion`)
+    attention: {
+      title: 'Requiere atención',
+      allClear: 'Todo al día: nada espera una decisión de la oficina.',
+      findings: 'Trabajo adicional por revisar',
+      quotes: 'Presupuestos sin respuesta del cliente',
+      unassigned: 'Tareas sin técnico: nadie cobra su comisión',
+      overdue: 'Órdenes con la entrega vencida',
+      emails: 'Correos al cliente con error (últimas 72 h)',
+      review: 'Revisar',
+      more: '+{n} más',
+      loadError: 'No se pudo revisar qué requiere atención.',
+    },
+    // Panel del técnico: sus tareas en todas sus órdenes (F7)
+    myTasks: {
+      title: 'Mis tareas',
+      empty: 'No tienes tareas pendientes.',
+      doneCount: '{n} hecha(s) en órdenes sin entregar',
+      openTask: 'Abrir {tarea} en la orden {numero}',
+      loadError: 'No se pudieron cargar tus tareas.',
     },
     // Finance
     finance: {
@@ -1169,6 +1220,8 @@ const translations: Record<Language, Translations> = {
       employees: 'Employees',
       settings: 'Settings',
       logout: 'Log Out',
+      sectionWorkshop: 'Workshop',
+      sectionSystem: 'System',
     },
     common: {
       search: 'Search...',
@@ -1590,6 +1643,25 @@ const translations: Record<Language, Translations> = {
       inheritedShare: 'split ÷ {crew}',
       unassignedTitle: 'Jobs without a technician: nobody will earn their commission until you assign one.',
     },
+    intake: {
+      stepOf: 'Step {step} of {total}',
+      steps: {
+        customer: 'Customer',
+        vehicle: 'Vehicle and check-in',
+        deposit: 'Deposit',
+        work: 'Jobs',
+      },
+      selectCustomer: '-- Select customer --',
+      selectVehicle: '-- Select vehicle --',
+      inspectionNotes: '360° inspection notes',
+      inspectionNotesPlaceholder: 'Scratches, existing dents or the general condition of the vehicle...',
+      depositHint: 'If the customer leaves a deposit, say how they paid. If not, continue with 0.',
+      taskPending: 'There is a job typed in but not added. Tap "Add" to put it on the order or "Cancel" to discard it.',
+      removeTask: 'Remove {task}',
+      removePart: 'Remove part',
+      receiptChosen: 'Receipt: {name}',
+      noTasksYet: 'No jobs yet. Add them now or later, from the order.',
+    },
     tasks: {
       add: 'Add job',
       formTitle: 'New job',
@@ -1938,6 +2010,31 @@ const translations: Record<Language, Translations> = {
       occupancy: 'Shop occupancy',
       moveTo: 'Move to',
       emptyColumn: 'No orders',
+      openOrder: 'Open order {numero}',
+    },
+    ordersView: {
+      label: 'View',
+      list: 'List',
+      board: 'Board',
+    },
+    attention: {
+      title: 'Needs attention',
+      allClear: 'All caught up: nothing is waiting on the office.',
+      findings: 'Additional work to review',
+      quotes: 'Quotes the customer has not answered',
+      unassigned: 'Jobs without a technician: nobody earns their commission',
+      overdue: 'Orders past their delivery date',
+      emails: 'Customer emails that failed (last 72 h)',
+      review: 'Review',
+      more: '+{n} more',
+      loadError: 'Could not check what needs attention.',
+    },
+    myTasks: {
+      title: 'My jobs',
+      empty: 'You have no pending jobs.',
+      doneCount: '{n} done on orders not yet delivered',
+      openTask: 'Open {tarea} on order {numero}',
+      loadError: 'Could not load your jobs.',
     },
     finance: {
       title: 'Financial Control',

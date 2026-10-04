@@ -1,35 +1,64 @@
-import { useRef, useState } from 'react';
-import { Camera, CheckCircle2, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
+import { Camera, Check, CheckCircle2, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { isMediaError } from '../../lib/media/errors';
+import { money } from '../../lib/money';
 import type { Customer, UserProfile, Vehicle, PaymentMethod } from '../../types/database';
 import VehicleFields from '../vehicles/VehicleFields';
 import MediaCaptureBar from '../media/MediaCaptureBar';
 import DraftMediaStrip from '../media/DraftMediaStrip';
 import { ZONES } from './useIntakePhotos';
 import type { WorkOrderFormApi } from './useWorkOrderForm';
+import { INTAKE_STEPS } from './workOrderForm.schema';
 import { AlertError } from '../../components/AlertError';
 import PhoneInput from '../../components/PhoneInput';
 import PaymentFields from './PaymentFields';
 import TaskEditor from './TaskEditor';
 
+/**
+ * Refuses the keys that put a minus sign into a `type="number"` box.
+ *
+ * `min={0}` is inert here: the form is `noValidate`, so the browser never runs
+ * its own constraint check, and the schema only speaks up on "Siguiente" or
+ * submit — by which point the user has already typed the number and been told
+ * off for it. This stops the common case at the keyboard instead. It
+ * deliberately does not clamp the value: a paste or an autofill still has to
+ * reach the schema and be reported, because silently rewriting somebody's -500
+ * to 0 is worse than telling them it is wrong.
+ */
 const blockNegativeKeys = (e: React.KeyboardEvent<HTMLInputElement>) => {
   if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault();
 };
 
+const TOTAL_STEPS = INTAKE_STEPS.length;
+
 interface WorkOrderCreateModalProps {
   form: WorkOrderFormApi;
   customers: Customer[];
+  /** Already narrowed to the selected customer by the caller. */
   vehiclesForCustomer: Vehicle[];
   operators: UserProfile[];
   isAdmin: boolean;
   saving: boolean;
+  /** Already translated by the caller. */
   error: string;
   onSubmit: () => void;
   onClose: () => void;
 }
 
+/**
+ * The "nueva orden" dialog, in four steps since the meeting with the shop on
+ * 03/10/2026 (F4): customer; vehicle and check-in (odometer, fuel, 360-degree
+ * photos plus extra photos, videos and voice notes); deposit and how it was
+ * paid; and the jobs — each with its type, price and technician — and parts.
+ *
+ * Deliberately presentational — every field belongs to `useWorkOrderForm` and
+ * submission belongs to the screen — so the dialog can be rendered and
+ * exercised on its own. Validation messages arrive as translation keys and are
+ * turned into sentences here, at render, so switching language never means
+ * revalidating the form.
+ */
 export default function WorkOrderCreateModal({
   form,
   customers,
@@ -47,13 +76,20 @@ export default function WorkOrderCreateModal({
   const { errors } = formState;
   const photos = form.photos;
   const newVehicle = form.newVehicle;
-  
-  const { step, nextStep, prevStep, setReceiptFile } = form;
+  const { step, furthestStep, nextStep, prevStep, goToStep } = form;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeZone, setActiveZone] = useState<string | null>(null);
+  // La barra está comprimiendo una foto o convirtiendo un video de galería.
   const [captureBusy, setCaptureBusy] = useState(false);
   const preparing = photos.processing > 0 || captureBusy;
+  // Una tarea escrita en el editor que todavía no se agregó a la lista.
+  const [taskPending, setTaskPending] = useState(false);
+  const [pendingWarning, setPendingWarning] = useState(false);
+  const onTaskPendingChange = useCallback((pending: boolean) => {
+    setTaskPending(pending);
+    if (!pending) setPendingWarning(false);
+  }, []);
 
   const FieldError = ({ messageKey }: { messageKey?: string }) =>
     messageKey ? (
@@ -67,6 +103,8 @@ export default function WorkOrderCreateModal({
     fileInputRef.current?.click();
   };
 
+  // Una foto que no se pudo leer (un HEIC en un navegador que no lo decodifica)
+  // se dice en el momento, en vez de desaparecer sin rastro.
   const reportPhotoError = (err: unknown) => {
     const detail = isMediaError(err) ? t('media.errors.' + err.code) : t('media.errors.unsupported-image');
     showToast('error', t('media.addError'), detail);
@@ -83,17 +121,38 @@ export default function WorkOrderCreateModal({
     photos.removePhoto(zoneKey);
   };
 
-  const renderStep1 = () => (
-    <div className="form-group" style={{ minHeight: 300 }}>
-      <h4 style={{ marginBottom: 'var(--space-3)' }}>1. {t('customers.customerProfile')}</h4>
+  // Enter dentro de un paso avanza al siguiente; solo en el último crea la orden. Antes de
+  // esto, un Enter en el depósito (el único campo de texto del paso 3) enviaba el formulario
+  // entero desde la mitad del asistente.
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (step < TOTAL_STEPS) {
+      void nextStep();
+      return;
+    }
+    if (taskPending) {
+      setPendingWarning(true);
+      return;
+    }
+    onSubmit();
+  };
+
+  const specialtyLabel = (especialidad: string) =>
+    especialidad === 'pintura' ? t('workOrders.painting') : t('workOrders.mechanical');
+
+  const renderCustomerStep = () => (
+    <div className="form-group">
+      <label className="form-label" htmlFor="intake-customer">{t('customers.customerProfile')}</label>
       {form.customerMode === 'existing' ? (
         <>
           <select
+            id="intake-customer"
             className="form-input form-select"
             value={form.selectedCustomer}
+            aria-invalid={!!errors.selectedCustomer}
             onChange={(e) => form.selectCustomer(e.target.value)}
           >
-            <option value="">-- Seleccionar Cliente --</option>
+            <option value="">{t('intake.selectCustomer')}</option>
             <option value="__new__">+ {t('customers.newCustomer')}</option>
             {customers.map((c) => (
               <option key={c.id} value={c.id}>{c.nombre}</option>
@@ -102,7 +161,7 @@ export default function WorkOrderCreateModal({
           <FieldError messageKey={errors.selectedCustomer?.message} />
         </>
       ) : (
-        <div style={{ padding: 'var(--space-3)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-surface-border)' }}>
+        <div className="intake-inline-panel">
           <div className="form-row">
             <div style={{ flex: 1 }}>
               <input
@@ -114,12 +173,14 @@ export default function WorkOrderCreateModal({
               <FieldError messageKey={errors.newCustomer?.nombre?.message} />
             </div>
             <div style={{ flex: 1 }}>
+              {/* Controlado a mano en vez de `register`: el campo son dos controles
+                  (país y número) que juntos dan un solo valor. */}
               <PhoneInput
                 value={watch('newCustomer.telefono')}
                 onChange={(telefono) =>
                   setValue('newCustomer.telefono', telefono, {
                     shouldDirty: true,
-                    shouldValidate: formState.isSubmitted,
+                    shouldValidate: formState.isSubmitted || !!errors.newCustomer?.telefono,
                   })
                 }
                 invalid={!!errors.newCustomer?.telefono}
@@ -145,19 +206,21 @@ export default function WorkOrderCreateModal({
     </div>
   );
 
-  const renderStep2 = () => (
-    <div style={{ minHeight: 300 }}>
-      <h4 style={{ marginBottom: 'var(--space-3)' }}>2. {t('vehicles.title')}</h4>
+  const renderVehicleStep = () => (
+    <>
       <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
+        <label className="form-label" htmlFor="intake-vehicle">{t('vehicles.title')}</label>
         {form.vehicleMode === 'existing' ? (
           <>
             <select
+              id="intake-vehicle"
               className="form-input form-select"
               value={watch('selectedVehicle')}
+              aria-invalid={!!errors.selectedVehicle}
               onChange={(e) => form.selectVehicle(e.target.value)}
               disabled={!form.selectedCustomer}
             >
-              <option value="">-- Seleccionar Vehículo --</option>
+              <option value="">{t('intake.selectVehicle')}</option>
               <option value="__new__">+ {t('vehicles.newVehicle')}</option>
               {vehiclesForCustomer.map((v) => (
                 <option key={v.id} value={v.id}>{v.marca} {v.modelo} ({v.placa})</option>
@@ -166,11 +229,13 @@ export default function WorkOrderCreateModal({
             <FieldError messageKey={errors.selectedVehicle?.message} />
           </>
         ) : (
-          <div style={{ padding: 'var(--space-3)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-surface-border)' }}>
+          /* The same VIN-first form the Vehiculos screen uses: VIN lookup, plate
+             check and brand/model suggestions, with the customer standing there. */
+          <div className="intake-inline-panel">
             <VehicleFields
               value={newVehicle}
               onChange={form.setNewVehicle}
-              touched={formState.isSubmitted}
+              touched={formState.isSubmitted || !!errors.newVehicle}
               requirePlate={false}
               disabled={saving}
             />
@@ -193,8 +258,8 @@ export default function WorkOrderCreateModal({
 
       <div className="form-row">
         <div className="form-group">
-          <label className="form-label">{t('workOrders.fuelLevel')}</label>
-          <select className="form-input form-select" {...register('fuelLevel')}>
+          <label className="form-label" htmlFor="order-fuel">{t('workOrders.fuelLevel')}</label>
+          <select id="order-fuel" className="form-input form-select" {...register('fuelLevel')}>
             <option value="E (Vacio)">E (Vacío / Empty)</option>
             <option value="1/4">1/4</option>
             <option value="1/2">1/2</option>
@@ -203,7 +268,10 @@ export default function WorkOrderCreateModal({
           </select>
         </div>
         <div className="form-group">
-          <label className="form-label">{t('workOrders.milesIn')}</label>
+          <label className="form-label" htmlFor="order-miles-in">{t('workOrders.milesIn')}</label>
+          {/* An odometer reading below zero is meaningless and it corrupts the
+              printed report, so the minus key is refused outright rather than
+              accepted and then complained about. */}
           <input
             className="form-input"
             id="order-miles-in"
@@ -263,6 +331,10 @@ export default function WorkOrderCreateModal({
             );
           })}
         </div>
+        {/* Lo mismo que la tarjeta de la orden ya creada: más fotos, un video de
+            recorrido o una nota de voz sobre cómo llegó el vehículo (pedido del taller,
+            octubre 2026). Queda en el navegador y entra a la cola de subida al crear la
+            orden, con las fotos. */}
         <div style={{ marginTop: 'var(--space-3)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           <DraftMediaStrip items={photos.extraMedia} onRemove={photos.removeMedia} />
           <MediaCaptureBar onAdd={photos.addMedia} disabled={saving} onBusyChange={setCaptureBusy} />
@@ -279,115 +351,145 @@ export default function WorkOrderCreateModal({
       </div>
 
       <div className="form-group" style={{ marginTop: 'var(--space-3)' }}>
-        <label className="form-label">Notas de la Inspección 360°</label>
+        <label className="form-label" htmlFor="order-inspection-notes">{t('intake.inspectionNotes')}</label>
         <textarea
+          id="order-inspection-notes"
           className="form-input form-textarea"
-          placeholder="Detalles sobre rayones, abolladuras previas o estado general del auto..."
+          placeholder={t('intake.inspectionNotesPlaceholder')}
           rows={2}
           {...register('inspectionNotes')}
         />
       </div>
-    </div>
+    </>
   );
 
-  const renderStep3 = () => (
-    <div style={{ minHeight: 300 }}>
-      <h4 style={{ marginBottom: 'var(--space-3)' }}>3. {t('workOrders.deposit')}</h4>
-      {isAdmin ? (
-        <>
-          <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
-            <label className="form-label">{t('workOrders.deposit')} ($)</label>
-            <input
-              id="order-deposit"
-              className="form-input"
-              type="number"
-              inputMode="decimal"
-              min={0}
-              step="0.01"
-              aria-invalid={!!errors.deposit}
-              onKeyDown={blockNegativeKeys}
-              {...register('deposit')}
-            />
-            <FieldError messageKey={errors.deposit?.message} />
-          </div>
-          {parseFloat(watch('deposit') || '0') > 0 && (
+  // Cobrar es de administración, igual que abrir la orden desde 20261004000000. El `isAdmin`
+  // se queda como red, porque `create_work_order` también ignora el depósito si no lo manda
+  // un admin.
+  const renderDepositStep = () =>
+    isAdmin ? (
+      <>
+        <p className="field-hint" style={{ marginBottom: 'var(--space-3)' }}>{t('intake.depositHint')}</p>
+        <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
+          <label className="form-label" htmlFor="order-deposit">{t('workOrders.deposit')} ($)</label>
+          <input
+            id="order-deposit"
+            className="form-input"
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="0.01"
+            aria-invalid={!!errors.deposit}
+            onKeyDown={blockNegativeKeys}
+            {...register('deposit')}
+          />
+          <FieldError messageKey={errors.deposit?.message} />
+        </div>
+        {parseFloat(watch('deposit') || '0') > 0 && (
+          <>
             <PaymentFields
               metodo={watch('paymentMethod') as PaymentMethod | ''}
-              onChangeMetodo={(val) => setValue('paymentMethod', val, { shouldValidate: true })}
+              onChangeMetodo={(val) => setValue('paymentMethod', val, { shouldDirty: true, shouldValidate: !!errors.paymentMethod })}
               numeroCheque={watch('checkNumber')}
-              onChangeNumeroCheque={(val) => setValue('checkNumber', val, { shouldValidate: true })}
-              onChangeFile={setReceiptFile}
+              onChangeNumeroCheque={(val) => setValue('checkNumber', val, { shouldDirty: true, shouldValidate: !!errors.checkNumber })}
+              onChangeFile={form.setReceiptFile}
               disabled={saving}
             />
-          )}
-          <FieldError messageKey={errors.paymentMethod?.message} />
-          <FieldError messageKey={errors.checkNumber?.message} />
-        </>
-      ) : (
-        <p className="field-hint">Solo administración puede registrar cobros.</p>
-      )}
-    </div>
-  );
+            {/* El campo de archivo se vacía al volver a este paso; el comprobante elegido no. */}
+            {form.receiptFile && (
+              <p className="field-hint">
+                {t('intake.receiptChosen').replace('{name}', form.receiptFile.name)}{' '}
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => form.setReceiptFile(null)}>
+                  {t('common.delete')}
+                </button>
+              </p>
+            )}
+          </>
+        )}
+        <FieldError messageKey={errors.paymentMethod?.message} />
+        <FieldError messageKey={errors.checkNumber?.message} />
+      </>
+    ) : null;
 
-  const renderStep4 = () => (
-    <div style={{ minHeight: 300 }}>
-      <h4 style={{ marginBottom: 'var(--space-3)' }}>4. Trabajos</h4>
+  const renderWorkStep = () => (
+    <>
       <div className="form-row">
         <div className="form-group">
-          <label className="form-label">{t('common.type')}</label>
-          <select className="form-input form-select" {...register('workType')}>
+          <label className="form-label" htmlFor="order-work-type">{t('workOrders.workType')}</label>
+          <select id="order-work-type" className="form-input form-select" {...register('workType')}>
             <option value="mecanica">{t('workOrders.mechanical')}</option>
             <option value="pintura">{t('workOrders.painting')}</option>
             <option value="combinado">{t('workOrders.combined')}</option>
           </select>
         </div>
         <div className="form-group">
-          <label className="form-label">{t('workOrders.estimatedDelivery')}</label>
-          <input className="form-input" type="date" {...register('estimatedDate')} />
+          <label className="form-label" htmlFor="order-estimated-date">{t('workOrders.estimatedDelivery')}</label>
+          <input id="order-estimated-date" className="form-input" type="date" {...register('estimatedDate')} />
         </div>
       </div>
 
+      {/* Mano de obra y repuestos: solo administración cotiza. */}
       {isAdmin && (
         <>
+          <p className="field-hint" style={{ marginTop: 'var(--space-3)' }}>{t('quotes.createHint')}</p>
           <div className="form-group" style={{ marginTop: 'var(--space-3)' }}>
-            <div className="form-label" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
-              <span>{t('workOrders.laborDescription')}</span>
-            </div>
-            
-            {form.labor.fields.map((field, i) => {
-              const assignedTo = operators.find(o => o.id === field.asignado_a);
-              return (
-                <div key={field.id} style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', marginBottom: 'var(--space-2)', padding: 'var(--space-2)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 500, fontSize: 'var(--font-size-sm)' }}>{field.descripcion}</div>
-                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
-                      ${field.costo} • {assignedTo?.nombre_completo || t('tasks.unassigned')}
+            <div className="form-label">{t('workOrders.laborDescription')}</div>
+            {form.labor.fields.length === 0 && (
+              <p className="field-hint">{t('intake.noTasksYet')}</p>
+            )}
+            <ul className="intake-task-list">
+              {form.labor.fields.map((field, i) => {
+                const technician = operators.find((o) => o.id === field.asignado_a);
+                return (
+                  <li key={field.id} className="intake-task">
+                    <div className="intake-task-text">
+                      <strong>{field.descripcion}</strong>
+                      <span>
+                        {specialtyLabel(field.especialidad)} · {money(field.costo)} ·{' '}
+                        {technician?.nombre_completo || t('tasks.unassigned')}
+                      </span>
                     </div>
-                  </div>
-                  <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => form.labor.remove(i)}>
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              );
-            })}
-            
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm btn-icon"
+                      onClick={() => form.labor.remove(i)}
+                      aria-label={t('intake.removeTask').replace('{task}', field.descripcion)}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* El mismo editor de la pestaña Trabajos (F3): tipo, descripción, precio y
+                técnico, con el aviso de oficio distinto. Aquí la tarea solo se suma al
+                borrador; entra a la base con la orden. */}
             <TaskEditor
               workType={watch('workType')}
               technicians={operators}
-              defaultTechnicianId={form.labor.fields.find(f => f.asignado_a)?.asignado_a || null}
+              defaultTechnicianId={form.labor.fields.find((f) => f.asignado_a)?.asignado_a || null}
               onAdd={(task) => {
                 form.labor.append({
                   descripcion: task.descripcion,
                   costo: task.costo.toString(),
                   especialidad: task.especialidad,
-                  asignado_a: task.asignado_a || ''
+                  asignado_a: task.asignado_a || '',
                 });
               }}
+              onPendingChange={onTaskPendingChange}
+              busy={saving}
               idPrefix="create-order"
             />
+            {pendingWarning && (
+              <p className="task-editor-error" role="alert">{t('intake.taskPending')}</p>
+            )}
           </div>
 
           <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
+            {/* `div`, no `label`: no etiqueta a ningún campo (los de abajo son una lista
+                que crece) y metía el botón dentro de la etiqueta, así que su nombre
+                accesible salía "Descripción de Repuestos Agregar". */}
             <div className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>{t('workOrders.partsDescription')}</span>
               <button
@@ -416,6 +518,9 @@ export default function WorkOrderCreateModal({
                     onKeyDown={blockNegativeKeys}
                     {...register(`parts.${i}.cantidad`)}
                   />
+                  {/* Price only. A part is billed on at what it cost, so the
+                      separate unit-cost box was a second money field nobody
+                      filled in; the database keeps cost in step with price. */}
                   <input
                     className="form-input"
                     type="number"
@@ -426,7 +531,12 @@ export default function WorkOrderCreateModal({
                     onKeyDown={blockNegativeKeys}
                     {...register(`parts.${i}.precio_venta_unitario`)}
                   />
-                  <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => form.parts.remove(i)}>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm btn-icon"
+                    onClick={() => form.parts.remove(i)}
+                    aria-label={t('intake.removePart')}
+                  >
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -442,55 +552,93 @@ export default function WorkOrderCreateModal({
           </div>
         </>
       )}
-    </div>
+    </>
   );
+
+  const current = INTAKE_STEPS[step - 1];
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" style={{ maxWidth: '720px' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3 className="modal-title">{t('workOrders.newOrder')} - Paso {step} de 4</h3>
-          <button className="modal-close" onClick={onClose}>
+          <h3 className="modal-title">{t('workOrders.newOrder')}</h3>
+          <button type="button" className="modal-close" onClick={onClose} aria-label={t('common.close')}>
             <X size={20} />
           </button>
         </div>
-        
-        <form
-          noValidate
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSubmit();
-          }}
-          style={{ display: 'contents' }}
-        >
+
+        {/* `noValidate`: the schema owns the rules, so the browser's own
+            bubbles never fire first with an untranslated message. */}
+        <form noValidate onSubmit={handleFormSubmit} style={{ display: 'contents' }}>
           <div className="modal-body">
             <AlertError message={error} />
             <input type="file" ref={fileInputRef} accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileChange} />
-            
-            {step === 1 && renderStep1()}
-            {step === 2 && renderStep2()}
-            {step === 3 && renderStep3()}
-            {step === 4 && renderStep4()}
+
+            {/* Los pasos ya vistos se pueden volver a abrir; los de adelante, solo con
+                "Siguiente", que valida el paso que se deja. */}
+            <ol className="intake-steps" aria-label={t('intake.stepOf').replace('{step}', String(step)).replace('{total}', String(TOTAL_STEPS))}>
+              {INTAKE_STEPS.map(({ key }, i) => {
+                const n = i + 1;
+                const state = n === step ? 'current' : n < step || n <= furthestStep ? 'done' : 'todo';
+                const label = t(`intake.steps.${key}`);
+                return (
+                  <li key={key} className={`intake-step intake-step-${state}`} aria-current={n === step ? 'step' : undefined}>
+                    {state === 'done' ? (
+                      <button type="button" className="intake-step-button" onClick={() => goToStep(n)} disabled={saving}>
+                        <span className="intake-step-number"><Check size={12} /></span>
+                        <span className="intake-step-label">{label}</span>
+                      </button>
+                    ) : (
+                      <span className="intake-step-button">
+                        <span className="intake-step-number">{n}</span>
+                        <span className="intake-step-label">{label}</span>
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+
+            <h4 className="intake-step-title">
+              {t('intake.stepOf').replace('{step}', String(step)).replace('{total}', String(TOTAL_STEPS))}
+              {' · '}
+              {t(`intake.steps.${current.key}`)}
+            </h4>
+
+            {step === 1 && renderCustomerStep()}
+            {step === 2 && renderVehicleStep()}
+            {step === 3 && renderDepositStep()}
+            {step === 4 && renderWorkStep()}
           </div>
-          <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div className="modal-footer intake-footer">
             <div>
               {step > 1 && (
                 <button type="button" className="btn btn-secondary" onClick={prevStep} disabled={saving}>
-                  <ChevronLeft size={16} style={{ marginRight: 4 }} /> Anterior
+                  <ChevronLeft size={16} /> {t('common.previous')}
                 </button>
               )}
             </div>
-            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+            <div className="intake-footer-actions">
               <button type="button" className="btn btn-ghost" onClick={onClose} disabled={saving}>
                 {t('common.cancel')}
               </button>
-              
-              {step < 4 ? (
-                <button type="button" className="btn btn-primary" onClick={nextStep} disabled={saving || preparing}>
-                  Siguiente <ChevronRight size={16} style={{ marginLeft: 4 }} />
+              {/* Mientras una foto se comprime o un video se convierte, seguir lo dejaría afuera. */}
+              {step < TOTAL_STEPS ? (
+                <button key="next" type="submit" className="btn btn-primary" disabled={saving || preparing}>
+                  {preparing ? t('media.processing') : t('common.next')} {!preparing && <ChevronRight size={16} />}
                 </button>
               ) : (
-                <button type="submit" className="btn btn-primary" disabled={saving || preparing}>
+                <button
+                  key="create"
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={saving || preparing}
+                  // "Crear" aparece donde estaba "Siguiente": un doble clic en el paso 3 no
+                  // debe crear la orden sin que nadie haya visto el paso 4.
+                  onClick={(e) => {
+                    if (e.detail > 1) e.preventDefault();
+                  }}
+                >
                   {saving ? t('common.loading') : preparing ? t('media.processing') : t('common.create')}
                 </button>
               )}

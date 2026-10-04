@@ -6,7 +6,7 @@
 // them: the board renders, the dialog opens with the pickers the screen
 // loaded, and a field typed in the dialog reaches the form state.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useNavigate } from 'react-router-dom';
@@ -45,6 +45,8 @@ const mocks = vi.hoisted(() => ({
   reportFinding: vi.fn(),
   quoteFinding: vi.fn(),
   discardFinding: vi.fn(),
+  uploadReceipt: vi.fn(),
+  removeDeliveryReceipt: vi.fn(),
 }));
 
 vi.mock('../context/auth.context', () => ({ useAuth: () => mocks.auth.current }));
@@ -90,8 +92,8 @@ vi.mock('../services/supabaseService', () => {
     uploadOrderPhotos: vi.fn(),
     getBalance: mocks.getBalance,
     deliver: vi.fn(),
-    uploadReceipt: vi.fn(),
-    removeDeliveryReceipt: vi.fn(),
+    uploadReceipt: mocks.uploadReceipt,
+    removeDeliveryReceipt: mocks.removeDeliveryReceipt,
     reportFinding: mocks.reportFinding,
     quoteFinding: mocks.quoteFinding,
     discardFinding: mocks.discardFinding,
@@ -238,6 +240,38 @@ async function openDetail(user: ReturnType<typeof userEvent.setup>, tab?: string
   if (tab) await user.click(screen.getByRole('tab', { name: new RegExp(`^${tab}`) }));
 }
 
+/** Abre el alta de una orden (el asistente de cuatro pasos, F4) y devuelve el diálogo. */
+async function openIntake(user: ReturnType<typeof userEvent.setup>) {
+  renderWithProviders(<WorkOrders />);
+  await screen.findAllByText('OT-2026-0042');
+  await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
+  return (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+}
+
+/** "Siguiente": valida el paso actual y, si está bien, abre el que sigue. */
+const next = (user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement) =>
+  user.click(within(dialog).getByRole('button', { name: /^Siguiente/ }));
+
+/** El nombre del paso abierto, según la lista de pasos del encabezado. */
+const currentStep = (dialog: HTMLElement) => dialog.querySelector('[aria-current="step"]')?.textContent ?? '';
+
+/** Paso 1 con el cliente de siempre, y al paso 2. */
+async function pickCustomer(user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement) {
+  await user.selectOptions(document.getElementById('intake-customer') as HTMLSelectElement, CUSTOMER.id);
+  await next(user, dialog);
+  await waitFor(() => expect(currentStep(dialog)).toMatch(/Vehículo/));
+}
+
+/** Cliente y vehículo existentes, sin depósito: deja el asistente en el paso 4 (Trabajos). */
+async function goToWorkStep(user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement) {
+  await pickCustomer(user, dialog);
+  await user.selectOptions(document.getElementById('intake-vehicle') as HTMLSelectElement, VEHICLE.id);
+  await next(user, dialog);
+  await waitFor(() => expect(currentStep(dialog)).toMatch(/Depósito/));
+  await next(user, dialog);
+  await waitFor(() => expect(currentStep(dialog)).toMatch(/Trabajos/));
+}
+
 describe('WorkOrders', () => {
   it('lists the sede orders', async () => {
     renderWithProviders(<WorkOrders />);
@@ -273,9 +307,12 @@ describe('WorkOrders', () => {
 
     const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
     expect(dialog).toBeTruthy();
-    // The pickers come from the screen's own load, through the extracted modal.
+    // The pickers come from the screen's own load, through the extracted modal: the
+    // customers on step 1, the technicians in the job editor of step 4.
     expect(within(dialog).getByRole('option', { name: 'Marta Ruiz' })).toBeInTheDocument();
-    expect(within(dialog).getByText(/Sara Vega/)).toBeInTheDocument();
+    await goToWorkStep(user, dialog);
+    await user.click(within(dialog).getByRole('button', { name: /Agregar trabajo/ }));
+    expect(within(dialog).getByRole('option', { name: /Sara Vega/ })).toBeInTheDocument();
   });
 
   // The seam between the screen's close handler and the hook's `isDirty`:
@@ -289,6 +326,7 @@ describe('WorkOrders', () => {
     await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
     const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
 
+    await pickCustomer(user, dialog);
     await user.type(document.getElementById('order-miles-in') as HTMLInputElement, '45000');
     await user.click(within(dialog).getByRole('button', { name: /Cancelar/i }));
 
@@ -385,17 +423,12 @@ describe('WorkOrders — abrir una orden es de administración', () => {
 
 // Pedido del taller (octubre 2026): en el alta también fotos extra, videos, notas de voz y
 // galería, como en la tarjeta de la orden ya creada. Antes solo se podía después de crearla.
+// Desde F4 la inspección va en el paso 2 (Vehículo y recepción).
 describe('WorkOrders — inspección 360 en el alta', () => {
-  async function openIntake(user: ReturnType<typeof userEvent.setup>) {
-    renderWithProviders(<WorkOrders />);
-    await screen.findAllByText('OT-2026-0042');
-    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    return (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
-  }
-
   it('ofrece foto, video, nota de voz y galería antes de crear la orden', async () => {
     const user = userEvent.setup();
     const dialog = await openIntake(user);
+    await pickCustomer(user, dialog);
 
     for (const name of ['Foto', 'Video', 'Nota de voz', 'Galería']) {
       expect(within(dialog).getByRole('button', { name })).toBeInTheDocument();
@@ -407,47 +440,53 @@ describe('WorkOrders — inspección 360 en el alta', () => {
     compress.fn.mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)));
     const user = userEvent.setup();
     const dialog = await openIntake(user);
+    await pickCustomer(user, dialog);
 
     const gallery = dialog.querySelector('input[type="file"][multiple]') as HTMLInputElement;
     fireEvent.change(gallery, { target: { files: [new File(['x'], 'golpe.jpg', { type: 'image/jpeg' })] } });
 
-    const create = within(dialog).getByRole('button', { name: /Procesando/ });
-    expect(create).toBeDisabled();
+    // Seguir de paso la dejaría afuera, igual que crear la orden.
+    const proceed = within(dialog).getByRole('button', { name: /Procesando/ });
+    expect(proceed).toBeDisabled();
 
     finish({ tipo: 'foto', blob: new Blob(['x'], { type: 'image/jpeg' }), mime: 'image/jpeg', thumb: null, duracionSeg: null, ancho: 1, alto: 1 });
 
-    // Ya preparada: queda en el borrador, cuenta en el encabezado y se puede crear.
-    await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Crear' })).toBeEnabled());
+    // Ya preparada: queda en el borrador, cuenta en el encabezado y se puede seguir.
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: /^Siguiente/ })).toBeEnabled());
     expect(dialog.querySelectorAll('.draft-media')).toHaveLength(1);
     expect(within(dialog).getByText(/0\/6\s*\+1/)).toBeInTheDocument();
   });
 });
 
 describe('WorkOrders — intake validation', () => {
+  // "Siguiente" valida el paso que se deja y dice qué falta en el campo mismo, sin mandar nada.
   it('reports every missing field on the field itself, and sends nothing', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<WorkOrders />);
-    await screen.findAllByText('OT-2026-0042');
-    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    const dialog = await openIntake(user);
 
-    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
-
-    // Both branches complain, not just whichever was checked first.
+    await next(user, dialog);
     expect(await within(dialog).findByText(/Selecciona un cliente/i)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Selecciona un veh[íi]culo/i)).toBeInTheDocument();
+    expect(currentStep(dialog)).toMatch(/Cliente/);
+
+    // Elegir apaga el aviso en el momento, sin esperar a otro "Siguiente".
+    await user.selectOptions(document.getElementById('intake-customer') as HTMLSelectElement, CUSTOMER.id);
+    await waitFor(() => expect(within(dialog).queryByText(/Selecciona un cliente/i)).not.toBeInTheDocument());
+
+    await next(user, dialog);
+    await waitFor(() => expect(currentStep(dialog)).toMatch(/Vehículo/));
+    await next(user, dialog);
+    expect(await within(dialog).findByText(/Selecciona un veh[íi]culo/i)).toBeInTheDocument();
+    expect(currentStep(dialog)).toMatch(/Vehículo/);
     expect(mocks.createWorkOrder).not.toHaveBeenCalled();
   });
 
   it('will not let a minus sign into the odometer field at all', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<WorkOrders />);
-    await screen.findAllByText('OT-2026-0042');
-    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' });
+    const dialog = await openIntake(user);
+    await pickCustomer(user, dialog);
 
     // The first line of defence is the keyboard: `min={0}` does nothing on a
-    // noValidate form, and complaining on submit still means the operator got
+    // noValidate form, and complaining on "Siguiente" still means the operator got
     // to type the wrong thing first.
     const miles = document.getElementById('order-miles-in') as HTMLInputElement;
     await user.type(miles, '-500');
@@ -456,32 +495,28 @@ describe('WorkOrders — intake validation', () => {
 
   it('still rejects a negative odometer reading that got past the keyboard', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<WorkOrders />);
-    await screen.findAllByText('OT-2026-0042');
-    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    const dialog = await openIntake(user);
+    await pickCustomer(user, dialog);
+    await user.selectOptions(document.getElementById('intake-vehicle') as HTMLSelectElement, VEHICLE.id);
 
     // A paste or an autofill never fires the keydown guard, so the schema has
     // to catch it and say so — rather than the value being silently rewritten,
     // which would hide a wrong reading instead of correcting it.
     const miles = document.getElementById('order-miles-in') as HTMLInputElement;
     fireEvent.change(miles, { target: { value: '-500' } });
-    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await next(user, dialog);
 
     expect(await within(dialog).findByText(/no pueden ser negativas/i)).toBeInTheDocument();
+    expect(currentStep(dialog)).toMatch(/Vehículo/);
     expect(mocks.createWorkOrder).not.toHaveBeenCalled();
   });
 
   it('asks for the fields of a customer being created inline', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<WorkOrders />);
-    await screen.findAllByText('OT-2026-0042');
-    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    const dialog = await openIntake(user);
 
-    // The customer picker is the dialog's first select.
-    await user.selectOptions(within(dialog).getAllByRole('combobox')[0], '__new__');
-    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await user.selectOptions(document.getElementById('intake-customer') as HTMLSelectElement, '__new__');
+    await next(user, dialog);
 
     expect(await within(dialog).findByText(/nombre del cliente es obligatorio/i)).toBeInTheDocument();
     expect(within(dialog).getByText(/tel[ée]fono del cliente es obligatorio/i)).toBeInTheDocument();
@@ -490,9 +525,6 @@ describe('WorkOrders — intake validation', () => {
   });
 });
 
-// The detail view used to be ~690 lines inside the page, with its handlers on
-// top of that. It is now `useWorkOrderDetail` plus five presentational cards;
-// these pin the seams between them.
 // Lo que se guarda antes que la orden no se deshace — un cliente y un vehículo sin orden
 // son filas válidas, se crean igual desde sus propias pantallas — pero hay que decirlo. Sin
 // el aviso, quien lee "no se pudo crear la orden" da por hecho que no quedó nada y vuelve a
@@ -500,18 +532,10 @@ describe('WorkOrders — intake validation', () => {
 describe('WorkOrders — el alta que falla a medio camino lo dice', () => {
   const abrirConVehiculoNuevo = async () => {
     const user = userEvent.setup();
-    renderWithProviders(<WorkOrders />);
-    await screen.findAllByText('OT-2026-0042');
-    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    const dialog = await openIntake(user);
+    await pickCustomer(user, dialog);
 
-    const selects = within(dialog).getAllByRole('combobox');
-    const clienteSelect = selects.find((el) => within(el).queryByText(CUSTOMER.nombre))!;
-    await user.selectOptions(clienteSelect, CUSTOMER.id);
-
-    const vehiculoSelect = within(dialog).getAllByRole('combobox').find((el) => within(el).queryByText(/\+ Nuevo Veh/i))!;
-    await user.selectOptions(vehiculoSelect, '__new__');
-
+    await user.selectOptions(document.getElementById('intake-vehicle') as HTMLSelectElement, '__new__');
     await user.type(document.getElementById('vehicle-brand') as HTMLInputElement, 'Toyota');
     await user.type(document.getElementById('vehicle-model') as HTMLInputElement, 'Camry');
     const anio = document.getElementById('vehicle-year') as HTMLSelectElement;
@@ -519,6 +543,10 @@ describe('WorkOrders — el alta que falla a medio camino lo dice', () => {
     // El VIN es obligatorio para un vehículo nuevo (workOrderForm.schema: 17 caracteres).
     await user.type(document.getElementById('vehicle-vin') as HTMLInputElement, '1HGCM82633A004352');
 
+    await next(user, dialog);
+    await waitFor(() => expect(currentStep(dialog)).toMatch(/Depósito/));
+    await next(user, dialog);
+    await waitFor(() => expect(currentStep(dialog)).toMatch(/Trabajos/));
     return { user, dialog };
   };
 
@@ -532,37 +560,241 @@ describe('WorkOrders — el alta que falla a medio camino lo dice', () => {
     expect(within(dialog).getByText(/El vehículo nuevo ya quedó guardado/)).toBeInTheDocument();
   });
 
-  // Los dos botones "Agregar" de la cotización vivían dentro de un `<label>`, así que su
-  // nombre accesible arrastraba el texto de la etiqueta: un lector de pantalla leía
-  // "Descripción de Labor Agregar" y este `getByRole` no los encontraba.
-  it('los botones de agregar línea se llaman solo "Agregar"', async () => {
+  // El botón "Agregar" de los repuestos vivía dentro de un `<label>`, así que su nombre
+  // accesible arrastraba el texto de la etiqueta: un lector de pantalla leía
+  // "Descripción de Repuestos Agregar" y este `getByRole` no lo encontraba. La mano de obra
+  // usa el editor de tareas (F3), con su propio botón verde.
+  it('los botones de agregar línea se llaman por lo que agregan', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<WorkOrders />);
-    await screen.findAllByText('OT-2026-0042');
-    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    const dialog = await openIntake(user);
+    await goToWorkStep(user, dialog);
 
-    expect(within(dialog).getAllByRole('button', { name: /^Agregar$/i })).toHaveLength(2);
+    expect(within(dialog).getAllByRole('button', { name: /^Agregar$/i })).toHaveLength(1);
+    expect(within(dialog).getByRole('button', { name: /^Agregar trabajo$/i })).toBeInTheDocument();
   });
 
   it('no inventa el aviso cuando no se creó nada', async () => {
     mocks.createWorkOrder.mockRejectedValue(new Error('Se cayó la red'));
     const user = userEvent.setup();
-    renderWithProviders(<WorkOrders />);
-    await screen.findAllByText('OT-2026-0042');
-    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
-
-    const selects = within(dialog).getAllByRole('combobox');
-    await user.selectOptions(selects.find((el) => within(el).queryByText(CUSTOMER.nombre))!, CUSTOMER.id);
-    await user.selectOptions(
-      within(dialog).getAllByRole('combobox').find((el) => within(el).queryByText(new RegExp(VEHICLE.modelo, 'i')))!,
-      VEHICLE.id
-    );
+    const dialog = await openIntake(user);
+    await goToWorkStep(user, dialog);
     await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
 
     expect(await within(dialog).findByText(/Se cayó la red/)).toBeInTheDocument();
     expect(within(dialog).queryByText(/ya quedó guardado/)).not.toBeInTheDocument();
+  });
+});
+
+// El alta en cuatro pasos (F4, reunión con el taller del 03/10/2026): lo que no se ve en un
+// paso no puede perderse ni mandarse distinto de lo que se eligió.
+describe('WorkOrders — el alta en cuatro pasos', () => {
+  beforeEach(() => {
+    mocks.createWorkOrder.mockResolvedValue({ ...ORDER, id: 'ord-nueva', numero_orden: 'OT-2026-0043' });
+  });
+
+  /** Paso 3 con un depósito: monto, método y (opcional) el archivo del comprobante. */
+  async function fillDeposit(
+    user: ReturnType<typeof userEvent.setup>,
+    dialog: HTMLElement,
+    amount: string,
+    method: string,
+    receipt?: File
+  ) {
+    await pickCustomer(user, dialog);
+    await user.selectOptions(document.getElementById('intake-vehicle') as HTMLSelectElement, VEHICLE.id);
+    await next(user, dialog);
+    await waitFor(() => expect(currentStep(dialog)).toMatch(/Depósito/));
+    const deposit = document.getElementById('order-deposit') as HTMLInputElement;
+    await user.clear(deposit);
+    await user.type(deposit, amount);
+    await user.selectOptions(document.getElementById('payment-method') as HTMLSelectElement, method);
+    if (receipt) await user.upload(document.getElementById('payment-receipt') as HTMLInputElement, receipt);
+  }
+
+  it('Enter dentro de un paso avanza al siguiente; no crea la orden', async () => {
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+    await pickCustomer(user, dialog);
+    await user.selectOptions(document.getElementById('intake-vehicle') as HTMLSelectElement, VEHICLE.id);
+    await next(user, dialog);
+    await waitFor(() => expect(currentStep(dialog)).toMatch(/Depósito/));
+
+    // El depósito es el único campo de texto del paso 3: un Enter ahí enviaba el formulario.
+    await user.type(document.getElementById('order-deposit') as HTMLInputElement, '{Enter}');
+
+    await waitFor(() => expect(currentStep(dialog)).toMatch(/Trabajos/));
+    expect(mocks.createWorkOrder).not.toHaveBeenCalled();
+  });
+
+  it('manda cada tarea con su tipo, su técnico y fuera del reparto heredado', async () => {
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+    await goToWorkStep(user, dialog);
+
+    // Una tarea de pintura en una orden de mecánica: antes se guardaba como mecánica.
+    await user.click(within(dialog).getByRole('button', { name: /Agregar trabajo/ }));
+    await user.selectOptions(document.getElementById('create-order-type') as HTMLSelectElement, 'pintura');
+    await user.type(document.getElementById('create-order-description') as HTMLInputElement, 'Pintar puerta');
+    await user.type(document.getElementById('create-order-price') as HTMLInputElement, '350');
+    await user.selectOptions(document.getElementById('create-order-technician') as HTMLSelectElement, PAINTER.id);
+    await user.click(document.getElementById('create-order-submit') as HTMLElement);
+    expect(within(dialog).getByText('Pintar puerta')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+
+    await waitFor(() => expect(mocks.createWorkOrder).toHaveBeenCalledTimes(1));
+    const input = mocks.createWorkOrder.mock.calls[0][0];
+    expect(input.tipo_trabajo).toBe('mecanica');
+    expect(input.labor_items).toEqual([
+      { descripcion: 'Pintar puerta', costo: 350, especialidad: 'pintura', asignado_a: PAINTER.id, reparto_heredado: false },
+    ]);
+    expect(input.asignaciones).toEqual([{ usuario_id: PAINTER.id, tipo_tarea: 'pintura' }]);
+  });
+
+  it('no crea la orden con un trabajo escrito sin agregar', async () => {
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+    await goToWorkStep(user, dialog);
+
+    await user.click(within(dialog).getByRole('button', { name: /Agregar trabajo/ }));
+    await user.type(document.getElementById('create-order-description') as HTMLInputElement, 'Frenos');
+    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+
+    expect(await within(dialog).findByText(/trabajo escrito sin agregar/i)).toBeInTheDocument();
+    expect(mocks.createWorkOrder).not.toHaveBeenCalled();
+  });
+
+  it('un doble clic en "Siguiente" del paso 3 no crea la orden al caer en "Crear"', async () => {
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+    await goToWorkStep(user, dialog);
+
+    // El segundo clic de un doble clic llega con detail = 2.
+    fireEvent.click(within(dialog).getByRole('button', { name: /^Crear$/i }), { detail: 2 });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(mocks.createWorkOrder).not.toHaveBeenCalled();
+  });
+
+  it('vuelve a un paso ya visto sin perder lo escrito', async () => {
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+    await pickCustomer(user, dialog);
+    await user.type(document.getElementById('order-miles-in') as HTMLInputElement, '45000');
+    await user.selectOptions(document.getElementById('intake-vehicle') as HTMLSelectElement, VEHICLE.id);
+    await next(user, dialog);
+    await waitFor(() => expect(currentStep(dialog)).toMatch(/Depósito/));
+
+    await user.click(within(dialog).getByRole('button', { name: /Vehículo y recepción/ }));
+    expect(currentStep(dialog)).toMatch(/Vehículo/);
+    expect((document.getElementById('order-miles-in') as HTMLInputElement).value).toBe('45000');
+    // Los pasos de adelante que nunca se abrieron no se pueden saltar.
+    expect(within(dialog).queryByRole('button', { name: /^Trabajos$/ })).not.toBeInTheDocument();
+  });
+
+  it('pide el método si hay depósito, y manda el método, el número y el comprobante', async () => {
+    mocks.uploadReceipt.mockResolvedValue(`${SEDE_CENTRO.id}/comprobante-alta-1.jpg`);
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+    await pickCustomer(user, dialog);
+    await user.selectOptions(document.getElementById('intake-vehicle') as HTMLSelectElement, VEHICLE.id);
+    await next(user, dialog);
+    await waitFor(() => expect(currentStep(dialog)).toMatch(/Depósito/));
+
+    const deposit = document.getElementById('order-deposit') as HTMLInputElement;
+    await user.clear(deposit);
+    await user.type(deposit, '200');
+    await next(user, dialog);
+    expect(currentStep(dialog)).toMatch(/Depósito/);
+    expect(dialog.querySelector('[role="alert"]')).toBeTruthy();
+
+    await user.selectOptions(document.getElementById('payment-method') as HTMLSelectElement, 'cheque');
+    await user.type(document.getElementById('payment-check') as HTMLInputElement, '1042');
+    await user.upload(
+      document.getElementById('payment-receipt') as HTMLInputElement,
+      new File(['x'], 'cheque.jpg', { type: 'image/jpeg' })
+    );
+    await next(user, dialog);
+    await waitFor(() => expect(currentStep(dialog)).toMatch(/Trabajos/));
+    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+
+    await waitFor(() => expect(mocks.createWorkOrder).toHaveBeenCalledTimes(1));
+    expect(mocks.uploadReceipt).toHaveBeenCalledWith(SEDE_CENTRO.id, 'alta', expect.any(File));
+    expect(mocks.createWorkOrder.mock.calls[0][0]).toMatchObject({
+      deposito_inicial: 200,
+      deposito_metodo: 'cheque',
+      deposito_cheque: '1042',
+      deposito_comprobante: `${SEDE_CENTRO.id}/comprobante-alta-1.jpg`,
+    });
+  });
+
+  it('si la base rechaza la orden borra el comprobante; si se cae la red lo deja y no lo sube otra vez', async () => {
+    mocks.uploadReceipt.mockResolvedValue(`${SEDE_CENTRO.id}/comprobante-alta-1.jpg`);
+    mocks.createWorkOrder.mockRejectedValueOnce({ code: '22023', message: 'Elige cómo dejó el depósito el cliente' });
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+    await fillDeposit(user, dialog, '50', 'efectivo', new File(['x'], 'recibo.jpg', { type: 'image/jpeg' }));
+    await next(user, dialog);
+    await waitFor(() => expect(currentStep(dialog)).toMatch(/Trabajos/));
+
+    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await waitFor(() => expect(mocks.removeDeliveryReceipt).toHaveBeenCalledWith(`${SEDE_CENTRO.id}/comprobante-alta-1.jpg`));
+
+    // Segundo intento: se sube de nuevo (el anterior se borró) y ahora falla la red.
+    mocks.createWorkOrder.mockRejectedValueOnce({ code: '', message: 'TypeError: Failed to fetch' });
+    mocks.removeDeliveryReceipt.mockClear();
+    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await waitFor(() => expect(mocks.createWorkOrder).toHaveBeenCalledTimes(2));
+    expect(mocks.uploadReceipt).toHaveBeenCalledTimes(2);
+    expect(mocks.removeDeliveryReceipt).not.toHaveBeenCalled();
+
+    // Tercer intento: usa el comprobante que quedó, sin subirlo otra vez.
+    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await waitFor(() => expect(mocks.createWorkOrder).toHaveBeenCalledTimes(3));
+    expect(mocks.uploadReceipt).toHaveBeenCalledTimes(2);
+    expect(mocks.createWorkOrder.mock.calls[2][0].deposito_comprobante).toBe(`${SEDE_CENTRO.id}/comprobante-alta-1.jpg`);
+  });
+});
+
+// The detail view used to be ~690 lines inside the page, with its handlers on
+// top of that. It is now `useWorkOrderDetail` plus five presentational cards;
+// these pin the seams between them.
+// F7 (reunión con el taller del 03/10/2026): Órdenes y Kanban son dos vistas de la misma
+// página, con la misma búsqueda. La vista se recuerda y `/kanban` redirige a `?vista=tablero`.
+describe('WorkOrders — lista y tablero en la misma página', () => {
+  // La vista elegida se guarda en el navegador: sin limpiar, las pruebas de después abrirían
+  // el tablero.
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  it('cambia al tablero, lo recuerda, y la búsqueda filtra también el tablero', async () => {
+    const user = userEvent.setup();
+    const first = renderWithProviders(<WorkOrders />);
+    await screen.findAllByText('OT-2026-0042');
+    expect(screen.getByRole('button', { name: 'Lista' })).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getByRole('button', { name: 'Tablero' }));
+    expect(screen.getByRole('button', { name: 'Tablero' })).toHaveAttribute('aria-pressed', 'true');
+    expect(document.querySelector('.kanban-board')).toBeTruthy();
+    expect(document.querySelector('.table-container')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Abrir la orden OT-2026-0042' })).toBeInTheDocument();
+
+    await user.type(screen.getByRole('textbox', { name: 'Buscar...' }), 'zzz');
+    expect(screen.queryByRole('button', { name: 'Abrir la orden OT-2026-0042' })).not.toBeInTheDocument();
+    first.unmount();
+
+    // Otra visita a Órdenes abre la vista que se usó la última vez.
+    renderWithProviders(<WorkOrders />);
+    expect(await screen.findByRole('button', { name: 'Abrir la orden OT-2026-0042' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tablero' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('?vista=tablero abre el tablero, y el número de la tarjeta abre la orden', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />, { route: '/work-orders?vista=tablero' });
+
+    await user.click(await screen.findByRole('button', { name: 'Abrir la orden OT-2026-0042' }));
+    await screen.findByRole('tablist');
+    expect(mocks.getWorkOrderDetail).toHaveBeenCalledWith(ORDER.id);
   });
 });
 

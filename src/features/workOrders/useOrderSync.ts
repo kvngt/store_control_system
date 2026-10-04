@@ -34,6 +34,8 @@ const LISTS = [
   queryKeys.workOrders()[0],
   queryKeys.archivedWorkOrders(undefined, '', 0)[0],
   queryKeys.dashboardStats()[0],
+  queryKeys.attention()[0],
+  queryKeys.myTasks()[0],
 ];
 
 /**

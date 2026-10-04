@@ -31,14 +31,15 @@ la base sin comprometer la operación: [mantenimiento.md §4](mantenimiento.md#4
 
 ## Órdenes de trabajo
 
-**Lista, detalle y alta** — ruta `/work-orders` (`?open=<id>` abre una).
+**Lista, tablero, detalle y alta** — ruta `/work-orders` (`?open=<id>` abre una;
+`?vista=tablero` abre el tablero, y `/kanban` redirige ahí).
 
 | | |
 |---|---|
-| Pantalla | `pages/WorkOrders.tsx` (lista y archivo; para un técnico, solo "Mis órdenes") |
+| Pantalla | `pages/WorkOrders.tsx` (lista y archivo; para un técnico, solo "Mis órdenes"). Desde F7, dos vistas con la misma búsqueda (`features/workOrders/orderSearch.ts`): **Lista** y **Tablero** (`KanbanBoard` con `embedded`). La vista va en la URL y se recuerda en el navegador (`restorify_orders_view`) |
 | Detalle | `features/workOrders/WorkOrderDetail.tsx` (dibuja) y `useWorkOrderDetail.ts` (estado, permisos derivados como `canEdit`, `canSign`, `canDeliver`, y todas las acciones). En escritorio, pestañas (`components/Tabs.tsx`) bajo un encabezado fijo: admin Resumen/Trabajos/Fotos y avances/Cobro y cliente/Historial; técnico Tareas/Orden/Avances. Cada pestaña se monta al abrirla y después solo se esconde. En el teléfono cada tarjeta va en un `MobileSection` plegable (`components/MobileSection.tsx`), en el orden de las pestañas. Enlace directo a una pestaña: `/work-orders?open=<id>&tab=<id de la pestaña>` |
 | Historial de la orden | Tabla `historial_orden` (trigger `trg_historial`, `20261010000004`); `workOrdersService.getHistory`; `features/workOrders/OrderHistory.tsx` y `historyFormat.ts` (convierte cada fila en una frase); pruebas `17_historial_orden.test.sql` y `historyFormat.test.ts` |
-| Alta | `features/workOrders/WorkOrderCreateModal.tsx`, `useWorkOrderForm.ts`, `workOrderForm.schema.ts` |
+| Alta | `features/workOrders/WorkOrderCreateModal.tsx`, `useWorkOrderForm.ts`, `workOrderForm.schema.ts`. Cuatro pasos (F4): Cliente, Vehículo y recepción, Depósito, Trabajos. Qué campo va en qué paso: `INTAKE_STEPS` (un error al crear abre su paso, `firstStepWithErrors`). Las tareas con `TaskEditor`; el depósito con `PaymentFields`. Lo envía `submitOrder` en `pages/WorkOrders.tsx` |
 | Tarjetas del detalle | `LaborTable` (con `TaskEditor`, `TechnicianSelect`, `TradeMismatchDialog` y las reglas de `tasks.ts`), `PartsTable`, `PartsSummaryCard`, `SignatureCard`, `ProgressLog`, `QuoteCard`, `CustomerLinkCard`, `CommissionEstimateCard`, `DeliveryModal`, `ShareReportModal`, `ArchivedOrders`; del técnico, `TechnicianTaskList` (Mis tareas, F5) y `ReportFindingModal`; de administración, `FindingsCard` (con `DiscardFindingModal`; reglas en `findings.ts`) |
 | Servicio | `services/workOrders.service.ts` |
 | Tablas | `ordenes_trabajo` (20 triggers), `orden_montos`, `orden_labor`, `orden_repuestos`, `orden_asignaciones`, `orden_avances`, `orden_hallazgos` (F6) |
@@ -59,9 +60,12 @@ la base sin comprometer la operación: [mantenimiento.md §4](mantenimiento.md#4
 
 ## Tablero (Kanban)
 
+Desde F7 es la vista **Tablero** de Órdenes, no una ruta aparte (`/kanban` redirige a
+`/work-orders?vista=tablero`).
+
 | | |
 |---|---|
-| Pantalla | `pages/KanbanBoard.tsx` (arrastrar en computadora, "Mover a" en el teléfono, archivar) |
+| Pantalla | `pages/KanbanBoard.tsx` (arrastrar en computadora, "Mover a" en el teléfono, archivar). Con `embedded` no dibuja título; `search` filtra las tarjetas (la ocupación sigue contando todo); `onOpen` hace del número de la tarjeta el enlace a la orden |
 | Servicio | `workOrders.service.ts` (`getWorkOrders`, `updateWorkOrderStatus`, `setArchived`, `deliver`) |
 | Pruebas | `pages/KanbanBoard.test.tsx` |
 
@@ -119,7 +123,9 @@ egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
 |---|---|
 | Pantalla | `pages/Dashboard.tsx` |
 | Servicio | `dashboard.service.ts` → RPC `resumen_panel` (SECURITY INVOKER: un técnico recibe solo lo suyo) |
-| Pruebas | `services/dashboard.service.test.ts`; pgTAP `08`, `10` |
+| Requiere atención (admin, F7) | `features/dashboard/AttentionCard.tsx` → `dashboardService.getAttention` → RPC `requiere_atencion` (`20261010000012`): hallazgos sin decidir, presupuestos sin respuesta, tareas sin técnico, órdenes vencidas y correos con error, contados en la base, con las primeras órdenes de cada grupo |
+| Mis tareas (técnico, F7) | `features/dashboard/MyTasksCard.tsx` → `workOrdersService.getMyTasks` (sus líneas de `orden_labor` en órdenes sin entregar) |
+| Pruebas | `services/dashboard.service.test.ts`, `features/dashboard/*.test.tsx`; pgTAP `08`, `10`, `23` |
 
 ## Clientes y vehículos
 
@@ -192,6 +198,8 @@ egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
 
 ## Menú y navegación
 
-`components/layout/` — `Sidebar.tsx` (menú lateral), `BottomNav.tsx` (barra del teléfono),
-`Header.tsx` (buscador, campana, sede activa). Las rutas y quién entra a cada una, en
+`components/layout/` — `Sidebar.tsx` (menú lateral, grupos Taller / Finanzas / Sistema),
+`BottomNav.tsx` (barra del teléfono: Panel y Órdenes, y Clientes y Vehículos para un admin),
+`Header.tsx` (buscador, campana, sede activa). El tablero no tiene entrada propia desde F7: es
+una vista de Órdenes. Las rutas y quién entra a cada una, en
 `App.tsx`. **Esconder una entrada del menú no es un permiso**: la regla va en la base.
