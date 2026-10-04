@@ -1,5 +1,4 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
   Archive,
@@ -41,8 +40,8 @@ import CommissionEstimateCard from './CommissionEstimateCard';
 import TechnicianTaskList from './TechnicianTaskList';
 import ProgressLog from './ProgressLog';
 import ShareReportModal from './ShareReportModal';
-import FindingsAlert from './FindingsAlert';
-
+import FindingsCard from './FindingsCard';
+import { findingsToReview } from './findings';
 import DeliveryModal from './DeliveryModal';
 import OrderBalanceCard from '../finance/OrderBalanceCard';
 import PublishProgressModal from './PublishProgressModal';
@@ -95,42 +94,16 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   const [visited, setVisited] = useState<string[]>([tabIds[0]]);
 
   const orderId = detail.order?.id;
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [preloadedText, setPreloadedText] = useState<string | undefined>();
+  // La tarea que se precarga al cotizar un hallazgo (F6).
+  const [prefill, setPrefill] = useState<{ text: string; nonce: number } | null>(null);
 
   useEffect(() => {
     const next = detail.requestedTab && tabIds.includes(detail.requestedTab) ? detail.requestedTab : tabIds[0];
     setTab(next);
     setVisited([next]);
+    // `tabIds` cambia solo con el rol, que no cambia con la orden abierta.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, detail.requestedTab]);
-
-  useEffect(() => {
-    if (!orderId || !detail.order) return;
-    const action = searchParams.get('action');
-    const findingId = searchParams.get('findingId');
-    if (action === 'quote' && findingId) {
-      const finding = detail.order.hallazgos?.find(h => h.id === findingId);
-      if (finding && finding.estado === 'pendiente') {
-        detail.quoteFinding(findingId).then(() => {
-          setPreloadedText(finding.descripcion);
-          setTab('trabajos');
-          setVisited(prev => prev.includes('trabajos') ? prev : [...prev, 'trabajos']);
-          setSearchParams(new URLSearchParams());
-        });
-      } else {
-        setSearchParams(new URLSearchParams());
-      }
-    } else if (action === 'discard' && findingId) {
-      // For discard, we can just clear it and maybe show a modal. For simplicity, just call discard directly.
-      const finding = detail.order.hallazgos?.find(h => h.id === findingId);
-      if (finding && finding.estado === 'pendiente') {
-         // This should ideally prompt for 'enReporte' and 'texto', but F6 plan says "El admin edita o agrega texto y elige si va al reporte".
-         // The prompt is complex without a modal. Let's just discard with default values, or wait for the admin to click the button in the UI.
-         setSearchParams(new URLSearchParams());
-      }
-    }
-  }, [orderId, detail.order, searchParams, setSearchParams, detail]);
 
   const order = detail.order;
   if (!order) return null;
@@ -146,6 +119,8 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   const laborList = order.labor_items || [];
   const partsList = order.repuestos || [];
   const progressEntries = order.avances || [];
+  // Los avances donde cayeron las fotos de un trabajo adicional reportado (F6).
+  const findingEntryIds = new Set((order.hallazgos || []).flatMap((h) => (h.avance_id ? [h.avance_id] : [])));
   // Solo lo autorizado por el cliente se cobra (igual que los totales de la base).
   const totalLabor = laborList.filter(isApproved).reduce((sum, l) => sum + l.costo, 0);
   const totalParts = partsList.filter(isApproved).reduce((sum, p) => sum + p.subtotal, 0);
@@ -300,7 +275,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         onChangeSpecialty={detail.canEditLines ? detail.changeLaborSpecialty : undefined}
         lockedIds={detail.lockedLaborIds}
         paidPools={detail.paidPools}
-        initialText={preloadedText}
+        prefill={prefill}
       />
     </MobileSection>
   );
@@ -542,6 +517,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         onToggleVisibility={detail.toggleMediaVisibility}
         onToggleEntryVisibility={detail.toggleProgressVisibility}
         onDeleteMedia={detail.deleteMedia}
+        findingEntryIds={findingEntryIds}
       />
     </MobileSection>
   );
@@ -551,6 +527,28 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     <MobileSection title={t('history.title')} icon={<History size={18} />}>
       <OrderHistory orderId={order.id} statusLabels={statusLabels} />
     </MobileSection>
+  );
+
+  // F6: lo que reportó el taller y administración tiene que decidir. Arriba de Resumen y de
+  // Trabajos; en el teléfono las dos pestañas están apiladas, así que va una sola vez.
+  const findings = isAdmin ? findingsToReview(order.hallazgos) : [];
+  const findingsSection = findings.length > 0 && (
+    <FindingsCard
+      findings={findings}
+      names={Object.fromEntries(assignments.map((a) => [a.usuario_id, a.usuario?.nombre_completo ?? '—']))}
+      mediaCount={(order.media || []).reduce<Record<string, number>>((acc, m) => {
+        if (m.avance_id) acc[m.avance_id] = (acc[m.avance_id] ?? 0) + 1;
+        return acc;
+      }, {})}
+      busy={detail.busy}
+      onQuote={async (h) => {
+        const text = await detail.quoteFinding(h.id);
+        if (text == null) return;
+        setPrefill({ text, nonce: Date.now() });
+        selectTab('trabajos');
+      }}
+      onDiscard={(h, enReporte, texto) => detail.discardFinding(h.id, enReporte, texto)}
+    />
   );
 
   // Aviso de tareas sin técnico, arriba del Resumen: es dinero que no le llega a nadie.
@@ -572,6 +570,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     ? {
         resumen: (
           <>
+            {findingsSection}
             {unassignedNotice}
             <div className="responsive-grid-2">
               {vehicleSection}
@@ -582,6 +581,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         ),
         trabajos: (
           <>
+            {!isMobile && findingsSection}
             <div className="responsive-grid-2">
               {laborSection}
               {partsSection}
@@ -630,7 +630,12 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
 
   const tabItems: TabItem[] = isAdmin
     ? [
-        { id: 'resumen', label: t('workOrders.tabs.summary') },
+        {
+          id: 'resumen',
+          label: t('workOrders.tabs.summary'),
+          attention: findings.length > 0,
+          attentionLabel: t('findings.cardTitle'),
+        },
         {
           id: 'trabajos',
           label: t('workOrders.tabs.work'),
@@ -659,7 +664,6 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
       {detail.error && <div className="alert-error">{detail.error}</div>}
       {detail.loading && <div className="loading-state"><div className="spinner" /></div>}
 
-      {isAdmin && <FindingsAlert orders={[order]} />}
       {order.estatus === 'espera_autorizacion' && (
         <div className="alert-warn">
           <strong>{t('workOrders.authorizationBanner')}</strong>
@@ -740,7 +744,10 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
             className="form-input form-select"
             value={order.estatus}
             onChange={(e) => detail.changeStatus(e.target.value as OrderStatus)}
-            disabled={!detail.canEdit}
+            // F6: la pausa la quita administración (al cotizar, descartar o con la respuesta del
+            // cliente); el técnico no la levanta por su cuenta.
+            disabled={!detail.canEdit || (!detail.isAdmin && order.estatus === 'espera_autorizacion')}
+            title={!detail.isAdmin && order.estatus === 'espera_autorizacion' ? t('findings.pausedByOffice') : undefined}
             style={{ flex: '1 1 160px' }}
           >
             {Object.keys(statusLabels)
@@ -751,6 +758,8 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
               // Devolver una orden a Recepción es de administración: la base responde 42501.
               // Se filtra igual que Entregado, para no ofrecer algo que siempre falla.
               .filter((s) => s !== 'recepcion' || detail.isAdmin || order.estatus === 'recepcion')
+              // F6: la pausa la pone la oficina; el técnico reporta trabajo adicional en Tareas.
+              .filter((s) => s !== 'espera_autorizacion' || detail.isAdmin || order.estatus === 'espera_autorizacion')
               .map((s) => (
                 <option key={s} value={s}>{statusLabels[s]}</option>
               ))}

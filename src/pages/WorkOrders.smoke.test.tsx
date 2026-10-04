@@ -42,6 +42,9 @@ const mocks = vi.hoisted(() => ({
   getBalance: vi.fn(),
   getEstimate: vi.fn(),
   getHistory: vi.fn(),
+  reportFinding: vi.fn(),
+  quoteFinding: vi.fn(),
+  discardFinding: vi.fn(),
 }));
 
 vi.mock('../context/auth.context', () => ({ useAuth: () => mocks.auth.current }));
@@ -89,6 +92,9 @@ vi.mock('../services/supabaseService', () => {
     deliver: vi.fn(),
     uploadReceipt: vi.fn(),
     removeDeliveryReceipt: vi.fn(),
+    reportFinding: mocks.reportFinding,
+    quoteFinding: mocks.quoteFinding,
+    discardFinding: mocks.discardFinding,
   };
   const customers = { getCustomers: mocks.getCustomers, createCustomer: mocks.createCustomer };
   const vehicles = { getVehicles: mocks.getVehicles, createVehicle: mocks.createVehicle };
@@ -1015,14 +1021,16 @@ describe('WorkOrders — tareas con técnico', () => {
     renderWithProviders(<WorkOrders />);
     await openDetail(user);
 
-    const mine = screen.getByText('Cambio de aceite').closest('tr') as HTMLElement;
+    // Desde F5 lo suyo va en tarjetas ("Mis tareas") y lo de los demás en una tabla de solo
+    // lectura debajo.
+    const mine = screen.getByText('Tarea: Cambio de aceite').closest('.task-card') as HTMLElement;
     const theirs = screen.getByText('Pintar defensa').closest('tr') as HTMLElement;
-    expect(within(mine).getByText(MECHANIC_USER.nombre_completo)).toBeInTheDocument();
     expect(within(theirs).getByText('Sara Vega')).toBeInTheDocument();
-    expect(within(mine).getByRole('button', { name: 'Marcar como hecho' })).toBeInTheDocument();
+    expect(within(mine).getByRole('button', { name: /Realizado/ })).toBeInTheDocument();
     expect(within(theirs).queryByRole('button')).toBeNull();
     // Ni selectores: asignar es de administración.
     expect(within(mine).queryByRole('combobox')).toBeNull();
+    expect(within(theirs).queryByRole('combobox')).toBeNull();
   });
 
   // Quién entra al reparto por especialidad de los trabajos anteriores lo decide el origen de la
@@ -1125,5 +1133,101 @@ describe('WorkOrders — tareas con técnico', () => {
 
     expect(screen.queryByDisplayValue('Pulido')).toBeNull();
     expect(screen.queryByLabelText('Descripción')).toBeNull();
+  });
+});
+
+// F6: el técnico reporta trabajo adicional y administración lo cotiza o lo descarta.
+describe('WorkOrders — trabajo adicional reportado (F6)', () => {
+  const HALLAZGO = {
+    id: 'hal-1',
+    orden_id: ORDER.id,
+    sede_id: SEDE_CENTRO.id,
+    reportado_por: MECHANIC_USER.id,
+    descripcion: 'Pastillas traseras gastadas',
+    estado: 'pendiente' as const,
+    en_reporte: false,
+    texto_cliente: null,
+    resuelto_por: null,
+    resuelto_en: null,
+    presupuesto_id: null,
+    avance_id: 'av-h1',
+    creado_en: '2026-10-04T15:00:00Z',
+  };
+  const ADMIN_VIEW: WorkOrder = {
+    ...DETAIL,
+    estatus: 'espera_autorizacion',
+    motivo_autorizacion: 'Pastillas traseras gastadas',
+    asignaciones: [{ id: 'asg-1', orden_id: ORDER.id, usuario_id: MECHANIC_USER.id, tipo_tarea: 'mecanica', estatus_tarea: 'pendiente', usuario: MECHANIC_USER }],
+    hallazgos: [HALLAZGO],
+  };
+
+  it('administración lo ve en Resumen y al cotizar precarga la tarea en Trabajos', async () => {
+    mocks.getWorkOrderDetail.mockResolvedValue(ADMIN_VIEW);
+    mocks.quoteFinding.mockResolvedValue('Pastillas traseras gastadas');
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+
+    const card = screen.getByRole('region', { name: 'El taller reportó trabajo adicional' });
+    expect(within(card).getByText('Pastillas traseras gastadas')).toBeInTheDocument();
+    expect(within(card).getByText(new RegExp(MECHANIC_USER.nombre_completo))).toBeInTheDocument();
+
+    await user.click(within(card).getByRole('button', { name: /Cotizar al cliente/ }));
+
+    expect(mocks.quoteFinding).toHaveBeenCalledWith('hal-1');
+    await waitFor(() => expect(screen.getByRole('tab', { name: /^Trabajos/ })).toHaveAttribute('aria-selected', 'true'));
+    expect(await screen.findByDisplayValue('Pastillas traseras gastadas')).toBeInTheDocument();
+  });
+
+  it('al descartar, el admin decide si va al reporte y con qué texto', async () => {
+    mocks.getWorkOrderDetail.mockResolvedValue(ADMIN_VIEW);
+    mocks.discardFinding.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+
+    await user.click(screen.getByRole('button', { name: /Descartar…/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Descartar trabajo adicional' });
+    const text = within(dialog).getByRole('textbox');
+    // Arranca con lo que escribió el técnico, para no empezar de cero.
+    expect(text).toHaveValue('Pastillas traseras gastadas');
+
+    await user.click(within(dialog).getByRole('checkbox', { name: /Mostrarlo en el reporte del cliente/ }));
+    await user.clear(text);
+    expect(within(dialog).getByRole('button', { name: 'Descartar' })).toBeDisabled();
+
+    await user.type(text, 'Las pastillas traseras tienen poca vida.');
+    await user.click(within(dialog).getByRole('button', { name: 'Descartar' }));
+
+    expect(mocks.discardFinding).toHaveBeenCalledWith('hal-1', true, 'Las pastillas traseras tienen poca vida.');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('el técnico reporta desde Tareas y el estado ya no le ofrece la pausa', async () => {
+    mocks.auth.current = authValue(MECHANIC_USER);
+    mocks.getWorkOrderDetail.mockResolvedValue({
+      ...TECH_DETAIL,
+      asignaciones: [{ id: 'asg-1', orden_id: ORDER.id, usuario_id: MECHANIC_USER.id, tipo_tarea: 'mecanica', estatus_tarea: 'pendiente' }],
+      hallazgos: [],
+    });
+    mocks.getEstimate.mockResolvedValue({ bolsas: [], reparto: [], mi_total: 0, tareas: [], sin_asignar: [] });
+    mocks.reportFinding.mockResolvedValue({ hallazgo_id: 'hal-2', avance_id: 'av-2' });
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+
+    const status = screen.getAllByRole('combobox').find((el) => (el as HTMLSelectElement).value === 'en_proceso') as HTMLSelectElement;
+    expect(Array.from(status.options).map((o) => o.value)).not.toContain('espera_autorizacion');
+
+    await user.click(screen.getByRole('button', { name: /Reportar trabajo adicional/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Reportar trabajo adicional' });
+    const confirm = within(dialog).getByRole('button', { name: 'Reportar y pausar la orden' });
+    expect(confirm).toBeDisabled();
+
+    await user.type(within(dialog).getByRole('textbox'), 'Fuga en la bomba de agua');
+    await user.click(confirm);
+
+    expect(mocks.reportFinding).toHaveBeenCalledWith(ORDER.id, 'Fuga en la bomba de agua');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 });

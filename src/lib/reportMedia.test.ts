@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { customerReportPhotos, groupByDay, reportAssetPaths, reportImagePath } from './reportMedia';
-import type { OrderMedia } from '../types/database';
+import { customerObservations, customerReportPhotos, groupByDay, reportAssetPaths, reportImagePath } from './reportMedia';
+import type { OrderFinding, OrderMedia } from '../types/database';
 
 function media(overrides: Partial<OrderMedia>): OrderMedia {
   return {
@@ -45,5 +45,32 @@ describe('reportMedia', () => {
       ['2026-09-12', ['a']],
       ['2026-09-13', ['c', 'b']],
     ]);
+  });
+});
+
+describe('customerObservations', () => {
+  const finding = (overrides: Partial<OrderFinding>): OrderFinding => ({
+    id: 'h', orden_id: 'o', sede_id: 's', reportado_por: 'u', descripcion: 'Interno: el dueño no lo va a pagar',
+    estado: 'descartado', en_reporte: true, texto_cliente: 'Las llantas están a la mitad.', resuelto_por: 'a',
+    resuelto_en: '2026-10-04T15:00:00Z', presupuesto_id: null, avance_id: null, creado_en: '2026-10-04T14:00:00Z',
+    ...overrides,
+  });
+
+  it('solo lo descartado que va al reporte, con el texto del admin', () => {
+    const order = {
+      hallazgos: [
+        finding({ id: 'b', resuelto_en: '2026-10-05T10:00:00Z', texto_cliente: 'Segunda' }),
+        finding({ id: 'a' }),
+        finding({ id: 'no-reporte', en_reporte: false }),
+        finding({ id: 'pendiente', estado: 'pendiente', resuelto_en: null }),
+        finding({ id: 'cotizado', estado: 'cotizado' }),
+        finding({ id: 'vacio', texto_cliente: '   ' }),
+      ],
+    };
+    expect(customerObservations(order).map((h) => h.id)).toEqual(['a', 'b']);
+  });
+
+  it('una orden sin hallazgos no tiene observaciones', () => {
+    expect(customerObservations({})).toEqual([]);
   });
 });

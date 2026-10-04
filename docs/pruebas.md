@@ -24,7 +24,7 @@ decidir cuál y corregirlo.
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
 | **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 619 pruebas, 78 archivos (4/10/2026) | ~30 s | Nada |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte y hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 459 aserciones, 19 archivos | ~1 min | Docker |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte y hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 536 aserciones, 22 archivos | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, 77 casos (76 pasan, 1 se salta) | 2–5 min | Credenciales de prueba (**al 1/10/2026 no existen**: se borraron el 29/09) |
 | **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 100 casos con las cuentas de prueba, todos de solo lectura (los que escriben, escriben el valor que ya hay). Los 66 anteriores, 66 PASS · 0 SKIP; los de las migraciones `20261006000000` a `20261010000006` pasan solo con ellas aplicadas (SEC-91 a SEC-105, verificados contra el Supabase local el 4/10/2026) | ~15 s | Nada; con cuentas de prueba cubre más |
 | **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
@@ -343,6 +343,9 @@ inyectado en la fórmula, o una comisión reescrita antes de la red, aborta y se
 Las pruebas 01 y 02 firman la recepción antes de entregar: desde la fase 5, sin
 autorización no hay nada que cobrar ni comisión que generar.
 
+> **Estado (4 de octubre de 2026, noche):** 536 aserciones en verde en los 22 archivos, localmente
+> (F6: `22_hallazgos.test.sql`, 44 aserciones).
+>
 > **Estado (4 de octubre de 2026):** 459 aserciones en verde en los 19 archivos, localmente.
 >
 > **Estado (29 de septiembre de 2026):** **330 aserciones en verde** en los 13 archivos con

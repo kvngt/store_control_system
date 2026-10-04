@@ -1,4 +1,4 @@
-import type { OrderMedia, WorkOrder } from '../types/database';
+import type { OrderFinding, OrderMedia, WorkOrder } from '../types/database';
 
 /**
  * Lo que un reporte para el cliente puede mostrar de la multimedia: solo fotos que
@@ -33,4 +33,15 @@ export function groupByDay(media: OrderMedia[]): { day: string; items: OrderMedi
     groups.set(day, [...(groups.get(day) ?? []), item]);
   }
   return [...groups.entries()].map(([day, items]) => ({ day, items }));
+}
+
+/**
+ * "Observaciones del taller" (F6): los hallazgos descartados que administración mandó al
+ * reporte, con SU texto. La descripción del técnico es interna y nunca sale. Misma regla que
+ * `observaciones` en `datos_portal`.
+ */
+export function customerObservations(order: Pick<WorkOrder, 'hallazgos'>): OrderFinding[] {
+  return (order.hallazgos || [])
+    .filter((h) => h.estado === 'descartado' && h.en_reporte && !!h.texto_cliente?.trim())
+    .sort((a, b) => (a.resuelto_en ?? '').localeCompare(b.resuelto_en ?? ''));
 }

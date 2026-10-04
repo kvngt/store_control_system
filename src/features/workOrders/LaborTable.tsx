@@ -42,8 +42,8 @@ interface LaborTableProps {
    * pasar a ellas (la base lo rechaza; su comisión no la cobraría nadie).
    */
   paidPools?: ReadonlySet<Specialty>;
-  /** Texto para precargar el editor (ej: al cotizar un hallazgo). */
-  initialText?: string;
+  /** Precarga el editor de tareas (F6: al cotizar un hallazgo). Ver `TaskEditor`. */
+  prefill?: { text: string; nonce: number } | null;
 }
 
 const NO_LOCKS: ReadonlySet<string> = new Set();
@@ -75,7 +75,7 @@ export default function LaborTable({
   onChangeSpecialty,
   lockedIds = NO_LOCKS,
   paidPools = NO_POOLS,
-  initialText,
+  prefill,
 }: LaborTableProps) {
   const { t } = useLanguage();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -386,7 +386,7 @@ export default function LaborTable({
           busy={busy}
           onAdd={onAdd}
           idPrefix="labor-new"
-          initialText={initialText}
+          prefill={prefill}
         />
       )}
 

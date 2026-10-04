@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle2, Circle, MessageSquarePlus, Clock, X, Plus, Eye, EyeOff } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Circle, MessageSquarePlus, Clock, X, Plus, Eye, EyeOff } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import type { LaborItem, PreparedMedia } from '../../types/database';
 import { isApproved } from './lineState';
@@ -7,6 +7,7 @@ import LaborTable from './LaborTable';
 import DraftMediaStrip from '../media/DraftMediaStrip';
 import MediaCaptureBar from '../media/MediaCaptureBar';
 import type { WorkOrderDetailApi } from './useWorkOrderDetail';
+import ReportFindingModal from './ReportFindingModal';
 
 interface TechnicianTaskListProps {
   items: LaborItem[];
@@ -17,6 +18,9 @@ interface TechnicianTaskListProps {
 export default function TechnicianTaskList({ items, currentUserId, detail }: TechnicianTaskListProps) {
   const { t } = useLanguage();
   const [addingProgressTo, setAddingProgressTo] = useState<LaborItem | null>(null);
+  const [reporting, setReporting] = useState(false);
+  // Lo que reportó: así sabe si administración ya lo vio y qué decidió.
+  const myFindings = (detail.order?.hallazgos || []).filter((h) => h.reportado_por === currentUserId);
 
   const myTasks = items.filter((item) => item.asignado_a === currentUserId);
   const otherTasks = items.filter((item) => item.asignado_a !== currentUserId);
@@ -25,7 +29,7 @@ export default function TechnicianTaskList({ items, currentUserId, detail }: Tec
     <div className="technician-tasks" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
       {myTasks.length === 0 ? (
         <div className="card" style={{ padding: 'var(--space-6)', textAlign: 'center', color: 'var(--color-text-tertiary)' }}>
-          <p>{t('tasks.noTasksAssigned') || 'No tienes tareas asignadas en esta orden.'}</p>
+          <p>{t('tasks.noTasksAssigned')}</p>
         </div>
       ) : (
         myTasks.map((task) => {
@@ -37,7 +41,7 @@ export default function TechnicianTaskList({ items, currentUserId, detail }: Tec
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-                    {t('tasks.taskLabel') || 'Tarea'}: {task.descripcion}
+                    {t('tasks.taskLabel')}: {task.descripcion}
                   </h3>
                   {!approved ? (
                     <span className="badge badge-waiting-auth" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
@@ -45,11 +49,11 @@ export default function TechnicianTaskList({ items, currentUserId, detail }: Tec
                     </span>
                   ) : completed ? (
                     <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                      <CheckCircle2 size={12} /> {t('tasks.completed') || 'Completada'}
+                      <CheckCircle2 size={12} /> {t('tasks.done')}
                     </span>
                   ) : (
                     <span className="badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--color-warning-bg)', color: 'var(--color-warning)' }}>
-                      <Circle size={12} /> {t('tasks.pending') || 'Pendiente'}
+                      <Circle size={12} /> {t('tasks.pendingBadge')}
                     </span>
                   )}
                 </div>
@@ -64,7 +68,7 @@ export default function TechnicianTaskList({ items, currentUserId, detail }: Tec
                     disabled={detail.busy}
                   >
                     {completed ? <Circle size={16} /> : <CheckCircle2 size={16} />}
-                    {completed ? t('workOrders.unmarkCompleted') : t('tasks.markDone') || 'Realizado'}
+                    {completed ? t('tasks.reopen') : t('tasks.markDone')}
                   </button>
                   <button
                     type="button"
@@ -72,7 +76,7 @@ export default function TechnicianTaskList({ items, currentUserId, detail }: Tec
                     onClick={() => setAddingProgressTo(task)}
                     disabled={detail.busy}
                   >
-                    <MessageSquarePlus size={16} /> {t('tasks.addProgress') || 'Agregar avance'}
+                    <MessageSquarePlus size={16} /> {t('tasks.addProgress')}
                   </button>
                 </div>
               )}
@@ -81,27 +85,37 @@ export default function TechnicianTaskList({ items, currentUserId, detail }: Tec
         })
       )}
 
-      {!detail.isDelivered && (
-        <div style={{ marginTop: 'var(--space-4)' }}>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{ width: '100%', justifyContent: 'center' }}
-            onClick={() => {
-              const reason = window.prompt(t('tasks.reportFindingPrompt') || 'Escribe por qué la orden necesita autorización (ej: El radiador está picado)');
-              if (reason) detail.reportFinding(reason);
-            }}
-            disabled={detail.busy}
-          >
-            <MessageSquarePlus size={16} /> {t('tasks.reportAdditional') || 'Reportar trabajo adicional'}
-          </button>
+      {detail.canEdit && (
+        <button
+          type="button"
+          className="btn btn-secondary"
+          style={{ width: '100%', justifyContent: 'center' }}
+          onClick={() => setReporting(true)}
+          disabled={detail.busy}
+        >
+          <AlertTriangle size={16} /> {t('findings.reportButton')}
+        </button>
+      )}
+
+      {myFindings.length > 0 && (
+        <div className="card">
+          {/* No `.card-title`: dentro de una sección plegable del teléfono ese título se esconde. */}
+          <h3 className="findings-heading">{t('findings.myFindings')}</h3>
+          <ul className="findings-list">
+            {myFindings.map((h) => (
+              <li key={h.id} className="findings-item">
+                <p className="findings-text">{h.descripcion}</p>
+                <span className={`badge findings-badge is-${h.estado}`}>{t(`findings.state.${h.estado}`)}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
       {otherTasks.length > 0 && (
         <div style={{ marginTop: 'var(--space-6)' }}>
           <LaborTable
-            title={t('tasks.otherTasks') || 'Otras tareas de la orden'}
+            title={t('tasks.otherTasks')}
             items={otherTasks}
             workType={detail.order?.tipo_trabajo}
             canEdit={false}
@@ -113,6 +127,17 @@ export default function TechnicianTaskList({ items, currentUserId, detail }: Tec
             onToggleComplete={detail.toggleLaborComplete}
           />
         </div>
+      )}
+      {reporting && (
+        <ReportFindingModal
+          saving={detail.busy}
+          onCancel={() => setReporting(false)}
+          onConfirm={async (descripcion, media) => {
+            const ok = await detail.reportFinding(descripcion, media);
+            if (ok) setReporting(false);
+            return ok;
+          }}
+        />
       )}
       {addingProgressTo && (
         <TaskProgressModal
@@ -153,7 +178,7 @@ function TaskProgressModal({
         <div className="modal-header">
           <h2 className="modal-title">
             <MessageSquarePlus size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
-            {t('tasks.addProgress') || 'Agregar avance'}
+            {t('tasks.addProgress')}
           </h2>
           <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={onCancel} disabled={saving} aria-label={t('common.cancel')}>
             <X size={18} />
@@ -180,10 +205,10 @@ function TaskProgressModal({
             <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
               <input type="checkbox" checked={isVisible} onChange={(e) => setIsVisible(e.target.checked)} disabled={saving} />
               {isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
-              <span>{t('tasks.visibleToCustomer') || 'Visible para el cliente'}</span>
+              <span>{t('tasks.visibleToCustomer')}</span>
             </label>
             <p className="field-hint" style={{ marginLeft: 24, marginTop: 4 }}>
-              {isVisible ? (t('tasks.visibleHint') || 'El cliente verá esta nota y fotos en su reporte.') : (t('tasks.internalHint') || 'Solo para uso interno del taller.')}
+              {isVisible ? t('tasks.visibleHint') : t('tasks.internalHint')}
             </p>
           </div>
         </div>

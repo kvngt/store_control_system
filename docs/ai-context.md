@@ -54,11 +54,17 @@ comisiones, el alta de la orden o la "espera de autorización".
   de un no-admin) se queda como red, pero su cuerpo ya no es alcanzable desde la API. Desde
   `20261010000006` **editar una asignación también es solo de admin**: el técnico podía cambiar
   el `tipo_tarea` de la suya y con eso mover su comisión (un UPDATE suyo da cero filas).
-- **Pedir autorización exige un motivo.** `espera_autorizacion` (antes "espera de
-  repuestos") es donde el técnico dice que encontró algo que hay que cotizar, y la base
-  rechaza el estado sin `ordenes_trabajo.motivo_autorizacion`. Al salir del estado el
-  motivo se limpia. Cuando el cliente autoriza, `_resolver_presupuesto` devuelve la orden
-  a `en_proceso` sola.
+- **La "espera de autorización" es una pausa, y el técnico la provoca reportando trabajo
+  adicional** (F6, `20261010000010`/`11`). La app ya no le ofrece el estado: llama
+  `reportar_hallazgo`, que crea el hallazgo (`orden_hallazgos`, solo lectura por la API), un
+  avance interno para sus fotos (el técnico no lo puede publicar) y pone la orden en espera
+  con el texto como `motivo_autorizacion`. Administración lo cotiza (`cotizar_hallazgo`) o lo
+  descarta (`descartar_hallazgo`, con el texto que verá el cliente si va al reporte). La orden
+  vuelve sola a `en_proceso` por `_salir_de_espera` — al responder el cliente, al descartar o
+  al cancelar el presupuesto — solo si no queda un hallazgo pendiente ni un presupuesto
+  enviado. Mientras no se publique la migración que contrae, el guardia del técnico sigue
+  aceptando el UPDATE directo con motivo (la app vieja). Al salir del estado el motivo se
+  limpia.
 - **El técnico puede tachar una mano de obra hecha**, pero `orden_labor` sigue siendo
   escritura solo de admin: se hace por la RPC `marcar_labor_completada`, que solo toca
   `completado_en`/`completado_por` y solo sobre una línea `aprobado`. Si necesitas que un

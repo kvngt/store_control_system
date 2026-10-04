@@ -10,6 +10,7 @@ import {
   Gauge,
   Fuel,
   Globe,
+  Info,
   Mail,
   MessageCircle,
   Mic,
@@ -211,6 +212,7 @@ function Report({
   // publicados cuyo avance no viene en la lista (los que un admin publicó suelto) se
   // agrupan al final, como siempre.
   const updates = report.avances ?? [];
+  const observations = report.observaciones ?? [];
   const updateIds = new Set(updates.map((u) => u.id));
   const looseProgress = progress.filter((m) => !m.avance_id || !updateIds.has(m.avance_id));
   const vehicleTitle = [vehiculo.anio, vehiculo.marca, vehiculo.modelo].filter(Boolean).join(' ');
@@ -303,6 +305,23 @@ function Report({
           </div>
         )}
       </section>
+
+      {observations.length > 0 && (
+        <section className="portal-card">
+          <h2 className="portal-section-title">
+            <Info size={18} /> {s.observationsTitle}
+          </h2>
+          <p className="portal-muted">{s.observationsHint}</p>
+          <div className="portal-updates">
+            {observations.map((o) => (
+              <article key={o.id} className="portal-update">
+                {o.fecha && <p className="portal-update-date">{fmt.date(o.fecha)}</p>}
+                <p className="portal-update-text">{o.texto}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="portal-card">
         <h2 className="portal-section-title">

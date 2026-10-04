@@ -119,20 +119,17 @@ describe('Kanban board without dragging', () => {
     await waitFor(() => expect(mocks.updateWorkOrderStatus).toHaveBeenCalledWith('ord-mine', 'en_proceso', undefined));
   });
 
-  // Pedir autorización sin decir por qué deja al admin adivinando qué cotizar, así que el
-  // tablero abre el diálogo en vez de mandar el cambio.
-  it('asks for a reason before moving an order to waiting for approval', async () => {
+  // F6: la pausa la pone la oficina. El técnico reporta trabajo adicional desde la orden y
+  // eso la pausa; el tablero ya no le ofrece "espera de autorización".
+  it('does not offer waiting for approval to a technician', async () => {
     mocks.auth.current = authValue(MECHANIC_USER);
     mocks.getWorkOrders.mockResolvedValue([MINE]);
 
-    const user = userEvent.setup();
     renderWithProviders(<KanbanBoard />);
 
     await screen.findByText('ORD-2026-001');
-    await user.selectOptions(moveSelectFor('ORD-2026-001')!, 'espera_autorizacion');
-
-    expect(await screen.findByRole('dialog')).toBeInTheDocument();
-    expect(mocks.updateWorkOrderStatus).not.toHaveBeenCalled();
+    const values = Array.from((moveSelectFor('ORD-2026-001') as HTMLSelectElement).options).map((o) => o.value);
+    expect(values).not.toContain('espera_autorizacion');
   });
 
   it('offers no move control on a colleague’s order', async () => {

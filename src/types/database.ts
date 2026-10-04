@@ -26,6 +26,7 @@ export type {
   OrderAmounts,
   PartSummary,
   OrderProgressUpdate,
+  OrderFinding,
   OrderHistoryEntry,
   HistoryChange,
   LaborItem,

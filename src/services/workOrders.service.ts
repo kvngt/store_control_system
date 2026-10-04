@@ -242,26 +242,32 @@ export const workOrdersService = {
     return data as WorkOrder;
   },
 
-  reportFinding: async (orderId: string, descripcion: string) => {
-    const { error } = await supabase.rpc('reportar_hallazgo', {
+  // ----- hallazgos (F6, 20261010000011) ----------------------------------------------
+  // El técnico reporta trabajo adicional: la base crea el hallazgo, un avance interno para
+  // sus fotos y pone la orden en pausa, todo junto. Devuelve el avance para que las fotos
+  // suban a él por la cola de siempre.
+  reportFinding: async (orderId: string, descripcion: string): Promise<{ hallazgo_id: string; avance_id: string }> => {
+    const { data, error } = await supabase.rpc('reportar_hallazgo', {
       p_orden_id: orderId,
       p_descripcion: descripcion,
     });
     if (error) throw error;
+    return data as { hallazgo_id: string; avance_id: string };
   },
 
-  quoteFinding: async (findingId: string) => {
-    const { error } = await supabase.rpc('cotizar_hallazgo', {
-      p_hallazgo_id: findingId,
-    });
+  /** Solo admin. Devuelve el texto del hallazgo para precargar la tarea. */
+  quoteFinding: async (findingId: string): Promise<string> => {
+    const { data, error } = await supabase.rpc('cotizar_hallazgo', { p_hallazgo_id: findingId });
     if (error) throw error;
+    return (data as { descripcion: string }).descripcion;
   },
 
-  discardFinding: async (findingId: string, en_reporte: boolean, texto: string) => {
+  /** Solo admin. `texto` es lo que verá el cliente si `enReporte`; nunca la descripción interna. */
+  discardFinding: async (findingId: string, enReporte: boolean, texto: string) => {
     const { error } = await supabase.rpc('descartar_hallazgo', {
       p_hallazgo_id: findingId,
-      p_en_reporte: en_reporte,
-      p_texto_cliente: texto,
+      p_en_reporte: enReporte,
+      p_texto: texto,
     });
     if (error) throw error;
   },

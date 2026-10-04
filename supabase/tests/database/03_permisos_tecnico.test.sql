@@ -14,7 +14,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(42);
+SELECT plan(44);
 
 -- ------------------------------------------------------------------------------------
 -- Datos de prueba: un admin, un mecánico asignado y uno que no lo está
@@ -170,22 +170,37 @@ SELECT lives_ok(
   'Y volver a ponerla en proceso'
 );
 
--- Pedir autorización es lo que un mecánico hace cuando descubre que falta algo. Ahora se hace por RPC.
+-- Pedir autorización es lo que un mecánico hace cuando descubre que falta algo. Desde F6
+-- (20261010000011) lo hace con `reportar_hallazgo`; mientras no se contraiga el guardia, el
+-- UPDATE directo sigue exigiendo el motivo.
 SELECT throws_ok(
-  $$ SELECT reportar_hallazgo((SELECT id FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001'), NULL::text) $$,
-  '23502', NULL,
-  'El técnico no puede pedir autorización sin decir por qué (null)'
+  $$ UPDATE ordenes_trabajo SET estatus = 'espera_autorizacion'
+     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
+  '42501', NULL,
+  'El técnico no puede pedir autorización sin decir por qué'
+);
+
+SELECT throws_ok(
+  $$ SELECT reportar_hallazgo((SELECT id FROM t_orden), '   ') $$,
+  '42501', 'Escribe qué encontraste y qué hay que hacer.',
+  'Reportar trabajo adicional exige escribir qué se encontró'
 );
 
 SELECT lives_ok(
-  $$ SELECT reportar_hallazgo((SELECT id FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001'), 'El radiador está picado'::text) $$,
-  'El técnico pide autorización con su motivo mediante reportar_hallazgo'
+  $$ SELECT reportar_hallazgo((SELECT id FROM t_orden), '  El radiador está picado  ') $$,
+  'El técnico reporta trabajo adicional'
 );
 
 SELECT is(
   (SELECT estatus FROM t_orden),
   'espera_autorizacion'::order_status,
-  'La orden pasa a espera_autorizacion'
+  'La orden queda en pausa, esperando autorización'
+);
+
+SELECT is(
+  (SELECT motivo_autorizacion FROM t_orden),
+  'El radiador está picado',
+  'El motivo es lo que reportó, sin los espacios de los extremos'
 );
 
 -- Al salir del estado, el motivo deja de ser cierto y no debe quedar colgado.

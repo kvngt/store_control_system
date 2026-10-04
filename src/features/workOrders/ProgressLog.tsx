@@ -25,7 +25,14 @@ interface ProgressLogProps {
   /** Mostrar u ocultar el avance completo al cliente: su texto y sus archivos. */
   onToggleEntryVisibility: (entry: OrderProgressUpdate) => void;
   onDeleteMedia: (media: OrderMedia) => void;
+  /**
+   * Avances de un trabajo adicional reportado (F6). Son internos: el técnico no los publica
+   * (la base lo rechaza), así que no se le ofrece el ojo; administración sí puede.
+   */
+  findingEntryIds?: ReadonlySet<string>;
 }
+
+const NO_FINDINGS: ReadonlySet<string> = new Set();
 
 /**
  * Donde mecánicos y pintores documentan lo que hicieron: una nota, fotos, videos
@@ -48,6 +55,7 @@ export default function ProgressLog({
   onToggleVisibility,
   onToggleEntryVisibility,
   onDeleteMedia,
+  findingEntryIds = NO_FINDINGS,
 }: ProgressLogProps) {
   const { t, language } = useLanguage();
   const [note, setNote] = useState('');
@@ -117,7 +125,10 @@ export default function ProgressLog({
                   {avance.visible_cliente && (
                     <span className="badge badge-finalizado">{t('workOrders.progressVisibleBadge')}</span>
                   )}
-                  {(isAdmin || userId === avance.usuario_id) && (
+                  {findingEntryIds.has(avance.id) && (
+                    <span className="badge findings-badge is-pendiente">{t('findings.entryBadge')}</span>
+                  )}
+                  {(isAdmin || (userId === avance.usuario_id && !findingEntryIds.has(avance.id))) && (
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm btn-icon"

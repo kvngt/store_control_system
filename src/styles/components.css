@@ -4794,6 +4794,106 @@ td .labor-specialty-select {
   color: inherit;
 }
 
+/* Trabajo adicional que reportó el taller (F6): la tarjeta de administración, el aviso de
+   las listas y lo que ve el técnico de lo suyo. */
+.findings-card-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.findings-list {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.findings-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.findings-item + .findings-item {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-surface-border);
+}
+
+.findings-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.findings-text {
+  margin: 0;
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.findings-meta {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.findings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.findings-card .btn-ghost {
+  color: inherit;
+}
+
+.findings-quote {
+  margin: var(--space-2) 0 var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--color-surface-border);
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.findings-error {
+  margin-top: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+}
+
+.findings-badge {
+  align-self: flex-start;
+}
+
+.findings-heading {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.findings-badge.is-pendiente {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.findings-badge.is-cotizado {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.findings-badge.is-descartado {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+}
+
 .delivery-unassigned ul,
 .commission-unassigned ul {
   margin: var(--space-1) 0 0;

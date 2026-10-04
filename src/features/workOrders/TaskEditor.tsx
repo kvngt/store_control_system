@@ -20,7 +20,11 @@ interface TaskEditorProps {
   onAdd: (task: TaskDraft) => Promise<boolean | void> | boolean | void;
   /** Prefijo de los id del DOM, por si hay dos editores en pantalla. */
   idPrefix?: string;
-  initialText?: string;
+  /**
+   * Abre el formulario con esta descripción (F6: al cotizar un hallazgo). `nonce` cambia en
+   * cada pedido, para precargar otra vez aunque el texto sea el mismo.
+   */
+  prefill?: { text: string; nonce: number } | null;
 }
 
 interface Draft {
@@ -42,13 +46,13 @@ interface Draft {
  * Si el tipo no es del oficio del técnico (pintura a un mecánico), pregunta antes de guardar:
  * la comisión de la tarea va a esa persona.
  */
-export default function TaskEditor({ workType, technicians, defaultTechnicianId, busy = false, onAdd, idPrefix = 'task-editor', initialText }: TaskEditorProps) {
+export default function TaskEditor({ workType, technicians, defaultTechnicianId, busy = false, onAdd, idPrefix = 'task-editor', prefill }: TaskEditorProps) {
   const { t } = useLanguage();
-  const [open, setOpen] = useState(!!initialText);
+  const [open, setOpen] = useState(!!prefill);
   // En un "combinado" el tipo que se usó la última vez: casi siempre se agregan seguidas varias
   // tareas de lo mismo.
   const [lastCombined, setLastCombined] = useState<Specialty>('mecanica');
-  const [draft, setDraft] = useState<Draft>({ descripcion: initialText || '', costo: '', especialidad: 'mecanica', asignado_a: '' });
+  const [draft, setDraft] = useState<Draft>({ descripcion: prefill?.text ?? '', costo: '', especialidad: 'mecanica', asignado_a: '' });
   const [error, setError] = useState('');
   const [mismatch, setMismatch] = useState<{ task: TaskDraft; technician: Technician } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -62,11 +66,11 @@ export default function TaskEditor({ workType, technicians, defaultTechnicianId,
   const disabled = busy || saving;
 
   useEffect(() => {
-    if (initialText) {
+    if (prefill) {
       setOpen(true);
-      setDraft((d) => ({ ...d, descripcion: initialText }));
+      setDraft((d) => ({ ...d, descripcion: prefill.text }));
     }
-  }, [initialText]);
+  }, [prefill]);
 
   useEffect(() => {
     if (!disabled && refocus.current) {

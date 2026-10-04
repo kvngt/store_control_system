@@ -152,8 +152,8 @@ describe('workOrdersService: cambios de las órdenes en tiempo real', () => {
   it('escucha la orden y sus hijas, con las tablas que publica la migración', () => {
     workOrdersService.subscribeToChanges(vi.fn(), vi.fn());
     expect(mocks.bindings.map((b) => b.table).sort()).toEqual([
-      'orden_asignaciones', 'orden_avances', 'orden_labor', 'orden_media', 'orden_repuestos',
-      'ordenes_trabajo', 'presupuestos',
+      'orden_asignaciones', 'orden_avances', 'orden_hallazgos', 'orden_labor', 'orden_media',
+      'orden_repuestos', 'ordenes_trabajo', 'presupuestos',
     ]);
   });
 

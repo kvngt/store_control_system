@@ -39,15 +39,22 @@ la base sin comprometer la operación: [mantenimiento.md §4](mantenimiento.md#4
 | Detalle | `features/workOrders/WorkOrderDetail.tsx` (dibuja) y `useWorkOrderDetail.ts` (estado, permisos derivados como `canEdit`, `canSign`, `canDeliver`, y todas las acciones). En escritorio, pestañas (`components/Tabs.tsx`) bajo un encabezado fijo: admin Resumen/Trabajos/Fotos y avances/Cobro y cliente/Historial; técnico Tareas/Orden/Avances. Cada pestaña se monta al abrirla y después solo se esconde. En el teléfono cada tarjeta va en un `MobileSection` plegable (`components/MobileSection.tsx`), en el orden de las pestañas. Enlace directo a una pestaña: `/work-orders?open=<id>&tab=<id de la pestaña>` |
 | Historial de la orden | Tabla `historial_orden` (trigger `trg_historial`, `20261010000004`); `workOrdersService.getHistory`; `features/workOrders/OrderHistory.tsx` y `historyFormat.ts` (convierte cada fila en una frase); pruebas `17_historial_orden.test.sql` y `historyFormat.test.ts` |
 | Alta | `features/workOrders/WorkOrderCreateModal.tsx`, `useWorkOrderForm.ts`, `workOrderForm.schema.ts` |
-| Tarjetas del detalle | `LaborTable` (con `TaskEditor`, `TechnicianSelect`, `TradeMismatchDialog` y las reglas de `tasks.ts`), `PartsTable`, `PartsSummaryCard`, `SignatureCard`, `ProgressLog`, `QuoteCard`, `CustomerLinkCard`, `CommissionEstimateCard`, `DeliveryModal`, `AuthorizationReasonModal`, `ShareReportModal`, `ArchivedOrders` |
+| Tarjetas del detalle | `LaborTable` (con `TaskEditor`, `TechnicianSelect`, `TradeMismatchDialog` y las reglas de `tasks.ts`), `PartsTable`, `PartsSummaryCard`, `SignatureCard`, `ProgressLog`, `QuoteCard`, `CustomerLinkCard`, `CommissionEstimateCard`, `DeliveryModal`, `ShareReportModal`, `ArchivedOrders`; del técnico, `TechnicianTaskList` (Mis tareas, F5) y `ReportFindingModal`; de administración, `FindingsCard` (con `DiscardFindingModal`; reglas en `findings.ts`) |
 | Servicio | `services/workOrders.service.ts` |
-| Tablas | `ordenes_trabajo` (20 triggers), `orden_montos`, `orden_labor`, `orden_repuestos`, `orden_asignaciones`, `orden_avances` |
-| RPC | `create_work_order`, `repuestos_de_orden`, `marcar_labor_completada`, `mis_ordenes_asignadas` |
-| Pruebas | `pages/WorkOrders.smoke.test.tsx`, `features/workOrders/*.test.tsx`; pgTAP `01`, `03`, `07`, `09`, `10` |
+| Tablas | `ordenes_trabajo` (20 triggers), `orden_montos`, `orden_labor`, `orden_repuestos`, `orden_asignaciones`, `orden_avances`, `orden_hallazgos` (F6) |
+| RPC | `create_work_order`, `repuestos_de_orden`, `marcar_labor_completada`, `mis_ordenes_asignadas`; hallazgos: `reportar_hallazgo`, `cotizar_hallazgo`, `descartar_hallazgo` (y `_salir_de_espera`, interna) |
+| Pruebas | `pages/WorkOrders.smoke.test.tsx`, `features/workOrders/*.test.tsx`; pgTAP `01`, `03`, `07`, `09`, `10`, `21`, `22` (hallazgos) |
 | Documento | [reglas-de-negocio.md §1 y §3](reglas-de-negocio.md) |
 
 - **Qué puede tocar un técnico** de una orden: trigger `trg_guard_order_technician` (columnas
   y estados permitidos) y las políticas de `20261007000000` (qué órdenes ve).
+- **Trabajo adicional (hallazgos, F6):** el técnico lo reporta desde Tareas
+  (`reportar_hallazgo`: hallazgo + avance interno para las fotos + pausa + un aviso
+  `hallazgo_reportado`); administración lo ve en Resumen y Trabajos (`FindingsCard`) y en las
+  listas (`FindingsAlert`), lo cotiza (precarga la tarea; `enviar_presupuesto` lo vincula) o lo
+  descarta (y decide si sale como "Observación del taller" en el portal y el PDF:
+  `datos_portal.observaciones`, `customerObservations` en `lib/reportMedia.ts`). Migraciones
+  `20261010000010` y `20261010000011`.
 - **Un estado nuevo** de la orden toca muchos lugares: [plan-de-mejora.md, al final](plan-de-mejora.md#si-el-taller-echa-de-menos-espera-de-repuestos).
 
 ## Tablero (Kanban)

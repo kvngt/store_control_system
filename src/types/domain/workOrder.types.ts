@@ -60,9 +60,16 @@ export interface WorkOrder {
   avances?: OrderProgressUpdate[];
   /** Hay un presupuesto enviado esperando la respuesta del cliente. */
   esperando_autorizacion?: boolean;
+  /** Trabajo adicional que reportó el taller (F6). Lo leen admin y los técnicos de la orden. */
   hallazgos?: OrderFinding[];
 }
 
+/**
+ * Un hallazgo: el técnico vio algo más que hacer. Pendiente hasta que administración lo
+ * cotiza (sale en un presupuesto) o lo descarta (y decide si el cliente lo ve en su reporte,
+ * con `texto_cliente`). Se escribe solo por RPC (`reportar_hallazgo`, `cotizar_hallazgo`,
+ * `descartar_hallazgo`).
+ */
 export interface OrderFinding {
   id: string;
   orden_id: string;

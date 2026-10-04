@@ -78,7 +78,6 @@ async function call(method, path, { token, body, headers = {} } = {}) {
 async function login(email, password) {
   if (!email || !password) return null;
   const r = await call('POST', '/auth/v1/token?grant_type=password', { body: { email, password } });
-  console.log('LOGIN RESP:', email, r.status, r.json);
   return r.json?.access_token ?? null;
 }
 
@@ -320,6 +319,15 @@ const CASES = [
   admin({ id: 'SEC-103', desc: 'Ni un admin llama el alta automática del técnico de una tarea como RPC', method: 'POST', path: () => rpc('trg_labor_tecnico_asignado'), body: {}, expect: 'denied' }),
   admin({ id: 'SEC-104', desc: 'Ni un admin llama el guardia de quitar a un técnico con tareas como RPC', method: 'POST', path: () => rpc('trg_guard_asignacion_con_tareas'), body: {}, expect: 'denied' }),
   admin({ id: 'SEC-105', desc: 'Ni un admin llama el recálculo de comisiones por línea como RPC', method: 'POST', path: () => rpc('trg_commissions_on_labor'), body: {}, expect: 'denied' }),
+  // F6: hallazgos (20261010000011). Ningún caso escribe: el técnico choca con el rol antes de
+  // buscar el hallazgo, y el resto no tiene permiso de ejecutar.
+  anon({ id: 'SEC-106', desc: 'Sin sesión no se leen hallazgos', method: 'GET', path: () => '/rest/v1/orden_hallazgos?select=id', expect: 'denied-or-empty' }),
+  anon({ id: 'SEC-107', desc: 'Sin sesión no se reporta un hallazgo', method: 'POST', path: () => rpc('reportar_hallazgo'), body: { p_orden_id: ZERO_UUID, p_descripcion: 'PRUEBA qa:security' }, expect: 'denied' }),
+  tech({ id: 'SEC-108', desc: 'Un técnico no cotiza un hallazgo', method: 'POST', path: () => rpc('cotizar_hallazgo'), body: { p_hallazgo_id: ZERO_UUID }, expect: 'denied' }),
+  tech({ id: 'SEC-109', desc: 'Un técnico no descarta un hallazgo', method: 'POST', path: () => rpc('descartar_hallazgo'), body: { p_hallazgo_id: ZERO_UUID, p_en_reporte: false, p_texto: null }, expect: 'denied' }),
+  tech({ id: 'SEC-110', desc: 'Un técnico no escribe orden_hallazgos', needs: ['ORDEN', 'TECH_ID'], method: 'POST', path: () => '/rest/v1/orden_hallazgos', body: (c) => ({ orden_id: c.ORDEN, sede_id: ZERO_UUID, reportado_por: c.TECH_ID, descripcion: 'PRUEBA qa:security' }), expect: 'denied' }),
+  admin({ id: 'SEC-111', desc: 'Ni un admin llama _salir_de_espera como RPC', method: 'POST', path: () => rpc('_salir_de_espera'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  admin({ id: 'SEC-112', desc: 'Ni un admin llama el guardia del avance de un hallazgo como RPC', method: 'POST', path: () => rpc('trg_avance_hallazgo_interno'), body: {}, expect: 'denied' }),
 ];
 
 function evaluate(expect, r) {

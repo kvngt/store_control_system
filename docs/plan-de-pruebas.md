@@ -446,6 +446,21 @@ Reglas: [presupuestos.md](presupuestos.md). Orden de **A** con cliente D-02 y **
 | PRE-17 | P0 | IA | Entregar con un repuesto **sin autorizar** → Finanzas no registra su costo. |
 | PRE-18 | P2 | IA | Un presupuesto enviado sin respuesta → al día siguiente, después de las 15:00 UTC, los admins reciben "Presupuesto sin respuesta". |
 
+### 4.14b Trabajo adicional reportado (HAL, F6)
+
+Migraciones `20261010000010` y `20261010000011`. Orden de **A** firmada, en proceso, con **M**
+asignado. Probar en un teléfono real (las fotos del reporte suben por la cola).
+
+| ID | P | Ejecuta | Pasos → Esperado |
+|---|---|---|---|
+| HAL-01 | P0 | IA | **M** abre la orden: el estado no ofrece "En espera de autorización", ni en el detalle ni en el tablero. |
+| HAL-02 | P0 | H | **M** → Tareas → **Reportar trabajo adicional**, texto y dos fotos → "Reportado…"; la orden dice "Orden en pausa…" y en Tareas aparece su reporte **Por revisar**. Las fotos suben a un avance que **no** tiene el ojo para publicarlo. |
+| HAL-03 | P0 | IA | **A** recibe **un** aviso "Trabajo adicional reportado · …" (no además "Nuevo avance" ni "Requiere autorización"). La orden abre en Resumen con la tarjeta "El taller reportó trabajo adicional" (nombre de **M**, "2 archivo(s) en Fotos"); la pestaña Resumen tiene el punto de atención. |
+| HAL-04 | P0 | IA | **A** → **Cotizar al cliente** → abre Trabajos con "Nuevo trabajo" precargado; agregar precio y técnico → **Enviar presupuesto** → el cliente autoriza en el portal → la orden vuelve sola a **En proceso** y el cliente no recibe otro correo de "en proceso". |
+| HAL-05 | P0 | IA | Otro reporte de **M** → **A** → **Descartar…**, marcar "Mostrarlo en el reporte del cliente", reescribir el texto → la orden vuelve a **En proceso**; el portal y el PDF muestran "Observaciones del taller" con el texto de **A**, nunca el de **M**. |
+| HAL-06 | P1 | IA | Descartar sin marcar el reporte → no aparece en el portal. Con un hallazgo pendiente y un presupuesto enviado, cancelar el presupuesto → la orden **sigue** en espera hasta resolver el hallazgo. |
+| HAL-07 | P1 | IA | La lista de órdenes y el panel de **A** muestran "Trabajo adicional por revisar" con **Revisar**, que abre la orden en Resumen. |
+
 ### 4.15 Reporte (REP)
 
 Reglas: [portal-y-correos.md](portal-y-correos.md#10-el-reporte-web). Orden con cliente
@@ -608,6 +623,7 @@ Según lo que toca el cambio:
 | Multimedia o notificaciones | MED, NOT y al menos Android + iPhone de la matriz |
 | Portal, correos o `datos_portal` | POR, REP y SEC-01 a SEC-26 |
 | Líneas, totales o presupuestos | DIN, PRE y SEC-40, SEC-60 |
+| La espera de autorización o los hallazgos | HAL, PRE-04 a PRE-14 y SEC-106 a SEC-112 |
 | La firma | ORD-07, ORD-12, PRE-02, PRE-15, POR-07 |
 | Sesión o sedes | ACC, SES, SED |
 | Estilos | MOV en un teléfono real |

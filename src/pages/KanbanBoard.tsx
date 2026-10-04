@@ -192,6 +192,18 @@ export default function KanbanBoard() {
       setDeliveringOrder(order);
       return;
     }
+    // F6: la pausa la pone y la quita la oficina; el técnico reporta el trabajo adicional
+    // desde la orden.
+    if (status === 'espera_autorizacion' && !isAdmin) {
+      discard();
+      showToast('error', t('findings.pauseFromOrder'));
+      return;
+    }
+    if (order.estatus === 'espera_autorizacion' && !isAdmin) {
+      discard();
+      showToast('error', t('findings.pausedByOffice'));
+      return;
+    }
     if (order.estatus === 'entregado' && !confirm(t('workOrders.confirmUndeliver'))) {
       discard();
       return;
@@ -333,7 +345,7 @@ export default function KanbanBoard() {
                               // o el <select> no podría mostrar su propio valor.
                               .filter((c) => c.status !== 'entregado' || canDeliver || order.estatus === 'entregado')
                               .filter((c) => c.status !== 'recepcion' || isAdmin || order.estatus === 'recepcion')
-                              .filter((c) => c.status !== 'espera_autorizacion' || order.estatus === 'espera_autorizacion')
+                              .filter((c) => c.status !== 'espera_autorizacion' || isAdmin || order.estatus === 'espera_autorizacion')
                               .map((c) => (
                                 <option key={c.status} value={c.status}>
                                   {statusLabels[c.status]}

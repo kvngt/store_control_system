@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import type { Sede, WorkOrder } from '../types/database';
-import { customerReportPhotos, groupByDay, reportImagePath } from './reportMedia';
+import { customerObservations, customerReportPhotos, groupByDay, reportImagePath } from './reportMedia';
 import { money } from './money';
 import { brandColors } from './brandColor';
 import { formatPhone } from './phone';
@@ -344,6 +344,22 @@ async function buildWorkOrderPdf(
     ensureSpace(LINE * notes.length);
     doc.text(notes, MARGIN, y);
     y += LINE * notes.length;
+  }
+
+  // ===== Observaciones del taller (F6) =====
+  // Lo que administración decidió contarle al cliente de un hallazgo que no se hará ahora.
+  const observations = customerObservations(order);
+  if (observations.length) {
+    sectionTitle('Observaciones del Taller');
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(20, 20, 30);
+    observations.forEach((o) => {
+      const lines = doc.splitTextToSize(`• ${o.texto_cliente!.trim()}`, contentWidth);
+      ensureSpace(LINE * lines.length);
+      doc.text(lines, MARGIN, y);
+      y += LINE * lines.length;
+    });
   }
 
   // ===== Avances publicados =====

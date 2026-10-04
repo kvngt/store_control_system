@@ -1,43 +1,51 @@
 import { useNavigate } from 'react-router-dom';
+import { AlertTriangle, ChevronRight } from 'lucide-react';
 import type { WorkOrder } from '../../types/database';
-import { AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { findingsToReview } from './findings';
 
 interface FindingsAlertProps {
   orders: WorkOrder[];
 }
 
+/**
+ * En la lista de órdenes y en el panel: qué órdenes tienen trabajo adicional reportado que
+ * administración no ha decidido. Cotizar o descartar se hace dentro de la orden, donde está
+ * el contexto (fotos, tareas, presupuesto); aquí solo se llega a ella.
+ */
 export default function FindingsAlert({ orders }: FindingsAlertProps) {
   const { t } = useLanguage();
   const navigate = useNavigate();
 
-  const pendingFindings = orders.flatMap((o) => 
-    (o.hallazgos || []).filter((h) => h.estado === 'pendiente').map((h) => ({ order: o, finding: h }))
-  );
+  const pending = orders
+    .map((order) => ({ order, findings: findingsToReview(order.hallazgos) }))
+    .filter((x) => x.findings.length > 0);
 
-  if (pendingFindings.length === 0) return null;
+  if (pending.length === 0) return null;
 
   return (
-    <div style={{ marginBottom: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-      {pendingFindings.map(({ order, finding }) => (
-        <div key={finding.id} className="alert-warn" style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
-            <AlertTriangle className="alert-icon" />
-            <div>
-              <strong>{t('tasks.findingTitle') || 'La mecánica reportó un trabajo'} ({order.numero_orden})</strong>
-              <p style={{ margin: 0, marginTop: 'var(--space-1)' }}>{finding.descripcion}</p>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-            <button className="btn btn-primary btn-sm" onClick={() => navigate(`/work-orders/${order.id}?action=quote&findingId=${finding.id}`)}>
-              {t('tasks.quoteCustomer') || 'Cotizar al cliente'}
+    <div className="alert-warn findings-card" role="region" aria-label={t('findings.listTitle')}>
+      <div className="findings-card-title">
+        <AlertTriangle size={16} aria-hidden="true" />
+        <strong>{t('findings.listTitle')}</strong>
+      </div>
+      <ul className="findings-list">
+        {pending.map(({ order, findings }) => (
+          <li key={order.id} className="findings-item findings-row">
+            <span className="findings-text">
+              <strong>{order.numero_orden}</strong> — {findings[0].descripcion}
+              {findings.length > 1 && ` (+${findings.length - 1})`}
+            </span>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => navigate(`/work-orders?open=${order.id}&tab=resumen`)}
+            >
+              {t('findings.review')} <ChevronRight size={14} />
             </button>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/work-orders/${order.id}?action=discard&findingId=${finding.id}`)}>
-              {t('tasks.discard') || 'Descartar…'}
-            </button>
-          </div>
-        </div>
-      ))}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

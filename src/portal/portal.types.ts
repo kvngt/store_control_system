@@ -93,6 +93,16 @@ export interface PortalProgress {
   mensaje: string | null;
 }
 
+/**
+ * Lo que el taller vio y el cliente no tiene que autorizar (F6). Es el texto que escribió
+ * administración al descartar un hallazgo, nunca lo que anotó el técnico.
+ */
+export interface PortalObservation {
+  id: string;
+  fecha: string | null;
+  texto: string;
+}
+
 export interface PortalReport {
   estado_enlace: 'ok';
   taller: PortalShop;
@@ -109,6 +119,7 @@ export interface PortalReport {
   };
   multimedia: PortalMedia[];
   avances?: PortalProgress[];
+  observaciones?: PortalObservation[];
   presupuesto?: PortalQuote | null;
   presupuestos_respondidos?: PortalQuoteHistory[];
   cuenta: PortalAccount;

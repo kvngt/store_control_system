@@ -14,7 +14,7 @@
 | F3 | Tareas con técnico y comisión por tarea | **Publicado** (`ead2a17` y `db push` del 04/10/2026; revisión adversarial corregida el 04/10/2026). Migración `20261010000006` (pgTAP 19 con 68 aserciones, ajuste de la 03, SEC-99 a SEC-105). Pantalla: editor de tareas `TaskEditor` (reutilizable para F4), tipo y técnico por fila con el diálogo de oficio distinto (también al cambiar el tipo), "Sin técnico", candado y Borrar apagado en lo ya pagado, reparto por tarea en la tarjeta de comisión, avisos en Resumen y al entregar (el diálogo los lee de la base, así que salen también desde el Kanban), "Por tarea" / "En el reparto" con Sacar/Sumar al reparto en la tarjeta de técnicos, avisos `tarea_*`, campos `tecnico` y `reparto` del historial. La red de seguridad compara la fórmula vieja contra la nueva sin reescribir comisiones. **Pendiente:** (1) confirmar con el taller que asignar técnico a una línea heredada la saca del reparto para siempre ([pagos-a-empleados.md](pagos-a-empleados.md#5-preguntas-enviadas-al-taller)); (2) ~~publicar: commit, `db push` de `20261010000004` a `20261010000006`~~ hecho el 04/10/2026; falta el deploy de `process-outbox` y correr `npm run qa:security` con `TOKEN_ADMIN`/`TOKEN_TECH` (SEC-91 a SEC-105 quedaron en SKIP); (3) **una migración posterior que contrae** (`ALTER TABLE orden_labor ALTER COLUMN reparto_heredado SET DEFAULT false`) cuando la app nueva esté publicada y ya nadie use la anterior. **Queda para F4:** que `create_work_order` acepte `asignado_a` y `reparto_heredado` en `p_labor` (hoy las líneas del alta nacen heredadas) y usar `TaskEditor` en el alta |
 | F4 | Nueva orden en 4 secciones y depósito con método | **Publicado** (migraciones, pruebas Vitest y UI de asistente completas). |
 | F5 | "Tareas por hacer" del técnico | **Completada en local** (migraciones, pruebas db y UI implementada). |
-| F6 | Hallazgos y nueva "espera de autorización" | Pendiente |
+| F6 | Hallazgos y nueva "espera de autorización" | **Expansión hecha en local, sin publicar.** Migraciones `20261010000010` (tabla y RPC, ya en `main` desde `2ce08c0`) y `20261010000011` (permisos, avance interno, aviso único, portal); pgTAP 22 (44 aserciones) y ajuste de la 03; SEC-106 a SEC-112. Pantalla: `ReportFindingModal`, `FindingsCard`/`DiscardFindingModal`, `FindingsAlert` en listas, Observaciones en portal y PDF. **Pendiente:** `db push` de `08` a `11` antes del push a `main`; la migración que contrae (guardia del técnico); casos HAL en un teléfono real |
 | F7 | Navegación del sitio | Pendiente |
 
 Nada se publica sin que la persona responsable lo pida: cada `db push`, `functions deploy`,
@@ -456,6 +456,36 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 04/10/2026, noche — Claude Code (F6)
+
+- **Encontrado al llegar:** `2ce08c0` (ya en `origin/main`, es decir, **publicado** por
+  Hostinger) traía una F6 a medias sin entrada en esta bitácora: la migración
+  `20261010000010` y pantalla. Huecos: `cotizar_hallazgo` y `descartar_hallazgo` sin chequeo
+  de rol (cualquier usuario con sesión resolvía hallazgos y sacaba órdenes de espera);
+  `_salir_de_espera` buscaba presupuestos `'esperando'` (no existe) y sin `search_path`;
+  `reportar_hallazgo` aceptaba texto vacío y órdenes entregadas y no creaba el avance; un
+  hallazgo cotizado creaba presupuestos vacíos; el servicio mandaba `p_texto_cliente` (el
+  parámetro es `p_texto`); `window.prompt` en vez de diálogo; claves de i18n inexistentes
+  con `|| 'texto'` (la app mostraba `tasks.markDone`); un `console.log` en
+  `api-security.mjs` que imprimía la respuesta del login (con el token); un enlace a
+  `/work-orders/<id>?action=…`, ruta que no existe. **No se sabe si la `010` está aplicada
+  en producción**: por eso todo se corrige en la `011`, que vale en los dos casos.
+- **Hecho:** migración `20261010000011_hallazgos_permisos_y_portal.sql` (ver su cabecera),
+  pgTAP 22 reescrita (44 aserciones) y la 03 ajustada; `npm run test:db` 22 archivos, 536
+  aserciones, PASS. Pantalla: técnico (Reportar trabajo adicional con fotos, sus reportes con
+  estado, sin "espera" en el selector ni en el tablero, sin poder levantar la pausa, sin ojo
+  en el avance del hallazgo); admin (tarjeta en Resumen y Trabajos, Cotizar precarga la tarea,
+  Descartar con texto y "al reporte", aviso en lista y panel); portal y PDF con
+  "Observaciones del taller". Revisado con capturas contra el Supabase local en escritorio y
+  teléfono. Casos manuales HAL-01 a HAL-07 en `plan-de-pruebas.md`.
+- **Vitest:** 11 pruebas del alta en `WorkOrders.smoke.test.tsx` siguen rojas **desde F4**
+  (`370bf12`: el alta pasó a 4 pasos y las pruebas no se adaptaron; la entrada de F4 decía que
+  se habían saltado con `.skip`, y no es así). Todo lo demás pasa. Lint, `tsc` y build limpios.
+- **Siguiente:** (1) con permiso: `npm run db:check`, `db push` (`08` a `11`), después push a
+  `main`; (2) `qa:security` con `TOKEN_ADMIN`/`TOKEN_TECH`; (3) cuando la app nueva esté
+  publicada, la migración que contrae (guardia del técnico: espera solo con hallazgo
+  pendiente y sin salir de ella); (4) adaptar las 11 pruebas del alta.
 
 ### 04/10/2026, tarde — Antigravity (Gemini)
 

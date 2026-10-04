@@ -100,6 +100,25 @@ describe('CustomerPortal', () => {
     expect(await screen.findByText('Ya lijamos la puerta.')).toBeInTheDocument();
   });
 
+  // F6: lo que el taller vio y el cliente no tiene que autorizar. Sin observaciones, la sección
+  // no aparece.
+  it('muestra las observaciones del taller solo cuando hay', async () => {
+    mocks.fetchPortal.mockResolvedValue({
+      ...report(),
+      observaciones: [{ id: 'h-1', fecha: '2026-10-04T15:00:00Z', texto: 'Las llantas traseras están a la mitad.' }],
+    });
+    const { unmount } = render(<CustomerPortal token={TOKEN} />);
+
+    expect(await screen.findByRole('heading', { name: 'Observaciones del taller' })).toBeInTheDocument();
+    expect(screen.getByText('Las llantas traseras están a la mitad.')).toBeInTheDocument();
+    unmount();
+
+    mocks.fetchPortal.mockResolvedValue({ ...report(), observaciones: [] });
+    render(<CustomerPortal token={TOKEN} />);
+    await screen.findByRole('heading', { name: /2019 Toyota Camry/ });
+    expect(screen.queryByRole('heading', { name: 'Observaciones del taller' })).toBeNull();
+  });
+
   // Un avance publicado que solo trae archivos: el hueco del texto no se queda en blanco.
   it('un avance sin texto dice que el taller compartió archivos', async () => {
     mocks.fetchPortal.mockResolvedValue({

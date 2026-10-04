@@ -64,9 +64,6 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // eligió — "Entregado" en una orden que no se entregó. Y esa lista es
   // justamente la ruta táctil, porque en un teléfono no hay arrastre.
   const [statusEpoch, setStatusEpoch] = useState(0);
-  // Pedir autorización necesita un motivo, así que el cambio de estado se parte en dos:
-  // el <select> abre el diálogo y el diálogo hace el UPDATE.
-
   // Entregar abre el diálogo de cobro (método, cheque, comprobante) en vez de un `confirm`.
   const [delivering, setDelivering] = useState(false);
   // El avance que está por publicarse. El diálogo muestra su texto como lo verá el cliente.
@@ -259,40 +256,56 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
 
   // ----- status & progress ---------------------------------------------------
 
-  const reportFinding = async (descripcion: string) => {
-    if (!order) return;
+  // ----- hallazgos (F6) --------------------------------------------------------
+  // Los errores van en toast: los tres corren desde un diálogo o una tarjeta, y el recuadro
+  // de error de la página queda tapado por el modal.
+
+  /** El técnico reporta trabajo adicional; las fotos suben al avance interno que crea la base. */
+  const reportFinding = async (descripcion: string, media: PreparedMedia[] = []) => {
+    if (!order) return false;
     setBusy(true);
     try {
-      await workOrdersService.reportFinding(order.id, descripcion);
+      const { avance_id } = await workOrdersService.reportFinding(order.id, descripcion.trim());
+      enqueueMedia(media, { origen: 'avance', avanceId: avance_id });
       await refresh();
+      showToast('success', t('findings.reported'));
+      return true;
     } catch (err) {
-      fail(err);
+      showToast('error', t('findings.reportError'), getErrorMessage(err, language));
+      return false;
     } finally {
       setBusy(false);
     }
   };
 
+  /** Devuelve el texto para precargar la tarea, o null si no se pudo. */
   const quoteFinding = async (findingId: string) => {
-    if (!order) return;
+    if (!order) return null;
     setBusy(true);
     try {
-      await workOrdersService.quoteFinding(findingId);
+      const text = await workOrdersService.quoteFinding(findingId);
       await refresh();
+      showToast('success', t('findings.quoted'));
+      return text;
     } catch (err) {
-      fail(err);
+      showToast('error', t('findings.actionError'), getErrorMessage(err, language));
+      return null;
     } finally {
       setBusy(false);
     }
   };
 
   const discardFinding = async (findingId: string, enReporte: boolean, texto: string) => {
-    if (!order) return;
+    if (!order) return false;
     setBusy(true);
     try {
       await workOrdersService.discardFinding(findingId, enReporte, texto);
       await refresh();
+      showToast('success', t('findings.discarded'));
+      return true;
     } catch (err) {
-      fail(err);
+      showToast('error', t('findings.actionError'), getErrorMessage(err, language));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -323,7 +336,17 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
       discard();
       return;
     }
-
+    // F6: la pausa la pone la oficina. El técnico la provoca reportando trabajo adicional.
+    if (status === 'espera_autorizacion' && !isAdmin) {
+      discard();
+      showToast('error', t('findings.pauseFromOrder'));
+      return;
+    }
+    if (order.estatus === 'espera_autorizacion' && !isAdmin) {
+      discard();
+      showToast('error', t('findings.pausedByOffice'));
+      return;
+    }
 
     try {
       await workOrdersService.updateWorkOrderStatus(order.id, status);
@@ -333,8 +356,6 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
       fail(err);
     }
   };
-
-
 
   // Cancelar deja el <select> mostrando el estado real.
   const cancelDelivery = () => {
@@ -347,8 +368,6 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     if (order) void queryClient.invalidateQueries({ queryKey: queryKeys.orderBalance(order.id) });
     await refresh();
   };
-
-
 
   // Publicar pasa por el diálogo; dejar de publicar es inmediato, porque quitar algo de la
   // vista del cliente nunca es el movimiento peligroso.
