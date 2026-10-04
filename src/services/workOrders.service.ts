@@ -246,20 +246,24 @@ export const workOrdersService = {
   // El técnico reporta trabajo adicional: la base crea el hallazgo, un avance interno para
   // sus fotos y pone la orden en pausa, todo junto. Devuelve el avance para que las fotos
   // suban a él por la cola de siempre.
-  reportFinding: async (orderId: string, descripcion: string): Promise<{ hallazgo_id: string; avance_id: string }> => {
+  reportFinding: async (orderId: string, descripcion: string): Promise<{ hallazgo_id: string; avance_id: string | null }> => {
     const { data, error } = await supabase.rpc('reportar_hallazgo', {
       p_orden_id: orderId,
       p_descripcion: descripcion,
     });
     if (error) throw error;
-    return data as { hallazgo_id: string; avance_id: string };
+    // Antes de `20261010000011` la RPC devolvía solo el id del hallazgo (sin avance): la app
+    // publicada puede llegar antes que el `db push`, así que se acepta esa forma también.
+    if (data && typeof data === 'object') return data as { hallazgo_id: string; avance_id: string | null };
+    return { hallazgo_id: String(data), avance_id: null };
   },
 
   /** Solo admin. Devuelve el texto del hallazgo para precargar la tarea. */
-  quoteFinding: async (findingId: string): Promise<string> => {
+  quoteFinding: async (findingId: string): Promise<string | null> => {
     const { data, error } = await supabase.rpc('cotizar_hallazgo', { p_hallazgo_id: findingId });
     if (error) throw error;
-    return (data as { descripcion: string }).descripcion;
+    // Antes de `20261010000011` no devolvía nada: quien llama usa el texto que ya tiene.
+    return (data as { descripcion?: string } | null)?.descripcion ?? null;
   },
 
   /** Solo admin. `texto` es lo que verá el cliente si `enReporte`; nunca la descripción interna. */

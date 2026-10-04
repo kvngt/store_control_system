@@ -64,7 +64,7 @@ comisiones, el alta de la orden o la "espera de autorización".
   al cancelar el presupuesto — solo si no queda un hallazgo pendiente ni un presupuesto
   enviado. Mientras no se publique la migración que contrae, el guardia del técnico sigue
   aceptando el UPDATE directo con motivo (la app vieja). Al salir del estado el motivo se
-  limpia.
+  limpia. Todo el detalle y lo que falta: [hallazgos.md](hallazgos.md).
 - **El técnico puede tachar una mano de obra hecha**, pero `orden_labor` sigue siendo
   escritura solo de admin: se hace por la RPC `marcar_labor_completada`, que solo toca
   `completado_en`/`completado_por` y solo sobre una línea `aprobado`. Si necesitas que un

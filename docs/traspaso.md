@@ -127,7 +127,7 @@ Si todo pasa, la máquina está lista.
 | 2 | [salida-a-produccion.md](salida-a-produccion.md) y [auditoria-2026-09.md](auditoria-2026-09.md) | Qué se rompió, cómo se arregló, qué queda abierto |
 | 3 | [deployment.md](deployment.md) y [mantenimiento.md](mantenimiento.md) | Publicar, rotar llaves, volver atrás; cambiar la base sin cortar el servicio |
 | 3 | [pruebas.md](pruebas.md) y [plan-de-pruebas.md](plan-de-pruebas.md) | Qué está probado y cómo probar lo que cambies |
-| Cuando toque | [presupuestos.md](presupuestos.md), [portal-y-correos.md](portal-y-correos.md), [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md), [comisiones.md](comisiones.md), [pagos-a-empleados.md](pagos-a-empleados.md) | Cada subsistema a fondo |
+| Cuando toque | [presupuestos.md](presupuestos.md), [hallazgos.md](hallazgos.md), [portal-y-correos.md](portal-y-correos.md), [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md), [comisiones.md](comisiones.md), [pagos-a-empleados.md](pagos-a-empleados.md) | Cada subsistema a fondo |
 | Cuando toque | [evolucion.md](evolucion.md) | Por qué algo es como es (decisiones que se reemplazaron) |
 | Para el taller | [manual-usuario.md](manual-usuario.md) | La app pantalla por pantalla |
 

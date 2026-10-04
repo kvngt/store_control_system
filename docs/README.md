@@ -30,6 +30,7 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 | Trabajar con **multimedia o notificaciones** | [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md) |
 | Trabajar con el **portal del cliente o los correos** | [portal-y-correos.md](portal-y-correos.md) |
 | Trabajar con **presupuestos** o entender por qué un total no incluye algo | [presupuestos.md](presupuestos.md) |
+| Entender el **trabajo adicional** que reporta el técnico (hallazgos, la pausa de la orden, observaciones del taller) | [hallazgos.md](hallazgos.md) |
 | Saber **cómo llegó el sistema a ser lo que es** y por qué se tomó cada decisión | [evolucion.md](evolucion.md) |
 | Entender **cómo se paga al personal** | [comisiones.md](comisiones.md) (hoy) y [pagos-a-empleados.md](pagos-a-empleados.md) (propuesta pendiente) |
 | Evaluar **un login y una dirección propios para otro taller** | [marca-por-dominio.md](marca-por-dominio.md) (propuesta pendiente) |

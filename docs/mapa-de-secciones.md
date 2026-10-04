@@ -54,7 +54,7 @@ la base sin comprometer la operación: [mantenimiento.md §4](mantenimiento.md#4
   listas (`FindingsAlert`), lo cotiza (precarga la tarea; `enviar_presupuesto` lo vincula) o lo
   descarta (y decide si sale como "Observación del taller" en el portal y el PDF:
   `datos_portal.observaciones`, `customerObservations` en `lib/reportMedia.ts`). Migraciones
-  `20261010000010` y `20261010000011`.
+  `20261010000010` y `20261010000011`. Detalle: [hallazgos.md](hallazgos.md).
 - **Un estado nuevo** de la orden toca muchos lugares: [plan-de-mejora.md, al final](plan-de-mejora.md#si-el-taller-echa-de-menos-espera-de-repuestos).
 
 ## Tablero (Kanban)

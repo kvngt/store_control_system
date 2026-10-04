@@ -266,7 +266,12 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     setBusy(true);
     try {
       const { avance_id } = await workOrdersService.reportFinding(order.id, descripcion.trim());
-      enqueueMedia(media, { origen: 'avance', avanceId: avance_id });
+      // Sin avance (base anterior a 20261010000011) las fotos irían sueltas: mejor en un avance
+      // propio del técnico, interno como todo avance nuevo.
+      const avanceId = avance_id ?? (media.length && user
+        ? (await workOrdersService.addProgressUpdate(order.id, user.id, descripcion.trim(), false)).id
+        : null);
+      enqueueMedia(media, { origen: 'avance', avanceId });
       await refresh();
       showToast('success', t('findings.reported'));
       return true;
@@ -283,7 +288,9 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     if (!order) return null;
     setBusy(true);
     try {
-      const text = await workOrdersService.quoteFinding(findingId);
+      const text = (await workOrdersService.quoteFinding(findingId))
+        ?? order.hallazgos?.find((h) => h.id === findingId)?.descripcion
+        ?? '';
       await refresh();
       showToast('success', t('findings.quoted'));
       return text;
