@@ -80,12 +80,8 @@ que ya tiene la pantalla. Así la app publicada no se rompe si llega antes que e
 
 ## 6. Lo que falta (en orden)
 
-1. **`db push` de `20261010000011`: FALTA.** El 04/10/2026 el usuario aplicó `…009` y `…010`
-   (su copia local aún no tenía la `011`) y la app nueva ya está en `main`. Mientras falte,
-   en producción `cotizar_hallazgo` y `descartar_hallazgo` **no verifican el rol**,
-   `_salir_de_espera` no respeta un presupuesto enviado y el portal no trae observaciones. La
-   app funciona igual (acepta la forma vieja de las RPC). Hacer `git pull`, `npm run db:check`
-   y `npx supabase db push` (debe listar solo la `011`).
+1. ~~`db push`~~ hecho: `009` y `010`, y después la `011` (04/10/2026, por el usuario). La
+   base de producción está al día con el código.
 2. `npm run qa:security` con `TOKEN_ADMIN`/`TOKEN_TECH`.
 3. **Migración que contrae**, con la app nueva ya publicada: reescribir entero
    `trg_guard_order_technician` (versión vigente: `npm run db:donde -- trg_guard_order_technician`)
