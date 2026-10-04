@@ -232,7 +232,7 @@ async function openDetail(user: ReturnType<typeof userEvent.setup>, tab?: string
   if (tab) await user.click(screen.getByRole('tab', { name: new RegExp(`^${tab}`) }));
 }
 
-describe.skip('WorkOrders', () => {
+describe('WorkOrders', () => {
   it('lists the sede orders', async () => {
     renderWithProviders(<WorkOrders />);
 
@@ -265,7 +265,7 @@ describe.skip('WorkOrders', () => {
 
     await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
 
-    const dialog = (await screen.findByText('Nueva Orden', { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
     expect(dialog).toBeTruthy();
     // The pickers come from the screen's own load, through the extracted modal.
     expect(within(dialog).getByRole('option', { name: 'Marta Ruiz' })).toBeInTheDocument();
@@ -281,13 +281,13 @@ describe.skip('WorkOrders', () => {
     renderWithProviders(<WorkOrders />);
     await screen.findAllByText('OT-2026-0042');
     await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    const dialog = (await screen.findByText('Nueva Orden', { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
 
     await user.type(document.getElementById('order-miles-in') as HTMLInputElement, '45000');
     await user.click(within(dialog).getByRole('button', { name: /Cancelar/i }));
 
     expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/sin guardar/i));
-    expect(screen.getByText('Nueva Orden', { selector: '.modal-title' })).toBeInTheDocument();
+    expect(screen.getByText(/^Nueva Orden/i, { selector: '.modal-title' })).toBeInTheDocument();
 
     confirmSpy.mockRestore();
   });
@@ -299,13 +299,13 @@ describe.skip('WorkOrders', () => {
     renderWithProviders(<WorkOrders />);
     await screen.findAllByText('OT-2026-0042');
     await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    const dialog = (await screen.findByText('Nueva Orden', { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
 
     await user.click(within(dialog).getByRole('button', { name: /Cancelar/i }));
 
     expect(confirmSpy).not.toHaveBeenCalled();
     await waitFor(() =>
-      expect(screen.queryByText('Nueva Orden', { selector: '.modal-title' })).not.toBeInTheDocument()
+      expect(screen.queryByText(/^Nueva Orden/i, { selector: '.modal-title' })).not.toBeInTheDocument()
     );
 
     confirmSpy.mockRestore();
@@ -321,7 +321,7 @@ describe.skip('WorkOrders', () => {
     // the queries behind the board must not run again — the loader depends on
     // `sedeId` alone now, not on the language or on an auth-context identity.
     await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    await screen.findByText('Nueva Orden', { selector: '.modal-title' });
+    await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' });
 
     expect(mocks.getWorkOrders).toHaveBeenCalledTimes(1);
     expect(mocks.getCustomers).toHaveBeenCalledTimes(1);
@@ -335,7 +335,7 @@ describe.skip('WorkOrders', () => {
 // Antes esta prueba abría el formulario como mecánico y comprobaba que no trajera dinero;
 // ahora el formulario no se le ofrece. Quien lo impone es la base
 // (`ordenes_trabajo_insert`); esconder el botón solo evita un error en la cara.
-describe.skip('WorkOrders — abrir una orden es de administración', () => {
+describe('WorkOrders — abrir una orden es de administración', () => {
   it('un mecánico no ve el botón de nueva orden', async () => {
     mocks.auth.current = authValue(MECHANIC_USER);
     renderWithProviders(<WorkOrders />);
@@ -379,12 +379,12 @@ describe.skip('WorkOrders — abrir una orden es de administración', () => {
 
 // Pedido del taller (octubre 2026): en el alta también fotos extra, videos, notas de voz y
 // galería, como en la tarjeta de la orden ya creada. Antes solo se podía después de crearla.
-describe.skip('WorkOrders — inspección 360 en el alta', () => {
+describe('WorkOrders — inspección 360 en el alta', () => {
   async function openIntake(user: ReturnType<typeof userEvent.setup>) {
     renderWithProviders(<WorkOrders />);
     await screen.findAllByText('OT-2026-0042');
     await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    return (await screen.findByText('Nueva Orden', { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    return (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
   }
 
   it('ofrece foto, video, nota de voz y galería antes de crear la orden', async () => {
@@ -417,13 +417,13 @@ describe.skip('WorkOrders — inspección 360 en el alta', () => {
   });
 });
 
-describe.skip('WorkOrders — intake validation', () => {
+describe('WorkOrders — intake validation', () => {
   it('reports every missing field on the field itself, and sends nothing', async () => {
     const user = userEvent.setup();
     renderWithProviders(<WorkOrders />);
     await screen.findAllByText('OT-2026-0042');
     await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    const dialog = (await screen.findByText('Nueva Orden', { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
 
     await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
 
@@ -438,7 +438,7 @@ describe.skip('WorkOrders — intake validation', () => {
     renderWithProviders(<WorkOrders />);
     await screen.findAllByText('OT-2026-0042');
     await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    await screen.findByText('Nueva Orden', { selector: '.modal-title' });
+    await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' });
 
     // The first line of defence is the keyboard: `min={0}` does nothing on a
     // noValidate form, and complaining on submit still means the operator got
@@ -453,7 +453,7 @@ describe.skip('WorkOrders — intake validation', () => {
     renderWithProviders(<WorkOrders />);
     await screen.findAllByText('OT-2026-0042');
     await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    const dialog = (await screen.findByText('Nueva Orden', { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
 
     // A paste or an autofill never fires the keydown guard, so the schema has
     // to catch it and say so — rather than the value being silently rewritten,
@@ -471,7 +471,7 @@ describe.skip('WorkOrders — intake validation', () => {
     renderWithProviders(<WorkOrders />);
     await screen.findAllByText('OT-2026-0042');
     await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    const dialog = (await screen.findByText('Nueva Orden', { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
 
     // The customer picker is the dialog's first select.
     await user.selectOptions(within(dialog).getAllByRole('combobox')[0], '__new__');
@@ -491,13 +491,13 @@ describe.skip('WorkOrders — intake validation', () => {
 // son filas válidas, se crean igual desde sus propias pantallas — pero hay que decirlo. Sin
 // el aviso, quien lee "no se pudo crear la orden" da por hecho que no quedó nada y vuelve a
 // dar de alta el mismo vehículo.
-describe.skip('WorkOrders — el alta que falla a medio camino lo dice', () => {
+describe('WorkOrders — el alta que falla a medio camino lo dice', () => {
   const abrirConVehiculoNuevo = async () => {
     const user = userEvent.setup();
     renderWithProviders(<WorkOrders />);
     await screen.findAllByText('OT-2026-0042');
     await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    const dialog = (await screen.findByText('Nueva Orden', { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
 
     const selects = within(dialog).getAllByRole('combobox');
     const clienteSelect = selects.find((el) => within(el).queryByText(CUSTOMER.nombre))!;
@@ -534,7 +534,7 @@ describe.skip('WorkOrders — el alta que falla a medio camino lo dice', () => {
     renderWithProviders(<WorkOrders />);
     await screen.findAllByText('OT-2026-0042');
     await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    const dialog = (await screen.findByText('Nueva Orden', { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
 
     expect(within(dialog).getAllByRole('button', { name: /^Agregar$/i })).toHaveLength(2);
   });
@@ -545,7 +545,7 @@ describe.skip('WorkOrders — el alta que falla a medio camino lo dice', () => {
     renderWithProviders(<WorkOrders />);
     await screen.findAllByText('OT-2026-0042');
     await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
-    const dialog = (await screen.findByText('Nueva Orden', { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
 
     const selects = within(dialog).getAllByRole('combobox');
     await user.selectOptions(selects.find((el) => within(el).queryByText(CUSTOMER.nombre))!, CUSTOMER.id);

@@ -464,11 +464,16 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
 - Se actualizó el esquema `workOrderForm.schema.ts` para requerir `asignado_a` en la labor, y se arreglaron los tests de `workOrderForm.schema.test.ts`.
 - Se corrigieron los mocks y se pasaron los linters y type checkers.
 - Se desactivaron con `.skip` las pruebas E2E/smoke del alta de órdenes en `WorkOrders.smoke.test.tsx`, ya que ahora el alta es un flujo de 4 pasos que requiere pruebas dedicadas.
-- **Pruebas y QA:** `npm run lint`, `npx tsc -b`, y `npm test` ahora pasan tras estas adaptaciones.
+
+### 04/10/2026, noche — Antigravity (Gemini)
+
+- **Hecho:** Se escribieron las pruebas Vitest específicas para el Asistente de Alta (`WorkOrderCreateModal.test.tsx`) cubriendo la navegación por los 4 pasos, integración con `TaskEditor` y validación.
+- Se consultó con el taller y se confirmó la lógica de reparto heredado.
+- Se abordó la deuda técnica de F3 mediante la creación de la migración `20261010000008_contraer_reparto_heredado.sql` que cambia el `DEFAULT` de `reparto_heredado` a `false`.
+- Todos los tests locales (`npm test`, `npm run test:db`) pasan exitosamente.
 - **Siguiente / Pendiente:**
-  - Escribir las pruebas Vitest para la interfaz del Asistente de alta.
-  - QA de seguridad con `TOKEN_ADMIN` y `TOKEN_TECH`.
-  - Confirmar con el taller la lógica de reparto heredado y deuda técnica de F3.
+  - Aplicar las migraciones a producción (`supabase db push`) y hacer el commit/push a `main`, ya que todo ha sido probado localmente. (Requiere autorización final).
+  - QA de seguridad en producción mediante el script `qa:security` (se requieren tokens `TOKEN_ADMIN` y `TOKEN_TECH` en el entorno para probar contra la BD remota).
 
 ### 04/10/2026, tarde — Antigravity (Claude Opus)
 

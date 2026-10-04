@@ -298,6 +298,7 @@ export default function WorkOrderCreateModal({
           <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
             <label className="form-label">{t('workOrders.deposit')} ($)</label>
             <input
+              id="order-deposit"
               className="form-input"
               type="number"
               inputMode="decimal"
