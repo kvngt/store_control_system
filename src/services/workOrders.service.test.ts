@@ -5,6 +5,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mocks = vi.hoisted(() => ({
   deleted: [] as { id: string }[],
   tables: [] as string[],
+  // El canal de Realtime: qué tablas escucha, con qué evento, y el aviso de estado.
+  channelNames: [] as string[],
+  bindings: [] as { event: string; table: string; handler: (payload: unknown) => void }[],
+  onStatus: null as ((status: string) => void) | null,
+  removed: 0,
 }));
 
 vi.mock('../lib/supabase', () => {
@@ -15,11 +20,28 @@ vi.mock('../lib/supabase', () => {
       Promise.resolve({ data: mocks.deleted, error: null }).then(resolve);
     return chain;
   };
+  const channel = {
+    on: (_type: string, filter: { event: string; table: string }, handler: (payload: unknown) => void) => {
+      mocks.bindings.push({ event: filter.event, table: filter.table, handler });
+      return channel;
+    },
+    subscribe: (onStatus: (status: string) => void) => {
+      mocks.onStatus = onStatus;
+      return channel;
+    },
+  };
   return {
     supabase: {
       from: (table: string) => {
         mocks.tables.push(table);
         return builder();
+      },
+      channel: (name: string) => {
+        mocks.channelNames.push(name);
+        return channel;
+      },
+      removeChannel: async () => {
+        mocks.removed += 1;
       },
     },
   };
@@ -104,5 +126,67 @@ describe('uploadSignature', () => {
     await expect(workOrdersService.uploadSignature(orden, 'data:image/png;base64,AA')).rejects.toThrow(
       /No se pudo guardar/
     );
+  });
+});
+
+// Reporte del taller (octubre 2026): el admin no veía una orden finalizada hasta recargar.
+describe('workOrdersService: cambios de las órdenes en tiempo real', () => {
+  beforeEach(() => {
+    mocks.channelNames = [];
+    mocks.bindings = [];
+    mocks.onStatus = null;
+    mocks.removed = 0;
+  });
+
+  const emitir = (table: string, payload: { new?: Record<string, unknown>; old?: Record<string, unknown> }) =>
+    mocks.bindings.find((b) => b.table === table)!.handler({ new: {}, old: {}, ...payload });
+
+  it('escucha la orden y sus hijas, con las tablas que publica la migración', () => {
+    workOrdersService.subscribeToChanges(vi.fn(), vi.fn());
+    expect(mocks.bindings.map((b) => b.table).sort()).toEqual([
+      'orden_asignaciones', 'orden_avances', 'orden_labor', 'orden_media', 'orden_repuestos',
+      'ordenes_trabajo', 'presupuestos',
+    ]);
+  });
+
+  it('dice qué orden cambió: el id de la orden, o el orden_id de una hija', () => {
+    const onChange = vi.fn();
+    workOrdersService.subscribeToChanges(onChange, vi.fn());
+
+    emitir('ordenes_trabajo', { new: { id: 'ord-1', estatus: 'finalizado' } });
+    emitir('orden_avances', { new: { id: 'av-1', orden_id: 'ord-2' } });
+
+    expect(onChange.mock.calls).toEqual([['ord-1'], ['ord-2']]);
+  });
+
+  it('una orden borrada llega con su id; una hija borrada no dice de qué orden era y se ignora', () => {
+    const onChange = vi.fn();
+    workOrdersService.subscribeToChanges(onChange, vi.fn());
+
+    // Realtime no puede aplicar la RLS a una fila borrada y manda solo la llave primaria.
+    emitir('ordenes_trabajo', { old: { id: 'ord-3' } });
+    emitir('orden_labor', { old: { id: 'lab-1' } });
+
+    expect(onChange.mock.calls).toEqual([['ord-3']]);
+  });
+
+  it('avisa de una reconexión, no de la primera conexión', () => {
+    const onReconnect = vi.fn();
+    workOrdersService.subscribeToChanges(vi.fn(), onReconnect);
+
+    mocks.onStatus!('SUBSCRIBED');
+    expect(onReconnect).not.toHaveBeenCalled();
+    mocks.onStatus!('CHANNEL_ERROR');
+    mocks.onStatus!('SUBSCRIBED');
+    expect(onReconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('cada suscripción usa su propio canal y se puede cerrar', () => {
+    const cerrar = workOrdersService.subscribeToChanges(vi.fn(), vi.fn());
+    workOrdersService.subscribeToChanges(vi.fn(), vi.fn());
+
+    expect(new Set(mocks.channelNames).size).toBe(2);
+    cerrar();
+    expect(mocks.removed).toBe(1);
   });
 });

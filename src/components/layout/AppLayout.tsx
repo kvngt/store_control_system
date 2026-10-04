@@ -10,6 +10,7 @@ import SchemaDriftBanner from '../SchemaDriftBanner';
 import MediaUploadsProvider from '../../features/media/MediaUploadsProvider';
 import UploadTray from '../../features/media/UploadTray';
 import { syncThisDevice } from '../../features/notifications/pushDevice';
+import { useOrderSync } from '../../features/workOrders/useOrderSync';
 
 export default function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -30,6 +31,10 @@ export default function AppLayout() {
   useEffect(() => {
     if (user?.id) void syncThisDevice().catch(() => {});
   }, [user?.id]);
+
+  // Las órdenes cambian solas en pantalla cuando otra persona las cambia (Realtime). Aquí y
+  // no en una pantalla: el tablero, el Kanban, el panel y el detalle leen las mismas órdenes.
+  useOrderSync();
 
   // Con el cajón abierto, el overlay `position: fixed` tapa la página pero no la
   // inmoviliza: un dedo sobre él seguía desplazando el contenido de atrás, así

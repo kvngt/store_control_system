@@ -103,6 +103,12 @@ un proyecto con datos reales, [mantenimiento.md §4](mantenimiento.md#4-cambiar-
   y la herencia en `trg_prepare_orden_media`). Ya no es cierto que todo lo del técnico sea
   interno hasta que un admin lo publique. Lo que **sigue** siendo cierto: al cliente no le
   llega el nombre de ningún técnico, y el archivo suelto lo publica solo un admin.
+- **Las órdenes se actualizan solas en pantalla** (`20261010000002`): `useOrderSync` escucha
+  por Realtime las tablas de la orden y vuelve a leer la que cambió. El evento es una señal,
+  no los datos: nunca pintes su contenido. Una tabla hija nueva que otra persona necesite ver
+  al momento va en la publicación (migración) y en `ORDER_TABLES` de `workOrders.service.ts`;
+  **toda tabla publicada lleva RLS**, porque Realtime manda cada fila a quien su política deje
+  leerla (`15_tiempo_real.test.sql`).
 - **La lista de órdenes no trae el histórico.** `getWorkOrders` excluye las entregadas de
   más de 90 días **y las archivadas a mano** (`archivada_en`); el archivo se pide con
   `getArchivedWorkOrders`, paginado y buscando en el servidor. Los dos filtros son

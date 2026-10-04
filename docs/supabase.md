@@ -64,7 +64,7 @@ Para **por qué** está construido así: [arquitectura.md](arquitectura.md). Par
 │                                                                                        │
 │  Auth ─────────── sesiones del personal (correo + contraseña)                          │
 │  PostgREST ────── /rest/v1: tablas y RPC, siempre con RLS                              │
-│  Realtime ─────── cambios de `notificaciones` → campana                                │
+│  Realtime ─────── `notificaciones` → campana · órdenes y sus hijas → pantallas al día  │
 │  Storage ──────── /storage/v1: fotos, videos, audio, firmas, logos, cheques, PDFs      │
 │  Edge Functions ─ /functions/v1: portal · process-outbox · cleanup-storage ·           │
 │                   create-employee · update-employee · delete-employee                  │
@@ -347,10 +347,27 @@ desparejados.
 
 ## 9. Realtime
 
-- **Publicación `supabase_realtime`:** solo `public.notificaciones`.
+- **Publicación `supabase_realtime`:** `notificaciones` y, desde `20261010000002`, las
+  tablas de la orden: `ordenes_trabajo`, `orden_asignaciones`, `orden_labor`,
+  `orden_repuestos`, `orden_avances`, `orden_media` y `presupuestos`.
 - La campana se suscribe a `postgres_changes` filtrado por `usuario_id`
   (`notifications.service.ts`). RLS aplica también aquí: nadie recibe avisos ajenos.
-- Nada más usa Realtime: órdenes, Kanban y Finanzas se releen con TanStack Query.
+- **Las órdenes:** `useOrderSync` (montado en `AppLayout`) escucha las tablas de la orden
+  (`workOrdersService.subscribeToChanges`) y con cada cambio vuelve a leer esa orden, el
+  tablero, el Kanban y el panel por las consultas de siempre; del evento solo usa el id. Junta
+  los avisos 400 ms (un cambio de estado toca varias filas) y relee todo al reconectarse o al
+  volver a la app tras 30 s escondida, porque lo que cambió durante un corte no se reenvía.
+  Antes el admin no veía una orden finalizada por la técnica hasta recargar (octubre 2026).
+- **Quién recibe qué:** Realtime aplica la política de SELECT de cada tabla con la sesión de
+  quien escucha. Comprobado contra el Supabase local con tres sesiones: el admin recibe todo;
+  la técnica asignada, su orden y su avance pero no los repuestos; un técnico no asignado,
+  nada. Un DELETE llega a cualquier suscriptor de la tabla con solo la llave primaria
+  (Realtime no puede revisar una fila borrada).
+- **Toda tabla en la publicación lleva RLS**: una sin ella mandaría sus filas a cualquiera con
+  sesión. Lo fija `15_tiempo_real.test.sql`.
+- Finanzas, clientes y vehículos no usan Realtime: se releen con TanStack Query.
+- Consumo: cada cambio es un mensaje por cada persona que puede verlo. El plan Pro incluye
+  500 conexiones simultáneas y 5 millones de mensajes al mes; un taller usa una fracción.
 
 Agregar una tabla a Realtime es una migración (`ALTER PUBLICATION supabase_realtime ADD
 TABLE …`), no un clic en el panel.

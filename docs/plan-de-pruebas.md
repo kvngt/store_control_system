@@ -525,6 +525,7 @@ Marca ✅ / ❌ y anota versión de sistema y navegador.
 | DEV-07 | Subida sigue tras modo avión (MED-10) | | | | | |
 | DEV-08 | Subida sigue tras recargar (MED-11) | | | | | |
 | DEV-09 | Campana en tiempo real (NOT-01) | | | | | |
+| DEV-09b | Orden abierta por el admin cambia sola cuando la técnica la finaliza (sin recargar, en 1-2 s) | | | | | |
 | DEV-10 | Push con la app cerrada (NOT-06/07) | | ❌ esperado | | | |
 | DEV-11 | Instalar como app (PWA-01/02) | | n/a | | | |
 | DEV-12 | Portal: abre, reproduce video, llamar/WhatsApp (POR-13/14) | | | n/a | | |
