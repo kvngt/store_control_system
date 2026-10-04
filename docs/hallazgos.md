@@ -5,7 +5,7 @@
 > [tabla de estado](plan-mejoras-2026-10.md#estado) y la [bitácora](plan-mejoras-2026-10.md#bitácora-de-traspaso-entre-agentes).
 
 ## 1. Qué cambia para el taller
-
+#despilegue
 Antes, el mecánico que encontraba algo más que hacer movía la orden a "espera de
 autorización" y escribía un motivo. Ahora **la pausa la pone y la quita administración**; el
 técnico **reporta trabajo adicional** y eso pausa la orden.
