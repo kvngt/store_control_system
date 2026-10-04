@@ -342,16 +342,25 @@ incluso si el cliente y el vehículo son nuevos.
 
 **4 — Inspección 360°.** Seis zonas fijas para fotografiar el estado del auto al
 entrar: **Frontal, Trasera, Izquierda, Derecha, Interior y Tablero**. Toca cada
-recuadro para tomar la foto o elegirla de la galería. Puedes agregar fotos
-adicionales para daños previos o documentos.
+recuadro para tomar la foto o elegirla de la galería.
 
-Las fotos se reducen en el teléfono antes de subirse (mientras tanto el botón
-dice «Procesando…»). Así suben rápido aunque la señal sea mala, y se les quita la
-ubicación GPS que guarda la cámara.
+Debajo de las zonas están los mismos botones que en la orden ya creada: **Foto**,
+**Video**, **Nota de voz** y **Galería**. Sirven para sumar fotos de daños previos o
+documentos, un video recorriendo el auto o una nota de voz sobre cómo llegó. Cada
+cosa aparece como miniatura (una foto o un video se abren al tocarlos) y la ✕ la
+quita. Todo se sube junto con las fotos al crear la orden.
 
-> Estas fotos son la evidencia del taller si el cliente reclama después un daño
-> que ya venía. Tómalas siempre, aunque el auto se vea bien. Son las únicas que
-> quedan **visibles para el cliente** desde el principio.
+Las fotos se reducen en el teléfono antes de subirse y un video de la galería se
+convierte a un tamaño liviano; mientras tanto el botón **Crear** dice
+«Procesando…» y espera. Así suben rápido aunque la señal sea mala, y se les quita
+la ubicación GPS que guarda la cámara.
+
+> Esto es la evidencia del taller si el cliente reclama después un daño que ya
+> venía. Tómalo siempre, aunque el auto se vea bien. Las fotos y los videos de la
+> recepción son lo único que queda **visible para el cliente** desde el
+> principio. Las **notas de voz quedan internas**: el cliente no las oye hasta que
+> un administrador las publique desde la orden. Un administrador también puede
+> ocultar cualquier archivo.
 
 <!-- IMAGEN: cuadrícula de las seis zonas de inspección, algunas ya con foto -->
 

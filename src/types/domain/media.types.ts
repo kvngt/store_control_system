@@ -23,7 +23,10 @@ export interface OrderMedia {
   duracion_seg: number | null;
   ancho: number | null;
   alto: number | null;
-  /** Solo un admin la cambia. La recepción nace visible; los avances, no. */
+  /**
+   * Solo un admin la cambia en un archivo suelto. La recepción nace visible, salvo la nota de
+   * voz (20261010000003); lo de un avance sigue a su avance.
+   */
   visible_cliente: boolean;
   proveedor: string;
   subido_por: string | null;

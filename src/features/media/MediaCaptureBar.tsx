@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Camera, Images, Mic, Video } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
@@ -13,6 +13,11 @@ interface MediaCaptureBarProps {
   disabled?: boolean;
   /** Qué botones mostrar. Por defecto, todos. */
   allow?: { photo?: boolean; video?: boolean; audio?: boolean; gallery?: boolean };
+  /**
+   * Avisa mientras procesa (comprimir una foto, convertir un video de galería). En el alta
+   * de la orden, crearla en ese momento dejaría afuera el archivo que se está preparando.
+   */
+  onBusyChange?: (busy: boolean) => void;
 }
 
 /**
@@ -22,7 +27,7 @@ interface MediaCaptureBarProps {
  * nota de voz liviana — para que lo que entra a la cola sea lo que se va a
  * subir, sin trabajo pendiente que pueda perderse si la pestaña se cierra.
  */
-export default function MediaCaptureBar({ onAdd, disabled, allow = {} }: MediaCaptureBarProps) {
+export default function MediaCaptureBar({ onAdd, disabled, allow = {}, onBusyChange }: MediaCaptureBarProps) {
   const { t } = useLanguage();
   const { showToast } = useToast();
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -32,6 +37,15 @@ export default function MediaCaptureBar({ onAdd, disabled, allow = {} }: MediaCa
 
   const show = { photo: true, video: true, audio: true, gallery: true, ...allow };
   const busy = disabled || processing !== null;
+
+  // En una ref: quien la usa suele pasar una función nueva en cada render.
+  const onBusyChangeRef = useRef(onBusyChange);
+  onBusyChangeRef.current = onBusyChange;
+  const working = processing !== null;
+  useEffect(() => {
+    onBusyChangeRef.current?.(working);
+  }, [working]);
+  useEffect(() => () => onBusyChangeRef.current?.(false), []);
 
   const reportError = (err: unknown) => {
     const detail = isMediaError(err) ? t('media.errors.' + err.code) : t('media.errors.unsupported-file');

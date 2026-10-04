@@ -294,9 +294,12 @@ comisión                   = parte × su porcentaje   (el suyo, o el de la sede
 
 ### Visibilidad para el cliente
 
-- Lo de la **recepción** nace **visible** para el cliente: es lo que el cliente
-  firma al dejar el vehículo.
-- Lo de un **avance** nace **interno**, aunque quien lo sube pida lo contrario.
+- Las fotos y los videos de la **recepción** nacen **visibles** para el cliente: es
+  lo que el cliente firma al dejar el vehículo.
+- Una **nota de voz** de la recepción nace **interna** (migración `20261010000003`):
+  es el taller hablando, y la publica un admin si quiere que el cliente la oiga.
+- Lo de un **avance** sigue al avance: interno, salvo que el técnico muestre ese
+  avance al cliente (`20260930000001`). Lo que pida quien sube el archivo se ignora.
 - **Solo un admin** cambia la visibilidad de un archivo.
 - El portal del cliente muestra **solo lo visible** (sección 7).
 

@@ -306,6 +306,7 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 | MED-02 | P1 | H | **Video**: cámara a pantalla completa; el contador corre y se pone rojo en los últimos 15 s; a los 2:00 se detiene solo; "Repetir", "Usar video" y cambiar de cámara funcionan. |
 | MED-03 | P1 | H | **Nota de voz**: graba, se escucha antes de usarla, se detiene a los 2:00. |
 | MED-04 | P1 | H | Elegir de la galería un video de iPhone de 30 s → "Convirtiendo video N %" y la miniatura; pesa ~5–6 MB. |
+| MED-04b | P1 | H | En **Nueva Orden**, bajo las seis zonas: **Video**, **Nota de voz** y un video de **Galería** → miniaturas en el diálogo; mientras el video se convierte, **Crear** dice "Procesando…" y no responde. Crear → los tres suben en la bandeja y aparecen en la tarjeta **Inspección 360°**: los videos "Visible al cliente", la nota de voz "Interno". Cancelar el diálogo con un video convirtiéndose y abrir otra orden nueva → no aparece ahí. |
 | MED-05 | P2 | IA | Elegir un video de más de 2 minutos → "dura más de 2 minutos". |
 | MED-06 | P2 | H | Negar el permiso de cámara → mensaje que explica cómo activarlo. |
 | MED-07 | P1 | H | Un avance con **solo** una nota de voz, sin texto → se guarda. |
@@ -314,7 +315,7 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 | MED-10 | P1 | IA | Red en **Offline** a mitad de un video → la bandeja dice "Sin conexión"; al volver la red sigue sola. |
 | MED-11 | P1 | IA | Recargar a mitad de un video de más de 6 MB → la subida continúa, no empieza de cero. |
 | MED-12 | P2 | IA | Cerrar la pestaña con subidas pendientes → el navegador pregunta si salir. |
-| MED-13 | P0 | IA | Fotos de recepción muestran "Visible al cliente"; archivos de avance, "Interno". **A** alterna la visibilidad; **M** solo ve la etiqueta. |
+| MED-13 | P0 | IA | Fotos y videos de recepción muestran "Visible al cliente"; una nota de voz de recepción y los archivos de avance, "Interno". **A** alterna la visibilidad; **M** solo ve la etiqueta. |
 | MED-14 | P0 | IA | **M** borra un archivo suyo; no puede borrar uno de otra persona; en una orden entregada no puede subir ni borrar. |
 | MED-15 | P1 | H | Abrir un video → se reproduce en el visor; flechas al siguiente. Un video grabado en Android se reproduce en iPhone y al revés. |
 | MED-16 | P1 | H | Un video de 2 minutos grabado con **Video** → sube completo (~24 MB). |

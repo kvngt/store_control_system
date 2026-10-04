@@ -35,6 +35,19 @@ function photo(name: string) {
   return new File(['x'], name, { type: 'image/jpeg' });
 }
 
+/** Lo que entrega `MediaCaptureBar` ya procesado: un video de recorrido o una nota de voz. */
+function prepared(tipo: 'video' | 'audio'): PreparedMedia {
+  return {
+    tipo,
+    blob: new Blob([tipo], { type: tipo === 'video' ? 'video/mp4' : 'audio/mp4' }),
+    mime: tipo === 'video' ? 'video/mp4' : 'audio/mp4',
+    thumb: null,
+    duracionSeg: 12,
+    ancho: tipo === 'video' ? 1280 : null,
+    alto: tipo === 'video' ? 720 : null,
+  };
+}
+
 /** URLs handed out but not yet revoked. */
 function leaked() {
   return created.filter((url) => !revoked.includes(url));
@@ -88,20 +101,26 @@ describe('useIntakePhotos', () => {
 
     await act(async () => {
       await result.current.setZonePhoto('front', photo('a.jpg'));
-      await result.current.addExtraPhotos([photo('b.jpg'), photo('c.jpg')]);
+      await result.current.setZonePhoto('rear', photo('b.jpg'));
     });
-    expect(leaked()).toHaveLength(3);
+    act(() => result.current.addMedia([prepared('video')]));
+    expect(leaked()).toHaveLength(2);
 
     act(() => result.current.reset());
 
     expect(leaked()).toHaveLength(0);
     expect(Object.keys(result.current.photos)).toHaveLength(0);
+    expect(result.current.extraMedia).toHaveLength(0);
+    expect(result.current.hasMedia).toBe(false);
   });
 
   it('revokes everything still held when the dialog unmounts', async () => {
     const { result, unmount } = renderHook(() => useIntakePhotos());
 
-    await act(() => result.current.addExtraPhotos([photo('a.jpg'), photo('b.jpg')]));
+    await act(async () => {
+      await result.current.setZonePhoto('left', photo('a.jpg'));
+      await result.current.setZonePhoto('right', photo('b.jpg'));
+    });
     expect(leaked()).toHaveLength(2);
 
     unmount();
@@ -109,7 +128,7 @@ describe('useIntakePhotos', () => {
     expect(leaked()).toHaveLength(0);
   });
 
-  it('adds the photos that compressed and reports the one that did not', async () => {
+  it('reports a zone photo that could not be read, and stops waiting for it', async () => {
     compress.fn.mockImplementationOnce(async () => {
       throw new Error('unsupported-image');
     });
@@ -117,11 +136,11 @@ describe('useIntakePhotos', () => {
 
     let error: unknown;
     await act(async () => {
-      await result.current.addExtraPhotos([photo('bad.heic'), photo('good.jpg')]).catch((e) => (error = e));
+      await result.current.setZonePhoto('front', photo('bad.heic')).catch((e: unknown) => (error = e));
     });
 
     expect(error).toBeInstanceOf(Error);
-    expect(result.current.extraPhotos).toHaveLength(1);
+    expect(result.current.photos['front']).toBeUndefined();
     expect(result.current.processing).toBe(0);
   });
 
@@ -144,16 +163,46 @@ describe('useIntakePhotos', () => {
     expect(leaked()).toHaveLength(0);
   });
 
-  it('keeps extra photos out of the six fixed zones', async () => {
+  // Pedido del taller (octubre 2026): videos y notas de voz desde el alta, no solo después.
+  it('sends what the capture bar added to the upload queue without a zone, next to the zone photos', async () => {
     const { result } = renderHook(() => useIntakePhotos());
 
-    await act(async () => {
-      await result.current.setZonePhoto('front', photo('front.jpg'));
-      await result.current.addExtraPhotos([photo('dent.jpg')]);
-    });
+    await act(() => result.current.setZonePhoto('front', photo('front.jpg')));
+    act(() => result.current.addMedia([prepared('video'), prepared('audio')]));
 
     expect(result.current.zonesCovered).toBe(1);
-    expect(result.current.extraPhotos).toHaveLength(1);
-    expect(ZONES.some((z) => z.key === result.current.extraPhotos[0].key)).toBe(false);
+    expect(result.current.extraMedia).toHaveLength(2);
+    expect(result.current.toUploads().map((u) => [u.zone, u.media.tipo])).toEqual([
+      ['front', 'foto'],
+      [null, 'video'],
+      [null, 'audio'],
+    ]);
+    expect(ZONES).toHaveLength(6);
+  });
+
+  it('removes one item from the bar and keeps the rest', () => {
+    const { result } = renderHook(() => useIntakePhotos());
+
+    act(() => result.current.addMedia([prepared('video'), prepared('audio')]));
+    expect(result.current.hasMedia).toBe(true);
+    act(() => result.current.removeMedia(0));
+
+    expect(result.current.extraMedia.map((m) => m.tipo)).toEqual(['audio']);
+  });
+
+  // Un video de galería tarda en convertirse. Si mientras tanto se creó la orden (o se
+  // descartó el borrador), no puede caer en la orden siguiente.
+  it('drops a video that finishes converting after the draft was discarded', () => {
+    const { result } = renderHook(() => useIntakePhotos());
+    // La barra guarda la `onAdd` del render en que empezó a convertir.
+    const addFromOldDraft = result.current.addMedia;
+
+    act(() => result.current.reset());
+    act(() => addFromOldDraft([prepared('video')]));
+    expect(result.current.extraMedia).toHaveLength(0);
+
+    // El borrador nuevo sí recibe lo suyo.
+    act(() => result.current.addMedia([prepared('audio')]));
+    expect(result.current.extraMedia.map((m) => m.tipo)).toEqual(['audio']);
   });
 });

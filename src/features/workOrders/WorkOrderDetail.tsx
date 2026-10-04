@@ -301,7 +301,8 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
             {order.inspeccion_360_notas}
           </p>
 
-          {/* La recepción es lo que el cliente firma: nace visible para él. Aquí
+          {/* La recepción es lo que el cliente firma: nace visible para él, salvo la nota de
+              voz, que es el taller hablando y la publica un admin (20261010000003). Aquí
               también se puede sumar un video de recorrido o una nota de voz
               sobre el estado en que llegó el vehículo. */}
           <MediaGallery

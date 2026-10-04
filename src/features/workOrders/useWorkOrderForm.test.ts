@@ -147,14 +147,20 @@ describe('useWorkOrderForm', () => {
     await act(async () => {
       result.current.labor.append({ descripcion: 'Alineación', costo: '80', especialidad: 'mecanica' });
       result.current.toggleOperator('op-1');
-      await result.current.photos.addExtraPhotos([new File(['x'], 'dent.jpg')]);
+      await result.current.photos.setZonePhoto('front', new File(['x'], 'front.jpg'));
     });
-    expect(result.current.photos.hasPhotos).toBe(true);
+    act(() =>
+      result.current.photos.addMedia([
+        { tipo: 'audio', blob: new Blob(['a']), mime: 'audio/mp4', thumb: null, duracionSeg: 5, ancho: null, alto: null },
+      ])
+    );
+    expect(result.current.photos.hasMedia).toBe(true);
 
     act(() => result.current.reset());
 
     expect(result.current.form.getValues('laborItems')).toEqual([]);
     expect(result.current.selectedOperators).toEqual([]);
-    expect(result.current.photos.hasPhotos).toBe(false);
+    expect(result.current.photos.hasMedia).toBe(false);
+    expect(result.current.photos.extraMedia).toEqual([]);
   });
 });

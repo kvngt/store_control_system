@@ -102,7 +102,8 @@ un proyecto con datos reales, [mantenimiento.md §4](mantenimiento.md#4-cambiar-
   marca el técnico, y con él salen su texto y sus archivos (`trg_publicar_archivos_avance`
   y la herencia en `trg_prepare_orden_media`). Ya no es cierto que todo lo del técnico sea
   interno hasta que un admin lo publique. Lo que **sigue** siendo cierto: al cliente no le
-  llega el nombre de ningún técnico, y el archivo suelto lo publica solo un admin.
+  llega el nombre de ningún técnico, y el archivo suelto lo publica solo un admin. Lo de la
+  recepción nace visible **salvo la nota de voz**, que nace interna (`20261010000003`).
 - **Las órdenes se actualizan solas en pantalla** (`20261010000002`): `useOrderSync` escucha
   por Realtime las tablas de la orden y vuelve a leer la que cambió. El evento es una señal,
   no los datos: nunca pintes su contenido. Una tabla hija nueva que otra persona necesite ver

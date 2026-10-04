@@ -23,7 +23,10 @@ export const ZONES: { key: string; label: string }[] = [
 ];
 
 /**
- * The 360-degree intake photos.
+ * The 360-degree intake photos — and, since October 2026, any extra photo, video or voice
+ * note, captured with the same bar the order detail uses (`MediaCaptureBar`). The shop
+ * asked for it: until then videos and voice notes could only be added once the order
+ * existed.
  *
  * Deliberately outside React Hook Form: these are `File` objects with a
  * `blob:` URL each, and the thing that actually needs managing is not their
@@ -40,7 +43,13 @@ export const ZONES: { key: string; label: string }[] = [
  */
 export function useIntakePhotos() {
   const [photos, setPhotos] = useState<Record<string, PhotoZone>>({});
+  // Lo que se agrega con la barra: fotos sin zona, videos y notas de voz, ya procesados.
+  // Sus miniaturas las dibuja (y libera) `DraftMediaStrip`.
+  const [extraMedia, setExtraMedia] = useState<PreparedMedia[]>([]);
   const [processing, setProcessing] = useState(0);
+  // La generación del borrador como estado, para que `addMedia` cambie de identidad con
+  // cada reset (ver abajo).
+  const [epoch, setEpoch] = useState(0);
 
   // Every object URL handed out, so none is left behind when the tab moves on.
   const objectUrls = useRef(new Set<string>());
@@ -97,37 +106,22 @@ export function useIntakePhotos() {
     [prepare, releaseUrl, trackUrl]
   );
 
-  // Photos beyond the six fixed zones: damage close-ups, paperwork, anything
-  // the six-tile grid can't anticipate. They're appended with generated keys
-  // so the fixed zones keep their meaning.
-  //
-  // Una foto ilegible no descarta las demás: se agregan las que sí se pudieron
-  // comprimir y después se reporta el primer error.
-  const addExtraPhotos = useCallback(
-    async (files: File[]) => {
-      if (!files.length) return;
-      const results = await Promise.allSettled(files.map((file) => prepare(file)));
-      const ready = results.flatMap((r) => (r.status === 'fulfilled' && r.value ? [r.value] : []));
-
-      if (ready.length) {
-        const created = ready.map((media) => ({ media, preview: trackUrl(media.thumb ?? media.blob) }));
-        setPhotos((prev) => {
-          const next = { ...prev };
-          let n = Object.keys(prev).filter((k) => k.startsWith('extra-')).length;
-          created.forEach(({ media, preview }) => {
-            n += 1;
-            const key = `extra-${Date.now()}-${n}`;
-            next[key] = { key, label: `Extra ${n}`, media, preview };
-          });
-          return next;
-        });
-      }
-
-      const failure = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
-      if (failure) throw failure.reason;
+  // Lo que llega de la barra. Un video de galería tarda en convertirse: si mientras tanto se
+  // descartó el borrador o se creó la orden y se cerró el diálogo, llamaría a esta función
+  // después del reset y caería en la orden siguiente. La barra guarda la `onAdd` del render
+  // en que empezó, así que cada generación tiene la suya y la de una generación vieja no
+  // agrega nada.
+  const addMedia = useCallback(
+    (items: PreparedMedia[]) => {
+      if (!mounted.current || epoch !== generation.current || !items.length) return;
+      setExtraMedia((prev) => [...prev, ...items]);
     },
-    [prepare, trackUrl]
+    [epoch]
   );
+
+  const removeMedia = useCallback((index: number) => {
+    setExtraMedia((prev) => prev.filter((_, i) => i !== index));
+  }, []);
 
   const removePhoto = useCallback(
     (zoneKey: string) => {
@@ -143,38 +137,37 @@ export function useIntakePhotos() {
 
   const reset = useCallback(() => {
     generation.current += 1;
+    setEpoch(generation.current);
     setPhotos((prev) => {
       Object.values(prev).forEach((photo) => releaseUrl(photo.preview));
       return {};
     });
+    setExtraMedia([]);
   }, [releaseUrl]);
 
-  const extraPhotos = useMemo(
-    () => Object.values(photos).filter((ph) => !ZONES.some((z) => z.key === ph.key)),
-    [photos]
-  );
   const zonesCovered = useMemo(() => ZONES.filter((z) => photos[z.key]).length, [photos]);
 
   /** Lo que entra a la cola de subida una vez que la orden existe. */
   const toUploads = useCallback(
-    () =>
-      Object.values(photos).map((p) => ({
-        // Las fotos extra no tienen zona: su clave generada no significa nada fuera de este diálogo.
-        zone: ZONES.some((z) => z.key === p.key) ? p.key : null,
-        media: p.media,
-      })),
-    [photos]
+    () => [
+      ...Object.values(photos).map((p) => ({ zone: p.key as string | null, media: p.media })),
+      // Lo de la barra no tiene zona.
+      ...extraMedia.map((media) => ({ zone: null, media })),
+    ],
+    [photos, extraMedia]
   );
 
   return {
     photos,
-    extraPhotos,
+    extraMedia,
     zonesCovered,
-    hasPhotos: Object.keys(photos).length > 0,
+    /** Hay algo capturado: descartar el borrador tiene que preguntar. */
+    hasMedia: Object.keys(photos).length > 0 || extraMedia.length > 0,
     /** Fotos comprimiéndose ahora mismo. Crear la orden espera a que llegue a 0. */
     processing,
     setZonePhoto,
-    addExtraPhotos,
+    addMedia,
+    removeMedia,
     removePhoto,
     reset,
     toUploads,

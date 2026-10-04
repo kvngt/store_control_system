@@ -47,6 +47,10 @@ vi.mock('../lib/vin', async (importOriginal) => {
   return { ...actual, decodeVin: vi.fn().mockResolvedValue(null), fetchModelsForMake: vi.fn().mockResolvedValue([]) };
 });
 
+// jsdom no tiene canvas para comprimir. Cada prueba decide cuándo termina una compresión.
+const compress = vi.hoisted(() => ({ fn: vi.fn() }));
+vi.mock('../lib/media/image', () => ({ compressImage: compress.fn }));
+
 // jsdom has no canvas, and the real signature pad reaches into one on mount.
 // The signature flow is not what these tests are about.
 vi.mock('react-signature-canvas', () => ({
@@ -350,6 +354,46 @@ describe('WorkOrders — abrir una orden es de administración', () => {
     await screen.findAllByText('OT-2026-0042');
 
     expect(screen.getByRole('button', { name: /Nueva Orden/i })).toBeInTheDocument();
+  });
+});
+
+// Pedido del taller (octubre 2026): en el alta también fotos extra, videos, notas de voz y
+// galería, como en la tarjeta de la orden ya creada. Antes solo se podía después de crearla.
+describe('WorkOrders — inspección 360 en el alta', () => {
+  async function openIntake(user: ReturnType<typeof userEvent.setup>) {
+    renderWithProviders(<WorkOrders />);
+    await screen.findAllByText('OT-2026-0042');
+    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
+    return (await screen.findByText('Nueva Orden', { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+  }
+
+  it('ofrece foto, video, nota de voz y galería antes de crear la orden', async () => {
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+
+    for (const name of ['Foto', 'Video', 'Nota de voz', 'Galería']) {
+      expect(within(dialog).getByRole('button', { name })).toBeInTheDocument();
+    }
+  });
+
+  it('no deja crear la orden mientras un archivo de la galería se procesa', async () => {
+    let finish: (media: unknown) => void = () => {};
+    compress.fn.mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)));
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+
+    const gallery = dialog.querySelector('input[type="file"][multiple]') as HTMLInputElement;
+    fireEvent.change(gallery, { target: { files: [new File(['x'], 'golpe.jpg', { type: 'image/jpeg' })] } });
+
+    const create = within(dialog).getByRole('button', { name: /Procesando/ });
+    expect(create).toBeDisabled();
+
+    finish({ tipo: 'foto', blob: new Blob(['x'], { type: 'image/jpeg' }), mime: 'image/jpeg', thumb: null, duracionSeg: null, ancho: 1, alto: 1 });
+
+    // Ya preparada: queda en el borrador, cuenta en el encabezado y se puede crear.
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Crear' })).toBeEnabled());
+    expect(dialog.querySelectorAll('.draft-media')).toHaveLength(1);
+    expect(within(dialog).getByText(/0\/6\s*\+1/)).toBeInTheDocument();
   });
 });
 

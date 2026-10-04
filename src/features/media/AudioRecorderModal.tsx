@@ -5,6 +5,7 @@ import { MAX_MEDIA_SECONDS } from '../../lib/media/constants';
 import { formatDuration } from '../../lib/media/mime';
 import type { PreparedMedia } from '../../types/database';
 import { useMediaRecorder } from './useMediaRecorder';
+import BodyPortal from '../../components/BodyPortal';
 
 interface AudioRecorderModalProps {
   onDone: (media: PreparedMedia) => void;
@@ -56,7 +57,11 @@ export default function AudioRecorderModal({ onDone, onClose }: AudioRecorderMod
   const timerClass =
     state === 'recording' && remaining <= 15 ? 'audio-recorder-timer is-ending' : 'audio-recorder-timer';
 
+  // En `<body>` y no donde la abren: en el alta de la orden se abre dentro de otro diálogo
+  // (y de su formulario), y una capa fija anidada queda a merced de los estilos de sus
+  // ancestros (ver `BodyPortal`).
   return (
+    <BodyPortal>
     <div className="modal-overlay" onClick={onClose}>
       <div
         className="modal audio-recorder"
@@ -113,5 +118,6 @@ export default function AudioRecorderModal({ onDone, onClose }: AudioRecorderMod
         </div>
       </div>
     </div>
+    </BodyPortal>
   );
 }

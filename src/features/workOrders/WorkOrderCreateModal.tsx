@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react';
-import { Camera, CheckCircle2, ChevronLeft, ImagePlus, Plus, Trash2, X } from 'lucide-react';
+import { Camera, CheckCircle2, ChevronLeft, Plus, Trash2, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { isMediaError } from '../../lib/media/errors';
 import type { Customer, UserProfile, Vehicle } from '../../types/database';
 import VehicleFields from '../vehicles/VehicleFields';
+import MediaCaptureBar from '../media/MediaCaptureBar';
+import DraftMediaStrip from '../media/DraftMediaStrip';
 import { ZONES } from './useIntakePhotos';
 import type { WorkOrderFormApi } from './useWorkOrderForm';
 import { AlertError } from '../../components/AlertError';
@@ -41,7 +43,7 @@ interface WorkOrderCreateModalProps {
 
 /**
  * The "nueva orden" dialog: customer, vehicle, intake details, 360-degree
- * photos, labor and parts.
+ * photos (plus extra photos, videos and voice notes), labor and parts.
  *
  * Deliberately presentational — every field belongs to `useWorkOrderForm` and
  * submission belongs to the screen — so the dialog can be rendered and
@@ -71,8 +73,10 @@ export default function WorkOrderCreateModal({
   const stacked = form.customerMode === 'new' || form.vehicleMode === 'new';
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const extraInputRef = useRef<HTMLInputElement>(null);
   const [activeZone, setActiveZone] = useState<string | null>(null);
+  // La barra está comprimiendo una foto o convirtiendo un video de galería.
+  const [captureBusy, setCaptureBusy] = useState(false);
+  const preparing = photos.processing > 0 || captureBusy;
 
   const FieldError = ({ messageKey }: { messageKey?: string }) =>
     messageKey ? (
@@ -96,11 +100,6 @@ export default function WorkOrderCreateModal({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && activeZone) photos.setZonePhoto(activeZone, file).catch(reportPhotoError);
-    e.target.value = '';
-  };
-
-  const handleExtraFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    photos.addExtraPhotos(Array.from(e.target.files || [])).catch(reportPhotoError);
     e.target.value = '';
   };
 
@@ -131,8 +130,6 @@ export default function WorkOrderCreateModal({
           <div className="modal-body">
             <AlertError message={error} />
             <input type="file" ref={fileInputRef} accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileChange} />
-            {/* No `capture` here: extras are often picked from the gallery. */}
-            <input type="file" ref={extraInputRef} accept="image/*" multiple style={{ display: 'none' }} onChange={handleExtraFilesChange} />
 
             {/* Customer & Vehicle.
                 Side by side while both are plain dropdowns, stacked as soon as
@@ -355,7 +352,7 @@ export default function WorkOrderCreateModal({
                 <span>{t('workOrders.inspection360')}</span>
                 <span style={{ fontSize: 'var(--font-size-xs)', color: photos.zonesCovered === ZONES.length ? 'var(--color-success)' : 'var(--color-text-tertiary)', fontWeight: 600 }}>
                   {photos.zonesCovered}/{ZONES.length}
-                  {photos.extraPhotos.length > 0 && ` +${photos.extraPhotos.length}`}
+                  {photos.extraMedia.length > 0 && ` +${photos.extraMedia.length}`}
                 </span>
               </label>
               <div className="photo-zone-grid">
@@ -393,40 +390,14 @@ export default function WorkOrderCreateModal({
                     </div>
                   );
                 })}
-
-                {photos.extraPhotos.map((photo) => (
-                  <div key={photo.key} className="photo-zone filled">
-                    <img
-                      src={photo.preview}
-                      alt={photo.label}
-                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                    <button
-                      type="button"
-                      className="photo-zone-remove"
-                      onClick={(e) => removePhoto(photo.key, e)}
-                      aria-label={`${t('common.delete')} ${photo.label}`}
-                    >
-                      <X size={14} />
-                    </button>
-                    <span className="photo-zone-caption">
-                      <CheckCircle2 size={12} /> {photo.label}
-                    </span>
-                  </div>
-                ))}
-
-                <div
-                  className="photo-zone photo-zone-add"
-                  onClick={() => extraInputRef.current?.click()}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') extraInputRef.current?.click();
-                  }}
-                >
-                  <ImagePlus size={24} className="photo-zone-icon" />
-                  <span className="photo-zone-label">{t('workOrders.addExtraPhoto')}</span>
-                </div>
+              </div>
+              {/* Lo mismo que la tarjeta de la orden ya creada: más fotos, un video de
+                  recorrido o una nota de voz sobre cómo llegó el vehículo. Antes eso solo se
+                  podía después de crearla (pedido del taller, octubre 2026). Queda en el
+                  navegador y entra a la cola de subida al crear la orden, con las fotos. */}
+              <div style={{ marginTop: 'var(--space-3)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                <DraftMediaStrip items={photos.extraMedia} onRemove={photos.removeMedia} />
+                <MediaCaptureBar onAdd={photos.addMedia} disabled={saving} onBusyChange={setCaptureBusy} />
               </div>
               <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 'var(--space-2)' }}>
                 {photos.processing > 0 ? (
@@ -560,9 +531,9 @@ export default function WorkOrderCreateModal({
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               {t('common.cancel')}
             </button>
-            {/* Mientras una foto se comprime, crear la orden la dejaría afuera. */}
-            <button type="submit" className="btn btn-primary" disabled={saving || photos.processing > 0}>
-              {saving ? t('common.loading') : photos.processing > 0 ? t('media.processing') : t('common.create')}
+            {/* Mientras una foto se comprime o un video se convierte, crear la orden lo dejaría afuera. */}
+            <button type="submit" className="btn btn-primary" disabled={saving || preparing}>
+              {saving ? t('common.loading') : preparing ? t('media.processing') : t('common.create')}
             </button>
           </div>
         </form>

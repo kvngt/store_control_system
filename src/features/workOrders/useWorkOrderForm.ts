@@ -125,8 +125,8 @@ export function useWorkOrderForm() {
     photos.reset();
   }, [form, photos]);
 
-  // RHF's own `isDirty` covers the fields; the photos are state it never sees.
-  const isDirty = form.formState.isDirty || photos.hasPhotos;
+  // RHF's own `isDirty` covers the fields; the photos, videos and voice notes are state it never sees.
+  const isDirty = form.formState.isDirty || photos.hasMedia;
 
   return {
     form,
