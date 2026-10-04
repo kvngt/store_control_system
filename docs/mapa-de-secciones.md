@@ -36,9 +36,10 @@ la base sin comprometer la operación: [mantenimiento.md §4](mantenimiento.md#4
 | | |
 |---|---|
 | Pantalla | `pages/WorkOrders.tsx` (lista y archivo; para un técnico, solo "Mis órdenes") |
-| Detalle | `features/workOrders/WorkOrderDetail.tsx` (dibuja) y `useWorkOrderDetail.ts` (estado, permisos derivados como `canEdit`, `canSign`, `canDeliver`, y todas las acciones). En el teléfono cada tarjeta va en un `MobileSection` plegable (`components/MobileSection.tsx`) |
+| Detalle | `features/workOrders/WorkOrderDetail.tsx` (dibuja) y `useWorkOrderDetail.ts` (estado, permisos derivados como `canEdit`, `canSign`, `canDeliver`, y todas las acciones). En escritorio, pestañas (`components/Tabs.tsx`) bajo un encabezado fijo: admin Resumen/Trabajos/Fotos y avances/Cobro y cliente/Historial; técnico Tareas/Orden/Avances. Cada pestaña se monta al abrirla y después solo se esconde. En el teléfono cada tarjeta va en un `MobileSection` plegable (`components/MobileSection.tsx`), en el orden de las pestañas. Enlace directo a una pestaña: `/work-orders?open=<id>&tab=<id de la pestaña>` |
+| Historial de la orden | Tabla `historial_orden` (trigger `trg_historial`, `20261010000004`); `workOrdersService.getHistory`; `features/workOrders/OrderHistory.tsx` y `historyFormat.ts` (convierte cada fila en una frase); pruebas `17_historial_orden.test.sql` y `historyFormat.test.ts` |
 | Alta | `features/workOrders/WorkOrderCreateModal.tsx`, `useWorkOrderForm.ts`, `workOrderForm.schema.ts` |
-| Tarjetas del detalle | `LaborTable`, `PartsTable`, `PartsSummaryCard`, `SignatureCard`, `ProgressLog`, `QuoteCard`, `CustomerLinkCard`, `CommissionEstimateCard`, `DeliveryModal`, `AuthorizationReasonModal`, `ShareReportModal`, `ArchivedOrders` |
+| Tarjetas del detalle | `LaborTable` (con `TaskEditor`, `TechnicianSelect`, `TradeMismatchDialog` y las reglas de `tasks.ts`), `PartsTable`, `PartsSummaryCard`, `SignatureCard`, `ProgressLog`, `QuoteCard`, `CustomerLinkCard`, `CommissionEstimateCard`, `DeliveryModal`, `AuthorizationReasonModal`, `ShareReportModal`, `ArchivedOrders` |
 | Servicio | `services/workOrders.service.ts` |
 | Tablas | `ordenes_trabajo` (20 triggers), `orden_montos`, `orden_labor`, `orden_repuestos`, `orden_asignaciones`, `orden_avances` |
 | RPC | `create_work_order`, `repuestos_de_orden`, `marcar_labor_completada`, `mis_ordenes_asignadas` |
@@ -86,7 +87,7 @@ la base sin comprometer la operación: [mantenimiento.md §4](mantenimiento.md#4
 | Servicios | `commissions.service.ts`, `employees.service.ts`, `users.service.ts` (edge functions de empleados) |
 | Base | tablas `comisiones`, `comision_pagos`, `perfiles_pago`; `_reparto_comisiones` (**la única cuenta**), `sync_order_commissions`, `comisiones_estimadas`, `pay_commissions`, `resumen_empleado` |
 | Edge functions | `create-employee`, `update-employee`, `delete-employee` |
-| Pruebas | `Employees.pay.test.tsx`, `Employees.users.test.tsx`, `CommissionEstimateCard.test.tsx`; pgTAP `01`, `12`, `13` |
+| Pruebas | `Employees.pay.test.tsx`, `Employees.users.test.tsx`, `CommissionEstimateCard.test.tsx`, `TaskEditor.test.tsx`, `LaborTable.test.tsx`, `DeliveryModal.test.tsx`, `workOrders.service.test.ts` (lo que manda la pantalla), `styles/laborMobile.test.ts`; pgTAP `01`, `12`, `13`, `19` (comisión por tarea) |
 | Documento | [comisiones.md](comisiones.md) (cómo funciona) y [pagos-a-empleados.md](pagos-a-empleados.md) (propuesta pendiente) |
 
 ## Finanzas

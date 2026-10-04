@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   revokeLink: vi.fn(),
   notifyProgress: vi.fn(),
   listEmails: vi.fn(),
+  retryEmail: vi.fn(),
 }));
 
 vi.mock('../../services/customerPortal.service', () => ({
@@ -147,5 +148,36 @@ describe('CustomerLinkCard', () => {
 
     expect(await screen.findByText(/pidió no recibir correos/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Avisar novedades/ })).not.toBeInTheDocument();
+  });
+
+  // Reporte del taller (octubre 2026): con la llave de Resend mal puesta los correos quedaban
+  // en error para siempre. Corregida la llave, se reintentan desde aquí.
+  it('ofrece reintentar solo un correo que falló, y lo devuelve a la cola', async () => {
+    mocks.getActiveLink.mockResolvedValue(LINK);
+    mocks.retryEmail.mockResolvedValue(undefined);
+    const failed: CustomerEmail = {
+      id: 'e3', plantilla: 'estatus', estado: 'error', destinatario: 'marta@example.com',
+      datos: { estatus: 'finalizado' }, intentos: 1, ultimo_error: 'Resend HTTP 400: API key is invalid',
+      enviar_despues_de: '2026-10-02T10:00:00Z', creado_en: '2026-10-02T09:57:00Z', enviado_en: null,
+    };
+    const sent: CustomerEmail = {
+      id: 'e1', plantilla: 'recepcion', estado: 'enviado', destinatario: 'marta@example.com',
+      datos: {}, intentos: 1, ultimo_error: null,
+      enviar_despues_de: '2026-09-10T15:12:00Z', creado_en: '2026-09-10T15:10:00Z', enviado_en: '2026-09-10T15:12:05Z',
+    };
+    mocks.listEmails.mockResolvedValue([failed, sent]);
+    renderWithProviders(<CustomerLinkCard order={order()} statusLabels={STATUS_LABELS} />);
+
+    expect(await screen.findByText(/API key is invalid/)).toBeInTheDocument();
+    // Un botón, no dos: el que salió bien no se reintenta.
+    const retry = screen.getAllByRole('button', { name: /Reintentar/ });
+    expect(retry).toHaveLength(1);
+
+    await userEvent.click(retry[0]);
+
+    await waitFor(() => expect(mocks.retryEmail).toHaveBeenCalledWith('e3'));
+    expect(await screen.findByText(/volvió a la cola/)).toBeInTheDocument();
+    // Y la lista se vuelve a pedir para mostrar el estado nuevo.
+    await waitFor(() => expect(mocks.listEmails.mock.calls.length).toBeGreaterThan(1));
   });
 });

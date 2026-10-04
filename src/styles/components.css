@@ -913,6 +913,25 @@ body.drawer-open {
   color: white;
 }
 
+/* Verde de acción afirmativa: agregar una tarea o un repuesto, marcar "Realizado". Pedido del
+   taller (03/10/2026): el "+" gris no se leía como "aquí se agrega". */
+.btn-success {
+  background: var(--color-success-fill);
+  color: var(--color-on-success);
+  border-color: var(--color-success-fill);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: var(--color-success-fill-hover);
+  border-color: var(--color-success-fill-hover);
+}
+
+/* Deshabilitado tiene que verse deshabilitado: un verde vivo invita a apretar. */
+.btn-success:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .btn-sm {
   padding: var(--space-1) var(--space-3);
   font-size: var(--font-size-sm);
@@ -4066,6 +4085,177 @@ body.drawer-open {
   border-radius: var(--radius-md);
 }
 
+/* ===== Detalle de la orden: encabezado y pestañas ===== */
+.order-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.order-detail-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.order-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.order-detail-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 460px;
+}
+
+/* Pestañas como botones: las clases `.tab` nacieron para enlaces y no limpiaban el botón. */
+button.tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+button.tab.active {
+  border-bottom-color: var(--color-primary);
+}
+
+button.tab:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.tabs-bar {
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: var(--space-4);
+}
+
+.tab-count {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full, 999px);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+}
+
+/* "Hay algo aquí que necesita atención": un punto, no un número. */
+.tab-attention {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-warning);
+}
+
+/* En escritorio el encabezado y las pestañas quedan fijos bajo la barra de arriba: con la
+   orden en pestañas, cambiar de sección o de estado no obliga a volver a subir. */
+@media (min-width: 769px) {
+  .order-detail-top {
+    position: sticky;
+    top: var(--header-height);
+    z-index: var(--z-sticky);
+    background: var(--color-bg-primary);
+    padding-top: var(--space-2);
+    margin-bottom: var(--space-2);
+  }
+
+  .order-detail-top .tabs-bar {
+    margin-bottom: 0;
+  }
+}
+
+/* En el teléfono el encabezado ocupaba media pantalla antes de la primera sección. */
+@media (max-width: 768px) {
+  .order-detail-header {
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+
+  .order-detail-title {
+    font-size: var(--font-size-xl);
+    gap: var(--space-2);
+  }
+
+  .order-detail-controls {
+    gap: var(--space-2);
+    max-width: none;
+  }
+}
+
+/* ===== Historial de la orden ===== */
+.order-history-day + .order-history-day {
+  margin-top: var(--space-4);
+}
+
+.order-history-day h4 {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-2);
+}
+
+/* "sábado, 3 de octubre" → "Sábado, 3 de octubre": solo la primera letra. */
+.order-history-day h4::first-letter {
+  text-transform: uppercase;
+}
+
+.order-history-day > ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.order-history-day > ul > li {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+}
+
+.order-history-day time {
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.order-history-day p {
+  overflow-wrap: anywhere;
+}
+
+.order-history-details {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  overflow-wrap: anywhere;
+}
+
+/* "Reintentar" bajo un correo con error: alineado con el texto, no con el borde. */
+.customer-link-email-retry {
+  margin-top: var(--space-1);
+  padding-left: 0;
+  padding-right: 0;
+}
+
 .customer-link-email-main {
   display: flex;
   align-items: center;
@@ -4416,6 +4606,215 @@ td .labor-specialty-select {
   max-width: none;
 }
 
+/* ----- Tareas con técnico (comisión por tarea, 20261010000006) ----- */
+/* Tipo y técnico de cada línea, bajo su descripción. */
+.labor-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.labor-meta .labor-specialty-tag {
+  margin-left: 0;
+}
+
+.labor-meta-select {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+.labor-type-select { max-width: 140px; }
+.labor-tech-select { max-width: 240px; }
+
+.labor-meta-lock {
+  display: inline-flex;
+  color: var(--color-text-tertiary);
+}
+
+.labor-technician {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.labor-technician.is-empty,
+.labor-no-tech {
+  color: var(--color-warning);
+}
+
+.labor-no-tech {
+  background: var(--color-warning-bg);
+}
+
+/* El alta de una tarea: el botón verde, y al abrirlo el formulario en línea. */
+.task-editor-start {
+  margin-top: var(--space-3);
+}
+
+.task-editor {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border: 1px dashed var(--color-surface-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+}
+
+.task-editor-fields {
+  display: grid;
+  grid-template-columns: minmax(110px, 140px) minmax(160px, 1fr) minmax(90px, 120px) minmax(150px, 220px);
+  gap: var(--space-2) var(--space-3);
+  align-items: end;
+}
+
+.task-editor-fields .form-group {
+  margin-bottom: 0;
+}
+
+.task-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.task-editor-error {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+}
+
+.task-editor .field-hint {
+  margin-top: var(--space-2);
+}
+
+/* En el teléfono: tipo y precio en una fila, descripción y técnico a lo ancho. */
+@media (max-width: 768px) {
+  .task-editor-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .task-editor-description,
+  .task-editor-technician {
+    grid-column: 1 / -1;
+  }
+
+  .task-editor-actions .btn {
+    flex: 1 1 0;
+    justify-content: center;
+    min-height: 40px;
+  }
+
+  .labor-meta-select,
+  .labor-type-select,
+  .labor-tech-select {
+    flex: 1 1 140px;
+    max-width: none;
+    /* Por debajo de 16px Safari en iOS hace zoom al tocar el selector (ver `.form-input`). */
+    font-size: 16px;
+  }
+
+  /* La celda de la descripción lleva además tipo y técnico. En tarjeta las celdas son una fila
+     flex sin salto: los dos selectores quedaban a la derecha, fuera de la tarjeta, con scroll
+     horizontal de la página y la descripción partida palabra por palabra. Aquí la celda salta
+     de renglón y los selectores bajan a uno propio, a lo ancho. */
+  .table-container.cards-on-mobile td.labor-desc-cell {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: var(--space-2);
+    text-align: left;
+  }
+
+  /* El rótulo en su propio renglón: a su lado la descripción quedaba en una columna angosta. */
+  .table-container.cards-on-mobile td.labor-desc-cell::before {
+    flex-basis: 100%;
+  }
+
+  /* Con base propia: si no caben, las insignias bajan de renglón en vez de angostarla. */
+  .labor-desc-cell .line-desc {
+    flex: 1 1 160px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .labor-desc-cell .labor-meta {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+}
+
+.trade-mismatch-actions {
+  flex-wrap: wrap;
+}
+
+/* Tarjeta de técnicos: si la persona entra al reparto por especialidad o cobra solo sus tareas. */
+.assignment-origin {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.assignment-origin-badge {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.assignment-origin-badge.is-task {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+}
+
+.assignment-split-toggle {
+  padding: 0 var(--space-2);
+  font-size: var(--font-size-xs);
+}
+
+/* Aviso arriba del Resumen ("2 tareas sin técnico"), con su atajo a Trabajos. */
+.order-notice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.order-notice > span {
+  flex: 1 1 200px;
+}
+
+.order-notice .btn {
+  color: inherit;
+}
+
+.delivery-unassigned ul,
+.commission-unassigned ul {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-5);
+}
+
+.commission-unassigned {
+  margin-bottom: var(--space-3);
+}
+
+.commission-task-line {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.commission-task-desc {
+  display: block;
+  font-weight: var(--font-weight-normal);
+}
+
 /* ----- Empleados ----- */
 .employee-summary {
   display: grid;
@@ -4566,6 +4965,13 @@ td .labor-specialty-select {
 
 .responsive-grid-2 > .mobile-section {
   margin-top: 0;
+}
+
+/* En el teléfono el detalle de la orden apila los grupos de sus pestañas: una cuadrícula que
+   no es lo primero necesita el mismo aire que una sección suelta. */
+.order-detail-group + .order-detail-group > .responsive-grid-2:first-child,
+.order-detail-group > .mobile-section + .responsive-grid-2 {
+  margin-top: var(--space-3);
 }
 
 /* La tarjeta de adentro no pintó nada (presupuesto vacío, comisión ajena). */

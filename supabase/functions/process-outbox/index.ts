@@ -260,9 +260,18 @@ async function sendEmail(job: OutboxJob): Promise<JobResult> {
     return { estado: 'enviado', proveedorId: body.id };
   }
 
-  const detail = `Resend HTTP ${res.status}: ${(await res.text().catch(() => '')).slice(0, 300)}`;
-  // Límite de envío o falla de Resend: vale la pena reintentar. Un 4xx (dirección
-  // inválida, dominio sin verificar, llave sin permiso) no se arregla solo.
+  const body = (await res.text().catch(() => '')).slice(0, 300);
+  // La llave mal puesta (401, o el 400 "API key is invalid" que manda Resend) es configuración:
+  // se dice con palabras que señalen el secreto, y se reintenta con la espera creciente de
+  // `finish_outbox`, para que los correos salgan solos si la llave se corrige a tiempo. Pasó
+  // en producción el 02/10/2026; después de los reintentos queda en error y se puede
+  // reintentar desde la app (`reintentar_envio`).
+  if (res.status === 401 || /api key/i.test(body)) {
+    throw new Error(`La llave de Resend no es válida: revisa el secreto RESEND_API_KEY. Resend HTTP ${res.status}: ${body}`);
+  }
+  const detail = `Resend HTTP ${res.status}: ${body}`;
+  // Límite de envío o falla de Resend: vale la pena reintentar. Otro 4xx (dirección
+  // inválida, dominio sin verificar) no se arregla solo.
   if (res.status === 429 || res.status >= 500) throw new Error(detail);
   return { estado: 'error', detalle: detail };
 }

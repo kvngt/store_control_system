@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import type { UserProfile, Sede } from '../types/database';
 import { AuthContext, type LoginResult } from './auth.context';
+import { identifyUser } from '../lib/monitoring';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -11,6 +12,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
   const queryClient = useQueryClient();
+
+  // Un error que llega a Sentry dice a quién le pasó; al cerrar sesión se olvida.
+  useEffect(() => {
+    identifyUser(user);
+  }, [user]);
   // Quién es dueño de lo que hay en la caché de datos. En una tablet compartida, sin
   // esto, quien entraba después veía por un momento las órdenes y los montos que cargó
   // la persona anterior (un admin), hasta que llegaba su propia consulta.

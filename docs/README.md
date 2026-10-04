@@ -18,6 +18,7 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 | **Entender el sistema** antes de tocar código | [arquitectura.md](arquitectura.md) → [reglas-de-negocio.md](reglas-de-negocio.md) |
 | **Cambiar una parte concreta** (Finanzas, la entrega, el portal…) y no saber a dónde ir | [mapa-de-secciones.md](mapa-de-secciones.md) |
 | Saber **qué tan sano está el proyecto hoy**: estructura, base de datos, operación y qué hacer primero | [evaluacion-2026-10.md](evaluacion-2026-10.md) |
+| Saber **qué sigue**: los cambios que pidió el taller en la reunión del 03/10/2026, por fases y con su estado | [plan-mejoras-2026-10.md](plan-mejoras-2026-10.md) |
 | **Cambiar la base en producción** sin comprometer la operación, o saber qué deuda técnica queda | [mantenimiento.md](mantenimiento.md) |
 | **Probar la plataforma a mano** como tester, sin programar | [manual-de-pruebas.md](manual-de-pruebas.md) |
 | **Probar la plataforma** con casos técnicos (persona o agente de IA) | [plan-de-pruebas.md](plan-de-pruebas.md) |
@@ -123,6 +124,13 @@ ejecutarlas, buckets y sus rutas, las 6 edge functions, nombres de secretos y de
 Auth, Realtime, tareas programadas, dónde está cada cosa en el panel, el Supabase local y
 lo que falta limpiar.
 
+**[plan-mejoras-2026-10.md](plan-mejoras-2026-10.md)** — El plan de los cambios que pidió el
+taller después del primer día de pruebas (03/10/2026): historial de la orden y seguimiento de
+errores, reintentar correos, detalle de la orden con pestañas, tareas con técnico y comisión
+por tarea, nueva orden en 4 secciones, tareas por hacer del técnico, hallazgos y la nueva
+"espera de autorización". Con las decisiones del taller, lo que hacen otros sistemas y el
+estado de cada fase.
+
 **[plan-de-mejora.md](plan-de-mejora.md)** — Análisis de desempeño, deuda técnica y plan de
 acción posterior a la auditoría. Es una foto anterior a la revisión previa a producción:
 lo que se resolvió de ahí está marcado al principio del documento. Al final están las
@@ -138,8 +146,9 @@ qué revisar después.
 escrita para el personal del taller. Base en texto para el manual con capturas.
 
 **[comisiones.md](comisiones.md)** — El modelo de pago del personal como funciona hoy:
-bolsas por especialidad, porcentaje de cada empleado, pagos con cheque y un egreso por orden
-en Finanzas.
+comisión por tarea (cada trabajo le paga a su técnico), el reparto por especialidad de las
+líneas de antes, porcentaje de cada empleado, pagos con cheque y un egreso por orden en
+Finanzas.
 
 **[pagos-a-empleados.md](pagos-a-empleados.md)** — Propuesta para quitar la ambigüedad del
 pago al personal (comisión congelada al devengarse, ajustes, períodos, salarios, adelantos),
@@ -220,7 +229,8 @@ que la acompaña está publicado (15 de septiembre de 2026).
 | **Presupuesto** | Trabajos que se le presentan al cliente para que los autorice línea por línea. |
 | **Línea autorizada** | Mano de obra o repuesto que el cliente aprobó. Solo eso se cobra. |
 | **Montos** | Totales, repuestos con precio y depósito. Solo los ve un admin. |
-| **Bolsa de comisión** | La mano de obra autorizada de una especialidad (mecánica o pintura), que se reparte entre quienes tienen esa tarea, cada uno a su porcentaje. |
+| **Tarea** | Una línea de mano de obra con su tipo y su técnico. Su comisión es de ese técnico, a su porcentaje; sin técnico, no la cobra nadie (desde `20261010000006`). |
+| **Bolsa de comisión** | La mano de obra autorizada **heredada** (líneas de antes de la comisión por tarea, sin técnico) de una especialidad, que se reparte entre quienes están asignados a mano con esa tarea, cada uno a su porcentaje. |
 | **RLS** | Row Level Security de Postgres: la regla que decide qué filas ve cada quien. |
 | **Trigger** | Función de la base que corre sola cuando cambia una fila. Aquí vive la lógica de dinero y avisos. |
 | **Edge function** | Código en el servidor de Supabase (Deno) para lo que el navegador no debe hacer. |

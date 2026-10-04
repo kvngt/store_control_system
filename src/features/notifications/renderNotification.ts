@@ -20,9 +20,11 @@ export function renderNotification(n: AppNotification, t: (key: string) => strin
   const fill = (template: string) =>
     template
       .replace(/\{(\w+)\}/g, (_, key: string) => (key === 'monto' ? money(data.monto) : String(data[key] ?? '')))
-      // Un dato vacío no debe dejar un separador colgando: "2019 Toyota Camry — ".
+      // Un dato vacío no debe dejar un separador colgando: "2019 Toyota Camry — ", o ": Frenos"
+      // en una tarea hecha cuyo técnico ya no existe.
       .replace(/\s*—\s*$/, '')
       .replace(/^\s*—\s*/, '')
+      .replace(/^\s*:\s*/, '')
       .trim();
 
   // Un mismo tipo puede necesitar dos redacciones cuando el dato cambia el sentido de la

@@ -2,18 +2,24 @@
 
 Propuesta para quitar la ambigüedad del pago al personal antes de salir a producción.
 
-> **Estado (29 de septiembre de 2026):** propuesta. Las preguntas de la
-> [sección 5](#5-preguntas-enviadas-al-taller) se enviaron al taller y esperan respuesta.
-> Nada de esto está implementado todavía. Cómo funciona **hoy**:
-> [comisiones.md](comisiones.md).
+> **Estado (4 de octubre de 2026):** propuesta. Las preguntas de la
+> [sección 5](#5-preguntas-enviadas-al-taller) se enviaron al taller; la 5 se contestó el
+> 03/10/2026 (comisión **por tarea**, ya hecha en local: migración `20261010000006`, fase F3
+> del [plan de mejoras](plan-mejoras-2026-10.md)) y las demás esperan respuesta. Lo de la
+> sección 4 no está implementado todavía. Cómo funciona **hoy**: [comisiones.md](comisiones.md).
 
 ---
 
 ## 1. Cómo funciona hoy
 
-- La comisión se **devenga al entregar** la orden. Cada especialidad (mecánica, pintura) es
-  una bolsa con su mano de obra autorizada, y se reparte **en partes iguales** entre los
-  asignados con esa tarea, al porcentaje de cada quien (el suyo o el de la sede).
+- La comisión se **devenga al entregar** la orden. Desde F3 (`20261010000006`) es **por
+  tarea**: cada línea de mano de obra autorizada tiene su técnico y le paga a él, costo × su
+  porcentaje (el suyo o el de la sede). Una tarea sin técnico no le paga a nadie (la orden lo
+  avisa).
+- Las líneas de **antes** de F3 conservan el reparto por especialidad (`20261009000000`):
+  cada especialidad es una bolsa con su mano de obra autorizada, repartida **en partes
+  iguales** entre los asignados **a mano** con esa tarea, al porcentaje de cada quien. Al
+  darle técnico a una de esas líneas sale de la bolsa (ver la decisión pendiente abajo).
 - Quien está **a salario** no cobra comisión. El monto del salario es solo informativo: no
   se paga ni se asienta en ningún lado.
 - Un **pago** es una selección libre de comisiones pendientes de una persona. Deja un egreso
@@ -124,18 +130,24 @@ Enviadas el 29 de septiembre de 2026. Cambian el diseño de las fases 2 y 3:
 | 2 | | |
 | 3 | | |
 | 4 | | |
-| 5 | | |
+| 5 | **Por tarea**: cada línea de mano de obra tiene su técnico y su comisión es de esa persona, a su porcentaje. Una tarea sin técnico no le paga a nadie y se avisa. Las líneas que ya existen siguen con el reparto por especialidad hasta que se les asigne técnico. Asignar es de administración y se cambia en cualquier momento, salvo que la comisión ya esté pagada. | 03/10/2026 (reunión) |
 | 6 | | |
+
+**Pendiente de confirmar con el taller (F3):** darle técnico a una línea heredada la saca del
+reparto por especialidad **para siempre**. Si después se le quita el técnico, queda "Sin
+técnico" (nadie cobra) en vez de volver a la bolsa. Se hizo así para que una línea no cambie
+de quién la cobra sin que nadie lo vea, pero el taller no lo decidió explícitamente.
 
 ## 6. Dónde se tocaría
 
 | Qué | Dónde |
 |---|---|
-| Cálculo del reparto | `_reparto_comisiones` y `sync_order_commissions` (migración `20261009000000`) |
+| Cálculo del reparto | `_reparto_comisiones` y `sync_order_commissions` (vigentes en `20261010000006`, comisión por tarea; el reparto por especialidad es de `20261009000000`) |
+| Técnico de cada tarea y lo pagado | `trg_labor_tecnico_guard`, `trg_labor_tecnico_asignado`, `trg_assignment_tasks_guard` (`20261010000006`); pantalla `LaborTable.tsx`, `TaskEditor.tsx` |
 | Pagos y egresos por orden | `pay_commissions` (migración `20261010000000`) |
 | Esquema de cada persona | tabla `perfiles_pago`; pantalla `src/pages/Employees.tsx` y `src/features/employees/` |
 | Pantalla de pagos | `src/pages/Payroll.tsx`, `src/services/commissions.service.ts` |
-| Pruebas | `supabase/tests/database/12_comisiones_especialidad.test.sql` y `13_margen_por_orden.test.sql` |
+| Pruebas | `supabase/tests/database/12_comisiones_especialidad.test.sql`, `13_margen_por_orden.test.sql` y `19_comision_por_tarea.test.sql` |
 
 ## Fuentes
 

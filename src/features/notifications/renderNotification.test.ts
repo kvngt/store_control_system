@@ -84,6 +84,27 @@ describe('renderNotification', () => {
     expect(renderNotification(n, es).title).toBe('El cliente respondió el presupuesto · ORD-2026-014');
   });
 
+  // Comisión por tarea (20261010000006): al técnico que recibe una tarea, al que se la quitan, y
+  // a administración cuando un técnico la termina.
+  it('redacta los avisos de tareas en los dos idiomas', () => {
+    const datos = { numero_orden: 'ORD-2026-014', vehiculo: '2019 Toyota Camry', descripcion: 'Pintar defensa', tecnico: 'Paula Pintora' };
+    const asignada = notification({ tipo: 'tarea_asignada', titulo: 'Nueva tarea · ORD-2026-014', datos });
+    const reasignada = notification({ tipo: 'tarea_reasignada', titulo: 'Tarea reasignada · ORD-2026-014', datos });
+    const hecha = notification({ tipo: 'tarea_completada', titulo: 'Tarea hecha · ORD-2026-014', datos });
+
+    expect(renderNotification(asignada, es)).toEqual({ title: 'Nueva tarea · ORD-2026-014', body: 'Pintar defensa — 2019 Toyota Camry' });
+    expect(renderNotification(asignada, en)).toEqual({ title: 'New job · ORD-2026-014', body: 'Pintar defensa — 2019 Toyota Camry' });
+    expect(renderNotification(reasignada, es).body).toBe('Pintar defensa ya no está a tu cargo');
+    expect(renderNotification(reasignada, en).title).toBe('Job reassigned · ORD-2026-014');
+    expect(renderNotification(hecha, es)).toEqual({ title: 'Tarea hecha · ORD-2026-014', body: 'Paula Pintora: Pintar defensa' });
+    expect(renderNotification(hecha, en).title).toBe('Job done · ORD-2026-014');
+  });
+
+  it('una tarea hecha sin nombre de técnico no deja los dos puntos colgando', () => {
+    const n = notification({ tipo: 'tarea_completada', datos: { numero_orden: 'ORD-2026-014', descripcion: 'Frenos', tecnico: null } });
+    expect(renderNotification(n, es).body).toBe('Frenos');
+  });
+
   it('usa el texto de la base para un tipo que el frontend todavía no conoce', () => {
     const n = notification({ tipo: 'presupuesto_aprobado', titulo: 'Trabajo autorizado · ORD-2026-014', cuerpo: 'Puedes continuar' });
     expect(renderNotification(n, en)).toEqual({ title: 'Trabajo autorizado · ORD-2026-014', body: 'Puedes continuar' });

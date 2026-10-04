@@ -5,6 +5,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mocks = vi.hoisted(() => ({
   deleted: [] as { id: string }[],
   tables: [] as string[],
+  // Lo que se le manda a la base: el payload de cada insert y update.
+  writes: [] as { table: string; method: string; payload: unknown }[],
   // El canal de Realtime: qué tablas escucha, con qué evento, y el aviso de estado.
   channelNames: [] as string[],
   bindings: [] as { event: string; table: string; handler: (payload: unknown) => void }[],
@@ -13,9 +15,15 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../lib/supabase', () => {
-  const builder = () => {
+  const builder = (table: string) => {
     const chain: Record<string, unknown> = {};
-    for (const method of ['delete', 'update', 'eq', 'select']) chain[method] = () => chain;
+    for (const method of ['delete', 'eq', 'select', 'single']) chain[method] = () => chain;
+    for (const method of ['insert', 'update']) {
+      chain[method] = (payload: unknown) => {
+        mocks.writes.push({ table, method, payload });
+        return chain;
+      };
+    }
     chain.then = (resolve: (value: { data: unknown[]; error: null }) => unknown) =>
       Promise.resolve({ data: mocks.deleted, error: null }).then(resolve);
     return chain;
@@ -34,7 +42,7 @@ vi.mock('../lib/supabase', () => {
     supabase: {
       from: (table: string) => {
         mocks.tables.push(table);
-        return builder();
+        return builder(table);
       },
       channel: (name: string) => {
         mocks.channelNames.push(name);
@@ -188,5 +196,62 @@ describe('workOrdersService: cambios de las órdenes en tiempo real', () => {
     expect(new Set(mocks.channelNames).size).toBe(2);
     cerrar();
     expect(mocks.removed).toBe(1);
+  });
+});
+
+// La comisión por tarea depende de dos datos que manda la pantalla (20261010000006). La columna
+// `reparto_heredado` nace con default true para la app que estaba publicada: si el alta dejara de
+// mandar `false`, cada tarea nueva sin técnico se repartiría por especialidad en vez de quedar
+// "Sin técnico", y nada en la pantalla lo diría.
+describe('workOrdersService: tareas con técnico', () => {
+  beforeEach(() => {
+    mocks.tables = [];
+    mocks.writes = [];
+    mocks.deleted = [{ id: 'l1' }];
+  });
+
+  it('addLaborItem manda reparto_heredado: false y el técnico (nulo por omisión)', async () => {
+    await workOrdersService.addLaborItem('o1', { descripcion: 'Frenos', costo: 200, especialidad: 'mecanica' });
+    expect(mocks.writes).toEqual([
+      {
+        table: 'orden_labor',
+        method: 'insert',
+        payload: { descripcion: 'Frenos', costo: 200, especialidad: 'mecanica', asignado_a: null, reparto_heredado: false, orden_id: 'o1' },
+      },
+    ]);
+  });
+
+  it('addLaborItem manda false aunque la tarea lleve técnico', async () => {
+    await workOrdersService.addLaborItem('o1', { descripcion: 'Puerta', costo: 500, especialidad: 'pintura', asignado_a: 'u1' });
+    expect(mocks.writes[0].payload).toMatchObject({ asignado_a: 'u1', reparto_heredado: false });
+  });
+
+  it('setLaborTechnician con técnico saca la línea del reparto heredado', async () => {
+    await workOrdersService.setLaborTechnician('l1', 'u1');
+    expect(mocks.writes).toEqual([{ table: 'orden_labor', method: 'update', payload: { asignado_a: 'u1', reparto_heredado: false } }]);
+  });
+
+  it('setLaborTechnician sin técnico solo quita el técnico', async () => {
+    await workOrdersService.setLaborTechnician('l1', null);
+    expect(mocks.writes).toEqual([{ table: 'orden_labor', method: 'update', payload: { asignado_a: null } }]);
+  });
+
+  it('setLaborSpecialty solo cambia el tipo', async () => {
+    await workOrdersService.setLaborSpecialty('l1', 'pintura');
+    expect(mocks.writes).toEqual([{ table: 'orden_labor', method: 'update', payload: { especialidad: 'pintura' } }]);
+  });
+
+  it('setAssignmentOrigin solo cambia el origen', async () => {
+    await workOrdersService.setAssignmentOrigin('a1', 'tarea');
+    expect(mocks.writes).toEqual([{ table: 'orden_asignaciones', method: 'update', payload: { origen: 'tarea' } }]);
+  });
+
+  it.each([
+    ['setLaborTechnician', () => workOrdersService.setLaborTechnician('l1', 'u1')],
+    ['setLaborSpecialty', () => workOrdersService.setLaborSpecialty('l1', 'pintura')],
+    ['setAssignmentOrigin', () => workOrdersService.setAssignmentOrigin('a1', 'manual')],
+  ])('%s falla si la base no escribió nada (RLS), en vez de fingir éxito', async (_nombre, llamar) => {
+    mocks.deleted = [];
+    await expect(llamar()).rejects.toThrow(/No se pudo guardar/);
   });
 });

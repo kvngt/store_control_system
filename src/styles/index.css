@@ -49,6 +49,11 @@
   /* Semantic Colors */
   --color-success: #10B981;
   --color-success-bg: rgba(16, 185, 129, 0.1);
+  /* Relleno de un botón verde (agregar, "Realizado"). #10B981 con texto blanco no llega al
+     contraste mínimo (2.5:1); este verde más profundo sí (5.5:1), en los dos temas. */
+  --color-success-fill: #047857;
+  --color-success-fill-hover: #065F46;
+  --color-on-success: #FFFFFF;
   --color-warning: #F59E0B;
   --color-warning-bg: rgba(245, 158, 11, 0.1);
   --color-danger: #EF4444;

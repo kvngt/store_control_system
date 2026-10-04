@@ -235,15 +235,16 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
           value={newDraft.precio_venta_unitario}
           onChange={(e) => setNewDraft({ ...newDraft, precio_venta_unitario: e.target.value })}
         />
+        {/* Verde y con su nombre, igual que el de la mano de obra (03/10/2026). */}
         <button
           type="button"
-          className="btn btn-secondary"
+          className="btn btn-success"
           aria-label={t('common.add')}
           title={t('common.add')}
           onClick={add}
           disabled={!canEdit || busy || !newDraft.descripcion.trim()}
         >
-          <Plus size={16} />
+          <Plus size={16} /> {t('common.add')}
         </button>
       </div>
     </div>

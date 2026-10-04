@@ -204,6 +204,9 @@ mismos permisos ("técnico"); cambia el tipo de tarea.
 | Ver qué repuestos lleva (sin precio) | ✅ | ✅ | ❌ |
 | Ver **su comisión estimada** | — | ✅ | ❌ |
 | Agregar / editar mano de obra o repuestos | ✅ | ❌ | ❌ |
+| **Asignar el técnico** de una tarea, o cambiar su tipo (en cualquier estado de la línea, salvo con la comisión pagada) | ✅ | ❌ | ❌ |
+| Ver el tipo y el técnico de cada tarea | ✅ | ✅ | ❌ |
+| **Marcar una tarea hecha** (solo autorizadas) | ✅ todas | ✅ las suyas y las que no tienen técnico | ❌ |
 | Registrar depósito | ✅ | ❌ | ❌ |
 | Cambiar estado (excepto a o desde Entregado) | ✅ | ✅ | ❌ |
 | Marcar **Entregado** | ✅ | ❌ | ❌ |
@@ -216,6 +219,9 @@ mismos permisos ("técnico"); cambia el tipo de tarea.
 | Agregar avances | ✅ | ✅ (orden no entregada) | ❌ |
 | Borrar avances | ✅ cualquiera | ✅ los suyos, orden no entregada | ❌ |
 | Asignar a otras personas (solo personal de la sede de la orden) | ✅ | ❌ | ❌ |
+| Quitar de la orden a alguien **con tareas** en ella | ❌ (primero se reasignan sus tareas) | ❌ | ❌ |
+| Meter o sacar a alguien del **reparto heredado** (origen de su asignación), salvo con esa bolsa pagada | ✅ | ❌ | ❌ |
+| Editar una asignación (tipo de tarea, origen) | ✅ | ❌ | ❌ |
 | **Enviar el reporte** al cliente (correo, WhatsApp, copiar enlace) | ✅ | ❌ | ❌ |
 | Descargar el PDF de la orden | ✅ | ❌ | ❌ |
 | Ver, crear, cambiar o desactivar el **enlace del cliente** | ✅ | ❌ | ❌ |
@@ -243,9 +249,15 @@ De una orden, un técnico asignado solo puede cambiar **estado (con su motivo al
 autorización), fecha de finalización y avance**. Cliente, vehículo, millas, gasolina, notas de
 recepción, fechas y creador solo los cambia un admin. La regla se comprueba
 contra la fila completa, así que una columna nueva queda protegida sin tocar el
-trigger (`trg_order_technician_guard`). Ni un avance ni una asignación pueden
-moverse a otra orden o a otra persona, ni siquiera por un admin: se borran y se
-crean de nuevo.
+trigger (`trg_order_technician_guard`). Ni un avance, ni una asignación, ni una línea de
+mano de obra pueden moverse a otra orden (ni la asignación a otra persona), ni siquiera por
+un admin: se borran y se crean de nuevo.
+
+Las filas de tareas, asignar técnico, marcar hecha y el reparto heredado las impone la
+base desde la comisión por tarea (migración `20261010000006`): asignar es una política solo
+admin y `trg_labor_tecnico_guard` exige que el técnico sea mecánico o pintor de la sede de la
+orden; `marcar_labor_completada` rechaza la tarea de otro técnico; quitar de la orden a alguien
+con tareas lo rechaza `trg_assignment_tasks_guard` (salvo al borrar la orden o al empleado).
 
 > **Por qué el técnico ve la mano de obra y nada más:** su comisión es un
 > porcentaje de la mano de obra. Ver ese número y la cuenta de su comisión le
@@ -257,26 +269,39 @@ crean de nuevo.
 
 Resumen; el detalle está en [comisiones.md](comisiones.md).
 
-Por especialidad y por empleado (reunión con el taller, septiembre de 2026; migración
-`20261009000000`):
+**Por tarea** desde el 03/10/2026 (fase F3, migración `20261010000006`): cada línea de mano
+de obra tiene su técnico y su comisión es de él.
 
 ```
-bolsa de cada especialidad = mano de obra autorizada de mecánica, o de pintura
-parte de cada quien        = bolsa ÷ asignados con esa tarea
-comisión                   = parte × su porcentaje   (el suyo, o el de la sede: 35 % por defecto)
+tarea con técnico      = costo de la línea × su porcentaje   (el suyo, o el de la sede: 35 % por defecto)
+tarea sin técnico      = nadie la cobra (la orden lo avisa en Resumen y al entregar)
+línea de antes de F3   = reparto por especialidad: bolsa ÷ asignados a mano con esa tarea × su porcentaje
 ```
 
-- Cada línea de mano de obra tiene especialidad: la del tipo de orden, o en una orden
-  **combinado** la que elija el admin (mecánica por omisión).
-- **A salario** no se cobra comisión; su parte se queda en el taller. Una bolsa sin nadie
-  asignado no la cobra nadie (la orden lo avisa). Quien trabaja las dos cobra de las dos.
-- Se generan **al entregar**. Se recalculan si cambian los totales, la especialidad de una
-  línea, el equipo asignado, el porcentaje de la sede o el esquema de un empleado —
-  **solo lo pendiente**; lo pagado no se toca. Pasar a alguien a salario le quita lo
-  pendiente (la pantalla avisa con el monto).
-- El reparto se hace en centavos exactos: tres al mismo porcentaje sobre $1,000 al 35 % =
-  $116.67 + $116.67 + $116.66.
-- El esquema de pago (`perfiles_pago`) es de administración; cada técnico ve el suyo.
+- **Toda línea nueva es una tarea** (`reparto_heredado = false`), con o sin técnico. El
+  técnico lo asigna administración, al agregarla o en su fila, en cualquier estado de la
+  línea y sin tocar lo cotizado; tiene que ser mecánico o pintor de la sede de la orden. Un
+  tipo que no es de su oficio pregunta antes.
+- Quien recibe una tarea **entra solo a la orden** (`origen = 'tarea'`) y **no entra** al
+  reparto de las líneas heredadas. Reasignarla no lo saca de la orden.
+- **Líneas de antes** (`reparto_heredado = true`): el reparto por especialidad de septiembre
+  (`20261009000000`), solo entre los asignados a mano (`origen = 'manual'`). Administración
+  mete o saca a alguien de ese reparto desde la tarjeta de técnicos. Darle técnico a una de
+  esas líneas la saca del reparto para siempre (decisión pendiente de confirmar,
+  [pagos-a-empleados.md](pagos-a-empleados.md#5-preguntas-enviadas-al-taller)).
+- **A salario** no se cobra comisión: ni por sus tareas ni por su parte de una bolsa.
+- Se generan **al entregar**. Se recalculan si cambia una línea (autorización, precio,
+  técnico, especialidad, reparto), el equipo asignado, el porcentaje de la sede o el esquema
+  de un empleado — **solo lo pendiente**; lo pagado no se toca. Pasar a alguien a salario le
+  quita lo pendiente (la pantalla avisa con el monto).
+- **Lo pagado bloquea la línea:** con la comisión pagada no se le cambia el técnico ni la
+  especialidad ni se borra (tampoco a una línea heredada de una bolsa pagada), una línea no
+  entra a una bolsa ya pagada y no se cambia quién reparte una bolsa pagada. Primero se
+  deshace el pago en Comisiones.
+- El reparto de una bolsa heredada se hace en centavos exactos: tres al mismo porcentaje
+  sobre $1,000 al 35 % = $116.67 + $116.67 + $116.66.
+- El esquema de pago (`perfiles_pago`) es de administración; cada técnico ve el suyo, y de
+  la estimación de la orden solo lo suyo.
 - Al pagar, el monto lo calcula el servidor. Un pago mezcla comisiones de una sola
   sede.
 - Cheque: se pide número o foto del comprobante (en la interfaz).
@@ -319,12 +344,15 @@ comisión                   = parte × su porcentaje   (el suyo, o el de la sede
 
 | Evento | Recibe | Texto |
 |---|---|---|
-| Te asignan a una orden (al crearla o después) | El técnico | "Nueva orden asignada · ORD-…" |
+| Te asignan a una orden a mano (al crearla o después) | El técnico | "Nueva orden asignada · ORD-…". **No** cuando entra a la orden por una tarea: ya recibió "Nueva tarea" |
+| Te dan una tarea (al agregarla o al cambiarle el técnico) | El técnico | "Nueva tarea · ORD-…" con la tarea y el vehículo |
+| Te quitan una tarea (se la asignan a otra persona o queda sin técnico) | El técnico de antes | "Tarea reasignada · ORD-…: … ya no está a tu cargo" |
+| Un **técnico** marca hecha una tarea (la primera vez) | Admins de la sede | "Tarea hecha · ORD-…" con quién y qué |
 | Te quitan de una orden | El técnico | "Ya no estás asignado · ORD-…" |
 | ~~Un **técnico** registra una recepción~~ | Admins de la sede | "Recepción registrada · ORD-… Falta cotizar." **Ya no ocurre:** abrir una orden es de administración (20261004000000), así que `trg_order_created_notify` quedó sin caso. El trigger se deja como red |
 | Un **técnico** agrega un avance | Admins de la sede | "Nuevo avance · ORD-…" con su nota |
 | Una orden pasa a **Finalizado** | Admins de la sede | "Lista para entregar · ORD-…" |
-| Se genera tu comisión (al entregar) | El técnico | "Comisión generada · ORD-… $175.00" |
+| Se genera tu comisión (al entregar) | El técnico | "Comisión generada · ORD-… $175.00": **uno** por orden y persona, con la suma de sus tareas y su parte de las bolsas |
 | Se responde un presupuesto (cliente, admin o firma de recepción) | Técnicos asignados | "Trabajos autorizados · ORD-…" / "Presupuesto rechazado · ORD-…" con "Autorizado: … No realizar: …" |
 | El **cliente** responde un presupuesto desde su enlace | Admins de la sede | "El cliente respondió el presupuesto · ORD-… Autorizó 2 de 3 ($450.00)" y su comentario |
 | Un presupuesto lleva **más de 24 horas** sin respuesta | Admins de la sede | "Presupuesto sin respuesta · ORD-…" (una vez al día, 15:00 UTC) |

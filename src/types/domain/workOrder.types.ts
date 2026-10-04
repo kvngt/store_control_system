@@ -108,6 +108,19 @@ export interface LaborItem {
   /** Cuándo se tachó el trabajo, y quién. Nulo = pendiente de hacer. */
   completado_en?: string | null;
   completado_por?: string | null;
+  /**
+   * El técnico de esta tarea: cobra su comisión (20261010000006). Solo lo escribe
+   * administración. Nulo = sin técnico (nadie cobra) o, si `reparto_heredado`, el reparto por
+   * especialidad de antes.
+   */
+  asignado_a?: string | null;
+  /**
+   * true = línea anterior a la comisión por tarea: sin técnico se reparte por especialidad
+   * entre los asignados a mano. La app crea las suyas con false.
+   */
+  reparto_heredado?: boolean;
+  /** El perfil de `asignado_a`, embebido (`perfiles!asignado_a`). */
+  tecnico?: Pick<UserProfile, 'id' | 'nombre_completo' | 'rol'> | null;
 }
 
 export interface OrderAssignment {
@@ -116,6 +129,11 @@ export interface OrderAssignment {
   usuario_id: string;
   tipo_tarea: 'mecanica' | 'pintura';
   estatus_tarea: TaskStatus;
+  /**
+   * manual = lo asignó administración (entra al reparto heredado); tarea = se agregó solo al
+   * darle una tarea, y cobra por sus tareas (20261010000006).
+   */
+  origen?: 'manual' | 'tarea';
   // Virtual
   usuario?: UserProfile;
 }
@@ -148,4 +166,26 @@ export interface WorkOrderInput {
   /** Only the price; `costo_unitario` is mirrored from it by the database. */
   repuestos: Omit<WorkOrderPart, 'id' | 'orden_id' | 'subtotal' | 'costo_unitario'>[];
   asignaciones: { usuario_id: string; tipo_tarea: 'mecanica' | 'pintura' }[];
+}
+
+/** Un valor que cambió en el historial: el de antes, el de después, o los dos. */
+export interface HistoryChange {
+  antes?: unknown;
+  despues?: unknown;
+}
+
+/**
+ * Una fila de `historial_orden` (20261010000004): quién cambió qué en una orden. Solo admin.
+ * `cambios` lleva, por campo, el antes y el después (o solo uno al crear o borrar).
+ */
+export interface OrderHistoryEntry {
+  id: number;
+  ocurrido_en: string;
+  actor_nombre: string | null;
+  origen: 'app' | 'portal' | 'sistema';
+  entidad: 'orden' | 'mano_obra' | 'repuesto' | 'asignacion' | 'deposito' | 'presupuesto' | 'archivo' | 'avance';
+  entidad_id: string | null;
+  accion: 'crear' | 'cambiar' | 'borrar';
+  resumen: string | null;
+  cambios: Record<string, HistoryChange>;
 }

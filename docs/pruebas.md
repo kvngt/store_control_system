@@ -23,10 +23,10 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 523 pruebas, 72 archivos (3/10/2026) | ~30 s | Nada |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte y hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 361 aserciones, 16 archivos | ~1 min | Docker |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 619 pruebas, 78 archivos (4/10/2026) | ~30 s | Nada |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte y hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 459 aserciones, 19 archivos | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, 77 casos (76 pasan, 1 se salta) | 2–5 min | Credenciales de prueba (**al 1/10/2026 no existen**: se borraron el 29/09) |
-| **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 85 casos con las cuentas de prueba, todos de solo lectura. Los 66 anteriores, 66 PASS · 0 SKIP; los 19 de las migraciones `20261006000000` a `20261010000000` pasan solo con ellas aplicadas | ~15 s | Nada; con cuentas de prueba cubre más |
+| **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 100 casos con las cuentas de prueba, todos de solo lectura (los que escriben, escriben el valor que ya hay). Los 66 anteriores, 66 PASS · 0 SKIP; los de las migraciones `20261006000000` a `20261010000006` pasan solo con ellas aplicadas (SEC-91 a SEC-105, verificados contra el Supabase local el 4/10/2026) | ~15 s | Nada; con cuentas de prueba cubre más |
 | **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
 
 Por qué hacen falta todas: **Vitest simula la base**, así que no puede detectar una
@@ -77,13 +77,14 @@ declaran `// @vitest-environment jsdom` y renderizan con los proveedores reales
 | Órdenes | `pages/WorkOrders.smoke`, `features/workOrders/*` (incluye `workOrderForm.schema`) | Lista (una sola versión según ancho), alta y validación, detalle; **técnico sin totales ni precios**, comisión estimada por especialidad (la calcula la base: mecánica $1,000 × 35 % ÷ 1 = $350), entregar abre el diálogo de pago, alta de técnico sin depósito/labor/repuestos; fotos de recepción comprimidas y su ciclo de memoria; avance solo con nota de voz; **firmar vuelve a leer la orden** (la firma autoriza lo cotizado); la lista para asignar solo trae personal de la sede de la orden; **el técnico ve una sola lista, sin "Otras órdenes" ni catálogos de clientes y vehículos**, y abrir una orden que no es suya lo explica; **la firma solo la toma administración** (`SignatureCard`) |
 | Kanban | `pages/KanbanBoard` | Mover tarjetas; **entregar abre el diálogo de cobro** y pasa por `entregar_orden`, nunca por un cambio de estatus suelto |
 | Comisión por especialidad | `features/workOrders/CommissionEstimateCard`, `features/workOrders/LaborTable` | El técnico ve su bolsa, su porcentaje y el total que da la base; a salario, que no genera; administración ve el reparto y el aviso de una bolsa sin nadie. En una orden combinada cada línea lleva especialidad y se manda al agregar y al editar; en las demás no se pide |
+| Comisión por tarea (F3) | `features/workOrders/TaskEditor`, `features/workOrders/LaborTable`, `features/workOrders/CommissionEstimateCard`, `features/workOrders/DeliveryModal`, `services/workOrders.service`, `pages/WorkOrders.smoke` ("tareas con técnico"), `features/workOrders/historyFormat`, `styles/laborMobile` | Agregar trabajo con tipo, precio y técnico (el tipo nace del de la orden, el técnico de la primera tarea; **el foco vuelve a Descripción**); preguntar antes de un cruce de oficio, **también al cambiar el tipo de una fila con técnico**; "Sin técnico" y el aviso en Resumen; **el servicio manda `reparto_heredado: false` al crear y al dar técnico** (y solo el técnico al quitarlo); candado y **Borrar deshabilitado** con la comisión pagada; una línea heredada no se ofrece a una bolsa pagada; el diálogo de entrega lee las tareas sin técnico de la base (sale también desde el Kanban); la tarjeta de técnicos distingue "Por tarea" de "En el reparto" y los mete o saca del reparto; **abrir otra orden en el teléfono empieza el editor de cero**; en el teléfono tipo y técnico bajan a su renglón (CSS) |
 | Empleados | `pages/Employees.pay`, `pages/Employees.users` | Pago de cada quien (el % de la sede, uno propio o salario); guardar un porcentaje; fuera de 0–100 se rechaza en el diálogo; pasar a salario con pendientes avisa con el monto. El alta y la edición del personal (antes en Configuración) |
 | Margen por orden | `features/finance/OrderBalanceCard`, `features/finance/OrderMarginCard` | El balance muestra lo que da la base y lista aparte lo vinculado; la lista del mes pide el mes en curso, muestra las sumas del servidor, pagina pidiendo la siguiente página y avisa si no hubo entregas; el rango del mes cruza diciembre |
 | Entregar | `features/workOrders/DeliveryModal` | Saldo según la base (cobrar, devolver o nada); método obligatorio con saldo; cheque con número o foto; el comprobante sube a la carpeta de la sede y se borra si la entrega falla; error dentro del diálogo; sin saldo calculado no deja entregar |
 | Clientes | `services/customers.service` | Conteos embebidos de vehículos y órdenes (`vehiculos(count)`), con cero para quien no tiene; los arreglos de conteo no quedan en el cliente |
 | Listas completas | `services/support` | `fetchAll`: 2.500 filas en tres páginas, una sola consulta si caben en una, una página más si la anterior llegó llena, error de cualquier página |
 | Panel y Finanzas | `services/dashboard.service` | Llama `resumen_panel` con el día y la zona del navegador, arma tarjetas y ocupación, capacidad cero sin dividir entre cero, un error de la base no se vuelve ceros, etiqueta del mes sin correrla por UTC |
-| Borrados en la orden | `services/workOrders.service` | Quitar mano de obra, un repuesto o una asignación falla con mensaje si la base no borró nada (RLS), en vez de fingir éxito |
+| Borrados en la orden | `services/workOrders.service` | Quitar mano de obra, un repuesto o una asignación falla con mensaje si la base no borró nada (RLS), en vez de fingir éxito; igual cambiar el técnico, el tipo o el origen de una asignación |
 | Importación bancaria | `pages/finance/ImportStatementModal` | El lote y sus movimientos viajan en una sola llamada; si falla se borra el PDF subido |
 | Notificaciones | `features/notifications/*`, `lib/push` | Campana: conteo, marcar leído, navegar, aviso en tiempo real con toast; traducción de avisos; detección de iPhone sin instalar; tarjeta de push: activar, permiso negado, prueba, desactivar |
 | Portal del cliente | `portal/CustomerPortal`, `lib/emailTemplates`, `lib/phone` | Estado, vehículo, multimedia publicada y cuenta; visor de video; WhatsApp y llamar; "pagado en su totalidad"; enlace vencido con teléfono; ruta sin token no consulta; reintento; **la baja se confirma con botón, nunca al abrir**; inglés. Plantillas: asunto por estado, fecha DATE sin correrse un día, **HTML escapado**, logo solo https y color solo hexadecimal, Reply-To solo si hay correo de contacto |
@@ -133,14 +134,15 @@ PostgREST en cada petición.
 - Multimedia: la foto de recepción nace visible, avance nace interno aunque lo pida; una fila
   no apunta a otra orden; un técnico no asignado no sube.
 
-**`supabase/tests/database/03_permisos_tecnico.test.sql`** (41)
+**`supabase/tests/database/03_permisos_tecnico.test.sql`** (42)
 
 - Técnico no asignado: no ve la orden (desde `20261007000000`), y un UPDATE sobre ella
   afecta cero filas: no cambia estado, avance ni firma, ni agrega avances.
 - Técnico asignado: cambia estado y avance; **no captura ni cambia la firma**
   (es de administración desde `20261006000000`); la firma no apunta a otra orden,
-  tampoco para un admin; no cambia cliente ni millas; no mueve un avance ni pasa su
-  asignación a otra persona.
+  tampoco para un admin; no cambia cliente ni millas; no mueve un avance ni edita su
+  asignación (desde `20261010000006` su UPDATE no llega a ninguna fila); un admin tampoco
+  pasa una asignación a otra persona.
 - Orden entregada: el técnico no la saca de Entregado (la orden y su comisión
   siguen intactas) y no agrega ni borra avances; el admin sí puede sacarla.
 - Los buckets viejos `vehiculos_fotos` y `firmas` ya no son públicos.
@@ -292,10 +294,56 @@ PostgREST en cada petición.
   la suba la mecánica o un admin y aunque el navegador pida publicarla.
 - La mecánica no la publica (la política de UPDATE es de admin); un admin sí.
 
+**`supabase/tests/database/17_historial_orden.test.sql`** (16)
+
+- Crear la orden registra la orden, su mano de obra, el técnico y el depósito, a nombre de
+  quien la creó y desde la app.
+- Lo que hace la técnica queda a su nombre con el antes → después; guardar lo mismo no deja
+  otra fila; un recálculo de totales no deja ninguna.
+- La técnica no lee ni escribe el historial; un admin lo lee pero no lo corrige.
+- Borrar la orden queda registrado (origen "sistema" sin sesión) y las hijas en cascada no se
+  registran una por una.
+
+**`supabase/tests/database/18_reintentar_correos.test.sql`** (13)
+
+- Un admin devuelve a la cola un correo con error (desde cero, sin el error viejo); un técnico
+  no; no se reintenta lo que salió bien, un push ni uno con otro igual pendiente.
+- El masivo reintenta solo lo de las últimas 72 h y, de varios con la misma clave, el más
+  nuevo.
+
+**`supabase/tests/database/19_comision_por_tarea.test.sql`** (68)
+
+- Cada tarea aprobada paga a su técnico, a su porcentaje (la pintora, su 40 %); una tarea sin
+  técnico sale en `sin_asignar` y no genera nada; sin líneas heredadas no hay bolsas.
+- Darle una tarea a alguien lo agrega a la orden (origen 'tarea') con `tarea_asignada` y sin
+  "Nueva orden asignada"; asignar técnico a una línea pendiente o rechazada no cambia su
+  estado; el historial nombra al técnico.
+- Un técnico ve en la estimación **solo sus tareas y su fila del reparto** (orden con tareas
+  de dos personas); no se asigna una tarea, no crea una propia ni edita su asignación; el
+  asignado es mecánico o pintor de la sede de la orden; solo el técnico de la tarea (o un
+  admin) la marca hecha, y administración recibe `tarea_completada`.
+- Al entregar: una fila por tarea y **un** aviso de comisión por persona con la suma.
+- Lo pagado: una tarea pagada no se reasigna, no cambia de especialidad y no se borra; una
+  aprobada después del pago tiene su propia fila. La línea heredada de una bolsa pagada no se
+  asigna, **no se borra, no cambia de especialidad ni sale del reparto**; **una línea no entra a
+  una bolsa pagada**; **una línea no se muda a otra orden**.
+- Las líneas heredadas se reparten por especialidad solo entre los asignados a mano;
+  **administración saca y mete a alguien del reparto con el origen de su asignación** (se
+  recalcula y queda en el historial), salvo en una bolsa ya pagada.
+- Quitar de la orden a alguien con tareas se bloquea; reasignadas, sí; borrar la orden
+  funciona; **borrar al empleado deja su tarea sin técnico**.
+- Ninguna función interna nueva es una RPC.
+
+La red de seguridad de la migración `20261010000006` no tiene archivo de pgTAP (corre una vez,
+al aplicarla). Se probó a mano el 4/10/2026: con la base en `20261010000005` y una orden
+entregada donde una persona pasó de salario a comisión sin fila (a propósito) y otra con un
+monto editado a mano, la migración aplica y la tabla `comisiones` queda idéntica; con un error
+inyectado en la fórmula, o una comisión reescrita antes de la red, aborta y se deshace entera.
+
 Las pruebas 01 y 02 firman la recepción antes de entregar: desde la fase 5, sin
 autorización no hay nada que cobrar ni comisión que generar.
 
-> **Estado (3 de octubre de 2026):** 361 aserciones en verde en los 16 archivos, localmente.
+> **Estado (4 de octubre de 2026):** 459 aserciones en verde en los 19 archivos, localmente.
 >
 > **Estado (29 de septiembre de 2026):** **330 aserciones en verde** en los 13 archivos con
 > las 54 migraciones aplicadas desde cero, localmente y en CI. La primera corrida (158 aserciones en 7 archivos,
@@ -372,7 +420,7 @@ Se necesita para:
 
 | Tarea | Comando | Por qué no se puede sin Docker |
 |---|---|---|
-| **Correr las pruebas de base de datos** (las 361 aserciones pgTAP) | `npm run test:db` | Necesitan un Postgres real donde crear datos y deshacerlos |
+| **Correr las pruebas de base de datos** (las 459 aserciones pgTAP) | `npm run test:db` | Necesitan un Postgres real donde crear datos y deshacerlos |
 | **Probar que las migraciones aplican desde cero** | `npx supabase db reset` | Recrea la base local aplicando las 54 migraciones en orden: detecta una migración que solo funciona sobre la base actual |
 | **Probar una migración antes de producción** | `npx supabase start` y luego la app contra la base local | Hoy cada migración se aplica directo al proyecto enlazado |
 | Probar edge functions localmente | `npx supabase functions serve` | Corren en el contenedor de Supabase |
@@ -424,12 +472,18 @@ había pensado en llamarlas desde fuera ([auditoria-2026-09.md](auditoria-2026-0
 - **Sin cuentas** corre los 23 casos sin sesión, incluidos SEC-17 (las 6 edge functions responden, no 404) y SEC-18 (el registro público está apagado).
 - **Con cuentas** (`E2E_ADMIN_*` y `E2E_MECHANIC_*` de `.env.test.local`, o `QA_TECH_*` /
   `QA_ADMIN_*`) inicia sesión, busca una orden asignada al técnico y una entregada con su
-  sesión, y una ajena con la del admin (el técnico ya no la ve), y corre los 85.
+  sesión, y una ajena con la del admin (el técnico ya no la ve), y corre los 100.
 - **Hoy no hay cuentas de prueba** (se borraron el 29/09/2026): corre solo los 23 sin sesión.
 - Lo que no puede preparar lo marca **SKIP**. Termina con código 1 si hay un **FAIL**.
 
 > Solo contra datos de prueba: si la base tiene un hueco, la petición que lo demuestra
-> sí escribe (por ejemplo, entrega la orden).
+> sí escribe (por ejemplo, entrega la orden). SEC-99 y SEC-100 escriben el valor que la fila
+> ya tiene, así que una regresión ahí no mueve ninguna comisión.
+>
+> Para correrla contra el Supabase **local** (`SB_URL=http://127.0.0.1:54321` y la clave
+> anónima de `npx supabase status`), deja vacías `ORDEN`, `ORDEN_AJENA` y `ORDEN_ENTREGADA`:
+> `.env.test.local` trae ids del proyecto real, que en local no existen, y los casos que los
+> usan dan un FAIL falso (204 sin filas).
 
 Lista de casos: [plan-de-pruebas.md §5](plan-de-pruebas.md#5-seguridad-contra-la-api-sec).
 

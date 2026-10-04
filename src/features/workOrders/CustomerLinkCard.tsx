@@ -83,6 +83,13 @@ export default function CustomerLinkCard({ order, statusLabels }: CustomerLinkCa
     }
   };
 
+  const retry = (email: CustomerEmail) =>
+    run(async () => {
+      await customerPortalService.retryEmail(email.id);
+      showToast('success', t('customerLink.retryQueued'));
+      void queryClient.invalidateQueries({ queryKey: queryKeys.failedEmails() });
+    }, 'customerLink.retryError');
+
   const notify = () =>
     run(async () => {
       const result = await customerPortalService.notifyProgress(order.id);
@@ -208,6 +215,13 @@ export default function CustomerLinkCard({ order, statusLabels }: CustomerLinkCa
                     : relativeTime(email.enviado_en ?? email.creado_en, language)}
                   {email.ultimo_error && email.estado !== 'enviado' && ` · ${email.ultimo_error}`}
                 </div>
+                {/* Un correo con error ya no se reintenta solo. Si falló por la llave de
+                    Resend, al corregirla se vuelve a mandar desde aquí. */}
+                {email.estado === 'error' && (
+                  <button type="button" className="btn btn-ghost btn-sm customer-link-email-retry" onClick={() => retry(email)} disabled={busy}>
+                    <RefreshCw size={14} /> {t('customerLink.retry')}
+                  </button>
+                )}
               </li>
             ))}
           </ul>

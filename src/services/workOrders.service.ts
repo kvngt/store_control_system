@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import type {
   LaborItem,
   OrderBalance,
+  OrderHistoryEntry,
   OrderMedia,
   OrderProgressUpdate,
   OrderStatus,
@@ -143,6 +144,22 @@ export const workOrdersService = {
     return (data || []) as unknown as WorkOrder[];
   },
 
+  /**
+   * El historial de una orden, del más nuevo al más viejo (solo admin; la RLS lo impone).
+   * Paginado: crece con cada cambio y la API no devuelve más de 1.000 filas sin avisar.
+   */
+  getHistory: async (orderId: string, limit: number) => {
+    const { data, error } = await supabase
+      .from('historial_orden')
+      .select('id, ocurrido_en, actor_nombre, origen, entidad, entidad_id, accion, resumen, cambios')
+      .eq('orden_id', orderId)
+      .order('ocurrido_en', { ascending: false })
+      .order('id', { ascending: false })
+      .range(0, limit - 1);
+    if (error) throw error;
+    return (data || []) as OrderHistoryEntry[];
+  },
+
   getWorkOrderDetail: async (orderId: string) => {
     // `montos` y `repuestos` vienen vacíos para un técnico (RLS solo admin);
     // `repuestos_resumen` es lo que él sí puede ver: qué piezas, sin precio.
@@ -152,7 +169,7 @@ export const workOrdersService = {
         montos:orden_montos(total_repuestos, total_general, deposito_inicial),
         cliente:clientes(*),
         vehiculo:vehiculos(*),
-        labor_items:orden_labor(*),
+        labor_items:orden_labor(*, tecnico:perfiles!asignado_a(id, nombre_completo, rol)),
         repuestos:orden_repuestos(*),
         asignaciones:orden_asignaciones(*, usuario:perfiles(*))
       `)
@@ -380,15 +397,62 @@ export const workOrdersService = {
   // Totals are recomputed by database triggers whenever these rows change:
   // `total_labor` on the order, `total_repuestos` / `total_general` on
   // `orden_montos`. All four writers below are admin-only by RLS.
-  addLaborItem: async (orderId: string, item: { descripcion: string; costo: number; especialidad?: Specialty }) => {
+  //
+  // Una tarea nueva lleva su técnico (`asignado_a`, o nulo = sin técnico: nadie cobra) y
+  // `reparto_heredado: false` siempre: el reparto por especialidad es solo de las líneas de
+  // antes de la comisión por tarea (20261010000006). La columna nace con default true para la
+  // app que estaba publicada; esta lo manda explícito en cada alta.
+  addLaborItem: async (
+    orderId: string,
+    item: { descripcion: string; costo: number; especialidad?: Specialty; asignado_a?: string | null }
+  ) => {
     const { data, error } = await supabase
       .from('orden_labor')
-      .insert({ ...item, orden_id: orderId })
+      .insert({ ...item, asignado_a: item.asignado_a ?? null, reparto_heredado: false, orden_id: orderId })
       .select()
       .single();
     if (error) throw error;
     return data as LaborItem;
   },
+
+  /**
+   * El técnico de una tarea (solo administración). Cambiar solo el técnico no toca lo cotizado:
+   * una línea pendiente sigue pendiente y una rechazada sigue rechazada. Asignar técnico a una
+   * línea heredada la saca del reparto por especialidad para siempre (`reparto_heredado:
+   * false`); quitarle el técnico después la deja sin técnico, no de vuelta en el reparto.
+   * La base rechaza (42501, con la frase para el taller) si su comisión ya se pagó o si el
+   * técnico no es mecánico o pintor de la sede de la orden.
+   */
+  setLaborTechnician: async (id: string, asignadoA: string | null) => {
+    const patch: { asignado_a: string | null; reparto_heredado?: boolean } = { asignado_a: asignadoA };
+    if (asignadoA) patch.reparto_heredado = false;
+    const { data, error } = await supabase.from('orden_labor').update(patch).eq('id', id).select('id');
+    if (error) throw error;
+    assertAffected(data, 'la tarea');
+  },
+
+  /** A qué bolsa va una tarea. Igual que el técnico, no cambia el estado de la línea. */
+  setLaborSpecialty: async (id: string, especialidad: Specialty) => {
+    const { data, error } = await supabase.from('orden_labor').update({ especialidad }).eq('id', id).select('id');
+    if (error) throw error;
+    assertAffected(data, 'la tarea');
+  },
+
+  /**
+   * Qué comisiones de la orden ya se pagaron, para no ofrecer cambiarle el técnico o la bolsa
+   * a esas tareas: la base lo rechaza. `labor_id` nulo = la bolsa heredada de esa especialidad.
+   * Solo administración lee `comisiones`.
+   */
+  getPaidCommissionKeys: async (orderId: string) =>
+    fetchAll<{ id: string; labor_id: string | null; especialidad: Specialty }>((from, to) =>
+      supabase
+        .from('comisiones')
+        .select('id, labor_id, especialidad')
+        .eq('orden_id', orderId)
+        .not('pago_id', 'is', null)
+        .order('id')
+        .range(from, to)
+    ),
 
   updateLaborItem: async (id: string, item: { descripcion: string; costo: number; especialidad?: Specialty }) => {
     const { data, error } = await supabase
@@ -463,6 +527,17 @@ export const workOrdersService = {
       .from('orden_asignaciones')
       .insert({ orden_id: orderId, usuario_id: usuarioId, tipo_tarea: tipoTarea, estatus_tarea: 'pendiente' });
     if (error) throw error;
+  },
+
+  /**
+   * Si la persona entra al reparto heredado por especialidad ('manual') o cobra solo sus tareas
+   * ('tarea'). Solo administración (20261010000006); la base lo rechaza si esa bolsa ya se pagó,
+   * con la frase para el taller.
+   */
+  setAssignmentOrigin: async (id: string, origen: 'manual' | 'tarea') => {
+    const { data, error } = await supabase.from('orden_asignaciones').update({ origen }).eq('id', id).select('id');
+    if (error) throw error;
+    assertAffected(data, 'la asignación');
   },
 
   removeAssignment: async (id: string) => {

@@ -18,19 +18,52 @@ export interface PayScheme {
   actualizado_en?: string;
 }
 
-/** Lo que devuelve `comisiones_estimadas`: las bolsas de la orden y cuánto le toca a cada quien. */
+/**
+ * Lo que devuelve `comisiones_estimadas` (20261010000006): la comisión de cada tarea, el reparto
+ * heredado de las líneas de antes y cuánto le toca a cada quien. Todas las cifras las calcula la
+ * base; la pantalla solo las muestra.
+ */
 export interface CommissionEstimate {
+  /**
+   * Solo el reparto heredado: líneas aprobadas sin técnico de antes de la comisión por tarea.
+   * `tecnicos` = asignados a mano con esa especialidad; 0 = nadie cobra esa bolsa.
+   */
   bolsas: { especialidad: Specialty; base: number; tecnicos: number }[];
+  /** Por persona y especialidad: su parte heredada más sus tareas. */
   reparto: {
     usuario_id: string;
     especialidad: Specialty;
     esquema: PayKind;
     porcentaje: number;
+    /** El equipo del reparto heredado si `heredado`; si no, 1. */
     tecnicos: number;
     monto: number;
+    /** Si incluye parte del reparto heredado. */
+    heredado: boolean;
+    /** Cuántas tareas suyas suma. */
+    tareas: number;
   }[];
-  /** Lo que le toca a quien pregunta, sumando sus bolsas. */
+  /** Lo que le toca a quien pregunta, sumado por la base. */
   mi_total: number;
+  /** Cada tarea aprobada con técnico y su comisión. Un técnico recibe solo las suyas. */
+  tareas: {
+    labor_id: string;
+    descripcion: string;
+    especialidad: Specialty;
+    usuario_id: string;
+    esquema: PayKind;
+    base: number;
+    porcentaje: number;
+    monto: number;
+  }[];
+  /** Tareas sin técnico (no heredadas, no rechazadas): nadie cobrará su comisión. */
+  sin_asignar: {
+    labor_id: string;
+    descripcion: string;
+    especialidad: Specialty;
+    costo: number;
+    estado: 'borrador' | 'pendiente' | 'aprobado';
+  }[];
 }
 
 /** Lo que devuelve `resumen_empleado`. Las sumas las hace la base. */
@@ -65,11 +98,18 @@ export interface Commission {
   /** Cuántos compartieron esa bolsa. */
   tecnicos: number;
   monto: number;
+  /**
+   * La tarea (`orden_labor`) que paga esta fila (20261010000006). Nulo = reparto heredado por
+   * especialidad. Una persona puede tener varias filas por orden: una por tarea.
+   */
+  labor_id?: string | null;
   /** Null while the commission is still owed. */
   pago_id?: string | null;
   creado_en: string;
   // Virtual, from joins
   usuario?: UserProfile;
+  /** La descripción de la tarea, si la fila es de una. */
+  labor?: { descripcion: string } | null;
   orden?: {
     id: string;
     numero_orden: string;

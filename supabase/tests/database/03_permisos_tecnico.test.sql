@@ -14,7 +14,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(41);
+SELECT plan(42);
 
 -- ------------------------------------------------------------------------------------
 -- Datos de prueba: un admin, un mecánico asignado y uno que no lo está
@@ -288,12 +288,24 @@ SELECT throws_ok(
   'Un avance no se puede mover a otra orden'
 );
 
+-- Desde 20261010000006 una asignación solo la edita administración (el técnico cambiaba su
+-- propio `tipo_tarea` y con eso movía su comisión): su UPDATE no llega a ninguna fila.
+SELECT is_empty(
+  $$ UPDATE orden_asignaciones SET usuario_id = 'a0000000-0000-0000-0000-000000000004'
+     WHERE usuario_id = 'a0000000-0000-0000-0000-000000000002' RETURNING id $$,
+  'El técnico no edita su asignación (ni para pasársela a otra persona)'
+);
+
+-- Y ni administración la pasa a otra persona: eso sería quitar a uno y asignar a otro sin
+-- que se entere ninguno de los dos.
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000001';
 SELECT throws_ok(
   $$ UPDATE orden_asignaciones SET usuario_id = 'a0000000-0000-0000-0000-000000000004'
      WHERE usuario_id = 'a0000000-0000-0000-0000-000000000002' $$,
   '42501', NULL,
   'Una asignación no se puede pasar a otra persona'
 );
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
 
 -- ------------------------------------------------------------------------------------
 -- 3. Orden entregada: cerrada para el técnico, abierta para el admin

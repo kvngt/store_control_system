@@ -151,6 +151,16 @@ if (ctx.TOKEN_TECH) {
     // La línea de la orden ajena tampoco la ve el técnico: la lee el admin.
     ctx.LABOR_AJENA ||= await lineaDe(ctx.ORDEN_AJENA, ctx.TOKEN_ADMIN);
     ctx.LABOR_ENTREGADA ||= await lineaDe(ctx.ORDEN_ENTREGADA);
+
+    // SEC-99 y SEC-100 escriben lo que ya hay (el mismo técnico de la línea, el mismo tipo de
+    // la asignación) y filtran por ese valor: si la regla fallara, la petición devolvería la fila
+    // sin mover ninguna comisión, aun en una base con datos reales.
+    if (ctx.LABOR) {
+      const r = await call('GET', `/rest/v1/orden_labor?select=asignado_a&id=eq.${ctx.LABOR}`, { token: ctx.TOKEN_TECH });
+      if (Array.isArray(r.json) && r.json[0] && 'asignado_a' in r.json[0]) ctx.LABOR_TECNICO = { asignado_a: r.json[0].asignado_a };
+    }
+    const asig = await call('GET', `/rest/v1/orden_asignaciones?select=id,tipo_tarea&usuario_id=eq.${ctx.TECH_ID}&limit=1`, { token: ctx.TOKEN_TECH });
+    ctx.ASIGNACION_PROPIA = Array.isArray(asig.json) ? asig.json[0] : undefined;
   }
 }
 
@@ -286,6 +296,29 @@ const CASES = [
   tech({ id: 'SEC-88', desc: 'Un técnico no ve el balance de una orden', needs: ['ORDEN'], method: 'POST', path: () => rpc('balance_orden'), body: (c) => ({ p_orden_id: c.ORDEN }), expect: 'denied' }),
   tech({ id: 'SEC-89', desc: 'Un técnico no ve el margen de las órdenes', method: 'POST', path: () => rpc('margen_ordenes'), body: { p_sede_id: null, p_desde: '2020-01-01', p_hasta: '2100-01-01' }, expect: 'denied' }),
   admin({ id: 'SEC-90', desc: 'Ni un admin llama la cuenta interna del balance', method: 'POST', path: () => rpc('_balance_orden'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+
+  // Historial de la orden (20261010000004): solo un admin lo lee; nadie lo escribe por la API.
+  anon({ id: 'SEC-91', desc: 'Sin sesión no se lee el historial de las órdenes', method: 'GET', path: () => '/rest/v1/historial_orden?select=id', expect: 'denied-or-empty' }),
+  tech({ id: 'SEC-92', desc: 'Un técnico no lee el historial de las órdenes', method: 'GET', path: () => '/rest/v1/historial_orden?select=id', expect: 'empty' }),
+  tech({ id: 'SEC-93', desc: 'Un técnico no escribe en el historial', method: 'POST', path: () => '/rest/v1/historial_orden', body: { orden_id: ZERO_UUID, origen: 'app', entidad: 'orden', accion: 'crear' }, expect: 'denied' }),
+  admin({ id: 'SEC-94', desc: 'Ni un admin corrige el historial', method: 'PATCH', path: () => `/rest/v1/historial_orden?orden_id=eq.${ZERO_UUID}`, body: { actor_nombre: 'otra persona' }, expect: 'denied' }),
+  admin({ id: 'SEC-95', desc: 'Ni un admin llama el trigger del historial como RPC', method: 'POST', path: () => rpc('trg_historial'), body: {}, expect: 'denied' }),
+
+  // Reintentar correos (20261010000005): solo administración.
+  anon({ id: 'SEC-96', desc: 'Sin sesión no se reintenta un correo', method: 'POST', path: () => rpc('reintentar_envio'), body: { p_id: ZERO_UUID }, expect: 'denied' }),
+  tech({ id: 'SEC-97', desc: 'Un técnico no reintenta un correo', method: 'POST', path: () => rpc('reintentar_envio'), body: { p_id: ZERO_UUID }, expect: 'denied' }),
+  tech({ id: 'SEC-98', desc: 'Un técnico no reintenta los correos fallidos', method: 'POST', path: () => rpc('reintentar_correos_fallidos'), body: {}, expect: 'denied' }),
+
+  // Comisión por tarea (20261010000006): asignar una tarea es dinero, y es de administración.
+  // SEC-99 y SEC-100 escriben el valor que ya tiene la fila y filtran por él: si la regla
+  // fallara, la respuesta traería la fila (FAIL) sin haber movido ninguna comisión.
+  tech({ id: 'SEC-99', desc: 'Un técnico no cambia el técnico de una tarea', needs: ['LABOR', 'LABOR_TECNICO'], method: 'PATCH', path: (c) => `/rest/v1/orden_labor?id=eq.${c.LABOR}&asignado_a=${c.LABOR_TECNICO.asignado_a ? `eq.${c.LABOR_TECNICO.asignado_a}` : 'is.null'}`, body: (c) => ({ asignado_a: c.LABOR_TECNICO.asignado_a }), headers: { Prefer: 'return=representation' }, expect: 'denied-or-empty' }),
+  tech({ id: 'SEC-100', desc: 'Un técnico no edita su asignación (tipo de tarea)', needs: ['ASIGNACION_PROPIA'], method: 'PATCH', path: (c) => `/rest/v1/orden_asignaciones?id=eq.${c.ASIGNACION_PROPIA.id}&tipo_tarea=eq.${c.ASIGNACION_PROPIA.tipo_tarea}`, body: (c) => ({ tipo_tarea: c.ASIGNACION_PROPIA.tipo_tarea }), headers: { Prefer: 'return=representation' }, expect: 'denied-or-empty' }),
+  tech({ id: 'SEC-101', desc: 'Un técnico no crea una tarea a su nombre', needs: ['ORDEN', 'TECH_ID'], method: 'POST', path: () => '/rest/v1/orden_labor', body: (c) => ({ orden_id: c.ORDEN, descripcion: 'PRUEBA qa:security', costo: 1, asignado_a: c.TECH_ID, reparto_heredado: false }), expect: 'denied' }),
+  admin({ id: 'SEC-102', desc: 'Ni un admin llama el guardia del técnico de una tarea como RPC', method: 'POST', path: () => rpc('trg_guard_labor_tecnico'), body: {}, expect: 'denied' }),
+  admin({ id: 'SEC-103', desc: 'Ni un admin llama el alta automática del técnico de una tarea como RPC', method: 'POST', path: () => rpc('trg_labor_tecnico_asignado'), body: {}, expect: 'denied' }),
+  admin({ id: 'SEC-104', desc: 'Ni un admin llama el guardia de quitar a un técnico con tareas como RPC', method: 'POST', path: () => rpc('trg_guard_asignacion_con_tareas'), body: {}, expect: 'denied' }),
+  admin({ id: 'SEC-105', desc: 'Ni un admin llama el recálculo de comisiones por línea como RPC', method: 'POST', path: () => rpc('trg_commissions_on_labor'), body: {}, expect: 'denied' }),
 ];
 
 function evaluate(expect, r) {

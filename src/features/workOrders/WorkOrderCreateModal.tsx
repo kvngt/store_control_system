@@ -433,7 +433,7 @@ export default function WorkOrderCreateModal({
                   La clase se queda: el estilo es el mismo. */}
               <div className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>{t('workOrders.laborDescription')}</span>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => form.labor.append({ descripcion: '', costo: '', especialidad: 'mecanica' })}>
+                <button type="button" className="btn btn-success btn-sm" onClick={() => form.labor.append({ descripcion: '', costo: '', especialidad: 'mecanica' })}>
                   <Plus size={14} /> {t('common.add')}
                 </button>
               </div>
@@ -473,7 +473,7 @@ export default function WorkOrderCreateModal({
                 <span>{t('workOrders.partsDescription')}</span>
                 <button
                   type="button"
-                  className="btn btn-ghost btn-sm"
+                  className="btn btn-success btn-sm"
                   onClick={() => form.parts.append({ descripcion: '', cantidad: '1', precio_venta_unitario: '' })}
                 >
                   <Plus size={14} /> {t('common.add')}

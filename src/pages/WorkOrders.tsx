@@ -376,11 +376,12 @@ export default function WorkOrders() {
     }
   };
 
-  // Deep link from the global header search: /work-orders?open=<id>
+  // Deep link from the global header search and from notifications:
+  // /work-orders?open=<id>[&tab=<pestaña>]
   useEffect(() => {
     const openId = searchParams.get('open');
     if (openId) {
-      detail.open(openId);
+      detail.open(openId, searchParams.get('tab'));
       setSearchParams({}, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -388,10 +389,14 @@ export default function WorkOrders() {
 
   // Order Detail View
   if (detail.order) {
+    // `key` por orden: abrir otra orden (un aviso, un enlace) sin pasar por la lista no desmontaba
+    // el detalle si la nueva ya estaba en caché, y en el teléfono las secciones siguen montadas.
+    // El editor de tareas se quedaba abierto con lo escrito y el técnico de la orden anterior, y
+    // la tarea nueva le tocaba a esa persona (o la base la rechazaba si era de otra sede).
     return (
       <WorkOrderDetail
+        key={detail.order.id}
         detail={detail}
-        operators={operators}
         statusLabels={statusLabels}
         onBack={detail.close}
       />

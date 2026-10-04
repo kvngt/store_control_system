@@ -144,9 +144,9 @@ Las 23 tienen **RLS activado**. Columnas y relaciones: [arquitectura.md §4](arq
 | | `vehiculos` | VIN, placa, marca, modelo | Admin; un técnico, los de sus órdenes. **Crear y editar, solo admin** |
 | **Órdenes** | `ordenes_trabajo` | La orden: estado, avance, firma, total de mano de obra, `archivada_en` (archivo a mano, solo entregadas) | Admin; un técnico, **solo las que tiene asignadas** (`mis_ordenes_asignadas`). **Abrirla, solo admin**; el trigger decide qué columnas cambia el técnico |
 | | `orden_montos` | Total, repuestos y depósito (1:1 con la orden) | **Solo admin** |
-| | `orden_labor` | Líneas de mano de obra con su estado de autorización y su `especialidad` (bolsa de comisión) | Admin; un técnico, las de sus órdenes |
+| | `orden_labor` | Líneas de mano de obra con su estado de autorización, su `especialidad`, su técnico (`asignado_a`, quien cobra su comisión) y `reparto_heredado` (línea de antes de la comisión por tarea, `20261010000006`) | Admin; un técnico, las de sus órdenes (escribe solo `completado_en` por `marcar_labor_completada`) |
 | | `orden_repuestos` | Repuestos con precio | **Solo admin** (el técnico usa `repuestos_de_orden`) |
-| | `orden_asignaciones` | Técnicos de la orden y su tarea — y por lo tanto quién cobra de qué bolsa | Admin; un técnico, las de sus órdenes; **asignar y desasignar, solo admin**; cada quien mueve el `estatus_tarea` de su propia fila |
+| | `orden_asignaciones` | Técnicos de la orden y su tarea; `origen` 'manual' (entra al reparto de las líneas heredadas) o 'tarea' (entró por una tarea y cobra solo sus tareas) | Admin; un técnico, las de sus órdenes; **asignar, desasignar y editar una asignación, solo admin** (editar desde `20261010000006`) |
 | | `orden_avances` | Bitácora del técnico | Admin; un técnico, los de sus órdenes |
 | | `orden_media` | Fotos, videos y audio: ruta en Storage, visible al cliente o no | Admin; un técnico, los de sus órdenes (también en Storage) |
 | | `numero_orden_contadores` | Último folio por año | Nadie directamente (RLS sin políticas); la usa un trigger |
@@ -155,7 +155,7 @@ Las 23 tienen **RLS activado**. Columnas y relaciones: [arquitectura.md §4](arq
 | **Dinero** | `finanzas_movimientos` | Ingresos y egresos, automáticos e importados; el cobro al entregar lleva `metodo_pago` y `comprobante_ruta` | **Solo admin** |
 | | `finanzas_importaciones` | Estados de cuenta importados y su huella | **Solo admin** |
 | | `finanzas_reglas_categorizacion` | 56 reglas para categorizar movimientos del banco | **Solo admin** |
-| | `comisiones` | Comisión por técnico, orden entregada y especialidad | Cada técnico las suyas, admin |
+| | `comisiones` | Comisión devengada al entregar: una por tarea (`labor_id`) y una por técnico y bolsa heredada (`labor_id` nulo); llave (orden, usuario, especialidad, `labor_id`) | Cada técnico las suyas, admin |
 | | `comision_pagos` | Pagos (cheques) de comisiones | Cada técnico los suyos, admin |
 | **Avisos** | `notificaciones` | La campana de cada persona | Cada quien las suyas |
 | | `push_suscripciones` | Dispositivos con push activo | Cada quien las suyas |

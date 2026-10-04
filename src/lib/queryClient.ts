@@ -1,4 +1,5 @@
-import { QueryClient } from '@tanstack/react-query';
+import { QueryCache, QueryClient } from '@tanstack/react-query';
+import { isExpectedFailure, reportError } from './monitoring';
 
 /**
  * Query keys, in one place so an invalidation and the query it is meant to
@@ -24,7 +25,13 @@ export const queryKeys = {
   employeeSummary: (userId: string) => ['employee-summary', userId] as const,
   employeeRecent: (userId: string) => ['employee-recent', userId] as const,
   customerEmails: (orderId: string) => ['customer-emails', orderId] as const,
+  /** Historial de una orden. La pantalla agrega cuántas filas pidió al final de la clave. */
+  orderHistory: (orderId: string) => ['order-history', orderId] as const,
+  /** Correos al cliente con error en las últimas horas (tarjeta de Configuración). */
+  failedEmails: () => ['failed-emails'] as const,
   quotes: (orderId: string) => ['quotes', orderId] as const,
+  /** Qué comisiones de una orden ya se pagaron (para bloquear el técnico de esas tareas). */
+  paidCommissions: (orderId: string) => ['paid-commissions', orderId] as const,
   customers: (sedeId?: string) => ['customers', sedeId] as const,
   customerDetail: (customerId: string) => ['customer', customerId] as const,
   vehicles: (sedeId?: string) => ['vehicles', sedeId] as const,
@@ -52,6 +59,14 @@ export const queryKeys = {
  */
 export function createQueryClient() {
   return new QueryClient({
+    // Una lectura que falla por algo inesperado (una función que la base no tiene, un 500)
+    // llega a Sentry con la consulta que la pidió. Lo esperado — fila inexistente, permiso,
+    // la red del taller — ya tiene su mensaje en pantalla y no es un error de la app.
+    queryCache: new QueryCache({
+      onError: (error, query) => {
+        if (!isExpectedFailure(error)) reportError(error, { queryKey: query.queryKey });
+      },
+    }),
     defaultOptions: {
       queries: {
         // Shop data changes when someone in the shop changes it, not on its

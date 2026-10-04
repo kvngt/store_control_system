@@ -336,6 +336,8 @@ export default function Payroll() {
                             <tr key={c.id}>
                               <td data-label={t('workOrders.orderNumber')} style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>
                                 {c.orden?.numero_orden || '—'}
+                                {/* Una fila por tarea desde 20261010000006: cuál, para no ver la orden repetida sin saber por qué. */}
+                                {c.labor?.descripcion && <span className="field-hint commission-task-desc">{c.labor.descripcion}</span>}
                               </td>
                               <td data-label={t('commission.specialty')}>{c.especialidad === 'pintura' ? t('workOrders.painting') : t('workOrders.mechanical')}</td>
                               <td data-label={t('payroll.profitBase')} style={{ textAlign: 'right' }}>{money(Number(c.base_ganancia))}</td>
@@ -377,6 +379,8 @@ export default function Payroll() {
                   <td data-label={t('payroll.employee')}>{c.usuario?.nombre_completo}</td>
                   <td data-label={t('workOrders.orderNumber')} style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>
                     {c.orden?.numero_orden || '—'}
+                    {/* Una fila por tarea desde 20261010000006: cuál, para no ver la orden repetida sin saber por qué. */}
+                    {c.labor?.descripcion && <span className="field-hint commission-task-desc">{c.labor.descripcion}</span>}
                   </td>
                   <td data-label={t('commission.specialty')}>{c.especialidad === 'pintura' ? t('workOrders.painting') : t('workOrders.mechanical')}</td>
                   <td data-label={t('payroll.profitBase')} style={{ textAlign: 'right' }}>{money(Number(c.base_ganancia))}</td>

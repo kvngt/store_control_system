@@ -5,6 +5,9 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
 [reglas-de-negocio.md](reglas-de-negocio.md). Para ubicar los archivos, tablas y pruebas
 de una sección, [mapa-de-secciones.md](mapa-de-secciones.md); antes de cambiar la base de
 un proyecto con datos reales, [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación).
+Lo que viene (cambios pedidos por el taller el 03/10/2026, por fases y con decisiones ya
+tomadas): [plan-mejoras-2026-10.md](plan-mejoras-2026-10.md). Léelo antes de tocar tareas,
+comisiones, el alta de la orden o la "espera de autorización".
 
 ---
 
@@ -43,12 +46,14 @@ un proyecto con datos reales, [mantenimiento.md §4](mantenimiento.md#4-cambiar-
   entregarla son de administración.
 - **Abrir una orden y asignar a alguien son solo de admin** (`ordenes_trabajo_insert` y
   `orden_asignaciones_insert`, ambas `is_admin()`). Lo segundo es dinero, no una etiqueta:
-  `trg_assignment_commissions` llama a `sync_order_commissions`, que reparte la mano de obra
-  entre los asignados, así que auto-asignarse era concederse una comisión y diluir la de
-  quien sí trabajó la orden. `create_work_order` es `SECURITY INVOKER`, así que la política
-  la cubre sin tocarla. `trg_guard_order_insert` (que bajaba a recepción la orden de un
-  no-admin) se queda como red, pero su cuerpo ya no es alcanzable desde la API. Un técnico
-  sigue moviendo el `estatus_tarea` de su propia asignación, que no toca el reparto.
+  `trg_assignment_commissions` llama a `sync_order_commissions`, que reparte entre los
+  asignados a mano (`origen = 'manual'`) la mano de obra **de las líneas heredadas** (ver
+  abajo; la de una tarea es de su técnico), así que auto-asignarse era concederse una comisión
+  y diluir la de quien sí trabajó la orden. `create_work_order` es `SECURITY INVOKER`, así que
+  la política la cubre sin tocarla. `trg_guard_order_insert` (que bajaba a recepción la orden
+  de un no-admin) se queda como red, pero su cuerpo ya no es alcanzable desde la API. Desde
+  `20261010000006` **editar una asignación también es solo de admin**: el técnico podía cambiar
+  el `tipo_tarea` de la suya y con eso mover su comisión (un UPDATE suyo da cero filas).
 - **Pedir autorización exige un motivo.** `espera_autorizacion` (antes "espera de
   repuestos") es donde el técnico dice que encontró algo que hay que cotizar, y la base
   rechaza el estado sin `ordenes_trabajo.motivo_autorizacion`. Al salir del estado el
@@ -64,10 +69,29 @@ un proyecto con datos reales, [mantenimiento.md §4](mantenimiento.md#4-cambiar-
   `tipo_tarea`, al porcentaje de cada quien (`perfiles_pago`, o el de la sede). La cuenta
   vive solo en `_reparto_comisiones(orden)`: la usan `sync_order_commissions` y
   `comisiones_estimadas`. **No la repitas en el navegador.** La llave de `comisiones` es
-  (orden, usuario, especialidad). El pago de cada quien va en `perfiles_pago`, nunca en
+  (orden, usuario, especialidad, `labor_id`) con `NULLS NOT DISTINCT`
+  (`comisiones_orden_usuario_especialidad_tarea_key`, desde `20261010000006`): una fila por
+  tarea y una por bolsa heredada, así que una persona puede tener varias filas en la misma
+  orden; no supongas una por persona y especialidad. El pago de cada quien va en `perfiles_pago`, nunca en
   `perfiles` (los técnicos leen los perfiles de sus compañeros). **El pago a empleados
   tiene decisiones abiertas con el taller** ([pagos-a-empleados.md](pagos-a-empleados.md)):
   no agregues salarios, períodos ni recálculos sin leerlo.
+- **Y desde `20261010000006`, por tarea.** Cada línea de `orden_labor` tiene su técnico
+  (`asignado_a`, solo lo escribe admin) y su comisión es de él: costo × su porcentaje
+  (`comisiones.labor_id`). Una línea nueva sin técnico no le paga a nadie (`sin_asignar` en
+  `comisiones_estimadas`; la orden lo avisa en Resumen y el diálogo de entrega lo lee de esa
+  misma RPC, así que avisa también desde el Kanban). Las líneas de antes
+  (`reparto_heredado = true`, el default de la columna) siguen con el reparto por
+  especialidad, solo entre los asignados `origen = 'manual'`. **La app manda
+  `reparto_heredado: false` en cada línea que crea**, y al asignarle técnico a una heredada
+  también (`setLaborTechnician`, fijado en `workOrders.service.test.ts`): queda fuera del
+  reparto para siempre. Quien recibe una tarea entra solo a la orden (`origen = 'tarea'`);
+  quitarlo de la orden con tareas se rechaza, pero administración lo saca del reparto (o mete
+  a quien entró por una tarea) cambiando el `origen` de su asignación, salvo que esa bolsa ya
+  se haya pagado (`trg_assignment_tasks_guard`). Lo pagado no se reasigna, no se borra, no
+  cambia de especialidad y una línea no entra a una bolsa ya pagada (`trg_labor_tecnico_guard`;
+  en pantalla, candado y Borrar deshabilitado). Una línea tampoco se muda de orden. El editor
+  de tareas es `TaskEditor` (no conoce la orden: F4 lo usa en el alta).
 - **Un pago de comisiones asienta un egreso por orden** (`20261010000000`), dentro de
   `pay_commissions` y verificando que sumen el pago. El margen de una orden sale de
   `balance_orden` (comisiones devengadas; repuestos = el costo automático de las líneas,
@@ -258,6 +282,14 @@ un proyecto con datos reales, [mantenimiento.md §4](mantenimiento.md#4-cambiar-
   mientras corre.
 - **Móvil primero.** Tablas con `cards-on-mobile` y `data-label`; inputs de 16 px;
   `useIsMobile()` para renderizar una sola versión; respeta `env(safe-area-inset-*)`.
+- **Una pantalla larga en escritorio va en pestañas** (`src/components/Tabs.tsx`, con
+  `role="tablist"` y flechas), como el detalle de la orden (03/10/2026). El contenido de una
+  pestaña se monta la primera vez que se abre y después se esconde con `hidden`, para no
+  perder lo escrito ni pedir datos de pestañas que nadie abrió. En el teléfono la misma
+  pantalla sigue en `MobileSection`, en el orden de las pestañas.
+- **El botón verde es `.btn-success`** (tokens `--color-success-fill` y `--color-on-success`,
+  contraste fijado en `successButton.test.ts`): para agregar y confirmar trabajo hecho. No
+  uses `--color-success` como relleno con texto blanco: no llega al contraste mínimo.
 - **Una pantalla larga en el teléfono se pliega con `<MobileSection>`**
   (`src/components/MobileSection.tsx`), como el detalle de la orden. En escritorio no hace
   nada. Envuelve la tarjeta entera: la sección le quita marco y `.card-title` y pone el
@@ -288,9 +320,17 @@ agregues pruebas que entreguen órdenes o paguen comisiones mientras no exista s
 
 ## 6. Observabilidad y despliegue
 
-- Errores del frontend en Sentry (`@sentry/react`), si `VITE_SENTRY_DSN` está
-  definida. **Al 1/10/2026 no lo está en Hostinger**: un error en producción no queda
-  registrado ([evaluacion-2026-10.md](evaluacion-2026-10.md), O-2).
+- Errores del frontend en Sentry, siempre a través de `src/lib/monitoring.ts`
+  (`reportError`, `identifyUser`, `openProblemReport`); ningún otro archivo importa
+  `@sentry/react`. Llegan los errores del `ErrorBoundary` y las consultas que fallan por algo
+  inesperado (`QueryCache`; lo esperado lo filtra `isExpectedFailure`), con quién tenía la
+  sesión; Configuración tiene "Reportar un problema". Sin `VITE_SENTRY_DSN` todo es un no-op, y
+  **al 3/10/2026 no está en Hostinger** ([evaluacion-2026-10.md](evaluacion-2026-10.md), O-2).
+- **Historial de la orden** (`historial_orden`, `20261010000004`): quién cambió qué, desde
+  dónde y el antes → después. Lo escribe un solo trigger genérico (`trg_historial`) con una
+  lista de columnas por tabla; solo un admin lo lee y nadie lo escribe por la API. Si agregas
+  una columna que alguien decide (no un total recalculado), súmala a esa lista y al
+  `UPDATE OF` del trigger en una migración nueva. Se ve en la tarjeta `OrderHistory`.
 - Producción: dominio `restorifyauto.net` (antes `reinventa.shop`, dado de baja). Hostinger
   compila y publica en cada push, con las variables `VITE_*` de su panel (no las de
   `.env.local`); `public/.htaccess` reescribe a `index.html` (salvo `assets/`, que da 404 si

@@ -12,6 +12,8 @@ import { isOptionalEmailValid } from '../lib/email';
 import type { SedeDeleteImpact } from '../services/sedes.service';
 import { Link } from 'react-router-dom';
 import PushSettingsCard from '../features/notifications/PushSettingsCard';
+import EmailOutboxCard from '../features/settings/EmailOutboxCard';
+import ProblemReportCard from '../features/settings/ProblemReportCard';
 import type { Sede, UserProfile } from '../types/database';
 import { AlertError } from '../components/AlertError';
 import {
@@ -464,6 +466,12 @@ export default function Settings() {
 
         {/* Push en este dispositivo — para todos: el mecánico es quien más lo necesita. */}
         <PushSettingsCard />
+
+        {/* Correos al cliente que fallaron (p. ej. con la llave de Resend mal puesta). */}
+        {user?.rol === 'admin' && <EmailOutboxCard />}
+
+        {/* Reportar un problema (Sentry). No se dibuja si Sentry no está configurado. */}
+        <ProblemReportCard />
 
         {/* Workshops — sede and staff management is admin-only. Everyone else
             still reaches /settings for their own profile, language and theme. */}

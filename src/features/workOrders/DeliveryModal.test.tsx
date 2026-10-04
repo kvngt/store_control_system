@@ -10,13 +10,17 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test/renderWithProviders';
 
 const mocks = vi.hoisted(() => ({
+  getEstimate: vi.fn(),
   getBalance: vi.fn(),
   deliver: vi.fn(),
   uploadDeliveryReceipt: vi.fn(),
   removeDeliveryReceipt: vi.fn(),
 }));
 
-vi.mock('../../services/supabaseService', () => ({ workOrdersService: mocks }));
+vi.mock('../../services/supabaseService', () => ({
+  workOrdersService: mocks,
+  commissionsService: { getEstimate: mocks.getEstimate },
+}));
 
 const { default: DeliveryModal } = await import('./DeliveryModal');
 
@@ -25,14 +29,25 @@ const ORDER = { id: 'ord-1', numero_orden: 'ORD-2026-007', sede_id: 'sede-centro
 function renderModal(overrides: { onDelivered?: () => void; onCancel?: () => void } = {}) {
   const onDelivered = overrides.onDelivered ?? vi.fn();
   const onCancel = overrides.onCancel ?? vi.fn();
-  renderWithProviders(<DeliveryModal order={ORDER} onDelivered={onDelivered} onCancel={onCancel} />);
+  renderWithProviders(
+    <DeliveryModal order={ORDER} onDelivered={onDelivered} onCancel={onCancel} />
+  );
   return { onDelivered, onCancel };
 }
+
+const sinAsignar = (descripcion: string, estado: 'borrador' | 'pendiente' | 'aprobado') => ({
+  labor_id: descripcion,
+  descripcion,
+  especialidad: 'mecanica' as const,
+  costo: 100,
+  estado,
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.deliver.mockResolvedValue({ saldo: 0, tipo: null, movimiento_id: null });
   mocks.removeDeliveryReceipt.mockResolvedValue(undefined);
+  mocks.getEstimate.mockResolvedValue({ bolsas: [], reparto: [], mi_total: 0, tareas: [], sin_asignar: [] });
 });
 
 describe('DeliveryModal', () => {
@@ -150,5 +165,38 @@ describe('DeliveryModal', () => {
 
     expect(await screen.findByText(/No se pudo calcular lo que falta cobrar/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Entregar' })).toBeDisabled();
+  });
+
+  // Comisión por tarea (20261010000006): al entregar se devengan las comisiones, y la de una tarea
+  // autorizada sin técnico no es de nadie. Se avisa, pero no impide entregar. El diálogo lo lee
+  // de la base, así que avisa igual desde el tablero, que no carga las líneas de la orden.
+  it('avisa de las tareas autorizadas sin técnico y deja entregar igual', async () => {
+    mocks.getBalance.mockResolvedValue({ total: 500, cobrado: 500, saldo: 0 });
+    mocks.getEstimate.mockResolvedValue({
+      bolsas: [], reparto: [], mi_total: 0, tareas: [],
+      sin_asignar: [sinAsignar('Alineación', 'aprobado'), sinAsignar('Pulido', 'aprobado'), sinAsignar('Diagnóstico', 'borrador')],
+    });
+    const user = userEvent.setup();
+    const { onDelivered } = renderModal();
+
+    const note = await screen.findByRole('note');
+    expect(mocks.getEstimate).toHaveBeenCalledWith('ord-1');
+    expect(note).toHaveTextContent('Hay 2 tarea(s) autorizada(s) sin técnico: nadie cobrará su comisión.');
+    expect(note).toHaveTextContent('Alineación');
+    expect(note).toHaveTextContent('Pulido');
+    // Lo que el cliente no autorizó no se cobra ni genera comisión: no es dinero que se pierda.
+    expect(note).not.toHaveTextContent('Diagnóstico');
+
+    await user.click(await screen.findByRole('button', { name: 'Entregar' }));
+    await waitFor(() => expect(mocks.deliver).toHaveBeenCalled());
+    expect(onDelivered).toHaveBeenCalled();
+  });
+
+  it('sin tareas sin técnico no avisa nada', async () => {
+    mocks.getBalance.mockResolvedValue({ total: 500, cobrado: 500, saldo: 0 });
+    renderModal();
+
+    await screen.findByText('No hay nada pendiente de cobro.');
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
   });
 });

@@ -76,8 +76,12 @@ firma del cliente. Cada orden recibe un número automático con el formato
 **Mano de obra.** Lo que se cobra por el trabajo. Es la base de la comisión de
 los técnicos, por eso es el único dinero de la orden que ellos ven.
 
-**Comisión.** La parte de la mano de obra que le toca a cada técnico asignado
-cuando la orden se entrega.
+**Comisión.** La parte de la mano de obra que le toca a un técnico cuando la orden se
+entrega. Desde octubre de 2026 cada trabajo (tarea) tiene **su técnico**, y la comisión de
+ese trabajo es suya.
+
+**Tarea.** Una línea de mano de obra con su tipo (mecánica o pintura), su precio y su
+técnico. Una tarea **sin técnico** no le paga comisión a nadie.
 
 **Presupuesto.** Los trabajos que se le presentan al cliente para que los autorice.
 **Lo que el cliente no autoriza no se hace ni se cobra.**
@@ -366,10 +370,11 @@ la ubicación GPS que guarda la cámara.
 
 **5 — Notas de inspección.** Texto libre sobre el estado del vehículo.
 
-**6 — Técnicos asignados.** Un administrador elige quién trabajará la orden. Es
-lo único que decide quién cobra comisión por ella, así que **solo administración
-asigna**: un mecánico o pintor no puede ponerse en una orden por su cuenta ni
-quitarse de una en la que está.
+**6 — Técnicos asignados.** Un administrador elige quién trabajará la orden. Asignar
+es dinero (decide quién ve la orden y, en los trabajos del alta, quién reparte su
+comisión), así que **solo administración asigna**: un mecánico o pintor no puede ponerse
+en una orden por su cuenta ni quitarse de una en la que está. Después, dentro de la orden,
+cada trabajo se le asigna a su técnico (abajo, **Mano de obra**).
 
 **7 — Mano de obra y repuestos** *(solo administradores)*. Cada línea de mano de
 obra lleva descripción y costo. Cada repuesto lleva descripción, cantidad y
@@ -397,6 +402,27 @@ Es la pantalla donde se sigue el trabajo día a día.
 
 <!-- IMAGEN: detalle de una orden completo, vista de administrador -->
 
+**Pestañas (en computadora).** Arriba quedan fijos el encabezado de la orden, su estado y
+su avance; debajo, las pestañas. Así no hay que recorrer toda la orden para llegar a una
+sección.
+
+| Quién | Pestañas |
+|---|---|
+| Administrador | **Resumen** (vehículo, firma, técnicos) · **Trabajos** (mano de obra, repuestos, presupuesto, comisión) · **Fotos y avances** · **Cobro y cliente** (totales, saldo, enlace y correos) · **Historial** |
+| Mecánico o pintor | **Tareas** (su trabajo y su comisión estimada) · **Orden** (vehículo, inspección, repuestos, firma, técnicos) · **Avances** |
+
+Junto al nombre de una pestaña aparece cuántas líneas o archivos tiene. Un **punto
+amarillo** en **Trabajos** avisa que hay mano de obra o repuestos **sin autorizar**: no se
+cobran ni generan comisión hasta que el cliente los autorice.
+
+En el teléfono la orden sigue en secciones que se abren y se cierran, en el mismo orden
+que las pestañas.
+
+**Historial** *(solo administradores)*. Quién cambió qué en la orden y cuándo: estados,
+avance, firma, mano de obra, repuestos, técnicos, depósito, presupuestos, archivos y
+avances, cada cambio con su antes y después. Sirve para responder cuando el cliente o el
+taller preguntan "¿quién movió esto?". Nadie lo puede editar.
+
 **Encabezado.** Número de orden, cliente, vehículo y, para administradores, los
 botones **Descargar PDF** y **Enviar reporte**.
 
@@ -418,9 +444,51 @@ botones **Descargar PDF** y **Enviar reporte**.
 **Datos del vehículo y del ingreso.** Millas, gasolina, fechas, notas y las fotos
 de la inspección 360°.
 
-**Mano de obra.** Las líneas del trabajo cotizado. Un administrador las agrega,
-edita y quita; los totales se recalculan solos. Un técnico las ve sin poder
-cambiarlas.
+**Mano de obra** (para el técnico, **Tareas**). Las líneas del trabajo cotizado. Cada una
+es una **tarea**, con su tipo y su técnico: **la comisión de cada tarea es de su técnico**,
+a su porcentaje. Un técnico las ve sin poder cambiarlas, con el tipo y el nombre de quien
+la tiene, y solo puede marcar como hechas las suyas y las que no tienen técnico.
+
+*Agregar un trabajo (administradores).* El botón verde **Agregar trabajo** abre una fila
+con **Tipo**, **Descripción**, **Precio** y **Técnico**:
+
+1. **Tipo** viene con el de la orden (en una orden **Combinado**, mecánica la primera vez
+   y después el último que usaste).
+2. **Técnico** viene con el de la primera tarea que ya tenga uno; la lista son los
+   mecánicos y pintores **de la sede de la orden**. Puedes dejarlo en *Sin asignar*.
+3. **Agregar** (o Enter) la guarda y deja la fila abierta para la siguiente, con el
+   cursor en Descripción. Un aviso confirma cada trabajo; si la orden ya está firmada,
+   recuerda que falta la autorización del cliente.
+
+Si el tipo no es del oficio de la persona — pintura a un mecánico, o mecánica a un
+pintor —, antes de guardar sale **"¿Asignar una tarea de pintura a un mecánico?"** con
+tres salidas: **Asignar igual** (a veces es justo lo que quieres; la comisión será suya),
+**Elegir otro** (vuelve al selector de técnico) o **Cancelar**. La misma pregunta sale si
+cambias el **Tipo** de una tarea que ya tiene técnico ("¿Pasar a pintura una tarea de un
+mecánico?", con **Cambiar igual**).
+
+*En cada fila (administradores)* hay dos selectores, **Tipo** y **Técnico**, que se pueden
+cambiar en cualquier momento — también con la línea esperando al cliente o rechazada — sin
+tocar lo cotizado. Al darle una tarea a alguien, entra solo a la orden para verla y le
+llega **Nueva tarea**; a quien se la quitan le llega **Tarea reasignada**. En el teléfono
+los dos selectores van debajo de la descripción, a lo ancho.
+
+*Una tarea sin técnico* lleva la insignia amarilla **Sin técnico**: **nadie cobrará su
+comisión hasta que se la asignes**. La orden lo avisa arriba del **Resumen** ("1 tarea(s)
+sin técnico…", con **Ver trabajos**), con un punto en la pestaña **Trabajos** y otra vez en
+el diálogo de entrega (también si entregas desde el Kanban). Entregar se deja igual: si
+la entregas así, esa comisión no se genera para nadie.
+
+*Trabajos de antes de octubre de 2026* (sin técnico): su selector dice **Reparto por
+especialidad**. Se siguen repartiendo como antes entre los técnicos asignados a mano con
+esa especialidad. Si les asignas un técnico, pasan a ser una tarea suya **para siempre**:
+si después le quitas el técnico, quedan *Sin técnico*, no vuelven al reparto.
+
+*Lo ya pagado no se mueve.* Si la comisión de un trabajo ya se pagó, sus selectores salen
+con un **candado** y **Eliminar** está apagado: para cambiarlo, primero deshaz ese pago en
+**Comisiones**. Lo mismo con un trabajo de antes cuyo reparto ya se pagó, y un trabajo de
+antes no se puede pasar a una especialidad cuyo reparto ya se pagó (la opción sale con
+*reparto ya pagado*).
 
 Cada línea puede llevar una insignia:
 
@@ -441,22 +509,30 @@ debajo, aparte.
 **Totales y depósito.** Solo para administradores.
 
 **Tu comisión estimada** *(técnicos asignados)*. Cuánto te tocaría si la orden se
-entregara hoy, con la cuenta a la vista por especialidad: *mano de obra de tu
-especialidad × tu porcentaje ÷ técnicos de esa especialidad*. Si estás en las dos
-(mecánica y pintura), ves una línea por cada una. Se confirma al entregar y cambia si
-cambia la mano de obra o el equipo. Si estás a salario, la tarjeta lo dice: la orden no
-te genera comisión.
+entregara hoy, con la cuenta a la vista: cada **tarea tuya** autorizada (*precio × tu
+porcentaje*) y, si la orden tiene trabajos de antes y estás en su reparto, tu parte (*mano
+de obra de la especialidad × tu porcentaje ÷ compañeros*). Solo ves lo tuyo. Se confirma
+al entregar y cambia si cambia la mano de obra, su técnico o el equipo. Si estás a salario,
+la tarjeta lo dice: la orden no te genera comisión.
 
 <!-- IMAGEN: detalle de la misma orden vista por un mecánico: sin totales, con
      repuestos sin precio y la tarjeta "Tu comisión estimada" -->
 
-**Técnicos asignados.** Quién trabaja la orden, y por lo tanto quién cobra comisión
-por ella. **Solo administración asigna:** si no estás asignado verás el aviso de solo
-lectura y la nota de que un administrador tiene que ponerte en la orden. No hay forma
-de unirte por tu cuenta, ni de quitarte. Un administrador solo puede asignar personal
-**de la sede de la orden**:
-si abriste una orden de otra sede (por ejemplo, desde un aviso) y la lista sale vacía,
-cambia a esa sede en el selector de arriba.
+**Técnicos asignados.** Quién trabaja la orden. **Solo administración asigna:** si no
+estás asignado verás el aviso de solo lectura y la nota de que un administrador tiene que
+ponerte en la orden. No hay forma de unirte por tu cuenta, ni de quitarte. Un administrador
+solo puede asignar personal **de la sede de la orden** (la lista sale de esa sede aunque
+arriba tengas elegida otra).
+
+- Quien entró a la orden **por una tarea** lleva la etiqueta **Por tarea**: cobra solo sus
+  tareas.
+- Si la orden tiene trabajos de antes de octubre de 2026, quien se asignó a mano lleva
+  **En el reparto**: además de sus tareas, reparte la comisión de esos trabajos de su
+  especialidad. Con **Sacar del reparto** / **Sumar al reparto** el administrador decide
+  quién entra, sin quitar a nadie de la orden; agregar a mano a alguien que está *Por
+  tarea* también lo suma. Si el reparto de esa especialidad ya se pagó, no se cambia.
+- **No se puede quitar de la orden a quien tiene tareas en ella**: primero se le asignan
+  esas tareas a otra persona (el sistema lo dice con su nombre y cuántas tiene).
 
 **Fotos, videos y notas de voz.** La galería de la orden (sección 9).
 
@@ -748,12 +824,15 @@ mientras la app está abierta, con un mensaje breve en pantalla.
 
 | Aviso | Lo recibe |
 |---|---|
-| **Nueva orden asignada** | El técnico al que asignan |
+| **Nueva orden asignada** | El técnico al que asignan a mano (no cuando entra por una tarea) |
+| **Nueva tarea** | El técnico al que le dan una tarea, con la tarea y el vehículo |
+| **Tarea reasignada** | El técnico al que le quitan una tarea |
+| **Tarea hecha** | Administradores, cuando un técnico marca una tarea como hecha |
 | **Ya no estás asignado** | El técnico al que quitan |
 | **Recepción registrada · Falta cotizar** | Administradores, cuando un técnico crea una orden. **Ya no se emite:** abrir una orden es de administración desde 20261004000000. Los avisos de este tipo que ya existían se siguen leyendo |
 | **Nuevo avance** | Administradores, cuando un técnico agrega un avance |
 | **Lista para entregar** | Administradores, cuando una orden pasa a Finalizado |
-| **Comisión generada** | Cada técnico, cuando se entrega su orden, con su monto |
+| **Comisión generada** | Cada técnico, cuando se entrega su orden: **uno** por orden, con la suma de lo suyo |
 | **Pasó la fecha de entrega** | Administradores y técnicos asignados, una vez al día por cada orden atrasada. **Reemplaza al del día anterior**: hay uno solo por orden, con los días de retraso al día |
 
 ### Notificaciones en el teléfono (push)
@@ -894,28 +973,31 @@ de obra de las órdenes que entrega. El detalle técnico está en
 
 ### Cómo se calcula
 
-Cada especialidad es una **bolsa**: la mano de obra autorizada de mecánica y la de
-pintura, por separado. Cada bolsa se reparte entre quienes tienen **esa tarea** en la
-orden, y cada quien cobra **su porcentaje** (el suyo, o el de la sede si no tiene uno):
+**Cada trabajo (tarea) le paga a su técnico**, a su porcentaje (el suyo, o el de la sede si
+no tiene uno):
 
 ```
-parte de cada quien  = bolsa de su especialidad ÷ compañeros con esa tarea
-su comisión          = su parte × su porcentaje
+comisión de una tarea = precio de la tarea × porcentaje de su técnico
 ```
 
-Ejemplo (el de la reunión con el taller): pintura $1,000 y mecánica $200, al 35 %. La
-pintora cobra **$350** y el mecánico **$70**. Antes, con toda la mano de obra en una
-sola bolsa, cobraban $210 cada uno.
+Ejemplo (el de la reunión con el taller, al 35 %): la pintora tiene la pintura de $1,000 y
+cobra **$350**; el mecánico tiene la mecánica de $200 y cobra **$70**. Si después se agrega
+una mano de obra extra de pintura de $500 y se le asigna a la pintora, cobra **$175** más,
+aunque haya otro pintor en la orden.
 
-- En una orden **Combinado**, cada línea de mano de obra dice a qué bolsa va: se elige
-  al crear la orden o en la tabla de mano de obra (mecánica por omisión).
-- Quien está **a salario** no cobra comisión; su parte se queda en el taller.
-- Si una bolsa no tiene a nadie con esa tarea, nadie la cobra. La tarjeta **Reparto de
-  la comisión** de la orden lo avisa.
+- **Una tarea sin técnico no la cobra nadie.** La orden lo avisa en el Resumen y al
+  entregar. Asígnale técnico antes de entregar.
+- Quien está **a salario** no cobra comisión; lo de sus tareas se queda en el taller.
+- **Trabajos de antes de octubre de 2026.** Los que no tienen técnico siguen con el reparto
+  por especialidad: cada especialidad es una bolsa que se reparte entre quienes están **en
+  el reparto** con esa tarea (*bolsa ÷ compañeros × su porcentaje*). Si una bolsa no tiene a
+  nadie, nadie la cobra, y la tarjeta **Reparto de la comisión** de la orden lo avisa.
 
 La comisión **se genera al entregar** la orden y se recalcula sola si cambia la mano de
-obra (o su especialidad), el equipo asignado o un porcentaje. **Lo ya pagado nunca se
-recalcula.**
+obra (su precio, su autorización, su técnico o su tipo), el equipo asignado o un
+porcentaje. **Lo ya pagado nunca se recalcula**, y por eso un trabajo con la comisión pagada
+queda bloqueado (sección 8). En **Historial de comisiones** cada fila dice qué trabajo paga:
+una persona puede tener varias por orden, una por tarea.
 
 ### Las tres pestañas
 
@@ -1056,6 +1138,8 @@ actualizarla.
 | Ver mano de obra | ✅ | ✅ |
 | Ver precios de repuestos, totales y depósito | ✅ | ❌ (ve las piezas sin precio) |
 | Agregar o editar mano de obra y repuestos | ✅ | ❌ |
+| Asignar el técnico y el tipo de cada tarea | ✅ | ❌ (ve quién tiene cada una) |
+| Marcar una tarea como hecha | ✅ todas | ✅ las suyas y las que no tienen técnico |
 | Ver su comisión estimada | — | ✅ en sus órdenes |
 | Cambiar estado y avance | ✅ | ✅ en sus órdenes: solo En Proceso, Espera Autorización y Finalizado |
 | Marcar **Entregado** | ✅ | ❌ |
@@ -1074,7 +1158,7 @@ actualizarla.
 | Configuración: perfil, idioma, tema, notificaciones | ✅ | ✅ |
 | Configuración: sedes y personal | ✅ | ❌ |
 | Cambiar de sede | ✅ | ❌ |
-| Notificaciones | Recepciones, avances, órdenes finalizadas | Asignaciones, comisiones |
+| Notificaciones | Recepciones, avances, órdenes finalizadas, tareas hechas | Asignaciones, tareas, comisiones |
 
 Todas estas reglas las aplica la base de datos, así que se cumplen aunque alguien
 intente saltarse la interfaz.
@@ -1090,8 +1174,9 @@ Conviene conocerlas para no sorprenderse ni registrar el mismo dinero dos veces.
 **Al marcar una orden como Entregado:**
 - Se registra como **ingreso** el saldo pendiente (total menos lo ya cobrado).
 - Se registra como **egreso** lo que costaron los repuestos.
-- Se generan las **comisiones** de los técnicos asignados, y cada uno recibe el
-  aviso.
+- Se generan las **comisiones**: la de cada tarea para su técnico (y el reparto de los
+  trabajos de antes), y cada uno recibe **un** aviso con su total. Una tarea sin técnico
+  no genera comisión.
 
 **Al editar una orden ya entregada**, se registra únicamente la diferencia — como
 cargo adicional o como reembolso — y las comisiones pendientes se recalculan.

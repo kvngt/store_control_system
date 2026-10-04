@@ -317,6 +317,7 @@ ORDER BY creado_en DESC;
 | `omitido` "no tiene un correo válido" | Corregir el correo del cliente |
 | `omitido` "pidió no recibir correos" | El cliente se dio de baja desde su enlace |
 | `omitido` "ya recibió el aviso de este estado" | Se evitó un duplicado. Normal |
+| `error` "La llave de Resend no es válida…" o "Resend HTTP 400: API key is invalid" | El secreto `RESEND_API_KEY` tiene una llave borrada o mal copiada (pasó el 02/10/2026: seguía la del dominio viejo `reinventa.shop`). Crear una llave de solo envío para `restorifyauto.net` en Resend y guardarla con `npx supabase secrets set RESEND_API_KEY=…`. Desde `20261010000005` la función reintenta sola con espera creciente (1, 4, 16, 64 min); si ya quedó en error, **Reintentar** en la tarjeta del enlace o **Configuración → Correos al cliente → Reintentar todos** (últimas 72 h) |
 | `error` "Resend HTTP 403" | La llave no tiene permiso o el dominio perdió la verificación (revisar DNS) |
 | `error` "Resend HTTP 422" | Resend rechazó la dirección |
 | `error` "El envío se interrumpió 5 veces" | La función de envío murió 5 veces con este correo (tiempo agotado). Revisa los logs de `process-outbox` |

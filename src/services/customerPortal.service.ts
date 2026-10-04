@@ -5,6 +5,12 @@ import { getPublicSiteUrl } from '../lib/siteUrl';
 import { CUSTOMER_PORTAL_PREFIX } from '../portal/path';
 import type { CustomerEmail, CustomerLink } from '../types/database';
 
+/**
+ * La ventana del reintento masivo. La base topa en 30 días; 72 horas cubre un fin de semana
+ * con la llave rota sin reenviar avisos de hace una semana.
+ */
+export const FAILED_EMAIL_WINDOW_HOURS = 72;
+
 export const customerPortalService = {
   /** restorifyauto.net/r/<token> */
   portalUrl: (token: string) => `${getPublicSiteUrl()}${CUSTOMER_PORTAL_PREFIX}${token}`,
@@ -71,5 +77,34 @@ export const customerPortalService = {
       .limit(20);
     if (error) throw error;
     return (data || []) as CustomerEmail[];
+  },
+
+  /**
+   * Devuelve a la cola un correo que falló (por ejemplo, con la llave de Resend mal puesta).
+   * La base decide si se puede: solo admin, solo un correo con error y sin otro igual pendiente.
+   */
+  retryEmail: async (id: string) => {
+    const { error } = await supabase.rpc('reintentar_envio', { p_id: id });
+    if (error) throw error;
+  },
+
+  /** Cuántos correos al cliente fallaron en las últimas horas, en todas las sedes que ve el admin. */
+  failedEmailCount: async (horas = FAILED_EMAIL_WINDOW_HOURS) => {
+    const since = new Date(Date.now() - horas * 3_600_000).toISOString();
+    const { count, error } = await supabase
+      .from('cola_envios')
+      .select('id', { count: 'exact', head: true })
+      .eq('canal', 'email')
+      .eq('estado', 'error')
+      .gte('creado_en', since);
+    if (error) throw error;
+    return count ?? 0;
+  },
+
+  /** Reintenta los correos fallidos recientes. Devuelve cuántos volvieron a la cola. */
+  retryFailedEmails: async (horas = FAILED_EMAIL_WINDOW_HOURS) => {
+    const { data, error } = await supabase.rpc('reintentar_correos_fallidos', { p_horas: horas });
+    if (error) throw error;
+    return (data as number) ?? 0;
   },
 };

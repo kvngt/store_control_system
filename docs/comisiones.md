@@ -11,36 +11,78 @@ describía cómo se paga a nadie en el taller.
 
 ## Cómo se calcula
 
-Desde la reunión con el taller de septiembre de 2026 (migración `20261009000000`) la
-comisión es **por especialidad** y **por empleado**:
+Desde el 03/10/2026 (migración `20261010000006`, fase F3 del
+[plan de mejoras](plan-mejoras-2026-10.md)) la comisión es **por tarea**: cada línea de mano
+de obra tiene **su técnico** y su comisión es de esa persona. Se pidió porque "la pintora no
+cobró una mano de obra extra": con el reparto por especialidad, quién cobraba una línea
+dependía de quién estuviera asignado a la orden, y eso no lo veía nadie al agregarla.
+
+Cada línea de mano de obra **autorizada** cae en uno de tres casos:
+
+| La línea | Quién cobra | Cuánto |
+|---|---|---|
+| **Tarea con técnico** (`orden_labor.asignado_a`) | Su técnico, y solo él | costo de la línea × su porcentaje |
+| **Tarea nueva sin técnico** (`reparto_heredado = false`) | **Nadie**, hasta que se le asigne uno | — |
+| **Línea de antes de F3, sin técnico** (`reparto_heredado = true`) | El equipo de su especialidad, como antes (abajo) | su parte de la bolsa × su porcentaje |
 
 ```
-bolsa de cada especialidad = mano de obra autorizada de esa especialidad (mecánica o pintura)
-parte de cada quien        = bolsa ÷ personas asignadas con esa tarea
+su porcentaje = el suyo (Empleados) o, si no tiene, el de la sede; a salario, 0
+tarea         = costo × su porcentaje / 100, redondeado al centavo
+```
+
+- **La app crea todas las líneas nuevas como tareas** (`reparto_heredado = false`), con o sin
+  técnico. Una tarea sin técnico se marca **Sin técnico** en la fila, la orden lo avisa en
+  Resumen (y con un punto en la pestaña Trabajos) y el diálogo de entrega lo repite: al
+  entregar, su comisión no se devenga para nadie. Ese aviso lo da la base
+  (`comisiones_estimadas → sin_asignar`), así que sale también al entregar desde el tablero.
+- **Asignar el técnico es de administración**, en la misma fila (Tipo y Técnico) o al agregar
+  el trabajo. Se puede cambiar en cualquier estado de la línea (borrador, esperando al
+  cliente, autorizada o rechazada) sin tocar lo cotizado. El técnico tiene que ser mecánico o
+  pintor **de la sede de la orden**. Si el tipo no es de su oficio (pintura a un mecánico) la
+  pantalla pregunta antes, también al cambiar el tipo de una tarea que ya tiene técnico.
+- **Quien recibe una tarea entra solo a la orden** (asignación con `origen = 'tarea'`), para
+  verla. No entra al reparto de las líneas heredadas: cobra por sus tareas.
+- **Quien está a salario** no cobra comisión por sus tareas ni por su parte de una bolsa: se
+  queda en el taller.
+
+### Las líneas de antes: el reparto por especialidad (`20261009000000`)
+
+Las líneas que ya existían al aplicar F3, y las que todavía cree una versión anterior de la
+app, conservan el reparto que se acordó en septiembre de 2026:
+
+```
+bolsa de cada especialidad = líneas heredadas autorizadas, sin técnico, de esa especialidad
+parte de cada quien        = bolsa ÷ personas asignadas A MANO con esa tarea (origen 'manual')
 comisión de cada quien     = su parte × (su porcentaje / 100)
-su porcentaje              = el suyo (Empleados) o, si no tiene, el de la sede
 ```
 
-- **Cada línea de mano de obra tiene especialidad.** En una orden de mecánica o de pintura
-  es la del tipo de orden; en una orden **combinado** la elige el administrador por línea
-  (mecánica por omisión), al crear la orden o en la tabla de mano de obra.
-- **Cada bolsa se reparte entre quienes tienen esa tarea** en la orden
-  (`orden_asignaciones.tipo_tarea`). Quien trabaja las dos cobra de las dos.
-- **Quien está a salario** cuenta para el reparto, pero no cobra comisión: **su parte se
-  queda en el taller** (no se reparte entre los demás).
-- **Una bolsa sin nadie asignado** no la cobra nadie. La orden lo avisa en la tarjeta
+- En una orden **combinado** la especialidad de cada línea la elige el administrador.
+- **Quien está a salario** cuenta para el reparto, pero su parte se queda en el taller.
+- **Una bolsa sin nadie asignado a mano** no la cobra nadie. La orden lo avisa en la tarjeta
   **Reparto de la comisión** (administración).
+- **Quién reparte la bolsa lo decide administración** en la tarjeta de técnicos de la orden:
+  "Sacar del reparto" deja a la persona en la orden pero fuera de la bolsa (así se saca a quien
+  tiene tareas, que no se puede quitar de la orden); "Sumar al reparto", o agregarla a mano,
+  mete a quien entró por una tarea. Si la bolsa de esa especialidad ya se pagó, no se cambia
+  quién la reparte.
+- **Darle técnico a una línea heredada la saca del reparto para siempre**: la app manda
+  `reparto_heredado = false` junto con el técnico, así que si después se le quita el técnico
+  queda **Sin técnico** (nadie cobra) en vez de volver en silencio a la bolsa. *Decisión
+  pendiente de confirmar con el taller* ([pagos-a-empleados.md](pagos-a-empleados.md#5-preguntas-enviadas-al-taller)).
 
 El ejemplo de la reunión: pintura **$1,000**, mecánica **$200**, al 35 %.
 
-| | Antes (toda la mano de obra, partes iguales) | Ahora (por especialidad) |
-|---|---|---|
-| Pintora | $210.00 | **$350.00** (35 % de $1,000) |
-| Mecánico | $210.00 | **$70.00** (35 % de $200) |
+| | Antes (toda la mano de obra, partes iguales) | Por especialidad (sept.) | Por tarea (oct.) |
+|---|---|---|---|
+| Pintora | $210.00 | **$350.00** | **$350.00** si la pintura es su tarea |
+| Mecánico | $210.00 | **$70.00** | **$70.00** si la mecánica es su tarea |
 
-Varios en la misma bolsa, al mismo porcentaje, siguen repartiéndose al centavo:
+Con tareas el reparto ya no depende de quién esté asignado: una mano de obra extra de pintura
+de $500 asignada a la pintora le suma $175, aunque otro pintor esté en la orden.
 
-| Pintores asignados a $1,000 de pintura | Le toca a cada uno |
+Varios en la misma bolsa heredada, al mismo porcentaje, siguen repartiéndose al centavo:
+
+| Pintores asignados a mano a $1,000 de pintura heredada | Le toca a cada uno |
 | --- | --- |
 | 1 | $350.00 |
 | 2 | $175.00 |
@@ -48,12 +90,14 @@ Varios en la misma bolsa, al mismo porcentaje, siguen repartiéndose al centavo:
 
 El reparto se hace en centavos exactos y el sobrante del redondeo va a las fracciones más
 grandes (en empate, por identificador), así que sale igual cada vez que se recalcula y la
-suma siempre cuadra con la bolsa. Con porcentajes distintos cada quien cobra su
-porcentaje sobre su parte.
+suma siempre cuadra con la bolsa.
 
-La cuenta vive en una sola función, `_reparto_comisiones(orden)`: la usan el devengo al
+La cuenta vive en una sola función, `_reparto_comisiones(orden)`: una fila por tarea
+(`labor_id`) y una por persona y bolsa heredada (`labor_id` nulo). La usan el devengo al
 entregar (`sync_order_commissions`) y la estimación que muestra la orden
-(`comisiones_estimadas`).
+(`comisiones_estimadas`). La llave de `comisiones` es (orden, usuario, especialidad,
+`labor_id`), con `NULLS NOT DISTINCT`: **una persona puede tener varias filas en una orden**, y
+la pantalla **Comisiones** dice qué trabajo paga cada una.
 
 ## Los repuestos ahora son de traspaso
 
@@ -89,11 +133,16 @@ repuestos y sus asignaciones solo los puede tocar un administrador, porque
 mueven dinero ya asentado. Las dos reglas las impone la base de datos, no la
 interfaz.
 
-Se recalcula sola cuando:
+Se recalcula sola cuando (trigger `trg_labor_commissions` sobre las líneas, más los de
+asignaciones, sede y empleado):
 
-- Cambian los totales de una orden ya entregada.
-- Se agrega o se quita un técnico, o se cambia su tarea, en una orden ya entregada.
-- Cambia la especialidad de una línea de mano de obra.
+- Cambia una línea de mano de obra de una orden ya entregada: se autoriza o se rechaza, cambia
+  su precio, su técnico, su especialidad o si va al reparto heredado, o se agrega o se borra.
+  (Desde F3 la comisión sale solo de las líneas; el recálculo por los totales de la orden,
+  `trg_order_montos_commissions`, se eliminó: recalculaba dos veces cada cambio de línea y no
+  se enteraba de un cambio de técnico.)
+- Se agrega o se quita un técnico, se cambia su tarea o si entra al reparto, en una orden ya
+  entregada (solo mueve las líneas heredadas).
 - Un administrador cambia el porcentaje de la sede.
 - Un administrador cambia el esquema o el porcentaje de un empleado (en **Empleados**).
   Pasar a alguien a salario le quita las comisiones pendientes: la pantalla lo avisa con
@@ -102,6 +151,17 @@ Se recalcula sola cuando:
 En todos los casos **solo se recalcula lo que sigue pendiente de pago**. Lo ya
 pagado es historia y no se toca: repartir de nuevo una comisión ya cobrada
 significaría que al taller le cuadran los números pero a la persona no.
+
+Por lo mismo, **lo pagado bloquea la línea** (`trg_labor_tecnico_guard`): a una tarea con su
+comisión pagada no se le cambia el técnico ni la especialidad y no se borra; a una línea
+heredada cuya bolsa ya se pagó tampoco (moverla a un técnico la pagaría dos veces), y ninguna
+línea entra a una bolsa heredada ya pagada (su comisión no la cobraría nadie). La pantalla lo
+muestra con un candado y Borrar deshabilitado; para cambiarla, primero se deshace el pago en
+**Comisiones**. Una línea tampoco se puede mudar a otra orden. Dos huecos conocidos, a
+propósito: cambiar el **precio** de una línea ya pagada se deja (lo pagado no cambia y nada
+se paga dos veces), y una línea heredada que se autoriza **después** de pagar su bolsa no la
+cobra nadie y queda bloqueada hasta deshacer ese pago (con la app nueva las líneas nacen como
+tareas, así que deja de pasar).
 
 Si una orden se saca de "entregada" (por ejemplo, se marcó por error), sus
 comisiones pendientes se eliminan **y Finanzas revierte el cobro final y el
@@ -124,19 +184,25 @@ Desde la fase 1, mecánicos y pintores **no ven** totales, precios de repuestos 
 depósitos (tabla `orden_montos`, solo admin). Sí ven la mano de obra, porque es
 la base de su pago:
 
-- En el detalle de cada orden asignada, la tarjeta **Tu comisión estimada**
-  muestra la cuenta de cada bolsa suya: mano de obra de la especialidad × su porcentaje
-  ÷ compañeros de esa tarea, y el total. La calcula la base (`comisiones_estimadas`,
-  la misma cuenta que al entregar). A quien está a salario le dice que la orden no le
+- En el detalle de cada orden asignada, la tarjeta **Tu comisión estimada** muestra sus
+  tareas autorizadas una por una (costo × su porcentaje), su parte de cada bolsa heredada en
+  la que está (mano de obra × su porcentaje ÷ compañeros) y el total. La calcula la base
+  (`comisiones_estimadas`, la misma cuenta que al entregar). Solo ve lo suyo: ni las tareas
+  ni el porcentaje de sus compañeros. A quien está a salario le dice que la orden no le
   genera comisión.
+- En la lista de trabajos ve el tipo y el técnico de cada línea, y solo puede marcar como
+  hechas **las suyas** y las que no tienen técnico.
 - No ve el porcentaje ni el sueldo de sus compañeros (`perfiles_pago` es de
   administración; cada quien lee solo el suyo).
-- Al entregarse la orden, cada técnico recibe el aviso **Comisión generada** con
-  su monto (trigger `trg_commission_notify`).
+- Al entregarse la orden, cada técnico recibe **un** aviso **Comisión generada** por orden,
+  con la suma de lo suyo (trigger `trg_commission_notify`, por sentencia: con varias tareas ya
+  no llega un aviso por fila).
+- Al darle una tarea recibe **Nueva tarea**; si se la pasan a otra persona, **Tarea
+  reasignada**. Cuando él marca una tarea como hecha, administración recibe **Tarea hecha**.
 - La pantalla **Comisiones** es solo para administradores.
 
-La comisión usa la mano de obra autorizada de cada especialidad; los repuestos no
-entran (son de traspaso).
+La comisión usa la mano de obra autorizada (de cada tarea, o de cada bolsa heredada); los
+repuestos no entran (son de traspaso).
 
 ## Pagar un saldo
 

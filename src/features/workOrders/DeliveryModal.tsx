@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { PackageCheck } from 'lucide-react';
+import { AlertTriangle, PackageCheck } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { AlertError } from '../../components/AlertError';
-import { workOrdersService } from '../../services/supabaseService';
+import { commissionsService, workOrdersService } from '../../services/supabaseService';
 import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';
 import { money } from '../../lib/money';
@@ -45,6 +45,19 @@ export default function DeliveryModal({ order, onCancel, onDelivered }: Delivery
     staleTime: 0,
   });
   const balance = balanceQuery.data;
+
+  // Las tareas autorizadas sin técnico: al entregar se devengan las comisiones y la de estas no es
+  // de nadie (20261010000006). Se avisa sin impedir la entrega. Lo pregunta el diálogo mismo, y
+  // no quien lo abre, para que el aviso salga también al entregar desde el tablero, que no carga
+  // las líneas de la orden. Si la consulta falla, la entrega sigue: el aviso no es un candado.
+  const estimateQuery = useQuery({
+    queryKey: queryKeys.commissionEstimate(order.id),
+    queryFn: () => commissionsService.getEstimate(order.id),
+    staleTime: 0,
+  });
+  const unassignedTasks = (estimateQuery.data?.sin_asignar ?? [])
+    .filter((l) => l.estado === 'aprobado')
+    .map((l) => l.descripcion);
   const saldo = balance?.saldo ?? 0;
   const collects = saldo > CENT;
   const refunds = saldo < -CENT;
@@ -108,6 +121,20 @@ export default function DeliveryModal({ order, onCancel, onDelivered }: Delivery
 
         <div className="modal-body">
           <AlertError message={error} />
+
+          {unassignedTasks.length > 0 && (
+            <div className="alert-warn delivery-unassigned" role="note">
+              <p>
+                <AlertTriangle size={14} aria-hidden="true" style={{ verticalAlign: 'middle', marginRight: 6 }} />
+                {t('delivery.unassignedWarning').replace('{n}', String(unassignedTasks.length))}
+              </p>
+              <ul>
+                {unassignedTasks.map((descripcion, i) => (
+                  <li key={i}>{descripcion}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {balanceQuery.isPending ? (
             <div className="loading-state"><div className="spinner" /></div>

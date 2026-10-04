@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { isStaleChunkError, reloadForStaleChunk } from '../lib/staleChunk';
+import { reportError } from '../lib/monitoring';
 
 interface Props {
   children: ReactNode;
@@ -28,6 +29,8 @@ export default class ErrorBoundary extends Component<Props, State> {
       return;
     }
     console.error('Restorify crashed:', error, info.componentStack);
+    // Antes se quedaba en la consola del teléfono de quien lo vio: nadie se enteraba.
+    reportError(error, { componentStack: info.componentStack });
   }
 
   render() {

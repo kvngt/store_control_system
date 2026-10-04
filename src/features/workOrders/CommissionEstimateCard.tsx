@@ -8,31 +8,46 @@ interface CommissionEstimateCardProps {
   /** Administración ve el reparto entero; un técnico, lo suyo. */
   isAdmin: boolean;
   userId?: string;
-  /** Nombre de cada asignado, para el reparto que ve administración. */
+  /** Nombre de cada técnico (asignados y técnicos de tareas), para lo que ve administración. */
   names: Record<string, string>;
 }
 
 /**
  * La comisión de una orden, con la cuenta a la vista.
  *
- * Para un técnico es la única cifra de dinero que ve, y por qué la ve: su parte de la mano de
- * obra de SU especialidad (reunión con el taller, sept. 2026). Mostrar la cuenta — bolsa ×
- * porcentaje ÷ compañeros — es lo que evita la pregunta "¿de dónde sale este número?" el día
- * del pago.
+ * Desde 20261010000006 la comisión es por tarea: cada línea de mano de obra con técnico le paga
+ * a ese técnico su porcentaje. Las líneas de antes, sin técnico, siguen con el reparto por
+ * especialidad (bolsa × porcentaje ÷ compañeros). La tarjeta muestra las dos cosas: es lo que
+ * evita la pregunta "¿de dónde sale este número?" el día del pago.
  *
- * Para administración es el reparto: cuánto se lleva cada quien de cada bolsa, y el aviso de
- * una bolsa que nadie cobra (mano de obra de pintura sin pintor asignado).
+ * Para un técnico es la única cifra de dinero que ve: sus tareas y, si la hay, su parte del
+ * reparto. Para administración es el reparto entero y dos avisos: tareas sin técnico (nadie
+ * cobrará su comisión) y una bolsa heredada que nadie cobra.
  *
- * La cuenta la hace la base (`comisiones_estimadas`), la misma que devenga al entregar.
+ * Todas las cifras las da la base (`comisiones_estimadas`, la misma cuenta que devenga al
+ * entregar). Aquí no se multiplica ni se suma nada.
  */
 export default function CommissionEstimateCard({ estimate, isAdmin, userId, names }: CommissionEstimateCardProps) {
   const { t } = useLanguage();
   const specialtyLabel = (s: Specialty) => (s === 'pintura' ? t('workOrders.painting') : t('workOrders.mechanical'));
+  const tareas = estimate.tareas ?? [];
+  const sinAsignar = estimate.sin_asignar ?? [];
+  const rate = (porcentaje: number) => `${Number(porcentaje)}%`;
+  const hasPool = (especialidad: Specialty) => estimate.bolsas.some((b) => b.especialidad === especialidad);
+  const inheritedDetail = (especialidad: Specialty, porcentaje: number, tecnicos: number) => {
+    const bolsa = estimate.bolsas.find((b) => b.especialidad === especialidad);
+    return t('commission.detail')
+      .replace('{especialidad}', specialtyLabel(especialidad))
+      .replace('{labor}', money(bolsa?.base ?? 0))
+      .replace('{rate}', String(Number(porcentaje)))
+      .replace('{crew}', String(tecnicos));
+  };
 
   if (!isAdmin) {
     const mine = estimate.reparto.filter((r) => r.usuario_id === userId);
     if (mine.length === 0) return null;
     const salaried = mine.every((r) => r.esquema === 'salario');
+    const myTasks = tareas.filter((x) => x.usuario_id === userId);
 
     return (
       <div className="card commission-estimate" style={{ marginTop: 'var(--space-4)' }}>
@@ -45,18 +60,29 @@ export default function CommissionEstimateCard({ estimate, isAdmin, userId, name
             {salaried ? (
               <p className="field-hint" style={{ marginTop: 'var(--space-1)' }}>{t('commission.salaried')}</p>
             ) : (
-              mine.map((r) => {
-                const bolsa = estimate.bolsas.find((b) => b.especialidad === r.especialidad);
-                return (
-                  <p key={r.especialidad} className="field-hint" style={{ marginTop: 'var(--space-1)' }}>
-                    {t('commission.detail')
-                      .replace('{especialidad}', specialtyLabel(r.especialidad))
-                      .replace('{labor}', money(bolsa?.base ?? 0))
-                      .replace('{rate}', String(Number(r.porcentaje)))
-                      .replace('{crew}', String(r.tecnicos))}
+              <>
+                {/* Su parte del reparto heredado (líneas de antes sin técnico). Un grupo sin
+                    `heredado` (dato anterior a la comisión por tarea) es todo reparto; con tareas
+                    y sin bolsa, la línea "$0.00 ÷ 1" solo estorbaría. */}
+                {mine
+                  .filter((r) => (r.heredado ?? true) && (!r.tareas || hasPool(r.especialidad)))
+                  .map((r) => (
+                    <p key={r.especialidad} className="field-hint" style={{ marginTop: 'var(--space-1)' }}>
+                      {inheritedDetail(r.especialidad, r.porcentaje, r.tecnicos)}
+                    </p>
+                  ))}
+                {myTasks.map((x) => (
+                  <p key={x.labor_id} className="field-hint commission-task-line" style={{ marginTop: 'var(--space-1)' }}>
+                    <span>
+                      {t('commission.taskDetail')
+                        .replace('{descripcion}', x.descripcion)
+                        .replace('{base}', money(Number(x.base)))
+                        .replace('{rate}', String(Number(x.porcentaje)))}
+                    </span>
+                    <span className="commission-split-amount">{money(Number(x.monto))}</span>
                   </p>
-                );
-              })
+                ))}
+              </>
             )}
           </div>
           {!salaried && <div className="commission-estimate-amount">{money(Number(estimate.mi_total))}</div>}
@@ -68,10 +94,11 @@ export default function CommissionEstimateCard({ estimate, isAdmin, userId, name
     );
   }
 
-  // Administración: una sección por bolsa, incluidas las especialidades con gente asignada y
-  // sin mano de obra, para que se vea por qué alguien no cobra.
+  // Administración: una sección por especialidad con lo de cada quien (sus tareas más su parte
+  // del reparto heredado), incluidas las especialidades con gente asignada y sin mano de obra,
+  // para que se vea por qué alguien no cobra. Debajo, el detalle por tarea.
   const specialties = [...new Set([...estimate.bolsas.map((b) => b.especialidad), ...estimate.reparto.map((r) => r.especialidad)])];
-  if (specialties.length === 0) return null;
+  if (specialties.length === 0 && tareas.length === 0 && sinAsignar.length === 0) return null;
 
   return (
     <div className="card" style={{ marginTop: 'var(--space-4)' }}>
@@ -79,6 +106,23 @@ export default function CommissionEstimateCard({ estimate, isAdmin, userId, name
         <Wallet size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
         {t('commission.splitTitle')}
       </h3>
+
+      {sinAsignar.length > 0 && (
+        <div className="commission-split-warning commission-unassigned" role="note">
+          <AlertTriangle size={14} aria-hidden="true" />
+          <div>
+            <p>{t('commission.unassignedTitle')}</p>
+            <ul>
+              {sinAsignar.map((x) => (
+                <li key={x.labor_id}>
+                  {x.descripcion} <span className="commission-split-rate">({specialtyLabel(x.especialidad)})</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
       {specialties.map((esp) => {
         const bolsa = estimate.bolsas.find((b) => b.especialidad === esp);
         const people = estimate.reparto.filter((r) => r.especialidad === esp);
@@ -86,28 +130,64 @@ export default function CommissionEstimateCard({ estimate, isAdmin, userId, name
           <div key={esp} className="commission-split">
             <div className="commission-split-header">
               <strong>{specialtyLabel(esp)}</strong>
-              <span>{t('commission.pool').replace('{monto}', money(bolsa?.base ?? 0))}</span>
+              {bolsa && (
+                <span>
+                  {(tareas.length > 0 ? t('commission.inheritedPool') : t('commission.pool')).replace('{monto}', money(bolsa.base))}
+                </span>
+              )}
             </div>
-            {people.length === 0 ? (
+            {bolsa && bolsa.tecnicos === 0 && (
               <p className="commission-split-warning" role="note">
                 <AlertTriangle size={14} /> {t('commission.nobodyAssigned').replace('{especialidad}', specialtyLabel(esp).toLowerCase())}
               </p>
-            ) : (
+            )}
+            {people.length > 0 && (
               <ul className="commission-split-list">
-                {people.map((r) => (
-                  <li key={r.usuario_id}>
-                    <span>{names[r.usuario_id] ?? '—'}</span>
-                    <span className="commission-split-rate">
-                      {r.esquema === 'salario' ? t('commission.salaryStaysInShop') : `${Number(r.porcentaje)}%`}
-                    </span>
-                    <span className="commission-split-amount">{r.esquema === 'salario' ? '—' : money(Number(r.monto))}</span>
-                  </li>
-                ))}
+                {people.map((r) => {
+                  const parts = [
+                    r.tareas > 0 ? t('commission.taskCount').replace('{n}', String(r.tareas)) : '',
+                    r.heredado && r.tareas > 0 && hasPool(esp) ? t('commission.inheritedShare').replace('{crew}', String(r.tecnicos)) : '',
+                  ].filter(Boolean);
+                  return (
+                    <li key={r.usuario_id}>
+                      <span>
+                        {names[r.usuario_id] ?? '—'}
+                        {parts.length > 0 && <span className="commission-split-rate"> · {parts.join(' + ')}</span>}
+                      </span>
+                      <span className="commission-split-rate">
+                        {r.esquema === 'salario' ? t('commission.salaryStaysInShop') : rate(r.porcentaje)}
+                      </span>
+                      <span className="commission-split-amount">{r.esquema === 'salario' ? '—' : money(Number(r.monto))}</span>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
         );
       })}
+
+      {tareas.length > 0 && (
+        <div className="commission-split">
+          <div className="commission-split-header">
+            <strong>{t('commission.byTask')}</strong>
+          </div>
+          <ul className="commission-split-list commission-task-list">
+            {tareas.map((x) => (
+              <li key={x.labor_id}>
+                <span>
+                  {x.descripcion}
+                  <span className="commission-split-rate"> · {names[x.usuario_id] ?? '—'}</span>
+                </span>
+                <span className="commission-split-rate">
+                  {x.esquema === 'salario' ? t('commission.salaryStaysInShop') : `${money(Number(x.base))} × ${rate(x.porcentaje)}`}
+                </span>
+                <span className="commission-split-amount">{x.esquema === 'salario' ? '—' : money(Number(x.monto))}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <p className="field-hint" style={{ marginTop: 'var(--space-2)' }}>{t('commission.splitHint')}</p>
     </div>
   );

@@ -1,57 +1,92 @@
 import { useState } from 'react';
-import { Check, CheckCircle2, Circle, Pencil, Plus, Trash2, Wrench, X } from 'lucide-react';
+import { Check, CheckCircle2, Circle, Lock, Pencil, Trash2, User, Wrench, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
-import { SPECIALTIES, type LaborItem, type Specialty } from '../../types/database';
+import { SPECIALTIES, type LaborItem, type Specialty, type WorkType } from '../../types/database';
 import LineStateBadge from './LineStateBadge';
 import { isApproved } from './lineState';
 import { money } from '../../lib/money';
+import TaskEditor from './TaskEditor';
+import TechnicianSelect from './TechnicianSelect';
+import TradeMismatchDialog from './TradeMismatchDialog';
+import { defaultTechnicianId, isTradeMismatch, isUnassignedTask, type TaskDraft, type Technician } from './tasks';
 
 interface LaborTableProps {
   items: LaborItem[];
   canEdit: boolean;
   busy: boolean;
-  onAdd: (item: { descripcion: string; costo: number; especialidad?: Specialty }) => Promise<void>;
-  onUpdate: (id: string, item: { descripcion: string; costo: number; especialidad?: Specialty }) => Promise<void>;
-  /**
-   * Si cada línea dice a qué bolsa de comisión va. Solo en órdenes "combinado": en las demás
-   * la especialidad es la del tipo de orden y no hay nada que elegir (20261009000000).
-   */
-  specialties?: boolean;
+  /** Una tarea nueva, con su tipo y su técnico. `false` = no se guardó. */
+  onAdd: (task: TaskDraft) => Promise<boolean | void>;
+  onUpdate: (id: string, item: { descripcion: string; costo: number }) => Promise<void>;
   onRemove: (id: string, descripcion: string) => Promise<void>;
   /**
    * Si se ofrece tachar el trabajo hecho. Es del técnico asignado, no solo del admin: por
-   * eso va aparte de `canEdit`, que gobierna cotizar.
+   * eso va aparte de `canEdit`, que gobierna cotizar. Como función, por línea: una tarea con
+   * técnico la marca solo ese técnico (o administración).
    */
-  canComplete: boolean;
+  canComplete: boolean | ((item: LaborItem) => boolean);
   onToggleComplete: (item: LaborItem) => void;
+  /** "Mano de obra" para administración y el cliente; "Tareas" para el técnico (03/10/2026). */
+  title?: string;
+  /** El tipo de la orden: el tipo con el que nace cada tarea nueva. */
+  workType?: WorkType;
+  /** Mecánicos y pintores de la sede de la orden: quienes pueden recibir una tarea. */
+  technicians?: Technician[];
+  /** Cambiar el técnico de una línea (administración). Sin esto el técnico solo se muestra. */
+  onAssign?: (item: LaborItem, asignadoA: string | null) => Promise<void>;
+  /** Cambiar el tipo (la bolsa) de una línea. Igual que el técnico, no toca lo cotizado. */
+  onChangeSpecialty?: (item: LaborItem, especialidad: Specialty) => Promise<void>;
+  /** Líneas con la comisión ya pagada: la base no deja cambiarles técnico ni tipo, ni borrarlas. */
+  lockedIds?: ReadonlySet<string>;
+  /**
+   * Especialidades cuyo reparto heredado ya se pagó: una línea heredada sin técnico no puede
+   * pasar a ellas (la base lo rechaza; su comisión no la cobraría nadie).
+   */
+  paidPools?: ReadonlySet<Specialty>;
 }
+
+const NO_LOCKS: ReadonlySet<string> = new Set();
+const NO_POOLS: ReadonlySet<Specialty> = new Set();
 
 /**
  * The labor lines of an order, editable in place.
  *
+ * Desde la comisión por tarea (20261010000006) cada línea dice su tipo y su técnico, que es
+ * quien cobra su comisión. Administración los cambia en la misma fila; el alta es el editor de
+ * tareas (`TaskEditor`), el mismo que usará el alta de la orden.
+ *
  * The row drafts live here rather than on the page: they are keystrokes in one
  * card, and nothing outside it ever needs to read them.
  */
-export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRemove, canComplete, onToggleComplete, specialties = false }: LaborTableProps) {
+export default function LaborTable({
+  items,
+  canEdit,
+  busy,
+  onAdd,
+  onUpdate,
+  onRemove,
+  canComplete,
+  onToggleComplete,
+  title,
+  workType = 'mecanica',
+  technicians = [],
+  onAssign,
+  onChangeSpecialty,
+  lockedIds = NO_LOCKS,
+  paidPools = NO_POOLS,
+}: LaborTableProps) {
   const { t } = useLanguage();
-  const [newDraft, setNewDraft] = useState<{ descripcion: string; costo: string; especialidad: Specialty }>({ descripcion: '', costo: '', especialidad: 'mecanica' });
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<{ descripcion: string; costo: string; especialidad: Specialty }>({ descripcion: '', costo: '', especialidad: 'mecanica' });
+  const [editDraft, setEditDraft] = useState<{ descripcion: string; costo: string }>({ descripcion: '', costo: '' });
+  // Un cambio de técnico fuera de oficio espera la respuesta del diálogo.
+  const [pendingAssign, setPendingAssign] = useState<{ item: LaborItem; technician: Technician } | null>(null);
+  // Lo mismo desde el otro selector: pasar a pintura una tarea de un mecánico es el mismo cruce.
+  const [pendingType, setPendingType] = useState<{ item: LaborItem; especialidad: Specialty; technician: Technician } | null>(null);
+  // Remonta los selectores al cancelar: sin cambio de estado React no vuelve a pintar el valor
+  // real, y el <select> se quedaba mostrando a quien no se asignó.
+  const [selectEpoch, setSelectEpoch] = useState(0);
   const specialtyLabel = (s?: Specialty) => (s === 'pintura' ? t('workOrders.painting') : t('workOrders.mechanical'));
-  // El mismo selector en la fila de alta y en la de edición.
-  const specialtySelect = (value: Specialty, onChange: (s: Specialty) => void, id: string) => (
-    <select
-      id={id}
-      className="form-input form-select labor-specialty-select"
-      value={value}
-      onChange={(e) => onChange(e.target.value as Specialty)}
-      aria-label={t('commission.specialty')}
-    >
-      {SPECIALTIES.map((s) => (
-        <option key={s} value={s}>{specialtyLabel(s)}</option>
-      ))}
-    </select>
-  );
+  const completable = (item: LaborItem) => (typeof canComplete === 'function' ? canComplete(item) : canComplete);
+  const editableRows = canEdit && !!onAssign;
 
   // Solo lo autorizado se cobra; lo demás se muestra aparte para que se vea cuánto
   // falta que el cliente autorice.
@@ -73,34 +108,112 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
 
   const startEdit = (item: LaborItem) => {
     setEditingId(item.id);
-    setEditDraft({ descripcion: item.descripcion, costo: String(item.costo), especialidad: item.especialidad ?? 'mecanica' });
+    setEditDraft({ descripcion: item.descripcion, costo: String(item.costo) });
   };
 
   const saveEdit = async () => {
     if (!editingId || !editDraft.descripcion.trim()) return;
-    await onUpdate(editingId, {
-      descripcion: editDraft.descripcion,
-      costo: toCost(editDraft.costo),
-      ...(specialties ? { especialidad: editDraft.especialidad } : {}),
-    });
+    await onUpdate(editingId, { descripcion: editDraft.descripcion, costo: toCost(editDraft.costo) });
     setEditingId(null);
   };
 
-  const add = async () => {
-    if (!newDraft.descripcion.trim()) return;
-    await onAdd({
-      descripcion: newDraft.descripcion,
-      costo: toCost(newDraft.costo),
-      ...(specialties ? { especialidad: newDraft.especialidad } : {}),
-    });
-    setNewDraft({ descripcion: '', costo: '', especialidad: newDraft.especialidad });
+  const technicianOf = (item: LaborItem): Technician | null =>
+    technicians.find((tech) => tech.id === item.asignado_a) ?? item.tecnico ?? null;
+
+  const chooseTechnician = (item: LaborItem, id: string) => {
+    if (!onAssign || id === (item.asignado_a ?? '')) return;
+    const technician = technicians.find((tech) => tech.id === id);
+    if (technician && isTradeMismatch(item.especialidad ?? 'mecanica', technician)) {
+      setPendingAssign({ item, technician });
+      return;
+    }
+    void onAssign(item, id || null);
+  };
+
+  const chooseSpecialty = (item: LaborItem, especialidad: Specialty) => {
+    if (!onChangeSpecialty || especialidad === (item.especialidad ?? 'mecanica')) return;
+    const technician = item.asignado_a ? technicianOf(item) : null;
+    if (technician && isTradeMismatch(especialidad, technician)) {
+      setPendingType({ item, especialidad, technician });
+      return;
+    }
+    void onChangeSpecialty(item, especialidad);
+  };
+
+  const closePending = () => {
+    setPendingAssign(null);
+    setPendingType(null);
+    setSelectEpoch((n) => n + 1);
+  };
+
+  // Tipo y técnico de una fila. Administración los cambia aquí mismo (en cualquier estado:
+  // no son lo cotizado); los demás los leen.
+  const assignmentControls = (item: LaborItem) => {
+    const locked = lockedIds.has(item.id);
+    const inherited = !item.asignado_a && item.reparto_heredado !== false;
+    // Una línea heredada autorizada se queda en el reparto al cambiar de tipo: no puede pasar a
+    // una especialidad cuyo reparto ya se pagó.
+    const blockedType = (s: Specialty) =>
+      inherited && isApproved(item) && s !== (item.especialidad ?? 'mecanica') && paidPools.has(s);
+    if (editableRows) {
+      return (
+        <div className="labor-meta">
+          <select
+            key={`type-${item.id}-${selectEpoch}`}
+            id={`labor-type-${item.id}`}
+            className="form-input form-select labor-meta-select labor-type-select"
+            value={item.especialidad ?? 'mecanica'}
+            onChange={(e) => chooseSpecialty(item, e.target.value as Specialty)}
+            disabled={busy || locked || !onChangeSpecialty}
+            aria-label={t('tasks.type')}
+            title={locked ? t('tasks.paidLocked') : t('tasks.type')}
+          >
+            {SPECIALTIES.map((s) => (
+              <option key={s} value={s} disabled={blockedType(s)} title={blockedType(s) ? t('tasks.paidPoolHint') : undefined}>
+                {blockedType(s) ? `${specialtyLabel(s)} (${t('tasks.paidPool')})` : specialtyLabel(s)}
+              </option>
+            ))}
+          </select>
+          <TechnicianSelect
+            key={`tech-${item.id}-${selectEpoch}`}
+            id={`labor-tech-${item.id}`}
+            className="labor-meta-select labor-tech-select"
+            value={item.asignado_a ?? ''}
+            onChange={(id) => chooseTechnician(item, id)}
+            technicians={technicians}
+            current={item.tecnico ?? null}
+            emptyLabel={inherited ? t('tasks.inheritedSplit') : t('tasks.unassigned')}
+            disabled={busy || locked}
+            title={locked ? t('tasks.paidLocked') : inherited ? t('tasks.inheritedHint') : undefined}
+          />
+          {locked && (
+            <span className="labor-meta-lock" title={t('tasks.paidLocked')} aria-label={t('tasks.paidLocked')} role="img">
+              <Lock size={14} />
+            </span>
+          )}
+        </div>
+      );
+    }
+    const technician = technicianOf(item);
+    return (
+      <div className="labor-meta">
+        <span className={`labor-specialty-tag labor-specialty-${item.especialidad ?? 'mecanica'}`}>{specialtyLabel(item.especialidad)}</span>
+        {technician ? (
+          <span className="labor-technician">
+            <User size={12} aria-hidden="true" /> {technician.nombre_completo}
+          </span>
+        ) : isUnassignedTask(item) ? (
+          <span className="labor-technician is-empty">{t('tasks.noTechnician')}</span>
+        ) : null}
+      </div>
+    );
   };
 
   return (
     <div className="card">
       <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>
         <Wrench size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
-        {t('workOrders.laborDescription')}
+        {title ?? t('workOrders.laborDescription')}
       </h3>
       {/* `cards-on-mobile`: en el teléfono la tabla se apila en tarjetas en vez
           de hacer scroll horizontal. Es la tabla que un mecánico edita de pie
@@ -123,9 +236,8 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                       className="form-input"
                       value={editDraft.descripcion}
                       onChange={(e) => setEditDraft({ ...editDraft, descripcion: e.target.value })}
+                      aria-label={t('common.description')}
                     />
-                    {specialties &&
-                      specialtySelect(editDraft.especialidad, (s) => setEditDraft({ ...editDraft, especialidad: s }), `labor-specialty-${item.id}`)}
                   </td>
                   <td>
                     <input
@@ -137,6 +249,7 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                       style={{ textAlign: 'right' }}
                       value={editDraft.costo}
                       onChange={(e) => setEditDraft({ ...editDraft, costo: e.target.value })}
+                      aria-label={t('tasks.price')}
                     />
                   </td>
                   <td>
@@ -160,10 +273,10 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                     item.completado_en ? 'line-done' : '',
                   ].filter(Boolean).join(' ') || undefined}
                 >
-                  <td data-label={t('common.description')}>
+                  <td data-label={t('common.description')} className="labor-desc-cell">
                     {/* Va en esta celda y no en la de acciones: esa solo existe para un
                         admin, y tachar el trabajo es justamente del técnico. */}
-                    {canComplete && isApproved(item) && (
+                    {completable(item) && isApproved(item) && (
                       <button
                         type="button"
                         className="btn btn-ghost btn-sm btn-icon labor-check"
@@ -179,7 +292,14 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                       </button>
                     )}
                     <span className="line-desc">{item.descripcion}</span> <LineStateBadge state={item.estado} />
-                    {specialties && <span className="labor-specialty-tag">{specialtyLabel(item.especialidad)}</span>}
+                    {/* Para administración, a la vista: una tarea sin técnico no le paga
+                        comisión a nadie. */}
+                    {canEdit && isUnassignedTask(item) && item.estado !== 'rechazado' && (
+                      <span className="badge line-state labor-no-tech" title={t('tasks.noTechnicianHint')}>
+                        {t('tasks.noTechnician')}
+                      </span>
+                    )}
+                    {assignmentControls(item)}
                   </td>
                   <td data-label={t('common.total')} style={{ textAlign: 'right', fontWeight: 600 }}>{money(item.costo)}</td>
                   {canEdit && (
@@ -199,8 +319,17 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                           >
                             <Pencil size={14} />
                           </button>
-                          <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => onRemove(item.id, item.descripcion)} aria-label={t('common.delete')} title={t('common.delete')}>
-                            <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
+                          {/* Con la comisión pagada la base no deja borrarla: se dice aquí en vez de
+                              dejar intentarlo. */}
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm btn-icon"
+                            onClick={() => onRemove(item.id, item.descripcion)}
+                            disabled={lockedIds.has(item.id)}
+                            aria-label={lockedIds.has(item.id) ? `${t('common.delete')}: ${t('tasks.paidLocked')}` : t('common.delete')}
+                            title={lockedIds.has(item.id) ? t('tasks.paidLocked') : t('common.delete')}
+                          >
+                            <Trash2 size={14} style={{ color: lockedIds.has(item.id) ? 'var(--color-text-tertiary)' : 'var(--color-danger)' }} />
                           </button>
                         </div>
                       )}
@@ -243,41 +372,56 @@ export default function LaborTable({ items, canEdit, busy, onAdd, onUpdate, onRe
           </tbody>
         </table>
       </div>
-      {/* Cotizar es de administración. Para un técnico la fila de alta no
-          existe, en vez de estar ahí deshabilitada sin explicar por qué. */}
+      {/* Cotizar es de administración. Para un técnico el alta no existe, en vez de estar
+          ahí deshabilitada sin explicar por qué. */}
       {!canEdit && <p className="field-hint" style={{ marginTop: 'var(--space-2)' }}>{t('workOrders.laborReadOnlyHint')}</p>}
       {canEdit && (
-      <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-3)', flexWrap: 'wrap' }}>
-        <input
-          className="form-input"
-          placeholder={t('common.description')}
-          style={{ flex: '2 1 140px' }}
-          value={newDraft.descripcion}
-          onChange={(e) => setNewDraft({ ...newDraft, descripcion: e.target.value })}
+        <TaskEditor
+          workType={workType}
+          technicians={technicians}
+          defaultTechnicianId={defaultTechnicianId(items, technicians)}
+          busy={busy}
+          onAdd={onAdd}
+          idPrefix="labor-new"
         />
-        {specialties && specialtySelect(newDraft.especialidad, (s) => setNewDraft({ ...newDraft, especialidad: s }), 'labor-new-specialty')}
-        <input
-          className="form-input"
-          type="number"
-          inputMode="decimal"
-          min={0}
-          step="0.01"
-          placeholder="$"
-          style={{ maxWidth: 100 }}
-          value={newDraft.costo}
-          onChange={(e) => setNewDraft({ ...newDraft, costo: e.target.value })}
+      )}
+
+      {pendingAssign && onAssign && (
+        <TradeMismatchDialog
+          especialidad={pendingAssign.item.especialidad ?? 'mecanica'}
+          technician={pendingAssign.technician}
+          onAssign={() => {
+            const { item, technician } = pendingAssign;
+            setPendingAssign(null);
+            void onAssign(item, technician.id);
+          }}
+          onChooseOther={() => {
+            const id = `labor-tech-${pendingAssign.item.id}`;
+            closePending();
+            setTimeout(() => document.getElementById(id)?.focus(), 0);
+          }}
+          onCancel={closePending}
         />
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={add}
-          disabled={busy || !newDraft.descripcion.trim()}
-          aria-label={t('common.add')}
-          title={t('common.add')}
-        >
-          <Plus size={16} />
-        </button>
-      </div>
+      )}
+
+      {pendingType && onChangeSpecialty && (
+        <TradeMismatchDialog
+          especialidad={pendingType.especialidad}
+          technician={pendingType.technician}
+          title={pendingType.especialidad === 'pintura' ? t('tasks.typeMismatchPaintToMechanic') : t('tasks.typeMismatchMechanicToPainter')}
+          confirmLabel={t('tasks.changeAnyway')}
+          onAssign={() => {
+            const { item, especialidad } = pendingType;
+            setPendingType(null);
+            void onChangeSpecialty(item, especialidad);
+          }}
+          onChooseOther={() => {
+            const id = `labor-tech-${pendingType.item.id}`;
+            closePending();
+            setTimeout(() => document.getElementById(id)?.focus(), 0);
+          }}
+          onCancel={closePending}
+        />
       )}
     </div>
   );

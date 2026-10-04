@@ -230,7 +230,7 @@ sedes ──┬── perfiles ── perfiles_pago usuarios; rol: admin | mecan
         │                    ├── orden_avances ─┐      bitácora del técnico
         │                    ├── orden_media ◄──┘      fotos, videos, audio (bucket privado)
         │                    ├── orden_enlaces         enlace del cliente (token) · SOLO ADMIN
-        │                    └── comisiones ── comision_pagos   una por (orden, persona, especialidad)
+        │                    └── comisiones ── comision_pagos   una por tarea (labor_id) y una por (persona, bolsa heredada)
         ├── finanzas_movimientos ──┬── ordenes_trabajo      referencia_orden_id
         │                          ├── finanzas_importaciones
         │                          └── comision_pagos       comision_pago_id (FK en cascada)
@@ -252,7 +252,8 @@ así que `select('*, montos:orden_montos(*)')` sirve para los dos roles.
 
 **Los repuestos son de traspaso.** Se captura solo el precio; el trigger copia el
 precio al costo (`costo_unitario`). La comisión sale solo de la mano de obra
-autorizada, por especialidad (`orden_labor.especialidad`). Ver [comisiones.md](comisiones.md).
+autorizada: cada tarea le paga a su técnico (`orden_labor.asignado_a`, desde `20261010000006`) y
+las líneas de antes se reparten por especialidad (`reparto_heredado`). Ver [comisiones.md](comisiones.md).
 
 **El cobro al entregar lleva su método.** `finanzas_movimientos.metodo_pago`
 (efectivo, cheque, transferencia) y `comprobante_ruta` (foto en el bucket privado
@@ -320,24 +321,26 @@ técnico.
 | `orden_montos` | `trg_order_montos_guard` | Totales solo por recálculo; depósito fijo tras entregar |
 | | `trg_order_montos_deposit` | Asienta el depósito (o su ajuste) |
 | | `trg_order_montos_delivered_adjustment` | Si cambia el total de una orden entregada, asienta la diferencia |
-| | `trg_order_montos_commissions` | Recalcula comisiones al cambiar totales |
 | `orden_labor` | `trg_labor_totals`, `trg_labor_delivered_guard` | Recalcula totales (solo aprobado); técnico no toca orden entregada |
-| | `trg_labor_quote_guard` | Línea nueva = borrador; pendiente no se edita (salvo su especialidad); el estado solo lo cambia un presupuesto; corregir una rechazada la vuelve a borrador |
+| | `trg_labor_quote_guard` | Línea nueva = borrador; pendiente no se edita (salvo especialidad, técnico y `reparto_heredado`, que no son lo cotizado ni mueven el estado); el estado solo lo cambia un presupuesto; corregir una rechazada la vuelve a borrador |
 | | `trg_labor_especialidad` | Una línea sin especialidad toma la del tipo de orden (mecánica en "combinado") |
-| | `trg_labor_specialty_commissions` | Cambiar la especialidad recalcula las comisiones pendientes |
+| | `trg_labor_tecnico_guard` | El técnico de una tarea es mecánico o pintor de la sede de la orden; con la comisión pagada (o la bolsa heredada pagada) no se cambia técnico, especialidad ni reparto ni se borra; nada entra a una bolsa pagada; una línea no se muda de orden |
+| | `trg_labor_tecnico_asignado` | Quien recibe una tarea entra a la orden (`origen = 'tarea'`); avisos `tarea_asignada` / `tarea_reasignada` |
+| | `trg_labor_commissions` | Recalcula las comisiones pendientes al cambiar estado, costo, técnico, reparto o especialidad (reemplaza a `trg_labor_specialty_commissions` y a `trg_order_montos_commissions`, eliminados en `20261010000006`) |
 | `orden_repuestos` | `trg_parts_subtotal`, `trg_part_cost_passthrough` | Subtotal y costo = precio |
 | | `trg_parts_quote_guard` | Igual que en mano de obra |
 | | `trg_parts_totals`, `trg_parts_expense_sync` | Totales y ajuste de egreso en orden entregada |
 | | `trg_parts_delivered_guard` | Técnico no toca los repuestos de una orden entregada |
-| `orden_asignaciones` | `trg_assignment_commissions` | Re-reparte las bolsas de comisión |
+| `orden_asignaciones` | `trg_assignment_commissions` | Re-reparte las bolsas heredadas de comisión |
+| | `trg_assignment_tasks_guard` | No se quita de la orden a quien tiene tareas (salvo al borrar la orden o al empleado); no se cambia quién reparte una bolsa ya pagada (`origen`, `tipo_tarea`) |
 | | `trg_assignments_delivered_guard` | Técnico no toca las asignaciones de una orden entregada |
 | | `trg_assignment_owner_immutable` | Una asignación no cambia de orden ni de persona |
-| | `trg_assignment_notify` | Aviso al técnico asignado / quitado |
+| | `trg_assignment_notify` | Aviso al técnico asignado (no si entró por una tarea) / quitado |
 | `orden_avances` | `trg_progress_notify` | Aviso a admins cuando un técnico documenta |
 | | `trg_avance_publicar_archivos` | Publicar un avance al cliente publica sus archivos |
 | | `trg_avance_owner_immutable` | Un avance no cambia de orden ni de autor |
 | `orden_media` | `trg_orden_media_prepare`, `trg_orden_media_guard` | Sede, ruta válida, visibilidad inicial; inmutable salvo visibilidad |
-| `comisiones` | `trg_commission_notify` | Aviso "comisión generada" |
+| `comisiones` | `trg_commission_notify` | Aviso "comisión generada", uno por orden y persona (por sentencia) |
 | `comision_pagos` | — | Desde `20261010000000` el egreso lo asienta `pay_commissions`, uno por orden (antes, un trigger con un egreso único) |
 | `perfiles_pago` | `trg_perfiles_pago_sello`, `trg_pay_scheme_commissions` | Quién y cuándo cambió el esquema; recalcula las comisiones pendientes de esa persona |
 | `sedes` | `trg_sede_commission_rate` | Re-precia comisiones pendientes al cambiar el % |
@@ -368,7 +371,7 @@ permiten cambiar totales con esa bandera: un `PATCH` directo a la API no la tien
 | `repuestos_de_orden` | todos | Repuestos sin precio (lo que ve un técnico, solo de sus órdenes) |
 | `saldo_orden` | admin | Lo que falta cobrar (o devolver) de una orden: total autorizado − cobrado neto |
 | `entregar_orden` | admin | Diálogo de entrega: asienta el pago final con su método (o la devolución) y marca la orden entregada, en una transacción; rechaza una segunda entrega |
-| `comisiones_estimadas` | admin y técnico asignado | Bolsas por especialidad y reparto de la orden (el técnico recibe lo suyo y su total) |
+| `comisiones_estimadas` | admin y técnico asignado | Bolsas heredadas, reparto por persona, cada tarea con su comisión y las tareas sin técnico (`sin_asignar`); el técnico recibe solo lo suyo y su total |
 | `resumen_empleado` | admin | Comisiones pendientes y pagadas, órdenes activas y entregadas de un empleado |
 | `balance_orden` | admin | Cobrado, costo de repuestos, comisiones devengadas y margen de una orden; lo demás vinculado, aparte |
 | `margen_ordenes` | admin | Órdenes entregadas de un periodo con su margen, paginadas, y las sumas del periodo |
@@ -418,7 +421,9 @@ Sobre eso:
   suelta al cliente, **tomar la firma de recepción**, **entregar** (`entregar_orden`), **abrir una orden**
   (`ordenes_trabajo_insert`) y **alta y baja de asignaciones**
   (`orden_asignaciones_insert` / `_delete`) — asignar reparte la comisión de la mano de
-  obra, así que no es una etiqueta.
+  obra, así que no es una etiqueta. Desde `20261010000006` también **editar una asignación**
+  (`orden_asignaciones_update`) y **asignar el técnico de una tarea** (escritura de
+  `orden_labor`).
 - **Propio:** `notificaciones` y `push_suscripciones` (cada quien las suyas);
   `comisiones` las lee el técnico dueño; avances y archivos se borran por su autor.
 - **Asignado:** modificar una orden (estado y avance), escribir avances y subir

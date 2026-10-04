@@ -26,6 +26,8 @@ export type {
   OrderAmounts,
   PartSummary,
   OrderProgressUpdate,
+  OrderHistoryEntry,
+  HistoryChange,
   LaborItem,
   OrderAssignment,
   WorkOrderPart,
