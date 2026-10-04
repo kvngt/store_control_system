@@ -32,6 +32,7 @@ const mocks = vi.hoisted(() => ({
   createVehicle: vi.fn(),
   addLaborItem: vi.fn(),
   updateWorkOrderStatus: vi.fn(),
+  updateWorkOrderProgress: vi.fn(),
   uploadSignature: vi.fn(),
   getBalance: vi.fn(),
   getEstimate: vi.fn(),
@@ -66,6 +67,7 @@ vi.mock('../services/supabaseService', () => {
     createWorkOrder: mocks.createWorkOrder,
     addLaborItem: mocks.addLaborItem,
     updateWorkOrderStatus: mocks.updateWorkOrderStatus,
+    updateWorkOrderProgress: mocks.updateWorkOrderProgress,
     uploadSignature: mocks.uploadSignature,
     uploadOrderPhotos: vi.fn(),
     getBalance: mocks.getBalance,
@@ -649,5 +651,82 @@ describe('WorkOrders — order detail', () => {
     // Cancelled, so nothing was sent and the selector shows the real status again.
     expect(mocks.updateWorkOrderStatus).not.toHaveBeenCalled();
     expect(screen.getByDisplayValue('En Proceso')).toBeInTheDocument();
+  });
+});
+
+// Reporte del taller (octubre 2026): una orden quedó Finalizada en 80 % y después en 0 %,
+// con el control ya bloqueado. El control deslizante guardaba en cada paso del arrastre sin
+// esperar a nada, y la casilla vacía se guardaba como 0; una de esas escrituras llegó a la
+// base después de "Finalizado". La base ya lo corrige (14_avance_orden_cerrada.test.sql);
+// esto fija que la pantalla no mande la ráfaga ni pinte un número que la base no guardó.
+describe('WorkOrders — avance de la orden', () => {
+  const slider = () => document.querySelector('input[type="range"]') as HTMLInputElement;
+  // La casilla de número que va con el control, no la de costo de la mano de obra.
+  const box = () => slider().parentElement!.querySelector('input[type="number"]') as HTMLInputElement;
+
+  beforeEach(() => {
+    mocks.updateWorkOrderProgress.mockResolvedValue(undefined);
+  });
+
+  it('arrastrar no guarda nada; soltar guarda una vez, el valor final', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+
+    fireEvent.change(slider(), { target: { value: '50' } });
+    fireEvent.change(slider(), { target: { value: '65' } });
+    fireEvent.change(slider(), { target: { value: '80' } });
+    expect(mocks.updateWorkOrderProgress).not.toHaveBeenCalled();
+    // La casilla acompaña al arrastre aunque todavía no se haya guardado.
+    expect(box().value).toBe('80');
+
+    fireEvent.pointerUp(slider());
+
+    await waitFor(() => expect(mocks.updateWorkOrderProgress).toHaveBeenCalledTimes(1));
+    expect(mocks.updateWorkOrderProgress).toHaveBeenCalledWith(ORDER.id, 80);
+  });
+
+  it('soltar sin haber movido nada no escribe', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+
+    fireEvent.pointerUp(slider());
+    fireEvent.blur(slider());
+
+    expect(mocks.updateWorkOrderProgress).not.toHaveBeenCalled();
+  });
+
+  it('borrar la casilla y salir no guarda 0: vuelve a lo guardado', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+
+    const input = box();
+    fireEvent.change(input, { target: { value: '' } });
+    fireEvent.blur(input);
+
+    expect(mocks.updateWorkOrderProgress).not.toHaveBeenCalled();
+    expect(input.value).toBe('40');
+  });
+
+  it('después de guardar muestra lo que guardó la base, no lo que pidió', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+    expect(mocks.getWorkOrderDetail).toHaveBeenCalledTimes(1);
+
+    // Mientras tanto la orden se finalizó desde otra pantalla: la base dejó el avance en 100.
+    mocks.getWorkOrderDetail.mockResolvedValue({ ...DETAIL, estatus: 'finalizado', porcentaje_avance: 100 });
+
+    fireEvent.change(slider(), { target: { value: '80' } });
+    fireEvent.pointerUp(slider());
+
+    await waitFor(() => expect(mocks.getWorkOrderDetail).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(slider().value).toBe('100'));
+    expect(box().value).toBe('100');
+    expect(box()).toBeDisabled();
+    expect(slider()).toBeDisabled();
+    expect(screen.getByText(/la orden ya está cerrada/)).toBeInTheDocument();
   });
 });

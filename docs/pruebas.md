@@ -23,8 +23,8 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 504 pruebas, 71 archivos (1/10/2026) | ~30 s | Nada |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte y hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 330 aserciones, 13 archivos | ~1 min | Docker |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 508 pruebas, 71 archivos (3/10/2026) | ~30 s | Nada |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte y hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 351 aserciones, 14 archivos | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, 77 casos (76 pasan, 1 se salta) | 2–5 min | Credenciales de prueba (**al 1/10/2026 no existen**: se borraron el 29/09) |
 | **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 85 casos con las cuentas de prueba, todos de solo lectura. Los 66 anteriores, 66 PASS · 0 SKIP; los 19 de las migraciones `20261006000000` a `20261010000000` pasan solo con ellas aplicadas | ~15 s | Nada; con cuentas de prueba cubre más |
 | **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
@@ -208,7 +208,7 @@ PostgREST en cada petición.
 - Una cuenta de Auth sin perfil no lee sedes.
 - Existen los índices de las llaves foráneas más usadas; `create_work_order` tiene
   `search_path` fijo.
-- El avance de una orden no puede pasar de 100.
+- El avance de una orden abierta no puede pasar de 100 (en una cerrada se fija en 100, ver 14).
 - Deshacer una importación bancaria es una sola transacción; el recordatorio de orden
   vencida reemplaza el del día anterior en vez de apilar otro.
 
@@ -271,9 +271,19 @@ PostgREST en cada petición.
 - Un técnico no ve balance ni margen; las funciones internas no son RPC y el egreso único
   se retiró.
 
+**`supabase/tests/database/14_avance_orden_cerrada.test.sql`** (21)
+
+- Reporte del taller (octubre 2026): una orden quedó Finalizada en 80 % y después en 0 %.
+  Finalizar pone el avance en 100, y un 80 o un 0 que llega después (de la mecánica
+  asignada o de un admin) no lo baja; tampoco un UPDATE que mande estatus y avance juntos.
+  No es un error: puede ser una escritura atrasada de la propia pantalla.
+- Reabrir conserva el 100 y la mecánica lo puede bajar. Entregada, igual que finalizada.
+
 Las pruebas 01 y 02 firman la recepción antes de entregar: desde la fase 5, sin
 autorización no hay nada que cobrar ni comisión que generar.
 
+> **Estado (3 de octubre de 2026):** 351 aserciones en verde en los 14 archivos, localmente.
+>
 > **Estado (29 de septiembre de 2026):** **330 aserciones en verde** en los 13 archivos con
 > las 54 migraciones aplicadas desde cero, localmente y en CI. La primera corrida (158 aserciones en 7 archivos,
 > 15 de septiembre de 2026, 35 migraciones) fue la primera vez que se ejecutaron. Esa primera
@@ -349,7 +359,7 @@ Se necesita para:
 
 | Tarea | Comando | Por qué no se puede sin Docker |
 |---|---|---|
-| **Correr las pruebas de base de datos** (las 330 aserciones pgTAP) | `npm run test:db` | Necesitan un Postgres real donde crear datos y deshacerlos |
+| **Correr las pruebas de base de datos** (las 351 aserciones pgTAP) | `npm run test:db` | Necesitan un Postgres real donde crear datos y deshacerlos |
 | **Probar que las migraciones aplican desde cero** | `npx supabase db reset` | Recrea la base local aplicando las 54 migraciones en orden: detecta una migración que solo funciona sobre la base actual |
 | **Probar una migración antes de producción** | `npx supabase start` y luego la app contra la base local | Hoy cada migración se aplica directo al proyecto enlazado |
 | Probar edge functions localmente | `npx supabase functions serve` | Corren en el contenedor de Supabase |

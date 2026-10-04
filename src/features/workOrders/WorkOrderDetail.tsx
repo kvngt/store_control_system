@@ -87,6 +87,9 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
   const receptionPending = detail.pendingUploads.filter((p) => p.origen === 'recepcion');
   // Null para mecánicos y pintores: `orden_montos` es solo admin.
   const amounts = order.montos ?? null;
+  // Con la casilla vacía (borrada para escribir otro número) el control muestra lo guardado.
+  const draftProgress = parseInt(detail.progressDraft, 10);
+  const sliderProgress = Number.isNaN(draftProgress) ? order.porcentaje_avance : draftProgress;
 
   const addOperator = async () => {
     const op = operators.find((o) => o.id === addingOperatorId);
@@ -205,13 +208,19 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
                 <span style={{ marginLeft: 6, color: 'var(--color-text-tertiary)' }}>({t('workOrders.progressLocked')})</span>
               )}
             </div>
+            {/* Arrastrar solo mueve el borrador; se guarda al soltar (puntero o tecla) o al
+                salir del control. Guardar en cada paso mandaba una ráfaga de UPDATE que
+                llegaba a la base en cualquier orden (ver `commitProgress`). */}
             <input
               type="range"
               min={0}
               max={100}
               step={5}
-              value={order.porcentaje_avance}
-              onChange={(e) => detail.changeProgress(parseInt(e.target.value, 10))}
+              value={sliderProgress}
+              onChange={(e) => detail.setProgressDraft(e.target.value)}
+              onPointerUp={detail.commitProgress}
+              onKeyUp={detail.commitProgress}
+              onBlur={detail.commitProgress}
               disabled={!detail.canEditProgress}
               style={{ width: '100%' }}
             />
@@ -226,7 +235,7 @@ export default function WorkOrderDetail({ detail, operators, statusLabels, onBac
                 disabled={!detail.canEditProgress}
                 style={{ width: 70, textAlign: 'right', padding: 'var(--space-1) var(--space-2)', color: detail.isComplete ? 'var(--color-success)' : undefined, fontWeight: detail.isComplete ? 700 : undefined }}
                 onChange={(e) => detail.setProgressDraft(e.target.value)}
-                onBlur={() => detail.changeProgress(parseInt(detail.progressDraft, 10) || 0)}
+                onBlur={detail.commitProgress}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur(); } }}
               />
               <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: detail.isComplete ? 'var(--color-success)' : 'var(--color-primary-light)' }}>%</span>

@@ -307,7 +307,7 @@ técnico.
 | | `trg_order_portal` | Firma → enlace del cliente y correo de recepción; estatus → correo con espera y vencimiento del enlace |
 | | `trg_order_quote_signature` | La **primera** firma de la orden aprueba los borradores; volver a firmar no |
 | | `trg_order_montos_create` | Crea la fila de `orden_montos` |
-| | `trg_progress_on_status` | Avance a 100 % al finalizar o entregar |
+| | `trg_progress_on_status` | Avance en 100 % mientras la orden esté finalizada o entregada, no solo al cerrarla: una escritura del avance que llegue después no la deja por debajo (`20261010000001`). Reabierta, conserva el 100 y se puede bajar |
 | | `trg_order_delivery_payment` | Al entregar por otra vía que `entregar_orden`: cobra el saldo pendiente o asienta la devolución, sin método |
 | | `trg_order_parts_expense` | Al entregar: asienta el costo de repuestos |
 | | `trg_order_delivery_reversal` | Al sacar de entregado: revierte cobro final (o devolución) y costo de repuestos |

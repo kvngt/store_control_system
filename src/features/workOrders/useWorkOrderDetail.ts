@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/auth.context';
 import { useLanguage } from '../../context/language.context';
@@ -327,17 +327,46 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     }
   };
 
-  const changeProgress = async (value: number) => {
+  // El avance se guarda una vez por gesto (al soltar el control o al salir de la casilla) y
+  // en fila. Antes el control deslizante mandaba un UPDATE por cada paso de 5 mientras se
+  // arrastraba, sin esperar a ninguno: llegaban a la base en cualquier orden, ganaba el
+  // último en llegar aunque fuera un valor intermedio, y uno que llegara después de
+  // "Finalizado" dejó una orden cerrada en 80 % y otra en 0 % (octubre 2026). La base ya
+  // no deja una orden cerrada por debajo de 100 (20261010000001); esto es para no mandar la
+  // ráfaga y no pintar un número que la base no guardó.
+  const progressQueue = useRef<Promise<void>>(Promise.resolve());
+  const progressSeq = useRef(0);
+
+  const commitProgress = () => {
     if (!order || !canEditProgress) return;
+    const value = parseInt(progressDraft, 10);
+    // Una casilla vacía no es 0 %: quien la borró iba a escribir otro número.
+    if (Number.isNaN(value)) {
+      setProgressDraft(String(order.porcentaje_avance));
+      return;
+    }
     const clamped = Math.min(100, Math.max(0, value));
     setProgressDraft(String(clamped));
-    try {
-      await workOrdersService.updateWorkOrderProgress(order.id, clamped);
-      patchOrder({ porcentaje_avance: clamped });
-      onBoardChanged();
-    } catch (err) {
-      fail(err);
-    }
+    if (clamped === order.porcentaje_avance) return;
+
+    const orderId = order.id;
+    const seq = ++progressSeq.current;
+    progressQueue.current = progressQueue.current.then(async () => {
+      try {
+        await workOrdersService.updateWorkOrderProgress(orderId, clamped);
+      } catch (err) {
+        if (seq === progressSeq.current) setProgressDraft(String(order.porcentaje_avance));
+        fail(err);
+      }
+      // Se relee en vez de pintar el número pedido: si la orden se cerró mientras tanto,
+      // la base lo dejó en 100. Relee solo la última, para que el control no salte entre
+      // valores que ya se reemplazaron.
+      if (seq === progressSeq.current) {
+        await queryClient.invalidateQueries({ queryKey: queryKeys.workOrderDetail(orderId) });
+        onBoardChanged();
+      }
+      // Una fila rechazada se saltaría todas las escrituras de después.
+    }).catch(fail);
   };
 
   // ----- labor ---------------------------------------------------------------
@@ -684,7 +713,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     close,
     changeStatus,
     toggleLaborComplete,
-    changeProgress,
+    commitProgress,
     addLabor,
     updateLabor,
     removeLabor,

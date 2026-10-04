@@ -210,10 +210,13 @@ SELECT ok(
   'create_work_order tiene search_path fijo'
 );
 -- Como admin: sin sesión, el trigger que cierra las órdenes entregadas falla antes.
+-- Y sobre la orden abierta en la misma sentencia: en una cerrada el avance queda en 100
+-- (20261010000001) y el CHECK nunca ve el 150. El CHECK salta después de los BEFORE y
+-- antes de los AFTER, así que la reversión de la entrega no llega a correr.
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000001';
 SELECT throws_ok(
-  $$ UPDATE ordenes_trabajo SET porcentaje_avance = 150
+  $$ UPDATE ordenes_trabajo SET porcentaje_avance = 150, estatus = 'en_proceso'
      WHERE sede_id = '10000000-0000-0000-0000-000000000001' $$,
   '23514', NULL,
   'El avance de una orden no puede pasar de 100'
