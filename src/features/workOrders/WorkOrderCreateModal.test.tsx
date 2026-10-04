@@ -1,12 +1,10 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import WorkOrderCreateModal from './WorkOrderCreateModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '../../context/ToastContext';
-import { workOrdersService } from '../../services/workOrders.service';
-import * as mediaService from '../../services/media.service';
 import { customersService } from '../../services/customers.service';
 import { vehiclesService } from '../../services/vehicles.service';
 import { usersService } from '../../services/users.service';
@@ -57,7 +55,7 @@ import { useWorkOrderForm } from './useWorkOrderForm';
 const mockSubmit = vi.fn();
 
 function TestWrapper() {
-  const form = useWorkOrderForm(true); // isAdmin = true
+  const form = useWorkOrderForm();
   return (
     <WorkOrderCreateModal
       form={form}

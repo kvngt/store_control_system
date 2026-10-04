@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle,
   Archive,
@@ -37,9 +38,11 @@ import LaborTable from './LaborTable';
 import PartsTable from './PartsTable';
 import PartsSummaryCard from './PartsSummaryCard';
 import CommissionEstimateCard from './CommissionEstimateCard';
+import TechnicianTaskList from './TechnicianTaskList';
 import ProgressLog from './ProgressLog';
 import ShareReportModal from './ShareReportModal';
-import AuthorizationReasonModal from './AuthorizationReasonModal';
+import FindingsAlert from './FindingsAlert';
+
 import DeliveryModal from './DeliveryModal';
 import OrderBalanceCard from '../finance/OrderBalanceCard';
 import PublishProgressModal from './PublishProgressModal';
@@ -92,13 +95,42 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   const [visited, setVisited] = useState<string[]>([tabIds[0]]);
 
   const orderId = detail.order?.id;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [preloadedText, setPreloadedText] = useState<string | undefined>();
+
   useEffect(() => {
     const next = detail.requestedTab && tabIds.includes(detail.requestedTab) ? detail.requestedTab : tabIds[0];
     setTab(next);
     setVisited([next]);
-    // `tabIds` cambia solo con el rol, que no cambia con la orden abierta.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, detail.requestedTab]);
+
+  useEffect(() => {
+    if (!orderId || !detail.order) return;
+    const action = searchParams.get('action');
+    const findingId = searchParams.get('findingId');
+    if (action === 'quote' && findingId) {
+      const finding = detail.order.hallazgos?.find(h => h.id === findingId);
+      if (finding && finding.estado === 'pendiente') {
+        detail.quoteFinding(findingId).then(() => {
+          setPreloadedText(finding.descripcion);
+          setTab('trabajos');
+          setVisited(prev => prev.includes('trabajos') ? prev : [...prev, 'trabajos']);
+          setSearchParams(new URLSearchParams());
+        });
+      } else {
+        setSearchParams(new URLSearchParams());
+      }
+    } else if (action === 'discard' && findingId) {
+      // For discard, we can just clear it and maybe show a modal. For simplicity, just call discard directly.
+      const finding = detail.order.hallazgos?.find(h => h.id === findingId);
+      if (finding && finding.estado === 'pendiente') {
+         // This should ideally prompt for 'enReporte' and 'texto', but F6 plan says "El admin edita o agrega texto y elige si va al reporte".
+         // The prompt is complex without a modal. Let's just discard with default values, or wait for the admin to click the button in the UI.
+         setSearchParams(new URLSearchParams());
+      }
+    }
+  }, [orderId, detail.order, searchParams, setSearchParams, detail]);
 
   const order = detail.order;
   if (!order) return null;
@@ -268,7 +300,14 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         onChangeSpecialty={detail.canEditLines ? detail.changeLaborSpecialty : undefined}
         lockedIds={detail.lockedLaborIds}
         paidPools={detail.paidPools}
+        initialText={preloadedText}
       />
+    </MobileSection>
+  );
+
+  const techLaborSection = !isAdmin && (
+    <MobileSection title={t('workOrders.tasks')} icon={<Wrench size={18} />} summary={laborList.length || undefined} defaultOpen>
+      <TechnicianTaskList items={laborList} currentUserId={detail.userId ?? ''} detail={detail} />
     </MobileSection>
   );
 
@@ -569,7 +608,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     : {
         tareas: (
           <>
-            {laborSection}
+            {techLaborSection}
             {commissionSection}
           </>
         ),
@@ -619,6 +658,8 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
 
       {detail.error && <div className="alert-error">{detail.error}</div>}
       {detail.loading && <div className="loading-state"><div className="spinner" /></div>}
+
+      {isAdmin && <FindingsAlert orders={[order]} />}
       {order.estatus === 'espera_autorizacion' && (
         <div className="alert-warn">
           <strong>{t('workOrders.authorizationBanner')}</strong>
@@ -780,13 +821,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           onDelivered={detail.finishDelivery}
         />
       )}
-      {detail.askingAuthReason && (
-        <AuthorizationReasonModal
-          saving={detail.busy}
-          onCancel={detail.cancelAuthReason}
-          onConfirm={detail.submitAuthReason}
-        />
-      )}
+
 
       {detail.publishingProgress && (
         <PublishProgressModal

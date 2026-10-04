@@ -78,6 +78,7 @@ async function call(method, path, { token, body, headers = {} } = {}) {
 async function login(email, password) {
   if (!email || !password) return null;
   const r = await call('POST', '/auth/v1/token?grant_type=password', { body: { email, password } });
+  console.log('LOGIN RESP:', email, r.status, r.json);
   return r.json?.access_token ?? null;
 }
 

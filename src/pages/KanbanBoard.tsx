@@ -10,7 +10,6 @@ import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
 import type { OrderStatus, WorkOrder } from '../types/database';
 import DeliveryModal from '../features/workOrders/DeliveryModal';
-import AuthorizationReasonModal from '../features/workOrders/AuthorizationReasonModal';
 import { orderDueState, type DueState } from '../lib/orderDue';
 import { Archive, Calendar, Gauge } from 'lucide-react';
 
@@ -97,9 +96,7 @@ export default function KanbanBoard() {
   // teléfono ese desplegable es la única forma de mover una tarjeta — el
   // arrastre de HTML5 no existe en táctil — así que era la ruta normal.
   const [moveEpoch, setMoveEpoch] = useState(0);
-  // Qué orden está esperando que alguien escriba su motivo. El tablero es la ruta táctil
-  // del taller, así que pedir autorización tiene que poder hacerse desde aquí.
-  const [askingReasonFor, setAskingReasonFor] = useState<string | null>(null);
+
   // Entregar abre el diálogo de cobro: método, cheque y comprobante (reunión con el taller).
   const [deliveringOrder, setDeliveringOrder] = useState<WorkOrder | null>(null);
   // Un rótulo accesible además del color: el color solo no es información.
@@ -197,10 +194,6 @@ export default function KanbanBoard() {
     }
     if (order.estatus === 'entregado' && !confirm(t('workOrders.confirmUndeliver'))) {
       discard();
-      return;
-    }
-    if (status === 'espera_autorizacion') {
-      setAskingReasonFor(orderId);
       return;
     }
 
@@ -340,6 +333,7 @@ export default function KanbanBoard() {
                               // o el <select> no podría mostrar su propio valor.
                               .filter((c) => c.status !== 'entregado' || canDeliver || order.estatus === 'entregado')
                               .filter((c) => c.status !== 'recepcion' || isAdmin || order.estatus === 'recepcion')
+                              .filter((c) => c.status !== 'espera_autorizacion' || order.estatus === 'espera_autorizacion')
                               .map((c) => (
                                 <option key={c.status} value={c.status}>
                                   {statusLabels[c.status]}
@@ -429,19 +423,7 @@ export default function KanbanBoard() {
           }}
         />
       )}
-      {askingReasonFor && (
-        <AuthorizationReasonModal
-          saving={move.isPending}
-          onCancel={() => {
-            setAskingReasonFor(null);
-            setMoveEpoch((n) => n + 1);
-          }}
-          onConfirm={(motivo) => {
-            move.mutate({ orderId: askingReasonFor, status: 'espera_autorizacion', motivo });
-            setAskingReasonFor(null);
-          }}
-        />
-      )}
+
     </div>
   );
 }

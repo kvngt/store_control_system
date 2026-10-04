@@ -37,7 +37,7 @@ import { quotesService } from './quotes.service';
  */
 const ORDER_TABLES = [
   'ordenes_trabajo', 'orden_asignaciones', 'orden_labor', 'orden_repuestos',
-  'orden_avances', 'orden_media', 'presupuestos',
+  'orden_avances', 'orden_media', 'presupuestos', 'orden_hallazgos'
 ] as const;
 
 /**
@@ -67,7 +67,8 @@ export const workOrdersService = {
         montos:orden_montos(total_repuestos, total_general, deposito_inicial),
         cliente:clientes(*),
         vehiculo:vehiculos(*),
-        asignaciones:orden_asignaciones(*, usuario:perfiles(*))
+        asignaciones:orden_asignaciones(*, usuario:perfiles(*)),
+        hallazgos:orden_hallazgos(*)
       `).order('creado_en', { ascending: false }).order('id');
       if (sedeId) query = query.eq('sede_id', sedeId);
       // Lo que un admin archivó a mano sale del tablero en el acto, sin esperar los 90 días.
@@ -171,7 +172,8 @@ export const workOrdersService = {
         vehiculo:vehiculos(*),
         labor_items:orden_labor(*, tecnico:perfiles!asignado_a(id, nombre_completo, rol)),
         repuestos:orden_repuestos(*),
-        asignaciones:orden_asignaciones(*, usuario:perfiles(*))
+        asignaciones:orden_asignaciones(*, usuario:perfiles(*)),
+        hallazgos:orden_hallazgos(*)
       `)
         .eq('id', orderId)
         // Las líneas en el orden en que se agregaron: es el orden del presupuesto.
@@ -238,6 +240,30 @@ export const workOrdersService = {
     });
     if (error) throw error;
     return data as WorkOrder;
+  },
+
+  reportFinding: async (orderId: string, descripcion: string) => {
+    const { error } = await supabase.rpc('reportar_hallazgo', {
+      p_orden_id: orderId,
+      p_descripcion: descripcion,
+    });
+    if (error) throw error;
+  },
+
+  quoteFinding: async (findingId: string) => {
+    const { error } = await supabase.rpc('cotizar_hallazgo', {
+      p_hallazgo_id: findingId,
+    });
+    if (error) throw error;
+  },
+
+  discardFinding: async (findingId: string, en_reporte: boolean, texto: string) => {
+    const { error } = await supabase.rpc('descartar_hallazgo', {
+      p_hallazgo_id: findingId,
+      p_en_reporte: en_reporte,
+      p_texto_cliente: texto,
+    });
+    if (error) throw error;
   },
 
   // `motivo` solo viaja hacia "espera de autorización", que es el único estado que lo
@@ -564,10 +590,10 @@ export const workOrdersService = {
   // entran a la cola de subida con el id de este avance y suben en segundo
   // plano (ver `MediaUploadQueue`), así que crear el avance es instantáneo aunque
   // lleve un video de 25 MB.
-  addProgressUpdate: async (orderId: string, usuarioId: string, descripcion: string) => {
+  addProgressUpdate: async (orderId: string, usuarioId: string, descripcion: string, visible_cliente?: boolean, labor_id?: string) => {
     const { data, error } = await supabase
       .from('orden_avances')
-      .insert({ orden_id: orderId, usuario_id: usuarioId, descripcion })
+      .insert({ orden_id: orderId, usuario_id: usuarioId, descripcion, visible_cliente, labor_id })
       .select('*, usuario:perfiles(*)')
       .single();
     if (error) throw error;

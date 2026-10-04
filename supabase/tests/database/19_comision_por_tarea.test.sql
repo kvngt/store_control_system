@@ -494,8 +494,8 @@ SELECT throws_ok(
 
 -- Y al revés: una línea heredada no entra a una bolsa ya pagada (nadie cobraría su comisión).
 SELECT lives_ok(
-  $$ INSERT INTO orden_labor (orden_id, descripcion, costo, especialidad)
-     SELECT id, 'Faros', 100, 'mecanica' FROM t_ids WHERE vehiculo_id = 'd1900000-0000-0000-0000-00000000000b';
+  $$ INSERT INTO orden_labor (orden_id, descripcion, costo, especialidad, reparto_heredado)
+     SELECT id, 'Faros', 100, 'mecanica', true FROM t_ids WHERE vehiculo_id = 'd1900000-0000-0000-0000-00000000000b';
      SELECT registrar_autorizacion(
        (SELECT id FROM t_ids WHERE vehiculo_id = 'd1900000-0000-0000-0000-00000000000b'),
        ARRAY(SELECT id FROM t_l WHERE descripcion = 'Faros'),
@@ -580,8 +580,8 @@ SELECT throws_ok(
 -- con reparto, o sea "entra" a una bolsa pagada; sin la excepción, eso impediría borrar al
 -- empleado.
 SELECT lives_ok(
-  $$ INSERT INTO orden_labor (orden_id, descripcion, costo, especialidad, asignado_a)
-     SELECT id, 'Retoque', 60, 'pintura', 'a1900000-0000-0000-0000-000000000006' FROM t_ids
+  $$ INSERT INTO orden_labor (orden_id, descripcion, costo, especialidad, asignado_a, reparto_heredado)
+     SELECT id, 'Retoque', 60, 'pintura', 'a1900000-0000-0000-0000-000000000006', true FROM t_ids
      WHERE vehiculo_id = 'd1900000-0000-0000-0000-00000000000b';
      SELECT registrar_autorizacion(
        (SELECT id FROM t_ids WHERE vehiculo_id = 'd1900000-0000-0000-0000-00000000000b'),

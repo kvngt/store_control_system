@@ -127,14 +127,14 @@ describe('useWorkOrderForm', () => {
     const { result } = renderHook(() => useWorkOrderForm());
 
     act(() => {
-      result.current.labor.append({ descripcion: '', costo: '', especialidad: 'mecanica' });
-      result.current.labor.append({ descripcion: 'Alineación', costo: '80', especialidad: 'mecanica' });
+      result.current.labor.append({ descripcion: '', costo: '', especialidad: 'mecanica', asignado_a: '' });
+      result.current.labor.append({ descripcion: 'Alineación', costo: '80', especialidad: 'mecanica', asignado_a: '' });
     });
     expect(result.current.labor.fields).toHaveLength(2);
 
     act(() => result.current.labor.remove(0));
     expect(result.current.form.getValues('laborItems')).toEqual([
-      { descripcion: 'Alineación', costo: '80', especialidad: 'mecanica' },
+      { descripcion: 'Alineación', costo: '80', especialidad: 'mecanica', asignado_a: '' },
     ]);
 
     act(() => result.current.parts.append({ descripcion: 'Filtro', cantidad: '1', precio_venta_unitario: '15' }));
@@ -145,7 +145,7 @@ describe('useWorkOrderForm', () => {
     const { result } = renderHook(() => useWorkOrderForm());
 
     await act(async () => {
-      result.current.labor.append({ descripcion: 'Alineación', costo: '80', especialidad: 'mecanica' });
+      result.current.labor.append({ descripcion: 'Alineación', costo: '80', especialidad: 'mecanica', asignado_a: '' });
       result.current.toggleOperator('op-1');
       await result.current.photos.setZonePhoto('front', new File(['x'], 'front.jpg'));
     });

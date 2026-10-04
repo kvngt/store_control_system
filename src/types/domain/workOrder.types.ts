@@ -60,6 +60,23 @@ export interface WorkOrder {
   avances?: OrderProgressUpdate[];
   /** Hay un presupuesto enviado esperando la respuesta del cliente. */
   esperando_autorizacion?: boolean;
+  hallazgos?: OrderFinding[];
+}
+
+export interface OrderFinding {
+  id: string;
+  orden_id: string;
+  sede_id: string;
+  reportado_por: string;
+  descripcion: string;
+  estado: 'pendiente' | 'cotizado' | 'descartado';
+  en_reporte: boolean;
+  texto_cliente: string | null;
+  resuelto_por: string | null;
+  resuelto_en: string | null;
+  presupuesto_id: string | null;
+  avance_id: string | null;
+  creado_en: string;
 }
 
 /** Totales y depósito de una orden. Solo administradores (ver `orden_montos`). */

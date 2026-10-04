@@ -20,6 +20,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { money } from '../lib/money';
+import FindingsAlert from '../features/workOrders/FindingsAlert';
 
 const EMPTY_STATS: DashboardStats = {
   ordenes_activas: 0,
@@ -104,6 +105,9 @@ export default function Dashboard() {
           </p>
         </div>
       </div>
+
+      {/* Findings Alert */}
+      {isAdmin && <FindingsAlert orders={recentOrders} />}
 
       {/* KPI Stats — each card is a shortcut into the section it summarises.
           Money-related KPIs are admin-only. */}

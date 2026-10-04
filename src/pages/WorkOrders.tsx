@@ -23,11 +23,12 @@ import { getErrorMessage } from '../lib/errors';
 import { daysFromTodayLocal } from '../lib/dates';
 import { orderDueState, type DueState } from '../lib/orderDue';
 import ArchivedOrders from '../features/workOrders/ArchivedOrders';
+import FindingsAlert from '../features/workOrders/FindingsAlert';
 
 /** El archivo no es un estatus: es otra vista de la misma pantalla. */
 const ARCHIVED = 'archivadas';
 import { checkUsPlate, checkVin } from '../lib/vin';
-import type { WorkOrder, Customer, Vehicle, UserProfile } from '../types/database';
+import type { WorkOrder, Customer, Vehicle, UserProfile, PaymentMethod } from '../types/database';
 import { Plus, Search, Eye, Car, Calendar, Trash2, ChevronRight, Wrench } from 'lucide-react';
 import { money } from '../lib/money';
 
@@ -587,6 +588,9 @@ export default function WorkOrders() {
       </div>
 
       {error && <div className="alert-error">{error}</div>}
+
+      {/* Findings Alert */}
+      {isAdmin && filterStatus !== ARCHIVED && <FindingsAlert orders={filtered} />}
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>

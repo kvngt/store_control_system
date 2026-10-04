@@ -170,26 +170,22 @@ SELECT lives_ok(
   'Y volver a ponerla en proceso'
 );
 
--- Pedir autorización es lo que un mecánico hace cuando descubre que falta algo. Sin el
--- motivo, el admin no sabe qué cotizar, así que el estado no se puede fijar sin él.
+-- Pedir autorización es lo que un mecánico hace cuando descubre que falta algo. Ahora se hace por RPC.
 SELECT throws_ok(
-  $$ UPDATE ordenes_trabajo SET estatus = 'espera_autorizacion'
-     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
-  '42501', NULL,
-  'El técnico no puede pedir autorización sin decir por qué'
+  $$ SELECT reportar_hallazgo((SELECT id FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001'), NULL::text) $$,
+  '23502', NULL,
+  'El técnico no puede pedir autorización sin decir por qué (null)'
 );
 
 SELECT lives_ok(
-  $$ UPDATE ordenes_trabajo
-     SET estatus = 'espera_autorizacion', motivo_autorizacion = '  El radiador está picado  '
-     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
-  'El técnico pide autorización con su motivo'
+  $$ SELECT reportar_hallazgo((SELECT id FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001'), 'El radiador está picado'::text) $$,
+  'El técnico pide autorización con su motivo mediante reportar_hallazgo'
 );
 
 SELECT is(
-  (SELECT motivo_autorizacion FROM t_orden),
-  'El radiador está picado',
-  'El motivo se guarda sin los espacios de los extremos'
+  (SELECT estatus FROM t_orden),
+  'espera_autorizacion'::order_status,
+  'La orden pasa a espera_autorizacion'
 );
 
 -- Al salir del estado, el motivo deja de ser cierto y no debe quedar colgado.

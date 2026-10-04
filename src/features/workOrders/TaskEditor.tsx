@@ -14,13 +14,13 @@ interface TaskEditorProps {
   /** El técnico que viene elegido (el de la primera tarea que tenga uno). */
   defaultTechnicianId?: string | null;
   busy?: boolean;
-  /**
-   * Guarda la tarea: en una orden que existe la inserta; en el alta (F4) la suma al borrador.
+  /** Guarda la tarea: en una orden que existe la inserta; en el alta (F4) la suma al borrador.
    * Devolver `false` deja el formulario con lo escrito, para corregir y reintentar.
    */
   onAdd: (task: TaskDraft) => Promise<boolean | void> | boolean | void;
   /** Prefijo de los id del DOM, por si hay dos editores en pantalla. */
   idPrefix?: string;
+  initialText?: string;
 }
 
 interface Draft {
@@ -42,13 +42,13 @@ interface Draft {
  * Si el tipo no es del oficio del técnico (pintura a un mecánico), pregunta antes de guardar:
  * la comisión de la tarea va a esa persona.
  */
-export default function TaskEditor({ workType, technicians, defaultTechnicianId, busy = false, onAdd, idPrefix = 'task-editor' }: TaskEditorProps) {
+export default function TaskEditor({ workType, technicians, defaultTechnicianId, busy = false, onAdd, idPrefix = 'task-editor', initialText }: TaskEditorProps) {
   const { t } = useLanguage();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!!initialText);
   // En un "combinado" el tipo que se usó la última vez: casi siempre se agregan seguidas varias
   // tareas de lo mismo.
   const [lastCombined, setLastCombined] = useState<Specialty>('mecanica');
-  const [draft, setDraft] = useState<Draft>({ descripcion: '', costo: '', especialidad: 'mecanica', asignado_a: '' });
+  const [draft, setDraft] = useState<Draft>({ descripcion: initialText || '', costo: '', especialidad: 'mecanica', asignado_a: '' });
   const [error, setError] = useState('');
   const [mismatch, setMismatch] = useState<{ task: TaskDraft; technician: Technician } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -60,6 +60,13 @@ export default function TaskEditor({ workType, technicians, defaultTechnicianId,
   // hacer clic para escribir la siguiente.
   const refocus = useRef(false);
   const disabled = busy || saving;
+
+  useEffect(() => {
+    if (initialText) {
+      setOpen(true);
+      setDraft((d) => ({ ...d, descripcion: initialText }));
+    }
+  }, [initialText]);
 
   useEffect(() => {
     if (!disabled && refocus.current) {

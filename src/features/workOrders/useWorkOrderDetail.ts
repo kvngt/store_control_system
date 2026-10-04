@@ -66,7 +66,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   const [statusEpoch, setStatusEpoch] = useState(0);
   // Pedir autorización necesita un motivo, así que el cambio de estado se parte en dos:
   // el <select> abre el diálogo y el diálogo hace el UPDATE.
-  const [askingAuthReason, setAskingAuthReason] = useState(false);
+
   // Entregar abre el diálogo de cobro (método, cheque, comprobante) en vez de un `confirm`.
   const [delivering, setDelivering] = useState(false);
   // El avance que está por publicarse. El diálogo muestra su texto como lo verá el cliente.
@@ -259,6 +259,45 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
 
   // ----- status & progress ---------------------------------------------------
 
+  const reportFinding = async (descripcion: string) => {
+    if (!order) return;
+    setBusy(true);
+    try {
+      await workOrdersService.reportFinding(order.id, descripcion);
+      await refresh();
+    } catch (err) {
+      fail(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const quoteFinding = async (findingId: string) => {
+    if (!order) return;
+    setBusy(true);
+    try {
+      await workOrdersService.quoteFinding(findingId);
+      await refresh();
+    } catch (err) {
+      fail(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const discardFinding = async (findingId: string, enReporte: boolean, texto: string) => {
+    if (!order) return;
+    setBusy(true);
+    try {
+      await workOrdersService.discardFinding(findingId, enReporte, texto);
+      await refresh();
+    } catch (err) {
+      fail(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const changeStatus = async (status: OrderStatus) => {
     if (!order || status === order.estatus) return;
 
@@ -284,10 +323,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
       discard();
       return;
     }
-    if (status === 'espera_autorizacion') {
-      setAskingAuthReason(true);
-      return;
-    }
+
 
     try {
       await workOrdersService.updateWorkOrderStatus(order.id, status);
@@ -298,19 +334,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     }
   };
 
-  const submitAuthReason = async (motivo: string) => {
-    if (!order) return;
-    setBusy(true);
-    try {
-      await workOrdersService.updateWorkOrderStatus(order.id, 'espera_autorizacion', motivo);
-      setAskingAuthReason(false);
-      await refresh();
-    } catch (err) {
-      fail(err);
-    } finally {
-      setBusy(false);
-    }
-  };
+
 
   // Cancelar deja el <select> mostrando el estado real.
   const cancelDelivery = () => {
@@ -324,11 +348,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     await refresh();
   };
 
-  // Cancelar deja el <select> mostrando el estado real, no el que no llegó a guardarse.
-  const cancelAuthReason = () => {
-    setAskingAuthReason(false);
-    setStatusEpoch((n) => n + 1);
-  };
+
 
   // Publicar pasa por el diálogo; dejar de publicar es inmediato, porque quitar algo de la
   // vista del cliente nunca es el movimiento peligroso.
@@ -687,11 +707,11 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
    * avance recién creado. El técnico ve el avance de inmediato, con sus videos
    * "subiendo", en vez de esperar a que terminen.
    */
-  const addProgressUpdate = async (note: string, media: PreparedMedia[]) => {
+  const addProgressUpdate = async (note: string, media: PreparedMedia[], isVisible?: boolean, laborId?: string) => {
     if (!order || !user || (!note.trim() && media.length === 0)) return false;
     setBusy(true);
     try {
-      const avance = await workOrdersService.addProgressUpdate(order.id, user.id, note.trim());
+      const avance = await workOrdersService.addProgressUpdate(order.id, user.id, note.trim(), isVisible, laborId);
       enqueueMedia(media, { origen: 'avance', avanceId: avance.id });
       await refresh(false);
       showToast('success', t('workOrders.progressAdded'));
@@ -815,7 +835,6 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     isComplete,
     isDelivered,
     statusEpoch,
-    askingAuthReason,
     delivering,
     cancelDelivery,
     finishDelivery,
@@ -823,8 +842,6 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     toggleProgressVisibility,
     confirmPublishProgress,
     cancelPublishProgress: () => setPublishingProgress(null),
-    submitAuthReason,
-    cancelAuthReason,
     progressDraft,
     setProgressDraft,
     savingSignature,
@@ -834,6 +851,9 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     close,
     requestedTab,
     changeStatus,
+    reportFinding,
+    quoteFinding,
+    discardFinding,
     toggleLaborComplete,
     commitProgress,
     addLabor,
