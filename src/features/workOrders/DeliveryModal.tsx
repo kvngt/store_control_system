@@ -8,7 +8,8 @@ import { commissionsService, workOrdersService } from '../../services/supabaseSe
 import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';
 import { money } from '../../lib/money';
-import { PAYMENT_METHODS, type PaymentMethod, type WorkOrder } from '../../types/database';
+import { type PaymentMethod, type WorkOrder } from '../../types/database';
+import PaymentFields from './PaymentFields';
 
 interface DeliveryModalProps {
   order: Pick<WorkOrder, 'id' | 'numero_orden' | 'sede_id'>;
@@ -78,7 +79,7 @@ export default function DeliveryModal({ order, onCancel, onDelivered }: Delivery
     let uploaded: string | null = null;
     try {
       if (needsMethod && file) {
-        uploaded = await workOrdersService.uploadDeliveryReceipt(order.sede_id, order.numero_orden, file);
+        uploaded = await workOrdersService.uploadReceipt(order.sede_id, order.numero_orden, file);
       }
       await workOrdersService.deliver({
         orderId: order.id,
@@ -159,53 +160,15 @@ export default function DeliveryModal({ order, onCancel, onDelivered }: Delivery
 
               {needsMethod && (
                 <>
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="delivery-method">
-                      {refunds ? t('delivery.refundMethod') : t('delivery.method')}
-                    </label>
-                    <select
-                      className="form-input form-select"
-                      id="delivery-method"
-                      value={metodo}
-                      onChange={(e) => setMetodo(e.target.value as PaymentMethod | '')}
-                      disabled={saving}
-                    >
-                      <option value="">{t('delivery.choose')}</option>
-                      {PAYMENT_METHODS.map((m) => (
-                        <option key={m} value={m}>{t('delivery.methods.' + m)}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {metodo === 'cheque' && (
-                    <div className="form-group">
-                      <label className="form-label" htmlFor="delivery-check">{t('delivery.checkNumber')}</label>
-                      <input
-                        className="form-input"
-                        id="delivery-check"
-                        inputMode="numeric"
-                        value={numeroCheque}
-                        onChange={(e) => setNumeroCheque(e.target.value)}
-                        placeholder="1042"
-                        disabled={saving}
-                      />
-                    </div>
-                  )}
-
-                  {metodo && (
-                    <div className="form-group">
-                      <label className="form-label" htmlFor="delivery-receipt">{t('delivery.receipt')}</label>
-                      <input
-                        className="form-input"
-                        id="delivery-receipt"
-                        type="file"
-                        accept="image/*,application/pdf"
-                        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                        disabled={saving}
-                      />
-                      <p className="field-hint">{t('delivery.receiptHint')}</p>
-                    </div>
-                  )}
+                  <PaymentFields
+                    metodo={metodo}
+                    onChangeMetodo={setMetodo}
+                    numeroCheque={numeroCheque}
+                    onChangeNumeroCheque={setNumeroCheque}
+                    onChangeFile={setFile}
+                    disabled={saving}
+                    refunds={refunds}
+                  />
                 </>
               )}
 

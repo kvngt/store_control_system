@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react';
-import { Camera, CheckCircle2, ChevronLeft, Plus, Trash2, X } from 'lucide-react';
+import { Camera, CheckCircle2, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { isMediaError } from '../../lib/media/errors';
-import type { Customer, UserProfile, Vehicle } from '../../types/database';
+import type { Customer, UserProfile, Vehicle, PaymentMethod } from '../../types/database';
 import VehicleFields from '../vehicles/VehicleFields';
 import MediaCaptureBar from '../media/MediaCaptureBar';
 import DraftMediaStrip from '../media/DraftMediaStrip';
@@ -11,18 +11,9 @@ import { ZONES } from './useIntakePhotos';
 import type { WorkOrderFormApi } from './useWorkOrderForm';
 import { AlertError } from '../../components/AlertError';
 import PhoneInput from '../../components/PhoneInput';
+import PaymentFields from './PaymentFields';
+import TaskEditor from './TaskEditor';
 
-/**
- * Refuses the keys that put a minus sign into a `type="number"` box.
- *
- * `min={0}` is inert here: the form is `noValidate`, so the browser never runs
- * its own constraint check, and the schema only speaks up on submit — by which
- * point the user has already typed the number and been told off for it. This
- * stops the common case at the keyboard instead. It deliberately does not clamp
- * the value: a paste or an autofill still has to reach the schema and be
- * reported, because silently rewriting somebody's -500 to 0 is worse than
- * telling them it is wrong.
- */
 const blockNegativeKeys = (e: React.KeyboardEvent<HTMLInputElement>) => {
   if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault();
 };
@@ -30,28 +21,15 @@ const blockNegativeKeys = (e: React.KeyboardEvent<HTMLInputElement>) => {
 interface WorkOrderCreateModalProps {
   form: WorkOrderFormApi;
   customers: Customer[];
-  /** Already narrowed to the selected customer by the caller. */
   vehiclesForCustomer: Vehicle[];
   operators: UserProfile[];
   isAdmin: boolean;
   saving: boolean;
-  /** Already translated by the caller. */
   error: string;
   onSubmit: () => void;
   onClose: () => void;
 }
 
-/**
- * The "nueva orden" dialog: customer, vehicle, intake details, 360-degree
- * photos (plus extra photos, videos and voice notes), labor and parts.
- *
- * Deliberately presentational — every field belongs to `useWorkOrderForm` and
- * submission belongs to the screen — so the dialog can be rendered and
- * exercised on its own, which the 2,000-line page it came out of made
- * impossible. Validation messages arrive as translation keys and are turned
- * into sentences here, at render, so switching language never means
- * revalidating the form.
- */
 export default function WorkOrderCreateModal({
   form,
   customers,
@@ -65,16 +43,15 @@ export default function WorkOrderCreateModal({
 }: WorkOrderCreateModalProps) {
   const { t } = useLanguage();
   const { showToast } = useToast();
-  const { register, formState, watch } = form.form;
+  const { register, formState, watch, setValue } = form.form;
   const { errors } = formState;
   const photos = form.photos;
   const newVehicle = form.newVehicle;
-  // Either side switching to "new" turns the pair into a tall form.
-  const stacked = form.customerMode === 'new' || form.vehicleMode === 'new';
+  
+  const { step, nextStep, prevStep, setReceiptFile } = form;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeZone, setActiveZone] = useState<string | null>(null);
-  // La barra está comprimiendo una foto o convirtiendo un video de galería.
   const [captureBusy, setCaptureBusy] = useState(false);
   const preparing = photos.processing > 0 || captureBusy;
 
@@ -90,8 +67,6 @@ export default function WorkOrderCreateModal({
     fileInputRef.current?.click();
   };
 
-  // Una foto que no se pudo leer (un HEIC en un navegador que no lo decodifica)
-  // se dice en el momento, en vez de desaparecer sin rastro.
   const reportPhotoError = (err: unknown) => {
     const detail = isMediaError(err) ? t('media.errors.' + err.code) : t('media.errors.unsupported-image');
     showToast('error', t('media.addError'), detail);
@@ -108,17 +83,377 @@ export default function WorkOrderCreateModal({
     photos.removePhoto(zoneKey);
   };
 
+  const renderStep1 = () => (
+    <div className="form-group" style={{ minHeight: 300 }}>
+      <h4 style={{ marginBottom: 'var(--space-3)' }}>1. {t('customers.customerProfile')}</h4>
+      {form.customerMode === 'existing' ? (
+        <>
+          <select
+            className="form-input form-select"
+            value={form.selectedCustomer}
+            onChange={(e) => form.selectCustomer(e.target.value)}
+          >
+            <option value="">-- Seleccionar Cliente --</option>
+            <option value="__new__">+ {t('customers.newCustomer')}</option>
+            {customers.map((c) => (
+              <option key={c.id} value={c.id}>{c.nombre}</option>
+            ))}
+          </select>
+          <FieldError messageKey={errors.selectedCustomer?.message} />
+        </>
+      ) : (
+        <div style={{ padding: 'var(--space-3)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-surface-border)' }}>
+          <div className="form-row">
+            <div style={{ flex: 1 }}>
+              <input
+                className="form-input"
+                placeholder={t('common.name')}
+                aria-invalid={!!errors.newCustomer?.nombre}
+                {...register('newCustomer.nombre')}
+              />
+              <FieldError messageKey={errors.newCustomer?.nombre?.message} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <PhoneInput
+                value={watch('newCustomer.telefono')}
+                onChange={(telefono) =>
+                  setValue('newCustomer.telefono', telefono, {
+                    shouldDirty: true,
+                    shouldValidate: formState.isSubmitted,
+                  })
+                }
+                invalid={!!errors.newCustomer?.telefono}
+                placeholder={t('common.phone')}
+              />
+              <FieldError messageKey={errors.newCustomer?.telefono?.message} />
+            </div>
+          </div>
+          <div className="form-row" style={{ marginTop: 'var(--space-2)' }}>
+            <input className="form-input" type="email" placeholder={t('common.email')} {...register('newCustomer.email')} />
+            <input className="form-input" placeholder={t('common.address')} {...register('newCustomer.direccion')} />
+          </div>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            style={{ marginTop: 'var(--space-2)' }}
+            onClick={form.backToExistingCustomer}
+          >
+            <ChevronLeft size={14} /> {t('common.back')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div style={{ minHeight: 300 }}>
+      <h4 style={{ marginBottom: 'var(--space-3)' }}>2. {t('vehicles.title')}</h4>
+      <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
+        {form.vehicleMode === 'existing' ? (
+          <>
+            <select
+              className="form-input form-select"
+              value={watch('selectedVehicle')}
+              onChange={(e) => form.selectVehicle(e.target.value)}
+              disabled={!form.selectedCustomer}
+            >
+              <option value="">-- Seleccionar Vehículo --</option>
+              <option value="__new__">+ {t('vehicles.newVehicle')}</option>
+              {vehiclesForCustomer.map((v) => (
+                <option key={v.id} value={v.id}>{v.marca} {v.modelo} ({v.placa})</option>
+              ))}
+            </select>
+            <FieldError messageKey={errors.selectedVehicle?.message} />
+          </>
+        ) : (
+          <div style={{ padding: 'var(--space-3)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-surface-border)' }}>
+            <VehicleFields
+              value={newVehicle}
+              onChange={form.setNewVehicle}
+              touched={formState.isSubmitted}
+              requirePlate={false}
+              disabled={saving}
+            />
+            <FieldError messageKey={errors.newVehicle?.vin?.message} />
+            <FieldError messageKey={errors.newVehicle?.marca?.message} />
+            <FieldError messageKey={errors.newVehicle?.modelo?.message} />
+            {form.customerMode === 'existing' && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                style={{ marginTop: 'var(--space-2)' }}
+                onClick={form.backToExistingVehicle}
+              >
+                <ChevronLeft size={14} /> {t('common.back')}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label">{t('workOrders.fuelLevel')}</label>
+          <select className="form-input form-select" {...register('fuelLevel')}>
+            <option value="E (Vacio)">E (Vacío / Empty)</option>
+            <option value="1/4">1/4</option>
+            <option value="1/2">1/2</option>
+            <option value="3/4">3/4</option>
+            <option value="F (Lleno)">F (Lleno / Full)</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">{t('workOrders.milesIn')}</label>
+          <input
+            className="form-input"
+            id="order-miles-in"
+            type="number"
+            min={0}
+            step={1}
+            inputMode="numeric"
+            aria-invalid={!!errors.milesIn}
+            onKeyDown={blockNegativeKeys}
+            {...register('milesIn')}
+          />
+          <FieldError messageKey={errors.milesIn?.message} />
+        </div>
+      </div>
+
+      <div className="form-group" style={{ marginTop: 'var(--space-2)' }}>
+        <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>{t('workOrders.inspection360')}</span>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: photos.zonesCovered === ZONES.length ? 'var(--color-success)' : 'var(--color-text-tertiary)', fontWeight: 600 }}>
+            {photos.zonesCovered}/{ZONES.length}
+            {photos.extraMedia.length > 0 && ` +${photos.extraMedia.length}`}
+          </span>
+        </label>
+        <div className="photo-zone-grid">
+          {ZONES.map(({ key, label }) => {
+            const photo = photos.photos[key];
+            return (
+              <div key={key} onClick={() => handleZoneClick(key)} className={`photo-zone ${photo ? 'filled' : ''}`}>
+                {photo && (
+                  <>
+                    <img
+                      src={photo.preview}
+                      alt={label}
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    <button
+                      type="button"
+                      className="photo-zone-remove"
+                      onClick={(e) => removePhoto(key, e)}
+                      aria-label={`${t('common.delete')} ${label}`}
+                    >
+                      <X size={14} />
+                    </button>
+                  </>
+                )}
+                {!photo ? (
+                  <>
+                    <Camera size={24} className="photo-zone-icon" />
+                    <span className="photo-zone-label">{label}</span>
+                  </>
+                ) : (
+                  <span className="photo-zone-caption">
+                    <CheckCircle2 size={12} /> {label}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ marginTop: 'var(--space-3)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+          <DraftMediaStrip items={photos.extraMedia} onRemove={photos.removeMedia} />
+          <MediaCaptureBar onAdd={photos.addMedia} disabled={saving} onBusyChange={setCaptureBusy} />
+        </div>
+        <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 'var(--space-2)' }}>
+          {photos.processing > 0 ? (
+            <>
+              <span className="spinner-small media-capture-spinner" /> {t('media.processing')}
+            </>
+          ) : (
+            t('workOrders.tapToCapture')
+          )}
+        </p>
+      </div>
+
+      <div className="form-group" style={{ marginTop: 'var(--space-3)' }}>
+        <label className="form-label">Notas de la Inspección 360°</label>
+        <textarea
+          className="form-input form-textarea"
+          placeholder="Detalles sobre rayones, abolladuras previas o estado general del auto..."
+          rows={2}
+          {...register('inspectionNotes')}
+        />
+      </div>
+    </div>
+  );
+
+  const renderStep3 = () => (
+    <div style={{ minHeight: 300 }}>
+      <h4 style={{ marginBottom: 'var(--space-3)' }}>3. {t('workOrders.deposit')}</h4>
+      {isAdmin ? (
+        <>
+          <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
+            <label className="form-label">{t('workOrders.deposit')} ($)</label>
+            <input
+              className="form-input"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="0.01"
+              aria-invalid={!!errors.deposit}
+              onKeyDown={blockNegativeKeys}
+              {...register('deposit')}
+            />
+            <FieldError messageKey={errors.deposit?.message} />
+          </div>
+          {parseFloat(watch('deposit') || '0') > 0 && (
+            <PaymentFields
+              metodo={watch('paymentMethod') as PaymentMethod | ''}
+              onChangeMetodo={(val) => setValue('paymentMethod', val, { shouldValidate: true })}
+              numeroCheque={watch('checkNumber')}
+              onChangeNumeroCheque={(val) => setValue('checkNumber', val, { shouldValidate: true })}
+              onChangeFile={setReceiptFile}
+              disabled={saving}
+            />
+          )}
+          <FieldError messageKey={errors.paymentMethod?.message} />
+          <FieldError messageKey={errors.checkNumber?.message} />
+        </>
+      ) : (
+        <p className="field-hint">Solo administración puede registrar cobros.</p>
+      )}
+    </div>
+  );
+
+  const renderStep4 = () => (
+    <div style={{ minHeight: 300 }}>
+      <h4 style={{ marginBottom: 'var(--space-3)' }}>4. Trabajos</h4>
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label">{t('common.type')}</label>
+          <select className="form-input form-select" {...register('workType')}>
+            <option value="mecanica">{t('workOrders.mechanical')}</option>
+            <option value="pintura">{t('workOrders.painting')}</option>
+            <option value="combinado">{t('workOrders.combined')}</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">{t('workOrders.estimatedDelivery')}</label>
+          <input className="form-input" type="date" {...register('estimatedDate')} />
+        </div>
+      </div>
+
+      {isAdmin && (
+        <>
+          <div className="form-group" style={{ marginTop: 'var(--space-3)' }}>
+            <div className="form-label" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+              <span>{t('workOrders.laborDescription')}</span>
+            </div>
+            
+            {form.labor.fields.map((field, i) => {
+              const assignedTo = operators.find(o => o.id === field.asignado_a);
+              return (
+                <div key={field.id} style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', marginBottom: 'var(--space-2)', padding: 'var(--space-2)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 500, fontSize: 'var(--font-size-sm)' }}>{field.descripcion}</div>
+                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
+                      ${field.costo} • {assignedTo?.nombre_completo || t('tasks.unassigned')}
+                    </div>
+                  </div>
+                  <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => form.labor.remove(i)}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              );
+            })}
+            
+            <TaskEditor
+              workType={watch('workType')}
+              technicians={operators}
+              defaultTechnicianId={form.labor.fields.find(f => f.asignado_a)?.asignado_a || null}
+              onAdd={(task) => {
+                form.labor.append({
+                  descripcion: task.descripcion,
+                  costo: task.costo.toString(),
+                  especialidad: task.especialidad,
+                  asignado_a: task.asignado_a || ''
+                });
+              }}
+              idPrefix="create-order"
+            />
+          </div>
+
+          <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
+            <div className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>{t('workOrders.partsDescription')}</span>
+              <button
+                type="button"
+                className="btn btn-success btn-sm"
+                onClick={() => form.parts.append({ descripcion: '', cantidad: '1', precio_venta_unitario: '' })}
+              >
+                <Plus size={14} /> {t('common.add')}
+              </button>
+            </div>
+            {form.parts.fields.map((field, i) => (
+              <div key={field.id} style={{ marginBottom: 'var(--space-2)' }}>
+                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                  <input
+                    className="form-input"
+                    placeholder={t('common.description')}
+                    aria-invalid={!!errors.parts?.[i]?.descripcion}
+                    {...register(`parts.${i}.descripcion`)}
+                  />
+                  <input
+                    className="form-input"
+                    type="number"
+                    min={1}
+                    placeholder={t('common.quantity')}
+                    style={{ maxWidth: 80 }}
+                    onKeyDown={blockNegativeKeys}
+                    {...register(`parts.${i}.cantidad`)}
+                  />
+                  <input
+                    className="form-input"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder={t('common.price')}
+                    style={{ maxWidth: 120 }}
+                    onKeyDown={blockNegativeKeys}
+                    {...register(`parts.${i}.precio_venta_unitario`)}
+                  />
+                  <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => form.parts.remove(i)}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+                <FieldError
+                  messageKey={
+                    errors.parts?.[i]?.descripcion?.message ||
+                    errors.parts?.[i]?.cantidad?.message ||
+                    errors.parts?.[i]?.precio_venta_unitario?.message
+                  }
+                />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" style={{ maxWidth: '720px' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3 className="modal-title">{t('workOrders.newOrder')}</h3>
+          <h3 className="modal-title">{t('workOrders.newOrder')} - Paso {step} de 4</h3>
           <button className="modal-close" onClick={onClose}>
             <X size={20} />
           </button>
         </div>
-        {/* `noValidate`: the schema owns the rules, so the browser's own
-            bubbles never fire first with an untranslated message. */}
+        
         <form
           noValidate
           onSubmit={(e) => {
@@ -130,411 +465,35 @@ export default function WorkOrderCreateModal({
           <div className="modal-body">
             <AlertError message={error} />
             <input type="file" ref={fileInputRef} accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileChange} />
-
-            {/* Customer & Vehicle.
-                Side by side while both are plain dropdowns, stacked as soon as
-                either becomes a full form: the vehicle panel is a whole VIN
-                intake, and squeezing that into half a modal left its fields in
-                a narrow column with the plate section pushed off the bottom. */}
-            <div className={stacked ? '' : 'form-row'}>
-              <div className="form-group">
-                <label className="form-label">{t('customers.customerProfile')}</label>
-                {form.customerMode === 'existing' ? (
-                  <>
-                    <select
-                      className="form-input form-select"
-                      value={form.selectedCustomer}
-                      onChange={(e) => form.selectCustomer(e.target.value)}
-                    >
-                      <option value="">-- Seleccionar Cliente --</option>
-                      <option value="__new__">+ {t('customers.newCustomer')}</option>
-                      {customers.map((c) => (
-                        <option key={c.id} value={c.id}>{c.nombre}</option>
-                      ))}
-                    </select>
-                    <FieldError messageKey={errors.selectedCustomer?.message} />
-                  </>
-                ) : (
-                  <div style={{ padding: 'var(--space-3)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-surface-border)' }}>
-                    <div className="form-row">
-                      <div style={{ flex: 1 }}>
-                        <input
-                          className="form-input"
-                          placeholder={t('common.name')}
-                          aria-invalid={!!errors.newCustomer?.nombre}
-                          {...register('newCustomer.nombre')}
-                        />
-                        <FieldError messageKey={errors.newCustomer?.nombre?.message} />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        {/* Controlado a mano en vez de `register`: el campo son dos controles
-                            (país y número) que juntos dan un solo valor. */}
-                        <PhoneInput
-                          value={watch('newCustomer.telefono')}
-                          onChange={(telefono) =>
-                            form.form.setValue('newCustomer.telefono', telefono, {
-                              shouldDirty: true,
-                              shouldValidate: formState.isSubmitted,
-                            })
-                          }
-                          invalid={!!errors.newCustomer?.telefono}
-                          placeholder={t('common.phone')}
-                        />
-                        <FieldError messageKey={errors.newCustomer?.telefono?.message} />
-                      </div>
-                    </div>
-                    <div className="form-row" style={{ marginTop: 'var(--space-2)' }}>
-                      <input className="form-input" type="email" placeholder={t('common.email')} {...register('newCustomer.email')} />
-                      <input className="form-input" placeholder={t('common.address')} {...register('newCustomer.direccion')} />
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      style={{ marginTop: 'var(--space-2)' }}
-                      onClick={form.backToExistingCustomer}
-                    >
-                      <ChevronLeft size={14} /> {t('common.back')}
-                    </button>
-                  </div>
-                )}
-              </div>
-              <div className="form-group">
-                <label className="form-label">{t('vehicles.title')}</label>
-                {form.vehicleMode === 'existing' ? (
-                  <>
-                    <select
-                      className="form-input form-select"
-                      value={watch('selectedVehicle')}
-                      onChange={(e) => form.selectVehicle(e.target.value)}
-                      disabled={!form.selectedCustomer}
-                    >
-                      <option value="">-- Seleccionar Vehículo --</option>
-                      <option value="__new__">+ {t('vehicles.newVehicle')}</option>
-                      {vehiclesForCustomer.map((v) => (
-                        <option key={v.id} value={v.id}>{v.marca} {v.modelo} ({v.placa})</option>
-                      ))}
-                    </select>
-                    <FieldError messageKey={errors.selectedVehicle?.message} />
-                  </>
-                ) : (
-                  /* The same VIN-first form the Vehiculos screen uses. This was
-                     four bare text boxes — no VIN lookup, no plate check, no
-                     brand/model suggestions — which made registering a car at
-                     intake, with the customer standing there, strictly worse
-                     than registering it later from the fleet screen. */
-                  <div style={{ padding: 'var(--space-3)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-surface-border)' }}>
-                    <VehicleFields
-                      value={newVehicle}
-                      onChange={form.setNewVehicle}
-                      touched={formState.isSubmitted}
-                      requirePlate={false}
-                      disabled={saving}
-                    />
-                    <FieldError messageKey={errors.newVehicle?.vin?.message} />
-                    <FieldError messageKey={errors.newVehicle?.marca?.message} />
-                    <FieldError messageKey={errors.newVehicle?.modelo?.message} />
-                    {form.customerMode === 'existing' && (
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        style={{ marginTop: 'var(--space-2)' }}
-                        onClick={form.backToExistingVehicle}
-                      >
-                        <ChevronLeft size={14} /> {t('common.back')}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Work Type & Fuel */}
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">{t('common.type')}</label>
-                <select className="form-input form-select" {...register('workType')}>
-                  <option value="mecanica">{t('workOrders.mechanical')}</option>
-                  <option value="pintura">{t('workOrders.painting')}</option>
-                  <option value="combinado">{t('workOrders.combined')}</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">{t('workOrders.fuelLevel')}</label>
-                <select className="form-input form-select" {...register('fuelLevel')}>
-                  <option value="E (Vacio)">E (Vacío / Empty)</option>
-                  <option value="1/4">1/4</option>
-                  <option value="1/2">1/2</option>
-                  <option value="3/4">3/4</option>
-                  <option value="F (Lleno)">F (Lleno / Full)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">{t('workOrders.milesIn')}</label>
-                {/* An odometer reading below zero is meaningless and it
-                    corrupts the printed report, so the minus key is refused
-                    outright rather than accepted and then complained about on
-                    submit. */}
-                <input
-                  className="form-input"
-                  id="order-miles-in"
-                  type="number"
-                  min={0}
-                  step={1}
-                  inputMode="numeric"
-                  aria-invalid={!!errors.milesIn}
-                  onKeyDown={blockNegativeKeys}
-                  {...register('milesIn')}
-                />
-                <FieldError messageKey={errors.milesIn?.message} />
-              </div>
-              {/* Cobrar es de administración, igual que abrir la orden desde
-                  20261004000000. El `isAdmin` se queda como red, porque
-                  `create_work_order` también ignora este campo si no lo manda un admin. */}
-              {isAdmin && (
-                <div className="form-group">
-                  <label className="form-label">{t('workOrders.deposit')} ($)</label>
-                  <input
-                    className="form-input"
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    step="0.01"
-                    aria-invalid={!!errors.deposit}
-                    onKeyDown={blockNegativeKeys}
-                    {...register('deposit')}
-                  />
-                  <FieldError messageKey={errors.deposit?.message} />
-                </div>
+            
+            {step === 1 && renderStep1()}
+            {step === 2 && renderStep2()}
+            {step === 3 && renderStep3()}
+            {step === 4 && renderStep4()}
+          </div>
+          <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div>
+              {step > 1 && (
+                <button type="button" className="btn btn-secondary" onClick={prevStep} disabled={saving}>
+                  <ChevronLeft size={16} style={{ marginRight: 4 }} /> Anterior
+                </button>
               )}
             </div>
-
-            <div className="form-group">
-              <label className="form-label">{t('workOrders.estimatedDelivery')}</label>
-              <input className="form-input" type="date" {...register('estimatedDate')} />
-            </div>
-
-            {/* Quién trabaja la orden. Aquí había una segunda rama para el técnico que
-                creaba la suya y quedaba auto-asignado; desde 20261004000000 abrir una orden
-                y asignar son de administración, así que ese caso ya no existe. El `isAdmin`
-                se queda como red: el modal solo lo abre un admin. */}
-            {isAdmin && (
-              <div className="form-group">
-                <label className="form-label">{t('workOrders.assignedTechnician')}</label>
-                <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                  {operators.map((op) => {
-                    const picked = form.selectedOperators.includes(op.id);
-                    return (
-                      <label
-                        key={op.id}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '6px',
-                          padding: '6px 12px', borderRadius: 'var(--radius-full)',
-                          background: picked ? 'var(--gradient-primary)' : 'var(--color-bg-tertiary)',
-                          color: picked ? 'var(--color-text-inverse)' : 'var(--color-text-secondary)',
-                          fontSize: 'var(--font-size-sm)', cursor: 'pointer',
-                        }}
-                      >
-                        <input type="checkbox" checked={picked} onChange={() => form.toggleOperator(op.id)} style={{ display: 'none' }} />
-                        {op.nombre_completo} ({op.rol})
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* 360 Photos upload */}
-            <div className="form-group" style={{ marginTop: 'var(--space-2)' }}>
-              <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>{t('workOrders.inspection360')}</span>
-                <span style={{ fontSize: 'var(--font-size-xs)', color: photos.zonesCovered === ZONES.length ? 'var(--color-success)' : 'var(--color-text-tertiary)', fontWeight: 600 }}>
-                  {photos.zonesCovered}/{ZONES.length}
-                  {photos.extraMedia.length > 0 && ` +${photos.extraMedia.length}`}
-                </span>
-              </label>
-              <div className="photo-zone-grid">
-                {ZONES.map(({ key, label }) => {
-                  const photo = photos.photos[key];
-                  return (
-                    <div key={key} onClick={() => handleZoneClick(key)} className={`photo-zone ${photo ? 'filled' : ''}`}>
-                      {photo && (
-                        <>
-                          <img
-                            src={photo.preview}
-                            alt={label}
-                            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
-                          <button
-                            type="button"
-                            className="photo-zone-remove"
-                            onClick={(e) => removePhoto(key, e)}
-                            aria-label={`${t('common.delete')} ${label}`}
-                          >
-                            <X size={14} />
-                          </button>
-                        </>
-                      )}
-                      {!photo ? (
-                        <>
-                          <Camera size={24} className="photo-zone-icon" />
-                          <span className="photo-zone-label">{label}</span>
-                        </>
-                      ) : (
-                        <span className="photo-zone-caption">
-                          <CheckCircle2 size={12} /> {label}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              {/* Lo mismo que la tarjeta de la orden ya creada: más fotos, un video de
-                  recorrido o una nota de voz sobre cómo llegó el vehículo. Antes eso solo se
-                  podía después de crearla (pedido del taller, octubre 2026). Queda en el
-                  navegador y entra a la cola de subida al crear la orden, con las fotos. */}
-              <div style={{ marginTop: 'var(--space-3)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                <DraftMediaStrip items={photos.extraMedia} onRemove={photos.removeMedia} />
-                <MediaCaptureBar onAdd={photos.addMedia} disabled={saving} onBusyChange={setCaptureBusy} />
-              </div>
-              <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 'var(--space-2)' }}>
-                {photos.processing > 0 ? (
-                  <>
-                    <span className="spinner-small media-capture-spinner" /> {t('media.processing')}
-                  </>
-                ) : (
-                  t('workOrders.tapToCapture')
-                )}
-              </p>
-            </div>
-
-            <div className="form-group" style={{ marginTop: 'var(--space-3)' }}>
-              <label className="form-label">Notas de la Inspección 360°</label>
-              <textarea
-                className="form-input form-textarea"
-                placeholder="Detalles sobre rayones, abolladuras previas o estado general del auto..."
-                rows={2}
-                {...register('inspectionNotes')}
-              />
-            </div>
-
-            {/* Mano de obra y repuestos: solo administración cotiza. */}
-            {isAdmin && (
-            <>
-            <p className="field-hint" style={{ marginTop: 'var(--space-3)' }}>{t('quotes.createHint')}</p>
-            {/* Labor Items */}
-            <div className="form-group" style={{ marginTop: 'var(--space-3)' }}>
-              {/* `div`, no `label`: no etiqueta a ningún campo (los de abajo son una lista
-                  que crece) y metía el botón dentro de la etiqueta, así que su nombre
-                  accesible salía "Descripción de Labor Agregar" — un lector de pantalla leía
-                  las dos cosas y `getByRole('button', { name: 'Agregar' })` no lo encontraba.
-                  La clase se queda: el estilo es el mismo. */}
-              <div className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>{t('workOrders.laborDescription')}</span>
-                <button type="button" className="btn btn-success btn-sm" onClick={() => form.labor.append({ descripcion: '', costo: '', especialidad: 'mecanica' })}>
-                  <Plus size={14} /> {t('common.add')}
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <button type="button" className="btn btn-ghost" onClick={onClose} disabled={saving}>
+                {t('common.cancel')}
+              </button>
+              
+              {step < 4 ? (
+                <button type="button" className="btn btn-primary" onClick={nextStep} disabled={saving || preparing}>
+                  Siguiente <ChevronRight size={16} style={{ marginLeft: 4 }} />
                 </button>
-              </div>
-              {form.labor.fields.map((field, i) => (
-                <div key={field.id} style={{ marginBottom: 'var(--space-2)' }}>
-                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                    <input
-                      className="form-input"
-                      placeholder={t('common.description')}
-                      aria-invalid={!!errors.laborItems?.[i]?.descripcion}
-                      {...register(`laborItems.${i}.descripcion`)}
-                    />
-                    <input className="form-input" type="number" placeholder="$" style={{ maxWidth: 110 }} {...register(`laborItems.${i}.costo`)} />
-                    {/* Solo en una orden combinada hay que decir a qué bolsa de comisión va. */}
-                    {watch('workType') === 'combinado' && (
-                      <select
-                        className="form-input form-select labor-specialty-select"
-                        aria-label={t('commission.specialty')}
-                        {...register(`laborItems.${i}.especialidad`)}
-                      >
-                        <option value="mecanica">{t('workOrders.mechanical')}</option>
-                        <option value="pintura">{t('workOrders.painting')}</option>
-                      </select>
-                    )}
-                    <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => form.labor.remove(i)}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                  <FieldError messageKey={errors.laborItems?.[i]?.descripcion?.message} />
-                </div>
-              ))}
-            </div>
-
-            {/* Parts */}
-            <div className="form-group">
-              <div className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>{t('workOrders.partsDescription')}</span>
-                <button
-                  type="button"
-                  className="btn btn-success btn-sm"
-                  onClick={() => form.parts.append({ descripcion: '', cantidad: '1', precio_venta_unitario: '' })}
-                >
-                  <Plus size={14} /> {t('common.add')}
+              ) : (
+                <button type="submit" className="btn btn-primary" disabled={saving || preparing}>
+                  {saving ? t('common.loading') : preparing ? t('media.processing') : t('common.create')}
                 </button>
-              </div>
-              {form.parts.fields.map((field, i) => (
-                <div key={field.id} style={{ marginBottom: 'var(--space-2)' }}>
-                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                    <input
-                      className="form-input"
-                      placeholder={t('common.description')}
-                      aria-invalid={!!errors.parts?.[i]?.descripcion}
-                      {...register(`parts.${i}.descripcion`)}
-                    />
-                    <input
-                      className="form-input"
-                      type="number"
-                      min={1}
-                      placeholder={t('common.quantity')}
-                      style={{ maxWidth: 80 }}
-                      onKeyDown={blockNegativeKeys}
-                      {...register(`parts.${i}.cantidad`)}
-                    />
-                    {/* Price only. A part is billed on at what it cost, so the
-                        separate unit-cost box was a second money field nobody
-                        filled in; the database keeps cost in step with price. */}
-                    <input
-                      className="form-input"
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      placeholder={t('common.price')}
-                      style={{ maxWidth: 120 }}
-                      onKeyDown={blockNegativeKeys}
-                      {...register(`parts.${i}.precio_venta_unitario`)}
-                    />
-                    <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => form.parts.remove(i)}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                  <FieldError
-                    messageKey={
-                      errors.parts?.[i]?.descripcion?.message ||
-                      errors.parts?.[i]?.cantidad?.message ||
-                      errors.parts?.[i]?.precio_venta_unitario?.message
-                    }
-                  />
-                </div>
-              ))}
+              )}
             </div>
-            </>
-            )}
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
-              {t('common.cancel')}
-            </button>
-            {/* Mientras una foto se comprime o un video se convierte, crear la orden lo dejaría afuera. */}
-            <button type="submit" className="btn btn-primary" disabled={saving || preparing}>
-              {saving ? t('common.loading') : preparing ? t('media.processing') : t('common.create')}
-            </button>
           </div>
         </form>
       </div>

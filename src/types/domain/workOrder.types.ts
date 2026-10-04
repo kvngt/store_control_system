@@ -4,6 +4,7 @@ import type { Customer } from './customer.types';
 import type { UserProfile } from './auth.types';
 import type { Vehicle } from './vehicle.types';
 import type { LineState } from './quote.types';
+import type { PaymentMethod } from './finance.types';
 
 export interface WorkOrder {
   id: string;
@@ -160,6 +161,9 @@ export interface WorkOrderInput {
   nivel_gasolina: string;
   /** Solo lo toma `create_work_order` si quien llama es admin. */
   deposito_inicial: number;
+  deposito_metodo?: PaymentMethod | null;
+  deposito_cheque?: string | null;
+  deposito_comprobante?: string | null;
   inspeccion_360_notas: string;
   fecha_estimada_entrega: string;
   labor_items: Omit<LaborItem, 'id' | 'orden_id'>[];

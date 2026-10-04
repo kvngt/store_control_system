@@ -23,6 +23,7 @@ const laborRow = z.object({
   // A qué bolsa de comisión va. Solo se elige en una orden "combinado"; en las demás manda
   // el tipo de orden y la base la pone sola.
   especialidad: z.enum(['mecanica', 'pintura']),
+  asignado_a: stringField,
 });
 
 // One money column, not two. A part is billed on at what it cost the shop, so
@@ -65,6 +66,8 @@ const baseShape = z.object({
   fuelLevel: stringField,
   milesIn: stringField,
   deposit: stringField,
+  paymentMethod: stringField,
+  checkNumber: stringField,
   estimatedDate: stringField,
   inspectionNotes: stringField,
   selectedOperators: z.array(stringField),
@@ -118,6 +121,13 @@ export const workOrderFormSchema = baseShape.check((ctx) => {
   }
   if (parseFloat(form.deposit) < 0) {
     reject(['deposit'], 'workOrders.validation.depositNegative');
+  } else if (parseFloat(form.deposit) > 0) {
+    if (!form.paymentMethod) {
+      reject(['paymentMethod'], 'delivery.methodRequired');
+    }
+    if (form.paymentMethod === 'cheque' && !form.checkNumber.trim()) {
+      reject(['checkNumber'], 'delivery.checkRequired');
+    }
   }
 
   form.laborItems.forEach((item, i) => {
@@ -171,6 +181,8 @@ export function emptyWorkOrderForm(): WorkOrderFormValues {
     fuelLevel: '1/2',
     milesIn: '',
     deposit: '0',
+    paymentMethod: '',
+    checkNumber: '',
     estimatedDate: '',
     inspectionNotes: '',
     selectedOperators: [],

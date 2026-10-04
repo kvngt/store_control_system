@@ -6,6 +6,11 @@ las reglas que no se pueden romper y dónde está cada cosa. Si vas a tomar el p
 completo, empieza por **[docs/traspaso.md](docs/traspaso.md)**. Para ubicar una sección
 (archivos, tablas, pruebas), **[docs/mapa-de-secciones.md](docs/mapa-de-secciones.md)**.
 
+**Si retomas trabajo en curso** (varios modelos se turnan): la tabla de estado y la
+**bitácora de traspaso** están en
+**[docs/plan-mejoras-2026-10.md](docs/plan-mejoras-2026-10.md#bitácora-de-traspaso-entre-agentes)**.
+Léela antes de empezar y agrega tu entrada al terminar cada bloque de trabajo.
+
 ## Lo mínimo
 
 - **No hay backend propio.** El navegador habla directo con Supabase con una clave

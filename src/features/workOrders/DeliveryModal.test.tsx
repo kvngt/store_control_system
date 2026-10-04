@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   getEstimate: vi.fn(),
   getBalance: vi.fn(),
   deliver: vi.fn(),
-  uploadDeliveryReceipt: vi.fn(),
+  uploadReceipt: vi.fn(),
   removeDeliveryReceipt: vi.fn(),
 }));
 
@@ -95,7 +95,7 @@ describe('DeliveryModal', () => {
 
   it('sube el comprobante a la carpeta de la sede y lo manda con la entrega', async () => {
     mocks.getBalance.mockResolvedValue({ total: 500, cobrado: 100, saldo: 400 });
-    mocks.uploadDeliveryReceipt.mockResolvedValue('sede-centro/entrega-ORD-2026-007-1.jpg');
+    mocks.uploadReceipt.mockResolvedValue('sede-centro/comprobante-ORD-2026-007-1.jpg');
     const user = userEvent.setup();
     renderModal();
 
@@ -105,18 +105,18 @@ describe('DeliveryModal', () => {
     await user.click(screen.getByRole('button', { name: /Entregar y cobrar/ }));
 
     await waitFor(() => expect(mocks.deliver).toHaveBeenCalled());
-    expect(mocks.uploadDeliveryReceipt).toHaveBeenCalledWith('sede-centro', 'ORD-2026-007', foto);
+    expect(mocks.uploadReceipt).toHaveBeenCalledWith('sede-centro', 'ORD-2026-007', foto);
     expect(mocks.deliver).toHaveBeenCalledWith({
       orderId: 'ord-1',
       metodo: 'transferencia',
       numeroCheque: null,
-      comprobanteRuta: 'sede-centro/entrega-ORD-2026-007-1.jpg',
+      comprobanteRuta: 'sede-centro/comprobante-ORD-2026-007-1.jpg',
     });
   });
 
   it('si la entrega falla, borra el comprobante que subió y lo dice dentro del diálogo', async () => {
     mocks.getBalance.mockResolvedValue({ total: 500, cobrado: 100, saldo: 400 });
-    mocks.uploadDeliveryReceipt.mockResolvedValue('sede-centro/entrega-ORD-2026-007-1.jpg');
+    mocks.uploadReceipt.mockResolvedValue('sede-centro/comprobante-ORD-2026-007-1.jpg');
     mocks.deliver.mockRejectedValue({ code: '42501', message: 'La orden ya fue entregada.' });
     const user = userEvent.setup();
     const { onDelivered } = renderModal();
@@ -126,7 +126,7 @@ describe('DeliveryModal', () => {
     await user.click(screen.getByRole('button', { name: /Entregar y cobrar/ }));
 
     expect(await screen.findByText('La orden ya fue entregada.')).toBeInTheDocument();
-    expect(mocks.removeDeliveryReceipt).toHaveBeenCalledWith('sede-centro/entrega-ORD-2026-007-1.jpg');
+    expect(mocks.removeDeliveryReceipt).toHaveBeenCalledWith('sede-centro/comprobante-ORD-2026-007-1.jpg');
     expect(onDelivered).not.toHaveBeenCalled();
   });
 

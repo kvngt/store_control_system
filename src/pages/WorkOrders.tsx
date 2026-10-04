@@ -282,14 +282,20 @@ export default function WorkOrders() {
         );
       }
 
-      // Solo un admin llega hasta aquí, así que solo queda su rama. La que había debajo
-      // asignaba a quien creaba la orden cuando no era admin — que es exactamente lo que se
-      // cerró: la asignación genera la comisión, así que crear y auto-asignarse era
-      // concederse una comisión que nadie autorizó.
-      const asignaciones = values.selectedOperators.map((id) => {
+      // F4: Los técnicos salen de las tareas (laborItems) asignadas
+      const uniqueTechnicianIds = Array.from(new Set(values.laborItems.map(l => l.asignado_a).filter(Boolean))) as string[];
+      const asignaciones = uniqueTechnicianIds.map((id) => {
         const op = operators.find((o) => o.id === id);
         return { usuario_id: id, tipo_tarea: (op?.rol === 'pintor' ? 'pintura' : 'mecanica') as 'mecanica' | 'pintura' };
       });
+
+      let uploadedReceipt: string | null = null;
+      if (isAdmin && parseFloat(values.deposit) > 0 && values.paymentMethod) {
+        if (form.receiptFile && !createdOrderRef.current) {
+          // El número de orden no existe todavía, usamos 'alta'
+          uploadedReceipt = await workOrdersService.uploadReceipt(targetSedeId, 'alta', form.receiptFile);
+        }
+      }
 
       const order = createdOrderRef.current ?? await workOrdersService.createWorkOrder({
         sede_id: targetSedeId,
@@ -303,6 +309,9 @@ export default function WorkOrders() {
         // mande quien no es admin: dos capas diciendo lo mismo, y ninguna que haya que
         // recordar si algún día la pantalla cambia.
         deposito_inicial: isAdmin ? parseFloat(values.deposit) || 0 : 0,
+        deposito_metodo: isAdmin && values.paymentMethod ? (values.paymentMethod as PaymentMethod) : null,
+        deposito_cheque: isAdmin && values.paymentMethod === 'cheque' ? values.checkNumber || null : null,
+        deposito_comprobante: uploadedReceipt,
         inspeccion_360_notas: values.inspectionNotes,
         fecha_estimada_entrega: values.estimatedDate || daysFromTodayLocal(5),
         // `Math.max(0, ...)` igual que en los repuestos. La labor era la única
@@ -313,6 +322,7 @@ export default function WorkOrders() {
           costo: Math.max(0, parseFloat(l.costo) || 0),
           // En una orden de un solo tipo la especialidad la pone la base con el tipo de orden.
           ...(values.workType === 'combinado' ? { especialidad: l.especialidad } : {}),
+          asignado_a: l.asignado_a || null,
         })),
         // No separate cost: a part is billed on at what it cost the shop, and
         // the database mirrors the price into `costo_unitario` so Finanzas

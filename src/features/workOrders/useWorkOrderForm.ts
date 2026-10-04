@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import { useIntakePhotos } from './useIntakePhotos';
@@ -34,6 +34,9 @@ export function useWorkOrderForm() {
 
   const labor = useFieldArray({ control: form.control, name: 'laborItems' });
   const parts = useFieldArray({ control: form.control, name: 'parts' });
+
+  const [step, setStep] = useState(1);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
   const customerMode = form.watch('customerMode');
   const vehicleMode = form.watch('vehicleMode');
@@ -123,7 +126,27 @@ export function useWorkOrderForm() {
   const reset = useCallback(() => {
     form.reset(emptyWorkOrderForm());
     photos.reset();
+    setStep(1);
+    setReceiptFile(null);
   }, [form, photos]);
+
+  const nextStep = useCallback(async () => {
+    let fieldsToValidate: string[] = [];
+    if (step === 1) {
+      if (customerMode === 'existing') fieldsToValidate = ['selectedCustomer'];
+      else fieldsToValidate = ['newCustomer.nombre', 'newCustomer.telefono', 'newCustomer.email', 'newCustomer.direccion'];
+    } else if (step === 2) {
+      if (vehicleMode === 'existing') fieldsToValidate = ['selectedVehicle', 'fuelLevel', 'milesIn', 'inspectionNotes'];
+      else fieldsToValidate = ['newVehicle.marca', 'newVehicle.modelo', 'newVehicle.vin', 'newVehicle.placa', 'newVehicle.placa_estado', 'newVehicle.color', 'fuelLevel', 'milesIn', 'inspectionNotes'];
+    } else if (step === 3) {
+      fieldsToValidate = ['deposit', 'paymentMethod', 'checkNumber'];
+    }
+
+    const isValid = await form.trigger(fieldsToValidate as any);
+    if (isValid) setStep((s) => Math.min(s + 1, 4));
+  }, [form, step, customerMode, vehicleMode]);
+
+  const prevStep = useCallback(() => setStep((s) => Math.max(s - 1, 1)), []);
 
   // RHF's own `isDirty` covers the fields; the photos, videos and voice notes are state it never sees.
   const isDirty = form.formState.isDirty || photos.hasMedia;
@@ -141,7 +164,12 @@ export function useWorkOrderForm() {
     newVehicle,
     errors: form.formState.errors,
     isDirty,
+    step,
+    receiptFile,
+    setReceiptFile,
     // actions
+    nextStep,
+    prevStep,
     selectCustomer,
     selectVehicle,
     backToExistingCustomer,

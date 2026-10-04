@@ -213,6 +213,9 @@ export const workOrdersService = {
       millas_ingreso: input.millas_ingreso,
       nivel_gasolina: input.nivel_gasolina,
       deposito_inicial: input.deposito_inicial,
+      deposito_metodo: input.deposito_metodo || null,
+      deposito_cheque: input.deposito_cheque || null,
+      deposito_comprobante: input.deposito_comprobante || null,
       inspeccion_360_notas: input.inspeccion_360_notas,
       fecha_estimada_entrega: input.fecha_estimada_entrega,
       creado_por: input.creado_por,
@@ -277,9 +280,9 @@ export const workOrdersService = {
    * Foto del cheque o de la transferencia. Bucket privado `comprobantes`, en la carpeta de la
    * sede de la orden (la RPC lo comprueba). Del nombre original solo se usa la extensión.
    */
-  uploadDeliveryReceipt: async (sedeId: string, numeroOrden: string, file: File) => {
+  uploadReceipt: async (sedeId: string, numeroOrden: string, file: File) => {
     const ext = (file.name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-    const path = `${sedeId}/entrega-${numeroOrden}-${Date.now()}.${ext}`;
+    const path = `${sedeId}/comprobante-${numeroOrden}-${Date.now()}.${ext}`;
     const { error } = await supabase.storage
       .from('comprobantes')
       .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type || undefined });

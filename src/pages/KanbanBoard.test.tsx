@@ -41,7 +41,7 @@ vi.mock('../services/supabaseService', () => {
     setArchived: mocks.setArchived,
     getBalance: mocks.getBalance,
     deliver: mocks.deliver,
-    uploadDeliveryReceipt: vi.fn(),
+    uploadReceipt: vi.fn(),
     removeDeliveryReceipt: vi.fn(),
   };
   return { workOrdersService: workOrders, supabaseService: workOrders };
