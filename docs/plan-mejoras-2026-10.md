@@ -14,7 +14,7 @@
 | F3 | Tareas con técnico y comisión por tarea | **Publicado** (`ead2a17` y `db push` del 04/10/2026; revisión adversarial corregida el 04/10/2026). Migración `20261010000006` (pgTAP 19 con 68 aserciones, ajuste de la 03, SEC-99 a SEC-105). Pantalla: editor de tareas `TaskEditor` (reutilizable para F4), tipo y técnico por fila con el diálogo de oficio distinto (también al cambiar el tipo), "Sin técnico", candado y Borrar apagado en lo ya pagado, reparto por tarea en la tarjeta de comisión, avisos en Resumen y al entregar (el diálogo los lee de la base, así que salen también desde el Kanban), "Por tarea" / "En el reparto" con Sacar/Sumar al reparto en la tarjeta de técnicos, avisos `tarea_*`, campos `tecnico` y `reparto` del historial. La red de seguridad compara la fórmula vieja contra la nueva sin reescribir comisiones. **Pendiente:** (1) confirmar con el taller que asignar técnico a una línea heredada la saca del reparto para siempre ([pagos-a-empleados.md](pagos-a-empleados.md#5-preguntas-enviadas-al-taller)); (2) ~~publicar: commit, `db push` de `20261010000004` a `20261010000006`~~ hecho el 04/10/2026; falta el deploy de `process-outbox` y correr `npm run qa:security` con `TOKEN_ADMIN`/`TOKEN_TECH` (SEC-91 a SEC-105 quedaron en SKIP); (3) **una migración posterior que contrae** (`ALTER TABLE orden_labor ALTER COLUMN reparto_heredado SET DEFAULT false`) cuando la app nueva esté publicada y ya nadie use la anterior. **Queda para F4:** que `create_work_order` acepte `asignado_a` y `reparto_heredado` en `p_labor` (hoy las líneas del alta nacen heredadas) y usar `TaskEditor` en el alta |
 | F4 | Nueva orden en 4 secciones y depósito con método | **Publicado** (migraciones, pruebas Vitest y UI de asistente completas). |
 | F5 | "Tareas por hacer" del técnico | **Completada en local** (migraciones, pruebas db y UI implementada). |
-| F6 | Hallazgos y nueva "espera de autorización" | **Publicado** (04/10/2026: `db push` de `08` a `11` por el usuario, después push a `main`). Detalle completo en [hallazgos.md](hallazgos.md). Migraciones `20261010000010` y `20261010000011`; pgTAP 22 (44) y ajuste de la 03; SEC-106 a SEC-112. **Pendiente:** `qa:security` con tokens; la migración que contrae (guardia del técnico, [hallazgos.md §6](hallazgos.md#6-lo-que-falta-en-orden)); casos HAL en un teléfono real; adaptar las 11 pruebas Vitest del alta (rotas desde F4) |
+| F6 | Hallazgos y nueva "espera de autorización" | **Publicado a medias** (04/10/2026: app en `main`; el usuario aplicó `009` y `010`, **falta el `db push` de la `011`**, que cierra los permisos). Detalle completo en [hallazgos.md](hallazgos.md). Migraciones `20261010000010` y `20261010000011`; pgTAP 22 (44) y ajuste de la 03; SEC-106 a SEC-112. **Pendiente:** `qa:security` con tokens; la migración que contrae (guardia del técnico, [hallazgos.md §6](hallazgos.md#6-lo-que-falta-en-orden)); casos HAL en un teléfono real; adaptar las 11 pruebas Vitest del alta (rotas desde F4) |
 | F7 | Navegación del sitio | Pendiente |
 
 Nada se publica sin que la persona responsable lo pida: cada `db push`, `functions deploy`,
@@ -482,12 +482,13 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
 - **Vitest:** 11 pruebas del alta en `WorkOrders.smoke.test.tsx` siguen rojas **desde F4**
   (`370bf12`: el alta pasó a 4 pasos y las pruebas no se adaptaron; la entrada de F4 decía que
   se habían saltado con `.skip`, y no es así). Todo lo demás pasa. Lint, `tsc` y build limpios.
-- **Publicado (a pedido del usuario):** el usuario hizo el `db push` (`08` a `11`) y después
-  se subió todo a `main` (Hostinger lo publica). Antes del push, el servicio quedó tolerante
-  a la forma vieja de las RPC por si la base iba atrasada.
+- **Publicado (a pedido del usuario):** todo está en `main` (Hostinger lo publica). El
+  usuario corrió `db push` desde una copia sin la `011`: entraron `009` y `010`, **la `011` no**.
+  El servicio quedó tolerante a la forma vieja de las RPC, así que la app funciona, pero los
+  huecos de permisos de la `010` siguen abiertos hasta aplicar la `011`.
 - **Documentación para seguir:** [hallazgos.md](hallazgos.md) (qué hace, tablas, RPC,
   archivos, pruebas, qué falta y cómo levantarlo en local).
-- **Siguiente:** (1) `npm run db:check` para confirmar que producción tiene la `011`;
+- **Siguiente:** (1) **urgente:** `git pull` y `npx supabase db push` de la `011` (confirmar con `npm run db:check`);
   (2) `qa:security` con `TOKEN_ADMIN`/`TOKEN_TECH`; (3) la migración que contrae
   ([hallazgos.md §6](hallazgos.md#6-lo-que-falta-en-orden)); (4) adaptar las 11 pruebas del
   alta en `WorkOrders.smoke.test.tsx` (y pasar a i18n los textos fijos del asistente: "Paso
