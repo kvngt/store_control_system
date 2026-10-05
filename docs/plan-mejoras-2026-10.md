@@ -12,10 +12,10 @@
 | F1 | Trazabilidad (historial de la orden, Sentry en el código, reportar problema) y reintentar correos | **Publicado** (commit `ead2a17` en `main` y `db push` de `20261010000004` a `20261010000007` el 04/10/2026; el push a `main` salió antes que el `db push` y el sitio estuvo ~1 h con la base atrasada). Migraciones `20261010000004` (historial) y `20261010000005` (reintentar correos), pgTAP 17 y 18, Sentry en `lib/monitoring.ts`, "Reportar un problema" y "Correos al cliente" en Configuración, botón Reintentar, pestaña Historial. `process-outbox` cambiado: **falta desplegarla** |
 | F2 | Detalle de la orden con pestañas, textos "Mano de obra"/"Tareas", botones verdes, avisos | **Publicado** (`ead2a17`). `components/Tabs.tsx`, encabezado fijo, pestañas por rol, enlace `?open=&tab=`, `.btn-success`, avisos al agregar (con "falta la autorización" si la orden ya está firmada). Revisado con capturas contra el Supabase local en escritorio y teléfono |
 | F3 | Tareas con técnico y comisión por tarea | **Publicado** (`ead2a17` y `db push` del 04/10/2026; revisión adversarial corregida el 04/10/2026). Migración `20261010000006` (pgTAP 19 con 68 aserciones, ajuste de la 03, SEC-99 a SEC-105). Pantalla: editor de tareas `TaskEditor` (reutilizable para F4), tipo y técnico por fila con el diálogo de oficio distinto (también al cambiar el tipo), "Sin técnico", candado y Borrar apagado en lo ya pagado, reparto por tarea en la tarjeta de comisión, avisos en Resumen y al entregar (el diálogo los lee de la base, así que salen también desde el Kanban), "Por tarea" / "En el reparto" con Sacar/Sumar al reparto en la tarjeta de técnicos, avisos `tarea_*`, campos `tecnico` y `reparto` del historial. La red de seguridad compara la fórmula vieja contra la nueva sin reescribir comisiones. **Pendiente:** (1) confirmar con el taller que asignar técnico a una línea heredada la saca del reparto para siempre ([pagos-a-empleados.md](pagos-a-empleados.md#5-preguntas-enviadas-al-taller)); (2) ~~publicar: commit, `db push` de `20261010000004` a `20261010000006`~~ hecho el 04/10/2026; falta el deploy de `process-outbox` y correr `npm run qa:security` con `TOKEN_ADMIN`/`TOKEN_TECH` (SEC-91 a SEC-105 quedaron en SKIP); (3) ~~una migración posterior que contrae (`ALTER TABLE orden_labor ALTER COLUMN reparto_heredado SET DEFAULT false`)~~ hecha en `20261010000008`; queda el respaldo de `create_work_order` (sin `reparto_heredado`, una línea sin técnico nace heredada), que ya no importa porque la app lo manda siempre desde el 04/10/2026 (noche). **Queda para F4:** que `create_work_order` acepte `asignado_a` y `reparto_heredado` en `p_labor` (hoy las líneas del alta nacen heredadas) y usar `TaskEditor` en el alta |
-| F4 | Nueva orden en 4 secciones y depósito con método | **Publicado** (`370bf12`, `e6bfced`; migración `20261010000007`). **Revisado el 04/10/2026 (noche), correcciones sin publicar:** el servicio mandaba el número de cheque y el comprobante con nombres que la base no lee (se perdían sin error), las tareas perdían su tipo en órdenes de un solo tipo y las sin técnico nacían en el reparto heredado; además Enter o doble clic creaban la orden a medio asistente, una tarea escrita sin agregar se perdía y había textos sin i18n. Las 11 pruebas rotas, adaptadas, y 7 nuevas. Detalle y consulta para revisar lo afectado en producción: [bitácora](#04102026-noche-2--claude-code-alta-y-f7) |
+| F4 | Nueva orden en 4 secciones y depósito con método | **Publicado** (`370bf12`, `e6bfced`; migración `20261010000007`). **Revisado y corregido el 04/10/2026 (noche), publicado por el usuario** (`93bdade`, `830961a`): el servicio mandaba el número de cheque y el comprobante con nombres que la base no lee (se perdían sin error), las tareas perdían su tipo en órdenes de un solo tipo y las sin técnico nacían en el reparto heredado; además Enter o doble clic creaban la orden a medio asistente, una tarea escrita sin agregar se perdía y había textos sin i18n. Las 11 pruebas rotas, adaptadas, y 7 nuevas. Detalle y consulta para revisar lo afectado en producción: [bitácora](#04102026-noche-2--claude-code-alta-y-f7) |
 | F5 | "Tareas por hacer" del técnico | **Publicado** (`2ce08c0`, `cbdf995` en `main`; `db push` de `20261010000009` el 04/10/2026). Pantalla en `TechnicianTaskList.tsx`; pgTAP 21 |
 | F6 | Hallazgos y nueva "espera de autorización" | **Publicado** (04/10/2026: app en `main`; `db push` de `009`, `010` y `011` por el usuario). Detalle completo en [hallazgos.md](hallazgos.md). Migraciones `20261010000010` y `20261010000011`; pgTAP 22 (44) y ajuste de la 03; SEC-106 a SEC-112. **Pendiente:** `qa:security` con tokens; la migración que contrae (guardia del técnico, [hallazgos.md §6](hallazgos.md#6-lo-que-falta-en-orden)); casos HAL en un teléfono real; ~~adaptar las 11 pruebas Vitest del alta~~ hecho el 04/10/2026 (noche) |
-| F7 | Navegación del sitio | **Hecho en local, sin publicar** (04/10/2026, noche). Órdenes y Kanban en una página (Lista \| Tablero, misma búsqueda, vista recordada, `/kanban` redirige); grupos del menú traducidos (Taller / Finanzas / Sistema); "Requiere atención" en el panel del admin (migración `20261010000012`, RPC `requiere_atencion`, pgTAP 23 con 15 aserciones, SEC-113 y SEC-114); "Mis tareas" en el panel del técnico. **Para publicar:** `db push` de la `012` y después push a `main` (si llega antes la app, la tarjeta no se muestra; no rompe). Casos NAV en [plan-de-pruebas.md](plan-de-pruebas.md) |
+| F7 | Navegación del sitio | **Publicado** (04/10/2026, noche: `93bdade` y `830961a` en `main`, `db push` de la `012`; `db:check` ✓ con 66 migraciones). `requiere_atencion` comprobada en producción (admin 200, mecánico 42501). Órdenes y Kanban en una página (Lista \| Tablero, misma búsqueda, vista recordada, `/kanban` redirige); grupos del menú traducidos (Taller / Finanzas / Sistema); "Requiere atención" en el panel del admin (migración `20261010000012`, RPC `requiere_atencion`, pgTAP 23 con 15 aserciones, SEC-113 y SEC-114); "Mis tareas" en el panel del técnico. Casos NAV en [plan-de-pruebas.md](plan-de-pruebas.md) |
 
 Nada se publica sin que la persona responsable lo pida: cada `db push`, `functions deploy`,
 push a `main` y commit se piden aparte.
@@ -456,6 +456,48 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 04/10/2026, noche (3) — Claude Code (secciones plegables y `qa:security`)
+
+- **Cuentas de prueba:** el usuario dio un admin y un mecánico **de producción** para las
+  pruebas; quedaron en `.env.test.local` (ignorado por git) como `E2E_ADMIN_*` y
+  `E2E_MECHANIC_*`, entre comillas porque las contraseñas llevan `#` (sin comillas se corta ahí).
+  Nunca en el repositorio, la documentación ni la memoria.
+- **`npm run qa:security` contra producción:** **81 PASS · 0 FAIL · 28 SKIP.** La primera
+  corrida dio 6 FAIL falsos (SEC-41 a 44, 53 y 60): `ORDEN`, `ORDEN_AJENA` y `ORDEN_ENTREGADA`
+  de `.env.test.local` son órdenes que ya no existen, y un PATCH sobre cero filas responde 204.
+  `scripts/qa/api-security.mjs` ahora descarta (con aviso) un id fijo que no es una orden del
+  técnico, o una ajena que no existe, y busca otra. Los 28 SKIP son porque **el mecánico de
+  prueba no tiene ninguna orden asignada**: para cubrirlos hace falta una orden de prueba
+  asignada a él (es escribir en producción: pedirlo a la persona responsable). SEC-113 y
+  SEC-114 prueban la función real: el usuario ya publicó F7 y la `012` (`93bdade`, `830961a`;
+  `db:check` ✓, 66 migraciones), y una llamada directa da 200 al admin y 42501 al mecánico. El
+  panel de producción marca **7 correos al cliente con error** en 72 h: probablemente la llave
+  de Resend (F0). Ojo: las e2e (`npm run test:e2e`) con estas cuentas **sí crean datos**
+  en producción (prefijo `PWTEST`).
+- **Secciones plegables (pedido del usuario, sin publicar):** en el detalle de la orden cada
+  tarjeta de cada pestaña arranca **cerrada**, con su título, un dato corto y una flecha, en
+  escritorio y en el teléfono. `components/MobileSection.tsx` pasó a
+  `components/CollapsibleSection.tsx` (controlable desde afuera; clases `.collapsible-section*`).
+  `WorkOrderDetail.tsx`: `TAB_SECTIONS` (qué sección en qué pestaña), "Desplegar todo" /
+  "Contraer todo" por pestaña (uno solo en el teléfono), `LINKED_SECTION` (un enlace a Trabajos
+  abre Mano de obra; el de "Mis tareas" abre Tareas), "Cotizar" y "Ver trabajos" abren Mano de
+  obra. Los avisos (hallazgos, tareas sin técnico) quedan arriba sin plegar. Las secciones ya
+  no van de a dos columnas: una debajo de otra, a lo ancho. Revisado con capturas contra el
+  Supabase local (escritorio, teléfono, admin y técnico), sin errores de consola ni scroll
+  horizontal. Pruebas: `CollapsibleSection.test.tsx` y "secciones plegables del detalle" en
+  `WorkOrders.smoke.test.tsx` (el ayudante `openDetail` abre las secciones para las demás).
+- **Verificación:** lint ✓, `tsc -b` ✓, Vitest 80 archivos / 656 pruebas ✓, build ✓. Sin
+  cambios de base en este bloque.
+- **Sin commit:** solo este bloque (secciones plegables, el arreglo de `api-security.mjs` y la
+  documentación). El anterior (noche 2) ya lo publicó el usuario.
+- **Siguiente:** (1) que el usuario revise las secciones plegables y pida commit y push (no
+  necesitan migración); (2) correr en producción las consultas de la entrada "noche (2)" sobre
+  los depósitos del alta; (3) F0: la llave de Resend y reintentar los correos con error
+  (Configuración → Correos al cliente); (4) decidir si se crea en producción una orden de
+  prueba asignada al mecánico de prueba para cubrir los 28 SKIP de `qa:security`; (5) las
+  migraciones que contraen ([hallazgos.md §6](hallazgos.md#6-lo-que-falta-en-orden)); (6) casos
+  ALT, NAV y HAL en un teléfono real.
 
 ### 04/10/2026, noche (2) — Claude Code (alta y F7)
 

@@ -137,7 +137,7 @@ src/
     layout/                      AppLayout (monta la cola de subidas), Sidebar, Header, BottomNav
     SchemaDriftBanner.tsx        avisa si la base está atrasada respecto al build
     BodyPortal.tsx               capas de pantalla completa fuera de las tarjetas
-    MobileSection.tsx            pliega una tarjeta en el teléfono (detalle de la orden)
+    CollapsibleSection.tsx       pliega una tarjeta (detalle de la orden, cerradas al entrar)
     Combobox, CustomerPicker, LazyModal, PasswordInput, PhoneInput, ErrorBoundary
 
   context/                       estado global, uno por preocupación
@@ -585,11 +585,12 @@ algo con un diálogo abierto.
   en algo que tiene que seguir siendo flex, el `!important` le quita el `gap`.
 - `useIsMobile()` cuando conviene renderizar una sola versión en vez de esconder
   la otra.
-- `<MobileSection>` (`components/MobileSection.tsx`) pliega una tarjeta en el teléfono:
+- `<CollapsibleSection>` (`components/CollapsibleSection.tsx`) pliega una tarjeta:
   encabezado con ícono, título y un dato corto (fotos, total, líneas), y el contenido
-  escondido con `hidden` para no perder lo que se está escribiendo. En escritorio
-  devuelve la tarjeta tal cual. Lo usa el detalle de la orden; los estilos están al final
-  de `components.css`.
+  escondido con `hidden` para no perder lo que se está escribiendo. Lo usa el detalle de la
+  orden, en escritorio dentro de cada pestaña y en el teléfono todas apiladas, cerradas al
+  entrar (04/10/2026; antes era `MobileSection` y en escritorio no plegaba). Los estilos están
+  al final de `components.css`.
 - Inputs a 16 px bajo 768 px: Safari de iOS hace zoom en cualquier campo menor.
 - `100dvh` junto a `100vh`, y `env(safe-area-inset-*)` con `viewport-fit=cover`.
 

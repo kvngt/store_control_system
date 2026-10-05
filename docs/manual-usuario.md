@@ -444,8 +444,16 @@ Junto al nombre de una pestaña aparece cuántas líneas o archivos tiene. Un **
 amarillo** en **Trabajos** avisa que hay mano de obra o repuestos **sin autorizar**: no se
 cobran ni generan comisión hasta que el cliente los autorice.
 
-En el teléfono la orden sigue en secciones que se abren y se cierran, en el mismo orden
-que las pestañas.
+**Secciones plegables.** Dentro de cada pestaña, cada parte de la orden (vehículo, firma,
+técnicos, mano de obra, repuestos…) aparece **cerrada**: se ve su título y un dato corto a la
+derecha (la placa, cuántas líneas, el total). La **flecha** la abre o la cierra, y **Desplegar
+todo** abre todas las de la pestaña. Lo que abriste sigue abierto al cambiar de pestaña y
+volver. Los avisos (trabajo adicional reportado, tareas sin técnico) no se pliegan: van
+arriba. Si llegas desde un aviso o desde el panel (por ejemplo "Tareas sin técnico" o una
+tarea de **Mis tareas**), la sección que fuiste a ver ya está abierta.
+
+En el teléfono son las mismas secciones, todas en una columna y en el mismo orden que las
+pestañas, con un solo **Desplegar todo** arriba.
 
 **Historial** *(solo administradores)*. Quién cambió qué en la orden y cuándo: estados,
 avance, firma, mano de obra, repuestos, técnicos, depósito, presupuestos, archivos y

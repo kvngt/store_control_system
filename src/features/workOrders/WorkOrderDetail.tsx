@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import {
   AlertTriangle,
   Archive,
@@ -7,6 +7,8 @@ import {
   Car,
   CheckCircle2,
   ChevronLeft,
+  ChevronsDownUp,
+  ChevronsUpDown,
   DollarSign,
   FileDown,
   FileSignature,
@@ -26,7 +28,7 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
-import MobileSection from '../../components/MobileSection';
+import CollapsibleSection from '../../components/CollapsibleSection';
 import Tabs, { TabPanel, type TabItem } from '../../components/Tabs';
 import { useAuth } from '../../context/auth.context';
 import { useLanguage } from '../../context/language.context';
@@ -67,12 +69,33 @@ const ADMIN_TABS = ['resumen', 'trabajos', 'fotos', 'cobro', 'historial'] as con
 const TECH_TABS = ['tareas', 'orden', 'avances'] as const;
 
 /**
+ * Las secciones plegables de cada pestaña, en orden. Arrancan cerradas (pedido del taller,
+ * 04/10/2026): se ven los títulos con su resumen y se abre lo que se necesita. En el teléfono,
+ * sin pestañas, van todas apiladas en este mismo orden.
+ */
+const TAB_SECTIONS: Record<string, readonly string[]> = {
+  resumen: ['vehiculo', 'firma', 'tecnicos'],
+  trabajos: ['mano_obra', 'repuestos', 'presupuesto', 'comision'],
+  fotos: ['inspeccion', 'avances'],
+  cobro: ['totales', 'balance', 'enlace'],
+  historial: ['historial'],
+  tareas: ['tareas', 'comision'],
+  orden: ['vehiculo', 'inspeccion', 'repuestos', 'firma', 'tecnicos'],
+  avances: ['avances'],
+};
+
+/** Un enlace a una pestaña (un aviso, "Requiere atención", "Mis tareas") abre lo que fue a ver. */
+const LINKED_SECTION: Record<string, string> = { trabajos: 'mano_obra', tareas: 'tareas' };
+
+/**
  * The single-order screen: header and status, vehicle and intake, signature,
  * labor, parts, totals, assignments and the progress log.
  *
  * Desde el 03/10/2026, en escritorio las tarjetas van en pestañas bajo un encabezado fijo: la
  * orden apilaba hasta doce y había que recorrerlas todas (pedido del taller). En el teléfono
- * siguen las secciones plegables (`MobileSection`), en el mismo orden que las pestañas.
+ * siguen las secciones apiladas, en el mismo orden que las pestañas. Desde el 04/10/2026 cada
+ * tarjeta es una sección plegable (`CollapsibleSection`), cerrada al entrar, también en
+ * escritorio: se ven los títulos y se abre lo que se necesita.
  *
  * It composes the cards and holds only what is genuinely local to the layout —
  * the open tab and the assignment picker. Every mutation belongs to
@@ -96,11 +119,15 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   const orderId = detail.order?.id;
   // La tarea que se precarga al cotizar un hallazgo (F6).
   const [prefill, setPrefill] = useState<{ text: string; nonce: number } | null>(null);
+  // Qué secciones están abiertas: ninguna al entrar a una orden, salvo la que pide un enlace.
+  const [openSections, setOpenSections] = useState<ReadonlySet<string>>(() => new Set());
 
   useEffect(() => {
     const next = detail.requestedTab && tabIds.includes(detail.requestedTab) ? detail.requestedTab : tabIds[0];
     setTab(next);
     setVisited([next]);
+    const linked = detail.requestedTab === next ? LINKED_SECTION[next] : undefined;
+    setOpenSections(new Set(linked ? [linked] : []));
     // `tabIds` cambia solo con el rol, que no cambia con la orden abierta.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, detail.requestedTab]);
@@ -112,6 +139,18 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     setTab(id);
     setVisited((prev) => (prev.includes(id) ? prev : [...prev, id]));
   };
+
+  const openSection = (id: string) => setOpenSections((prev) => new Set(prev).add(id));
+  // Lo que recibe cada `CollapsibleSection`: si está abierta y cómo se abre o se cierra.
+  const sectionState = (id: string) => ({
+    open: openSections.has(id),
+    onToggle: () =>
+      setOpenSections((prev) => {
+        const next = new Set(prev);
+        if (!next.delete(id)) next.add(id);
+        return next;
+      }),
+  });
 
   const customer = order.cliente;
   const vehicle = order.vehiculo;
@@ -156,11 +195,11 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   };
 
   // ----- las secciones ---------------------------------------------------------
-  // Cada una envuelta en su `MobileSection`, que en escritorio no hace nada. Se arman una vez
-  // y se acomodan abajo: en pestañas (escritorio) o apiladas (teléfono).
+  // Cada una envuelta en su `CollapsibleSection`, cerrada al entrar. Se arman una vez y se
+  // acomodan abajo (`TAB_SECTIONS`): en pestañas (escritorio) o apiladas (teléfono).
 
   const vehicleSection = (
-    <MobileSection title={t('workOrders.vehicleServiceRepair')} icon={<Car size={18} />} summary={vehicle?.placa || undefined}>
+    <CollapsibleSection {...sectionState('vehiculo')} title={t('workOrders.vehicleServiceRepair')} icon={<Car size={18} />} summary={vehicle?.placa || undefined}>
       <div className="card">
         <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>
           <Car size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
@@ -200,11 +239,11 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           )}
         </div>
       </div>
-    </MobileSection>
+    </CollapsibleSection>
   );
 
   const inspectionSection = (
-    <MobileSection title={t('workOrders.inspection360')} icon={<Camera size={18} />} summary={receptionMedia.length || undefined}>
+    <CollapsibleSection {...sectionState('inspeccion')} title={t('workOrders.inspection360')} icon={<Camera size={18} />} summary={receptionMedia.length || undefined}>
       <div className="card">
         <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>
           <Camera size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
@@ -234,11 +273,11 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           </div>
         )}
       </div>
-    </MobileSection>
+    </CollapsibleSection>
   );
 
   const signatureSection = (
-    <MobileSection
+    <CollapsibleSection {...sectionState('firma')}
       title={t('workOrders.customerSignature')}
       icon={<PenLine size={18} />}
       summary={order.firma_ruta ? <CheckCircle2 size={16} style={{ color: 'var(--color-success)', verticalAlign: 'middle' }} /> : undefined}
@@ -252,13 +291,13 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         saving={detail.savingSignature}
         onSave={detail.saveSignature}
       />
-    </MobileSection>
+    </CollapsibleSection>
   );
 
   // "Mano de obra" para administración (y el cliente); "Tareas" para el técnico.
   const laborTitle = isAdmin ? t('workOrders.laborDescription') : t('workOrders.tasks');
   const laborSection = (
-    <MobileSection title={laborTitle} icon={<Wrench size={18} />} summary={laborList.length || undefined} defaultOpen={!isAdmin}>
+    <CollapsibleSection {...sectionState('mano_obra')} title={laborTitle} icon={<Wrench size={18} />} summary={laborList.length || undefined}>
       <LaborTable
         title={laborTitle}
         items={laborList}
@@ -277,19 +316,19 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         paidPools={detail.paidPools}
         prefill={prefill}
       />
-    </MobileSection>
+    </CollapsibleSection>
   );
 
   const techLaborSection = !isAdmin && (
-    <MobileSection title={t('workOrders.tasks')} icon={<Wrench size={18} />} summary={laborList.length || undefined} defaultOpen>
+    <CollapsibleSection {...sectionState('tareas')} title={t('workOrders.tasks')} icon={<Wrench size={18} />} summary={laborList.length || undefined}>
       <TechnicianTaskList items={laborList} currentUserId={detail.userId ?? ''} detail={detail} />
-    </MobileSection>
+    </CollapsibleSection>
   );
 
   // Un técnico no ve precios de repuestos: la tabla con montos es solo admin (y la base no se
   // la devuelve). Ve qué piezas lleva la orden, que es lo que necesita para hacer el trabajo.
   const partsSection = (
-    <MobileSection
+    <CollapsibleSection {...sectionState('repuestos')}
       title={t('workOrders.partsDescription')}
       icon={isAdmin ? <Paintbrush size={18} /> : <Package size={18} />}
       summary={(isAdmin ? partsList.length : (order.repuestos_resumen || []).length) || undefined}
@@ -306,25 +345,25 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
       ) : (
         <PartsSummaryCard items={order.repuestos_resumen || []} />
       )}
-    </MobileSection>
+    </CollapsibleSection>
   );
 
   // Presupuesto: lo que falta autorizar y lo que espera al cliente. Solo admin.
   const quoteSection = isAdmin && (
-    <MobileSection title={t('quotes.title')} icon={<FileSignature size={18} />}>
+    <CollapsibleSection {...sectionState('presupuesto')} title={t('quotes.title')} icon={<FileSignature size={18} />}>
       <QuoteCard order={order} />
-    </MobileSection>
+    </CollapsibleSection>
   );
 
   // Cuánto dejó el trabajo: solo tiene sentido ya entregado, y es de administración.
   const balanceSection = isAdmin && detail.isDelivered && (
-    <MobileSection title={t('orderBalance.title')} icon={<Scale size={18} />}>
+    <CollapsibleSection {...sectionState('balance')} title={t('orderBalance.title')} icon={<Scale size={18} />}>
       <OrderBalanceCard orderId={order.id} />
-    </MobileSection>
+    </CollapsibleSection>
   );
 
   const commissionSection = detail.commissionEstimate && (
-    <MobileSection
+    <CollapsibleSection {...sectionState('comision')}
       title={isAdmin ? t('commission.splitTitle') : t('workOrders.estimatedCommission')}
       icon={<Wallet size={18} />}
     >
@@ -339,12 +378,12 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           ...Object.fromEntries((order.asignaciones || []).map((a) => [a.usuario_id, a.usuario?.nombre_completo ?? '—'])),
         }}
       />
-    </MobileSection>
+    </CollapsibleSection>
   );
 
   // Totales — solo cuando la base devolvió los montos (admin).
   const totalsSection = amounts && (
-    <MobileSection
+    <CollapsibleSection {...sectionState('totales')}
       title={t('workOrders.totalsTitle')}
       icon={<Receipt size={18} />}
       summary={money(totalParts + totalLabor - Number(amounts.deposito_inicial))}
@@ -372,18 +411,18 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           </div>
         </div>
       </div>
-    </MobileSection>
+    </CollapsibleSection>
   );
 
   // El enlace abre precios y totales: solo administración lo comparte.
   const customerLinkSection = isAdmin && (
-    <MobileSection title={t('customerLink.title')} icon={<Link2 size={18} />}>
+    <CollapsibleSection {...sectionState('enlace')} title={t('customerLink.title')} icon={<Link2 size={18} />}>
       <CustomerLinkCard order={order} statusLabels={statusLabels} />
-    </MobileSection>
+    </CollapsibleSection>
   );
 
   const techniciansSection = (
-    <MobileSection title={t('workOrders.assignedTechnician')} icon={<User size={18} />} summary={assignments.length || undefined}>
+    <CollapsibleSection {...sectionState('tecnicos')} title={t('workOrders.assignedTechnician')} icon={<User size={18} />} summary={assignments.length || undefined}>
       <div className="card" style={{ marginTop: 'var(--space-4)' }}>
         <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>
           <User size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
@@ -493,16 +532,14 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           </p>
         )}
       </div>
-    </MobileSection>
+    </CollapsibleSection>
   );
 
-  // Para un técnico es la tarjeta de trabajo: en el teléfono abre ya desplegada.
   const progressSection = (
-    <MobileSection
+    <CollapsibleSection {...sectionState('avances')}
       title={t('workOrders.progressLog')}
       icon={<MessageSquarePlus size={18} />}
       summary={progressEntries.length || undefined}
-      defaultOpen={!isAdmin}
     >
       <ProgressLog
         entries={progressEntries}
@@ -519,14 +556,14 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         onDeleteMedia={detail.deleteMedia}
         findingEntryIds={findingEntryIds}
       />
-    </MobileSection>
+    </CollapsibleSection>
   );
 
   // El historial es de administración. Se monta solo cuando se abre (ver `visited`).
   const historySection = isAdmin && (
-    <MobileSection title={t('history.title')} icon={<History size={18} />}>
+    <CollapsibleSection {...sectionState('historial')} title={t('history.title')} icon={<History size={18} />}>
       <OrderHistory orderId={order.id} statusLabels={statusLabels} />
-    </MobileSection>
+    </CollapsibleSection>
   );
 
   // F6: lo que reportó el taller y administración tiene que decidir. Arriba de Resumen y de
@@ -545,6 +582,8 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         const text = await detail.quoteFinding(h.id);
         if (text == null) return;
         setPrefill({ text, nonce: Date.now() });
+        // La tarea precargada está en Mano de obra: se abre para que se vea.
+        openSection('mano_obra');
         selectTab('trabajos');
       }}
       onDiscard={(h, enReporte, texto) => detail.discardFinding(h.id, enReporte, texto)}
@@ -557,7 +596,14 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
       <AlertTriangle size={16} aria-hidden="true" />
       <span>{t('tasks.unassignedNotice').replace('{n}', String(unassignedCount))}</span>
       {!isMobile && (
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => selectTab('trabajos')}>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          onClick={() => {
+            openSection('mano_obra');
+            selectTab('trabajos');
+          }}
+        >
           {t('tasks.goToWork')}
         </button>
       )}
@@ -566,67 +612,74 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
 
   // ----- qué va en cada pestaña --------------------------------------------------
 
-  const tabContent: Record<string, ReactNode> = isAdmin
-    ? {
-        resumen: (
-          <>
-            {findingsSection}
-            {unassignedNotice}
-            <div className="responsive-grid-2">
-              {vehicleSection}
-              {signatureSection}
-            </div>
-            {techniciansSection}
-          </>
-        ),
-        trabajos: (
-          <>
-            {!isMobile && findingsSection}
-            <div className="responsive-grid-2">
-              {laborSection}
-              {partsSection}
-            </div>
-            {quoteSection}
-            {commissionSection}
-          </>
-        ),
-        fotos: (
-          <>
-            {inspectionSection}
-            {progressSection}
-          </>
-        ),
-        cobro: (
-          <>
-            {totalsSection}
-            {balanceSection}
-            {customerLinkSection}
-          </>
-        ),
-        historial: historySection,
-      }
-    : {
-        tareas: (
-          <>
-            {techLaborSection}
-            {commissionSection}
-          </>
-        ),
-        orden: (
-          <>
-            <div className="responsive-grid-2">
-              {vehicleSection}
-              {inspectionSection}
-            </div>
-            <div className="responsive-grid-2">
-              {partsSection}
-              {signatureSection}
-            </div>
-            {techniciansSection}
-          </>
-        ),
-        avances: progressSection,
-      };
+  const sectionNodes: Record<string, ReactNode> = {
+    vehiculo: vehicleSection,
+    firma: signatureSection,
+    tecnicos: techniciansSection,
+    mano_obra: laborSection,
+    tareas: techLaborSection,
+    repuestos: partsSection,
+    presupuesto: quoteSection,
+    comision: commissionSection,
+    inspeccion: inspectionSection,
+    avances: progressSection,
+    totales: totalsSection,
+    balance: balanceSection,
+    enlace: customerLinkSection,
+    historial: historySection,
+  };
+  // Las que esta orden y este rol de verdad tienen (el balance solo entregada, el presupuesto
+  // solo para administración…).
+  const sectionsOf = (tabId: string) => (TAB_SECTIONS[tabId] ?? []).filter((id) => sectionNodes[id]);
+
+  // "Desplegar todo" / "Contraer todo" de un grupo de secciones (una pestaña, o todo el detalle
+  // en el teléfono). Con una sola no hace falta: su flecha es lo mismo.
+  const sectionTools = (ids: readonly string[]) => {
+    if (ids.length < 2) return null;
+    const allOpen = ids.every((id) => openSections.has(id));
+    return (
+      <div className="section-tools">
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          onClick={() =>
+            setOpenSections((prev) => {
+              const next = new Set(prev);
+              for (const id of ids) {
+                if (allOpen) next.delete(id);
+                else next.add(id);
+              }
+              return next;
+            })
+          }
+        >
+          {allOpen ? <ChevronsDownUp size={14} aria-hidden /> : <ChevronsUpDown size={14} aria-hidden />}{' '}
+          {allOpen ? t('workOrders.tabs.collapseAll') : t('workOrders.tabs.expandAll')}
+        </button>
+      </div>
+    );
+  };
+
+  // Los avisos van arriba de las secciones y no se pliegan: son lo que hay que atender.
+  const tabTop: Record<string, ReactNode> = {
+    resumen: (
+      <>
+        {findingsSection}
+        {unassignedNotice}
+      </>
+    ),
+    trabajos: !isMobile && findingsSection,
+  };
+
+  const renderTab = (tabId: string) => (
+    <>
+      {tabTop[tabId]}
+      {!isMobile && sectionTools(sectionsOf(tabId))}
+      {sectionsOf(tabId).map((id) => (
+        <Fragment key={id}>{sectionNodes[id]}</Fragment>
+      ))}
+    </>
+  );
 
   const tabItems: TabItem[] = isAdmin
     ? [
@@ -814,11 +867,18 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
 
       {isMobile ? (
         // En el teléfono, todas las secciones apiladas y plegables, en el orden de las pestañas.
-        tabIds.map((id) => <div key={id} className="order-detail-group">{tabContent[id]}</div>)
+        <>
+          {sectionTools(tabIds.flatMap(sectionsOf))}
+          {tabIds.map((id) => (
+            <div key={id} className="order-detail-group">
+              {renderTab(id)}
+            </div>
+          ))}
+        </>
       ) : (
         tabIds.map((id) => (
           <TabPanel key={id} id={id} idPrefix="order-detail" active={tab === id}>
-            {visited.includes(id) ? tabContent[id] : null}
+            {visited.includes(id) ? renderTab(id) : null}
           </TabPanel>
         ))
       )}

@@ -307,15 +307,21 @@ comisiones, el alta de la orden o la "espera de autorización".
   `role="tablist"` y flechas), como el detalle de la orden (03/10/2026). El contenido de una
   pestaña se monta la primera vez que se abre y después se esconde con `hidden`, para no
   perder lo escrito ni pedir datos de pestañas que nadie abrió. En el teléfono la misma
-  pantalla sigue en `MobileSection`, en el orden de las pestañas.
+  pantalla apila sus secciones, en el orden de las pestañas.
 - **El botón verde es `.btn-success`** (tokens `--color-success-fill` y `--color-on-success`,
   contraste fijado en `successButton.test.ts`): para agregar y confirmar trabajo hecho. No
   uses `--color-success` como relleno con texto blanco: no llega al contraste mínimo.
-- **Una pantalla larga en el teléfono se pliega con `<MobileSection>`**
-  (`src/components/MobileSection.tsx`), como el detalle de la orden. En escritorio no hace
-  nada. Envuelve la tarjeta entera: la sección le quita marco y `.card-title` y pone el
-  suyo. El contenido se esconde con `hidden`, no se desmonta, para no perder lo que se estaba
-  escribiendo o firmando; si la tarjeta devuelve `null`, la sección desaparece por CSS.
+- **Las tarjetas del detalle de la orden se pliegan con `<CollapsibleSection>`**
+  (`src/components/CollapsibleSection.tsx`), en escritorio y en el teléfono, **cerradas al
+  entrar** (pedido del taller, 04/10/2026): se ven los títulos con un dato corto y se abre lo
+  que se necesita. Qué sección va en qué pestaña está en `TAB_SECTIONS`
+  (`WorkOrderDetail.tsx`), con "Desplegar todo" por pestaña; un enlace con `&tab=` abre la
+  sección que fue a ver (`LINKED_SECTION`), y "Cotizar" abre Mano de obra. Los avisos
+  (hallazgos, tareas sin técnico) van arriba y no se pliegan. La sección envuelve la tarjeta
+  entera: le quita marco y `.card-title` y pone el suyo. El contenido se esconde con
+  `hidden`, no se desmonta, para no perder lo que se estaba escribiendo o firmando; si la
+  tarjeta devuelve `null`, la sección desaparece por CSS. Una tarjeta nueva del detalle va en
+  `TAB_SECTIONS` con su id.
 - **Un `<select>` controlado que se cancela con `confirm`** se remonta con una `key`
   (`statusEpoch`).
 - **Un `DELETE` o un `UPDATE` rechazado por RLS devuelve éxito sin filas**: usa

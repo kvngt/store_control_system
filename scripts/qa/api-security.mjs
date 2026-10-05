@@ -112,8 +112,27 @@ if (ctx.TOKEN_TECH) {
     );
     const list = Array.isArray(orders.json) ? orders.json : [];
     const mine = (o) => (o.asignaciones || []).some((a) => a.usuario_id === ctx.TECH_ID);
+    // Un id fijo (.env.test.local) de una orden borrada, o que no es de este técnico, hace que
+    // un PATCH no toque ninguna fila y responda 204: daba FAIL sin que hubiera un hueco (y un
+    // PASS igual de falso en los casos que esperan cero filas). Se descarta y se busca otra.
+    const descartar = (key, ok) => {
+      if (ctx[key] && !ok(list.find((o) => o.id === ctx[key]))) {
+        console.error(`${key} de .env.test.local no es una orden de este técnico (borrada o ajena): se ignora.`);
+        ctx[key] = undefined;
+      }
+    };
+    descartar('ORDEN', (o) => o && mine(o) && o.estatus !== 'entregado');
+    descartar('ORDEN_ENTREGADA', (o) => o && mine(o) && o.estatus === 'entregado');
     ctx.ORDEN ||= list.find((o) => mine(o) && o.estatus !== 'entregado')?.id;
     ctx.ORDEN_ENTREGADA ||= list.find((o) => mine(o) && o.estatus === 'entregado')?.id;
+    // La ajena fija tiene que existir: una borrada daría "cero filas" y un PASS que no prueba nada.
+    if (ctx.ORDEN_AJENA && ctx.TOKEN_ADMIN) {
+      const r = await call('GET', `/rest/v1/ordenes_trabajo?select=id&id=eq.${ctx.ORDEN_AJENA}`, { token: ctx.TOKEN_ADMIN });
+      if (!(Array.isArray(r.json) && r.json.length) || list.some((o) => o.id === ctx.ORDEN_AJENA && mine(o))) {
+        console.error('ORDEN_AJENA de .env.test.local no existe o es del técnico: se ignora.');
+        ctx.ORDEN_AJENA = undefined;
+      }
+    }
     // Desde 20261007000000 el técnico no ve las órdenes de sus compañeros, así que la ajena se
     // busca con la sesión del admin: una de su sede, sin entregar, donde él no está.
     if (!ctx.ORDEN_AJENA && ctx.TOKEN_ADMIN && ctx.TECH_SEDE) {

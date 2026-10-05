@@ -364,6 +364,9 @@ const translations: Record<Language, Translations> = {
         order: 'Orden',
         progress: 'Avances',
         unauthorized: 'Hay trabajos sin autorizar',
+        // Las secciones de cada pestaña arrancan cerradas (04/10/2026)
+        expandAll: 'Desplegar todo',
+        collapseAll: 'Contraer todo',
       },
       status: {
         pendiente: 'Pendiente',
@@ -1552,6 +1555,8 @@ const translations: Record<Language, Translations> = {
         order: 'Order',
         progress: 'Progress',
         unauthorized: 'There is unauthorized work',
+        expandAll: 'Expand all',
+        collapseAll: 'Collapse all',
       },
       status: {
         pendiente: 'Pending',

@@ -5372,31 +5372,32 @@ button.intake-step-button:hover:not(:disabled) {
   color: var(--color-text-secondary);
 }
 
-/* ===== Secciones plegables del teléfono (components/MobileSection) =====
-   Solo se renderizan en el teléfono. La tarjeta de adentro pierde marco, margen y
-   título: el encabezado de la sección ya los pone. */
-.mobile-section {
+/* ===== Secciones plegables (components/CollapsibleSection) =====
+   El detalle de la orden, en escritorio dentro de cada pestaña y en el teléfono todas
+   apiladas: cerradas al entrar (pedido del taller, 04/10/2026). La tarjeta de adentro pierde
+   marco, margen y título: el encabezado de la sección ya los pone. */
+.collapsible-section {
   padding: 0;
   margin-top: var(--space-3);
 }
 
-.responsive-grid-2 > .mobile-section {
-  margin-top: 0;
-}
-
-/* En el teléfono el detalle de la orden apila los grupos de sus pestañas: una cuadrícula que
-   no es lo primero necesita el mismo aire que una sección suelta. */
-.order-detail-group + .order-detail-group > .responsive-grid-2:first-child,
-.order-detail-group > .mobile-section + .responsive-grid-2 {
+/* "Desplegar todo" de la pestaña (o de todo el detalle en el teléfono). */
+.section-tools {
+  display: flex;
+  justify-content: flex-end;
   margin-top: var(--space-3);
 }
 
+.section-tools + .collapsible-section {
+  margin-top: var(--space-2);
+}
+
 /* La tarjeta de adentro no pintó nada (presupuesto vacío, comisión ajena). */
-.mobile-section:has(> .mobile-section-body:empty) {
+.collapsible-section:has(> .collapsible-section-body:empty) {
   display: none;
 }
 
-.mobile-section-toggle {
+.collapsible-section-toggle {
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -5414,38 +5415,38 @@ button.intake-step-button:hover:not(:disabled) {
   -webkit-tap-highlight-color: transparent;
 }
 
-.mobile-section-icon {
+.collapsible-section-icon {
   display: inline-flex;
   color: var(--color-primary-light);
 }
 
-.mobile-section-title {
+.collapsible-section-title {
   flex: 1;
   min-width: 0;
 }
 
-.mobile-section-summary {
+.collapsible-section-summary {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
-.mobile-section-chevron {
+.collapsible-section-chevron {
   flex-shrink: 0;
   color: var(--color-text-tertiary);
   transition: transform var(--transition-fast);
 }
 
-.mobile-section.open .mobile-section-chevron {
+.collapsible-section.open .collapsible-section-chevron {
   transform: rotate(180deg);
 }
 
-.mobile-section-body {
+.collapsible-section-body {
   padding: 0 var(--space-4) var(--space-4);
 }
 
-.mobile-section-body > .card {
+.collapsible-section-body > .card {
   margin: 0 !important;
   padding: 0;
   border: 0;
@@ -5453,6 +5454,6 @@ button.intake-step-button:hover:not(:disabled) {
   box-shadow: none;
 }
 
-.mobile-section-body .card-title {
+.collapsible-section-body .card-title {
   display: none;
 }

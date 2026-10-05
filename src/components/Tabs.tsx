@@ -86,7 +86,7 @@ interface TabPanelProps {
 
 /**
  * El contenido de una pestaña. Se esconde con `hidden` en vez de desmontarse: lo que se estaba
- * escribiendo o firmando en otra pestaña sigue ahí al volver (igual que `MobileSection`).
+ * escribiendo o firmando en otra pestaña sigue ahí al volver (igual que `CollapsibleSection`).
  */
 export function TabPanel({ id, idPrefix, active, children }: TabPanelProps) {
   return (

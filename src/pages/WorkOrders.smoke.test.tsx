@@ -238,6 +238,19 @@ async function openDetail(user: ReturnType<typeof userEvent.setup>, tab?: string
   await user.click(document.querySelector('.table-actions button') as HTMLElement);
   await screen.findByRole('tablist');
   if (tab) await user.click(screen.getByRole('tab', { name: new RegExp(`^${tab}`) }));
+  await expandSections(user);
+}
+
+/**
+ * Desde el 04/10/2026 las secciones del detalle arrancan cerradas (pedido del taller). Las
+ * pruebas que miran adentro de las tarjetas abren las de la pestaña visible; las cerradas
+ * tienen su propia prueba ("secciones plegables").
+ */
+async function expandSections(user: ReturnType<typeof userEvent.setup>) {
+  const toggles = Array.from(
+    document.querySelectorAll<HTMLButtonElement>('.collapsible-section-toggle[aria-expanded="false"]')
+  ).filter((toggle) => !toggle.closest('[hidden]'));
+  for (const toggle of toggles) await user.click(toggle);
 }
 
 /** Abre el alta de una orden (el asistente de cuatro pasos, F4) y devuelve el diálogo. */
@@ -942,8 +955,11 @@ describe('WorkOrders — order detail', () => {
     renderWithProviders(<WorkOrders />);
     await openDetail(user);
 
-    const card = (await screen.findByText(/Tu comisión estimada/i)).closest('.card') as HTMLElement;
-    expect(within(card).getByText('$350.00')).toBeInTheDocument();
+    // La estimación llega después que la orden: su sección aparece cerrada y se abre aquí.
+    const toggle = await screen.findByRole('button', { name: /Tu comisión estimada/i });
+    if (toggle.getAttribute('aria-expanded') === 'false') await user.click(toggle);
+    const card = toggle.closest('.collapsible-section') as HTMLElement;
+    expect(within(card).getByText('$350.00')).toBeVisible();
     expect(within(card).getByText(/Mecánica: mano de obra \$1,000\.00 × 35% ÷ 1/)).toBeInTheDocument();
     expect(mocks.getEstimate).toHaveBeenCalledWith(ORDER.id);
   });
@@ -1087,7 +1103,7 @@ describe('WorkOrders — pestañas del detalle', () => {
     renderWithProviders(<WorkOrders />, { route: `/work-orders?open=${ORDER.id}&tab=trabajos` });
 
     expect(await screen.findByRole('tab', { name: /^Trabajos/ })).toHaveAttribute('aria-selected', 'true');
-    expect(await screen.findByText('Cambio de aceite')).toBeInTheDocument();
+    expect(await screen.findByText('Cambio de aceite')).toBeVisible();
   });
 
   it('el historial se pide solo al abrir su pestaña', async () => {
@@ -1120,6 +1136,89 @@ describe('WorkOrders — pestañas del detalle', () => {
 
     expect(screen.getByRole('tab', { name: /^Trabajos/ })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: /^Trabajos/ })).toHaveFocus();
+  });
+});
+
+// Pedido del taller (04/10/2026): dentro de cada pestaña las secciones arrancan cerradas, con el
+// título y un resumen a la vista; se abre con la flecha lo que se necesita.
+describe('WorkOrders — secciones plegables del detalle', () => {
+  /** Abre la orden sin desplegar nada (el `openDetail` de arriba lo despliega todo). */
+  async function openClosed(user: ReturnType<typeof userEvent.setup>) {
+    renderWithProviders(<WorkOrders />);
+    await screen.findAllByText('OT-2026-0042');
+    await user.click(document.querySelector('.table-actions button') as HTMLElement);
+    await screen.findByRole('tablist');
+  }
+  const section = (name: RegExp) => screen.getByRole('button', { name });
+
+  it('al entrar, cada sección está cerrada y su encabezado dice qué hay', async () => {
+    const user = userEvent.setup();
+    await openClosed(user);
+
+    const vehicle = section(/Servicio y Reparación del Vehículo/);
+    expect(vehicle).toHaveAttribute('aria-expanded', 'false');
+    // El resumen del encabezado: la placa.
+    expect(vehicle).toHaveTextContent(VEHICLE.placa!);
+    expect(screen.getByText(VEHICLE.vin)).not.toBeVisible();
+    expect(section(/Firma del Cliente/)).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(vehicle);
+    expect(vehicle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText(VEHICLE.vin)).toBeVisible();
+  });
+
+  it('"Desplegar todo" abre las de la pestaña y "Contraer todo" las cierra', async () => {
+    const user = userEvent.setup();
+    await openClosed(user);
+    await user.click(screen.getByRole('tab', { name: /^Trabajos/ }));
+
+    await user.click(screen.getByRole('button', { name: /Desplegar todo/ }));
+    expect(screen.getByText('Cambio de aceite')).toBeVisible();
+    expect(screen.getByText('Filtro de aceite')).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: /Contraer todo/ }));
+    expect(screen.getByText('Cambio de aceite')).not.toBeVisible();
+  });
+
+  it('lo abierto sigue abierto al cambiar de pestaña y volver', async () => {
+    const user = userEvent.setup();
+    await openClosed(user);
+    await user.click(section(/Servicio y Reparación del Vehículo/));
+
+    await user.click(screen.getByRole('tab', { name: /^Trabajos/ }));
+    await user.click(screen.getByRole('tab', { name: /^Resumen/ }));
+    expect(section(/Servicio y Reparación del Vehículo/)).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('un enlace a Trabajos abre Mano de obra y deja lo demás cerrado', async () => {
+    renderWithProviders(<WorkOrders />, { route: `/work-orders?open=${ORDER.id}&tab=trabajos` });
+
+    expect(await screen.findByText('Cambio de aceite')).toBeVisible();
+    expect(section(/Mano de obra/)).toHaveAttribute('aria-expanded', 'true');
+    expect(section(/Descripción de Repuestos/)).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('el técnico que llega desde "Mis tareas" encuentra sus tareas abiertas', async () => {
+    mocks.auth.current = authValue(MECHANIC_USER);
+    mocks.getWorkOrderDetail.mockResolvedValue(TECH_DETAIL);
+    renderWithProviders(<WorkOrders />, { route: `/work-orders?open=${ORDER.id}&tab=tareas` });
+
+    await screen.findByRole('tablist');
+    expect(await screen.findByRole('button', { name: /^Tareas/, expanded: true })).toBeInTheDocument();
+  });
+
+  it('en el teléfono, todas apiladas y cerradas, con un solo "Desplegar todo"', async () => {
+    setViewportMatches(true);
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />, { route: `/work-orders?open=${ORDER.id}` });
+
+    const toggles = await screen.findAllByRole('button', { expanded: false });
+    expect(toggles.length).toBeGreaterThan(5);
+    expect(screen.getAllByRole('button', { name: /Desplegar todo/ })).toHaveLength(1);
+
+    await user.click(screen.getByRole('button', { name: /Desplegar todo/ }));
+    expect(screen.getByText('Cambio de aceite')).toBeVisible();
+    expect(screen.getByText(VEHICLE.vin)).toBeVisible();
   });
 });
 
