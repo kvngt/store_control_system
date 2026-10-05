@@ -614,6 +614,15 @@ export const workOrdersService = {
     assertDeleted(data, 'la asignación');
   },
 
+  approveCommission: async (comisionId: string, montoNuevo?: number, porcentajeNuevo?: number) => {
+    const { error } = await supabase.rpc('aprobar_comision', {
+      p_comision_id: comisionId,
+      p_monto: montoNuevo ?? null,
+      p_porcentaje: porcentajeNuevo ?? null,
+    });
+    if (error) throw error;
+  },
+
   updateAssignmentStatus: async (id: string, estatus: 'pendiente' | 'en_curso' | 'completada') => {
     const { data, error } = await supabase
       .from('orden_asignaciones')

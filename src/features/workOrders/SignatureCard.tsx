@@ -5,6 +5,7 @@ import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { trimmedSignatureDataUrl } from '../../lib/signature';
 import { useSignedUrls } from '../media/useSignedUrls';
+import { LegalTerms } from './LegalTerms';
 
 interface SignatureCardProps {
   /** Ruta de la firma en el bucket privado, o null mientras no se ha capturado. */
@@ -92,6 +93,7 @@ export default function SignatureCard({
 
       {showPad ? (
         <>
+          {!resigning && <LegalTerms />}
           <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-3)' }}>
             {resigning ? t('workOrders.resignHint') : t('workOrders.signatureHint')}
           </p>

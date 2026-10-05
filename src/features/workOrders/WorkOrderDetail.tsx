@@ -377,6 +377,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           ...Object.fromEntries(laborList.flatMap((l) => (l.tecnico ? [[l.tecnico.id, l.tecnico.nombre_completo]] : []))),
           ...Object.fromEntries((order.asignaciones || []).map((a) => [a.usuario_id, a.usuario?.nombre_completo ?? '—'])),
         }}
+        onApproveCommission={detail.approveCommission}
       />
     </CollapsibleSection>
   );

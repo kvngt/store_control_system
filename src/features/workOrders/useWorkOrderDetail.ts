@@ -838,6 +838,20 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
 
   const closeShare = useCallback(() => setShare(null), []);
 
+  const approveCommission = async (comisionId: string, montoNuevo?: number, porcentajeNuevo?: number) => {
+    if (!isAdmin) return;
+    setBusy(true);
+    try {
+      await workOrdersService.approveCommission(comisionId, montoNuevo, porcentajeNuevo);
+      await refresh(false);
+      showToast('success', t('commission.approvedSuccess'));
+    } catch (err) {
+      fail(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return {
     order,
     loading,
@@ -848,6 +862,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     canEdit,
     canCompleteLabor,
     canCompleteLaborItem,
+    approveCommission,
     canResign,
     canSign,
     canEditProgress,

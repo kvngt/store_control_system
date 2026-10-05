@@ -27,7 +27,7 @@ const Finance = lazy(() => import('./pages/Finance'));
 const Payroll = lazy(() => import('./pages/Payroll'));
 const Employees = lazy(() => import('./pages/Employees'));
 const Settings = lazy(() => import('./pages/Settings'));
-
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { isAuthenticated, user } = useAuth();
 
@@ -74,6 +74,7 @@ function AppRoutes() {
           rather than the login form for the moment in between, and it gives the
           Redirect URLs allow-list something specific to hold. */}
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/privacidad" element={<PrivacyPolicy />} />
       <Route
         element={
           <ProtectedRoute>

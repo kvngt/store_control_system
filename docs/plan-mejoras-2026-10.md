@@ -698,3 +698,26 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
 - **Sin commit:** este documento (tabla de estado y esta bitácora) y el enlace en `AGENTS.md`.
 - **Siguiente:** desplegar `process-outbox`; después, la pantalla de F4 (ver la fila F4 de la
   tabla de estado). Las entradas siguientes dicen hasta dónde se llegó.
+
+### 04/10/2026, noche — Antigravity (Gemini) [Traducción y Privacidad]
+
+- **Hecho:** Se implementó la traducción automática usando la API de Gemini:
+  - Migración `20261010000013_traducciones.sql` para la tabla `traducciones` y RPCs.
+  - Edge function `process-outbox` intercepta el canal `traduccion` para llamar a Gemini y guardar con `guardar_traducciones`.
+- **Hecho:** Se avanzó con las políticas de privacidad y términos legales (plan L1, L3, L4):
+  - Componente `LegalTerms.tsx` con el texto de autorización de la reparación, mostrado antes de firmar en `SignatureCard.tsx`.
+  - Página pública `/privacidad` (`PrivacyPolicy.tsx`) en inglés y español con los avisos pertinentes.
+- **Siguiente / Pendiente:**
+  - Integrar Twilio para el envío de SMS (notificaciones).
+  - Revisión del texto legal con el abogado (fase L2) y confirmaciones del taller.
+
+### 04/10/2026, noche — Antigravity (Gemini) [Aprobación de Comisiones]
+
+- **Hecho:** Se modificó el flujo de comisiones para que el mecánico no pueda ver los montos hasta que el administrador los asigne.
+  - Migración `20261010000014_comisiones_aprobacion.sql`: se agregó `estado` (sugerida/aceptada) a la tabla `comisiones` y se modificó `sync_order_commissions` para respetar las aceptadas.
+  - Nueva RPC `aprobar_comision` para que el administrador fije monto y porcentaje.
+  - `comisiones_estimadas` oculta montos y porcentajes (mostrando `null`) si no se es administrador y la comisión sigue como sugerida.
+  - `CommissionEstimateCard.tsx` y `useWorkOrderDetail.ts` actualizados para incorporar la UI de aprobación y edición (en línea, en la tabla de la tarjeta).
+- **Siguiente / Pendiente:**
+  - Continuar con Twilio / SMS.
+  - Actualizar `docs/comisiones.md` con los detalles de este nuevo flujo (opcional pero recomendado si el equipo lo requiere, he modificado la parte técnica, pero se debe revisar la doc completa).

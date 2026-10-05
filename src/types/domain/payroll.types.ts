@@ -28,20 +28,22 @@ export interface CommissionEstimate {
    * Solo el reparto heredado: líneas aprobadas sin técnico de antes de la comisión por tarea.
    * `tecnicos` = asignados a mano con esa especialidad; 0 = nadie cobra esa bolsa.
    */
-  bolsas: { especialidad: Specialty; base: number; tecnicos: number }[];
+  bolsas: { especialidad: Specialty; base: number | null; tecnicos: number }[];
   /** Por persona y especialidad: su parte heredada más sus tareas. */
   reparto: {
     usuario_id: string;
     especialidad: Specialty;
     esquema: PayKind;
-    porcentaje: number;
+    porcentaje: number | null;
     /** El equipo del reparto heredado si `heredado`; si no, 1. */
     tecnicos: number;
-    monto: number;
+    monto: number | null;
     /** Si incluye parte del reparto heredado. */
     heredado: boolean;
     /** Cuántas tareas suyas suma. */
     tareas: number;
+    comision_id?: string;
+    estado?: 'sugerida' | 'aceptada';
   }[];
   /** Lo que le toca a quien pregunta, sumado por la base. */
   mi_total: number;
@@ -52,9 +54,11 @@ export interface CommissionEstimate {
     especialidad: Specialty;
     usuario_id: string;
     esquema: PayKind;
-    base: number;
-    porcentaje: number;
-    monto: number;
+    base: number | null;
+    porcentaje: number | null;
+    monto: number | null;
+    comision_id?: string;
+    estado?: 'sugerida' | 'aceptada';
   }[];
   /** Tareas sin técnico (no heredadas, no rechazadas): nadie cobrará su comisión. */
   sin_asignar: {
