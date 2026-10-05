@@ -457,6 +457,32 @@ al día aparte.
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
 
+### 04/10/2026, noche (4) — Claude Code (órdenes de prueba y plan legal)
+
+- **Órdenes de prueba en producción** (autorizado por el usuario: el taller está en período de
+  prueba y acepta datos de prueba y borrados). Creadas por la API con las cuentas de prueba, con
+  tareas de **$0** (no mueven Finanzas ni comisiones) y clientes **sin correo** (no se le manda
+  nada a nadie): clientes "PRUEBA QA — Cliente del mecánico" y "PRUEBA QA — Cliente ajeno",
+  vehículos con VIN `1HGCM82633A90000{1,2,3}`, y las órdenes **ORD-2026-006** (del mecánico,
+  firmada, en proceso), **ORD-2026-007** (del mecánico, entregada con saldo $0) y
+  **ORD-2026-008** (de otro cliente, sin el mecánico). Sus ids quedaron en `.env.test.local`
+  (`ORDEN`, `ORDEN_ENTREGADA`, `ORDEN_AJENA`). Para borrarlas: eliminar esas tres órdenes y los
+  dos clientes desde la app.
+- **`qa:security` contra producción: 109 PASS · 0 FAIL · 0 SKIP.** `api-security.mjs` ahora
+  también saca `CLIENTE_AJENO` de una `ORDEN_AJENA` fija (SEC-78 se saltaba).
+- **Plan nuevo:** [plan-legal-y-privacidad.md](plan-legal-y-privacidad.md) (minuta: políticas de
+  privacidad y texto de la firma). **El taller está en Maryland** (dato del usuario; la primera
+  versión suponía Texas y se rehízo). Investigación con fuentes oficiales; fases L0–L8; las
+  preguntas que tiene que contestar el taller (§3) y la revisión de un abogado de Maryland van
+  antes de publicar cualquier texto. Hallazgos que tocan la app de hoy: la ley de talleres de
+  Maryland pide avisos fijos en presupuesto y factura, la firma de la factura y ofrecer las piezas
+  reemplazadas (§4.2 del plan); los videos graban sonido y Maryland exige el permiso de todos para
+  grabar una conversación; `SHOP_TIMEZONE` debería ser `America/New_York` (hoy cae en
+  `America/Chicago`). Nada implementado todavía.
+- **Sin commit:** este bloque y el anterior (noche 3).
+- **Siguiente:** que el usuario lleve la §3 del plan legal al taller; lo demás, como la entrada
+  anterior.
+
 ### 04/10/2026, noche (3) — Claude Code (secciones plegables y `qa:security`)
 
 - **Cuentas de prueba:** el usuario dio un admin y un mecánico **de producción** para las

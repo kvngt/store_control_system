@@ -127,10 +127,14 @@ if (ctx.TOKEN_TECH) {
     ctx.ORDEN_ENTREGADA ||= list.find((o) => mine(o) && o.estatus === 'entregado')?.id;
     // La ajena fija tiene que existir: una borrada daría "cero filas" y un PASS que no prueba nada.
     if (ctx.ORDEN_AJENA && ctx.TOKEN_ADMIN) {
-      const r = await call('GET', `/rest/v1/ordenes_trabajo?select=id&id=eq.${ctx.ORDEN_AJENA}`, { token: ctx.TOKEN_ADMIN });
-      if (!(Array.isArray(r.json) && r.json.length) || list.some((o) => o.id === ctx.ORDEN_AJENA && mine(o))) {
+      const r = await call('GET', `/rest/v1/ordenes_trabajo?select=id,cliente_id&id=eq.${ctx.ORDEN_AJENA}`, { token: ctx.TOKEN_ADMIN });
+      const fija = Array.isArray(r.json) ? r.json[0] : undefined;
+      if (!fija || list.some((o) => o.id === ctx.ORDEN_AJENA && mine(o))) {
         console.error('ORDEN_AJENA de .env.test.local no existe o es del técnico: se ignora.');
         ctx.ORDEN_AJENA = undefined;
+      } else if (!list.some((o) => o.cliente_id === fija.cliente_id)) {
+        // Su cliente, si no es también de una orden del técnico (ese sí lo vería): SEC-78.
+        ctx.CLIENTE_AJENO ||= fija.cliente_id;
       }
     }
     // Desde 20261007000000 el técnico no ve las órdenes de sus compañeros, así que la ajena se

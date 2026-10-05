@@ -19,6 +19,7 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 | **Cambiar una parte concreta** (Finanzas, la entrega, el portal…) y no saber a dónde ir | [mapa-de-secciones.md](mapa-de-secciones.md) |
 | Saber **qué tan sano está el proyecto hoy**: estructura, base de datos, operación y qué hacer primero | [evaluacion-2026-10.md](evaluacion-2026-10.md) |
 | Saber **qué sigue**: los cambios que pidió el taller en la reunión del 03/10/2026, por fases y con su estado | [plan-mejoras-2026-10.md](plan-mejoras-2026-10.md) |
+| Preparar la **privacidad, el texto de la firma y la protección legal** (plan del 04/10/2026, pendiente de las decisiones del taller y de un abogado) | [plan-legal-y-privacidad.md](plan-legal-y-privacidad.md) |
 | **Cambiar la base en producción** sin comprometer la operación, o saber qué deuda técnica queda | [mantenimiento.md](mantenimiento.md) |
 | **Probar la plataforma a mano** como tester, sin programar | [manual-de-pruebas.md](manual-de-pruebas.md) |
 | **Probar la plataforma** con casos técnicos (persona o agente de IA) | [plan-de-pruebas.md](plan-de-pruebas.md) |
