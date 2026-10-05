@@ -74,20 +74,28 @@ export const commissionsService = {
   buildBalances: (pending: Commission[]): CommissionBalance[] => {
     const byUser = new Map<string, CommissionBalance>();
     for (const c of pending) {
-      const existing = byUser.get(c.usuario_id);
-      if (existing) {
-        existing.total += Number(c.monto);
-        existing.items.push(c);
-      } else {
-        byUser.set(c.usuario_id, {
-          usuario_id: c.usuario_id,
-          usuario: c.usuario,
-          total: Number(c.monto),
-          items: [c],
-        });
+      const accepted = c.estado === 'aceptada';
+      let balance = byUser.get(c.usuario_id);
+      if (!balance) {
+        balance = { usuario_id: c.usuario_id, usuario: c.usuario, total: 0, aceptado: 0, porRevisar: 0, items: [] };
+        byUser.set(c.usuario_id, balance);
       }
+      balance.total += Number(c.monto);
+      if (accepted) balance.aceptado += Number(c.monto);
+      else balance.porRevisar += 1;
+      balance.items.push(c);
     }
     return [...byUser.values()].sort((a, b) => b.total - a.total);
+  },
+
+  /**
+   * Acepta tal cual las comisiones elegidas que sigan sugeridas (`aprobar_comisiones`). Un
+   * solo aviso por técnico y orden. Devuelve cuántas aceptó.
+   */
+  approveMany: async (ids: string[]) => {
+    const { data, error } = await supabase.rpc('aprobar_comisiones', { p_ids: ids });
+    if (error) throw error;
+    return (data ?? 0) as number;
   },
 
   /**

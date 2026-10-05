@@ -38,6 +38,11 @@ export interface WorkOrder {
    * del tablero a los 90 días de entregadas.
    */
   archivada_en?: string | null;
+  /**
+   * Se cerró sin hacer el trabajo (`retirar_sin_reparar`, 20261010000017). Siempre con
+   * estatus `entregado`; en pantalla y para el cliente es otro estado.
+   */
+  retirada_sin_reparar?: boolean;
   creado_por: string;
   creado_en: string;
   // Virtual fields from joins
@@ -60,6 +65,8 @@ export interface WorkOrder {
   avances?: OrderProgressUpdate[];
   /** Hay un presupuesto enviado esperando la respuesta del cliente. */
   esperando_autorizacion?: boolean;
+  /** Hay una pieza pedida que no ha llegado (`ordenes_esperando_repuestos`). */
+  esperando_repuestos?: boolean;
   /** Trabajo adicional que reportó el taller (F6). Lo leen admin y los técnicos de la orden. */
   hallazgos?: OrderFinding[];
 }
@@ -91,7 +98,13 @@ export interface OrderAmounts {
   total_repuestos: number;
   total_general: number;
   deposito_inicial: number;
+  /** Lo absorbe el taller: baja `total_general`, no la mano de obra (`aplicar_descuento`). */
+  descuento?: number;
+  descuento_motivo?: string | null;
 }
+
+/** Si una pieza se pidió y si ya llegó. Nulo: no se sigue. */
+export type PartOrderState = 'pedido' | 'recibido';
 
 /**
  * Un repuesto como lo ve un técnico: qué pieza y cuántas, sin precio.
@@ -102,6 +115,7 @@ export interface PartSummary {
   descripcion: string;
   cantidad: number;
   estado?: LineState;
+  estado_pedido?: PartOrderState | null;
 }
 
 export interface OrderProgressUpdate {
@@ -168,12 +182,16 @@ export interface WorkOrderPart {
   orden_id: string;
   descripcion: string;
   cantidad: number;
+  /** Lo que le costó al taller. Por defecto el precio; administración lo cambia si lo sabe. */
   costo_unitario: number;
   precio_venta_unitario: number;
   subtotal: number;
   estado?: LineState;
   presupuesto_id?: string | null;
   creado_en?: string;
+  estado_pedido?: PartOrderState | null;
+  pedido_en?: string | null;
+  recibido_en?: string | null;
 }
 
 export interface WorkOrderInput {
@@ -191,8 +209,8 @@ export interface WorkOrderInput {
   inspeccion_360_notas: string;
   fecha_estimada_entrega: string;
   labor_items: Omit<LaborItem, 'id' | 'orden_id'>[];
-  /** Only the price; `costo_unitario` is mirrored from it by the database. */
-  repuestos: Omit<WorkOrderPart, 'id' | 'orden_id' | 'subtotal' | 'costo_unitario'>[];
+  /** El precio, y el costo si administración lo sabe (sin él, la base usa el precio). */
+  repuestos: (Omit<WorkOrderPart, 'id' | 'orden_id' | 'subtotal' | 'costo_unitario'> & { costo_unitario?: number | null })[];
   asignaciones: { usuario_id: string; tipo_tarea: 'mecanica' | 'pintura' }[];
 }
 
@@ -211,7 +229,7 @@ export interface OrderHistoryEntry {
   ocurrido_en: string;
   actor_nombre: string | null;
   origen: 'app' | 'portal' | 'sistema';
-  entidad: 'orden' | 'mano_obra' | 'repuesto' | 'asignacion' | 'deposito' | 'presupuesto' | 'archivo' | 'avance';
+  entidad: 'orden' | 'mano_obra' | 'repuesto' | 'asignacion' | 'deposito' | 'descuento' | 'presupuesto' | 'archivo' | 'avance';
   entidad_id: string | null;
   accion: 'crear' | 'cambiar' | 'borrar';
   resumen: string | null;

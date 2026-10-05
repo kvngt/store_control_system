@@ -7,6 +7,7 @@ import type {
   OrderFinancialBalance,
   OrderMarginPage,
   ParsedStatementTransaction,
+  StatementSummary,
   TransactionCategory,
   TransactionType,
 } from '../types/database';
@@ -120,6 +121,13 @@ export const financeService = {
     return (data || []) as BankStatementImport[];
   },
 
+  /** Lo importado de cada estado de cuenta, con sus sumas (las hace la base). */
+  getStatementSummaries: async (sedeId?: string) => {
+    const { data, error } = await supabase.rpc('resumen_importaciones', { p_sede_id: sedeId ?? null });
+    if (error) throw error;
+    return (data ?? []) as StatementSummary[];
+  },
+
   /** Every import for a sede, so an admin can review and undo one. */
   getImportBatches: async (sedeId?: string) => {
     let query = supabase
@@ -155,24 +163,29 @@ export const financeService = {
     if (error) throw error;
   },
 
-  // Flags parsed transactions that likely already exist in finanzas_movimientos
-  // (same sede, same amount, date within 2 days) — e.g. a client payment the
-  // order-delivery trigger already recorded — so they default to excluded in
-  // the review table instead of getting double-counted.
+  // Flags parsed transactions that likely were already imported from another
+  // statement (same sede, same amount, date within 2 days), so they default to
+  // excluded in the review table instead of getting double-counted.
+  //
+  // Solo contra lo importado: desde el 05/10/2026 el estado de cuenta es contabilidad
+  // aparte (docs/analisis-del-proceso-2026-10.md §A). Compararlo con los cobros que asentó
+  // la app desmarcaba depósitos reales del banco solo porque una orden cobró lo mismo.
   findPossibleDuplicates: async (sedeId: string, transactions: ParsedStatementTransaction[]) => {
     if (transactions.length === 0) return new Map<number, string>();
     const dates = transactions.map((t) => t.fecha).sort();
-    const rangeStart = new Date(dates[0]);
-    rangeStart.setDate(rangeStart.getDate() - 2);
-    const rangeEnd = new Date(dates[dates.length - 1]);
-    rangeEnd.setDate(rangeEnd.getDate() + 2);
+    // Fechas 'AAAA-MM-DD' movidas en UTC de ida y de vuelta: sin el corrimiento de zona.
+    const shiftDay = (iso: string, days: number) => {
+      const [y, m, d] = iso.split('-').map(Number);
+      return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+    };
 
     const { data, error } = await supabase
       .from('finanzas_movimientos')
       .select('tipo, monto, fecha, descripcion')
       .eq('sede_id', sedeId)
-      .gte('fecha', rangeStart.toISOString().split('T')[0])
-      .lte('fecha', rangeEnd.toISOString().split('T')[0]);
+      .not('importacion_id', 'is', null)
+      .gte('fecha', shiftDay(dates[0], -2))
+      .lte('fecha', shiftDay(dates[dates.length - 1], 2));
     if (error) throw error;
 
     const existing = (data || []) as {

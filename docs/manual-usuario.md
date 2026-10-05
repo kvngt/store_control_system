@@ -337,15 +337,25 @@ Si abres un aviso o un enlace de una orden que ya no es tuya, la app te lo dice.
 Arriba hay un **buscador** (por número de orden o nombre de cliente) y **filtros
 por estado**.
 
-### Los cinco estados de una orden
+### Los estados de una orden
 
 | Estado | Qué significa |
 |---|---|
 | **Recepción** | El vehículo acaba de ingresar. Aún no se trabaja en él. |
 | **En Proceso** | Se está trabajando. |
-| **Espera Autorización** | El técnico encontró algo que hay que cotizar y la orden espera a que el cliente lo autorice. Hay que escribir el motivo; administración lo lee para armar el presupuesto. Cuando el cliente responde, la orden vuelve sola a En Proceso. |
+| **Espera Autorización** | El técnico reportó trabajo adicional y la orden espera a que el cliente lo autorice. Cuando el cliente responde (o administración descarta el hallazgo), la orden vuelve sola a En Proceso. |
 | **Finalizado** | El trabajo terminó. El avance pasa a 100 % y **se avisa a administración** que está lista para entregar. |
 | **Entregado** | El cliente se llevó el vehículo. **Solo un administrador** la marca. Registra el cobro en Finanzas y genera las comisiones (sección 17). |
+| **Retirada sin reparar** | El cliente se llevó el vehículo **sin que se hiciera el trabajo**. **Solo un administrador**, con el botón **Retirada sin reparar** de la orden (ver abajo). |
+
+**Esperando repuestos** no es un estado: en los repuestos de la orden, cada pieza se marca
+**Pedido** y después **Llegó**. Mientras falte una, la orden lleva la marca "Esperando
+repuestos" en la lista y el tablero, y el cliente ve en su enlace qué pieza se espera. Al
+marcarla **Llegó**, los técnicos de la orden reciben un aviso.
+
+**El avance se mueve solo** con las tareas: cada tarea que se marca hecha suma según su
+precio (una de $400 pesa más que una de $50). El técnico lo puede corregir a mano si no
+refleja el avance real; la próxima tarea que marque lo vuelve a calcular.
 
 ### Crear una orden
 
@@ -720,6 +730,57 @@ sea el mismo precio): vuelve a **Sin autorizar** y puedes presentarla de nuevo.
 > **No se puede entregar** una orden con un presupuesto esperando respuesta. Registra
 > la autorización o cancela el presupuesto primero.
 
+### Costo de un repuesto
+
+Solo administración. Cada repuesto tiene **Precio** (lo que paga el cliente) y **Costo** (lo
+que pagó el taller). El costo es opcional: vacío, se toma el precio. Escríbelo cuando lo sepas
+y el margen de la orden y el egreso de repuestos en Finanzas dirán la ganancia real de las
+piezas. Corregirlo en una orden ya entregada registra solo el ajuste.
+
+### Descuento
+
+Solo administración, en la pestaña **Cobro y cliente** → **Totales** → **Aplicar descuento**:
+en dólares o en porcentaje, y un motivo (por ejemplo, "cliente frecuente"). **Lo absorbe el taller**: baja lo que
+paga el cliente, **no** la comisión de los técnicos. No puede ser mayor que lo autorizado. Para
+quitarlo, **Cambiar descuento** → **Quitar descuento**. Queda en el historial de la orden, y el
+cliente ve el subtotal y el descuento en su enlace y en el PDF.
+
+### Retirada sin reparar
+
+Cuando el cliente se lleva el vehículo sin que se haga todo el trabajo (no autorizó, cambió de
+idea, o solo se hizo una parte). Botón **Retirada sin reparar** arriba en la orden, y elige qué
+pasó:
+
+- **Se canceló todo**: no se cobra nada y se le devuelve lo que dejó.
+- **Solo se cobra la revisión**: escribe cuánto cuesta la revisión del vehículo.
+- **Se hicieron algunos trabajos**: marca los trabajos y repuestos que sí se hicieron (las
+  tareas ya marcadas como hechas vienen marcadas) y, si quieres, la revisión.
+
+El sistema muestra lo que el cliente ya dejó y **cuánto hay que devolverle** (o cobrarle). Elige
+cómo y confirma. Lo que no se cobra queda como "no realizado" y aparece como pendiente la
+próxima vez que venga ese vehículo. Los trabajos cobrados pagan la comisión de su técnico; la
+revisión, no. La orden no cuenta como terminada en el panel. Si se cerró por error, cámbiala de
+estado como cualquier entregada: el dinero se revierte.
+
+### Anticipos
+
+Si el cliente paga una parte antes de llevarse el vehículo (por ejemplo, la pieza), en
+**Cobro y cliente** → **Totales** → **Registrar anticipo**: el monto, cómo pagó y, si quieres,
+la foto del comprobante. Se suma a **Depósito y anticipos**, y al entregar se cobra solo lo
+que falte.
+
+### Pendiente de visitas anteriores
+
+Lo que el cliente no autorizó, o no se hizo, en otras visitas de ese vehículo aparece arriba
+del **Resumen** de la orden y en el paso de trabajos al crear una orden nueva: es el momento de
+ofrecerlo otra vez. Solo lo ve administración.
+
+### Descargar el PDF en inglés
+
+Junto a **Descargar PDF** hay un selector **ES / EN**. En inglés salen todas las etiquetas, y
+los textos del taller (trabajos, notas) salen traducidos si la traducción automática ya los
+tradujo; los que no, como se escribieron.
+
 ### Orden entregada
 
 Queda cerrada para los técnicos: no pueden cambiar su estado, mano de obra,
@@ -905,8 +966,20 @@ como los de cualquier otra aplicación.
 
 <!-- IMAGEN: pantalla de finanzas con las tarjetas de totales y la tabla -->
 
-Arriba: **ingresos**, **egresos** y **balance** del período. Abajo, la tabla de
-movimientos con filtros por tipo.
+Tiene dos vistas:
+
+- **Registros del taller**: lo que registra la app (cobros de las órdenes, costo de repuestos,
+  comisiones y lo que registres a mano). Arriba, **ingresos**, **egresos** y **balance**;
+  abajo, la tabla con filtros por tipo y por **mes**. **Exportar Excel** baja lo que muestra
+  la tabla (por ejemplo, un mes) para el contador.
+- **Estados de cuenta (contabilidad)**: los estados de cuenta del banco que importes, para
+  ordenar meses anteriores y mandárselos al contador. Son contabilidad aparte: **no se suman**
+  a los ingresos y egresos de la app. Cada uno muestra su periodo, cuánto entró y salió, y se
+  exporta por separado.
+
+Los métodos de pago son **efectivo, tarjeta, Zelle, transferencia y cheque**. Las comisiones
+del banco y de Clover van en la categoría **Comisiones de banco y tarjeta**: regístralas a mano
+una vez al mes, con el monto del estado de cuenta.
 
 Muchos movimientos **los crea el sistema solo** (depósitos, cobros al entregar,
 costo de repuestos, pagos de comisiones; sección 17). No los registres a mano o
@@ -961,7 +1034,7 @@ teclearlos uno por uno.
 > Por ahora solo entiende estados de cuenta de **Wells Fargo**. El archivo debe
 > ser el PDF descargado del banco, no un escaneo ni una foto.
 
-1. **Importar Estado de Cuenta**.
+1. En la vista **Estados de cuenta (contabilidad)**, **Importar Estado de Cuenta**.
 2. Selecciona el PDF. Todo el procesamiento ocurre en tu navegador; el archivo no
    se envía a ningún servicio externo.
 3. Aparece la lista de transacciones encontradas. El sistema propone una categoría
@@ -986,8 +1059,9 @@ egresos del mes**. El sistema te protege en tres niveles:
 1. **Detecta el archivo repetido.** Si ese mismo archivo ya se importó en esta
    sede, aparece un aviso rojo con la fecha. Lo reconoce por su contenido, así que
    cambiarle el nombre no lo engaña.
-2. **Desmarca los movimientos que ya existen** (mismo tipo, mismo monto, fecha con
-   menos de dos días de diferencia) con la etiqueta «Posible duplicado».
+2. **Desmarca los movimientos que ya se importaron** de otro estado de cuenta (mismo tipo,
+   mismo monto, fecha con menos de dos días de diferencia) con la etiqueta «Posible
+   duplicado». No los compara con los cobros que registró la app: son libros distintos.
 3. **«Seleccionar todas» no las incluye.** Si de verdad es un movimiento distinto,
    márcalo a mano.
 
@@ -1045,11 +1119,22 @@ una persona puede tener varias por orden, una por tarea.
 - **Historial de comisiones** — cada comisión, pendiente o pagada.
 - **Pagos realizados** — los pagos registrados, con su comprobante.
 
+### Revisar y aceptar
+
+Al entregar una orden, cada comisión nace **por revisar**. **Solo se paga lo aceptado.**
+
+- En **Saldos pendientes**, cada técnico muestra cuántas tiene por revisar. **Aceptar todas**
+  las acepta tal cual, de un golpe.
+- Para cambiar una antes de aceptarla, abre la fila del técnico y usa el lápiz de esa comisión:
+  cambia el **porcentaje** (el monto se recalcula) o el **monto** en dólares.
+- El técnico ve su comisión y recibe un aviso cuando se acepta.
+
 ### Pagar un saldo
 
-1. En **Saldos pendientes**, presiona **Pagar saldo** en la fila del técnico.
-2. El diálogo muestra el saldo completo y de cuántas órdenes viene. Elige la
-   fecha y el método (Cheque, Efectivo, Transferencia).
+1. En **Saldos pendientes**, presiona **Pagar lo aceptado** en la fila del técnico (apagado si
+   no hay nada aceptado).
+2. El diálogo muestra lo aceptado y de cuántas órdenes viene; lo que sigue por revisar no entra.
+   Elige la fecha y el método (Cheque, Efectivo, Zelle, Transferencia).
 3. Con **cheque**, escribe el número o adjunta la foto (al menos uno de los dos:
    es lo que permite conciliarlo con el banco).
 4. **Registrar pago**.

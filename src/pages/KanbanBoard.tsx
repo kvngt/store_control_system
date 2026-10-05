@@ -326,6 +326,12 @@ export default function KanbanBoard({ embedded = false, search = '', onOpen }: K
                         {order.esperando_autorizacion && (
                           <span className="badge badge-waiting-auth" style={{ fontSize: '10px' }}>{t('quotes.waitingBadge')}</span>
                         )}
+                        {order.esperando_repuestos && (
+                          <span className="badge badge-waiting-parts" style={{ fontSize: '10px' }}>{t('parts.waitingBadge')}</span>
+                        )}
+                        {order.retirada_sin_reparar && (
+                          <span className="badge badge-retirada" style={{ fontSize: '10px' }}>{t('withdrawal.status')}</span>
+                        )}
                         <span className={`badge badge-${order.tipo_trabajo}`} style={{ fontSize: '10px' }}>
                           {order.tipo_trabajo === 'mecanica'
                             ? t('workOrders.mechanical')

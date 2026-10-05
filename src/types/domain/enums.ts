@@ -23,4 +23,6 @@ export type TransactionCategory =
   | 'pago_cliente'
   | 'compra_repuesto'
   | 'planilla'
-  | 'gasto_operativo';
+  | 'gasto_operativo'
+  /** Comisiones de Clover, de la tarjeta y del banco (20261010000016). */
+  | 'comision_bancaria';

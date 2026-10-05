@@ -36,6 +36,12 @@ export default function PartsSummaryCard({ items }: { items: PartSummary[] }) {
             <li key={part.id} className={'parts-summary-item' + (part.estado === 'rechazado' ? ' line-rejected' : '')}>
               <span>
                 <span className="line-desc">{part.descripcion}</span> <LineStateBadge state={part.estado} />
+                {/* Si la pieza se pidió y si ya llegó (20261010000017): es lo que el técnico espera. */}
+                {part.estado_pedido && part.estado !== 'rechazado' && (
+                  <span className={`badge ${part.estado_pedido === 'recibido' ? 'badge-success' : 'badge-waiting-parts'}`}>
+                    {part.estado_pedido === 'recibido' ? t('parts.received') : t('parts.ordered')}
+                  </span>
+                )}
               </span>
               <span className="parts-summary-qty">× {part.cantidad}</span>
             </li>

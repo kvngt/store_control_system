@@ -5582,3 +5582,266 @@ button.intake-step-button:hover:not(:disabled) {
 .collapsible-section-body .card-title {
   display: none;
 }
+
+/* ===== Proceso del taller (05/10/2026) ===================================== */
+/* Insignias: aceptada / pieza en espera / retirada sin reparar. Con tokens: se ven en los dos temas. */
+.badge-success {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.badge-waiting-parts {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.badge-retirada {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+/* Un control compacto dentro de una fila (comisión, pedido de pieza, idioma del PDF). En el
+   teléfono conserva 16 px: con menos, iOS hace zoom al tocarlo. Un <select> compacto deja
+   espacio a su flecha. */
+.form-input.form-input-sm {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-sm);
+  width: auto;
+}
+
+.form-select.form-input-sm {
+  padding-right: var(--space-8);
+  background-position: right 8px center;
+}
+
+/* Un botón apagado se ve apagado. No había regla general: "Pagar lo aceptado" sin nada
+   aceptado se veía igual que activo. */
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .form-input.form-input-sm {
+    font-size: 16px;
+    min-height: 40px;
+  }
+}
+
+/* Comisiones: revisar y aceptar en bloque. */
+.payroll-review-badge {
+  margin-left: var(--space-2);
+}
+
+.payroll-balance-amounts {
+  text-align: right;
+}
+
+/* Repuestos: costo y pedido. */
+.part-order-state {
+  display: block;
+  margin-top: var(--space-1);
+  max-width: 160px;
+}
+
+.part-order-state.is-pedido {
+  border-color: var(--color-info);
+  color: var(--color-info);
+}
+
+.part-order-state.is-recibido {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.part-cost-default {
+  color: var(--color-text-tertiary);
+}
+
+/* Totales de la orden: todo lo cuenta la base. */
+.order-totals-grid {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-8);
+}
+
+.order-totals-grid > div {
+  text-align: right;
+}
+
+.order-totals-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.order-totals-value {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.order-totals-value.is-total {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-primary-light);
+}
+
+.order-totals-value.is-due {
+  color: var(--color-warning);
+}
+
+.order-totals-total {
+  border-left: 2px solid var(--color-primary);
+  padding-left: var(--space-4);
+}
+
+.order-totals-discount {
+  margin-top: var(--space-4);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.order-totals-discount-form {
+  display: grid;
+  gap: var(--space-2);
+  width: min(100%, 360px);
+}
+
+.order-totals-discount-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Finanzas: dos libros y el mes. */
+.finance-views {
+  margin-bottom: var(--space-4);
+}
+
+.finance-month-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.finance-import-scope {
+  margin-top: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-info-bg);
+  color: var(--color-text-primary);
+}
+
+/* El PDF y su idioma, juntos. */
+.pdf-download {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.pdf-language {
+  min-width: 64px;
+}
+
+/* Totales: anticipo y descuento, uno al lado del otro. */
+.order-totals-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+/* Retirada sin reparar: qué pasó con el trabajo, y qué se hizo. */
+.withdrawal-outcomes,
+.withdrawal-jobs {
+  border: 0;
+  padding: 0;
+  margin: 0 0 var(--space-4);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.withdrawal-outcome {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.withdrawal-outcome.is-selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-subtle);
+}
+
+.withdrawal-outcome > span {
+  display: grid;
+  gap: 2px;
+}
+
+.withdrawal-outcome input,
+.withdrawal-job input {
+  margin-top: 3px;
+  accent-color: var(--color-primary);
+}
+
+.withdrawal-job {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-surface-border);
+  cursor: pointer;
+}
+
+.withdrawal-job-desc {
+  flex: 1;
+}
+
+.withdrawal-job-amount {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Pendiente de visitas anteriores. */
+.pending-work {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-info);
+  border-radius: var(--radius-md);
+  background: var(--color-info-bg);
+}
+
+.pending-work-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-info);
+}
+
+.pending-work ul {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.pending-work li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.pending-work-amount {
+  font-weight: 600;
+  white-space: nowrap;
+}

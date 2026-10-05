@@ -5,6 +5,7 @@ import {
   ArchiveRestore,
   Camera,
   Car,
+  CarFront,
   CheckCircle2,
   ChevronLeft,
   ChevronsDownUp,
@@ -45,12 +46,16 @@ import ShareReportModal from './ShareReportModal';
 import FindingsCard from './FindingsCard';
 import { findingsToReview } from './findings';
 import DeliveryModal from './DeliveryModal';
+import WithdrawalModal, { type WithdrawalLine } from './WithdrawalModal';
+import AdvancePaymentModal from './AdvancePaymentModal';
+import OrderTotalsCard from './OrderTotalsCard';
+import PendingWorkNotice from './PendingWorkNotice';
+import { isApproved } from './lineState';
 import OrderBalanceCard from '../finance/OrderBalanceCard';
 import PublishProgressModal from './PublishProgressModal';
 import CustomerLinkCard from './CustomerLinkCard';
 import QuoteCard from './QuoteCard';
 import OrderHistory from './OrderHistory';
-import { isApproved } from './lineState';
 import { isUnassignedTask } from './tasks';
 import SignatureCard from './SignatureCard';
 import MediaCaptureBar from '../media/MediaCaptureBar';
@@ -108,6 +113,8 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [addingOperatorId, setAddingOperatorId] = useState('');
+  // El idioma del PDF que se descarga: lo elige administración (05/10/2026).
+  const [pdfLanguage, setPdfLanguage] = useState<'es' | 'en'>('es');
 
   const isAdmin = user?.rol === 'admin';
   const tabIds: readonly string[] = isAdmin ? ADMIN_TABS : TECH_TABS;
@@ -160,13 +167,24 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   const progressEntries = order.avances || [];
   // Los avances donde cayeron las fotos de un trabajo adicional reportado (F6).
   const findingEntryIds = new Set((order.hallazgos || []).flatMap((h) => (h.avance_id ? [h.avance_id] : [])));
-  // Solo lo autorizado por el cliente se cobra (igual que los totales de la base).
-  const totalLabor = laborList.filter(isApproved).reduce((sum, l) => sum + l.costo, 0);
-  const totalParts = partsList.filter(isApproved).reduce((sum, p) => sum + p.subtotal, 0);
   const receptionMedia = (order.media || []).filter((m) => m.origen === 'recepcion');
   const receptionPending = detail.pendingUploads.filter((p) => p.origen === 'recepcion');
   // Null para mecánicos y pintores: `orden_montos` es solo admin.
   const amounts = order.montos ?? null;
+  // Lo autorizado de la orden: lo que se puede marcar como hecho al retirarla sin reparar.
+  const withdrawalLines: WithdrawalLine[] = [
+    ...laborList.filter(isApproved).map((l) => ({
+      id: l.id, tipo: 'mano_obra' as const, descripcion: l.descripcion, monto: Number(l.costo), hecho: !!l.completado_en,
+    })),
+    ...partsList.filter(isApproved).map((p) => ({
+      id: p.id, tipo: 'repuesto' as const, descripcion: p.descripcion, monto: Number(p.subtotal),
+    })),
+  ];
+  // Una pieza pedida que no ha llegado. Administración lo lee de sus repuestos; el técnico, del
+  // resumen sin precios (`repuestos_de_orden`).
+  const waitingParts = [...partsList, ...(order.repuestos_resumen || [])].some(
+    (p) => p.estado_pedido === 'pedido' && p.estado !== 'rechazado'
+  );
   // Con la casilla vacía (borrada para escribir otro número) el control muestra lo guardado.
   const draftProgress = parseInt(detail.progressDraft, 10);
   const sliderProgress = Number.isNaN(draftProgress) ? order.porcentaje_avance : draftProgress;
@@ -341,6 +359,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           onAdd={detail.addPart}
           onUpdate={detail.updatePart}
           onRemove={detail.removePart}
+          onSetOrderState={detail.setPartOrderState}
         />
       ) : (
         <PartsSummaryCard items={order.repuestos_resumen || []} />
@@ -382,36 +401,20 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     </CollapsibleSection>
   );
 
-  // Totales — solo cuando la base devolvió los montos (admin).
+  // Totales — solo cuando la base devolvió los montos (admin). Todas las cifras son de la base.
   const totalsSection = amounts && (
     <CollapsibleSection {...sectionState('totales')}
       title={t('workOrders.totalsTitle')}
       icon={<Receipt size={18} />}
-      summary={money(totalParts + totalLabor - Number(amounts.deposito_inicial))}
+      summary={money(Number(amounts.total_general))}
     >
-      <div className="card" style={{ marginTop: 'var(--space-4)' }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-8)', flexWrap: 'wrap' }}>
-          {[
-            [t('workOrders.parts'), totalParts],
-            [t('workOrders.labor'), totalLabor],
-            [t('common.subtotal'), totalParts + totalLabor],
-            [t('workOrders.deposit'), -Number(amounts.deposito_inicial)],
-          ].map(([label, value], i) => (
-            <div key={i} style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>{label as string}</div>
-              <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600 }}>
-                {money(value as number)}
-              </div>
-            </div>
-          ))}
-          <div style={{ textAlign: 'right', borderLeft: '2px solid var(--color-primary)', paddingLeft: 'var(--space-4)' }}>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>{t('common.total')}</div>
-            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-primary-light)' }}>
-              {money(totalParts + totalLabor - Number(amounts.deposito_inicial))}
-            </div>
-          </div>
-        </div>
-      </div>
+      <OrderTotalsCard
+        order={order}
+        amounts={amounts}
+        canDiscount={detail.canEditLines}
+        onApplyDiscount={detail.applyDiscount}
+        onRegisterAdvance={detail.canRegisterAdvance ? detail.startAdvance : undefined}
+      />
     </CollapsibleSection>
   );
 
@@ -667,6 +670,8 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
       <>
         {findingsSection}
         {unassignedNotice}
+        {/* Lo que el cliente dejó pendiente en otras visitas: el momento de ofrecerlo es ahora. */}
+        {isAdmin && !detail.isDelivered && <PendingWorkNotice vehicleId={order.vehiculo_id} excludeOrderId={order.id} />}
       </>
     ),
     trabajos: !isMobile && findingsSection,
@@ -737,29 +742,48 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         <div className="order-detail-heading">
           <h1 className="page-title order-detail-title">
             {order.numero_orden}
-            <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
+            {order.retirada_sin_reparar ? (
+              <span className="badge badge-retirada">{t('withdrawal.status')}</span>
+            ) : (
+              <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
+            )}
             <span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span>
+            {waitingParts && !detail.isDelivered && (
+              <span className="badge badge-waiting-parts">{t('parts.waitingBadge')}</span>
+            )}
             {[...laborList, ...partsList, ...(order.repuestos_resumen || [])].some((l) => l.estado === 'pendiente') && (
               <span className="badge badge-waiting-auth">{t('quotes.waitingBadge')}</span>
             )}
             {detail.isArchived && <span className="badge badge-archived">{t('workOrders.archivedBadge')}</span>}
           </h1>
           <p className="page-subtitle">{customer?.nombre} — {vehicle?.anio} {vehicle?.marca} {vehicle?.modelo}</p>
-          {(detail.canSendReport || detail.canArchive) && (
+          {(detail.canSendReport || detail.canArchive || detail.canWithdraw) && (
             <div className="order-detail-actions">
               {/* Solo administración: el reporte lleva precios y totales, y el
                   cliente pidió que los técnicos no lo manden desde su perfil. */}
               {detail.canSendReport && (
                 <>
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={detail.generatePdf}
-                    disabled={detail.generatingPdf}
-                    title={t('workOrders.generatePdf')}
-                  >
-                    <FileDown size={14} /> {detail.generatingPdf ? t('common.loading') : t('workOrders.generatePdf')}
-                  </button>
+                  {/* El PDF sale en el idioma que elija administración (05/10/2026). */}
+                  <span className="pdf-download">
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => void detail.generatePdf(pdfLanguage)}
+                      disabled={detail.generatingPdf}
+                      title={t('workOrders.generatePdf')}
+                    >
+                      <FileDown size={14} /> {detail.generatingPdf ? t('common.loading') : t('workOrders.generatePdf')}
+                    </button>
+                    <select
+                      className="form-input form-select form-input-sm pdf-language"
+                      aria-label={t('workOrders.pdfLanguage')}
+                      value={pdfLanguage}
+                      onChange={(e) => setPdfLanguage(e.target.value as 'es' | 'en')}
+                    >
+                      <option value="es">ES</option>
+                      <option value="en">EN</option>
+                    </select>
+                  </span>
                   {/* Enviar reporte: comparte el enlace web del cliente (correo desde el
                       sistema o WhatsApp). El PDF de al lado es solo para imprimir. */}
                   <button
@@ -783,6 +807,18 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
                 >
                   {detail.isArchived ? <ArchiveRestore size={14} /> : <Archive size={14} />}{' '}
                   {detail.isArchived ? t('workOrders.unarchive') : t('workOrders.archive')}
+                </button>
+              )}
+              {/* Cerrar sin hacer el trabajo: devuelve el depósito o cobra el diagnóstico. */}
+              {detail.canWithdraw && (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={detail.startWithdrawal}
+                  disabled={detail.busy}
+                  id="order-withdraw"
+                >
+                  <CarFront size={14} /> {t('withdrawal.action')}
                 </button>
               )}
             </div>
@@ -892,6 +928,23 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         />
       )}
 
+      {detail.withdrawing && (
+        <WithdrawalModal
+          order={order}
+          lines={withdrawalLines}
+          onCancel={detail.cancelWithdrawal}
+          onDone={detail.finishWithdrawal}
+        />
+      )}
+
+      {detail.advancing && (
+        <AdvancePaymentModal
+          order={order}
+          onCancel={detail.cancelAdvance}
+          onDone={detail.finishAdvance}
+        />
+      )}
+
 
       {detail.publishingProgress && (
         <PublishProgressModal
@@ -908,7 +961,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           link={detail.share.link}
           message={detail.share.message}
           downloading={detail.generatingPdf}
-          onDownload={detail.generatePdf}
+          onDownload={() => void detail.generatePdf(pdfLanguage)}
           onClose={detail.closeShare}
         />
       )}

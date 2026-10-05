@@ -100,3 +100,45 @@ describe('generateWorkOrderPdf', () => {
     expect(texto).not.toContain('Espera de Repuestos');
   });
 });
+
+// En español o en inglés, como lo elija administración (decisión del taller, 05/10/2026).
+describe('generateWorkOrderPdf: idioma y cuenta', () => {
+  const conLineas = () =>
+    ({
+      ...orden('en_proceso'),
+      total_labor: 400,
+      labor_items: [{ id: 'l1', orden_id: 'o1', descripcion: 'Cambio de frenos', costo: 400, estado: 'aprobado' }],
+      inspeccion_360_notas: 'Rayón en la puerta',
+      montos: { total_general: 360, total_repuestos: 0, deposito_inicial: 100, descuento: 40 },
+    }) as unknown as WorkOrder;
+
+  it('en inglés traduce las etiquetas y lo que ya está traducido; lo demás sale como se escribió', async () => {
+    await generateWorkOrderPdf(conLineas(), SEDE, {}, {
+      language: 'en',
+      translations: { 'Cambio de frenos': 'Brake replacement' },
+      balance: { cobrado: 100, saldo: 260 },
+    });
+    const texto = textoPintado();
+    expect(texto).toContain('Work Order ORD-2026-001');
+    expect(texto).toContain('Labor');
+    expect(texto).toContain('Brake replacement');
+    expect(texto).toContain('Rayón en la puerta');
+    expect(texto).toContain('Balance due');
+    expect(texto.some((t) => t.startsWith('Orden de Trabajo'))).toBe(false);
+  });
+
+  it('el resumen lleva el descuento y el saldo que da la base', async () => {
+    await generateWorkOrderPdf(conLineas(), SEDE, {}, { balance: { cobrado: 100, saldo: 260 } });
+    const texto = textoPintado();
+    expect(texto).toContain('Descuento');
+    expect(texto).toContain('-$40.00');
+    expect(texto).toContain('$260.00');
+  });
+
+  it('una retirada sin reparar lo dice, sin avance', async () => {
+    await generateWorkOrderPdf({ ...orden('entregado'), retirada_sin_reparar: true } as WorkOrder, SEDE);
+    const estado = textoPintado().find((t) => t.startsWith('Estado:'));
+    expect(estado).toContain('Retirado sin reparar');
+    expect(estado).not.toContain('Avance');
+  });
+});

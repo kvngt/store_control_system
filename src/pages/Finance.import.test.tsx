@@ -77,6 +77,8 @@ describe('Finance — Importar Estado de Cuenta', () => {
     const user = userEvent.setup();
     renderWithProviders(<Finance />);
 
+    // Desde el 05/10/2026 la importación vive en su propia vista (contabilidad aparte).
+    await user.click(await screen.findByRole('tab', { name: /Estados de cuenta/i }));
     await user.click(await screen.findByRole('button', { name: /Importar Estado de Cuenta/i }));
 
     // Anything at all, as long as the admin can tell the click registered.

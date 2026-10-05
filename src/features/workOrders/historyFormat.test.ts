@@ -161,4 +161,35 @@ describe('describeHistoryEntry', () => {
     );
     expect(porTarea.details).toEqual(['Especialidad: Pintura', 'Por una tarea: cobra solo sus tareas']);
   });
+
+  // 05/10/2026: el descuento, el costo de una pieza, su pedido y la retirada sin reparar.
+  it('el descuento se lee como tal, con su monto y su motivo', () => {
+    const item = describeHistoryEntry(
+      entry({
+        entidad: 'descuento',
+        resumen: null,
+        cambios: { descuento: { antes: 0, despues: 45 }, descuento_motivo: { antes: null, despues: 'Cliente frecuente' } },
+      }),
+      ctx
+    );
+    expect(item.action).toBe('cambió el descuento');
+    expect(item.details).toEqual(['Descuento: $0.00 → $45.00', 'Motivo: — → «Cliente frecuente»']);
+  });
+
+  it('el costo y el pedido de un repuesto', () => {
+    const item = describeHistoryEntry(
+      entry({
+        entidad: 'repuesto',
+        resumen: 'Amortiguador',
+        cambios: { costo_unitario: { antes: 150, despues: 95 }, estado_pedido: { antes: 'pedido', despues: 'recibido' } },
+      }),
+      ctx
+    );
+    expect(item.details).toEqual(['Costo: $150.00 → $95.00', 'Pedido: Pedido → Llegó']);
+  });
+
+  it('una retirada sin reparar se dice con una frase', () => {
+    const item = describeHistoryEntry(entry({ cambios: { retirada_sin_reparar: { antes: false, despues: true } } }), ctx);
+    expect(item.details).toEqual(['Retirada sin reparar']);
+  });
 });

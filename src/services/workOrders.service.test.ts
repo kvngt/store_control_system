@@ -340,3 +340,55 @@ describe('workOrdersService: getMyTasks', () => {
     expect(select).toContain('ordenes_trabajo!inner(');
   });
 });
+
+// El costo de un repuesto (decisión del taller, 05/10/2026): por defecto el precio, y el que
+// escribe administración se queda. Mandar siempre el precio como costo lo borraba al editar.
+describe('workOrdersService: costo y pedido de un repuesto', () => {
+  beforeEach(() => {
+    mocks.writes = [];
+    mocks.rpcs = [];
+    mocks.deleted = [{ id: 'p1' }];
+  });
+
+  it('addPart manda el precio como costo si no hay costo, y el costo si lo hay', async () => {
+    await workOrdersService.addPart('o1', { descripcion: 'Filtro', cantidad: 1, precio_venta_unitario: 20 });
+    await workOrdersService.addPart('o1', { descripcion: 'Amortiguador', cantidad: 2, precio_venta_unitario: 150, costo_unitario: 90 });
+    expect(mocks.writes.map((w) => (w.payload as { costo_unitario: number }).costo_unitario)).toEqual([20, 90]);
+  });
+
+  it('updatePart no manda el costo si administración no lo escribió', async () => {
+    await workOrdersService.updatePart('p1', { descripcion: 'Filtro', cantidad: 1, precio_venta_unitario: 25, costo_unitario: null });
+    expect(mocks.writes[0].payload).not.toHaveProperty('costo_unitario');
+    await workOrdersService.updatePart('p1', { descripcion: 'Filtro', cantidad: 1, precio_venta_unitario: 25, costo_unitario: 12 });
+    expect(mocks.writes[1].payload).toMatchObject({ costo_unitario: 12 });
+  });
+
+  it('setPartOrderState solo cambia el pedido', async () => {
+    await workOrdersService.setPartOrderState('p1', 'recibido');
+    expect(mocks.writes).toEqual([{ table: 'orden_repuestos', method: 'update', payload: { estado_pedido: 'recibido' } }]);
+  });
+
+  it('el descuento y la retirada sin reparar van por sus RPC, con los nombres de la base', async () => {
+    await workOrdersService.applyDiscount('o1', { monto: 45 }, 'Cliente frecuente');
+    await workOrdersService.applyDiscount('o1', { porcentaje: 10 }, null);
+    await workOrdersService.withdrawWithoutRepair({
+      orderId: 'o1', cobro: 50, concepto: 'Diagnóstico', metodo: 'efectivo', conservar: ['l1'],
+    });
+    await workOrdersService.registerAdvance({ orderId: 'o1', monto: 200, metodo: 'zelle' });
+    expect(mocks.rpcs).toEqual([
+      { fn: 'aplicar_descuento', args: { p_orden_id: 'o1', p_monto: 45, p_motivo: 'Cliente frecuente', p_porcentaje: null } },
+      { fn: 'aplicar_descuento', args: { p_orden_id: 'o1', p_monto: null, p_motivo: null, p_porcentaje: 10 } },
+      {
+        fn: 'retirar_sin_reparar',
+        args: {
+          p_orden_id: 'o1', p_cobro: 50, p_concepto: 'Diagnóstico', p_metodo: 'efectivo',
+          p_numero_cheque: null, p_comprobante_ruta: null, p_conservar: ['l1'],
+        },
+      },
+      {
+        fn: 'registrar_anticipo',
+        args: { p_orden_id: 'o1', p_monto: 200, p_metodo: 'zelle', p_numero_cheque: null, p_comprobante_ruta: null },
+      },
+    ]);
+  });
+});

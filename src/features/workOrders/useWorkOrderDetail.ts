@@ -13,7 +13,7 @@ import { customerPortalService } from '../../services/customerPortal.service';
 import { reportAssetPaths } from '../../lib/reportMedia';
 import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';
-import type { LaborItem, OrderAssignment, OrderMedia, OrderProgressUpdate, OrderStatus, PreparedMedia, Specialty, UserProfile, WorkOrder } from '../../types/database';
+import type { LaborItem, OrderAssignment, OrderMedia, OrderProgressUpdate, OrderStatus, PartOrderState, PreparedMedia, Specialty, UserProfile, WorkOrder } from '../../types/database';
 import { isApproved } from './lineState';
 import type { TaskDraft, Technician } from './tasks';
 
@@ -66,6 +66,10 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   const [statusEpoch, setStatusEpoch] = useState(0);
   // Entregar abre el diálogo de cobro (método, cheque, comprobante) en vez de un `confirm`.
   const [delivering, setDelivering] = useState(false);
+  // "Retirada sin reparar": el diálogo que cierra la orden sin hacer el trabajo.
+  const [withdrawing, setWithdrawing] = useState(false);
+  // Un anticipo: el cliente paga una parte antes de llevarse el vehículo.
+  const [advancing, setAdvancing] = useState(false);
   // El avance que está por publicarse. El diálogo muestra su texto como lo verá el cliente.
   const [publishingProgress, setPublishingProgress] = useState<OrderProgressUpdate | null>(null);
 
@@ -376,6 +380,34 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     await refresh();
   };
 
+  const finishWithdrawal = async () => {
+    setWithdrawing(false);
+    if (order) void queryClient.invalidateQueries({ queryKey: queryKeys.orderBalance(order.id) });
+    await refresh();
+  };
+
+  const finishAdvance = async () => {
+    setAdvancing(false);
+    if (order) void queryClient.invalidateQueries({ queryKey: queryKeys.orderBalance(order.id) });
+    await refresh();
+  };
+
+  // ----- descuento -------------------------------------------------------------
+  // Lo absorbe el taller (decisión del 05/10/2026): la base baja el total y no toca la mano de
+  // obra ni las comisiones. Un error se muestra en un aviso: la tarjeta queda abierta para corregir.
+  const applyDiscount = async (value: { monto?: number; porcentaje?: number }, motivo: string | null) => {
+    if (!order) return;
+    try {
+      await workOrdersService.applyDiscount(order.id, value, motivo);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.orderBalance(order.id) });
+      await refresh();
+      showToast('success', (value.porcentaje ?? value.monto ?? 0) > 0 ? t('discount.applied') : t('discount.removed'));
+    } catch (err) {
+      showToast('error', t('discount.error'), getErrorMessage(err, language));
+      throw err;
+    }
+  };
+
   // Publicar pasa por el diálogo; dejar de publicar es inmediato, porque quitar algo de la
   // vista del cliente nunca es el movimiento peligroso.
   const toggleProgressVisibility = async (entry: OrderProgressUpdate) => {
@@ -556,6 +588,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     descripcion: string;
     cantidad: number;
     precio_venta_unitario: number;
+    costo_unitario?: number | null;
   };
 
   const addPart = async (item: PartInput) => {
@@ -582,6 +615,18 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
       fail(err);
     } finally {
       setBusy(false);
+    }
+  };
+
+  // Pedido → llegó. Al llegar, la base avisa a los técnicos de la orden.
+  const setPartOrderState = async (id: string, estado: PartOrderState | null) => {
+    if (!order) return;
+    try {
+      await workOrdersService.setPartOrderState(id, estado);
+      await refresh();
+      if (estado) showToast('success', estado === 'pedido' ? t('parts.markedOrdered') : t('parts.markedReceived'));
+    } catch (err) {
+      showToast('error', t('parts.orderStateError'), getErrorMessage(err, language));
     }
   };
 
@@ -793,19 +838,29 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
    */
   const signPdfAssets = async (target: WorkOrder) => mediaService.signUrls(reportAssetPaths(target), 10 * 60);
 
-  const generatePdf = async () => {
+  // En español o en inglés, lo elige administración al descargarlo (decisión del 05/10/2026).
+  const generatePdf = async (pdfLanguage: 'es' | 'en' = 'es') => {
     if (!order || !canSendReport) return;
     setGeneratingPdf(true);
     try {
       // ~400 kB of jsPDF, fetched only when someone prints.
-      const [{ generateWorkOrderPdf }, urls, link] = await Promise.all([
+      const [{ generateWorkOrderPdf }, urls, link, balance, translations] = await Promise.all([
         import('../../lib/workOrderPdf'),
         signPdfAssets(order),
         // Si la orden ya tiene enlace, el PDF lo lleva: la versión con videos.
         customerPortalService.getActiveLink(order.id).catch(() => null),
+        // Lo recibido y el saldo, como los cuenta la base. Si falla, el PDF usa lo de antes.
+        workOrdersService.getBalance(order.id).catch(() => null),
+        // En inglés, lo que el taller escribió sale con su traducción si ya la hay.
+        pdfLanguage === 'en'
+          ? workOrdersService.getOrderTranslations(order.id).catch(() => ({}) as Record<string, string>)
+          : Promise.resolve({} as Record<string, string>),
       ]);
       await generateWorkOrderPdf(order, orderSede, urls, {
         portalUrl: link ? customerPortalService.portalUrl(link.token) : undefined,
+        language: pdfLanguage,
+        translations,
+        balance: balance ? { cobrado: balance.cobrado, saldo: balance.saldo } : null,
       });
     } catch (err) {
       showToast('error', t('workOrders.pdfError'), getErrorMessage(err, language));
@@ -879,6 +934,17 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     delivering,
     cancelDelivery,
     finishDelivery,
+    withdrawing,
+    canWithdraw: isAdmin && !isDelivered,
+    advancing,
+    canRegisterAdvance: isAdmin && !isDelivered,
+    startAdvance: () => setAdvancing(true),
+    cancelAdvance: () => setAdvancing(false),
+    finishAdvance,
+    startWithdrawal: () => setWithdrawing(true),
+    cancelWithdrawal: () => setWithdrawing(false),
+    finishWithdrawal,
+    applyDiscount,
     publishingProgress,
     toggleProgressVisibility,
     confirmPublishProgress,
@@ -909,6 +975,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     addPart,
     updatePart,
     removePart,
+    setPartOrderState,
     addAssignment,
     setAssignmentInSplit,
     removeAssignment,

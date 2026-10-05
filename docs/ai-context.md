@@ -117,6 +117,41 @@ comisiones, el alta de la orden o la "espera de autorización".
   `balance_orden` (comisiones devengadas; repuestos = el costo automático de las líneas,
   lo demás vinculado aparte). Si agregas un movimiento automático de una orden, decide si
   entra en esa cuenta.
+- **Proceso del taller (05/10/2026, `20261010000016`–`18`, [analisis-del-proceso-2026-10.md](analisis-del-proceso-2026-10.md)):**
+  - **Lo importado del banco es contabilidad aparte.** Un movimiento con `importacion_id` no
+    cuenta en `resumen_panel`, `_saldo_orden`, `_balance_orden`, el ajuste de una orden
+    entregada ni `datos_portal`. Si sumas `finanzas_movimientos` para algo de la app, filtra
+    `importacion_id IS NULL`. El costo automático de repuestos es solo el del sistema
+    (`registrado_por IS NULL`): una compra a mano vinculada a la orden no lo toca.
+  - **La fecha de un movimiento automático es `hoy_taller(sede)`**, nunca `CURRENT_DATE` (la
+    base está en UTC: después de las 8 p. m. de Maryland ya es mañana).
+  - **Métodos de pago:** efectivo, tarjeta, zelle, transferencia, cheque (`PAYMENT_METHODS` y el
+    CHECK de `finanzas_movimientos`). Comisiones del banco y de Clover: categoría
+    `comision_bancaria`.
+  - **Costo de un repuesto:** por defecto el precio; uno escrito por administración se queda
+    (`trg_part_cost_follows_price`). `updatePart` manda `costo_unitario` solo si se escribió:
+    mandarlo igual al precio borraba el costo real. La columna ya no tiene DEFAULT.
+  - **Descuento:** `orden_montos.descuento`, solo por `aplicar_descuento`, en $ o en % (el
+    guardia de montos rechaza escribirlo directo). `total_general = mano de obra + repuestos − descuento`; las
+    comisiones no cambian (salen de la mano de obra).
+  - **Retirada sin reparar** es `estatus = 'entregado'` + `retirada_sin_reparar = true`, y solo
+    la enciende `retirar_sin_reparar` (vía `entregar_orden` con `restorify.retirada`). Recibe
+    `p_conservar` (las líneas autorizadas que sí se hicieron): esas se cobran y pagan su
+    comisión; el resto pasa a `rechazado`. No cuenta en `ordenes_finalizadas_mes`. En pantalla
+    es otro estado: mira la marca antes de pintar "Entregado".
+  - **Anticipos** (`registrar_anticipo`) suben `deposito_inicial` con su método (la config
+    `restorify.deposito` lleva `anticipo: true`): por eso la reversión de una entrega vuelve a
+    lo pagado por adelantado. No asientes un pago anticipado por otra vía.
+  - **Pendientes del vehículo** (`trabajos_pendientes_vehiculo`): las líneas rechazadas de sus
+    otras órdenes, para ofrecerlas de nuevo. Es solo lectura.
+  - **Solo se paga lo aceptado** (`pay_commissions` filtra `estado = 'aceptada'`); se acepta en
+    bloque con `aprobar_comisiones`. Una prueba que paga comisiones tiene que aceptarlas antes.
+  - **El avance lo recalcula la base** al marcar una tarea (`trg_labor_avance`, pesado por el
+    precio); el técnico lo puede corregir a mano.
+  - **Repuesto pedido → llegó:** `orden_repuestos.estado_pedido`; la marca de la lista sale de
+    `ordenes_esperando_repuestos()`, y al llegar se avisa (`repuesto_recibido`).
+  - El PDF tiene sus textos en `es` y `en` dentro de `lib/workOrderPdf.ts` (como el portal); el
+    CSV para el contador sale de `lib/csv.ts`.
 - **El alta es `create_work_order` y lee claves con nombre exacto.** El depósito va dentro de
   `p_order` como `deposito_metodo`, `deposito_numero_cheque` y `deposito_comprobante_ruta`
   (`20261010000007`); una clave con otro nombre **se ignora sin error**. Pasó: del 04/10/2026

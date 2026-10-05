@@ -24,6 +24,7 @@ export type { Vehicle, VehicleInput } from './domain/vehicle.types';
 export type {
   WorkOrder,
   OrderAmounts,
+  PartOrderState,
   PartSummary,
   OrderProgressUpdate,
   OrderFinding,
@@ -44,6 +45,9 @@ export type {
   OrderBalance,
   OrderFinancialBalance,
   OrderMarginPage,
+  StatementSummary,
+  WithdrawalBalance,
+  PendingWorkItem,
 } from './domain/finance.types';
 export { PAYMENT_METHODS } from './domain/finance.types';
 export type {

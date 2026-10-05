@@ -362,6 +362,22 @@ const CASES = [
   admin({ id: 'SEC-117', desc: 'Ni un admin llama el trigger de traducción como RPC', method: 'POST', path: () => rpc('trg_encolar_traduccion'), body: {}, expect: 'denied' }),
   anon({ id: 'SEC-118', desc: 'Sin sesión no se aprueban comisiones', method: 'POST', path: () => rpc('aprobar_comision'), body: { p_comision_id: ZERO_UUID }, expect: 'denied' }),
   tech({ id: 'SEC-119', desc: 'Un técnico no aprueba ni cambia una comisión', method: 'POST', path: () => rpc('aprobar_comision'), body: { p_comision_id: ZERO_UUID, p_monto: 9999 }, expect: 'denied' }),
+  // 20261010000016-18 (proceso del taller, 05/10/2026): descuento, retirada sin reparar,
+  // comisiones en bloque, estados de cuenta aparte, fecha del taller y avance por tareas.
+  tech({ id: 'SEC-120', desc: 'Un técnico no acepta comisiones en bloque', method: 'POST', path: () => rpc('aprobar_comisiones'), body: { p_ids: [ZERO_UUID] }, expect: 'denied' }),
+  tech({ id: 'SEC-121', desc: 'Un técnico no aplica descuentos', method: 'POST', path: () => rpc('aplicar_descuento'), body: { p_orden_id: ZERO_UUID, p_monto: 1 }, expect: 'denied' }),
+  tech({ id: 'SEC-122', desc: 'Un técnico no cierra una orden como retirada sin reparar', method: 'POST', path: () => rpc('retirar_sin_reparar'), body: { p_orden_id: ZERO_UUID, p_cobro: 0 }, expect: 'denied' }),
+  tech({ id: 'SEC-123', desc: 'Un técnico no ve el saldo de un retiro', method: 'POST', path: () => rpc('saldo_retiro'), body: { p_orden_id: ZERO_UUID, p_cobro: 0 }, expect: 'denied' }),
+  anon({ id: 'SEC-124', desc: 'Sin sesión no se ven los estados de cuenta', method: 'POST', path: () => rpc('resumen_importaciones'), body: { p_sede_id: null }, expect: 'denied' }),
+  tech({ id: 'SEC-125', desc: 'Un técnico no ve los estados de cuenta', method: 'POST', path: () => rpc('resumen_importaciones'), body: { p_sede_id: null }, expect: 'denied' }),
+  anon({ id: 'SEC-126', desc: 'Sin sesión no se pregunta qué órdenes esperan piezas', method: 'POST', path: () => rpc('ordenes_esperando_repuestos'), body: {}, expect: 'denied' }),
+  admin({ id: 'SEC-127', desc: 'Ni un admin llama la fecha del taller como RPC', method: 'POST', path: () => rpc('hoy_taller'), body: { p_sede_id: null }, expect: 'denied' }),
+  admin({ id: 'SEC-128', desc: 'Ni un admin llama el cálculo interno del avance', method: 'POST', path: () => rpc('_avance_por_tareas'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  admin({ id: 'SEC-129', desc: 'Ni un admin llama los triggers nuevos como RPC', method: 'POST', path: () => rpc('trg_guard_retirada'), body: {}, expect: 'denied' }),
+  admin({ id: 'SEC-130', desc: 'Ni un admin llama el aviso de pieza recibida como RPC', method: 'POST', path: () => rpc('trg_notify_repuesto_recibido'), body: {}, expect: 'denied' }),
+  tech({ id: 'SEC-131', desc: 'Un técnico no registra anticipos', method: 'POST', path: () => rpc('registrar_anticipo'), body: { p_orden_id: ZERO_UUID, p_monto: 1, p_metodo: 'efectivo' }, expect: 'denied' }),
+  anon({ id: 'SEC-132', desc: 'Sin sesión no se registran anticipos', method: 'POST', path: () => rpc('registrar_anticipo'), body: { p_orden_id: ZERO_UUID, p_monto: 1, p_metodo: 'efectivo' }, expect: 'denied' }),
+  tech({ id: 'SEC-133', desc: 'Un técnico no ve los pendientes de un vehículo', method: 'POST', path: () => rpc('trabajos_pendientes_vehiculo'), body: { p_vehiculo_id: ZERO_UUID }, expect: 'denied' }),
 ];
 
 function evaluate(expect, r) {

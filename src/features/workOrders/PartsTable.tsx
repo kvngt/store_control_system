@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Check, Paintbrush, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
-import type { WorkOrderPart } from '../../types/database';
+import type { PartOrderState, WorkOrderPart } from '../../types/database';
 import LineStateBadge from './LineStateBadge';
 import { isApproved } from './lineState';
 import { money } from '../../lib/money';
@@ -10,6 +10,8 @@ export interface PartInput {
   descripcion: string;
   cantidad: number;
   precio_venta_unitario: number;
+  /** Nulo: no se tocó (al crear, la base usa el precio; al editar, lo deja como estaba). */
+  costo_unitario?: number | null;
 }
 
 interface PartsTableProps {
@@ -19,22 +21,24 @@ interface PartsTableProps {
   onAdd: (item: PartInput) => Promise<void>;
   onUpdate: (id: string, item: PartInput) => Promise<void>;
   onRemove: (id: string, descripcion: string) => Promise<void>;
+  /** Pedido → llegó. Sin la función, la tabla no lo ofrece. */
+  onSetOrderState?: (id: string, estado: PartOrderState | null) => Promise<void>;
 }
 
-const EMPTY_DRAFT = { descripcion: '', cantidad: '1', precio_venta_unitario: '' };
+const EMPTY_DRAFT = { descripcion: '', cantidad: '1', precio_venta_unitario: '', costo_unitario: '' };
 
 /**
  * The parts of an order, editable in place.
  *
- * One money column. This used to show both "costo unitario" (what the shop
- * paid) and "precio" (what the customer is charged), and in practice the shop
- * bills a part on at what it cost — so the first column was a second money
- * field nobody filled in that still had to be tabbed past on every line, on a
- * tablet, on the busiest screen in the building. The database now mirrors the
- * price into `costo_unitario`, so Finanzas still books the parts expense and
- * the commission base still subtracts it, without anybody typing it twice.
+ * El precio es lo que se le cobra al cliente. El costo (lo que pagó el taller) es opcional:
+ * se deja vacío y la base usa el precio, y administración lo escribe cuando lo sabe para que
+ * el margen y el egreso de repuestos digan lo real (decisión del taller, 05/10/2026). Antes la
+ * base copiaba siempre el precio en el costo y la ganancia de las piezas no aparecía.
+ *
+ * Cada pieza puede marcarse "Pedido" y luego "Llegó": la orden aparece esperando repuestos en
+ * la lista, en el tablero y en el enlace del cliente, y al llegar se avisa al técnico.
  */
-export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRemove }: PartsTableProps) {
+export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRemove, onSetOrderState }: PartsTableProps) {
   const { t } = useLanguage();
   const [newDraft, setNewDraft] = useState(EMPTY_DRAFT);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -45,11 +49,18 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
     .filter((p) => p.estado === 'borrador' || p.estado === 'pendiente')
     .reduce((sum, p) => sum + p.subtotal, 0);
 
-  const toInput = (draft: typeof EMPTY_DRAFT): PartInput => ({
-    descripcion: draft.descripcion,
-    cantidad: Math.max(1, parseInt(draft.cantidad, 10) || 1),
-    precio_venta_unitario: Math.max(0, parseFloat(draft.precio_venta_unitario) || 0),
-  });
+  const toInput = (draft: typeof EMPTY_DRAFT): PartInput => {
+    const cost = parseFloat(draft.costo_unitario);
+    return {
+      descripcion: draft.descripcion,
+      cantidad: Math.max(1, parseInt(draft.cantidad, 10) || 1),
+      precio_venta_unitario: Math.max(0, parseFloat(draft.precio_venta_unitario) || 0),
+      costo_unitario: draft.costo_unitario.trim() !== '' && Number.isFinite(cost) ? Math.max(0, cost) : null,
+    };
+  };
+
+  // Un costo igual al precio es "no lo sé": el campo queda vacío y sigue al precio.
+  const hasOwnCost = (part: WorkOrderPart) => Number(part.costo_unitario) !== Number(part.precio_venta_unitario);
 
   const startEdit = (part: WorkOrderPart) => {
     setEditingId(part.id);
@@ -57,8 +68,24 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
       descripcion: part.descripcion,
       cantidad: String(part.cantidad),
       precio_venta_unitario: String(part.precio_venta_unitario),
+      costo_unitario: hasOwnCost(part) ? String(part.costo_unitario) : '',
     });
   };
+
+  const orderStateControl = (part: WorkOrderPart) =>
+    onSetOrderState && part.estado !== 'rechazado' ? (
+      <select
+        className={`form-input form-select form-input-sm part-order-state${part.estado_pedido ? ` is-${part.estado_pedido}` : ''}`}
+        aria-label={t('parts.orderState')}
+        value={part.estado_pedido ?? ''}
+        disabled={!canEdit || busy}
+        onChange={(e) => void onSetOrderState(part.id, (e.target.value || null) as PartOrderState | null)}
+      >
+        <option value="">{t('parts.notTracked')}</option>
+        <option value="pedido">{t('parts.ordered')}</option>
+        <option value="recibido">{t('parts.received')}</option>
+      </select>
+    ) : null;
 
   const saveEdit = async () => {
     if (!editingId || !editDraft.descripcion.trim()) return;
@@ -87,6 +114,7 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
               <th>{t('common.description')}</th>
               <th>{t('common.quantity')}</th>
               <th style={{ textAlign: 'right' }}>{t('common.price')}</th>
+              <th style={{ textAlign: 'right' }} title={t('parts.costHint')}>{t('parts.cost')}</th>
               <th style={{ textAlign: 'right' }}>{t('common.subtotal')}</th>
               <th style={{ width: 64 }}></th>
             </tr>
@@ -126,6 +154,21 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                       onChange={(e) => setEditDraft({ ...editDraft, precio_venta_unitario: e.target.value })}
                     />
                   </td>
+                  <td data-label={t('parts.cost')}>
+                    <input
+                      className="form-input"
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="0.01"
+                      style={{ width: 110, textAlign: 'right' }}
+                      placeholder={editDraft.precio_venta_unitario || t('parts.costPlaceholder')}
+                      aria-label={t('parts.cost')}
+                      title={t('parts.costHint')}
+                      value={editDraft.costo_unitario}
+                      onChange={(e) => setEditDraft({ ...editDraft, costo_unitario: e.target.value })}
+                    />
+                  </td>
                   {/* La vista previa se calcula con el mismo `toInput` que se
                       guarda. Antes usaba `parseFloat(cantidad)` mientras el
                       guardado usaba `Math.max(1, parseInt(...))`, así que
@@ -151,9 +194,18 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                 <tr key={part.id} className={part.estado === 'rechazado' ? 'line-rejected' : undefined}>
                   <td data-label={t('common.description')}>
                     <span className="line-desc">{part.descripcion}</span> <LineStateBadge state={part.estado} />
+                    {orderStateControl(part)}
                   </td>
                   <td data-label={t('common.quantity')}>{part.cantidad}</td>
                   <td data-label={t('common.price')} style={{ textAlign: 'right' }}>{money(part.precio_venta_unitario)}</td>
+                  <td
+                    data-label={t('parts.cost')}
+                    style={{ textAlign: 'right' }}
+                    className={hasOwnCost(part) ? undefined : 'part-cost-default'}
+                    title={hasOwnCost(part) ? undefined : t('parts.costSameAsPrice')}
+                  >
+                    {money(part.costo_unitario)}
+                  </td>
                   <td data-label={t('common.subtotal')} style={{ textAlign: 'right', fontWeight: 600 }}>{money(part.subtotal)}</td>
                   <td>
                     {part.estado === 'pendiente' ? (
@@ -180,7 +232,7 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
               )
             )}
             <tr>
-              <td className="desktop-only" colSpan={3} style={{ fontWeight: 700 }}>
+              <td className="desktop-only" colSpan={4} style={{ fontWeight: 700 }}>
                 Total {t('workOrders.parts')}
               </td>
               <td
@@ -193,7 +245,7 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
             </tr>
             {unauthorized > 0 && (
               <tr>
-                <td className="desktop-only" colSpan={3} style={{ color: 'var(--color-text-tertiary)' }}>
+                <td className="desktop-only" colSpan={4} style={{ color: 'var(--color-text-tertiary)' }}>
                   {t('quotes.unauthorizedTotal')}
                 </td>
                 <td data-label={t('quotes.unauthorizedTotal')} style={{ textAlign: 'right', color: 'var(--color-text-tertiary)' }}>
@@ -234,6 +286,19 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
           style={{ flex: '1 1 110px' }}
           value={newDraft.precio_venta_unitario}
           onChange={(e) => setNewDraft({ ...newDraft, precio_venta_unitario: e.target.value })}
+        />
+        <input
+          className="form-input"
+          type="number"
+          inputMode="decimal"
+          min={0}
+          step="0.01"
+          placeholder={t('parts.costPlaceholder')}
+          aria-label={t('parts.cost')}
+          title={t('parts.costHint')}
+          style={{ flex: '1 1 110px' }}
+          value={newDraft.costo_unitario}
+          onChange={(e) => setNewDraft({ ...newDraft, costo_unitario: e.target.value })}
         />
         {/* Verde y con su nombre, igual que el de la mano de obra (03/10/2026). */}
         <button

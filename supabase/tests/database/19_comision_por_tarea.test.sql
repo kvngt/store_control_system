@@ -341,7 +341,8 @@ SET LOCAL ROLE authenticated;
 -- 5. Lo pagado no se mueve ni se paga dos veces
 -- ------------------------------------------------------------------------------------
 SELECT lives_ok(
-  $$ SELECT pay_commissions('a1900000-0000-0000-0000-000000000002',
+  $$ SELECT aprobar_comisiones(ARRAY(SELECT id FROM comisiones WHERE usuario_id = 'a1900000-0000-0000-0000-000000000002'));
+     SELECT pay_commissions('a1900000-0000-0000-0000-000000000002',
        ARRAY(SELECT id FROM comisiones WHERE usuario_id = 'a1900000-0000-0000-0000-000000000002'),
        CURRENT_DATE, 'cheque', '1901', NULL, NULL) $$,
   'Se le paga al mecánico'
@@ -454,7 +455,9 @@ SELECT is(
 SET LOCAL request.jwt.claim.sub = 'a1900000-0000-0000-0000-000000000001';
 
 SELECT lives_ok(
-  $$ SELECT pay_commissions('a1900000-0000-0000-0000-000000000003',
+  $$ SELECT aprobar_comisiones(ARRAY(SELECT id FROM comisiones WHERE usuario_id = 'a1900000-0000-0000-0000-000000000003'
+               AND orden_id = (SELECT id FROM t_ids WHERE vehiculo_id = 'd1900000-0000-0000-0000-00000000000b')));
+     SELECT pay_commissions('a1900000-0000-0000-0000-000000000003',
        ARRAY(SELECT id FROM comisiones WHERE usuario_id = 'a1900000-0000-0000-0000-000000000003'
                AND orden_id = (SELECT id FROM t_ids WHERE vehiculo_id = 'd1900000-0000-0000-0000-00000000000b')),
        CURRENT_DATE, 'cheque', '1902', NULL, NULL) $$,

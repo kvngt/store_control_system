@@ -137,17 +137,17 @@ SET LOCAL ROLE authenticated;
 -- 2. Lo que se rechaza
 -- ------------------------------------------------------------------------------------
 SELECT throws_ok(
-  $$ SELECT pg_temp.alta('d2000000-0000-0000-0000-00000000000d', 100, '{"deposito_metodo":"tarjeta"}', '[]', '[]') $$,
+  $$ SELECT pg_temp.alta('d2000000-0000-0000-0000-00000000000d', 100, '{"deposito_metodo":"bitcoin"}', '[]', '[]') $$,
   '22023',
-  'Elige cómo dejó el depósito el cliente: efectivo, cheque o transferencia.',
-  'Un método que no es efectivo, cheque ni transferencia se rechaza'
+  'Elige cómo dejó el depósito el cliente: efectivo, tarjeta, Zelle, transferencia o cheque.',
+  'Un método que no es efectivo, tarjeta, Zelle, transferencia ni cheque se rechaza'
 );
 
 SELECT throws_ok(
   $$ SELECT pg_temp.alta('d2000000-0000-0000-0000-00000000000d', 100,
        '{"deposito_comprobante_ruta":"20000000-0000-0000-0000-000000000001/x.jpg"}', '[]', '[]') $$,
   '22023',
-  'Elige cómo dejó el depósito el cliente: efectivo, cheque o transferencia.',
+  'Elige cómo dejó el depósito el cliente: efectivo, tarjeta, Zelle, transferencia o cheque.',
   'Un comprobante sin método se rechaza'
 );
 

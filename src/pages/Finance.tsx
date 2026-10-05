@@ -9,7 +9,8 @@ import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { todayLocal } from '../lib/dates';
 import { getErrorMessage } from '../lib/errors';
-import type { FinancialTransaction, TransactionType, TransactionCategory, DashboardStats, WorkOrder, BankStatementImport } from '../types/database';
+import type { FinancialTransaction, TransactionType, TransactionCategory, DashboardStats, WorkOrder, BankStatementImport, StatementSummary } from '../types/database';
+import { toCsv, downloadCsv } from '../lib/csv';
 
 // Lazy-loaded: pulls in pdfjs-dist (~1MB), which shouldn't ship in the main
 // bundle for users who never open the import dialog.
@@ -78,11 +79,17 @@ export default function Finance() {
     queryKey: queryKeys.importBatches(sedeId),
     queryFn: () => financeService.getImportBatches(sedeId),
   });
+  // Las sumas de cada estado de cuenta las hace la base (`resumen_importaciones`).
+  const summariesQuery = useQuery({
+    queryKey: [...queryKeys.importBatches(sedeId), 'resumen'],
+    queryFn: () => financeService.getStatementSummaries(sedeId),
+  });
 
   const transactions = transactionsQuery.data ?? emptyList<FinancialTransaction>();
   const stats: DashboardStats | null = statsQuery.data ?? null;
   const orders = ordersQuery.data ?? emptyList<WorkOrder>();
   const imports = importsQuery.data ?? emptyList<BankStatementImport>();
+  const summaries = summariesQuery.data ?? emptyList<StatementSummary>();
   const loading =
     transactionsQuery.isPending ||
     statsQuery.isPending ||
@@ -92,6 +99,7 @@ export default function Finance() {
     transactionsQuery.error ?? statsQuery.error ?? ordersQuery.error ?? importsQuery.error;
 
   // Money moving changes the KPI cards and the import list, but not the orders.
+  // Las sumas de los estados de cuenta cuelgan de la misma clave de importaciones.
   const loadData = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.transactions(sedeId) });
     queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats(sedeId, currentSede?.capacidad) });
@@ -104,6 +112,11 @@ export default function Finance() {
   const error = loadError ? getErrorMessage(loadError, language) : '';
 
   const [filterType, setFilterType] = useState<'all' | 'ingreso' | 'egreso'>('all');
+  // Dos libros (decisión del taller, 05/10/2026): lo que registra la app, y los estados de
+  // cuenta importados, que son para la contabilidad de meses pasados y para el contador.
+  const [view, setView] = useState<'app' | 'banco'>('app');
+  // 'AAAA-MM' o '' (todos): para revisar un mes y mandárselo al contador.
+  const [month, setMonth] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   // Scoped to the dialog: the page-level `error` renders above the table and
@@ -128,9 +141,16 @@ export default function Finance() {
     referencia_orden_id: '',
   };
 
+  // Lo importado no es un registro de la app: va en su vista y no suma en los totales.
   const filtered = useMemo(
-    () => transactions.filter((txn) => filterType === 'all' || txn.tipo === filterType),
-    [transactions, filterType]
+    () =>
+      transactions.filter(
+        (txn) =>
+          !txn.importacion_id &&
+          (filterType === 'all' || txn.tipo === filterType) &&
+          (!month || txn.fecha.startsWith(month))
+      ),
+    [transactions, filterType, month]
   );
 
   // Los suma la base (`resumen_panel`), no esta pantalla: la lista de movimientos es
@@ -159,6 +179,7 @@ export default function Finance() {
     compra_repuesto: t('finance.partsPurchase'),
     planilla: t('finance.payroll'),
     gasto_operativo: t('finance.operatingExpense'),
+    comision_bancaria: t('finance.bankFees'),
   };
 
   // Like the other dialogs in the app, every failed path has to say why: this
@@ -227,23 +248,30 @@ export default function Finance() {
     }
   };
 
-  const handleExportExcel = () => {
-    const headers = [t('common.date'), t('common.type'), t('common.category'), t('common.description'), t('common.amount')];
-    const rows = filtered.map((txn) => [
+  // Para el contador: una fila por movimiento, con el signo en el monto, el método y la orden.
+  const exportRows = (rows: FinancialTransaction[]) => [
+    [t('common.date'), t('common.type'), t('common.category'), t('common.description'), t('delivery.method'), t('finance.linkedOrder'), t('common.amount')],
+    ...rows.map((txn) => [
       txn.fecha,
-      txn.tipo,
+      txn.tipo === 'ingreso' ? t('finance.income') : t('finance.expense'),
       categoryLabels[txn.categoria] || txn.categoria,
-      txn.descripcion.replace(/"/g, '""'),
-      txn.tipo === 'ingreso' ? txn.monto : -txn.monto,
-    ]);
-    const csv = [headers, ...rows].map((r) => r.map((cell) => `"${cell}"`).join(',')).join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `restorify-finanzas-${todayLocal()}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+      txn.descripcion,
+      txn.metodo_pago ? t('delivery.methods.' + txn.metodo_pago) : '',
+      txn.referencia_orden_id ? orders.find((o) => o.id === txn.referencia_orden_id)?.numero_orden ?? '' : '',
+      txn.tipo === 'ingreso' ? Number(txn.monto) : -Number(txn.monto),
+    ]),
+  ];
+
+  const handleExportExcel = () => {
+    downloadCsv(`restorify-finanzas-${month || todayLocal()}.csv`, toCsv(exportRows(sortedTransactions)));
+  };
+
+  const handleExportStatement = (batch: BankStatementImport) => {
+    const rows = transactions
+      .filter((txn) => txn.importacion_id === batch.id)
+      .sort((a, b) => a.fecha.localeCompare(b.fecha));
+    const base = batch.nombre_archivo.replace(/\.pdf$/i, '');
+    downloadCsv(`restorify-estado-de-cuenta-${base}.csv`, toCsv(exportRows(rows)));
   };
 
   if (loading) {
@@ -255,22 +283,95 @@ export default function Finance() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{t('finance.title')}</h1>
-          <p className="page-subtitle">{filtered.length} {t('finance.transactions').toLowerCase()}</p>
+          {view === 'app' && <p className="page-subtitle">{filtered.length} {t('finance.transactions').toLowerCase()}</p>}
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-          <button className="btn btn-secondary" id="export-excel-btn" onClick={handleExportExcel}>
-            <Download size={18} /> {t('finance.exportExcel')}
-          </button>
-          <button className="btn btn-secondary" id="import-statement-btn" onClick={() => setShowImportModal(true)}>
-            <FileUp size={18} /> {t('finance.importStatement')}
-          </button>
-          <button className="btn btn-primary" onClick={() => { setModalError(''); setForm(EMPTY_FORM); setShowModal(true); }} id="new-transaction-btn">
-            <Plus size={18} /> {t('finance.newTransaction')}
-          </button>
+          {view === 'app' ? (
+            <>
+              <button className="btn btn-secondary" id="export-excel-btn" onClick={handleExportExcel}>
+                <Download size={18} /> {t('finance.exportExcel')}
+              </button>
+              <button className="btn btn-primary" onClick={() => { setModalError(''); setForm(EMPTY_FORM); setShowModal(true); }} id="new-transaction-btn">
+                <Plus size={18} /> {t('finance.newTransaction')}
+              </button>
+            </>
+          ) : (
+            <button className="btn btn-primary" id="import-statement-btn" onClick={() => setShowImportModal(true)}>
+              <FileUp size={18} /> {t('finance.importStatement')}
+            </button>
+          )}
         </div>
       </div>
 
       {error && <div className="alert-error">{error}</div>}
+
+      <div className="tabs finance-views" role="tablist" aria-label={t('finance.title')}>
+        {(['app', 'banco'] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            role="tab"
+            aria-selected={view === v}
+            className={`tab ${view === v ? 'active' : ''}`}
+            onClick={() => setView(v)}
+          >
+            {v === 'app' ? t('finance.viewShop') : t('finance.viewStatements')}
+          </button>
+        ))}
+      </div>
+
+      {view === 'banco' && (
+        <div className="card finance-statements" style={{ marginBottom: 'var(--space-4)' }}>
+          <p className="field-hint" style={{ marginTop: 0 }}>{t('finance.statementsHint')}</p>
+          {imports.length === 0 ? (
+            <p className="orders-section-empty">{t('finance.noStatements')}</p>
+          ) : (
+            <div className="import-list">
+              {imports.map((batch) => {
+                const sum = summaries.find((x) => x.importacion_id === batch.id);
+                return (
+                  <div key={batch.id} className="import-list-row">
+                    <div className="import-list-main">
+                      <span className="import-list-name">{batch.nombre_archivo}</span>
+                      <span className="import-list-meta">
+                        {sum?.desde && sum?.hasta ? `${sum.desde} — ${sum.hasta} · ` : ''}
+                        {sum ? sum.movimientos : batch.total_transacciones} {t('finance.transactionsCount')}
+                        {sum && (
+                          <>
+                            {' · '}
+                            <span style={{ color: 'var(--color-success)' }}>{moneySigned(sum.ingresos, true)}</span>
+                            {' · '}
+                            <span style={{ color: 'var(--color-danger)' }}>{moneySigned(sum.egresos, false)}</span>
+                          </>
+                        )}
+                      </span>
+                      <span className="import-list-meta">
+                        {t('finance.importedOn')} {new Date(batch.fecha_importacion).toLocaleString(language)}
+                      </span>
+                    </div>
+                    <div className="table-actions">
+                      <button className="btn btn-secondary btn-sm" onClick={() => handleExportStatement(batch)}>
+                        <Download size={14} /> {t('finance.exportStatement')}
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ color: 'var(--color-danger)' }}
+                        onClick={() => handleRevertImport(batch)}
+                        disabled={revertingId === batch.id}
+                      >
+                        {revertingId === batch.id ? t('common.loading') : t('finance.revertImport')}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {view === 'app' && (
+      <>
 
       {/* Financial KPIs */}
       {/* No inline grid-template here: it would beat the responsive rules in
@@ -336,7 +437,7 @@ export default function Finance() {
       )}
 
       {/* Filter tabs */}
-      <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+      <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center' }}>
         {(['all', 'ingreso', 'egreso'] as const).map((type) => (
           <button
             key={type}
@@ -347,40 +448,22 @@ export default function Finance() {
             {type === 'all' ? t('common.all') : type === 'ingreso' ? t('finance.income') : t('finance.expense')}
           </button>
         ))}
+        <label className="finance-month-filter">
+          <span>{t('finance.month')}</span>
+          <input
+            type="month"
+            className="form-input form-input-sm"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            aria-label={t('finance.month')}
+          />
+        </label>
+        {month && (
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMonth('')}>
+            {t('finance.allMonths')}
+          </button>
+        )}
       </div>
-
-      {/* Imports — listed so a duplicated statement can be undone in one click. */}
-      {imports.length > 0 && (
-        <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
-          <div className="card-header">
-            <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-              <FileUp size={18} /> {t('finance.imports')}
-            </h3>
-          </div>
-          <div className="import-list">
-            {imports.map((batch) => (
-              <div key={batch.id} className="import-list-row">
-                <div className="import-list-main">
-                  <span className="import-list-name">{batch.nombre_archivo}</span>
-                  <span className="import-list-meta">
-                    {t('finance.importedOn')} {new Date(batch.fecha_importacion).toLocaleString('es')}
-                    {' · '}
-                    {batch.total_transacciones} {t('finance.transactionsCount')}
-                  </span>
-                </div>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  style={{ color: 'var(--color-danger)' }}
-                  onClick={() => handleRevertImport(batch)}
-                  disabled={revertingId === batch.id}
-                >
-                  {revertingId === batch.id ? t('common.loading') : t('finance.revertImport')}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Cuánto dejó cada trabajo del mes (reunión con el taller, sept. 2026). */}
       <OrderMarginCard sedeId={sedeId} />
@@ -474,6 +557,8 @@ export default function Finance() {
           </tbody>
         </table>
       </div>
+      </>
+      )}
 
       {/* New Transaction Modal */}
       {showModal && (
@@ -508,6 +593,7 @@ export default function Finance() {
                     <option value="compra_repuesto">{t('finance.partsPurchase')}</option>
                     <option value="planilla">{t('finance.payroll')}</option>
                     <option value="gasto_operativo">{t('finance.operatingExpense')}</option>
+                    <option value="comision_bancaria">{t('finance.bankFees')}</option>
                   </select>
                 </div>
               </div>

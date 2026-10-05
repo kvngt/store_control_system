@@ -32,6 +32,8 @@ export interface PortalMedia {
 export interface PortalOrder {
   numero: string;
   estatus: 'recepcion' | 'en_proceso' | 'espera_autorizacion' | 'finalizado' | 'entregado';
+  /** Se cerró sin hacer el trabajo: el cliente lo ve como otro estado, no como "Entregado". */
+  retirada_sin_reparar?: boolean;
   tipo_trabajo: string;
   porcentaje_avance: number;
   fecha_ingreso: string;
@@ -80,10 +82,24 @@ export interface PortalAccount {
   no_autorizados?: { descripcion: string; monto: number }[];
   total_mano_obra: number;
   total_repuestos: number;
+  /** Mano de obra + repuestos, antes del descuento. Ausente en la base anterior. */
+  subtotal?: number;
+  /** Lo absorbe el taller. */
+  descuento?: number;
   total: number;
   deposito: number;
+  /** Todo lo recibido, depósito incluido. */
   pagado: number;
+  /** Lo cobrado después del depósito; negativo = devuelto al cliente. Ausente en la base anterior. */
+  otros_pagos?: number;
+  /** Con signo desde 20261010000018: negativo es saldo a favor del cliente. */
   saldo: number;
+}
+
+/** Una pieza que el taller pidió y no ha llegado: por qué la orden no avanza. */
+export interface PortalWaitingPart {
+  descripcion: string;
+  desde: string | null;
 }
 
 /** Un avance que el taller decidió mostrar. Sin autor: no se nombran los técnicos. */
@@ -120,6 +136,7 @@ export interface PortalReport {
   multimedia: PortalMedia[];
   avances?: PortalProgress[];
   observaciones?: PortalObservation[];
+  esperando_repuestos?: PortalWaitingPart[];
   presupuesto?: PortalQuote | null;
   presupuestos_respondidos?: PortalQuoteHistory[];
   cuenta: PortalAccount;

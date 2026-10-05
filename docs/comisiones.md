@@ -186,10 +186,21 @@ de 0–100 se rechazan, y lo ya pagado no se cambia (`aprobar_comision`, que blo
   monto. Pero se borra, como cualquier otra sin pagar, si la orden deja de estar entregada (al
   volver a entregarla, se acepta de nuevo) o si la tarea pasa a otro técnico (si no, se pagaría
   la misma tarea dos veces).
-- Pagar no exige que esté aceptada: **Comisiones** paga lo pendiente como antes. Si el taller
-  quiere que solo se pague lo aceptado, es un cambio a `pay_commissions`.
+- **Solo se paga lo aceptado** (desde `20261010000018`, decisión del taller del 05/10/2026):
+  `pay_commissions` rechaza pagar lo que sigue sugerido ("Esas comisiones todavía no están
+  aceptadas…"). Antes pagaba también lo sugerido, y aceptar orden por orden no cambiaba nada del
+  pago.
+- **Se revisa en bloque en Comisiones:** cada empleado muestra cuántas tiene "por revisar" y el
+  botón **Aceptar todas** (`aprobar_comisiones`, un solo aviso por técnico y orden). Al abrir su
+  fila, cada comisión se acepta o se edita (% o $) ahí mismo. **Pagar lo aceptado** paga solo
+  esas.
+- Una **retirada sin reparar** genera solo las comisiones de las tareas que se cobraron como
+  hechas ("Se hicieron algunos trabajos"); cancelar todo o cobrar solo la revisión no le paga a
+  nadie (la revisión no tiene técnico). Un **descuento** no las cambia (lo absorbe el taller; la
+  comisión sale de la mano de obra).
 
-Pruebas: `25_comisiones_aprobacion.test.sql`; la 02, la 12 y la 19 se ajustaron a la regla.
+Pruebas: `25_comisiones_aprobacion.test.sql` y `26_proceso_del_taller.test.sql`; la 01, 02,
+07, 08, 12, 13 y 19 aceptan antes de pagar.
 
 ## Solo lo autorizado genera comisión
 

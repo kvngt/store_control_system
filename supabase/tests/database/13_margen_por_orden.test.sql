@@ -90,7 +90,8 @@ SELECT is(
 -- 2. Un pago, un egreso por orden
 -- ------------------------------------------------------------------------------------
 SELECT lives_ok(
-  $$ SELECT pay_commissions('ad000000-0000-0000-0000-000000000002',
+  $$ SELECT aprobar_comisiones(ARRAY(SELECT id FROM comisiones WHERE usuario_id = 'ad000000-0000-0000-0000-000000000002'));
+     SELECT pay_commissions('ad000000-0000-0000-0000-000000000002',
        ARRAY(SELECT id FROM comisiones WHERE usuario_id = 'ad000000-0000-0000-0000-000000000002'),
        CURRENT_DATE, 'cheque', '3001', NULL, NULL) $$,
   'Se le paga al mecánico lo de las dos órdenes en un cheque'

@@ -177,6 +177,7 @@ WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
 UPDATE ordenes_trabajo SET estatus = 'entregado' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
 
 DO $do$ BEGIN
+  PERFORM aprobar_comisiones(ARRAY(SELECT id FROM comisiones WHERE usuario_id = 'a0000000-0000-0000-0000-000000000002'));
   PERFORM pay_commissions('a0000000-0000-0000-0000-000000000002',
     ARRAY(SELECT id FROM comisiones WHERE usuario_id = 'a0000000-0000-0000-0000-000000000002'),
     CURRENT_DATE, 'cheque', '3001', NULL, NULL);

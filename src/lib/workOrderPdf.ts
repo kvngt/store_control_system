@@ -5,9 +5,21 @@ import { money } from './money';
 import { brandColors } from './brandColor';
 import { formatPhone } from './phone';
 
+export type PdfLanguage = 'es' | 'en';
+
 export interface WorkOrderPdfOptions {
   /** El enlace personal del cliente, si la orden tiene: la versión web con videos. */
   portalUrl?: string;
+  /** El idioma del documento; lo elige administración al descargarlo (05/10/2026). */
+  language?: PdfLanguage;
+  /**
+   * Texto original → traducción al inglés (`traducciones_orden`, la misma que usa el portal).
+   * Con el PDF en inglés, las descripciones y notas que ya estén traducidas salen traducidas;
+   * las que no, como las escribió el taller.
+   */
+  translations?: Record<string, string>;
+  /** Lo recibido y lo que falta (o sobra), como lo cuenta la base (`saldo_orden`). */
+  balance?: { cobrado: number; saldo: number } | null;
 }
 
 const MARGIN = 15;
@@ -19,16 +31,109 @@ const MUTED: [number, number, number] = [110, 110, 130];
 // Keeps the minus sign in front of the currency symbol: "-$100.00", not
 // "$-100.00", which is how the shop's paperwork reads.
 
-const STATUS_LABELS: Record<string, string> = {
-  recepcion: 'Recepción',
-  en_proceso: 'En Proceso',
-  // Era "Espera de Repuestos", el nombre del estado antes de que F1 lo convirtiera en la
-  // espera de la autorización del cliente. Este documento lo lee el cliente, así que dice lo
-  // mismo que su portal (`src/portal/strings.ts`).
-  espera_autorizacion: 'Esperando su autorización',
-  finalizado: 'Finalizado',
-  entregado: 'Entregado',
+// Los textos del documento, en los dos idiomas. Como el portal (`src/portal/strings.ts`), este
+// módulo tiene los suyos: lo lee el cliente, no la pantalla del taller.
+const STRINGS = {
+  es: {
+    locale: 'es-US',
+    status: {
+      recepcion: 'Recepción',
+      en_proceso: 'En Proceso',
+      // Era "Espera de Repuestos", el nombre del estado antes de que F1 lo convirtiera en la
+      // espera de la autorización del cliente. Dice lo mismo que el portal.
+      espera_autorizacion: 'Esperando su autorización',
+      finalizado: 'Finalizado',
+      entregado: 'Entregado',
+      retirada: 'Retirado sin reparar',
+    } as Record<string, string>,
+    workType: { mecanica: 'Mecánica', pintura: 'Pintura', combinado: 'Mecánica y pintura' } as Record<string, string>,
+    generated: 'Generado',
+    title: 'Orden de Trabajo',
+    statusLabel: 'Estado',
+    progress: 'Avance',
+    type: 'Tipo',
+    online: 'Vea este reporte en línea, con videos y el estado actualizado:',
+    customerVehicle: 'Cliente y Vehículo',
+    customer: 'Cliente',
+    phone: 'Teléfono',
+    vehicle: 'Vehículo',
+    plate: 'Placa',
+    vin: 'VIN',
+    milesIn: 'Millas de ingreso',
+    dateIn: 'Fecha de ingreso',
+    estimated: 'Entrega estimada',
+    labor: 'Mano de Obra',
+    laborTotal: 'Total mano de obra',
+    parts: 'Repuestos',
+    partsTotal: 'Total repuestos',
+    summary: 'Resumen',
+    discount: 'Descuento',
+    total: 'Total',
+    deposit: 'Depósito recibido',
+    received: 'Total recibido',
+    balanceDue: 'Saldo pendiente',
+    credit: 'Saldo a favor del cliente',
+    intakeNotes: 'Notas de Inspección 360°',
+    observations: 'Observaciones del Taller',
+    progressPhotos: 'Avances del Trabajo',
+    intakePhotos: 'Fotos de Recepción',
+    signature: 'Conformidad del Cliente',
+    customerFallback: 'Cliente',
+    signed: 'Firmado',
+  },
+  en: {
+    locale: 'en-US',
+    status: {
+      recepcion: 'Received',
+      en_proceso: 'In progress',
+      espera_autorizacion: 'Awaiting your authorization',
+      finalizado: 'Completed',
+      entregado: 'Delivered',
+      retirada: 'Picked up without repair',
+    } as Record<string, string>,
+    workType: { mecanica: 'Mechanical', pintura: 'Paint', combinado: 'Mechanical and paint' } as Record<string, string>,
+    generated: 'Generated',
+    title: 'Work Order',
+    statusLabel: 'Status',
+    progress: 'Progress',
+    type: 'Type',
+    online: 'See this report online, with videos and the latest status:',
+    customerVehicle: 'Customer and Vehicle',
+    customer: 'Customer',
+    phone: 'Phone',
+    vehicle: 'Vehicle',
+    plate: 'Plate',
+    vin: 'VIN',
+    milesIn: 'Mileage in',
+    dateIn: 'Date in',
+    estimated: 'Estimated completion',
+    labor: 'Labor',
+    laborTotal: 'Labor total',
+    parts: 'Parts',
+    partsTotal: 'Parts total',
+    summary: 'Summary',
+    discount: 'Discount',
+    total: 'Total',
+    deposit: 'Deposit received',
+    received: 'Total received',
+    balanceDue: 'Balance due',
+    credit: 'Credit due to customer',
+    intakeNotes: '360° Inspection Notes',
+    observations: 'Shop Observations',
+    progressPhotos: 'Work Progress',
+    intakePhotos: 'Intake Photos',
+    signature: 'Customer Acknowledgment',
+    customerFallback: 'Customer',
+    signed: 'Signed',
+  },
 };
+
+/** 'AAAA-MM-DD' como fecha local, sin el corrimiento de zona de `new Date('AAAA-MM-DD')`. */
+function formatDay(value: string, locale: string) {
+  const [y, m, d] = value.slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return value;
+  return new Date(y, m - 1, d).toLocaleDateString(locale);
+}
 
 // Phone photos come in at several MB each; embedding them raw produced a
 // ~24MB PDF that email providers reject. Downscale to at most MAX_PHOTO_PX on
@@ -109,6 +214,10 @@ async function buildWorkOrderPdf(
   options: WorkOrderPdfOptions = {}
 ) {
   const photos = customerReportPhotos(order);
+  const lang: PdfLanguage = options.language ?? 'es';
+  const S = STRINGS[lang];
+  // En inglés, lo que el taller escribió en español sale traducido si ya hay traducción.
+  const tr = (text: string) => (lang === 'en' ? options.translations?.[text] ?? text : text);
   const urlsOf = (list: typeof photos.reception, limit: number) =>
     list
       .map((m) => urls[reportImagePath(m)])
@@ -198,7 +307,7 @@ async function buildWorkOrderPdf(
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...MUTED);
   doc.text(
-    `Generado: ${new Date().toLocaleDateString('es')} ${new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`,
+    `${S.generated}: ${new Date().toLocaleDateString(S.locale)} ${new Date().toLocaleTimeString(S.locale, { hour: '2-digit', minute: '2-digit' })}`,
     pageWidth - MARGIN,
     y + 2,
     { align: 'right' }
@@ -212,14 +321,20 @@ async function buildWorkOrderPdf(
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(20, 20, 30);
-  doc.text(`Orden de Trabajo ${order.numero_orden}`, MARGIN, y);
+  doc.text(`${S.title} ${order.numero_orden}`, MARGIN, y);
   y += 5;
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...MUTED);
+  const statusKey = order.retirada_sin_reparar ? 'retirada' : order.estatus;
   doc.text(
-    `Estado: ${STATUS_LABELS[order.estatus] || order.estatus}  ·  Avance: ${order.porcentaje_avance}%  ·  Tipo: ${order.tipo_trabajo}`,
+    [
+      `${S.statusLabel}: ${S.status[statusKey] || order.estatus}`,
+      // Una orden retirada sin reparar no tiene avance que contar.
+      ...(order.retirada_sin_reparar ? [] : [`${S.progress}: ${order.porcentaje_avance}%`]),
+      `${S.type}: ${S.workType[order.tipo_trabajo] || order.tipo_trabajo}`,
+    ].join('  ·  '),
     MARGIN,
     y
   );
@@ -229,7 +344,7 @@ async function buildWorkOrderPdf(
   if (options.portalUrl) {
     doc.setFontSize(9);
     doc.setTextColor(...MUTED);
-    doc.text('Vea este reporte en línea, con videos y el estado actualizado:', MARGIN, y);
+    doc.text(S.online, MARGIN, y);
     y += 4.5;
     doc.setTextColor(...brand.text);
     doc.textWithLink(options.portalUrl, MARGIN, y, { url: options.portalUrl });
@@ -237,39 +352,39 @@ async function buildWorkOrderPdf(
   }
 
   // ===== Customer & vehicle =====
-  sectionTitle('Cliente y Vehículo');
+  sectionTitle(S.customerVehicle);
   const half = contentWidth / 2;
-  label('Cliente', order.cliente?.nombre || '', MARGIN, half - 5);
-  label('Teléfono', formatPhone(order.cliente?.telefono), MARGIN + half, half - 5);
+  label(S.customer, order.cliente?.nombre || '', MARGIN, half - 5);
+  label(S.phone, formatPhone(order.cliente?.telefono), MARGIN + half, half - 5);
   y += 11;
-  label('Vehículo', `${order.vehiculo?.anio || ''} ${order.vehiculo?.marca || ''} ${order.vehiculo?.modelo || ''}`.trim(), MARGIN, half - 5);
-  label('Placa', order.vehiculo?.placa || '', MARGIN + half, half - 5);
+  label(S.vehicle, `${order.vehiculo?.anio || ''} ${order.vehiculo?.marca || ''} ${order.vehiculo?.modelo || ''}`.trim(), MARGIN, half - 5);
+  label(S.plate, order.vehiculo?.placa || '', MARGIN + half, half - 5);
   y += 11;
-  label('VIN', order.vehiculo?.vin || '', MARGIN, half - 5);
-  label('Millas de ingreso', String(order.millas_ingreso ?? ''), MARGIN + half, half - 5);
+  label(S.vin, order.vehiculo?.vin || '', MARGIN, half - 5);
+  label(S.milesIn, String(order.millas_ingreso ?? ''), MARGIN + half, half - 5);
   y += 11;
-  label('Fecha de ingreso', order.fecha_ingreso ? new Date(order.fecha_ingreso).toLocaleDateString('es') : '', MARGIN, half - 5);
-  label('Entrega estimada', order.fecha_estimada_entrega || '', MARGIN + half, half - 5);
+  label(S.dateIn, order.fecha_ingreso ? new Date(order.fecha_ingreso).toLocaleDateString(S.locale) : '', MARGIN, half - 5);
+  label(S.estimated, order.fecha_estimada_entrega ? formatDay(order.fecha_estimada_entrega, S.locale) : '', MARGIN + half, half - 5);
   y += 11;
 
   // ===== Labor =====
   // Solo lo autorizado: es lo que se cobra y lo que suman los totales.
   const laborItems = (order.labor_items || []).filter((l) => (l.estado ?? 'aprobado') === 'aprobado');
   if (laborItems.length) {
-    sectionTitle('Mano de Obra');
+    sectionTitle(S.labor);
     doc.setFontSize(9);
     laborItems.forEach((item) => {
       ensureSpace(LINE);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(20, 20, 30);
-      const lines = doc.splitTextToSize(item.descripcion, contentWidth - 30);
+      const lines = doc.splitTextToSize(tr(item.descripcion), contentWidth - 30);
       doc.text(lines, MARGIN, y);
       doc.text(money(Number(item.costo)), pageWidth - MARGIN, y, { align: 'right' });
       y += LINE * lines.length;
     });
     ensureSpace(LINE);
     doc.setFont('helvetica', 'bold');
-    doc.text('Total mano de obra', MARGIN, y);
+    doc.text(S.laborTotal, MARGIN, y);
     doc.text(money(Number(order.total_labor)), pageWidth - MARGIN, y, { align: 'right' });
     y += LINE;
   }
@@ -284,39 +399,42 @@ async function buildWorkOrderPdf(
   );
   const totalGeneral = Number(order.montos?.total_general ?? Number(order.total_labor) + totalRepuestos);
   const deposito = Number(order.montos?.deposito_inicial ?? 0);
+  const descuento = Number(order.montos?.descuento ?? 0);
   if (parts.length) {
-    sectionTitle('Repuestos');
+    sectionTitle(S.parts);
     doc.setFontSize(9);
     parts.forEach((part) => {
       ensureSpace(LINE);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(20, 20, 30);
-      const lines = doc.splitTextToSize(`${part.descripcion}  (x${part.cantidad})`, contentWidth - 30);
+      const lines = doc.splitTextToSize(`${tr(part.descripcion)}  (x${part.cantidad})`, contentWidth - 30);
       doc.text(lines, MARGIN, y);
       doc.text(money(Number(part.subtotal)), pageWidth - MARGIN, y, { align: 'right' });
       y += LINE * lines.length;
     });
     ensureSpace(LINE);
     doc.setFont('helvetica', 'bold');
-    doc.text('Total repuestos', MARGIN, y);
+    doc.text(S.partsTotal, MARGIN, y);
     doc.text(money(totalRepuestos), pageWidth - MARGIN, y, { align: 'right' });
     y += LINE;
   }
 
   // ===== Totals =====
-  sectionTitle('Resumen');
+  // Las cifras son las de la base: el total ya trae el descuento, y lo recibido y el saldo
+  // salen de `saldo_orden` (depósito, pagos y devoluciones). Sin ellas (una llamada vieja), lo
+  // de antes: una orden entregada ya cobró su saldo.
+  sectionTitle(S.summary);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(20, 20, 30);
-  // Una orden entregada ya cobró su saldo (lo asienta la base al entregar): el
-  // papel no debe decir que el cliente todavía debe.
   const delivered = order.estatus === 'entregado';
-  const balance = delivered ? 0 : totalGeneral - deposito;
+  const balance = options.balance ? options.balance.saldo : delivered ? 0 : totalGeneral - deposito;
   const rows: [string, string][] = [
-    ['Subtotal', money(Number(order.total_labor) + totalRepuestos)],
-    ['Depósito recibido', `-${money(deposito)}`],
-    ...(delivered && totalGeneral - deposito > 0.009
-      ? ([['Pagado al entregar', `-${money(totalGeneral - deposito)}`]] as [string, string][])
+    ...(descuento > 0.009 ? ([[S.discount, `-${money(descuento)}`]] as [string, string][]) : []),
+    [S.total, money(totalGeneral)],
+    [S.deposit, money(deposito)],
+    ...(options.balance && Math.abs(options.balance.cobrado - deposito) > 0.009
+      ? ([[S.received, money(options.balance.cobrado)]] as [string, string][])
       : []),
   ];
   rows.forEach(([k, v]) => {
@@ -330,17 +448,17 @@ async function buildWorkOrderPdf(
   doc.setFontSize(12);
   // A deposit larger than the job total isn't an error — it's money the shop
   // owes back, and the report should say so rather than print a negative debt.
-  doc.text(balance < 0 ? 'Saldo a favor del cliente' : 'Saldo pendiente', MARGIN, y);
+  doc.text(balance < -0.009 ? S.credit : S.balanceDue, MARGIN, y);
   doc.text(money(Math.abs(balance)), pageWidth - MARGIN, y, { align: 'right' });
   y += LINE + 2;
 
   // ===== Intake notes =====
   if (order.inspeccion_360_notas) {
-    sectionTitle('Notas de Inspección 360°');
+    sectionTitle(S.intakeNotes);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(20, 20, 30);
-    const notes = doc.splitTextToSize(order.inspeccion_360_notas, contentWidth);
+    const notes = doc.splitTextToSize(tr(order.inspeccion_360_notas), contentWidth);
     ensureSpace(LINE * notes.length);
     doc.text(notes, MARGIN, y);
     y += LINE * notes.length;
@@ -350,12 +468,12 @@ async function buildWorkOrderPdf(
   // Lo que administración decidió contarle al cliente de un hallazgo que no se hará ahora.
   const observations = customerObservations(order);
   if (observations.length) {
-    sectionTitle('Observaciones del Taller');
+    sectionTitle(S.observations);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(20, 20, 30);
     observations.forEach((o) => {
-      const lines = doc.splitTextToSize(`• ${o.texto_cliente!.trim()}`, contentWidth);
+      const lines = doc.splitTextToSize(`• ${tr(o.texto_cliente!.trim())}`, contentWidth);
       ensureSpace(LINE * lines.length);
       doc.text(lines, MARGIN, y);
       y += LINE * lines.length;
@@ -369,7 +487,7 @@ async function buildWorkOrderPdf(
     .map(({ day, items }) => ({ day, urls: urlsOf(items, 6) }))
     .filter((g) => g.urls.length > 0);
   if (progressDays.length) {
-    sectionTitle('Avances del Trabajo');
+    sectionTitle(S.progressPhotos);
     const imgW = 45;
     const imgH = 34;
     for (const group of progressDays) {
@@ -377,7 +495,7 @@ async function buildWorkOrderPdf(
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...MUTED);
-      doc.text(new Date(`${group.day}T12:00:00`).toLocaleDateString('es'), MARGIN, y);
+      doc.text(new Date(`${group.day}T12:00:00`).toLocaleDateString(S.locale), MARGIN, y);
       y += 3;
       let x = MARGIN;
       for (const url of group.urls) {
@@ -403,7 +521,7 @@ async function buildWorkOrderPdf(
   // ===== Intake photos =====
   const intakePhotos = urlsOf(photos.reception, 12);
   if (intakePhotos.length) {
-    sectionTitle('Fotos de Recepción');
+    sectionTitle(S.intakePhotos);
     const imgW = 55;
     const imgH = 41;
     let x = MARGIN;
@@ -437,7 +555,7 @@ async function buildWorkOrderPdf(
       // Reserve the whole block (title + rule + image + name line) up front so
       // the heading never lands alone at the bottom of a page.
       ensureSpace(sigH + 34);
-      sectionTitle('Conformidad del Cliente');
+      sectionTitle(S.signature);
       try {
         doc.addImage(firma.dataUrl, 'PNG', MARGIN, y, sigW, sigH);
       } catch {
@@ -451,9 +569,9 @@ async function buildWorkOrderPdf(
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...MUTED);
-      doc.text(order.cliente?.nombre || 'Cliente', MARGIN, y);
+      doc.text(order.cliente?.nombre || S.customerFallback, MARGIN, y);
       if (order.firma_fecha) {
-        doc.text(`Firmado: ${new Date(order.firma_fecha).toLocaleDateString('es')}`, MARGIN + 70, y, {
+        doc.text(`${S.signed}: ${new Date(order.firma_fecha).toLocaleDateString(S.locale)}`, MARGIN + 70, y, {
           align: 'right',
         });
       }
@@ -465,8 +583,8 @@ async function buildWorkOrderPdf(
 }
 
 /** The file name the shop expects to see in their downloads folder. */
-export function workOrderPdfName(order: WorkOrder) {
-  return `${order.numero_orden}.pdf`;
+export function workOrderPdfName(order: WorkOrder, language: PdfLanguage = 'es') {
+  return language === 'en' ? `${order.numero_orden}-EN.pdf` : `${order.numero_orden}.pdf`;
 }
 
 /** Genera el reporte y lo descarga. */
@@ -477,5 +595,5 @@ export async function generateWorkOrderPdf(
   options: WorkOrderPdfOptions = {}
 ) {
   const doc = await buildWorkOrderPdf(order, sede, urls, options);
-  doc.save(workOrderPdfName(order));
+  doc.save(workOrderPdfName(order, options.language));
 }

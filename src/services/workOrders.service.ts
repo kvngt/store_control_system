@@ -9,12 +9,15 @@ import type {
   OrderMedia,
   OrderProgressUpdate,
   OrderStatus,
+  PartOrderState,
   PartSummary,
   PaymentMethod,
   Specialty,
   WorkOrder,
   WorkOrderInput,
   WorkOrderPart,
+  WithdrawalBalance,
+  PendingWorkItem,
 } from '../types/database';
 import { mediaPath } from '../lib/media/mime';
 import { assertAffected, assertDeleted, fetchAll } from './support';
@@ -80,13 +83,25 @@ export const workOrdersService = {
       return query.range(from, to);
     };
 
-    // Qué órdenes esperan la respuesta del cliente a un presupuesto. Tolerante: si
-    // falla, la lista se ve igual, sin la marca.
-    const [data, waiting] = await Promise.all([
+    // Qué órdenes esperan la respuesta del cliente a un presupuesto, y cuáles una pieza.
+    // Tolerantes: si fallan, la lista se ve igual, sin la marca.
+    const [data, waiting, waitingParts] = await Promise.all([
       fetchAll<WorkOrder>(page),
       quotesService.waitingOrderIds().catch(() => new Set<string>()),
+      workOrdersService.waitingPartsOrderIds().catch(() => new Set<string>()),
     ]);
-    return data.map((order) => ({ ...order, esperando_autorizacion: waiting.has(order.id) }));
+    return data.map((order) => ({
+      ...order,
+      esperando_autorizacion: waiting.has(order.id),
+      esperando_repuestos: waitingParts.has(order.id),
+    }));
+  },
+
+  /** Órdenes abiertas con una pieza pedida que no ha llegado (20261010000017). */
+  waitingPartsOrderIds: async () => {
+    const { data, error } = await supabase.rpc('ordenes_esperando_repuestos');
+    if (error) throw error;
+    return new Set(((data as string[] | null) ?? []).map(String));
   },
 
   /**
@@ -168,7 +183,7 @@ export const workOrdersService = {
     const [{ data, error }, { data: resumen }, media] = await Promise.all([
       supabase.from('ordenes_trabajo').select(`
         *,
-        montos:orden_montos(total_repuestos, total_general, deposito_inicial),
+        montos:orden_montos(total_repuestos, total_general, deposito_inicial, descuento, descuento_motivo),
         cliente:clientes(*),
         vehiculo:vehiculos(*),
         labor_items:orden_labor(*, tecnico:perfiles!asignado_a(id, nombre_completo, rol)),
@@ -264,7 +279,8 @@ export const workOrdersService = {
     const { data, error } = await supabase.rpc('create_work_order', {
       p_order: orderPayload,
       p_labor: input.labor_items,
-      p_parts: input.repuestos.map((p) => ({ ...p, costo_unitario: p.precio_venta_unitario })),
+      // Sin costo, la base usa el precio (20261010000017).
+      p_parts: input.repuestos.map((p) => ({ ...p, costo_unitario: p.costo_unitario ?? p.precio_venta_unitario })),
       p_assignments: input.asignaciones,
     });
     if (error) throw error;
@@ -371,6 +387,58 @@ export const workOrdersService = {
       p_metodo: input.metodo,
       p_numero_cheque: input.numeroCheque ?? null,
       p_comprobante_ruta: input.comprobanteRuta ?? null,
+    });
+    if (error) throw error;
+    return data as { saldo: number; tipo: 'ingreso' | 'egreso' | null; movimiento_id: string | null };
+  },
+
+  /**
+   * Las traducciones al inglés de lo que escribió el taller en la orden (`traducciones_orden`:
+   * texto original → traducción). Lo que todavía no se tradujo no viene.
+   */
+  getOrderTranslations: async (orderId: string) => {
+    const { data, error } = await supabase.rpc('traducciones_orden', { p_orden_id: orderId });
+    if (error) throw error;
+    return (data ?? {}) as Record<string, string>;
+  },
+
+  /**
+   * Cuánto se recibió y cuánto se cobraría (o devolvería) al retirar sin reparar, cobrando los
+   * trabajos `conservar` (los que sí se hicieron) más `cobro` (la revisión).
+   */
+  getWithdrawalBalance: async (orderId: string, cobro: number, conservar: string[] = []) => {
+    const { data, error } = await supabase.rpc('saldo_retiro', {
+      p_orden_id: orderId,
+      p_cobro: cobro,
+      p_conservar: conservar,
+    });
+    if (error) throw error;
+    return data as WithdrawalBalance;
+  },
+
+  /**
+   * Cierra la orden sin hacer (todo) el trabajo (`retirar_sin_reparar`): se cobran los trabajos
+   * que sí se hicieron (`conservar`, con su comisión) más `cobro` (la revisión), lo demás pasa a
+   * no autorizado, y se devuelve o cobra la diferencia con lo recibido, con su método.
+   */
+  withdrawWithoutRepair: async (input: {
+    orderId: string;
+    cobro: number;
+    concepto?: string | null;
+    metodo: PaymentMethod | null;
+    numeroCheque?: string | null;
+    comprobanteRuta?: string | null;
+    /** Las líneas autorizadas que sí se hicieron y se cobran. Vacío: no se hizo nada. */
+    conservar?: string[];
+  }) => {
+    const { data, error } = await supabase.rpc('retirar_sin_reparar', {
+      p_orden_id: input.orderId,
+      p_cobro: input.cobro,
+      p_concepto: input.concepto ?? null,
+      p_metodo: input.metodo,
+      p_numero_cheque: input.numeroCheque ?? null,
+      p_comprobante_ruta: input.comprobanteRuta ?? null,
+      p_conservar: input.conservar ?? [],
     });
     if (error) throw error;
     return data as { saldo: number; tipo: 'ingreso' | 'egreso' | null; movimiento_id: string | null };
@@ -541,26 +609,22 @@ export const workOrdersService = {
     assertDeleted(data, 'la línea de mano de obra');
   },
 
-  // Only the sale price is captured in the UI. `costo_unitario` is still
-  // written explicitly here rather than left to the database, and that is
-  // deliberate: the column is NOT NULL, and omitting it makes the insert depend
-  // on a DEFAULT and a trigger both being present on whichever environment this
-  // is talking to. Adding a part to an existing order broke in production for
-  // exactly that reason — the write reached a database where the pass-through
-  // trigger had not been applied yet, and came back as "falta completar un
-  // campo obligatorio", which reads to the user as a broken form.
-  //
-  // A part is billed on at what it cost the shop, so cost and price carry the
-  // same number. The trg_part_cost_passthrough trigger enforces that rule for
-  // every other writer; sending it here too costs nothing and makes this path
-  // work with or without the migration.
-  addPart: async (orderId: string, item: { descripcion: string; cantidad: number; precio_venta_unitario: number }) => {
+  // El costo (lo que pagó el taller) es por defecto el precio, y administración lo cambia
+  // cuando lo sabe (decisión del taller, 05/10/2026). Al crear la línea se manda siempre: la
+  // columna es NOT NULL, y depender del trigger hizo fallar el alta de repuestos en producción
+  // cuando la base todavía no lo tenía ("falta completar un campo obligatorio").
+  addPart: async (
+    orderId: string,
+    item: { descripcion: string; cantidad: number; precio_venta_unitario: number; costo_unitario?: number | null }
+  ) => {
     const { data, error } = await supabase
       .from('orden_repuestos')
       .insert({
-        ...item,
+        descripcion: item.descripcion,
+        cantidad: item.cantidad,
+        precio_venta_unitario: item.precio_venta_unitario,
         orden_id: orderId,
-        costo_unitario: item.precio_venta_unitario,
+        costo_unitario: item.costo_unitario ?? item.precio_venta_unitario,
         subtotal: item.cantidad * item.precio_venta_unitario,
       })
       .select()
@@ -569,19 +633,89 @@ export const workOrdersService = {
     return data as WorkOrderPart;
   },
 
-  updatePart: async (id: string, item: { descripcion: string; cantidad: number; precio_venta_unitario: number }) => {
+  // Al editar, el costo viaja solo si administración lo escribió: sin él, la base lo deja como
+  // estaba o, si seguía al precio, lo mueve con el precio (`trg_part_cost_follows_price`).
+  // Mandarlo siempre igual al precio borraba el costo real en cada corrección del precio.
+  updatePart: async (
+    id: string,
+    item: { descripcion: string; cantidad: number; precio_venta_unitario: number; costo_unitario?: number | null }
+  ) => {
+    const updates: Record<string, unknown> = {
+      descripcion: item.descripcion,
+      cantidad: item.cantidad,
+      precio_venta_unitario: item.precio_venta_unitario,
+      subtotal: item.cantidad * item.precio_venta_unitario,
+    };
+    if (item.costo_unitario != null) updates.costo_unitario = item.costo_unitario;
     const { data, error } = await supabase
       .from('orden_repuestos')
-      .update({
-        ...item,
-        costo_unitario: item.precio_venta_unitario,
-        subtotal: item.cantidad * item.precio_venta_unitario,
-      })
+      .update(updates)
       .eq('id', id)
       .select()
       .single();
     if (error) throw error;
     return data as WorkOrderPart;
+  },
+
+  /** Pedido → llegó (o nulo: no se sigue). Al llegar, la base avisa a los técnicos de la orden. */
+  setPartOrderState: async (id: string, estado: PartOrderState | null) => {
+    const { data, error } = await supabase
+      .from('orden_repuestos')
+      .update({ estado_pedido: estado })
+      .eq('id', id)
+      .select('id');
+    if (error) throw error;
+    assertAffected(data, 'el repuesto');
+  },
+
+  /**
+   * Descuento al cliente, absorbido por el taller (`aplicar_descuento`), en dólares o en
+   * porcentaje de lo autorizado (la base hace la cuenta). 0 lo quita.
+   */
+  applyDiscount: async (orderId: string, value: { monto?: number; porcentaje?: number }, motivo?: string | null) => {
+    const { data, error } = await supabase.rpc('aplicar_descuento', {
+      p_orden_id: orderId,
+      p_monto: value.porcentaje == null ? value.monto ?? 0 : null,
+      p_motivo: motivo ?? null,
+      p_porcentaje: value.porcentaje ?? null,
+    });
+    if (error) throw error;
+    return data as { descuento: number; total: number };
+  },
+
+  /**
+   * Un pago del cliente antes de entregar, con su método (`registrar_anticipo`). Suma a lo
+   * pagado por adelantado: la entrega cobra solo lo que falte.
+   */
+  registerAdvance: async (input: {
+    orderId: string;
+    monto: number;
+    metodo: PaymentMethod;
+    numeroCheque?: string | null;
+    comprobanteRuta?: string | null;
+  }) => {
+    const { data, error } = await supabase.rpc('registrar_anticipo', {
+      p_orden_id: input.orderId,
+      p_monto: input.monto,
+      p_metodo: input.metodo,
+      p_numero_cheque: input.numeroCheque ?? null,
+      p_comprobante_ruta: input.comprobanteRuta ?? null,
+    });
+    if (error) throw error;
+    return data as { anticipos: number; saldo: number };
+  },
+
+  /**
+   * Lo que el cliente no autorizó (o no se hizo) en visitas anteriores de un vehículo, para
+   * ofrecérselo de nuevo. Sin la orden que se está viendo. Solo administración.
+   */
+  getPendingWork: async (vehicleId: string, excludeOrderId?: string | null) => {
+    const { data, error } = await supabase.rpc('trabajos_pendientes_vehiculo', {
+      p_vehiculo_id: vehicleId,
+      p_excluir_orden: excludeOrderId ?? null,
+    });
+    if (error) throw error;
+    return (data ?? []) as PendingWorkItem[];
   },
 
   removePart: async (id: string) => {

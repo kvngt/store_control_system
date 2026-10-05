@@ -25,6 +25,7 @@ const CATEGORY_KEYS: Record<TransactionCategory, string> = {
   compra_repuesto: 'finance.partsPurchase',
   planilla: 'finance.payroll',
   gasto_operativo: 'finance.operatingExpense',
+  comision_bancaria: 'finance.bankFees',
 };
 
 export default function ImportStatementModal({ onClose, onImported }: Props) {
@@ -209,6 +210,9 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
             </div>
           ) : (
             <>
+              {/* Decisión del taller (05/10/2026): el estado de cuenta es para la contabilidad
+                  y para el contador; no se mezcla con lo que registra la app. */}
+              <p className="field-hint finance-import-scope">{t('finance.importScopeHint')}</p>
               <div className="form-group">
                 <label className="form-label">{t('finance.uploadPdf')}</label>
                 <input

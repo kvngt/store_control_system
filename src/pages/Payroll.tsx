@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Banknote,
   Calendar,
+  CheckCheck,
   ChevronDown,
   ChevronRight,
   FileImage,
@@ -14,7 +15,7 @@ import {
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { useToast } from '../context/toast.context';
-import { commissionsService, sedesService } from '../services/supabaseService';
+import { commissionsService, sedesService, workOrdersService } from '../services/supabaseService';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { todayLocal } from '../lib/dates';
@@ -22,6 +23,7 @@ import { getErrorMessage } from '../lib/errors';
 import type { Commission, CommissionBalance, CommissionPayment } from '../types/database';
 import { AlertError } from '../components/AlertError';
 import { money } from '../lib/money';
+import CommissionApproval from '../features/workOrders/CommissionApproval';
 
 
 
@@ -41,6 +43,10 @@ type Tab = 'pending' | 'history' | 'payments';
  * 20260912000000 migration), so nothing here creates a commission. The three
  * tabs are the three questions an admin has: what do I owe, where did it come
  * from, and what have I already paid.
+ *
+ * Desde 20261010000018 se revisa aquí, en bloque: cada comisión nace sugerida, administración
+ * la acepta (tal cual, o con otro porcentaje o monto) y solo se paga lo aceptado. Antes se
+ * aceptaba orden por orden y el pago no lo exigía (docs/analisis-del-proceso-2026-10.md §I).
  */
 export default function Payroll() {
   const { t, language } = useLanguage();
@@ -80,6 +86,35 @@ export default function Payroll() {
 
   const [tab, setTab] = useState<Tab>('pending');
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [approvingFor, setApprovingFor] = useState<string | null>(null);
+  const totalToReview = useMemo(() => balances.reduce((n, b) => n + b.porRevisar, 0), [balances]);
+
+  // ----- reviewing -------------------------------------------------------------
+  const approveAll = async (balance: CommissionBalance) => {
+    const ids = balance.items.filter((c) => c.estado !== 'aceptada').map((c) => c.id);
+    if (ids.length === 0) return;
+    setApprovingFor(balance.usuario_id);
+    try {
+      const n = await commissionsService.approveMany(ids);
+      reload();
+      showToast('success', t('payroll.approvedMany').replace('{count}', String(n)));
+    } catch (err) {
+      showToast('error', t('payroll.approveError'), getErrorMessage(err, language));
+    } finally {
+      setApprovingFor(null);
+    }
+  };
+
+  const approveOne = async (comisionId: string, montoNuevo?: number, porcentajeNuevo?: number) => {
+    try {
+      await workOrdersService.approveCommission(comisionId, montoNuevo, porcentajeNuevo);
+      reload();
+      showToast('success', t('commission.approvedSuccess'));
+    } catch (err) {
+      showToast('error', t('payroll.approveError'), getErrorMessage(err, language));
+      throw err;
+    }
+  };
 
   // ----- commission rate -----------------------------------------------------
   const [rateDraft, setRateDraft] = useState<string | null>(null);
@@ -148,7 +183,8 @@ export default function Payroll() {
       }
       await commissionsService.payCommissions({
         usuario_id: payTarget.usuario_id,
-        comision_ids: payTarget.items.map((c) => c.id),
+        // Solo lo aceptado: la base rechaza pagar lo que nadie revisó.
+        comision_ids: payTarget.items.filter((c) => c.estado === 'aceptada').map((c) => c.id),
         fecha_pago: payForm.fecha_pago,
         metodo: payForm.metodo,
         numero_cheque: payForm.numero_cheque.trim() || null,
@@ -211,6 +247,9 @@ export default function Payroll() {
               <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-warning)' }}>
                 {money(totalPending)}
               </div>
+              {isAdmin && totalToReview > 0 && (
+                <div className="field-hint">{t('payroll.toReviewHint').replace('{count}', String(totalToReview))}</div>
+              )}
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
@@ -305,15 +344,42 @@ export default function Payroll() {
                         </span>
                         <span style={{ display: 'block', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
                           {balance.items.length} {t('payroll.ordersCount')}
+                          {balance.porRevisar > 0 && (
+                            <span className="badge badge-waiting-auth payroll-review-badge">
+                              {t('payroll.toReview').replace('{count}', String(balance.porRevisar))}
+                            </span>
+                          )}
                         </span>
                       </span>
                     </button>
-                    <div style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-warning)' }}>
-                      {money(balance.total)}
+                    <div className="payroll-balance-amounts">
+                      <div style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-warning)' }}>
+                        {money(balance.total)}
+                      </div>
+                      {balance.porRevisar > 0 && (
+                        <div className="field-hint">{t('payroll.acceptedAmount')}: {money(balance.aceptado)}</div>
+                      )}
                     </div>
+                    {isAdmin && balance.porRevisar > 0 && (
+                      <button
+                        className="btn btn-success btn-sm"
+                        onClick={() => void approveAll(balance)}
+                        disabled={approvingFor === balance.usuario_id}
+                      >
+                        <CheckCheck size={16} />{' '}
+                        {approvingFor === balance.usuario_id
+                          ? t('common.loading')
+                          : t('payroll.acceptAll').replace('{count}', String(balance.porRevisar))}
+                      </button>
+                    )}
                     {isAdmin && (
-                      <button className="btn btn-primary btn-sm pay-balance-btn" onClick={() => openPayModal(balance)}>
-                        <Banknote size={16} /> {t('payroll.payBalance')}
+                      <button
+                        className="btn btn-primary btn-sm pay-balance-btn"
+                        onClick={() => openPayModal(balance)}
+                        disabled={balance.aceptado <= 0}
+                        title={balance.aceptado <= 0 ? t('payroll.nothingAccepted') : undefined}
+                      >
+                        <Banknote size={16} /> {t('payroll.payAccepted')}
                       </button>
                     )}
                   </div>
@@ -329,6 +395,7 @@ export default function Payroll() {
                             <th style={{ textAlign: 'right' }}>{t('payroll.rate')}</th>
                             <th style={{ textAlign: 'right' }}>{t('payroll.technicians')}</th>
                             <th style={{ textAlign: 'right' }}>{t('payroll.share')}</th>
+                            <th>{t('common.status')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -344,6 +411,23 @@ export default function Payroll() {
                               <td data-label={t('payroll.rate')} style={{ textAlign: 'right' }}>{Number(c.porcentaje)}%</td>
                               <td data-label={t('payroll.technicians')} style={{ textAlign: 'right' }}>{c.tecnicos}</td>
                               <td data-label={t('payroll.share')} style={{ textAlign: 'right', fontWeight: 700 }}>{money(Number(c.monto))}</td>
+                              <td data-label={t('common.status')}>
+                                {isAdmin ? (
+                                  // La llave lleva monto y porcentaje: al cambiar en la base, el editor arranca con los nuevos.
+                                  <CommissionApproval
+                                    key={[c.id, c.monto, c.porcentaje, c.estado].join('|')}
+                                    comisionId={c.id}
+                                    estado={c.estado}
+                                    monto={Number(c.monto)}
+                                    porcentaje={Number(c.porcentaje)}
+                                    onApprove={approveOne}
+                                  />
+                                ) : (
+                                  <span className={`badge ${c.estado === 'aceptada' ? 'badge-success' : 'badge-waiting-auth'}`}>
+                                    {c.estado === 'aceptada' ? t('commission.accepted') : t('commission.suggested')}
+                                  </span>
+                                )}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -388,8 +472,8 @@ export default function Payroll() {
                   <td data-label={t('payroll.technicians')} style={{ textAlign: 'right' }}>{c.tecnicos}</td>
                   <td data-label={t('payroll.share')} style={{ textAlign: 'right', fontWeight: 700 }}>{money(Number(c.monto))}</td>
                   <td data-label={t('common.status')}>
-                    <span className={`badge badge-${c.pago_id ? 'entregado' : 'warn'}`}>
-                      {c.pago_id ? t('payroll.settled') : t('payroll.pending')}
+                    <span className={`badge badge-${c.pago_id ? 'entregado' : c.estado === 'aceptada' ? 'success' : 'warn'}`}>
+                      {c.pago_id ? t('payroll.settled') : c.estado === 'aceptada' ? t('commission.accepted') : t('payroll.notReviewed')}
                     </span>
                   </td>
                 </tr>
@@ -481,12 +565,15 @@ export default function Payroll() {
               <div className="share-target">
                 <div className="share-target-label">{t('payroll.amount')}</div>
                 <div className="share-target-value" style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, color: 'var(--color-primary-light)' }}>
-                  {money(payTarget.total)}
+                  {money(payTarget.aceptado)}
                 </div>
               </div>
               <p className="field-hint">
-                {payTarget.items.length} {t('payroll.ordersCount')} · {t('payroll.amountIsServerSide')}
+                {payTarget.items.filter((c) => c.estado === 'aceptada').length} {t('payroll.ordersCount')} · {t('payroll.amountIsServerSide')}
               </p>
+              {payTarget.porRevisar > 0 && (
+                <p className="field-hint">{t('payroll.unreviewedNotPaid').replace('{count}', String(payTarget.porRevisar))}</p>
+              )}
 
               <div className="form-row" style={{ marginTop: 'var(--space-4)' }}>
                 <div className="form-group">
@@ -509,6 +596,7 @@ export default function Payroll() {
                   >
                     <option value="cheque">{t('payroll.methodCheque')}</option>
                     <option value="efectivo">{t('payroll.methodCash')}</option>
+                    <option value="zelle">{t('delivery.methods.zelle')}</option>
                     <option value="transferencia">{t('payroll.methodTransfer')}</option>
                   </select>
                 </div>

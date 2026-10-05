@@ -197,7 +197,8 @@ SELECT is((SELECT neto FROM t_cobrado), 1200.00::numeric, 'Re-entregar vuelve a 
 -- 5. Deshacer un pago de comisiones solo borra SU egreso
 -- ------------------------------------------------------------------------------------
 SELECT lives_ok(
-  $$ SELECT pay_commissions('a0000000-0000-0000-0000-000000000002',
+  $$ SELECT aprobar_comisiones(ARRAY(SELECT id FROM comisiones));
+     SELECT pay_commissions('a0000000-0000-0000-0000-000000000002',
        ARRAY(SELECT id FROM comisiones WHERE usuario_id = 'a0000000-0000-0000-0000-000000000002'),
        CURRENT_DATE, 'cheque', '1001', NULL, NULL);
      SELECT pay_commissions('a0000000-0000-0000-0000-000000000003',

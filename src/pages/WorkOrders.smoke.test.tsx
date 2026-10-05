@@ -172,6 +172,9 @@ const PAINTER: UserProfile = { ...MECHANIC_USER, id: 'user-pintor', rol: 'pintor
 // draws but the board never loads.
 const DETAIL: WorkOrder = {
   ...ORDER,
+  // Los totales como los deja la base: la tarjeta de totales ya no suma en el navegador.
+  total_labor: 120,
+  montos: { total_repuestos: 30, total_general: 150, deposito_inicial: 0 },
   labor_items: [{ id: 'lab-1', orden_id: ORDER.id, descripcion: 'Cambio de aceite', costo: 120 }],
   repuestos: [
     {
@@ -820,11 +823,11 @@ describe('WorkOrders — order detail', () => {
     expect(mocks.getWorkOrderDetail).toHaveBeenCalledWith(ORDER.id);
     expect(screen.getByText('Cambio de aceite')).toBeInTheDocument();
     expect(screen.getByText('Filtro de aceite')).toBeInTheDocument();
-    // 2 × $15 sale price: the row subtotal and the column total. There is no
-    // separate unit-cost column any more — a part is billed on at what it cost,
-    // so the price is the only money figure the shop enters.
+    // 2 × $15 sale price: the row subtotal and the column total.
     expect(screen.getAllByText('$30.00').length).toBeGreaterThan(0);
-    expect(screen.queryByText('$8.00')).not.toBeInTheDocument();
+    // El costo (lo que pagó el taller) vuelve a verse, solo para administración: el taller
+    // decidió el 05/10/2026 anotarlo cuando lo sabe, para ver la ganancia de las piezas.
+    expect(screen.getAllByText('$8.00').length).toBeGreaterThan(0);
   });
 
   it('re-reads the order after the customer signs, because the signature authorizes the quote', async () => {

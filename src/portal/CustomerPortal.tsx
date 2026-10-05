@@ -18,6 +18,7 @@ import {
   Play,
   Receipt,
   Video,
+  Package,
   Wrench,
   X,
 } from 'lucide-react';
@@ -235,7 +236,11 @@ function Report({
           <span className="portal-order-number">
             {s.order} {orden.numero}
           </span>
-          <span className={`badge badge-${orden.estatus}`}>{s.status[orden.estatus]}</span>
+          {orden.retirada_sin_reparar ? (
+            <span className="badge badge-retirada">{s.withdrawnStatus}</span>
+          ) : (
+            <span className={`badge badge-${orden.estatus}`}>{s.status[orden.estatus]}</span>
+          )}
         </div>
         <h1 className="portal-vehicle">
           <Car size={22} /> {vehicleTitle || s.vehicle}
@@ -246,8 +251,15 @@ function Report({
             .join(' · ')}
         </p>
 
-        <StatusSteps status={orden.estatus} s={s} />
-        <p className="portal-status-hint">{s.statusHint[orden.estatus]}</p>
+        {/* Retirado sin reparar no recorre los pasos: se cerró sin hacer el trabajo. */}
+        {orden.retirada_sin_reparar ? (
+          <p className="portal-status-hint">{s.withdrawnHint}</p>
+        ) : (
+          <>
+            <StatusSteps status={orden.estatus} s={s} />
+            <p className="portal-status-hint">{s.statusHint[orden.estatus]}</p>
+          </>
+        )}
 
         {orden.estatus !== 'entregado' && (
           <div className="portal-progress">
@@ -267,6 +279,21 @@ function Report({
           </p>
         )}
       </section>
+
+      {/* Por qué la orden no avanza: las piezas que se pidieron y no han llegado. */}
+      {(report.esperando_repuestos ?? []).length > 0 && (
+        <section className="portal-card portal-waiting-parts">
+          <h2 className="portal-section-title">
+            <Package size={18} /> {s.waitingPartsTitle}
+          </h2>
+          <p className="portal-muted">{s.waitingPartsHint}</p>
+          <ul>
+            {(report.esperando_repuestos ?? []).map((part, i) => (
+              <li key={i}>{part.descripcion}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Lo primero después del estado: es lo único que espera algo del cliente. */}
       {report.presupuesto && report.presupuesto.lineas.length > 0 && (
@@ -481,7 +508,8 @@ function AccountSection({ report, s, fmt }: { report: PortalReport; s: Strings; 
           )}
           {(cuenta.no_autorizados ?? []).length > 0 && (
             <div className="portal-lines portal-not-authorized">
-              <div className="portal-label">{s.notAuthorized}</div>
+              {/* En una retirada sin reparar, lo que no se cobra no es que no lo autorizara: no se hizo. */}
+              <div className="portal-label">{report.orden.retirada_sin_reparar ? s.notPerformed : s.notAuthorized}</div>
               {(cuenta.no_autorizados ?? []).map((line, i) => (
                 <div key={i} className="portal-line">
                   <span>{line.descripcion}</span>
@@ -491,6 +519,19 @@ function AccountSection({ report, s, fmt }: { report: PortalReport; s: Strings; 
             </div>
           )}
           <div className="portal-totals">
+            {/* El descuento lo absorbe el taller: se muestra el subtotal y lo que se descontó. */}
+            {Number(cuenta.descuento ?? 0) > 0 && (
+              <>
+                <div className="portal-line">
+                  <span>{s.subtotal}</span>
+                  <span>{fmt.money(cuenta.subtotal ?? Number(cuenta.total) + Number(cuenta.descuento))}</span>
+                </div>
+                <div className="portal-line">
+                  <span>{s.discount}</span>
+                  <span>−{fmt.money(cuenta.descuento ?? 0)}</span>
+                </div>
+              </>
+            )}
             <div className="portal-line is-total">
               <span>{s.total}</span>
               <span>{fmt.money(cuenta.total)}</span>
@@ -501,13 +542,32 @@ function AccountSection({ report, s, fmt }: { report: PortalReport; s: Strings; 
                 <span>{fmt.money(cuenta.deposito)}</span>
               </div>
             )}
-            {Number(cuenta.pagado) > 0 && (
+            {/* Lo cobrado después del depósito, aparte: "Pagado" incluía el depósito y se leía
+                como si hubiera pagado dos veces (05/10/2026). La base anterior no lo manda. */}
+            {cuenta.otros_pagos === undefined ? (
+              Number(cuenta.pagado) > 0 && (
+                <div className="portal-line">
+                  <span>{s.paid}</span>
+                  <span>{fmt.money(cuenta.pagado)}</span>
+                </div>
+              )
+            ) : Number(cuenta.otros_pagos) > 0.009 ? (
               <div className="portal-line">
-                <span>{s.paid}</span>
-                <span>{fmt.money(cuenta.pagado)}</span>
+                <span>{s.otherPayments}</span>
+                <span>{fmt.money(cuenta.otros_pagos)}</span>
               </div>
-            )}
-            {Number(cuenta.total) > 0 && Number(cuenta.saldo) <= 0 ? (
+            ) : Number(cuenta.otros_pagos) < -0.009 ? (
+              <div className="portal-line">
+                <span>{s.refunded}</span>
+                <span>{fmt.money(-Number(cuenta.otros_pagos))}</span>
+              </div>
+            ) : null}
+            {Number(cuenta.saldo) < -0.009 ? (
+              <div className="portal-line is-balance is-credit">
+                <span>{s.credit}</span>
+                <span>{fmt.money(-Number(cuenta.saldo))}</span>
+              </div>
+            ) : Number(cuenta.total) > 0 && Number(cuenta.saldo) <= 0.009 ? (
               <div className="portal-line is-balance is-settled">
                 <span>{s.paidInFull}</span>
                 <Check size={16} />

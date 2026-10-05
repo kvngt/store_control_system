@@ -300,3 +300,75 @@ describe('CustomerPortal', () => {
     expect(localStorage.getItem('restorify_portal_lang')).toBe('en');
   });
 });
+
+// La cuenta como la entiende el cliente (decisiones del taller, 05/10/2026).
+describe('CustomerPortal — la cuenta', () => {
+  it('no repite el depósito dentro de "pagado": lo cobrado después va aparte', async () => {
+    mocks.fetchPortal.mockResolvedValue(
+      report({ cuenta: { ...report().cuenta, pagado: 250, otros_pagos: 150, saldo: 150 } })
+    );
+    render(<CustomerPortal token={TOKEN} />);
+
+    const account = (await screen.findByRole('heading', { name: 'Su cuenta' })).closest('section') as HTMLElement;
+    expect(within(account).getByText('Depósito y anticipos')).toBeInTheDocument();
+    expect(within(account).getByText('Otros pagos')).toBeInTheDocument();
+    expect(within(account).getByText('$150.00', { selector: '.portal-line:not(.is-balance) span' })).toBeInTheDocument();
+    // "Pagado" (que incluía el depósito) ya no aparece cuando la base manda lo de después.
+    expect(within(account).queryByText('Pagado')).toBeNull();
+  });
+
+  it('dice "saldo a su favor" cuando el taller le debe al cliente', async () => {
+    mocks.fetchPortal.mockResolvedValue(
+      report({ cuenta: { ...report().cuenta, total: 50, deposito: 200, pagado: 200, otros_pagos: 0, saldo: -150 } })
+    );
+    render(<CustomerPortal token={TOKEN} />);
+
+    const account = (await screen.findByRole('heading', { name: 'Su cuenta' })).closest('section') as HTMLElement;
+    expect(within(account).getByText('Saldo a su favor')).toBeInTheDocument();
+    expect(within(account).queryByText('Pagado en su totalidad')).toBeNull();
+  });
+
+  it('muestra el subtotal y el descuento cuando hay', async () => {
+    mocks.fetchPortal.mockResolvedValue(
+      report({ cuenta: { ...report().cuenta, subtotal: 400, descuento: 40, total: 360, otros_pagos: 0, saldo: 260 } })
+    );
+    render(<CustomerPortal token={TOKEN} />);
+
+    const account = (await screen.findByRole('heading', { name: 'Su cuenta' })).closest('section') as HTMLElement;
+    expect(within(account).getByText('Subtotal')).toBeInTheDocument();
+    expect(within(account).getByText('Descuento')).toBeInTheDocument();
+    expect(within(account).getByText('$360.00')).toBeInTheDocument();
+  });
+
+  it('dice por qué la orden no avanza: las piezas que se esperan', async () => {
+    mocks.fetchPortal.mockResolvedValue({
+      ...report({ orden: { ...report().orden, estatus: 'en_proceso' } }),
+      esperando_repuestos: [{ descripcion: 'Amortiguador trasero', desde: '2026-10-04T15:00:00Z' }],
+    });
+    render(<CustomerPortal token={TOKEN} />);
+
+    expect(await screen.findByRole('heading', { name: 'Esperando repuestos' })).toBeInTheDocument();
+    expect(screen.getByText('Amortiguador trasero')).toBeInTheDocument();
+  });
+
+  it('una orden retirada sin reparar no se ve como "Entregado" ni muestra avance', async () => {
+    mocks.fetchPortal.mockResolvedValue(
+      report({ orden: { ...report().orden, estatus: 'entregado', retirada_sin_reparar: true, porcentaje_avance: 100 } })
+    );
+    render(<CustomerPortal token={TOKEN} />);
+
+    expect(await screen.findByText('Retirado sin reparar')).toBeInTheDocument();
+    expect(screen.queryByText('Avance')).toBeNull();
+  });
+
+  it('en una retirada, lo que no se cobra se lee como "no realizado"', async () => {
+    mocks.fetchPortal.mockResolvedValue(
+      report({
+        orden: { ...report().orden, estatus: 'entregado', retirada_sin_reparar: true },
+        cuenta: { ...report().cuenta, no_autorizados: [{ descripcion: 'Reparar motor', monto: 1000 }] },
+      })
+    );
+    render(<CustomerPortal token={TOKEN} />);
+    expect(await screen.findByText('No realizados (no se cobran)')).toBeInTheDocument();
+  });
+});

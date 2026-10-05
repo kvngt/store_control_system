@@ -526,3 +526,15 @@
   line-height: 1.6;
   white-space: pre-line;
 }
+
+/* Saldo a favor del cliente (20261010000018): no es una deuda. `.badge-retirada` viene de
+   components.css. */
+.portal-line.is-credit {
+  color: var(--color-success);
+}
+
+/* Piezas que se esperan. */
+.portal-waiting-parts ul {
+  margin: var(--space-2) 0 0;
+  padding-left: 1.2em;
+}

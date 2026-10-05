@@ -15,6 +15,7 @@ import { AlertError } from '../../components/AlertError';
 import PhoneInput from '../../components/PhoneInput';
 import PaymentFields from './PaymentFields';
 import TaskEditor from './TaskEditor';
+import PendingWorkNotice from './PendingWorkNotice';
 
 /**
  * Refuses the keys that put a minus sign into a `type="number"` box.
@@ -411,8 +412,13 @@ export default function WorkOrderCreateModal({
       </>
     ) : null;
 
+  // Lo que este vehículo dejó pendiente en otras visitas: es cuando se cotiza que conviene verlo.
+  const chosenVehicle = watch('selectedVehicle');
   const renderWorkStep = () => (
     <>
+      {form.vehicleMode === 'existing' && chosenVehicle && chosenVehicle !== '__new__' && (
+        <PendingWorkNotice vehicleId={chosenVehicle} />
+      )}
       <div className="form-row">
         <div className="form-group">
           <label className="form-label" htmlFor="order-work-type">{t('workOrders.workType')}</label>

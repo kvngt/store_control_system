@@ -537,8 +537,13 @@ export default function WorkOrders() {
               </div>
               <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                 <span className={`badge badge-${order.tipo_trabajo}`}>{typeLabels[order.tipo_trabajo]}</span>
-                <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
+                {order.retirada_sin_reparar ? (
+                  <span className="badge badge-retirada">{t('withdrawal.status')}</span>
+                ) : (
+                  <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
+                )}
                 {order.esperando_autorizacion && <span className="badge badge-waiting-auth">{t('quotes.waitingBadge')}</span>}
+                {order.esperando_repuestos && <span className="badge badge-waiting-parts">{t('parts.waitingBadge')}</span>}
               </div>
               <div className="workorder-card-progress">
                 <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
@@ -607,9 +612,16 @@ export default function WorkOrders() {
                   </td>
                   <td><span className={`badge badge-${order.tipo_trabajo}`}>{typeLabels[order.tipo_trabajo]}</span></td>
                   <td>
-                    <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
+                    {order.retirada_sin_reparar ? (
+                      <span className="badge badge-retirada">{t('withdrawal.status')}</span>
+                    ) : (
+                      <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
+                    )}
                     {order.esperando_autorizacion && (
                       <span className="badge badge-waiting-auth" style={{ marginLeft: 4 }}>{t('quotes.waitingBadge')}</span>
+                    )}
+                    {order.esperando_repuestos && (
+                      <span className="badge badge-waiting-parts" style={{ marginLeft: 4 }}>{t('parts.waitingBadge')}</span>
                     )}
                   </td>
                   <td>

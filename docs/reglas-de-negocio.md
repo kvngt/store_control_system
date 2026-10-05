@@ -28,8 +28,9 @@ solo en la interfaz, se dice.
 ## 1. Ciclo de vida de una orden
 
 ```
-Recepción ──► En proceso ──► Espera de repuestos ──► Finalizado ──► Entregado
-     ▲______________________________________________________________│
+Recepción ──► En proceso ◄──► Espera de autorización ──► Finalizado ──► Entregado
+                                                                     └► Retirada sin reparar
+     ▲___________________________________________________________________│
                     (se puede volver atrás; ver "Des-entregar")
 ```
 
@@ -37,29 +38,44 @@ Recepción ──► En proceso ──► Espera de repuestos ──► Finaliza
 |---|---|---|
 | **Recepción** | El vehículo ingresó; no se trabaja todavía | — |
 | **En proceso** | Se está trabajando | — |
-| **Espera de repuestos** | Detenida esperando piezas | Aparece en alertas del panel |
+| **Espera de autorización** | Pausa: hay trabajo adicional que el cliente tiene que autorizar. El técnico la provoca **reportando un hallazgo** (`reportar_hallazgo`); no la elige en el selector | Aviso a administración. Sale sola a En proceso al responder el cliente, al descartar el hallazgo o al cancelar el presupuesto ([hallazgos.md](hallazgos.md)) |
 | **Finalizado** | Trabajo terminado | Avance al 100 %, fecha de finalización, **aviso a admins: "Lista para entregar"** |
 | **Entregado** | El cliente se llevó el vehículo y pagó | Avance 100 %, **cobro del saldo, costo de repuestos, comisiones** (sección 2 y 4) |
+| **Retirada sin reparar** | El cliente se llevó el vehículo **sin que se hiciera (todo) el trabajo**: no autorizó, cambió de idea, o solo se hizo una parte | Ver [Retirada sin reparar](#retirada-sin-reparar) |
+
+"Espera de repuestos" ya no es un estado (el 29/09/2026 se convirtió en la espera de
+autorización). Desde el 05/10/2026 **cada repuesto** se marca **Pedido** y luego **Llegó**: la
+orden aparece "Esperando repuestos" en la lista, en el tablero y en el enlace del cliente
+(con el nombre de la pieza), y al llegar se avisa a los técnicos de la orden.
 
 **No hay una máquina de estados rígida**: se puede pasar de cualquier estado a
-cualquier otro, con dos restricciones:
+cualquier otro, con estas restricciones:
 
-- **Solo un admin puede marcar Entregado.** Entregar asienta el ingreso y devenga
-  comisiones; un técnico asignado podía hacerlo y acreditarse su propia comisión.
+- **Solo un admin puede marcar Entregado** y **Retirada sin reparar**. Entregar asienta el
+  ingreso y devenga comisiones; un técnico asignado podía hacerlo y acreditarse su propia
+  comisión.
+- **El técnico elige solo** En proceso y Finalizado (y no saca la orden de la espera de
+  autorización: eso pasa al resolver lo que la puso ahí). Devolver una orden a Recepción es
+  de administración.
 - **Sacar una orden de Entregado** (una entrega marcada por error) revierte el
   dinero: ver [Des-entregar](#des-entregar).
 
-Al reabrir una orden cerrada se borra su fecha de finalización; el porcentaje de
-avance se conserva y el técnico puede corregirlo.
+### El avance
+
+El porcentaje de avance **sale de las tareas** (desde el 05/10/2026, migración
+`20261010000018`): al marcar o desmarcar una tarea, o cuando cambia lo autorizado, es lo hecho
+sobre lo autorizado **pesado por el precio** de cada tarea (un cambio de amortiguadores de
+$400 pesa más que un cambio de aceite de $50; si todas valen $0, cuentan igual). El técnico
+lo puede corregir a mano si cree que no refleja el avance real; la próxima tarea que marque
+lo vuelve a calcular. Finalizada o entregada, la orden está al 100 %. Al reabrir una orden
+cerrada se borra su fecha de finalización y el avance se conserva.
 
 ### Alta de una orden
 
-- La crea cualquier persona de la sede. Si la crea un **técnico**, queda asignado a
-  sí mismo y **no registra depósito, mano de obra ni repuestos**: registra la
-  recepción (cliente, vehículo, fotos, notas, gasolina, millas) y un admin cotiza
-  después. Si el técnico enviara esos campos igual, la base los ignora. Tampoco puede
-  crear por la API una orden ya avanzada: la base la deja en recepción, con avance
-  0, sin firma, con el número del sistema y con él como autor.
+- **La abre solo un admin** (desde el 04/10/2026, `20261004000000`: `ordenes_trabajo_insert`
+  es `is_admin()`). Antes un técnico podía registrar la recepción; ya no.
+- Se hace en cuatro pasos: cliente, vehículo y recepción, depósito (con su método y
+  comprobante) y trabajos (cada tarea con su técnico).
 - Lo que un admin cotiza al crear la orden nace **sin autorizar** y se autoriza
   cuando el cliente **firma la recepción** por primera vez (sección 8).
 - El número `ORD-AAAA-###` se genera de forma atómica: dos órdenes simultáneas
@@ -99,13 +115,15 @@ Nadie registra a mano el dinero de una orden. Estos movimientos los crea la base
 
 | Cuándo | Movimiento en Finanzas | Categoría |
 |---|---|---|
-| Se fija un depósito al crear la orden | **Ingreso** "Depósito inicial" | pago_cliente |
+| Se fija un depósito al crear la orden | **Ingreso** "Depósito inicial", con su método | pago_cliente |
+| Se registra un **anticipo** | **Ingreso** "Anticipo", con su método | pago_cliente |
 | Un admin corrige el depósito antes de entregar | Ingreso o egreso "Ajuste de depósito" por la diferencia | pago_cliente |
-| Se **entrega** la orden | **Ingreso** "Pago final" = total − lo ya cobrado, **con su método** (efectivo, cheque o transferencia), número de cheque y comprobante | pago_cliente |
+| Se **entrega** la orden | **Ingreso** "Pago final" = total − lo ya cobrado, **con su método** (efectivo, tarjeta, Zelle, transferencia o cheque), número de cheque y comprobante | pago_cliente |
 | Se **entrega** una orden cuyo depósito **supera** el total | **Egreso** "Devolución al cliente" por la diferencia, con su método | pago_cliente |
-| Se **entrega** la orden | **Egreso** "Costo de repuestos" | compra_repuesto |
-| Cambia el total de una orden **ya entregada** | Ingreso "Ajuste por cargo adicional" o egreso "Reembolso por ajuste" por la diferencia | pago_cliente |
-| Cambian los repuestos de una orden ya entregada | Egreso o ingreso de ajuste por la diferencia de costo | compra_repuesto |
+| Se **entrega** la orden | **Egreso** "Costo de repuestos" (el costo de cada pieza, no su precio) | compra_repuesto |
+| Se **retira sin reparar** | "Devolución al cliente" (o "Pago final" por el diagnóstico), con su método; sin costo de repuestos ni comisiones | pago_cliente |
+| Cambia el total de una orden **ya entregada** (también por un descuento) | Ingreso "Ajuste por cargo adicional" o egreso "Reembolso por ajuste" por la diferencia | pago_cliente |
+| Cambian los repuestos de una orden ya entregada (o se corrige su costo) | Egreso o ingreso de ajuste por la diferencia de costo | compra_repuesto |
 | Se **saca de Entregado** | Egreso "Reversión de entrega" (o ingreso "Reversión de devolución") e ingreso "Reversión de costo de repuestos" | pago_cliente / compra_repuesto |
 | Un admin **paga comisiones** | Un **egreso** por orden, "Comisión nombre – ORD-…", vinculado a la orden | planilla |
 | Se **deshace** un pago de comisiones | Se eliminan **los** egresos de ese pago (y solo esos) | — |
@@ -121,11 +139,24 @@ Nadie registra a mano el dinero de una orden. Estos movimientos los crea la base
   su total, y la reversión usa el depósito como el monto al que volver.
 - **Los totales los calcula el sistema, con lo autorizado.** Mano de obra = suma de
   sus líneas **aprobadas**; repuestos = cantidad × precio de los **aprobados**;
-  total = mano de obra + repuestos. El costo de repuestos al entregar también cuenta
-  solo lo aprobado. Nadie puede
-  escribir un total a mano, ni siquiera un admin por la API.
-- **Los repuestos son de traspaso**: el costo es igual al precio. El taller no gana
-  en las piezas; su ganancia es la mano de obra.
+  total = mano de obra + repuestos − **descuento**. El costo de repuestos al entregar
+  también cuenta solo lo aprobado. Nadie puede escribir un total a mano, ni siquiera un
+  admin por la API.
+- **El costo de un repuesto** (lo que pagó el taller) es por defecto su precio, y
+  administración lo cambia cuando lo sabe (decisión del taller, 05/10/2026). Mientras siga
+  igual al precio, lo sigue si cambia el precio; uno escrito a mano se queda. Así el margen
+  de la orden muestra la ganancia de las piezas. Solo administración lo ve.
+- **El costo automático es solo el que asienta el sistema.** Una compra de repuestos
+  registrada a mano y vinculada a la orden se ve en el balance de la orden, pero no achica
+  ni se revierte con el costo automático.
+- **Descuento** (`aplicar_descuento`, solo admin): lo **absorbe el taller**. Baja el total
+  que paga el cliente; no toca la mano de obra, así que **las comisiones no cambian**. En
+  dólares o en **porcentaje** de lo autorizado (la base hace la cuenta). Nunca más que lo
+  autorizado. Se registra en el historial con su motivo.
+- **Anticipos** (`registrar_anticipo`, solo admin, orden sin entregar): un pago del cliente
+  antes de llevarse el vehículo, con su método y comprobante. Se asienta como "Anticipo" y
+  suma a lo pagado por adelantado (`deposito_inicial`): la entrega cobra solo lo que falte, y
+  sacar la orden de Entregado vuelve a ese monto.
 - **Negativos no.** Mano de obra, precios y depósito no aceptan valores negativos, ni
   un repuesto cantidad cero (formulario y base).
 
@@ -147,6 +178,31 @@ total autorizado − lo cobrado neto) y `entregar_orden` hace todo en una transa
 Una entrega por otra vía (un UPDATE directo, una pestaña con la versión anterior) sigue
 asentando el pago final o la devolución, pero **sin método**.
 
+### Retirada sin reparar
+
+El cliente se lleva el vehículo sin que se haga todo el trabajo (decisión del taller,
+05/10/2026; `retirar_sin_reparar`, solo admin). Administración elige qué pasó:
+
+| Salida | Se cobra | Comisiones |
+|---|---|---|
+| **Se canceló todo** | Nada: se le devuelve lo que dejó | Ninguna |
+| **Solo la revisión** | La revisión del vehículo (una línea de mano de obra sin técnico) | Ninguna |
+| **Algunos trabajos** | Los trabajos y repuestos autorizados que sí se hicieron, y si se quiere la revisión | Las de esas tareas, a su técnico (sugeridas, como siempre) |
+
+En una transacción:
+
+- Se cancela el presupuesto que esperaba respuesta y se descartan los hallazgos pendientes.
+- Lo autorizado que no se cobra pasa a **no autorizado** ("no realizado" en el enlace del
+  cliente) y queda como **pendiente del vehículo** para la próxima visita. Lo que se cobra
+  queda hecho; un repuesto cobrado asienta su costo.
+- Solo se cobra lo autorizado de **esa** orden. El descuento se quita.
+- La base calcula la diferencia con lo que dejó el cliente (`saldo_retiro`) y la **devuelve**
+  o la **cobra** con su método, como una entrega.
+- **No cuenta como orden terminada** en el panel.
+- En la base es una entrega marcada (`retirada_sin_reparar`): hereda el archivo, el candado
+  de lo entregado y la reversión. Solo esa función la enciende; sacar la orden de Entregado
+  la apaga.
+
 ### Des-entregar
 
 Sacar una orden de Entregado deja la contabilidad como si nunca se hubiera
@@ -161,15 +217,28 @@ entregado:
 
 ### Importar un estado de cuenta
 
+**Es contabilidad aparte** (decisión del taller, 05/10/2026): sirve para ordenar meses
+anteriores y mandárselos al contador, y **no se mezcla** con lo que registra la app.
+
+- Lo importado vive en su propia vista de Finanzas ("Estados de cuenta"), con su resumen por
+  estado de cuenta (`resumen_importaciones`) y su exportación.
+- **No cuenta** en los ingresos y egresos del panel ni de Finanzas (`resumen_panel`), ni en
+  lo cobrado de una orden (saldo, balance, ajuste al entregar, enlace del cliente).
+- "Posible duplicado" compara solo contra otros estados de cuenta importados (el mismo
+  movimiento importado dos veces), no contra los cobros que asentó la app.
 - Todo o nada: el lote y sus movimientos se guardan juntos. Si algo falla, no queda un lote a
   medias y el mismo archivo se puede volver a importar.
-- Los totales del panel y de Finanzas los suma la base con **todos** los movimientos de la
-  sede, sin importar cuántos haya.
+- Las comisiones de Clover y del banco ("bankcard fee", "bankcard discount fee", "clover
+  fee"…) tienen su categoría, **Comisiones de banco y tarjeta**; también para registrarlas a
+  mano cada mes, que es como las cobra el banco.
 
 ### Fechas
 
-Las fechas de los movimientos son la fecha **local** del taller. Un movimiento del
-día 1 cuenta en ese mes, no en el anterior (antes pasaba en zonas al oeste de UTC).
+Los movimientos automáticos llevan la **fecha del taller** (`hoy_taller(sede)`, con la zona
+de la sede: `America/New_York` por defecto). Hasta el 05/10/2026 se fechaban con la fecha de
+la base (UTC): un cobro después de las 8 p. m. de Maryland caía al día siguiente, y el
+último día del mes, en el mes siguiente. Los movimientos a mano llevan la fecha que se
+elige, y un movimiento del día 1 cuenta en ese mes.
 
 ---
 
@@ -204,12 +273,16 @@ mismos permisos ("técnico"); cambia el tipo de tarea.
 | Ver qué repuestos lleva (sin precio) | ✅ | ✅ | ❌ |
 | Ver **su comisión estimada** | — | ✅ | ❌ |
 | Agregar / editar mano de obra o repuestos | ✅ | ❌ | ❌ |
+| Ver y escribir el **costo** de un repuesto | ✅ | ❌ | ❌ |
+| Marcar un repuesto **pedido / llegó** | ✅ | ❌ (ve si se pidió y si llegó) | ❌ |
+| **Aplicar un descuento** (en $ o en %) o **registrar un anticipo** | ✅ | ❌ | ❌ |
+| Ver lo **pendiente de visitas anteriores** del vehículo | ✅ | ❌ | ❌ |
 | **Asignar el técnico** de una tarea, o cambiar su tipo (en cualquier estado de la línea, salvo con la comisión pagada) | ✅ | ❌ | ❌ |
 | Ver el tipo y el técnico de cada tarea | ✅ | ✅ | ❌ |
 | **Marcar una tarea hecha** (solo autorizadas) | ✅ todas | ✅ las suyas y las que no tienen técnico | ❌ |
 | Registrar depósito | ✅ | ❌ | ❌ |
 | Cambiar estado (excepto a o desde Entregado) | ✅ | ✅ | ❌ |
-| Marcar **Entregado** | ✅ | ❌ | ❌ |
+| Marcar **Entregado** o **Retirada sin reparar** | ✅ | ❌ | ❌ |
 | Mover el avance | ✅ | ✅ (orden no cerrada ¹) | ❌ |
 | Capturar la firma del cliente ³ | ✅ | ❌ (la ve) | ❌ |
 | Volver a firmar (la nueva firma **no** autoriza nada) | ✅ (en recepción) | ❌ | ❌ |
@@ -223,7 +296,7 @@ mismos permisos ("técnico"); cambia el tipo de tarea.
 | Meter o sacar a alguien del **reparto heredado** (origen de su asignación), salvo con esa bolsa pagada | ✅ | ❌ | ❌ |
 | Editar una asignación (tipo de tarea, origen) | ✅ | ❌ | ❌ |
 | **Enviar el reporte** al cliente (correo, WhatsApp, copiar enlace) | ✅ | ❌ | ❌ |
-| Descargar el PDF de la orden | ✅ | ❌ | ❌ |
+| Descargar el PDF de la orden (en español o en inglés) | ✅ | ❌ | ❌ |
 | Ver, crear, cambiar o desactivar el **enlace del cliente** | ✅ | ❌ | ❌ |
 | **Avisar novedades** al cliente por correo | ✅ | ❌ | ❌ |
 | Ver el **estado de cada línea** (sin autorizar, esperando, autorizada, no realizar) | ✅ | ✅ | ❌ |
@@ -290,10 +363,16 @@ línea de antes de F3   = reparto por especialidad: bolsa ÷ asignados a mano co
   esas líneas la saca del reparto para siempre (decisión pendiente de confirmar,
   [pagos-a-empleados.md](pagos-a-empleados.md#5-preguntas-enviadas-al-taller)).
 - **A salario** no se cobra comisión: ni por sus tareas ni por su parte de una bolsa.
-- Se generan **al entregar**. Se recalculan si cambia una línea (autorización, precio,
-  técnico, especialidad, reparto), el equipo asignado, el porcentaje de la sede o el esquema
-  de un empleado — **solo lo pendiente**; lo pagado no se toca. Pasar a alguien a salario le
-  quita lo pendiente (la pantalla avisa con el monto).
+- Se generan **al entregar**, **sugeridas**. Se recalculan si cambia una línea (autorización,
+  precio, técnico, especialidad, reparto), el equipo asignado, el porcentaje de la sede o el
+  esquema de un empleado — **solo lo sugerido**; lo aceptado conserva su monto y lo pagado no
+  se toca. Pasar a alguien a salario le quita lo pendiente (la pantalla avisa con el monto).
+  Una **retirada sin reparar** solo genera las de las tareas que se cobraron como hechas.
+- **Administración las acepta** (tal cual, o con otro porcentaje o monto) y **solo se paga lo
+  aceptado** (`pay_commissions`, desde el 05/10/2026). Se aceptan **en bloque** desde
+  Comisiones ("Aceptar todas"), o una por una ahí o en la tarjeta de la orden. El técnico ve
+  el monto cuando se acepta y recibe un aviso por orden.
+- **El descuento no las toca**: sale de la mano de obra, y el descuento lo absorbe el taller.
 - **Lo pagado bloquea la línea:** con la comisión pagada no se le cambia el técnico ni la
   especialidad ni se borra (tampoco a una línea heredada de una bolsa pagada), una línea no
   entra a una bolsa ya pagada y no se cambia quién reparte una bolsa pagada. Primero se
@@ -394,17 +473,21 @@ Detalle técnico: [portal-y-correos.md](portal-y-correos.md).
 
 | Ve | No ve |
 |---|---|
-| Estado, avance y fecha estimada | Técnicos asignados, comisiones |
+| Estado, avance y fecha estimada; "Retirado sin reparar" si se cerró así | Técnicos asignados, comisiones |
+| Las piezas que se pidieron y no han llegado (solo el nombre) | Proveedor, costo |
 | Vehículo (placa, color, últimos 6 del VIN) | VIN completo |
 | Recepción: fecha, millaje, gasolina, observaciones, fotos visibles, firma | Archivos internos (no publicados) |
 | Fotos, videos y notas de voz de avances **publicados** | El texto de los avances (notas del técnico) |
-| Mano de obra y repuestos **autorizados** a precio de venta, total, depósito, pagado, saldo | Costo de repuestos para el taller |
+| Mano de obra y repuestos **autorizados** a precio de venta, subtotal y descuento, total, depósito, otros pagos (o lo devuelto), saldo (o saldo a su favor) | Costo de repuestos para el taller, motivo del descuento |
 | El presupuesto que espera su respuesta, línea por línea | La evidencia completa (IP, navegador, nota del admin) |
 | Lo que no autorizó (tachado, no se cobra) y su historial de respuestas | Borradores que el admin no ha enviado |
 | Contacto del taller | Datos de otras órdenes o clientes |
 
 Lo **pagado** es la suma con signo de los movimientos "pago de cliente" de la orden
-(depósito, pago final, ajustes y reversiones); el **saldo** es total − pagado.
+(depósito, pago final, ajustes y reversiones), **sin lo importado del banco**; el **saldo**
+es total − pagado, **con signo**: negativo es saldo a favor del cliente. El enlace ya no
+pone el depósito también dentro de "Pagado" (se leía como si hubiera pagado dos veces): muestra
+el depósito y, aparte, lo cobrado después (`otros_pagos`, o lo devuelto si es negativo).
 
 ### Correos automáticos
 
@@ -443,7 +526,9 @@ Lo **pagado** es la suma con signo de los movimientos "pago de cliente" de la or
   baja; si no, el taller usa WhatsApp.
 - El **PDF** existe solo para descargar (imprimir, archivar) y muestra lo mismo que el
   enlace: fotos publicadas, líneas autorizadas, el enlace; sin notas internas ni
-  técnicos. Si la orden está entregada, el saldo es 0.
+  técnicos. Sale **en español o en inglés**, como lo elija administración; en inglés, lo que
+  escribió el taller sale con la traducción automática si ya la hay. El descuento, lo
+  recibido y el saldo son los de la base (`saldo_orden`).
 - Ya no se suben PDFs al almacenamiento.
 
 ---

@@ -457,6 +457,54 @@ al día aparte.
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
 
+### 05/10/2026, noche (2) — Claude Code (retiro con tres salidas, mejoras de los programas comerciales, publicación de la base)
+
+- **Pedido:** que "Retirada sin reparar" deje elegir entre cancelar todo y devolver, cobrar solo
+  la revisión, o cobrar solo los trabajos que se hicieron; comparar con programas comerciales e
+  implementar lo que valga; commit y actualizar la base en Supabase.
+- **Hecho (en 017 y 018, corregidas en su lugar porque no estaban aplicadas en ninguna base
+  real):** `retirar_sin_reparar(..., p_conservar uuid[])` y `saldo_retiro(..., p_conservar)`;
+  las tareas conservadas pagan su comisión (`sync_order_commissions` ya no excluye la retirada);
+  `registrar_anticipo` (sube `deposito_inicial` con método, "Anticipo"); `aplicar_descuento` en $
+  o en % (`p_porcentaje`); `trabajos_pendientes_vehiculo`. Pantalla: `WithdrawalModal` con tres
+  salidas y lista de trabajos, `AdvancePaymentModal`, `PendingWorkNotice` (Resumen y alta),
+  descuento $/% en `OrderTotalsCard`, "No realizados" en el portal. Comparación en la §0 de
+  [analisis-del-proceso-2026-10.md](analisis-del-proceso-2026-10.md).
+- **Verificación:** lint ✓, `tsc -b` ✓, Vitest 84 / 700 ✓, build ✓, pgTAP 26 / 679 ✓ desde base
+  vacía, revisión visual en local (anticipo y retiro parcial). SEC-131 a 133 nuevos.
+- **Publicado con permiso del usuario:** commit y `db push` (016 → 018). **No** se hizo push a
+  `main`: la app nueva no está en vivo hasta ese push (ver la entrada siguiente o la respuesta al
+  usuario). La base nueva es compatible con la app publicada.
+
+### 05/10/2026, noche — Claude Code (decisiones del taller sobre el análisis del proceso)
+
+- **Pedido:** el usuario comentó cada punto de
+  [analisis-del-proceso-2026-10.md](analisis-del-proceso-2026-10.md) e indicó implementarlos. Lo
+  decidido y su estado está en la §0 de ese documento.
+- **Base (sin publicar):** `20261010000016` (categoría `comision_bancaria`, sola por ser un
+  enum), `20261010000017_dinero_de_la_orden` (fecha del taller `hoy_taller`, tarjeta y Zelle,
+  banco aparte, costo de repuestos, descuento, retirada sin reparar, repuestos pedido/llegó,
+  recordatorio con la zona de la sede) y `20261010000018_operacion_del_taller` (avance por
+  tareas, `aprobar_comisiones` y pagar solo lo aceptado, `datos_portal`, historial). pgTAP 26
+  nueva (65); 01, 07, 08, 12, 13, 19 y 20 ajustadas. Suite completa desde base vacía: 26
+  archivos, 662 ✓.
+- **Pantalla:** Comisiones (revisar y aceptar en bloque, % o $ por fila, pagar lo aceptado),
+  Finanzas (dos vistas, filtro por mes, exportar por estado de cuenta, `lib/csv.ts`), repuestos
+  (costo y pedido), tarjeta de Totales nueva (`OrderTotalsCard`, cifras de la base, descuento),
+  `WithdrawalModal`, marcas "Esperando repuestos" y "Retirada sin reparar", PDF ES/EN, portal
+  (depósito y otros pagos, saldo a favor, piezas en espera). `CommissionApproval` salió de
+  `CommissionEstimateCard` para usarse en las dos pantallas. `.btn:disabled` ahora se ve apagado.
+- **Verificación:** lint ✓, `tsc -b` ✓, Vitest 84 archivos / 691 ✓, build ✓, pgTAP 26 / 662 ✓, y
+  revisión visual contra Supabase local (orden, totales con descuento, retiro con devolución,
+  Comisiones, Finanzas, vista de la técnica). El portal no se pudo ver en local (la edge function
+  no corre ahí); lo cubren sus pruebas.
+- **Sin commit ni publicación.** Orden: `db push` (016 → 018) → push a `main` → `qa:security`
+  (SEC-120 a SEC-130 nuevos). No hace falta desplegar funciones: `portal` pasa los campos nuevos
+  tal cual.
+- **Para el taller:** registrar a mano, una vez al mes, las comisiones del banco y de Clover con la
+  categoría nueva. El detalle de "Retirada sin reparar" (las líneas autorizadas pasan a no
+  autorizadas) conviene confirmarlo con ellos al probarlo.
+
 ### 05/10/2026, tarde — Claude Code (análisis del proceso completo)
 
 - **Pedido:** ver el taller como un proceso (cliente → orden → trabajo → repuestos → cobro →

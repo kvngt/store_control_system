@@ -117,7 +117,8 @@ SELECT is(
 );
 
 SELECT lives_ok(
-  $$ SELECT pay_commissions('ac000000-0000-0000-0000-000000000003',
+  $$ SELECT aprobar_comisiones(ARRAY(SELECT id FROM comisiones WHERE usuario_id = 'ac000000-0000-0000-0000-000000000003'));
+     SELECT pay_commissions('ac000000-0000-0000-0000-000000000003',
        ARRAY(SELECT id FROM comisiones WHERE usuario_id = 'ac000000-0000-0000-0000-000000000003'),
        CURRENT_DATE, 'cheque', '2001', NULL, NULL) $$,
   'Se le paga'

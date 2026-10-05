@@ -23,8 +23,8 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 664 pruebas, 81 archivos (5/10/2026) | ~30 s | Nada |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención" y los hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 597 aserciones, 25 archivos | ~1 min | Docker |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 700 pruebas, 84 archivos (5/10/2026, noche) | ~30 s | Nada |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención" y los hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 679 aserciones, 26 archivos | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, 77 casos (76 pasan, 1 se salta) | 2–5 min | Credenciales de prueba (**al 1/10/2026 no existen**: se borraron el 29/09) |
 | **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 100 casos con las cuentas de prueba, todos de solo lectura (los que escriben, escriben el valor que ya hay). Los 66 anteriores, 66 PASS · 0 SKIP; los de las migraciones `20261006000000` a `20261010000006` pasan solo con ellas aplicadas (SEC-91 a SEC-105, verificados contra el Supabase local el 4/10/2026) | ~15 s | Nada; con cuentas de prueba cubre más |
 | **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
@@ -377,6 +377,37 @@ autorización no hay nada que cobrar ni comisión que generar.
 - Ninguna función interna es una RPC. Reescrita el 05/10/2026: la versión de la `013` insertaba
   en columnas que no existen y nunca corrió.
 
+**`supabase/tests/database/26_proceso_del_taller.test.sql`** (82)
+
+Las decisiones del taller del 05/10/2026 ([analisis-del-proceso-2026-10.md](analisis-del-proceso-2026-10.md)):
+
+- La fecha de los movimientos automáticos es la del taller (Maryland), y una zona mal escrita no
+  rompe nada. Depósito con tarjeta y pago final con Zelle; un método desconocido se rechaza.
+- El costo de un repuesto: sin costo, el precio; uno escrito se queda aunque cambie el precio;
+  cambiarlo no toca la autorización; negativo, no. El egreso de repuestos usa el costo, y una
+  compra a mano vinculada a la orden no lo mueve.
+- El avance sale de las tareas pesado por su precio (89 % con la de $400 de $450 hecha); el
+  técnico lo corrige y la próxima tarea lo recalcula.
+- Descuento: solo admin, no mayor que lo autorizado, no negativo, no se escribe directo; baja el
+  total y no las comisiones.
+- Lo importado del banco no cambia el saldo de la orden ni el panel, y se resume aparte (solo
+  admin).
+- Repuesto pedido → llegó: la orden aparece esperando (admin y técnico asignado; otro técnico
+  no), el cliente ve la pieza, al llegar se avisa al técnico.
+- Comisiones: no se paga lo que nadie revisó; un técnico no acepta; aceptar en bloque manda un
+  aviso por orden; aceptadas, se pagan.
+- El enlace del cliente: descuento, depósito y otros pagos por separado, sin lo importado.
+- El historial registra el descuento, el costo y la llegada de la pieza.
+- Retirada sin reparar: solo admin; la base dice cuánto se devuelve; sin método no cierra; las
+  líneas no hechas pasan a no autorizadas y se cobra el diagnóstico; devolución con su método;
+  sin comisiones; el hallazgo pendiente se descarta; no cuenta como terminada; la marca no se
+  cambia a mano y se apaga al reabrir. Con algunos trabajos hechos: no se cobra una línea de otra
+  orden; lo hecho se cobra y queda hecho; el repuesto instalado asienta su costo; solo la tarea
+  hecha paga comisión; lo no hecho queda pendiente del vehículo.
+- Anticipo: solo admin, mayor que cero, cheque con número o foto; queda con su método y entra en
+  lo cobrado. Descuento en porcentaje calculado por la base.
+- Permisos de las funciones nuevas (RPC e internas).
+
 **`supabase/tests/database/25_comisiones_aprobacion.test.sql`** (22)
 
 - Al entregar, la comisión nace sugerida y no sale aviso con el monto; el técnico no la lee por
@@ -396,6 +427,14 @@ autorización no hay nada que cobrar ni comisión que generar.
   los de otra sede (como los reintentaría `reintentar_correos_fallidos`).
 - Filtra por sede, o todas sin sede; los grupos vacíos llegan en cero con la misma forma.
 
+> **Estado (5 de octubre de 2026, noche):** 679 aserciones en verde en los 26 archivos, desde una
+> base vacía (la 26 sumó el retiro con algunos trabajos hechos, el anticipo, el descuento en
+> porcentaje y los pendientes del vehículo).
+>
+> **Estado (5 de octubre de 2026, tarde):** 662 aserciones en verde en los 26 archivos, desde una
+> base vacía como el CI. La 26 es nueva (el proceso del taller); la 01, 07, 08, 12, 13 y 19 aceptan
+> las comisiones antes de pagarlas (solo se paga lo aceptado) y la 20 suma tarjeta y Zelle.
+>
 > **Estado (5 de octubre de 2026):** 597 aserciones en verde en los 25 archivos, localmente y
 > desde una base vacía como el CI (24 y 25 nuevas; la 02, la 12 y la 19 ajustadas a la aprobación
 > de comisiones). El CI fallaba desde la `013`: su trigger rompía toda alta de mano de obra.

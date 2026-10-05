@@ -109,6 +109,11 @@ export interface Commission {
   labor_id?: string | null;
   /** Null while the commission is still owed. */
   pago_id?: string | null;
+  /**
+   * sugerida: la calculó la base al entregar y nadie la revisó; aceptada: administración la
+   * revisó (20261010000014). Solo se paga lo aceptado (20261010000018).
+   */
+  estado?: 'sugerida' | 'aceptada';
   creado_en: string;
   // Virtual, from joins
   usuario?: UserProfile;
@@ -144,6 +149,11 @@ export interface CommissionPayment {
 export interface CommissionBalance {
   usuario_id: string;
   usuario?: UserProfile;
+  /** Todo lo pendiente, revisado o no. */
   total: number;
+  /** Lo que ya se aceptó: es lo único que se paga (20261010000018). */
+  aceptado: number;
+  /** Cuántas siguen sugeridas, esperando revisión. */
+  porRevisar: number;
   items: Commission[];
 }

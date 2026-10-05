@@ -1,8 +1,11 @@
 import type { TransactionCategory, TransactionType } from './enums';
 
-/** Cómo pagó el cliente al entregar (o cómo se le devolvió). CHECK en la base. */
-export type PaymentMethod = 'efectivo' | 'cheque' | 'transferencia';
-export const PAYMENT_METHODS: PaymentMethod[] = ['efectivo', 'cheque', 'transferencia'];
+/**
+ * Cómo pagó el cliente (o cómo se le devolvió). CHECK en la base. Tarjeta y Zelle desde
+ * 20261010000017: el taller cobra con tarjeta por Clover.
+ */
+export type PaymentMethod = 'efectivo' | 'tarjeta' | 'zelle' | 'transferencia' | 'cheque';
+export const PAYMENT_METHODS: PaymentMethod[] = ['efectivo', 'tarjeta', 'zelle', 'transferencia', 'cheque'];
 
 export interface FinancialTransaction {
   id: string;
@@ -10,7 +13,8 @@ export interface FinancialTransaction {
   /** Set automatically for money the order lifecycle books, and settable by
    *  hand from Finanzas so a manual movement can be traced to its order. */
   referencia_orden_id?: string | null;
-  importacion_id?: string;
+  /** Vino de un estado de cuenta: contabilidad aparte, no cuenta en los totales de la app. */
+  importacion_id?: string | null;
   tipo: TransactionType;
   categoria: TransactionCategory;
   monto: number;
@@ -70,6 +74,40 @@ export interface OrderBalance {
   total: number;
   cobrado: number;
   saldo: number;
+}
+
+/**
+ * `saldo_retiro`: lo recibido, lo que se cobraría (los trabajos que sí se hicieron más la
+ * revisión) y la diferencia (< 0 es lo que se le devuelve) al retirar sin reparar.
+ */
+export interface WithdrawalBalance {
+  cobrado: number;
+  trabajos: number;
+  revision: number;
+  cobro: number;
+  saldo: number;
+}
+
+/** Una línea no autorizada (o no hecha) de una visita anterior (`trabajos_pendientes_vehiculo`). */
+export interface PendingWorkItem {
+  tipo: 'mano_obra' | 'repuesto';
+  descripcion: string;
+  monto: number;
+  orden_id: string;
+  numero_orden: string;
+  fecha: string;
+  /** Vino de una orden retirada sin reparar: se canceló, no se rechazó. */
+  retirada: boolean;
+}
+
+/** `resumen_importaciones`: lo importado de cada estado de cuenta. Las sumas son de la base. */
+export interface StatementSummary {
+  importacion_id: string;
+  desde: string | null;
+  hasta: string | null;
+  movimientos: number;
+  ingresos: number;
+  egresos: number;
 }
 
 // ===== Bank statement import =====

@@ -17,7 +17,9 @@ interface Ctx {
   language: string;
 }
 
-const MONEY_FIELDS = new Set(['costo', 'precio_venta_unitario', 'deposito_inicial', 'total_propuesto', 'total_aprobado']);
+const MONEY_FIELDS = new Set([
+  'costo', 'precio_venta_unitario', 'costo_unitario', 'deposito_inicial', 'descuento', 'total_propuesto', 'total_aprobado',
+]);
 const SPECIALTY_KEY: Record<string, string> = {
   mecanica: 'workOrders.mechanical',
   pintura: 'workOrders.painting',
@@ -66,9 +68,13 @@ function formatValue(entry: OrderHistoryEntry, field: string, value: unknown, ct
       return formatDay(String(value), ctx.language);
     case 'respondido_via':
       return t(`quotes.responseVia.${value}`);
+    // Pedido → llegó (20261010000017). Vacío ya salió arriba como "—".
+    case 'estado_pedido':
+      return value === 'recibido' ? t('parts.received') : t('parts.ordered');
     case 'descripcion':
     case 'inspeccion_360_notas':
     case 'motivo_autorizacion':
+    case 'descuento_motivo':
       return quote(value);
     default:
       return String(value);
@@ -98,6 +104,9 @@ function describeToggle(field: string, change: HistoryChange, t: Ctx['t']): stri
     // de su asignación) o cobra solo sus tareas (20261010000006).
     case 'reparto':
       return t(change.despues === true ? 'history.value.joinedSplit' : 'history.value.leftSplit');
+    // Se cerró sin hacer el trabajo, o se reabrió (20261010000017).
+    case 'retirada_sin_reparar':
+      return t(change.despues === true ? 'history.value.withdrawn' : 'history.value.unwithdrawn');
     default:
       return null;
   }

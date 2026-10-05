@@ -224,6 +224,7 @@ SELECT throws_ok(
 DELETE FROM orden_labor WHERE orden_id = (SELECT id FROM t_orden) AND descripcion = 'Pintura';
 UPDATE ordenes_trabajo SET estatus = 'entregado' WHERE id = (SELECT id FROM t_orden);
 DO $do$ BEGIN
+  PERFORM aprobar_comisiones(ARRAY(SELECT id FROM comisiones WHERE usuario_id = 'a0000000-0000-0000-0000-000000000002'));
   PERFORM pay_commissions('a0000000-0000-0000-0000-000000000002',
     ARRAY(SELECT id FROM comisiones WHERE usuario_id = 'a0000000-0000-0000-0000-000000000002'),
     CURRENT_DATE, 'cheque', '2001', NULL, NULL);
