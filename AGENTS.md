@@ -3,7 +3,7 @@
 Restorify es un sistema en producción que maneja dinero, datos de clientes y permisos
 por rol. Antes de cambiar algo, lee **[docs/ai-context.md](docs/ai-context.md)**: son
 las reglas que no se pueden romper y dónde está cada cosa. Si vas a tomar el proyecto
-completo, empieza por **[docs/traspaso.md](docs/traspaso.md)**. Para ubicar una sección
+completo, empieza por **[docs/traspaso.md](docs/traspaso.md)**. Para ver cómo está construido todo en diagramas (los "planos"), **[docs/planos.md](docs/planos.md)**; para ubicar una sección
 (archivos, tablas, pruebas), **[docs/mapa-de-secciones.md](docs/mapa-de-secciones.md)**.
 
 **Si retomas trabajo en curso** (varios modelos se turnan): la tabla de estado y la

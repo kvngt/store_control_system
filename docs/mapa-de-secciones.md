@@ -101,6 +101,23 @@ Desde F7 es la vista **Tablero** de Órdenes, no una ruta aparte (`/kanban` redi
 | Pruebas | `Employees.pay.test.tsx`, `Employees.users.test.tsx`, `CommissionEstimateCard.test.tsx`, `TaskEditor.test.tsx`, `LaborTable.test.tsx`, `DeliveryModal.test.tsx`, `workOrders.service.test.ts` (lo que manda la pantalla), `styles/laborMobile.test.ts`; pgTAP `01`, `12`, `13`, `19` (comisión por tarea) |
 | Documento | [comisiones.md](comisiones.md) (cómo funciona) y [pagos-a-empleados.md](pagos-a-empleados.md) (propuesta pendiente) |
 
+## Proceso del taller (05/10/2026, `20261010000016`–`18`)
+
+Diagramas en [planos.md](planos.md). Decisiones en [analisis-del-proceso-2026-10.md](analisis-del-proceso-2026-10.md).
+
+| Qué | Dónde |
+|---|---|
+| Retirada sin reparar (cancelar todo / solo revisión / algunos trabajos) | `WithdrawalModal.tsx` → `workOrdersService.withdrawWithoutRepair` → RPC `retirar_sin_reparar`, `saldo_retiro`; marca `ordenes_trabajo.retirada_sin_reparar` |
+| Anticipos | `AdvancePaymentModal.tsx` → RPC `registrar_anticipo` (suma a `orden_montos.deposito_inicial`) |
+| Descuento ($ o %) y totales con cifras de la base | `OrderTotalsCard.tsx` → RPC `aplicar_descuento`; `recalculate_order_totals` |
+| Pendiente de visitas anteriores | `PendingWorkNotice.tsx` → RPC `trabajos_pendientes_vehiculo` |
+| Costo del repuesto y pedido/llegó | `PartsTable.tsx`; `orden_repuestos.costo_unitario`, `estado_pedido`; `ordenes_esperando_repuestos()` |
+| Aceptar comisiones en bloque y pagar lo aceptado | `pages/Payroll.tsx`, `CommissionApproval.tsx` → RPC `aprobar_comisiones`, `pay_commissions` |
+| Avance por tareas | trigger `trg_labor_avance`, `_avance_por_tareas` |
+| Fecha del taller | `hoy_taller(sede)`, `sedes.zona_horaria` |
+| PDF en español / inglés | `lib/workOrderPdf.ts` (textos propios), `getOrderTranslations` |
+| CSV para el contador | `lib/csv.ts`, `pages/Finance.tsx` |
+
 ## Finanzas
 
 | | |

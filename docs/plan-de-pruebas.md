@@ -427,7 +427,7 @@ Reglas: [portal-y-correos.md](portal-y-correos.md).
 | POR-05 | P1 | IA | **Cambiar enlace** → el viejo muestra "Este enlace ya no está activo" con botón para llamar. **Desactivar** → igual; **Crear enlace** genera otro. |
 | POR-06 | P1 | IA | Entregar la orden → la tarjeta dice "Disponible hasta el …" (90 días). |
 | POR-07 | P0 | IA | ~2 minutos después de la primera firma (cliente D-02) → correo `recepcion` **enviado**; la tarjeta pasa de **Programado** a **Enviado**. |
-| POR-08 | P1 | IA | Mover a En proceso → ~3 min, correo `estatus`. Mover a Espera de repuestos y de vuelta a En proceso en menos de 3 min → **No enviado** "ya recibió el aviso de este estado". Finalizado y Entregado → un correo cada uno. |
+| POR-08 | P1 | IA | Mover a En proceso → ~3 min, correo `estatus`. Mover a Espera de autorización y de vuelta a En proceso en menos de 3 min → **No enviado** "ya recibió el aviso de este estado". Finalizado y Entregado → un correo cada uno. |
 | POR-09 | P1 | IA | Publicar una foto de avance y **Avisar novedades** → al minuto, correo `avance` enviado. |
 | POR-10 | P2 | H | Responder un correo → llega al correo de contacto de la Sede A. |
 | POR-11 | P1 | IA | Cliente D-03 (sin correo) → la tarjeta sugiere WhatsApp y no hay botón de avisar; no se generan correos. |
