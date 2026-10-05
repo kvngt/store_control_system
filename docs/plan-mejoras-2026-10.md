@@ -457,6 +457,22 @@ al día aparte.
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
 
+### 05/10/2026, tarde — Claude Code (análisis del proceso completo)
+
+- **Pedido:** ver el taller como un proceso (cliente → orden → trabajo → repuestos → cobro →
+  comisiones → ganancia y gastos) y decir qué agrega valor y qué solo complejidad. Resultado en
+  **[analisis-del-proceso-2026-10.md](analisis-del-proceso-2026-10.md)**. Sin cambios de código ni
+  de base; solo consultas de lectura a producción.
+- **Lo más importante para quien siga:** la importación del banco cuenta dos veces lo que las
+  órdenes ya asientan (A); el costo de un repuesto es su precio (B); no hay tarjeta aunque cobran
+  con Clover (C); no hay impuesto de Maryland sobre repuestos (D); el enlace del cliente muestra el
+  depósito como "Depósito" y otra vez como "Pagado" (E); **0 correos enviados, 11 en error** por la
+  llave de Resend (F0); la base fecha en UTC (J); el % de avance a mano ya no coincide con las
+  tareas (G).
+- **Siguiente paso:** las prioridades 2 a 5 del §5 (E, J, C, G) no necesitan decisiones del
+  taller más allá de confirmar la zona horaria y los métodos de pago. Del 6 en adelante, esperar
+  las respuestas a las preguntas del §4. Nada de esto está empezado.
+
 ### 05/10/2026 — Claude Code (revisión de lo publicado: producción caída, CI, comisiones, privacidad)
 
 - **Encontrado al llegar:** `main` en `2d050f6` con trabajo de otros agentes (`e73b5d9`: traducción

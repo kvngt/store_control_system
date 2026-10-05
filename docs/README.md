@@ -19,6 +19,7 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 | **Cambiar una parte concreta** (Finanzas, la entrega, el portal…) y no saber a dónde ir | [mapa-de-secciones.md](mapa-de-secciones.md) |
 | Saber **qué tan sano está el proyecto hoy**: estructura, base de datos, operación y qué hacer primero | [evaluacion-2026-10.md](evaluacion-2026-10.md) |
 | Saber **qué sigue**: los cambios que pidió el taller en la reunión del 03/10/2026, por fases y con su estado | [plan-mejoras-2026-10.md](plan-mejoras-2026-10.md) |
+| Saber si el **proceso del taller** (orden → trabajo → cobro → comisiones → ganancia) tiene fallas de lógica y qué agrega valor o solo complejidad (05/10/2026) | [analisis-del-proceso-2026-10.md](analisis-del-proceso-2026-10.md) |
 | Preparar la **privacidad, el texto de la firma y la protección legal** (plan del 04/10/2026, pendiente de las decisiones del taller y de un abogado) | [plan-legal-y-privacidad.md](plan-legal-y-privacidad.md) |
 | **Cambiar la base en producción** sin comprometer la operación, o saber qué deuda técnica queda | [mantenimiento.md](mantenimiento.md) |
 | **Probar la plataforma a mano** como tester, sin programar | [manual-de-pruebas.md](manual-de-pruebas.md) |
@@ -132,6 +133,12 @@ errores, reintentar correos, detalle de la orden con pestañas, tareas con técn
 por tarea, nueva orden en 4 secciones, tareas por hacer del técnico, hallazgos y la nueva
 "espera de autorización". Con las decisiones del taller, lo que hacen otros sistemas y el
 estado de cada fase.
+
+**[analisis-del-proceso-2026-10.md](analisis-del-proceso-2026-10.md)** — Una orden de punta a
+punta (05/10/2026): qué aporta cada parte y qué solo agrega pasos, las fallas de lógica con su
+evidencia (doble conteo al importar el banco, costo de repuestos igual al precio, sin tarjeta ni
+impuesto de Maryland, el depósito dos veces en el enlace del cliente, correos sin salir, fechas
+en UTC, avance a mano), las preguntas para el taller y el orden propuesto.
 
 **[plan-de-mejora.md](plan-de-mejora.md)** — Análisis de desempeño, deuda técnica y plan de
 acción posterior a la auditoría. Es una foto anterior a la revisión previa a producción:
