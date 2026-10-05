@@ -489,10 +489,14 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
 - **Verificación:** lint ✓, `tsc -b` ✓, Vitest 81 archivos / 664 ✓, build ✓, pgTAP desde una
   base vacía (como el CI) 25 archivos / 597 ✓, `qa:security` contra producción 114 PASS · 0 FAIL ·
   0 SKIP (SEC-118/119 pasan porque `aprobar_comision` aún no existe allá: repetir tras el push).
-- **Sin commit ni publicación.** Para publicar, en este orden y con permiso: `db push` (aplica
-  `014` y `015`: la `015` es la que levanta producción) → push a `main` → `functions deploy
-  process-outbox`. Opcional: `supabase secrets set SHOP_TIMEZONE=America/New_York` y
-  `GEMINI_MODEL`.
+- **Publicado el 05/10/2026, con permiso del usuario y en este orden:** `db push` de la `014` y la
+  `015` (`db:check` ✓, 69 migraciones); comprobado en producción que agregar una tarea y un
+  repuesto vuelve a responder 201 (filas de prueba borradas) y que `sin_asignar` llega como
+  lista; commit `5ed5928` y push a `main`; `functions deploy process-outbox`. `qa:security`
+  después: 114 PASS · 0 FAIL · 0 SKIP (SEC-118/119 ya contra `aprobar_comision` real). La cola de
+  traducción no la ve un admin por la API (su política solo muestra correos y push): revisarla en
+  el panel de Supabase. Pendiente opcional: `supabase secrets set SHOP_TIMEZONE=America/New_York`
+  y, si Google retira `gemini-2.5-flash`, `GEMINI_MODEL`.
 - **Decisiones para el usuario:** la aprobación de comisiones cambia lo que veía el técnico
   (antes veía su estimado desde que se autorizaba el trabajo); confirmar que es lo que pidió el
   taller. La traducción manda textos de clientes a Google: usar una llave con facturación. Los
