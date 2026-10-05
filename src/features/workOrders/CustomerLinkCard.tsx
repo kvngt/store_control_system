@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Copy, ExternalLink, Link2, Mail, MessageCircle, RefreshCw, Send, XCircle } from 'lucide-react';
+import { Check, Copy, ExternalLink, Link2, Mail, MessageCircle, MessageSquareText, RefreshCw, Send, XCircle } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { getErrorMessage } from '../../lib/errors';
 import { isValidEmail } from '../../lib/email';
-import { whatsAppUrl } from '../../lib/phone';
+import { canOpenSms, smsUrl, whatsAppUrl } from '../../lib/phone';
 import { queryKeys } from '../../lib/queryClient';
 import { relativeTime } from '../notifications/renderNotification';
 import { customerPortalService } from '../../services/customerPortal.service';
@@ -56,6 +56,9 @@ export default function CustomerLinkCard({ order, statusLabels }: CustomerLinkCa
   const customer = order.cliente;
   const hasEmail = isValidEmail(customer?.email);
   const acceptsEmail = customer?.acepta_correos !== false;
+  // En el teléfono el aviso sale por SMS desde la app de Mensajes del admin (en EE. UU.
+  // casi nadie tiene WhatsApp); WhatsApp queda al lado. En la computadora, solo WhatsApp.
+  const sms = canOpenSms();
 
   const run = async (action: () => Promise<unknown>, errorKey = 'customerLink.actionError') => {
     setBusy(true);
@@ -142,7 +145,17 @@ export default function CustomerLinkCard({ order, statusLabels }: CustomerLinkCa
             <a className="btn btn-secondary btn-sm" href={url ?? undefined} target="_blank" rel="noopener noreferrer">
               <ExternalLink size={14} /> {t('customerLink.open')}
             </a>
-            <a className="btn btn-primary btn-sm" href={whatsAppUrl(customer?.telefono, whatsAppMessage)} target="_blank" rel="noopener noreferrer">
+            {sms && (
+              <a className="btn btn-primary btn-sm" href={smsUrl(customer?.telefono, whatsAppMessage)}>
+                <MessageSquareText size={14} /> {t('customerLink.sms')}
+              </a>
+            )}
+            <a
+              className={`btn ${sms ? 'btn-secondary' : 'btn-primary'} btn-sm`}
+              href={whatsAppUrl(customer?.telefono, whatsAppMessage)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <MessageCircle size={14} /> {t('customerLink.whatsapp')}
             </a>
             <button

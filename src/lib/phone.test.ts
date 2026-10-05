@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { isOptionalEmailValid, isValidEmail } from './email';
-import { formatPhone, looksIncomplete, parsePhone, telUrl, toE164, toWhatsAppNumber, whatsAppUrl } from './phone';
+import { canOpenSms, formatPhone, looksIncomplete, parsePhone, smsUrl, telUrl, toE164, toWhatsAppNumber, whatsAppUrl } from './phone';
 import { tokenFromPath } from '../portal/path';
 
 describe('phone', () => {
@@ -26,6 +26,24 @@ describe('phone', () => {
   it('un número con + no recibe el prefijo de EE. UU. aunque sea corto', () => {
     expect(toWhatsAppNumber('+53 5123 4567')).toBe('5351234567');
     expect(toWhatsAppNumber('+5351234567')).toBe('5351234567');
+  });
+
+  // iOS separa el texto con "&" y Android con "?": con el del otro, iOS abre Mensajes vacío.
+  it('arma el enlace de SMS con el separador de cada sistema', () => {
+    expect(smsUrl('512 555 0100', 'Hola Marta', false)).toBe('sms:+15125550100?body=Hola%20Marta');
+    expect(smsUrl('+15125550100', 'Hola', true)).toBe('sms:+15125550100&body=Hola');
+    expect(smsUrl('+53 5123 4567', 'Hola', false)).toBe('sms:+5351234567?body=Hola');
+    expect(smsUrl(null, 'Hola', false)).toBe('sms:?body=Hola');
+  });
+
+  it('ofrece SMS solo en teléfonos y tabletas, no en la computadora', () => {
+    const nav = (userAgent: string, platform = '', maxTouchPoints = 0) => ({ userAgent, platform, maxTouchPoints });
+    expect(canOpenSms(nav('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)'))).toBe(true);
+    expect(canOpenSms(nav('Mozilla/5.0 (Linux; Android 15; Pixel 9)'))).toBe(true);
+    // iPad con iPadOS: dice ser una Mac, pero tiene pantalla táctil.
+    expect(canOpenSms(nav('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', 'MacIntel', 5))).toBe(true);
+    expect(canOpenSms(nav('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', 'MacIntel', 0))).toBe(false);
+    expect(canOpenSms(nav('Mozilla/5.0 (Windows NT 10.0; Win64; x64)', 'Win32'))).toBe(false);
   });
 });
 

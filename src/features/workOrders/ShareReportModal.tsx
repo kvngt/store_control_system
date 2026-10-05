@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, Copy, Download, ExternalLink, Mail, MessageCircle, X } from 'lucide-react';
+import { Check, Copy, Download, ExternalLink, Mail, MessageCircle, MessageSquareText, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { getErrorMessage } from '../../lib/errors';
@@ -9,7 +9,7 @@ import { queryKeys } from '../../lib/queryClient';
 import { customerPortalService } from '../../services/customerPortal.service';
 import { reportsService } from '../../services/reports.service';
 import type { WorkOrder } from '../../types/database';
-import { formatPhone } from '../../lib/phone';
+import { canOpenSms, formatPhone, smsUrl } from '../../lib/phone';
 
 interface ShareReportModalProps {
   order: WorkOrder;
@@ -41,6 +41,8 @@ export default function ShareReportModal({ order, link, message, onClose, onDown
   const customer = order.cliente;
   const hasPhone = !!customer?.telefono?.trim();
   const canEmail = isValidEmail(customer?.email) && customer?.acepta_correos !== false;
+  // En el teléfono, SMS desde la app de Mensajes del admin; WhatsApp sigue debajo.
+  const sms = canOpenSms();
 
   const copyLink = async () => {
     try {
@@ -120,6 +122,13 @@ export default function ShareReportModal({ order, link, message, onClose, onDown
             >
               <Mail size={16} /> {sending ? t('common.loading') : t('workOrders.sendEmail')}
             </button>
+
+            {sms && (
+              <a className="btn btn-secondary" href={smsUrl(customer?.telefono, message)}>
+                <MessageSquareText size={16} />
+                {hasPhone ? t('workOrders.sendSms') : t('workOrders.sendSmsPick')}
+              </a>
+            )}
 
             <a
               className="btn btn-secondary"

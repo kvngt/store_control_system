@@ -11,10 +11,11 @@ import { ANNOUNCED_STATUSES, renderEmail } from '../_shared/email/templates.ts';
 
 interface OutboxJob {
   id: string;
-  canal: 'push' | 'email';
+  canal: 'push' | 'email' | 'traduccion';
   destinatario: string;
   plantilla: string;
   datos: Record<string, unknown>;
+  orden_id?: string;
   intentos: number;
 }
 
@@ -276,12 +277,91 @@ async function sendEmail(job: OutboxJob): Promise<JobResult> {
   return { estado: 'error', detalle: detail };
 }
 
+async function sendTraduccion(job: OutboxJob): Promise<JobResult> {
+  const apiKey = Deno.env.get('GEMINI_API_KEY');
+  if (!apiKey) throw new Error('GEMINI_API_KEY no configurada.');
+
+  if (!job.orden_id) return { estado: 'error', detalle: 'El job de traducción no tiene orden_id.' };
+
+  const { data: orden, error: errOrden } = await supabase
+    .from('ordenes_trabajo')
+    .select('sede_id')
+    .eq('id', job.orden_id)
+    .single();
+
+  if (errOrden || !orden) return { estado: 'omitido', detalle: 'La orden ya no existe.' };
+
+  const { data: textos, error: errTextos } = await supabase
+    .rpc('_textos_cliente', { p_orden_id: job.orden_id });
+
+  if (errTextos) throw errTextos;
+  if (!textos || textos.length === 0) return { estado: 'omitido', detalle: 'La orden no tiene textos visibles.' };
+
+  const prompt = {
+    contents: [{
+      parts: [{ text: JSON.stringify(textos) }]
+    }],
+    systemInstruction: {
+      parts: [{ text: "Eres un traductor técnico de un taller automotriz. Traduce el siguiente array JSON de español a inglés. Si una frase ya está en inglés, o es un nombre propio/marca, consérvala o corrígela si tiene errores. Devuelve estrictamente un objeto JSON con la forma {\"traducciones\": [\"texto1\", \"texto2\"]} manteniendo el mismo orden y longitud del array original. No incluyas markdown ni explicaciones." }]
+    },
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.1
+    }
+  };
+
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(prompt)
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    const detail = `Gemini HTTP ${res.status}: ${errText.slice(0, 300)}`;
+    if (res.status >= 500 || res.status === 429) throw new Error(detail);
+    return { estado: 'error', detalle: detail };
+  }
+
+  const body = await res.json().catch(() => ({}));
+  const content = body.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!content) return { estado: 'error', detalle: 'Gemini no devolvió texto en el formato esperado.' };
+
+  let traduccionesStr: string[];
+  try {
+    const parsed = JSON.parse(content);
+    traduccionesStr = parsed.traducciones;
+    if (!Array.isArray(traduccionesStr) || traduccionesStr.length !== textos.length) {
+      throw new Error('La longitud del array traducido no coincide con el original.');
+    }
+  } catch (err) {
+    return { estado: 'error', detalle: `Respuesta JSON inválida de Gemini: ${err instanceof Error ? err.message : String(err)}` };
+  }
+
+  const lote = textos.map((original: string, idx: number) => ({
+    original,
+    traduccion: traduccionesStr[idx] || original,
+  }));
+
+  const { error: saveErr } = await supabase.rpc('guardar_traducciones', {
+    p_sede_id: orden.sede_id,
+    p_idioma_destino: 'en',
+    p_textos: lote
+  });
+
+  if (saveErr) throw saveErr;
+
+  return { estado: 'enviado' };
+}
+
 async function handle(job: OutboxJob): Promise<JobResult> {
   switch (job.canal) {
     case 'push':
       return sendPush(job);
     case 'email':
       return sendEmail(job);
+    case 'traduccion':
+      return sendTraduccion(job);
     default:
       return { estado: 'error', detalle: `Canal "${job.canal}" desconocido.` };
   }

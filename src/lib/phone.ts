@@ -1,4 +1,4 @@
-// Teléfonos → enlaces de WhatsApp y de llamada.
+// Teléfonos → enlaces de WhatsApp, SMS y de llamada.
 //
 // Vive aparte de reports.service para que el portal del cliente lo use sin
 // arrastrar el cliente de Supabase a su paquete.
@@ -39,6 +39,44 @@ export function whatsAppUrl(phone: string | null | undefined, message: string): 
 export function telUrl(phone: string | null | undefined): string | null {
   const cleaned = (phone || '').replace(/[^\d+]/g, '');
   return cleaned.replace(/\D/g, '').length >= 7 ? `tel:${cleaned}` : null;
+}
+
+// ------------------------------------------------------------------------------------
+// SMS desde el teléfono de quien envía
+// ------------------------------------------------------------------------------------
+// Mientras no haya SMS automático (Twilio), el admin manda el aviso desde su propio
+// teléfono: el enlace `sms:` abre la app de Mensajes con el número y el texto listos y
+// solo falta tocar Enviar. En una computadora no hay app de SMS confiable (Windows abre
+// otra cosa o nada), así que ahí se queda WhatsApp.
+
+type SmsNavigator = Pick<Navigator, 'userAgent' | 'platform' | 'maxTouchPoints'>;
+
+/** iPhone, iPod o iPad. El iPad con iPadOS 13+ dice ser una Mac; lo delata la pantalla táctil. */
+export function isAppleMobile(nav: SmsNavigator | undefined = globalThis.navigator): boolean {
+  if (!nav) return false;
+  if (/iPhone|iPad|iPod/i.test(nav.userAgent)) return true;
+  return nav.platform === 'MacIntel' && (nav.maxTouchPoints ?? 0) > 1;
+}
+
+/** ¿El dispositivo tiene una app de mensajes que abra un `sms:`? Teléfonos y tabletas, no computadoras. */
+export function canOpenSms(nav: SmsNavigator | undefined = globalThis.navigator): boolean {
+  if (!nav) return false;
+  return isAppleMobile(nav) || /Android/i.test(nav.userAgent);
+}
+
+/**
+ * `sms:+15125550100?body=…`. iOS separa el texto con `&` y Android con `?`; con el
+ * separador del otro, iOS abre Mensajes sin el texto. Sin número abre Mensajes para elegir
+ * contacto. El número va con su país (el mismo que usa WhatsApp) y el "+" delante.
+ */
+export function smsUrl(
+  phone: string | null | undefined,
+  message: string,
+  ios: boolean = isAppleMobile(),
+): string {
+  const digits = toWhatsAppNumber(phone || '');
+  const number = digits ? `+${digits}` : '';
+  return `sms:${number}${ios ? '&' : '?'}body=${encodeURIComponent(message)}`;
 }
 
 // ------------------------------------------------------------------------------------

@@ -70,6 +70,24 @@ describe('ShareReportModal', () => {
     expect(screen.getByText(/90 días después de entregarla/)).toBeInTheDocument();
   });
 
+  it('en la computadora no ofrece SMS; en un teléfono sí, con el número y el mensaje, y WhatsApp sigue', () => {
+    const props = { order: order(), link: LINK, message: `Hola Marta ${LINK}`, onClose: vi.fn(), onDownload: vi.fn(), downloading: false };
+    const { unmount } = renderWithProviders(<ShareReportModal {...props} />);
+    expect(screen.queryByRole('link', { name: /Enviar por SMS/ })).not.toBeInTheDocument();
+    unmount();
+
+    const ua = vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Linux; Android 15; Pixel 9)');
+    try {
+      renderWithProviders(<ShareReportModal {...props} />);
+      const sms = screen.getByRole('link', { name: /Enviar por SMS/ });
+      expect(sms.getAttribute('href')).toMatch(/^sms:\+15125550100\?body=/);
+      expect(decodeURIComponent(sms.getAttribute('href')!)).toContain(LINK);
+      expect(screen.getByRole('link', { name: /Enviar por WhatsApp/ })).toBeInTheDocument();
+    } finally {
+      ua.mockRestore();
+    }
+  });
+
   it('el PDF queda como descarga', async () => {
     const onDownload = vi.fn();
     renderWithProviders(
