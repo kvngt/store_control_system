@@ -129,11 +129,21 @@ SELECT lives_ok(
   'El admin entrega la orden'
 );
 
+-- Desde 20261010000014 la comisión nace sugerida y el aviso le llega al técnico cuando
+-- administración la acepta, con el monto aceptado (antes llegaba al entregar).
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000001';
+DO $$ BEGIN
+  PERFORM aprobar_comision(c.id) FROM comisiones c
+  JOIN ordenes_trabajo o ON o.id = c.orden_id
+  WHERE o.vehiculo_id = 'd0000000-0000-0000-0000-000000000001'
+    AND c.usuario_id = 'a0000000-0000-0000-0000-000000000002';
+END $$;
+
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
 SELECT is(
   (SELECT COUNT(*)::int FROM notificaciones WHERE tipo = 'comision_generada'),
   1,
-  'El mecánico recibe "Comisión generada" al entregarse la orden'
+  'El mecánico recibe "Comisión aprobada" cuando administración acepta su comisión'
 );
 
 -- ------------------------------------------------------------------------------------

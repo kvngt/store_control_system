@@ -170,6 +170,27 @@ quedaba asentado, así que el taller reportaba el cobro completo de un carro que
 seguía en el taller y sin el pasivo de comisión que lo acompaña. Lo conciliado
 contra un estado de cuenta no se toca: ese dinero sí pasó por el banco.
 
+## Administración acepta cada comisión (`20261010000014`)
+
+Al entregar, la base calcula la comisión como siempre, pero la deja **sugerida**
+(`comisiones.estado`). Administración la revisa en la tarjeta **Reparto de la comisión** de la
+orden y la **acepta** tal cual, o con otro porcentaje o monto (lápiz). Con solo el porcentaje,
+el monto sale de la misma cuenta (base × % ÷ técnicos); un monto negativo o un porcentaje fuera
+de 0–100 se rechazan, y lo ya pagado no se cambia (`aprobar_comision`, que bloquea la fila).
+
+- **El técnico no ve el monto hasta que se acepta**, y no es solo la pantalla: la base se lo
+  manda vacío en `comisiones_estimadas`, la política de `comisiones` no le deja leer sus filas
+  sugeridas, y el aviso **Comisión aprobada** le llega al aceptarla, con el monto aceptado (al
+  entregar ya no recibe un aviso con el monto sugerido). Lo ya pagado lo ve siempre.
+- **El recálculo respeta lo aceptado**: si cambia la cuenta, una comisión aceptada conserva su
+  monto. Pero se borra, como cualquier otra sin pagar, si la orden deja de estar entregada (al
+  volver a entregarla, se acepta de nuevo) o si la tarea pasa a otro técnico (si no, se pagaría
+  la misma tarea dos veces).
+- Pagar no exige que esté aceptada: **Comisiones** paga lo pendiente como antes. Si el taller
+  quiere que solo se pague lo aceptado, es un cambio a `pay_commissions`.
+
+Pruebas: `25_comisiones_aprobacion.test.sql`; la 02, la 12 y la 19 se ajustaron a la regla.
+
 ## Solo lo autorizado genera comisión
 
 Desde la fase 5 los totales de una orden suman solo las líneas que el cliente
@@ -186,7 +207,9 @@ la base de su pago:
 
 - En el detalle de cada orden asignada, la tarjeta **Tu comisión estimada** muestra sus
   tareas autorizadas una por una (costo × su porcentaje), su parte de cada bolsa heredada en
-  la que está (mano de obra × su porcentaje ÷ compañeros) y el total. La calcula la base
+  la que está (mano de obra × su porcentaje ÷ compañeros) y el total. **Desde
+  `20261010000014`, los montos y porcentajes salen "Pendiente" hasta que administración acepta
+  la comisión** (ver arriba). La calcula la base
   (`comisiones_estimadas`, la misma cuenta que al entregar). Solo ve lo suyo: ni las tareas
   ni el porcentaje de sus compañeros. A quien está a salario le dice que la orden no le
   genera comisión.
@@ -194,9 +217,9 @@ la base de su pago:
   hechas **las suyas** y las que no tienen técnico.
 - No ve el porcentaje ni el sueldo de sus compañeros (`perfiles_pago` es de
   administración; cada quien lee solo el suyo).
-- Al entregarse la orden, cada técnico recibe **un** aviso **Comisión generada** por orden,
-  con la suma de lo suyo (trigger `trg_commission_notify`, por sentencia: con varias tareas ya
-  no llega un aviso por fila).
+- Cuando administración acepta su comisión, recibe el aviso **Comisión aprobada** con el
+  monto aceptado (`aprobar_comision`). Al entregar ya no le llega aviso: el monto todavía era el
+  sugerido (`trg_commission_notify` solo avisa lo que nace aceptado, hoy nada).
 - Al darle una tarea recibe **Nueva tarea**; si se la pasan a otra persona, **Tarea
   reasignada**. Cuando él marca una tarea como hecha, administración recibe **Tarea hecha**.
 - La pantalla **Comisiones** es solo para administradores.

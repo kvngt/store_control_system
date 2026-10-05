@@ -15,10 +15,10 @@
 | Fase | Qué | Estado |
 |---|---|---|
 | L0 | Decisiones del taller (preguntas de la §3) | Pendiente (taller) |
-| L1 | Borradores de los documentos | **Borrador implementado** en `LegalTerms.tsx` y `PrivacyPolicy.tsx` |
+| L1 | Borradores de los documentos | **Borradores en la app, sin revisión legal**: el texto de la firma (`LegalTerms.tsx`) y el aviso (`/privacidad`, `pages/PrivacyPolicy.tsx`). El aviso se corrigió el 05/10/2026 para que diga lo que la app hace (Google Gemini, sonido de los videos, Canadá, contacto). Faltan la §3 del taller y la revisión del abogado |
 | L2 | Revisión del abogado | Pendiente (taller y abogado) |
 | L3 | Documentos versionados en la base y páginas públicas | **Parcialmente hecho** (Página pública `/privacidad` creada estática) |
-| L4 | Texto, casillas y constancia en la firma de recepción | **Borrador implementado** (Componente `LegalTerms` antes de la firma) |
+| L4 | Texto, casillas y constancia en la firma de recepción | **Solo el texto**: `LegalTerms` se muestra antes de firmar. Faltan la casilla "Leí y acepto", el nombre de quien firma, las casillas opcionales y **guardar con la firma qué versión del texto se mostró** (la RPC `firmar_recepcion` y la tabla `firmas`); sin eso el texto vale poco como prueba |
 | L5 | Presupuesto y factura como los pide Maryland; firma de entrega; piezas reemplazadas | Pendiente |
 | L6 | Términos al autorizar un presupuesto (portal y por teléfono) | Pendiente |
 | L7 | Consentimientos del cliente y sus derechos (exportar, anonimizar, retención) | Pendiente |

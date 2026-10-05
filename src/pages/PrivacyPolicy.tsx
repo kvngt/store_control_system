@@ -2,118 +2,242 @@ import { useEffect } from 'react';
 import { Shield } from 'lucide-react';
 import { useLanguage } from '../context/language.context';
 
+interface Section {
+  title: string;
+  body: string[];
+  list?: string[];
+}
+
+interface Policy {
+  title: string;
+  updated: string;
+  sections: Section[];
+}
+
+/**
+ * El aviso de privacidad, en español y en inglés (plan-legal-y-privacidad.md §6.3).
+ *
+ * Es un documento legal y va entero aquí, no en `translations.ts`: es un texto largo que se
+ * revisa como unidad (lo revisa un abogado de Maryland antes de darlo por definitivo) y la fase
+ * L3 del plan lo pasará a versiones guardadas en la base. Tiene que decir **solo lo que la app
+ * hace**: si se agrega un proveedor o un uso de datos, se cambia aquí antes de publicarlo.
+ */
+const POLICY: Record<'es' | 'en', Policy> = {
+  es: {
+    title: 'Aviso de Privacidad',
+    updated: 'Última actualización: 5 de octubre de 2026',
+    sections: [
+      {
+        title: '1. A qué se aplica',
+        body: [
+          'Este aviso explica cómo el taller que atiende su vehículo recopila, usa y comparte su información cuando le damos servicio, cuando usa su enlace del taller (el portal del cliente) y cuando le escribimos.',
+        ],
+      },
+      {
+        title: '2. Qué datos recopilamos',
+        body: ['Recopilamos:'],
+        list: [
+          'Sus datos de contacto: nombre, teléfono, correo electrónico y dirección.',
+          'Los datos de su vehículo: VIN, marca, modelo, año, color, placa, millas y nivel de gasolina al recibirlo.',
+          'Fotos y videos del vehículo, al recibirlo y durante el trabajo. Pueden verse la placa, el interior y objetos que haya dejado en él. Los videos pueden grabar sonido.',
+          'Su firma de recepción y la fecha en que firmó.',
+          'Sus respuestas a los presupuestos: qué autorizó, cuándo, y la dirección IP y el navegador con que respondió en su enlace.',
+          'Los pagos y, si nos los da, la foto del comprobante o del cheque.',
+        ],
+      },
+      {
+        title: '3. Para qué la usamos',
+        body: ['Usamos su información para:'],
+        list: [
+          'Atender su orden y reparar su vehículo.',
+          'Comunicarnos con usted sobre presupuestos, autorizaciones y el estado del servicio.',
+          'Cobrar el servicio y llevar nuestros registros.',
+          'Documentar el estado de su vehículo al recibirlo y al entregarlo, y resolver dudas o reclamos.',
+          'Cumplir con nuestras obligaciones legales, incluidas las leyes de Maryland.',
+        ],
+      },
+      {
+        title: '4. Fotos, videos y grabaciones',
+        body: [
+          'Las fotos y los videos se toman para documentar el vehículo y el trabajo. Los ve el personal del taller, y usted ve los que publicamos en su enlace. No los publicamos con fines publicitarios sin su permiso.',
+          'Nuestro personal no graba conversaciones sin el permiso de todos los presentes, como exige la ley de Maryland. Si no quiere que un video grabe sonido, avísenos. No usamos fotos ni grabaciones para reconocer a nadie por su cara o por su voz.',
+        ],
+      },
+      {
+        title: '5. Con quién la compartimos',
+        body: [
+          'No vendemos su información. Solo la compartimos con proveedores que la procesan por cuenta del taller:',
+        ],
+        list: [
+          'Almacenamiento de la base de datos y de los archivos (Supabase), en servidores ubicados en Canadá.',
+          'Alojamiento del sitio web (Hostinger) y fuentes tipográficas del sitio (Google Fonts).',
+          'Envío de correos (Resend).',
+          'Traducción automática al inglés de los textos de su orden que usted ve (Google Gemini).',
+          'Decodificación del VIN (NHTSA, del gobierno de EE. UU.).',
+          'Monitoreo de fallas de la aplicación (Sentry), sin las fotos ni los textos de la pantalla.',
+        ],
+      },
+      {
+        title: '',
+        body: ['También podemos entregar información a las autoridades cuando la ley lo exija.'],
+      },
+      {
+        title: '6. Cuánto tiempo la guardamos',
+        body: [
+          'Guardamos su información, incluidas las fotos y el historial del servicio, mientras sea necesaria para atenderle, llevar nuestros registros y cumplir requisitos fiscales y legales. Después la borramos o la anonimizamos de forma segura.',
+        ],
+      },
+      {
+        title: '7. Seguridad',
+        body: [
+          'Usamos medidas de seguridad razonables: cada persona del taller ve solo lo que su puesto necesita, los archivos se guardan en almacenamiento privado y hay copias de seguridad. Ningún sistema es completamente seguro y no podemos prometer seguridad absoluta. Si una filtración afecta su información, se lo avisaremos como exige la ley de Maryland.',
+        ],
+      },
+      {
+        title: '8. Sus derechos',
+        body: [
+          'Puede pedirnos ver, corregir o borrar sus datos, con las excepciones que fija la ley (por ejemplo, lo que debemos conservar por impuestos o por un reclamo). También puede darse de baja de los correos que no son de su servicio. Para hacerlo, comuníquese con el taller con los datos de contacto de su presupuesto o de su enlace.',
+          'Si cree que no tratamos bien su información, puede presentar una queja ante la División de Protección al Consumidor de la Fiscalía General de Maryland.',
+        ],
+      },
+      {
+        title: '9. Menores de edad',
+        body: ['Nuestros servicios no están dirigidos a menores de 13 años.'],
+      },
+      {
+        title: '10. Cambios a este aviso',
+        body: ['Si cambiamos este aviso, publicaremos aquí la versión nueva con su fecha.'],
+      },
+    ],
+  },
+  en: {
+    title: 'Privacy Notice',
+    updated: 'Last updated: October 5, 2026',
+    sections: [
+      {
+        title: '1. What this covers',
+        body: [
+          'This notice explains how the shop servicing your vehicle collects, uses and shares your information when we service your vehicle, when you use your shop link (the customer portal) and when we email you.',
+        ],
+      },
+      {
+        title: '2. Information we collect',
+        body: ['We collect:'],
+        list: [
+          'Your contact details: name, phone, email and address.',
+          'Your vehicle details: VIN, make, model, year, color, license plate, mileage and fuel level at drop-off.',
+          'Photos and videos of the vehicle, at drop-off and during the work. They may show the plate, the interior and items left in it. Videos may record sound.',
+          'Your drop-off signature and the date you signed.',
+          'Your answers to estimates: what you authorized, when, and the IP address and browser you used in your link.',
+          'Payments and, if you give it to us, a photo of the receipt or check.',
+        ],
+      },
+      {
+        title: '3. How we use it',
+        body: ['We use your information to:'],
+        list: [
+          'Service your order and repair your vehicle.',
+          'Communicate with you about estimates, authorizations and the status of the service.',
+          'Collect payment and keep our records.',
+          'Document the condition of your vehicle at drop-off and pickup, and resolve questions or claims.',
+          'Comply with our legal obligations, including Maryland law.',
+        ],
+      },
+      {
+        title: '4. Photos, videos and recordings',
+        body: [
+          'Photos and videos are taken to document the vehicle and the work. Shop staff can see them, and you see the ones we publish in your link. We do not publish them for advertising without your permission.',
+          'Our staff do not record conversations without the consent of everyone present, as Maryland law requires. If you do not want a video to record sound, let us know. We do not use photos or recordings to identify anyone by their face or voice.',
+        ],
+      },
+      {
+        title: '5. Who we share it with',
+        body: ['We do not sell your information. We only share it with providers that process it on the shop’s behalf:'],
+        list: [
+          'Database and file storage (Supabase), on servers located in Canada.',
+          'Website hosting (Hostinger) and website fonts (Google Fonts).',
+          'Email delivery (Resend).',
+          'Automatic translation into English of the order text you see (Google Gemini).',
+          'VIN decoding (NHTSA, a U.S. government agency).',
+          'App error monitoring (Sentry), without the photos or the on-screen text.',
+        ],
+      },
+      {
+        title: '',
+        body: ['We may also disclose information to authorities when the law requires it.'],
+      },
+      {
+        title: '6. How long we keep it',
+        body: [
+          'We keep your information, including photos and service history, for as long as needed to serve you, keep our records and meet tax and legal requirements. After that we securely delete or anonymize it.',
+        ],
+      },
+      {
+        title: '7. Security',
+        body: [
+          'We use reasonable security measures: each staff member sees only what their role needs, files are kept in private storage and there are backups. No system is completely secure and we cannot promise absolute security. If a breach affects your information, we will notify you as Maryland law requires.',
+        ],
+      },
+      {
+        title: '8. Your rights',
+        body: [
+          'You may ask us to access, correct or delete your data, subject to legal exceptions (for example, what we must keep for taxes or a claim). You may also unsubscribe from emails that are not about your service. To do so, contact the shop using the contact details on your estimate or in your link.',
+          'If you believe we have not handled your information properly, you may file a complaint with the Consumer Protection Division of the Maryland Attorney General.',
+        ],
+      },
+      {
+        title: '9. Children',
+        body: ['Our services are not directed to children under 13.'],
+      },
+      {
+        title: '10. Changes to this notice',
+        body: ['If we change this notice, we will post the new version here with its date.'],
+      },
+    ],
+  },
+};
+
+/** Página pública (`/privacidad`, sin sesión): la enlazan el texto de la firma y el portal. */
 export default function PrivacyPolicy() {
-  const { language } = useLanguage();
+  const { language, setLanguage } = useLanguage();
+  const policy = POLICY[language === 'en' ? 'en' : 'es'];
 
   useEffect(() => {
-    document.title = language === 'en' ? 'Privacy Policy - Restorify' : 'Aviso de Privacidad - Restorify';
-  }, [language]);
-
-  const EnContent = () => (
-    <>
-      <p><em>Last updated: October 2026</em></p>
-      
-      <h3>1. Who We Are and What This Covers</h3>
-      <p>This Privacy Policy explains how we collect, use, and share your personal information when you use our services at the shop, our customer portal, or communicate with us.</p>
-      
-      <h3>2. Information We Collect</h3>
-      <p>We collect information you provide directly (such as your name, phone number, and email address), vehicle information (VIN, make, model, year, license plate), and service history. We also capture photos, videos (which may include ambient audio), and diagnostic data from your vehicle to document its condition and the work performed. If you provide a deposit or payment, we may capture a photo of the receipt or check.</p>
-      
-      <h3>3. How We Use Your Information</h3>
-      <p>We use your information to:</p>
-      <ul>
-        <li>Service your vehicle and fulfill your work order.</li>
-        <li>Communicate with you regarding estimates, approvals, and vehicle status.</li>
-        <li>Process payments and collect unpaid balances.</li>
-        <li>Document the condition of your vehicle at intake and delivery to protect against false claims.</li>
-        <li>Comply with legal obligations under Maryland law.</li>
-      </ul>
-      
-      <h3>4. Photos, Videos, and Recordings</h3>
-      <p>Photos and videos of your vehicle are taken strictly for documentation and service purposes. Our staff and authorized technicians will have access to them. We will not publish images or videos of your vehicle for marketing purposes without your explicit consent.</p>
-      
-      <h3>5. How We Share Your Information</h3>
-      <p>We <strong>do not sell</strong> your personal information. We share your information only with service providers who process data on our behalf (such as our database hosting in Canada, email delivery services, error monitoring, and VIN decoding APIs). We may also disclose information to law enforcement or authorities if required by law.</p>
-
-      <h3>6. Data Retention</h3>
-      <p>We keep your information, including photos and service history, for as long as necessary to provide our services, maintain proper business records, and comply with tax and legal requirements. After this period, data will be securely deleted or anonymized.</p>
-
-      <h3>7. Security</h3>
-      <p>We implement reasonable security measures, including role-based access control and encrypted backups, to protect your data. However, no electronic storage system is completely secure, and we cannot guarantee absolute security.</p>
-
-      <h3>8. Your Rights</h3>
-      <p>You have the right to request access to, correction, or deletion of your personal data, subject to legal and business record exceptions. You may also opt out of non-essential communications at any time. To exercise these rights, please contact the shop directly.</p>
-
-      <h3>9. Children's Privacy</h3>
-      <p>Our services are not directed to individuals under 13 years of age.</p>
-
-      <h3>10. Changes to This Policy</h3>
-      <p>We may update this Privacy Policy from time to time. The revised policy will be posted on this page with the updated date.</p>
-    </>
-  );
-
-  const EsContent = () => (
-    <>
-      <p><em>Última actualización: Octubre 2026</em></p>
-      
-      <h3>1. Quiénes somos y a qué se aplica</h3>
-      <p>Este Aviso de Privacidad explica cómo recopilamos, usamos y compartimos su información personal cuando utiliza nuestros servicios en el taller, nuestro portal para clientes, o al comunicarse con nosotros.</p>
-      
-      <h3>2. Qué datos recopilamos</h3>
-      <p>Recopilamos la información que nos proporciona directamente (nombre, teléfono y correo electrónico), información del vehículo (VIN, marca, modelo, año, placa) y el historial de servicios. También capturamos fotos, videos (que pueden incluir sonido ambiente) y datos de diagnóstico de su vehículo para documentar su estado y el trabajo realizado. Si entrega un depósito, podemos tomar una foto del comprobante o cheque.</p>
-      
-      <h3>3. Para qué usamos su información</h3>
-      <p>Utilizamos su información para:</p>
-      <ul>
-        <li>Atender su orden y reparar su vehículo.</li>
-        <li>Comunicarnos con usted sobre cotizaciones, aprobaciones y el estado del servicio.</li>
-        <li>Procesar pagos y cobrar saldos pendientes.</li>
-        <li>Documentar el estado de su vehículo al recibirlo y entregarlo para proteger al taller ante un reclamo.</li>
-        <li>Cumplir con obligaciones legales según las leyes de Maryland.</li>
-      </ul>
-      
-      <h3>4. Fotos, videos y grabaciones</h3>
-      <p>Las fotos y videos de su vehículo se toman estrictamente con fines de documentación. Nuestro personal y técnicos autorizados tendrán acceso a ellos. No publicaremos imágenes o videos de su vehículo con fines publicitarios sin su consentimiento explícito.</p>
-      
-      <h3>5. Con quién compartimos su información</h3>
-      <p>Nosotros <strong>no vendemos</strong> su información personal. Solo compartimos su información con proveedores de servicios que procesan datos por cuenta nuestra (como nuestro alojamiento de base de datos en Canadá, servicios de envío de correos, monitoreo de errores y APIs de decodificación de VIN). También podemos revelar información a las autoridades si la ley lo exige.</p>
-
-      <h3>6. Cuánto tiempo la guardamos</h3>
-      <p>Conservamos su información, incluidas las fotos y el historial de servicios, durante el tiempo necesario para brindar nuestros servicios, mantener registros comerciales adecuados y cumplir con los requisitos fiscales y legales. Transcurrido este período, los datos se eliminarán o anonimizarán de forma segura.</p>
-
-      <h3>7. Seguridad</h3>
-      <p>Implementamos medidas de seguridad razonables, que incluyen control de acceso por roles y copias de seguridad cifradas, para proteger sus datos. Sin embargo, ningún sistema de almacenamiento es completamente seguro, por lo que no podemos prometer seguridad absoluta.</p>
-
-      <h3>8. Sus derechos</h3>
-      <p>Tiene derecho a solicitar el acceso, la corrección o el borrado de sus datos personales, sujeto a excepciones por requisitos legales o de registros comerciales. También puede darse de baja de nuestras comunicaciones no esenciales en cualquier momento. Para ejercer estos derechos, comuníquese directamente con el taller.</p>
-
-      <h3>9. Menores de edad</h3>
-      <p>Nuestros servicios no están dirigidos a menores de 13 años.</p>
-
-      <h3>10. Cambios a este aviso</h3>
-      <p>Podemos actualizar este Aviso de Privacidad ocasionalmente. La versión revisada se publicará en esta página con la fecha actualizada.</p>
-    </>
-  );
+    document.title = `${policy.title} - Restorify`;
+  }, [policy.title]);
 
   return (
-    <div className="layout">
-      <header className="topbar">
-        <div className="topbar-content">
-          <div className="topbar-left">
-            <h1 className="topbar-title">
-              <Shield size={20} className="icon-title" />
-              {language === 'en' ? 'Privacy Policy' : 'Aviso de Privacidad'}
-            </h1>
-          </div>
+    <div className="legal-page">
+      <header className="legal-page-header">
+        <h1 className="legal-page-title">
+          <Shield size={22} aria-hidden="true" /> {policy.title}
+        </h1>
+        <div className="legal-page-lang" role="group" aria-label="Idioma / Language">
+          <button type="button" className={language === 'es' ? 'active' : ''} aria-pressed={language === 'es'} onClick={() => setLanguage('es')}>
+            ES
+          </button>
+          <button type="button" className={language === 'en' ? 'active' : ''} aria-pressed={language === 'en'} onClick={() => setLanguage('en')}>
+            EN
+          </button>
         </div>
       </header>
-
-      <main className="main-content">
-        <div className="card" style={{ maxWidth: '800px', margin: '0 auto', padding: 'var(--space-6)' }}>
-          <div className="prose">
-            {language === 'en' ? <EnContent /> : <EsContent />}
-          </div>
-        </div>
+      <main className="legal-page-body card">
+        <p className="legal-page-updated">{policy.updated}</p>
+        {policy.sections.map((section, i) => (
+          <section key={i}>
+            {section.title && <h2>{section.title}</h2>}
+            {section.body.map((paragraph, j) => (
+              <p key={j}>{paragraph}</p>
+            ))}
+            {section.list && (
+              <ul>
+                {section.list.map((item, j) => (
+                  <li key={j}>{item}</li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ))}
       </main>
     </div>
   );

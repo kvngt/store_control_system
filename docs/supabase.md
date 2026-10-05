@@ -289,7 +289,9 @@ no valores).
 | `RESEND_API_KEY` | Nosotros | Enviar correos. Llave **de solo envío** |
 | `PUBLIC_SITE_URL` | Nosotros | Base de los enlaces en los correos (`https://restorifyauto.net` desde el 30/09/2026) |
 | `EMAIL_FROM_ADDRESS` | Nosotros | Remitente (`notificaciones@restorifyauto.net`) |
-| `SHOP_TIMEZONE` | Opcional (no está puesto) | Zona de las fechas en los correos; sin ella, `America/Chicago` |
+| `SHOP_TIMEZONE` | Opcional (no está puesto) | Zona de las fechas en los correos; sin ella, `America/Chicago`. **El taller está en Maryland: debería ser `America/New_York`** (hoy las horas de los correos salen una hora atrasadas) |
+| `GEMINI_API_KEY` | Nosotros (desde el 05/10/2026) | Traducción automática al inglés de los textos de la orden (`process-outbox`, canal `traduccion`). Usar una llave de un proyecto **con facturación**: en la capa gratuita Google puede usar los textos para mejorar sus productos y revisarlos personas |
+| `GEMINI_MODEL` | Opcional | Modelo de Gemini; sin él, `gemini-2.5-flash`. Cuando Google retire un modelo, se cambia aquí sin desplegar |
 
 Copia local de los que generamos nosotros: `supabase/.env.secrets.local` (ignorado por git).
 La llave de Resend no está en ningún archivo.

@@ -99,6 +99,19 @@ comisiones, el alta de la orden o la "espera de autorización".
   cambia de especialidad y una línea no entra a una bolsa ya pagada (`trg_labor_tecnico_guard`;
   en pantalla, candado y Borrar deshabilitado). Una línea tampoco se muda de orden. El editor
   de tareas es `TaskEditor` (no conoce la orden: F4 lo usa en el alta).
+- **Desde `20261010000014` cada comisión nace sugerida y administración la acepta**
+  (`aprobar_comision`). El técnico no ve el monto hasta entonces, y eso lo impone la base: lo
+  oculta `comisiones_estimadas`, la política de `comisiones` y el aviso (sale al aceptar). Una
+  aceptada sin pagar se borra si la orden deja de estar entregada o si su tarea cambia de
+  técnico: no la conserves "para respetar lo aceptado", se pagaría dos veces. Detalle en
+  [comisiones.md](comisiones.md#administración-acepta-cada-comisión-20261010000014).
+- **Un trigger auxiliar nunca bloquea una escritura de la orden.** La traducción automática
+  (`trg_encolar_traduccion`, `20261010000013`/`15`) encola en `cola_envios` dentro de un bloque
+  que, si falla, solo avisa con un WARNING, como el historial. La primera versión leía una
+  columna que no existía en esa tabla y tumbó en producción toda alta o edición de mano de obra
+  y repuestos (04–05/10/2026). En PL/pgSQL, `OLD.columna` se resuelve en toda la expresión
+  aunque otra condición la descarte: separa las ramas por tabla. Y todo `ON CONFLICT` necesita
+  un índice único que coincida.
 - **Un pago de comisiones asienta un egreso por orden** (`20261010000000`), dentro de
   `pay_commissions` y verificando que sumen el pago. El margen de una orden sale de
   `balance_orden` (comisiones devengadas; repuestos = el costo automático de las líneas,

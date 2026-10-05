@@ -5,8 +5,9 @@
 // con la cuenta a la vista; administración ve el reparto, el detalle por tarea y los avisos de
 // una bolsa que nadie cobra y de tareas sin técnico. Todas las cifras vienen de la base.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test/renderWithProviders';
 import CommissionEstimateCard from './CommissionEstimateCard';
 import type { CommissionEstimate } from '../../types/database';
@@ -163,5 +164,64 @@ describe('CommissionEstimateCard', () => {
       expect(screen.getByText('Tarea «Cambio de aceite»: $120.00 × 30%')).toBeInTheDocument();
       expect(screen.getByText('$66.00')).toBeInTheDocument();
     });
+  });
+});
+
+// Desde 20261010000014 la comisión devengada nace sugerida y administración la acepta. El técnico
+// recibe su monto vacío hasta entonces (la base no se lo manda).
+describe('CommissionEstimateCard — aprobación', () => {
+  const ENTREGADA: CommissionEstimate = {
+    ...POR_TAREA,
+    sin_asignar: [],
+    tareas: [
+      { ...POR_TAREA.tareas[2], comision_id: 'c-mario', estado: 'sugerida' },
+      { ...POR_TAREA.tareas[0], comision_id: 'c-paula', estado: 'aceptada' },
+    ],
+  };
+
+  it('administración ve el estado de cada una y acepta la sugerida tal cual', async () => {
+    const onApprove = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderWithProviders(<CommissionEstimateCard estimate={ENTREGADA} isAdmin names={NAMES} onApproveCommission={onApprove} />);
+
+    const mario = screen.getByText('Cambio de aceite').closest('li') as HTMLElement;
+    expect(within(mario).getByText('Por aceptar')).toBeInTheDocument();
+    const paula = screen.getByText('Pintura general').closest('li') as HTMLElement;
+    expect(within(paula).getByText('Aceptada')).toBeInTheDocument();
+    expect(within(paula).queryByRole('button', { name: 'Aceptar' })).not.toBeInTheDocument();
+
+    await user.click(within(mario).getByRole('button', { name: 'Aceptar' }));
+    expect(onApprove).toHaveBeenCalledWith('c-mario', undefined, undefined);
+  });
+
+  it('al cambiar solo el porcentaje manda solo el porcentaje (la base recalcula el monto)', async () => {
+    const onApprove = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderWithProviders(<CommissionEstimateCard estimate={ENTREGADA} isAdmin names={NAMES} onApproveCommission={onApprove} />);
+
+    const mario = screen.getByText('Cambio de aceite').closest('li') as HTMLElement;
+    await user.click(within(mario).getByRole('button', { name: 'Cambiar porcentaje o monto' }));
+    const pct = within(mario).getByRole('spinbutton', { name: 'Porcentaje' });
+    expect(pct).toHaveValue(30);
+    await user.clear(pct);
+    await user.type(pct, '40');
+    await user.click(within(mario).getByRole('button', { name: 'Aceptar' }));
+
+    expect(onApprove).toHaveBeenCalledWith('c-mario', undefined, 40);
+  });
+
+  it('el técnico ve su tarea como pendiente, con el aviso de que la acepta administración', () => {
+    const estimate: CommissionEstimate = {
+      bolsas: [],
+      reparto: [{ usuario_id: 'u-mario', especialidad: 'mecanica', esquema: 'comision', porcentaje: null, tecnicos: 1, monto: null, heredado: false, tareas: 1 }],
+      mi_total: 0,
+      tareas: [{ ...POR_TAREA.tareas[2], base: null, porcentaje: null, monto: null, comision_id: 'c-mario', estado: 'sugerida' }],
+      sin_asignar: [],
+    };
+    renderWithProviders(<CommissionEstimateCard estimate={estimate} isAdmin={false} userId="u-mario" names={NAMES} />);
+
+    expect(screen.getByText('Pendiente', { selector: '.badge' })).toBeInTheDocument();
+    expect(screen.getByText(/se confirma cuando administración la acepta/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Aceptar' })).not.toBeInTheDocument();
   });
 });

@@ -242,8 +242,8 @@ SELECT results_eq(
   $$ SELECT usuario_id, monto FROM jsonb_to_recordset(
        comisiones_estimadas((SELECT id FROM t_ids WHERE vehiculo_id = 'd1900000-0000-0000-0000-00000000000a'))->'reparto'
      ) AS r(usuario_id uuid, monto numeric) $$,
-  $$ VALUES ('a1900000-0000-0000-0000-000000000002'::uuid, 105.00::numeric) $$,
-  'Y en el reparto, solo su fila'
+  $$ VALUES ('a1900000-0000-0000-0000-000000000002'::uuid, NULL::numeric) $$,
+  'Y en el reparto, solo su fila, sin monto hasta que administración acepte la comisión (20261010000014)'
 );
 SET LOCAL request.jwt.claim.sub = 'a1900000-0000-0000-0000-000000000001';
 
@@ -332,8 +332,8 @@ RESET ROLE;
 SELECT results_eq(
   $$ SELECT COUNT(*)::int, MAX((datos->>'monto')::numeric) FROM notificaciones
      WHERE usuario_id = 'a1900000-0000-0000-0000-000000000002' AND tipo = 'comision_generada' $$,
-  $$ VALUES (1, 105.00::numeric) $$,
-  'El mecánico recibe un solo aviso de comisión por la orden, con la suma de sus dos tareas'
+  $$ VALUES (0, NULL::numeric) $$,
+  'Al entregar, el mecánico no recibe aviso con el monto sugerido: le llega al aceptarla (20261010000014)'
 );
 SET LOCAL ROLE authenticated;
 
@@ -429,20 +429,27 @@ SELECT results_eq(
 );
 
 SET LOCAL request.jwt.claim.sub = 'a1900000-0000-0000-0000-000000000004';
+-- Desde 20261010000014 los montos y porcentajes le llegan en null hasta que administración
+-- acepta la comisión (la prueba 25 cubre lo aceptado). `comision_id` de la tarea se quita: es
+-- un id generado.
 SELECT is(
-  comisiones_estimadas((SELECT id FROM t_ids WHERE vehiculo_id = 'd1900000-0000-0000-0000-00000000000b')) - 'bolsas' - 'sin_asignar',
+  (SELECT jsonb_build_object(
+            'mi_total', j->'mi_total',
+            'reparto', j->'reparto',
+            'tareas', (SELECT jsonb_agg(t - 'comision_id') FROM jsonb_array_elements(j->'tareas') t))
+   FROM (SELECT comisiones_estimadas((SELECT id FROM t_ids WHERE vehiculo_id = 'd1900000-0000-0000-0000-00000000000b')) AS j) e),
   jsonb_build_object(
-    'mi_total', 105.00,
+    'mi_total', 0,
     'reparto', jsonb_build_array(jsonb_build_object(
       'usuario_id', 'a1900000-0000-0000-0000-000000000004', 'especialidad', 'pintura',
-      'esquema', 'comision', 'porcentaje', 35.00, 'tecnicos', 1, 'monto', 105.00,
-      'heredado', false, 'tareas', 1)),
+      'esquema', 'comision', 'porcentaje', NULL, 'tecnicos', 1, 'monto', NULL,
+      'heredado', false, 'tareas', 1, 'comision_id', NULL, 'estado', 'sugerida')),
     'tareas', jsonb_build_array(jsonb_build_object(
       'labor_id', (SELECT id FROM t_l WHERE descripcion = 'Pulido'),
       'descripcion', 'Pulido', 'especialidad', 'pintura',
       'usuario_id', 'a1900000-0000-0000-0000-000000000004',
-      'esquema', 'comision', 'base', 300.00, 'porcentaje', 35.00, 'monto', 105.00))),
-  'En la orden B, Memo ve solo su tarea, su fila del reparto y su total (no la bolsa de Mario y Paula)'
+      'esquema', 'comision', 'base', NULL, 'porcentaje', NULL, 'monto', NULL, 'estado', 'sugerida'))),
+  'En la orden B, Memo ve solo su tarea y su fila del reparto (no la bolsa de Mario y Paula), sin montos hasta que se acepten'
 );
 SET LOCAL request.jwt.claim.sub = 'a1900000-0000-0000-0000-000000000001';
 

@@ -457,6 +457,47 @@ al día aparte.
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
 
+### 05/10/2026 — Claude Code (revisión de lo publicado: producción caída, CI, comisiones, privacidad)
+
+- **Encontrado al llegar:** `main` en `2d050f6` con trabajo de otros agentes (`e73b5d9`: traducción
+  con Gemini, migración `013`, SMS; `2d050f6`: aprobación de comisiones `014`, `LegalTerms`,
+  `/privacidad`). Producción con la `013` aplicada y la `014` **no**. El CI fallaba en el trabajo
+  de base de datos.
+- **Producción caída desde la `013`** (comprobado con una orden de prueba): `trg_encolar_traduccion`
+  leía `OLD.visible_cliente` en tablas que no la tienen, así que **toda alta o edición de mano de
+  obra y de repuestos fallaba** con `record "old" has no field "visible_cliente"` (crear órdenes
+  con tareas, "Agregar trabajo", repuestos). Además su `ON CONFLICT` no tenía índice único,
+  `traducciones_orden` devolvía las traducciones de cualquier orden a cualquier usuario y
+  `traducciones_portal` respondía con enlaces revocados. Todo se arregla en la migración nueva
+  **`20261010000015_arreglo_traducciones.sql`** (sin publicar). pgTAP 24 reescrita (la de la `013`
+  nunca corrió: usaba columnas que no existen).
+- **La `014` (sin aplicar en ninguna base real) tenía errores de dinero y de seguridad**; se
+  corrigió en su lugar (ver su cabecera): el técnico veía las comisiones de sus compañeros;
+  `sin_asignar` pasaba de lista a número (el diálogo de entrega hace `.filter` y se rompía:
+  **no se habría podido entregar**); una aceptada sobrevivía a sacar la orden de Entregado o a
+  cambiar el técnico de la tarea (pago doble); montos negativos; la política de `comisiones` y
+  el aviso de "comisión generada" dejaban ver el monto sugerido. pgTAP 25 nueva; 02, 12 y 19
+  ajustadas a la regla nueva. Documentado en [comisiones.md](comisiones.md#administración-acepta-cada-comisión-20261010000014).
+- **Pantalla:** `CommissionEstimateCard` sin textos fijos ("Pendiente") ni claves inexistentes
+  (`common.approved`, `common.accept`, `commission.approvedSuccess`…), y al editar manda solo lo
+  que cambió (antes mandaba el monto viejo junto al porcentaje nuevo). Aviso de privacidad
+  reescrito y con estilos (las clases que usaba no existían): Gemini, sonido de los videos,
+  contacto, sin "datos de diagnóstico"; selector ES/EN. `LegalTerms` con estilos y aviso de
+  sonido. `process-outbox`: el modelo `gemini-1.5-flash` ya no existe → `GEMINI_MODEL`
+  (por defecto `gemini-2.5-flash`) y la llave en el encabezado, no en la URL. Borrado
+  `scratch/schema.sql` (archivo vacío). SEC-115 a SEC-119 en `qa:security`.
+- **Verificación:** lint ✓, `tsc -b` ✓, Vitest 81 archivos / 664 ✓, build ✓, pgTAP desde una
+  base vacía (como el CI) 25 archivos / 597 ✓, `qa:security` contra producción 114 PASS · 0 FAIL ·
+  0 SKIP (SEC-118/119 pasan porque `aprobar_comision` aún no existe allá: repetir tras el push).
+- **Sin commit ni publicación.** Para publicar, en este orden y con permiso: `db push` (aplica
+  `014` y `015`: la `015` es la que levanta producción) → push a `main` → `functions deploy
+  process-outbox`. Opcional: `supabase secrets set SHOP_TIMEZONE=America/New_York` y
+  `GEMINI_MODEL`.
+- **Decisiones para el usuario:** la aprobación de comisiones cambia lo que veía el técnico
+  (antes veía su estimado desde que se autorizaba el trabajo); confirmar que es lo que pidió el
+  taller. La traducción manda textos de clientes a Google: usar una llave con facturación. Los
+  textos legales están en vivo sin revisión del abogado.
+
 ### 04/10/2026, noche (4) — Claude Code (órdenes de prueba y plan legal)
 
 - **Órdenes de prueba en producción** (autorizado por el usuario: el taller está en período de

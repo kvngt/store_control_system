@@ -23,8 +23,8 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 656 pruebas, 80 archivos (4/10/2026, noche) | ~30 s | Nada |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención" y los hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 551 aserciones, 23 archivos | ~1 min | Docker |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 664 pruebas, 81 archivos (5/10/2026) | ~30 s | Nada |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención" y los hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 597 aserciones, 25 archivos | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, 77 casos (76 pasan, 1 se salta) | 2–5 min | Credenciales de prueba (**al 1/10/2026 no existen**: se borraron el 29/09) |
 | **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 100 casos con las cuentas de prueba, todos de solo lectura (los que escriben, escriben el valor que ya hay). Los 66 anteriores, 66 PASS · 0 SKIP; los de las migraciones `20261006000000` a `20261010000006` pasan solo con ellas aplicadas (SEC-91 a SEC-105, verificados contra el Supabase local el 4/10/2026) | ~15 s | Nada; con cuentas de prueba cubre más |
 | **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
@@ -367,6 +367,25 @@ autorización no hay nada que cobrar ni comisión que generar.
   cotizar y descartar solo admin, el presupuesto, la salida de la espera, el correo y el portal.
   Detalle en [hallazgos.md](hallazgos.md#5-pruebas).
 
+**`supabase/tests/database/24_traducciones.test.sql`** (24)
+
+- Guardar mano de obra, repuestos, avances y notas de inspección **funciona** (la `013` rompía
+  toda alta o edición de mano de obra y repuestos) y encola **una** traducción pendiente por
+  orden, solo cuando cambia un texto que ve el cliente (no el precio, no un avance interno).
+- `traducciones_orden`: admin y técnico asignado sí, otro técnico recibe `{}`; nadie lee la
+  tabla directo. `traducciones_portal`: con enlace vigente sí, revocado o inexistente no.
+- Ninguna función interna es una RPC. Reescrita el 05/10/2026: la versión de la `013` insertaba
+  en columnas que no existen y nunca corrió.
+
+**`supabase/tests/database/25_comisiones_aprobacion.test.sql`** (22)
+
+- Al entregar, la comisión nace sugerida y no sale aviso con el monto; el técnico no la lee por
+  la API, ve su tarea sin monto y en cero su total, y nunca ve la de su compañero.
+- `aprobar_comision`: solo admin; rechaza monto negativo y porcentaje fuera de 0–100; con solo
+  el porcentaje recalcula el monto; avisa al técnico con el monto aceptado.
+- El recálculo no pisa lo aceptado; si la tarea cambia de técnico, la aceptada del anterior se
+  borra (una sola comisión por tarea); sacar la orden de Entregado borra lo aceptado sin pagar.
+
 **`supabase/tests/database/23_requiere_atencion.test.sql`** (15)
 
 - `requiere_atencion` (F7): anon no la llama; un técnico recibe 42501.
@@ -377,6 +396,10 @@ autorización no hay nada que cobrar ni comisión que generar.
   los de otra sede (como los reintentaría `reintentar_correos_fallidos`).
 - Filtra por sede, o todas sin sede; los grupos vacíos llegan en cero con la misma forma.
 
+> **Estado (5 de octubre de 2026):** 597 aserciones en verde en los 25 archivos, localmente y
+> desde una base vacía como el CI (24 y 25 nuevas; la 02, la 12 y la 19 ajustadas a la aprobación
+> de comisiones). El CI fallaba desde la `013`: su trigger rompía toda alta de mano de obra.
+>
 > **Estado (4 de octubre de 2026, madrugada del 5):** 551 aserciones en verde en los 23 archivos,
 > localmente (F7: `23_requiere_atencion.test.sql`, 15 aserciones).
 >

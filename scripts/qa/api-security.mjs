@@ -355,6 +355,13 @@ const CASES = [
   // ── F7: "Requiere atención" del panel (20261010000012) ──
   anon({ id: 'SEC-113', desc: 'Sin sesión no se pide lo que requiere atención', method: 'POST', path: () => rpc('requiere_atencion'), body: { p_sede_id: null, p_hoy: null }, expect: 'denied' }),
   tech({ id: 'SEC-114', desc: 'Un técnico no ve lo que requiere atención de la oficina', method: 'POST', path: () => rpc('requiere_atencion'), body: { p_sede_id: null, p_hoy: null }, expect: 'denied' }),
+
+  // ── Traducciones (20261010000013/15) y aprobación de comisiones (20261010000014) ──
+  admin({ id: 'SEC-115', desc: 'Ni un admin llama la extracción interna de textos de una orden', method: 'POST', path: () => rpc('_textos_cliente'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  admin({ id: 'SEC-116', desc: 'Ni un admin guarda traducciones (solo la edge function)', method: 'POST', path: () => rpc('guardar_traducciones'), body: { p_sede_id: ZERO_UUID, p_idioma_destino: 'en', p_textos: [] }, expect: 'denied' }),
+  admin({ id: 'SEC-117', desc: 'Ni un admin llama el trigger de traducción como RPC', method: 'POST', path: () => rpc('trg_encolar_traduccion'), body: {}, expect: 'denied' }),
+  anon({ id: 'SEC-118', desc: 'Sin sesión no se aprueban comisiones', method: 'POST', path: () => rpc('aprobar_comision'), body: { p_comision_id: ZERO_UUID }, expect: 'denied' }),
+  tech({ id: 'SEC-119', desc: 'Un técnico no aprueba ni cambia una comisión', method: 'POST', path: () => rpc('aprobar_comision'), body: { p_comision_id: ZERO_UUID, p_monto: 9999 }, expect: 'denied' }),
 ];
 
 function evaluate(expect, r) {

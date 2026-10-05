@@ -288,10 +288,12 @@ SELECT results_eq(
   'La estimación le muestra lo suyo y no lo de los demás'
 );
 
+-- Desde 20261010000014 el técnico ve su monto cuando administración acepta la comisión; antes,
+-- su total es cero (la cuenta de $35 la ve administración, y la prueba 25 cubre lo aceptado).
 SELECT is(
   (comisiones_estimadas((SELECT id FROM t_ids WHERE vehiculo_id = 'dc000000-0000-0000-0000-00000000000a'))->>'mi_total')::numeric,
-  35.00::numeric,
-  'Y su total lo suma la base: $35 de la mecánica'
+  0::numeric,
+  'Sin aceptar, su total es cero: el monto lo ve cuando administración lo acepta'
 );
 
 SELECT throws_ok(

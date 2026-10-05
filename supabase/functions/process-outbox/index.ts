@@ -310,9 +310,13 @@ async function sendTraduccion(job: OutboxJob): Promise<JobResult> {
     }
   };
 
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+  // El modelo se elige con GEMINI_MODEL: Google retira modelos (el `gemini-1.5-flash` que estaba
+  // aquí ya no existe) y cambiarlo no debe exigir un despliegue. La llave va en el encabezado,
+  // no en la URL, para que no quede en los registros de nadie.
+  const model = Deno.env.get('GEMINI_MODEL') || 'gemini-2.5-flash';
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify(prompt)
   });
 
