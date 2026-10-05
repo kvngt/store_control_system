@@ -472,9 +472,13 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
   [analisis-del-proceso-2026-10.md](analisis-del-proceso-2026-10.md).
 - **Verificación:** lint ✓, `tsc -b` ✓, Vitest 84 / 700 ✓, build ✓, pgTAP 26 / 679 ✓ desde base
   vacía, revisión visual en local (anticipo y retiro parcial). SEC-131 a 133 nuevos.
-- **Publicado con permiso del usuario:** commit y `db push` (016 → 018). **No** se hizo push a
-  `main`: la app nueva no está en vivo hasta ese push (ver la entrada siguiente o la respuesta al
-  usuario). La base nueva es compatible con la app publicada.
+- **Publicado con permiso del usuario:** commit `db09854` y `db push` (016 → 018): `db:check` al
+  día con 72 migraciones; `qa:security` contra producción 128 PASS · 0 FAIL · 0 SKIP. **No** se
+  hizo push a `main`: la app nueva no está en vivo hasta ese push. La base nueva es compatible con
+  la app publicada, con una diferencia que ya se nota: Comisiones (la pantalla vieja) no puede
+  pagar lo que no se aceptó; se acepta en la tarjeta de la orden o se publica la app nueva.
+- **Siguiente paso:** push a `main` (lo pide el usuario) y probar en el teléfono el retiro con
+  las tres salidas, un anticipo y el descuento en %.
 
 ### 05/10/2026, noche — Claude Code (decisiones del taller sobre el análisis del proceso)
 
