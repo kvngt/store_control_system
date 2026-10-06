@@ -50,3 +50,20 @@ export function defaultTechnicianId(items: Pick<LaborItem, 'asignado_a'>[], tech
 export function isUnassignedTask(item: Pick<LaborItem, 'asignado_a' | 'reparto_heredado'>): boolean {
   return !item.asignado_a && item.reparto_heredado === false;
 }
+
+/**
+ * El técnico que viene elegido al agregar un trabajo en una orden que ya existe (pedido del
+ * taller del 06/10/2026): si el trabajo sale de un hallazgo, quien lo reportó; si no, el único
+ * técnico de la orden. Con varios técnicos y un trabajo que agrega administración, ninguno:
+ * que se elija a quién va cada uno. Solo cuenta quien puede recibir la tarea.
+ */
+export function suggestedTechnicianId(
+  assignedIds: readonly string[],
+  technicians: Technician[],
+  reportedBy?: string | null
+): string | null {
+  const eligible = (id: string | null | undefined) => !!id && technicians.some((tech) => tech.id === id);
+  if (eligible(reportedBy)) return reportedBy as string;
+  const unique = [...new Set(assignedIds)].filter(eligible);
+  return unique.length === 1 ? unique[0] : null;
+}

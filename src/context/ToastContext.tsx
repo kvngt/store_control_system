@@ -43,12 +43,18 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(() => ({ showToast }), [showToast]);
 
+  // En el iPhone, con el teclado abierto, `position: fixed` se mide contra la página y no
+  // contra lo que se ve: el aviso de "Mano de obra agregada" quedaba arriba, fuera de la
+  // pantalla, y el taller no sabía si el trabajo había entrado (06/10/2026). Se corre lo que
+  // la parte visible se haya desplazado.
+  const viewportTop = useVisualViewportTop();
+
   return (
     <ToastContext.Provider value={value}>
       {children}
       {/* Lo que se lee en voz alta es cada aviso, no el contenedor: un `role="status"` fijo y
           vacío chocaba con los demás estados de la pantalla. */}
-      <div className="toast-stack">
+      <div className="toast-stack" style={viewportTop > 0 ? { transform: `translateY(${viewportTop}px)` } : undefined}>
         {toasts.map((toast) => (
           <div
             key={toast.id}
@@ -73,4 +79,22 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       </div>
     </ToastContext.Provider>
   );
+}
+
+/** Cuánto se desplazó la parte visible de la pantalla (el teclado del iPhone la corre). */
+function useVisualViewportTop(): number {
+  const [top, setTop] = useState(0);
+  useEffect(() => {
+    const viewport = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (!viewport) return;
+    const update = () => setTop(Math.max(0, Math.round(viewport.offsetTop)));
+    update();
+    viewport.addEventListener('resize', update);
+    viewport.addEventListener('scroll', update);
+    return () => {
+      viewport.removeEventListener('resize', update);
+      viewport.removeEventListener('scroll', update);
+    };
+  }, []);
+  return top;
 }

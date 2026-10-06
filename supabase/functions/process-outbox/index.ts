@@ -121,7 +121,10 @@ async function sendPush(job: OutboxJob): Promise<JobResult> {
 /** Lo que devuelve `datos_correo`: todo leído al momento de enviar. */
 interface EmailData {
   token: string;
-  cliente: { nombre: string | null; email: string | null; email_valido: boolean; acepta_correos: boolean };
+  /** `idioma` desde 20261010000022 (es | en). Sin él, el correo sale en inglés. */
+  cliente: { nombre: string | null; email: string | null; email_valido: boolean; acepta_correos: boolean; idioma?: string | null };
+  /** Texto original → inglés de lo que el taller escribió (20261010000022). */
+  traducciones?: Record<string, string> | null;
   taller: {
     nombre: string;
     direccion: string | null;
@@ -198,7 +201,14 @@ async function sendEmail(job: OutboxJob): Promise<JobResult> {
     return { estado: 'omitido', detalle: 'El presupuesto no tiene una respuesta registrada.' };
   }
 
+  // Inglés salvo que el cliente haya elegido español en su enlace (pedido del taller,
+  // 06/10/2026). En inglés, las líneas del presupuesto van traducidas si ya hay traducción.
+  const lang = ctx.cliente.idioma === 'es' ? 'es' : 'en';
+  const dict = lang === 'en' ? ctx.traducciones ?? {} : {};
+  const tr = (text: string) => dict[text.trim()] ?? text;
+
   const email = renderEmail(job.plantilla, {
+    lang,
     portalUrl: `${siteUrl}/r/${ctx.token}`,
     cliente: { nombre: ctx.cliente.nombre },
     taller: {
@@ -224,7 +234,7 @@ async function sendEmail(job: OutboxJob): Promise<JobResult> {
           via: ctx.presupuesto.via,
           totalPropuesto: Number(ctx.presupuesto.total_propuesto),
           totalAprobado: ctx.presupuesto.total_aprobado == null ? null : Number(ctx.presupuesto.total_aprobado),
-          lineas: ctx.presupuesto.lineas,
+          lineas: ctx.presupuesto.lineas.map((l) => ({ ...l, descripcion: tr(l.descripcion) })),
         }
       : null,
   });

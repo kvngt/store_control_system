@@ -13,12 +13,14 @@ const mocks = vi.hoisted(() => ({
   fetchPortal: vi.fn(),
   setEmailPreference: vi.fn(),
   answerQuote: vi.fn(),
+  setLanguagePreference: vi.fn(async () => undefined),
 }));
 
 vi.mock('./portal.api', () => ({
   fetchPortal: mocks.fetchPortal,
   setEmailPreference: mocks.setEmailPreference,
   answerQuote: mocks.answerQuote,
+  setLanguagePreference: mocks.setLanguagePreference,
 }));
 
 const { default: CustomerPortal } = await import('./CustomerPortal');
@@ -89,6 +91,44 @@ beforeEach(() => {
 });
 
 describe('CustomerPortal', () => {
+  // 06/10/2026: lo escrito a mano solo salía traducido en el PDF; el enlace lo mostraba en
+  // español aunque el cliente lo pidiera en inglés.
+  it('en inglés muestra lo escrito por el taller traducido, y guarda el idioma del cliente', async () => {
+    mocks.fetchPortal.mockResolvedValue({
+      ...report(),
+      avances: [{ id: 'av-1', fecha: '2026-09-18T15:00:00Z', mensaje: 'Ya lijamos la puerta.' }],
+      traducciones: {
+        'Ya lijamos la puerta.': 'We already sanded the door.',
+        'Cambio de frenos': 'Brake replacement',
+        'Rayón en la puerta trasera.': 'Scratch on the rear door.',
+      },
+    });
+    const user = userEvent.setup();
+    render(<CustomerPortal token={TOKEN} />);
+
+    expect(await screen.findByText('Ya lijamos la puerta.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /English/ }));
+
+    expect(await screen.findByText('We already sanded the door.')).toBeInTheDocument();
+    expect(screen.getAllByText('Brake replacement').length).toBeGreaterThan(0);
+    expect(screen.getByText('Scratch on the rear door.')).toBeInTheDocument();
+    // Lo que no tiene traducción se queda como se escribió.
+    expect(screen.getAllByText('Pastillas').length).toBeGreaterThan(0);
+    expect(mocks.setLanguagePreference).toHaveBeenCalledWith(TOKEN, 'en');
+  });
+
+  // Los correos salen en inglés por defecto: quien nunca eligió en este navegador abre el
+  // enlace en el idioma de sus correos.
+  it('sin una elección guardada, abre en el idioma del cliente', async () => {
+    mocks.fetchPortal.mockResolvedValue({
+      ...report(),
+      cliente: { nombre: 'Marta Ruiz', tiene_correo: true, acepta_correos: true, idioma: 'en' },
+    });
+    render(<CustomerPortal token={TOKEN} />);
+
+    expect(await screen.findByRole('button', { name: /Español/ })).toBeInTheDocument();
+  });
+
   // Lo que el técnico marcó como visible: su fecha y su texto, agrupando sus archivos.
   it('muestra los avances que el taller publicó, sin nombrar a nadie', async () => {
     mocks.fetchPortal.mockResolvedValue({

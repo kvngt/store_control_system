@@ -127,6 +127,26 @@ describe('generateWorkOrderPdf: idioma y cuenta', () => {
     expect(texto.some((t) => t.startsWith('Orden de Trabajo'))).toBe(false);
   });
 
+  // 06/10/2026: el enlace mostraba lo que el técnico escribió en un avance visible y el PDF no.
+  it('lleva el texto de los avances visibles, traducido; nunca los internos', async () => {
+    await generateWorkOrderPdf(
+      {
+        ...conLineas(),
+        avances: [
+          { id: 'a1', orden_id: 'o1', usuario_id: 'u1', descripcion: 'Ya lijamos la puerta', creado_en: '2026-09-02T15:00:00Z', visible_cliente: true },
+          { id: 'a2', orden_id: 'o1', usuario_id: 'u1', descripcion: 'Nota interna del taller', creado_en: '2026-09-02T16:00:00Z', visible_cliente: false },
+        ],
+      } as unknown as WorkOrder,
+      SEDE,
+      {},
+      { language: 'en', translations: { 'Ya lijamos la puerta': 'We already sanded the door' }, balance: { cobrado: 100, saldo: 260 } }
+    );
+    const texto = textoPintado();
+    expect(texto).toContain('Work Progress');
+    expect(texto).toContain('• We already sanded the door');
+    expect(texto.some((t) => t.includes('Nota interna'))).toBe(false);
+  });
+
   it('el resumen lleva el descuento y el saldo que da la base', async () => {
     await generateWorkOrderPdf(conLineas(), SEDE, {}, { balance: { cobrado: 100, saldo: 260 } });
     const texto = textoPintado();

@@ -13,8 +13,9 @@ interface SignatureCardProps {
   signedAt?: string | null;
   customerName?: string;
   /**
-   * Si se muestra el lienzo para tomar la firma. Solo administración: la primera firma
-   * aprueba lo cotizado (`trg_quote_on_signature`) y la base se lo niega al técnico.
+   * Si se muestra el lienzo para tomar la firma. Solo administración (la base se lo niega al
+   * técnico). Desde 20261010000022 la firma ya no aprueba lo cotizado: es la conformidad del
+   * cliente con cómo entregó el vehículo.
    */
   canSign: boolean;
   /**
@@ -38,8 +39,7 @@ interface SignatureCardProps {
  * que dejaba `firma_ruta` en NULL: sin confirmar, sin poder cancelar, y sin
  * forma de recuperar la firma anterior desde la app. Ahora es un cambio de modo
  * en esta tarjeta, la firma vieja sigue en su sitio, y guardar la sustituye de
- * una sola vez. Como la ruta nunca pasa por NULL, `trg_quote_on_signature`
- * tampoco se vuelve a disparar: volver a firmar no aprueba nada.
+ * una sola vez.
  */
 export default function SignatureCard({
   signaturePath,

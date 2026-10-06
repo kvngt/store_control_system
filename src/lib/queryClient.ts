@@ -53,6 +53,8 @@ export const queryKeys = {
   attention: (sedeId?: string) => ['attention', sedeId] as const,
   /** "Mis tareas" del panel del técnico: sus tareas en todas sus órdenes abiertas. */
   myTasks: (userId?: string) => ['my-tasks', userId] as const,
+  /** "Mis comisiones" del técnico: sus comisiones, sus pagos y los totales de la base. */
+  myCommissions: (userId?: string) => ['my-commissions', userId] as const,
 } as const;
 
 /**

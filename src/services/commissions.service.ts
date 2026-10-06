@@ -5,7 +5,7 @@
 // (see the 20260912000000 migration), so nothing here creates a commission —
 // this module reads balances and records payments.
 import { supabase } from '../lib/supabase';
-import type { Commission, CommissionBalance, CommissionEstimate, CommissionPayment } from '../types/database';
+import type { Commission, CommissionBalance, CommissionEstimate, CommissionPayment, MyCommissionsSummary } from '../types/database';
 import { fetchAll } from './support';
 
 const COMMISSION_SELECT = `
@@ -16,6 +16,40 @@ const COMMISSION_SELECT = `
 `;
 
 export const commissionsService = {
+  /**
+   * "Mis comisiones" del técnico (pedido del taller del 06/10/2026). La política de
+   * `comisiones` ya le deja leer solo lo suyo aceptado o pagado: lo sugerido no le llega.
+   */
+  getMyCommissions: async (userId: string) =>
+    fetchAll<Commission>((from, to) =>
+      supabase
+        .from('comisiones')
+        .select(`*, orden:ordenes_trabajo!orden_id(id, numero_orden, fecha_finalizacion), labor:orden_labor!labor_id(descripcion)`)
+        .eq('usuario_id', userId)
+        .order('creado_en', { ascending: false })
+        .order('id')
+        .range(from, to)
+    ),
+
+  /** Sus pagos, el más nuevo primero. La política de `comision_pagos` le deja ver solo los suyos. */
+  getMyPayments: async (userId: string) =>
+    fetchAll<CommissionPayment>((from, to) =>
+      supabase
+        .from('comision_pagos')
+        .select('*')
+        .eq('usuario_id', userId)
+        .order('fecha_pago', { ascending: false })
+        .order('id')
+        .range(from, to)
+    ),
+
+  /** Por cobrar y pagado: lo suma la base (`resumen_mis_comisiones`), nunca el navegador. */
+  getMySummary: async () => {
+    const { data, error } = await supabase.rpc('resumen_mis_comisiones');
+    if (error) throw error;
+    return data as MyCommissionsSummary;
+  },
+
   /**
    * El reparto estimado de una orden (`comisiones_estimadas`): la misma cuenta que hace la
    * base al entregar. Administración recibe a todos; un técnico asignado, lo suyo.

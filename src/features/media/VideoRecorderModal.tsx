@@ -172,7 +172,13 @@ export default function VideoRecorderModal({ onDone, onClose }: VideoRecorderMod
           // Sin `autoPlay`: con sonido el navegador lo bloquea y el iPhone deja el cuadro en
           // negro hasta que se toca. Con póster y `preload="metadata"` se ve la toma y se
           // reproduce al tocarla.
+          //
+          // Las `key` hacen que la toma y la cámara en vivo sean dos <video> distintos. Sin
+          // ellas React reusaba el elemento de la cámara: le ponía `src` pero le quedaba el
+          // `srcObject` de la cámara ya apagada, que manda sobre `src`, y al darle play la
+          // pantalla se quedaba en negro (06/10/2026).
           <video
+            key="playback"
             className="recorder-video"
             src={playbackUrl}
             poster={posterUrl ?? undefined}
@@ -181,7 +187,7 @@ export default function VideoRecorderModal({ onDone, onClose }: VideoRecorderMod
             preload="metadata"
           />
         ) : (
-          <video className="recorder-video" ref={previewRef} muted playsInline autoPlay />
+          <video key="live" className="recorder-video" ref={previewRef} muted playsInline autoPlay />
         )}
 
         {state === 'starting' && <div className="recorder-message">{t('media.cameraStarting')}</div>}

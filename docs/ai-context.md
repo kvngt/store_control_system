@@ -38,8 +38,8 @@ comisiones, el alta de la orden o la "espera de autorización".
   un técnico, una orden ajena **no existe** (PGRST116, cero filas en un UPDATE), no da 42501.
 - **Un técnico modifica una orden solo si está asignado y no está entregada**, y
   solo estado y avance (`trg_order_technician_guard`). **La firma de recepción es de
-  administración** (`20261006000000`): la primera firma aprueba lo cotizado, y el técnico
-  podía capturarla en cualquier estado. Si agregas una
+  administración** (`20261006000000`): es el respaldo de cómo se recibió el vehículo, y el
+  técnico podía capturarla en cualquier estado. Si agregas una
   acción de técnico que cambie otra columna de `ordenes_trabajo`, añádela a la
   lista permitida de ese trigger en una migración nueva. **Tampoco elige cualquier estado**: solo
   `en_proceso`, `espera_autorizacion` y `finalizado`; devolver una orden a recepción y
@@ -179,9 +179,22 @@ comisiones, el alta de la orden o la "espera de autorización".
   `DeliveryModal` y el saldo lo da `saldo_orden`. `handle_order_delivery_payment` se queda
   como red para otra vía (asienta sin método), y `reverse_order_delivery_finance` revierte
   en los dos sentidos: al sacar de Entregado, lo cobrado vuelve al depósito.
-- **Solo la primera firma de la orden autoriza lo cotizado** (`trg_quote_on_signature`).
-  Volver a firmar no aprueba nada: lo agregado después pasa por presupuesto o por
-  "Registrar autorización".
+- **La firma de recepción no autoriza lo cotizado** (desde `20261010000022`, pedido del taller
+  del 06/10/2026). Firmar es estar de acuerdo con cómo se recibió el vehículo (millas, gasolina,
+  fotos); lo cotizado se autoriza solo con un presupuesto o con "Registrar autorización".
+  `trg_quote_on_signature` ya no existe. Lo que la oficina tiene por autorizar sale en "Requiere
+  atención" (grupo `por_autorizar`). En las pruebas pgTAP que parten de una orden autorizada,
+  `pg_temp.autorizar_cotizado(orden)` hace lo que hacía la firma.
+- **Idioma del cliente** (`clientes.idioma`, `20261010000022`): inglés por defecto. Los correos
+  salen en ese idioma (`process-outbox` lo lee de `datos_correo`) y el cliente lo cambia desde su
+  enlace (`preferencia_idioma_portal`, por la edge function `portal`). `datos_portal` y
+  `datos_correo` traen además `traducciones` (`_diccionario_traducciones`): el portal traduce lo
+  escrito a mano con `translateReport` (`src/portal/translate.ts`). Antes solo el PDF lo hacía.
+- **El técnico se entera de lo que el cliente no autorizó** (`_resolver_presupuesto`, aviso
+  "Trabajo no autorizado") y lo ve en la orden: `TechOrderStatus` arriba de sus tareas y la tarea
+  rechazada como "No autorizada · no se realiza" (`techStatus.ts`). "Mis comisiones"
+  (`/mis-comisiones`) muestra lo suyo aceptado y sus pagos; los totales salen de
+  `resumen_mis_comisiones`.
 - **Roles:** `admin`, `mecanico`, `pintor`. Mecánico y pintor tienen los mismos
   permisos.
 - **Las seis fases del cliente están hechas** (restricciones de técnicos, multimedia,

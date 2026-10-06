@@ -8,6 +8,11 @@ export interface Customer {
   notas_crm: string;
   /** Recepción y cambios de estado por correo. El cliente puede darse de baja desde su enlace. */
   acepta_correos?: boolean;
+  /**
+   * Idioma de sus correos y de su enlace (20261010000022): inglés por defecto. Lo cambia el
+   * cliente desde su enlace o administración aquí. Ausente si la base no tiene la migración.
+   */
+  idioma?: 'es' | 'en';
   creado_en: string;
   // Virtual fields from joins
   vehiculos_count?: number;
@@ -21,5 +26,6 @@ export interface CustomerInput {
   direccion: string;
   notas_crm: string;
   acepta_correos?: boolean;
+  idioma?: 'es' | 'en';
   sede_id: string;
 }

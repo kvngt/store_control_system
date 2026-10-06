@@ -33,7 +33,9 @@ export function renderNotification(n: AppNotification, t: (key: string) => strin
   // se leía igual que una aprobación. `!= null` a propósito: un aviso viejo sin el dato se
   // queda con la redacción de siempre en vez de convertirse en un rechazo.
   const variante =
-    n.tipo === 'presupuesto_respondido_cliente' && data.autorizados != null && Number(data.autorizados) === 0
+    (n.tipo === 'presupuesto_respondido_cliente' || n.tipo === 'presupuesto_respondido') &&
+    data.autorizados != null &&
+    Number(data.autorizados) === 0
       ? '_rechazo'
       : '';
 

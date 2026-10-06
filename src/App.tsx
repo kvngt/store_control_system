@@ -27,6 +27,7 @@ const Finance = lazy(() => import('./pages/Finance'));
 const Payroll = lazy(() => import('./pages/Payroll'));
 const Employees = lazy(() => import('./pages/Employees'));
 const Settings = lazy(() => import('./pages/Settings'));
+const MyCommissions = lazy(() => import('./pages/MyCommissions'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { isAuthenticated, user } = useAuth();
@@ -132,6 +133,9 @@ function AppRoutes() {
         {/* Open to every role: profile, language and theme live here. The
             sede/staff management sections inside are admin-gated. */}
         <Route path="/settings" element={<Settings />} />
+        {/* Las comisiones de quien entra (pedido del taller, 06/10/2026). La base le muestra
+            solo lo suyo aceptado o pagado. */}
+        <Route path="/mis-comisiones" element={<MyCommissions />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

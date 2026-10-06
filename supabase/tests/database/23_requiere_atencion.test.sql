@@ -13,7 +13,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(15);
+SELECT plan(16);
 
 -- ------------------------------------------------------------------------------------
 -- Datos: dos sedes, un admin y un mecánico; siete órdenes en la primera, una en la segunda
@@ -161,6 +161,13 @@ SELECT is((SELECT v->'sin_tecnico' FROM t_res WHERE k = 'norte'),
   jsonb_build_object('total', 1, 'ordenes', jsonb_build_array(jsonb_build_object(
     'id', (SELECT id FROM t_o WHERE n = 3), 'numero_orden', (SELECT numero_orden FROM t_o WHERE n = 3)))),
   'Sin técnico: solo la tarea nueva sin técnico; no las heredadas ni la que tiene técnico');
+-- Sin la firma, lo cotizado espera a que la oficina lo autorice o mande el presupuesto
+-- (20261010000022). La 2 ya tiene el presupuesto enviado: la cuenta su grupo.
+SELECT is((SELECT v->'por_autorizar' FROM t_res WHERE k = 'norte'),
+  jsonb_build_object('total', 4, 'ordenes', jsonb_build_array(
+    jsonb_build_object('id', (SELECT id FROM t_o WHERE n = 1), 'numero_orden', (SELECT numero_orden FROM t_o WHERE n = 1)),
+    jsonb_build_object('id', (SELECT id FROM t_o WHERE n = 3), 'numero_orden', (SELECT numero_orden FROM t_o WHERE n = 3)))),
+  'Por autorizar: las líneas en borrador de las órdenes sin presupuesto enviado (1 de la 1 y 3 de la 3)');
 SELECT is((SELECT pg_temp.numeros(v->'vencidas') FROM t_res WHERE k = 'norte'), pg_temp.de(ARRAY[4]),
   'Vencidas: la que pasó su fecha; no la finalizada ni la entregada');
 SELECT is((SELECT v->'correos'->>'total' FROM t_res WHERE k = 'norte'), '1',
@@ -178,7 +185,7 @@ SELECT is((SELECT v->'vencidas' FROM t_res WHERE k = 'antes'), '{"total": 0, "or
 SELECT is((SELECT v FROM t_res WHERE k = 'sur') - 'hallazgos',
   '{"presupuestos": {"total": 0, "ordenes": []}, "sin_tecnico": {"total": 0, "ordenes": []},
     "vencidas": {"total": 0, "ordenes": []}, "por_revisar": {"total": 0, "ordenes": []},
-    "correos": {"total": 1}}'::jsonb,
+    "por_autorizar": {"total": 0, "ordenes": []}, "correos": {"total": 1}}'::jsonb,
   'Los grupos vacíos llegan en cero, con la misma forma');
 SELECT is((SELECT pg_temp.numeros(v->'hallazgos') FROM t_res WHERE k = 'sur'), pg_temp.de(ARRAY[6]),
   'Y la otra sede ve solo lo suyo');

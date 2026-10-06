@@ -19,7 +19,15 @@ const TEMPLATES: readonly string[] = ['recepcion', 'estatus', 'avance', 'presupu
 export const ANNOUNCED_STATUSES = ['en_proceso', 'finalizado', 'entregado'] as const;
 export type AnnouncedStatus = (typeof ANNOUNCED_STATUSES)[number];
 
+/** Idioma del correo. Inglés por defecto (pedido del taller del 06/10/2026). */
+export type EmailLanguage = 'es' | 'en';
+
 export interface EmailContext {
+  /**
+   * El idioma que eligió el cliente en su enlace (`clientes.idioma`). Sin él, inglés: la
+   * mayoría de los clientes del taller lo hablan.
+   */
+  lang?: EmailLanguage;
   /** Enlace personal del cliente: https://restorifyauto.net/r/<token> */
   portalUrl: string;
   cliente: { nombre: string | null };
@@ -93,27 +101,36 @@ function safeHttpsUrl(url: string | null | undefined): string | null {
   return url && /^https:\/\/[^\s"'<>]+$/i.test(url) ? url : null;
 }
 
-function formatDate(iso: string | null | undefined, timeZone: string): string | null {
+function formatDate(iso: string | null | undefined, timeZone: string, lang: EmailLanguage): string | null {
   if (!iso) return null;
   // Una columna DATE llega como '2026-10-01': medianoche UTC sería el día anterior
   // en EE. UU. Se fija a mediodía para que el día no se mueva.
   const date = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T12:00:00Z`) : new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
+  const locale = lang === 'es' ? 'es-US' : 'en-US';
   try {
-    return new Intl.DateTimeFormat('es-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone }).format(date);
+    return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric', timeZone }).format(date);
   } catch {
-    return new Intl.DateTimeFormat('es-US', { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
+    return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
   }
 }
 
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 const money = (value: number | null | undefined) => usd.format(Number(value ?? 0));
 
-const VIA_TEXT: Record<string, string> = {
-  cliente_portal: 'desde su enlace',
-  admin_telefono: 'por teléfono',
-  admin_presencial: 'en el taller',
-  admin_whatsapp: 'por WhatsApp',
+const VIA_TEXT: Record<EmailLanguage, Record<string, string>> = {
+  es: {
+    cliente_portal: 'desde su enlace',
+    admin_telefono: 'por teléfono',
+    admin_presencial: 'en el taller',
+    admin_whatsapp: 'por WhatsApp',
+  },
+  en: {
+    cliente_portal: 'from your link',
+    admin_telefono: 'by phone',
+    admin_presencial: 'at the shop',
+    admin_whatsapp: 'by WhatsApp',
+  },
 };
 
 function firstName(name: string | null): string | null {
@@ -131,15 +148,15 @@ interface Copy {
   button: string;
 }
 
-function copyFor(template: EmailTemplate, ctx: EmailContext): Copy | null {
+function copyEs(template: EmailTemplate, ctx: EmailContext): Copy | null {
   const tz = ctx.timeZone || 'America/Chicago';
   const vehicle = ctx.vehiculo?.trim() || 'su vehículo';
   const shop = ctx.taller.nombre;
 
   switch (template) {
     case 'recepcion': {
-      const date = formatDate(ctx.orden.fechaIngreso, tz);
-      const eta = formatDate(ctx.orden.fechaEstimadaEntrega, tz);
+      const date = formatDate(ctx.orden.fechaIngreso, tz, 'es');
+      const eta = formatDate(ctx.orden.fechaEstimadaEntrega, tz, 'es');
       return {
         subject: `Recibimos su ${vehicle} · ${ctx.orden.numero}`,
         preheader: `Vea el reporte de recepción con fotos y la firma.`,
@@ -204,7 +221,7 @@ function copyFor(template: EmailTemplate, ctx: EmailContext): Copy | null {
       if (!quote || quote.estado !== 'respondido') return null;
       const approved = quote.lineas.filter((l) => l.estado === 'aprobado');
       const rejected = quote.lineas.filter((l) => l.estado === 'rechazado');
-      const via = quote.via ? VIA_TEXT[quote.via] : null;
+      const via = quote.via ? VIA_TEXT.es[quote.via] : null;
       const byShop = !!quote.via && quote.via !== 'cliente_portal';
       const approvedTotal = quote.totalAprobado ?? approved.reduce((sum, l) => sum + Number(l.monto), 0);
       return {
@@ -249,6 +266,149 @@ function copyFor(template: EmailTemplate, ctx: EmailContext): Copy | null {
   }
 }
 
+function copyEn(template: EmailTemplate, ctx: EmailContext): Copy | null {
+  const tz = ctx.timeZone || 'America/Chicago';
+  const vehicle = ctx.vehiculo?.trim() || 'your vehicle';
+  const shop = ctx.taller.nombre;
+
+  switch (template) {
+    case 'recepcion': {
+      const date = formatDate(ctx.orden.fechaIngreso, tz, 'en');
+      const eta = formatDate(ctx.orden.fechaEstimadaEntrega, tz, 'en');
+      return {
+        subject: `We received your ${vehicle} · ${ctx.orden.numero}`,
+        preheader: 'See the check-in report with photos and your signature.',
+        heading: `Your ${vehicle} is at the shop`,
+        paragraphs: [
+          `${shop} received your vehicle${date ? ` on ${date}` : ''} under order ${ctx.orden.numero}.`,
+          'The link shows the check-in report: photos of the condition it arrived in, the mileage, the fuel level and your signature. You will also see the progress of the work there.',
+          ...(eta ? [`Estimated delivery date: ${eta}.`] : []),
+        ],
+        button: 'View check-in report',
+      };
+    }
+    case 'estatus': {
+      const status = ctx.orden.estatus as AnnouncedStatus;
+      const byStatus: Record<AnnouncedStatus, Omit<Copy, 'button'>> = {
+        en_proceso: {
+          subject: `We are working on your ${vehicle} · ${ctx.orden.numero}`,
+          preheader: 'Work on your vehicle has started.',
+          heading: 'We started the work',
+          paragraphs: [`The ${shop} team is now working on your ${vehicle}.`],
+        },
+        finalizado: {
+          subject: `Your ${vehicle} is ready · ${ctx.orden.numero}`,
+          preheader: 'You can come pick it up.',
+          heading: 'Your vehicle is ready',
+          paragraphs: [
+            `We finished the work on your ${vehicle}. You can pick it up at ${shop}.`,
+            'The link shows the work done and the balance due.',
+          ],
+        },
+        entregado: {
+          subject: `Thank you for your visit · ${ctx.orden.numero}`,
+          preheader: 'Your report stays available at the link.',
+          heading: 'Thank you for trusting us',
+          paragraphs: [
+            `We delivered your ${vehicle}. The work report, with its photos, stays available at the link for 90 days.`,
+          ],
+        },
+      };
+      const copy = byStatus[status];
+      return copy ? { ...copy, button: 'View vehicle status' } : null;
+    }
+    case 'presupuesto': {
+      const quote = ctx.presupuesto;
+      const lines = (quote?.lineas ?? []).filter((l) => l.estado === 'pendiente');
+      if (!quote || quote.estado !== 'enviado' || lines.length === 0) return null;
+      const total = lines.reduce((sum, l) => sum + Number(l.monto), 0);
+      return {
+        subject: `Estimate for your ${vehicle} · ${ctx.orden.numero}`,
+        preheader: `${lines.length} job(s) for ${money(total)} are waiting for your authorization.`,
+        heading: 'You have an estimate to authorize',
+        paragraphs: [
+          `${shop} prepared an estimate for your ${vehicle}. At the link you can authorize each job separately: we will only do what you authorize.`,
+        ],
+        items: [...lines.map((l) => ({ label: l.descripcion, amount: money(l.monto) })), { label: 'Total', amount: money(total) }],
+        button: 'Review and authorize',
+      };
+    }
+    case 'presupuesto_confirmacion': {
+      const quote = ctx.presupuesto;
+      if (!quote || quote.estado !== 'respondido') return null;
+      const approved = quote.lineas.filter((l) => l.estado === 'aprobado');
+      const rejected = quote.lineas.filter((l) => l.estado === 'rechazado');
+      const via = quote.via ? VIA_TEXT.en[quote.via] : null;
+      const byShop = !!quote.via && quote.via !== 'cliente_portal';
+      const approvedTotal = quote.totalAprobado ?? approved.reduce((sum, l) => sum + Number(l.monto), 0);
+      return {
+        subject: `${byShop ? 'We recorded your authorization' : 'We received your answer'} · ${ctx.orden.numero}`,
+        preheader: approved.length ? `You authorized ${approved.length} job(s) for ${money(approvedTotal)}.` : 'You did not authorize any work.',
+        heading: approved.length ? 'These are the jobs you authorized' : 'You did not authorize any work',
+        paragraphs: [
+          byShop
+            ? `${shop} recorded your answer to the estimate${via ? ` ${via}` : ''}. If anything does not match what you agreed to, reply to this email or call the shop.`
+            : 'We saved your answer to the estimate. We will only do the jobs you authorized.',
+          ...(rejected.length ? [`Not authorized: ${rejected.map((l) => l.descripcion).join(', ')}.`] : []),
+        ],
+        items: approved.length
+          ? [...approved.map((l) => ({ label: l.descripcion, amount: money(l.monto) })), { label: 'Total authorized', amount: money(approvedTotal) }]
+          : undefined,
+        button: 'View your order',
+      };
+    }
+    case 'reporte':
+      return {
+        subject: `Report for your ${vehicle} · ${ctx.orden.numero}`,
+        preheader: 'The status, the photos and videos of the work and your account, in one link.',
+        heading: 'Your vehicle report',
+        paragraphs: [
+          `${shop} is sharing the report for order ${ctx.orden.numero}.`,
+          'At the link you can see how the work is going, the photos and videos the shop shared, the authorized jobs and your account. No account needed.',
+        ],
+        button: 'View report',
+      };
+    case 'avance':
+      return {
+        subject: `Updates on your ${vehicle} · ${ctx.orden.numero}`,
+        preheader: 'The shop shared photos or videos of the work.',
+        heading: 'There are updates on the work',
+        paragraphs: [`${shop} shared photos or videos of the progress on your ${vehicle}.`],
+        button: 'View updates',
+      };
+    default:
+      return null;
+  }
+}
+
+function copyFor(template: EmailTemplate, ctx: EmailContext, lang: EmailLanguage): Copy | null {
+  return lang === 'es' ? copyEs(template, ctx) : copyEn(template, ctx);
+}
+
+/** Los textos fijos del correo (saludo y pie) en cada idioma. */
+const CHROME: Record<EmailLanguage, {
+  hello: (name: string | null) => string;
+  order: string;
+  personalLink: string;
+  canReply: string;
+  unsubscribe: string;
+}> = {
+  es: {
+    hello: (name) => (name ? `Hola ${name}:` : 'Hola:'),
+    order: 'Orden',
+    personalLink: 'Este enlace es personal: no lo comparta.',
+    canReply: 'Puede responder a este correo para comunicarse con el taller.',
+    unsubscribe: 'No quiero recibir estos correos',
+  },
+  en: {
+    hello: (name) => (name ? `Hi ${name},` : 'Hi,'),
+    order: 'Order',
+    personalLink: 'This link is personal: please do not share it.',
+    canReply: 'You can reply to this email to reach the shop.',
+    unsubscribe: 'I do not want to receive these emails',
+  },
+};
+
 function renderItems(items: Copy['items']): string {
   if (!items?.length) return '';
   const rows = items
@@ -262,7 +422,9 @@ function renderItems(items: Copy['items']): string {
 
 export function renderEmail(template: string, ctx: EmailContext): RenderedEmail | null {
   if (!TEMPLATES.includes(template)) return null;
-  const copy = copyFor(template as EmailTemplate, ctx);
+  const lang: EmailLanguage = ctx.lang === 'es' ? 'es' : 'en';
+  const chrome = CHROME[lang];
+  const copy = copyFor(template as EmailTemplate, ctx, lang);
   if (!copy) return null;
 
   const color = safeColor(ctx.taller.color);
@@ -271,11 +433,11 @@ export function renderEmail(template: string, ctx: EmailContext): RenderedEmail 
   const portal = safeHttpsUrl(ctx.portalUrl) ?? ctx.portalUrl;
   const unsubscribe = `${portal}?correos=baja`;
   const name = firstName(ctx.cliente.nombre);
-  const greeting = name ? `Hola ${name}:` : 'Hola:';
+  const greeting = chrome.hello(name);
   const contact = [ctx.taller.direccion, ctx.taller.telefono].filter((v) => v && String(v).trim()) as string[];
 
   const html = `<!doctype html>
-<html lang="es">
+<html lang="${lang}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -302,12 +464,12 @@ ${renderItems(copy.items)}
 <a href="${escapeHtml(portal)}" style="display:inline-block;background:${color};color:${buttonText};text-decoration:none;font-weight:700;font-size:16px;padding:14px 24px;border-radius:8px;">${escapeHtml(copy.button)}</a>
 </td></tr>
 <tr><td style="padding:8px 28px 24px;">
-<p style="margin:0;font-size:13px;line-height:1.5;color:#6B6B76;">Orden ${escapeHtml(ctx.orden.numero)}${ctx.vehiculo ? ` · ${escapeHtml(ctx.vehiculo)}` : ''}. Este enlace es personal: no lo comparta.</p>
+<p style="margin:0;font-size:13px;line-height:1.5;color:#6B6B76;">${chrome.order} ${escapeHtml(ctx.orden.numero)}${ctx.vehiculo ? ` · ${escapeHtml(ctx.vehiculo)}` : ''}. ${chrome.personalLink}</p>
 </td></tr>
 <tr><td style="padding:16px 28px 24px;border-top:1px solid #EDEDF0;">
 <p style="margin:0 0 6px;font-size:13px;line-height:1.5;color:#6B6B76;">${escapeHtml(ctx.taller.nombre)}${contact.length ? ` · ${contact.map(escapeHtml).join(' · ')}` : ''}</p>
-${ctx.taller.email ? '<p style="margin:0 0 6px;font-size:13px;line-height:1.5;color:#6B6B76;">Puede responder a este correo para comunicarse con el taller.</p>' : ''}
-<p style="margin:0;font-size:12px;line-height:1.5;color:#9A9AA6;"><a href="${escapeHtml(unsubscribe)}" style="color:#9A9AA6;">No quiero recibir estos correos</a></p>
+${ctx.taller.email ? `<p style="margin:0 0 6px;font-size:13px;line-height:1.5;color:#6B6B76;">${chrome.canReply}</p>` : ''}
+<p style="margin:0;font-size:12px;line-height:1.5;color:#9A9AA6;"><a href="${escapeHtml(unsubscribe)}" style="color:#9A9AA6;">${chrome.unsubscribe}</a></p>
 </td></tr>
 </table>
 </td></tr>
@@ -325,11 +487,11 @@ ${ctx.taller.email ? '<p style="margin:0 0 6px;font-size:13px;line-height:1.5;co
     '',
     `${copy.button}: ${portal}`,
     '',
-    `Orden ${ctx.orden.numero}${ctx.vehiculo ? ` · ${ctx.vehiculo}` : ''}. Este enlace es personal: no lo comparta.`,
+    `${chrome.order} ${ctx.orden.numero}${ctx.vehiculo ? ` · ${ctx.vehiculo}` : ''}. ${chrome.personalLink}`,
     '',
     [ctx.taller.nombre, ...contact].join(' · '),
-    ctx.taller.email ? 'Puede responder a este correo para comunicarse con el taller.' : null,
-    `No quiero recibir estos correos: ${unsubscribe}`,
+    ctx.taller.email ? chrome.canReply : null,
+    `${chrome.unsubscribe}: ${unsubscribe}`,
   ]
     .filter((line) => line !== null)
     .join('\n');

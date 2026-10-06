@@ -13,6 +13,25 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
+-- Desde 20261010000022 la firma de recepción no autoriza lo cotizado. Estas pruebas parten de
+-- una orden ya autorizada: esto la autoriza como lo hacía la firma (mismo presupuesto como
+-- evidencia, vía 'firma_recepcion'), sin depender de la firma.
+CREATE FUNCTION pg_temp.autorizar_cotizado(p_orden UUID) RETURNS VOID
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $h$
+DECLARE
+  v_p presupuestos;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM orden_labor WHERE orden_id = p_orden AND estado = 'borrador')
+     AND NOT EXISTS (SELECT 1 FROM orden_repuestos WHERE orden_id = p_orden AND estado = 'borrador') THEN
+    RETURN;
+  END IF;
+  v_p := public._crear_presupuesto(p_orden);
+  PERFORM public._resolver_presupuesto(
+    v_p.id, public._lineas_pendientes(v_p.id), 'firma_recepcion',
+    (SELECT c.nombre FROM ordenes_trabajo o JOIN clientes c ON c.id = o.cliente_id WHERE o.id = p_orden),
+    NULL, NULL, 'Autorizado en la prueba.', NULL, NULL);
+END $h$;
+
 SELECT plan(22);
 
 -- ------------------------------------------------------------------------------------
@@ -68,6 +87,7 @@ CREATE TEMP VIEW t_c AS
 GRANT SELECT ON t_c TO authenticated;
 
 UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma.png' WHERE id = (SELECT id FROM t_o);
+DO $do$ BEGIN PERFORM pg_temp.autorizar_cotizado((SELECT id FROM t_o)); END $do$;
 DELETE FROM notificaciones;
 SET LOCAL ROLE authenticated;
 UPDATE ordenes_trabajo SET estatus = 'entregado' WHERE id = (SELECT id FROM t_o);

@@ -78,6 +78,8 @@ describe('TaskEditor', () => {
 
     expect(onAdd).toHaveBeenCalledWith({ descripcion: 'Cambio de aceite', costo: 120, especialidad: 'mecanica', asignado_a: MARIO.id });
     await waitFor(() => expect(description()).toHaveValue(''));
+    // Junto al botón, y no solo en el aviso de arriba que el teclado del teléfono tapa.
+    expect(screen.getByRole('status')).toHaveTextContent('Agregado: Cambio de aceite');
     expect(price()).toHaveValue(null);
     expect(technicianSelect()).toHaveValue(MARIO.id);
     // Y con el foco en Descripción, para escribir la siguiente sin volver a hacer clic.

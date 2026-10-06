@@ -5,6 +5,8 @@ import type { PartOrderState, WorkOrderPart } from '../../types/database';
 import LineStateBadge from './LineStateBadge';
 import { isApproved } from './lineState';
 import { money } from '../../lib/money';
+import AddedConfirmation from './AddedConfirmation';
+import { useAddedConfirmation } from './useAddedConfirmation';
 
 export interface PartInput {
   descripcion: string;
@@ -18,7 +20,8 @@ interface PartsTableProps {
   items: WorkOrderPart[];
   canEdit: boolean;
   busy: boolean;
-  onAdd: (item: PartInput) => Promise<void>;
+  /** `false` si no entró: lo escrito se queda para corregir y reintentar. */
+  onAdd: (item: PartInput) => Promise<boolean | void>;
   onUpdate: (id: string, item: PartInput) => Promise<void>;
   onRemove: (id: string, descripcion: string) => Promise<void>;
   /** Pedido → llegó. Sin la función, la tabla no lo ofrece. */
@@ -39,6 +42,7 @@ const EMPTY_DRAFT = { descripcion: '', cantidad: '1', precio_venta_unitario: '',
  * la lista, en el tablero y en el enlace del cliente, y al llegar se avisa al técnico.
  */
 export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRemove, onSetOrderState }: PartsTableProps) {
+  const { added, flash: flashAdded } = useAddedConfirmation();
   const { t } = useLanguage();
   const [newDraft, setNewDraft] = useState(EMPTY_DRAFT);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -95,8 +99,11 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
 
   const add = async () => {
     if (!newDraft.descripcion.trim()) return;
-    await onAdd(toInput(newDraft));
+    const input = toInput(newDraft);
+    const result = await onAdd(input);
+    if (result === false) return;
     setNewDraft(EMPTY_DRAFT);
+    flashAdded(input.descripcion);
   };
 
   return (
@@ -312,6 +319,7 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
           <Plus size={16} /> {t('common.add')}
         </button>
       </div>
+      <AddedConfirmation text={added} />
     </div>
   );
 }

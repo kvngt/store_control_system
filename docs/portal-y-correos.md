@@ -97,6 +97,14 @@ no publicados, costo del taller en repuestos, VIN completo, correo del cliente,
 rutas internas de Storage, datos de otras órdenes. `datos_portal` arma el JSON
 campo por campo, nunca con `to_jsonb(fila)`: una columna nueva no aparece sola.
 
+### Traducción de lo escrito a mano
+
+Desde `20261010000022`, `datos_portal` trae `traducciones` (texto original → inglés, de
+`_diccionario_traducciones`), y con el portal en inglés `translateReport`
+(`src/portal/translate.ts`) reemplaza trabajos, repuestos, avances, notas de recepción y
+observaciones. Antes solo el PDF usaba las traducciones y el enlace mostraba esos textos en
+español. Lo que todavía no tiene traducción sale como se escribió.
+
 ### Estados del enlace
 
 | Respuesta | HTTP | La página muestra |
@@ -166,6 +174,21 @@ el cliente no se enteraba de nada.
   Otro 4xx (dirección rechazada, llave sin permiso) → **error** sin reintentar.
 - 550 ms entre correos: el plan gratuito permite 2 por segundo.
 - Etiqueta `plantilla` en Resend para filtrar en su panel.
+
+### Idioma (`20261010000022`)
+
+Los correos salen **en inglés por defecto** (pedido del taller del 06/10/2026) y en español si
+el cliente lo eligió. El idioma vive en `clientes.idioma` (`'en'` por defecto, también para los
+clientes que ya existían). Lo cambia:
+
+- **el cliente**, con el botón de idioma de su enlace: el portal hace `POST {accion:
+  'preferencia_idioma'}` a la edge function `portal`, que llama `preferencia_idioma_portal`;
+- **administración**, en la ficha del cliente (*Idioma de los correos*).
+
+`datos_correo` entrega `cliente.idioma` y `traducciones`; `process-outbox` redacta la plantilla
+en ese idioma (`renderEmail` con `lang`) y, en inglés, traduce las líneas del presupuesto. El
+portal abre en el idioma que el cliente eligió en ese navegador, o si nunca eligió, en el de sus
+correos.
 
 ### Baja
 

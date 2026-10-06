@@ -66,6 +66,18 @@ describe('AttentionCard', () => {
     expect(within(card).queryByText(/entrega vencida/)).not.toBeInTheDocument();
   });
 
+  // 20261010000022: la firma ya no autoriza; lo cotizado espera a la oficina.
+  it('cuenta lo cotizado sin autorizar y abre Trabajos', async () => {
+    mocks.getAttention.mockResolvedValue({ ...SUMMARY, por_autorizar: { total: 2, ordenes: [{ id: 'o7', numero_orden: 'OT-7' }] } });
+    const user = userEvent.setup();
+    renderCard();
+
+    const card = await screen.findByRole('region', { name: 'Requiere atención' });
+    expect(within(card).getByText(/Trabajos cotizados sin autorizar/)).toHaveTextContent('2');
+    await user.click(within(card).getByRole('button', { name: 'OT-7' }));
+    expect(screen.getByTestId('where')).toHaveTextContent('/work-orders?open=o7&tab=trabajos');
+  });
+
   it('nombra tres órdenes y cuenta el resto', async () => {
     mocks.getAttention.mockResolvedValue(SUMMARY);
     renderCard();

@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import type { Sede, WorkOrder } from '../types/database';
-import { customerObservations, customerReportPhotos, groupByDay, reportImagePath } from './reportMedia';
+import { customerObservations, customerReportPhotos, progressTimeline, reportImagePath } from './reportMedia';
 import { money } from './money';
 import { brandColors } from './brandColor';
 import { formatPhone } from './phone';
@@ -481,11 +481,12 @@ async function buildWorkOrderPdf(
   }
 
   // ===== Avances publicados =====
-  // Solo las fotos que administración publicó, por día. Las notas de los avances
-  // son internas del taller y no salen en un documento para el cliente.
-  const progressDays = groupByDay(photos.progress)
-    .map(({ day, items }) => ({ day, urls: urlsOf(items, 6) }))
-    .filter((g) => g.urls.length > 0);
+  // Lo mismo que ve el cliente en su enlace, por día: el texto de los avances que se marcaron
+  // visibles (traducido si el PDF va en inglés) y las fotos publicadas. Las notas internas no
+  // salen (06/10/2026: antes salían solo las fotos y faltaba lo que el taller escribió).
+  const progressDays = progressTimeline(order)
+    .map(({ day, notes, photos: dayPhotos }) => ({ day, notes, urls: urlsOf(dayPhotos, 6) }))
+    .filter((g) => g.urls.length > 0 || g.notes.length > 0);
   if (progressDays.length) {
     sectionTitle(S.progressPhotos);
     const imgW = 45;
@@ -497,6 +498,22 @@ async function buildWorkOrderPdf(
       doc.setTextColor(...MUTED);
       doc.text(new Date(`${group.day}T12:00:00`).toLocaleDateString(S.locale), MARGIN, y);
       y += 3;
+      if (group.notes.length) {
+        doc.setFontSize(10);
+        doc.setTextColor(20, 20, 30);
+        for (const note of group.notes) {
+          const lines = doc.splitTextToSize(`• ${tr(note)}`, contentWidth);
+          y += 2;
+          ensureSpace(LINE * lines.length);
+          doc.text(lines, MARGIN, y);
+          y += LINE * lines.length - 2;
+        }
+        y += 3;
+      }
+      if (group.urls.length === 0) {
+        y += 3;
+        continue;
+      }
       let x = MARGIN;
       for (const url of group.urls) {
         if (x + imgW > pageWidth - MARGIN) {

@@ -43,7 +43,12 @@ interface LaborTableProps {
    */
   paidPools?: ReadonlySet<Specialty>;
   /** Precarga el editor de tareas (F6: al cotizar un hallazgo). Ver `TaskEditor`. */
-  prefill?: { text: string; nonce: number } | null;
+  prefill?: { text: string; nonce: number; technicianId?: string | null } | null;
+  /**
+   * El técnico que viene elegido al agregar un trabajo. Sin la prop, el de la primera tarea
+   * que tenga uno (así lo usaba toda la app hasta el 06/10/2026).
+   */
+  suggestedTechnicianId?: string | null;
 }
 
 const NO_LOCKS: ReadonlySet<string> = new Set();
@@ -76,6 +81,7 @@ export default function LaborTable({
   lockedIds = NO_LOCKS,
   paidPools = NO_POOLS,
   prefill,
+  suggestedTechnicianId,
 }: LaborTableProps) {
   const { t } = useLanguage();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -382,7 +388,7 @@ export default function LaborTable({
         <TaskEditor
           workType={workType}
           technicians={technicians}
-          defaultTechnicianId={defaultTechnicianId(items, technicians)}
+          defaultTechnicianId={suggestedTechnicianId !== undefined ? suggestedTechnicianId : defaultTechnicianId(items, technicians)}
           busy={busy}
           onAdd={onAdd}
           idPrefix="labor-new"

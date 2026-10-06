@@ -293,8 +293,9 @@ o evidencia, expandir antes de contraer, `db push` antes del push a `main`.
   `workOrders.service.ts`). Pasa a una RPC `firmar_recepcion(orden, ruta_firma, documento_id,
   nombre_firmante, relacion, consentimientos)` que, **en una transacción**, guarda la firma en la
   orden y una fila en una tabla nueva `firmas` (orden, tipo `recepcion`, documento y versión, hash
-  del texto mostrado, nombre, relación, consentimientos, quién la capturó, fecha, navegador). La
-  primera firma sigue autorizando lo cotizado (`trg_quote_on_signature`).
+  del texto mostrado, nombre, relación, consentimientos, quién la capturó, fecha, navegador). Desde
+  `20261010000022` la firma ya no autoriza lo cotizado: el texto de la firma (`LegalTerms.tsx`)
+  dice que autoriza la inspección y el diagnóstico, y que los trabajos se cotizan aparte.
 - Despliegue en dos pasos: la migración que agrega la RPC y la tabla no rompe la app publicada;
   cuando la app nueva esté en vivo, otra migración exige la fila en `firmas` para cambiar
   `firma_ruta`.

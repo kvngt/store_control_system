@@ -320,8 +320,9 @@ vehículo. Las de sus compañeros no le aparecen ni pidiéndolas por su id, y su
 tampoco se pueden descargar por la ruta. Clientes y Vehículos salen de su menú; los ve
 dentro de sus órdenes, sin poder crearlos ni editarlos.
 
-³ **La firma de recepción la toma administración** (migración `20261006000000`): la
-primera firma aprueba lo cotizado, y el técnico podía capturarla en cualquier estado.
+³ **La firma de recepción la toma administración** (migración `20261006000000`): es el
+respaldo de cómo se recibió el vehículo, y el técnico podía capturarla en cualquier estado.
+Desde `20261010000022` la firma ya no aprueba lo cotizado.
 
 De una orden, un técnico asignado solo puede cambiar **estado (con su motivo al pedir
 autorización), fecha de finalización y avance**. Cliente, vehículo, millas, gasolina, notas de

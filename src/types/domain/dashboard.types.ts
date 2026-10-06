@@ -36,6 +36,12 @@ export interface AttentionSummary {
   vencidas: AttentionGroup;
   /** Finalizadas por el técnico que administración todavía no marca listas para entregar. */
   por_revisar: AttentionGroup;
+  /**
+   * Órdenes con trabajos o repuestos en borrador y sin presupuesto enviado (20261010000022):
+   * desde que la firma no autoriza, es el paso que la oficina da en cada orden nueva. Opcional
+   * mientras la base no tenga la migración.
+   */
+  por_autorizar?: AttentionGroup;
   correos: { total: number };
 }
 

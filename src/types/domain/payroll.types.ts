@@ -157,3 +157,13 @@ export interface CommissionBalance {
   porRevisar: number;
   items: Commission[];
 }
+
+/** Los totales de "Mis comisiones" (`resumen_mis_comisiones`, 20261010000022). */
+export interface MyCommissionsSummary {
+  /** Aceptadas por administración y todavía sin pagar. */
+  por_cobrar: number;
+  /** Pagado en el mes en curso (fecha del taller). */
+  pagado_mes: number;
+  pagado_total: number;
+  pagos: number;
+}

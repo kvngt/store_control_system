@@ -591,14 +591,14 @@ avances, pero no los de un compañero.
 <!-- IMAGEN: sección de avances con una entrada con fotos y una nota de voz -->
 
 **Firma del cliente** *(la toma un administrador)*. El cliente firma con el dedo sobre el recuadro. Queda
-guardada con fecha y aparece en el reporte del cliente y en el PDF. **La primera firma
-autoriza los trabajos que ya estaban cotizados**: al guardarla, las líneas dejan de
-decir *Sin autorizar* y el total se actualiza en la pantalla. Se puede limpiar y volver
-a firmar (si salió mal); las firmas anteriores quedan como historial, pero **volver a
-firmar no autoriza nada nuevo**: lo que agregaste después de la recepción se presenta
-con un presupuesto o se registra la autorización. Los técnicos ven si la orden ya está
-firmada, pero no toman ni cambian la firma: como la primera firma autoriza dinero, es un
-paso de la recepción, en el mostrador.
+guardada con fecha y aparece en el reporte del cliente y en el PDF. **La firma dice que el
+cliente está de acuerdo con cómo entregó el vehículo** (millas, gasolina y fotos); **no
+autoriza el presupuesto**. Los trabajos cotizados siguen *Sin autorizar* hasta que le envíes
+el presupuesto y lo responda, o registres su autorización si la da en el mostrador. Mientras
+tanto la orden aparece en el panel, en *Requiere atención*. Se puede limpiar y volver a
+firmar (si salió mal); las firmas anteriores quedan como historial. Los técnicos ven si la
+orden ya está firmada, pero no toman ni cambian la firma: es un paso de la recepción, en el
+mostrador.
 
 **Enlace del cliente** *(solo administradores)*. Ver la sección siguiente.
 
@@ -1355,9 +1355,9 @@ todavía no se cobra. Envía el presupuesto o registra la autorización.
 **«No me deja editar ni borrar una línea.»**
 Está **Esperando al cliente**. Cancela el presupuesto, corrige y vuelve a enviarlo.
 
-**«Volví a firmar y el trabajo nuevo sigue sin autorizar.»**
-Es lo esperado: solo la primera firma, la de la recepción, autoriza. Para lo que se
-agregó después, envía el presupuesto o registra la autorización.
+**«El cliente firmó y los trabajos siguen sin autorizar.»**
+Es lo esperado: la firma es la conformidad con cómo dejó el vehículo, no la autorización del
+presupuesto. Envía el presupuesto o registra la autorización.
 
 **«No me deja borrar una orden: dice que tiene comisiones pagadas.»**
 Deshaz ese pago en **Comisiones**, borra la orden y, si corresponde, vuelve a pagar

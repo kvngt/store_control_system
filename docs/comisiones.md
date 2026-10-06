@@ -241,6 +241,14 @@ la base de su pago:
 La comisión usa la mano de obra autorizada (de cada tarea, o de cada bolsa heredada); los
 repuestos no entran (son de traspaso).
 
+### "Mis comisiones" (`/mis-comisiones`, 06/10/2026)
+
+Mecánicos y pintores tienen en el menú **Mis comisiones**: los totales (por cobrar, pagado en el
+mes y en total, de `resumen_mis_comisiones`), lo aceptado que falta pagar y el historial de
+pagos con lo que entró en cada uno. No hay nada nuevo que leer en la base: las políticas de
+`comisiones` (lo suyo aceptado o pagado) y de `comision_pagos` (sus pagos) ya lo limitaban. Lo
+sugerido sigue sin llegarle hasta que administración lo acepta.
+
 ## Pagar un saldo
 
 Pantalla **Comisiones → Saldos pendientes → Pagar saldo**.

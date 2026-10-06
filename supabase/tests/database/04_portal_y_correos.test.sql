@@ -13,7 +13,26 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(27);
+-- Desde 20261010000022 la firma de recepción no autoriza lo cotizado. Estas pruebas parten de
+-- una orden ya autorizada: esto la autoriza como lo hacía la firma (mismo presupuesto como
+-- evidencia, vía 'firma_recepcion'), sin depender de la firma.
+CREATE FUNCTION pg_temp.autorizar_cotizado(p_orden UUID) RETURNS VOID
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $h$
+DECLARE
+  v_p presupuestos;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM orden_labor WHERE orden_id = p_orden AND estado = 'borrador')
+     AND NOT EXISTS (SELECT 1 FROM orden_repuestos WHERE orden_id = p_orden AND estado = 'borrador') THEN
+    RETURN;
+  END IF;
+  v_p := public._crear_presupuesto(p_orden);
+  PERFORM public._resolver_presupuesto(
+    v_p.id, public._lineas_pendientes(v_p.id), 'firma_recepcion',
+    (SELECT c.nombre FROM ordenes_trabajo o JOIN clientes c ON c.id = o.cliente_id WHERE o.id = p_orden),
+    NULL, NULL, 'Autorizado en la prueba.', NULL, NULL);
+END $h$;
+
+SELECT plan(28);
 
 -- ------------------------------------------------------------------------------------
 -- Datos de prueba
@@ -117,6 +136,7 @@ RESET ROLE;
 -- De aquí en adelante los cambios directos los hace el admin: los guards leen el
 -- `sub` del JWT aunque la sesión ya no tenga el rol authenticated.
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000001';
+DO $do$ BEGIN PERFORM pg_temp.autorizar_cotizado((SELECT id FROM t_orden)); END $do$;
 SELECT is((SELECT COUNT(*)::int FROM t_enlace), 1, 'Firmar crea el enlace');
 SELECT ok((SELECT token ~ '^[0-9a-f]{64}$' FROM t_enlace), 'El token tiene 64 hexadecimales');
 -- La orden ya tiene una foto de recepción registrada (ver el fixture), así que el
@@ -194,6 +214,12 @@ SELECT results_eq(
   $$ SELECT (d->'cuenta'->>'total')::numeric, (d->'cuenta'->>'pagado')::numeric, (d->'cuenta'->>'saldo')::numeric FROM t_portal $$,
   $$ VALUES (400.00::numeric, 100.00::numeric, 300.00::numeric) $$,
   'La cuenta: total $400, depósito cobrado $100, saldo $300'
+);
+-- 20261010000022: el idioma del cliente (inglés por defecto) y el diccionario de traducciones.
+SELECT results_eq(
+  $$ SELECT d->'cliente'->>'idioma', jsonb_typeof(d->'traducciones') FROM t_portal $$,
+  $$ VALUES ('en'::text, 'object'::text) $$,
+  'El portal recibe el idioma del cliente (inglés por defecto) y las traducciones'
 );
 SELECT ok(
   (SELECT d::text NOT LIKE '%costo_unitario%' AND d::text NOT LIKE '%comision%' AND d::text NOT LIKE '%Luis Mecánico%' AND d::text NOT LIKE '%1HGCM82633A%' FROM t_portal),

@@ -116,8 +116,9 @@ SELECT lives_ok(
   'El técnico asignado mueve el avance'
 );
 
--- La primera firma aprueba lo cotizado (trg_quote_on_signature): una firma tomada por el
--- técnico fuera de su momento autorizaba dinero. Es de mostrador, aunque esté asignado.
+-- La firma es de mostrador, aunque el técnico esté asignado (20261006000000). Hasta
+-- 20261010000022 además aprobaba lo cotizado; ya no, pero sigue siendo la conformidad del
+-- cliente con cómo dejó el vehículo.
 SELECT throws_ok(
   $$ UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma-1.png', firma_fecha = NOW()
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
@@ -140,6 +141,16 @@ SELECT lives_ok(
   'Administración captura la firma en la carpeta de la orden'
 );
 
+-- La firma ya no autoriza lo cotizado (20261010000022): administración lo registra aparte.
+DO $do$ BEGIN
+  PERFORM registrar_autorizacion(
+    (SELECT id FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001'),
+    ARRAY(SELECT l.id FROM orden_labor l JOIN ordenes_trabajo o ON o.id = l.orden_id WHERE o.vehiculo_id = 'd0000000-0000-0000-0000-000000000001' AND l.estado = 'borrador'),
+    ARRAY(SELECT l.id FROM orden_labor l JOIN ordenes_trabajo o ON o.id = l.orden_id WHERE o.vehiculo_id = 'd0000000-0000-0000-0000-000000000001' AND l.estado = 'borrador'),
+    'admin_presencial'
+  );
+END $do$;
+
 SELECT throws_ok(
   $$ UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/otra-orden/firma.png'
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
@@ -149,8 +160,8 @@ SELECT throws_ok(
 
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
 
--- Volver a recepción es donde se captura la firma y donde la primera firma
--- autoriza lo cotizado: es una decisión de administración, no del taller.
+-- Volver a recepción es donde se captura la firma: es una decisión de administración, no
+-- del taller.
 SELECT throws_ok(
   $$ UPDATE ordenes_trabajo SET estatus = 'recepcion'
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
@@ -233,9 +244,9 @@ SELECT is(
 -- ------------------------------------------------------------------------------------
 -- 2b. Marcar un trabajo como completado
 -- ------------------------------------------------------------------------------------
--- La firma de recepción ya aprobó los borradores, así que la línea se puede tachar.
+-- Administración registró la autorización, así que la línea se puede tachar.
 SELECT is((SELECT estado FROM orden_labor WHERE descripcion = 'Frenos'), 'aprobado',
-  'Punto de partida: la firma de recepción dejó la línea aprobada');
+  'Punto de partida: la autorización registrada dejó la línea aprobada');
 
 -- La tabla sigue cerrada: un UPDATE directo no pasa la RLS y devuelve cero filas.
 SELECT is_empty(
@@ -278,8 +289,7 @@ SELECT throws_ok(
 );
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
 
--- Anular la firma rehacía el respaldo de lo autorizado, y además dejaba a
--- trg_quote_on_signature listo para aprobar los borradores en la firma siguiente.
+-- Anular la firma borraría el respaldo de cómo se recibió el vehículo.
 SELECT throws_ok(
   $$ UPDATE ordenes_trabajo SET firma_ruta = NULL, firma_fecha = NULL
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,

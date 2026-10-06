@@ -24,15 +24,47 @@ export function reportAssetPaths(order: Pick<WorkOrder, 'media' | 'firma_ruta'>)
   return [...reception, ...progress].map(reportImagePath).concat(order.firma_ruta ? [order.firma_ruta] : []);
 }
 
+/** El día local (AAAA-MM-DD) de una fecha y hora. */
+function localDay(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 /** Fotos de avances agrupadas por día (fecha local), en orden. */
 export function groupByDay(media: OrderMedia[]): { day: string; items: OrderMedia[] }[] {
   const groups = new Map<string, OrderMedia[]>();
   for (const item of [...media].sort((a, b) => a.creado_en.localeCompare(b.creado_en))) {
-    const d = new Date(item.creado_en);
-    const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const day = localDay(item.creado_en);
     groups.set(day, [...(groups.get(day) ?? []), item]);
   }
   return [...groups.entries()].map(([day, items]) => ({ day, items }));
+}
+
+/**
+ * El texto de los avances que el cliente ve: los que se marcaron visibles y dicen algo. Misma
+ * regla que `avances` en `datos_portal`. Faltaba en el PDF (pedido del taller del 06/10/2026):
+ * el enlace los mostraba y el documento impreso no.
+ */
+export function customerProgressNotes(order: Pick<WorkOrder, 'avances'>): { creado_en: string; texto: string }[] {
+  return (order.avances || [])
+    .filter((a) => a.visible_cliente && !!a.descripcion?.trim())
+    .map((a) => ({ creado_en: a.creado_en, texto: a.descripcion.trim() }))
+    .sort((a, b) => a.creado_en.localeCompare(b.creado_en));
+}
+
+/** Los avances para el cliente por día: lo que se escribió y las fotos publicadas de ese día. */
+export function progressTimeline(
+  order: Pick<WorkOrder, 'avances' | 'media'>
+): { day: string; notes: string[]; photos: OrderMedia[] }[] {
+  const days = new Map<string, { notes: string[]; photos: OrderMedia[] }>();
+  const at = (day: string) => {
+    const entry = days.get(day) ?? { notes: [], photos: [] };
+    days.set(day, entry);
+    return entry;
+  };
+  for (const note of customerProgressNotes(order)) at(localDay(note.creado_en)).notes.push(note.texto);
+  for (const { day, items } of groupByDay(customerReportPhotos(order).progress)) at(day).photos.push(...items);
+  return [...days.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([day, entry]) => ({ day, ...entry }));
 }
 
 /**

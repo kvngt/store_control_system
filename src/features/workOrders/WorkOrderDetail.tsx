@@ -41,6 +41,7 @@ import PartsTable from './PartsTable';
 import PartsSummaryCard from './PartsSummaryCard';
 import CommissionEstimateCard from './CommissionEstimateCard';
 import TechnicianTaskList from './TechnicianTaskList';
+import TechOrderStatus from './TechOrderStatus';
 import ProgressLog from './ProgressLog';
 import ShareReportModal from './ShareReportModal';
 import FindingsCard from './FindingsCard';
@@ -56,7 +57,7 @@ import PublishProgressModal from './PublishProgressModal';
 import CustomerLinkCard from './CustomerLinkCard';
 import QuoteCard from './QuoteCard';
 import OrderHistory from './OrderHistory';
-import { isUnassignedTask } from './tasks';
+import { isUnassignedTask, suggestedTechnicianId } from './tasks';
 import SignatureCard from './SignatureCard';
 import MediaCaptureBar from '../media/MediaCaptureBar';
 import MediaGallery from '../media/MediaGallery';
@@ -125,7 +126,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
 
   const orderId = detail.order?.id;
   // La tarea que se precarga al cotizar un hallazgo (F6).
-  const [prefill, setPrefill] = useState<{ text: string; nonce: number } | null>(null);
+  const [prefill, setPrefill] = useState<{ text: string; nonce: number; technicianId?: string | null } | null>(null);
   // Qué secciones están abiertas: ninguna al entrar a una orden, salvo la que pide un enlace.
   const [openSections, setOpenSections] = useState<ReadonlySet<string>>(() => new Set());
 
@@ -333,6 +334,9 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         lockedIds={detail.lockedLaborIds}
         paidPools={detail.paidPools}
         prefill={prefill}
+        // Un trabajo que agrega administración: el único técnico de la orden, o nadie si hay
+        // varios, para que se elija a quién va (06/10/2026).
+        suggestedTechnicianId={suggestedTechnicianId(assignments.map((a) => a.usuario_id), detail.technicians)}
       />
     </CollapsibleSection>
   );
@@ -585,7 +589,12 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
       onQuote={async (h) => {
         const text = await detail.quoteFinding(h.id);
         if (text == null) return;
-        setPrefill({ text, nonce: Date.now() });
+        // Va a quien lo reportó; si no puede recibirla, al único técnico de la orden (06/10/2026).
+        setPrefill({
+          text,
+          nonce: Date.now(),
+          technicianId: suggestedTechnicianId(assignments.map((a) => a.usuario_id), detail.technicians, h.reportado_por),
+        });
         // La tarea precargada está en Mano de obra: se abre para que se vea.
         openSection('mano_obra');
         selectTab('trabajos');
@@ -675,6 +684,14 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
       </>
     ),
     trabajos: !isMobile && findingsSection,
+    // El técnico ve primero en qué va la orden y qué de lo suyo está autorizado (06/10/2026).
+    tareas: !isAdmin && (
+      <TechOrderStatus
+        order={order}
+        myTasks={laborList.filter((l) => l.asignado_a === detail.userId)}
+        statusLabel={statusLabels[order.estatus] ?? order.estatus}
+      />
+    ),
   };
 
   const renderTab = (tabId: string) => (

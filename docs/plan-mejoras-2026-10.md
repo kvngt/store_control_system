@@ -17,6 +17,7 @@
 | F6 | Hallazgos y nueva "espera de autorización" | **Publicado** (04/10/2026: app en `main`; `db push` de `009`, `010` y `011` por el usuario). Detalle completo en [hallazgos.md](hallazgos.md). Migraciones `20261010000010` y `20261010000011`; pgTAP 22 (44) y ajuste de la 03; SEC-106 a SEC-112. **Pendiente:** `qa:security` con tokens; la migración que contrae (guardia del técnico, [hallazgos.md §6](hallazgos.md#6-lo-que-falta-en-orden)); casos HAL en un teléfono real; ~~adaptar las 11 pruebas Vitest del alta~~ hecho el 04/10/2026 (noche) |
 | F7 | Navegación del sitio | **Publicado** (04/10/2026, noche: `93bdade` y `830961a` en `main`, `db push` de la `012`; `db:check` ✓ con 66 migraciones). `requiere_atencion` comprobada en producción (admin 200, mecánico 42501). Órdenes y Kanban en una página (Lista \| Tablero, misma búsqueda, vista recordada, `/kanban` redirige); grupos del menú traducidos (Taller / Finanzas / Sistema); "Requiere atención" en el panel del admin (migración `20261010000012`, RPC `requiere_atencion`, pgTAP 23 con 15 aserciones, SEC-113 y SEC-114); "Mis tareas" en el panel del técnico. Casos NAV en [plan-de-pruebas.md](plan-de-pruebas.md) |
 | Pedidos | Implementar los pedidos del taller del 05/10/2026 | **Para implementar** (ver [plan-pedidos-2026-10-05.md](plan-pedidos-2026-10-05.md)) |
+| Pedidos 06/10 | Revisión desde el teléfono (PDF del 06/10/2026): firma sin autorizar, idioma y traducciones del cliente, lo rechazado para el técnico, "Mis comisiones", alta editable y arreglos de pantalla | **Hecho, sin publicar** (migración `20261010000022`; ver la [bitácora](#06102026-tarde--claude-code-pedidos-del-0610-revisión-desde-el-teléfono)) |
 
 Nada se publica sin que la persona responsable lo pida: cada `db push`, `functions deploy`,
 push a `main` y commit se piden aparte.
@@ -457,6 +458,43 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 06/10/2026, tarde — Claude Code (pedidos del 06/10: revisión desde el teléfono)
+
+- **Pedido:** implementar el PDF del taller del 06/10/2026. Once puntos; todos hechos.
+- **Pantalla (sin base):** (1) los avisos se abrían detrás de la barra de avance: el encabezado
+  pasó a `--z-sticky + 20`. (2) La toma de video se veía negra al darle play: React reusaba el
+  `<video>` de la cámara con su `srcObject`; ahora son dos elementos (`key`). (3) Aviso al agregar
+  en el teléfono: los avisos siguen a la parte visible (`visualViewport`, el teclado del iPhone
+  los dejaba fuera) y además "Agregado: …" junto al botón (`AddedConfirmation`). (4) Alta: los
+  trabajos y los repuestos se agregan con su editor (`TaskEditor` / `PartEditor` nuevo), entran a
+  una lista con aviso y resaltado, y se **editan** o quitan; "Crear" avisa si hay algo escrito o en
+  edición. (11) Técnico por defecto al cotizar un hallazgo: quien lo reportó; si no, el único
+  técnico de la orden; con varios, ninguno (`suggestedTechnicianId`).
+- **Base (`20261010000022`, sin aplicar):** (5) la firma ya **no** autoriza lo cotizado (se borra
+  `trg_quote_on_signature`; texto de la firma y `LegalTerms` al día) y "Requiere atención" suma
+  `por_autorizar`; (9) `_resolver_presupuesto` avisa al técnico también si no se autorizó nada;
+  (7) `clientes.idioma` ('en' por defecto) + `preferencia_idioma_portal`; (6) `datos_portal` y
+  `datos_correo` traen `idioma` y `traducciones`, y las observaciones también se traducen; (8)
+  `resumen_mis_comisiones`. pgTAP 29 nueva (21); 01–05, 07, 08, 11–13, 19, 22, 23, 25–28 ajustadas
+  (las que partían de "la firma autoriza" usan `pg_temp.autorizar_cotizado`). SEC-137 a 140.
+- **Pantalla con base:** técnico — resumen de estado arriba de sus tareas (`TechOrderStatus`),
+  tarea rechazada "No autorizada · no se realiza", hallazgo "El cliente no lo autorizó", aviso
+  "Trabajo no autorizado"; "Mis comisiones" (`/mis-comisiones`, menú y barra inferior); portal
+  traducido (`translateReport`) y guarda el idioma; PDF con el texto de los avances visibles,
+  traducido; correos en inglés/español (`templates.ts`, `process-outbox`); idioma en la ficha del
+  cliente.
+- **Verificación:** lint ✓, `tsc -b` ✓, Vitest 90 / 737 ✓, build ✓, pgTAP 29 / 738 ✓ (Supabase
+  local con imágenes de Docker Hub). Revisado con capturas en local: alta en el teléfono, aviso en
+  el detalle, vista del mecánico con un hallazgo rechazado, campana sobre el detalle en
+  escritorio, "Mis comisiones".
+- **Para publicar, en este orden:** `db push` (hasta `022`; antes confirmar con `db:check` si
+  `020` y `021` ya están) → `functions deploy portal process-outbox` → push a `main` →
+  `npm run qa:security`. La app nueva tolera la base vieja (sin `por_autorizar`, sin
+  `resumen_mis_comisiones`, sin la acción de idioma), pero mientras no se aplique la `022` la firma
+  sigue autorizando aunque la pantalla diga que no.
+- **Para el taller / abogado:** el punto 1 del texto que se firma cambió (autoriza inspección y
+  diagnóstico; los trabajos se cotizan aparte). Sigue pendiente la revisión legal.
 
 ### 06/10/2026 — Claude Code (revisión del trabajo de otra IA y Bloque E: listo para entregar)
 

@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Camera, Check, CheckCircle2, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react';
+import { Camera, Check, CheckCircle2, ChevronLeft, ChevronRight, Pencil, Trash2, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { isMediaError } from '../../lib/media/errors';
@@ -15,6 +15,7 @@ import { AlertError } from '../../components/AlertError';
 import PhoneInput from '../../components/PhoneInput';
 import PaymentFields from './PaymentFields';
 import TaskEditor from './TaskEditor';
+import PartEditor from './PartEditor';
 import PendingWorkNotice from './PendingWorkNotice';
 
 /**
@@ -86,11 +87,34 @@ export default function WorkOrderCreateModal({
   const preparing = photos.processing > 0 || captureBusy;
   // Una tarea escrita en el editor que todavía no se agregó a la lista.
   const [taskPending, setTaskPending] = useState(false);
-  const [pendingWarning, setPendingWarning] = useState(false);
+  const [partPending, setPartPending] = useState(false);
+  const [pendingWarning, setPendingWarning] = useState<'task' | 'part' | 'edit' | null>(null);
   const onTaskPendingChange = useCallback((pending: boolean) => {
     setTaskPending(pending);
-    if (!pending) setPendingWarning(false);
+    if (!pending) setPendingWarning((w) => (w === 'task' ? null : w));
   }, []);
+  const onPartPendingChange = useCallback((pending: boolean) => {
+    setPartPending(pending);
+    if (!pending) setPendingWarning((w) => (w === 'part' ? null : w));
+  }, []);
+  // La línea que se está editando en la lista (pedido del taller del 06/10/2026: lo agregado
+  // en el alta solo se podía borrar). Una a la vez.
+  const [editingTask, setEditingTask] = useState<number | null>(null);
+  const [editingPart, setEditingPart] = useState<number | null>(null);
+  // La última línea agregada se resalta un momento, para que se vea que entró.
+  const [justAdded, setJustAdded] = useState<{ kind: 'task' | 'part'; index: number } | null>(null);
+  // La explicación ("se guarda al crear…") solo la primera vez: en el teléfono los avisos
+  // apilados tapaban la lista.
+  const explained = useRef(false);
+  const addedHint = () => {
+    if (explained.current) return undefined;
+    explained.current = true;
+    return t('intake.addedHint');
+  };
+  const markAdded = (kind: 'task' | 'part', index: number) => {
+    setJustAdded({ kind, index });
+    setTimeout(() => setJustAdded((cur) => (cur?.kind === kind && cur.index === index ? null : cur)), 2500);
+  };
 
   const FieldError = ({ messageKey }: { messageKey?: string }) =>
     messageKey ? (
@@ -131,8 +155,16 @@ export default function WorkOrderCreateModal({
       void nextStep();
       return;
     }
+    if (editingTask !== null || editingPart !== null) {
+      setPendingWarning('edit');
+      return;
+    }
     if (taskPending) {
-      setPendingWarning(true);
+      setPendingWarning('task');
+      return;
+    }
+    if (partPending) {
+      setPendingWarning('part');
       return;
     }
     onSubmit();
@@ -434,31 +466,81 @@ export default function WorkOrderCreateModal({
         </div>
       </div>
 
-      {/* Mano de obra y repuestos: solo administración cotiza. */}
+      {/* Mano de obra y repuestos: solo administración cotiza. Cada línea se agrega con su
+          editor (botón verde → formulario → "Agregar"), entra a la lista con un aviso y desde
+          ahí se edita o se quita, como en los programas de taller (pedido del 06/10/2026). */}
       {isAdmin && (
         <>
           <p className="field-hint" style={{ marginTop: 'var(--space-3)' }}>{t('quotes.createHint')}</p>
           <div className="form-group" style={{ marginTop: 'var(--space-3)' }}>
-            <div className="form-label">{t('workOrders.laborDescription')}</div>
+            <div className="form-label">{t('intake.tasksCount').replace('{n}', String(form.labor.fields.length))}</div>
             {form.labor.fields.length === 0 && (
               <p className="field-hint">{t('intake.noTasksYet')}</p>
             )}
             <ul className="intake-task-list">
               {form.labor.fields.map((field, i) => {
+                if (editingTask === i) {
+                  return (
+                    <li key={field.id}>
+                      <TaskEditor
+                        workType={watch('workType')}
+                        technicians={operators}
+                        initial={{
+                          descripcion: field.descripcion,
+                          costo: parseFloat(field.costo) || 0,
+                          especialidad: field.especialidad,
+                          asignado_a: field.asignado_a || null,
+                        }}
+                        onAdd={(task) => {
+                          form.labor.update(i, {
+                            descripcion: task.descripcion,
+                            costo: task.costo.toString(),
+                            especialidad: task.especialidad,
+                            asignado_a: task.asignado_a || '',
+                          });
+                          showToast('success', t('intake.lineUpdated'));
+                        }}
+                        onClose={() => {
+                          setEditingTask(null);
+                          setPendingWarning((w) => (w === 'edit' ? null : w));
+                        }}
+                        busy={saving}
+                        idPrefix={`edit-task-${i}`}
+                      />
+                    </li>
+                  );
+                }
                 const technician = operators.find((o) => o.id === field.asignado_a);
+                const fresh = justAdded?.kind === 'task' && justAdded.index === i;
                 return (
-                  <li key={field.id} className="intake-task">
+                  <li key={field.id} className={'intake-task' + (fresh ? ' is-new' : '')}>
                     <div className="intake-task-text">
                       <strong>{field.descripcion}</strong>
                       <span>
-                        {specialtyLabel(field.especialidad)} · {money(field.costo)} ·{' '}
+                        {specialtyLabel(field.especialidad)} · {money(parseFloat(field.costo) || 0)} ·{' '}
                         {technician?.nombre_completo || t('tasks.unassigned')}
                       </span>
                     </div>
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm btn-icon"
-                      onClick={() => form.labor.remove(i)}
+                      onClick={() => {
+                        setEditingPart(null);
+                        setEditingTask(i);
+                      }}
+                      disabled={saving}
+                      aria-label={t('intake.editTask').replace('{task}', field.descripcion)}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm btn-icon"
+                      onClick={() => {
+                        setEditingTask(null);
+                        form.labor.remove(i);
+                      }}
+                      disabled={saving}
                       aria-label={t('intake.removeTask').replace('{task}', field.descripcion)}
                     >
                       <Trash2 size={14} />
@@ -476,86 +558,107 @@ export default function WorkOrderCreateModal({
               technicians={operators}
               defaultTechnicianId={form.labor.fields.find((f) => f.asignado_a)?.asignado_a || null}
               onAdd={(task) => {
+                markAdded('task', form.labor.fields.length);
                 form.labor.append({
                   descripcion: task.descripcion,
                   costo: task.costo.toString(),
                   especialidad: task.especialidad,
                   asignado_a: task.asignado_a || '',
                 });
+                showToast('success', t('intake.taskAdded').replace('{task}', task.descripcion), addedHint());
               }}
               onPendingChange={onTaskPendingChange}
               busy={saving}
               idPrefix="create-order"
             />
-            {pendingWarning && (
+            {pendingWarning === 'task' && (
               <p className="task-editor-error" role="alert">{t('intake.taskPending')}</p>
             )}
           </div>
 
           <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-            {/* `div`, no `label`: no etiqueta a ningún campo (los de abajo son una lista
-                que crece) y metía el botón dentro de la etiqueta, así que su nombre
-                accesible salía "Descripción de Repuestos Agregar". */}
-            <div className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>{t('workOrders.partsDescription')}</span>
-              <button
-                type="button"
-                className="btn btn-success btn-sm"
-                onClick={() => form.parts.append({ descripcion: '', cantidad: '1', precio_venta_unitario: '' })}
-              >
-                <Plus size={14} /> {t('common.add')}
-              </button>
-            </div>
-            {form.parts.fields.map((field, i) => (
-              <div key={field.id} style={{ marginBottom: 'var(--space-2)' }}>
-                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                  <input
-                    className="form-input"
-                    placeholder={t('common.description')}
-                    aria-invalid={!!errors.parts?.[i]?.descripcion}
-                    {...register(`parts.${i}.descripcion`)}
-                  />
-                  <input
-                    className="form-input"
-                    type="number"
-                    min={1}
-                    placeholder={t('common.quantity')}
-                    style={{ maxWidth: 80 }}
-                    onKeyDown={blockNegativeKeys}
-                    {...register(`parts.${i}.cantidad`)}
-                  />
-                  {/* Price only. A part is billed on at what it cost, so the
-                      separate unit-cost box was a second money field nobody
-                      filled in; the database keeps cost in step with price. */}
-                  <input
-                    className="form-input"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    placeholder={t('common.price')}
-                    style={{ maxWidth: 120 }}
-                    onKeyDown={blockNegativeKeys}
-                    {...register(`parts.${i}.precio_venta_unitario`)}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm btn-icon"
-                    onClick={() => form.parts.remove(i)}
-                    aria-label={t('intake.removePart')}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-                <FieldError
-                  messageKey={
-                    errors.parts?.[i]?.descripcion?.message ||
-                    errors.parts?.[i]?.cantidad?.message ||
-                    errors.parts?.[i]?.precio_venta_unitario?.message
-                  }
-                />
-              </div>
-            ))}
+            <div className="form-label">{t('intake.partsCount').replace('{n}', String(form.parts.fields.length))}</div>
+            {form.parts.fields.length === 0 && <p className="field-hint">{t('intake.noPartsYet')}</p>}
+            <ul className="intake-task-list">
+              {form.parts.fields.map((field, i) => {
+                if (editingPart === i) {
+                  return (
+                    <li key={field.id}>
+                      <PartEditor
+                        initial={{ descripcion: field.descripcion, cantidad: field.cantidad, precio_venta_unitario: field.precio_venta_unitario }}
+                        onSave={(part) => {
+                          form.parts.update(i, part);
+                          showToast('success', t('intake.lineUpdated'));
+                        }}
+                        onClose={() => {
+                          setEditingPart(null);
+                          setPendingWarning((w) => (w === 'edit' ? null : w));
+                        }}
+                        disabled={saving}
+                        idPrefix={`edit-part-${i}`}
+                      />
+                    </li>
+                  );
+                }
+                const fresh = justAdded?.kind === 'part' && justAdded.index === i;
+                const rowError =
+                  errors.parts?.[i]?.descripcion?.message ||
+                  errors.parts?.[i]?.cantidad?.message ||
+                  errors.parts?.[i]?.precio_venta_unitario?.message;
+                return (
+                  <li key={field.id} className={'intake-task' + (fresh ? ' is-new' : '')}>
+                    <div className="intake-task-text">
+                      <strong>{field.descripcion}</strong>
+                      <span>
+                        {field.cantidad} × {money(parseFloat(field.precio_venta_unitario) || 0)}
+                      </span>
+                      <FieldError messageKey={rowError} />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm btn-icon"
+                      onClick={() => {
+                        setEditingTask(null);
+                        setEditingPart(i);
+                      }}
+                      disabled={saving}
+                      aria-label={t('intake.editPart').replace('{part}', field.descripcion)}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm btn-icon"
+                      onClick={() => {
+                        setEditingPart(null);
+                        form.parts.remove(i);
+                      }}
+                      disabled={saving}
+                      aria-label={t('intake.removePart')}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <PartEditor
+              onSave={(part) => {
+                markAdded('part', form.parts.fields.length);
+                form.parts.append(part);
+                showToast('success', t('intake.partAdded').replace('{part}', part.descripcion), addedHint());
+              }}
+              onPendingChange={onPartPendingChange}
+              disabled={saving}
+              idPrefix="create-order-part"
+            />
+            {pendingWarning === 'part' && (
+              <p className="task-editor-error" role="alert">{t('intake.partPending')}</p>
+            )}
           </div>
+          {pendingWarning === 'edit' && (
+            <p className="task-editor-error" role="alert">{t('intake.editPending')}</p>
+          )}
         </>
       )}
     </>

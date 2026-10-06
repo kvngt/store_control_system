@@ -74,6 +74,18 @@ describe('renderNotification', () => {
     expect(renderNotification(aprueba, en).title).toBe('The customer answered the quote · ORD-2026-014');
   });
 
+  // 20261010000022: el técnico también se entera cuando el cliente no autoriza nada.
+  it('al técnico le dice que el trabajo no se autorizó', () => {
+    const n = notification({
+      tipo: 'presupuesto_respondido',
+      titulo: 'Trabajo no autorizado · ORD-2026-014',
+      cuerpo: 'No realizar: Frenos.',
+      datos: { numero_orden: 'ORD-2026-014', autorizados: 0, rechazados: 1 },
+    });
+    expect(renderNotification(n, es)).toEqual({ title: 'Trabajo no autorizado · ORD-2026-014', body: 'No realizar: Frenos.' });
+    expect(renderNotification(n, en).title).toBe('Work not authorized · ORD-2026-014');
+  });
+
   // Un aviso guardado antes de que existiera el dato no debe convertirse en un rechazo.
   it('un aviso viejo sin el conteo se queda con la redacción de siempre', () => {
     const n = notification({

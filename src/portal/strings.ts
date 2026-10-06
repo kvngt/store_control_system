@@ -285,14 +285,25 @@ export const portalStrings: Record<PortalLanguage, PortalStrings> = { es, en };
 
 const STORAGE_KEY = 'restorify_portal_lang';
 
-/** Lo que eligió antes; si no, el idioma del teléfono; español por defecto. */
-export function initialPortalLanguage(): PortalLanguage {
+/** El idioma que el cliente eligió antes en este navegador, o null si nunca eligió. */
+export function savedPortalLanguage(): PortalLanguage | null {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved === 'es' || saved === 'en') return saved;
   } catch {
     // Almacenamiento bloqueado (modo privado de algunos navegadores).
   }
+  return null;
+}
+
+/**
+ * Lo que eligió antes; si no, el idioma del teléfono; español por defecto. Al cargar el
+ * reporte, si nunca eligió en este navegador, manda el idioma guardado del cliente (el de sus
+ * correos).
+ */
+export function initialPortalLanguage(): PortalLanguage {
+  const saved = savedPortalLanguage();
+  if (saved) return saved;
   const nav = typeof navigator !== 'undefined' ? navigator.language || '' : '';
   return /^en\b/i.test(nav) ? 'en' : 'es';
 }

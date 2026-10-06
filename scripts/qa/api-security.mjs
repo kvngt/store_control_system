@@ -382,6 +382,11 @@ const CASES = [
   tech({ id: 'SEC-134', desc: 'Un técnico no marca una orden lista para entregar', method: 'POST', path: () => rpc('marcar_lista_para_entregar'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
   anon({ id: 'SEC-135', desc: 'Sin sesión no se marca una orden lista para entregar', method: 'POST', path: () => rpc('marcar_lista_para_entregar'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
   admin({ id: 'SEC-136', desc: 'Ni un admin llama _estatus_cliente ni el guardia de la marca como RPC', method: 'POST', path: () => rpc('trg_guard_lista_para_entregar'), body: {}, expect: 'denied' }),
+  // 20261010000022: idioma del cliente, traducciones en el portal y "Mis comisiones".
+  anon({ id: 'SEC-137', desc: 'Sin sesión no se cambia el idioma del cliente por la API (solo la edge function)', method: 'POST', path: () => rpc('preferencia_idioma_portal'), body: { p_token: '0'.repeat(64), p_idioma: 'es' }, expect: 'denied' }),
+  admin({ id: 'SEC-138', desc: 'Ni un admin cambia el idioma del cliente por la RPC del portal', method: 'POST', path: () => rpc('preferencia_idioma_portal'), body: { p_token: '0'.repeat(64), p_idioma: 'es' }, expect: 'denied' }),
+  admin({ id: 'SEC-139', desc: 'Ni un admin llama el diccionario interno de traducciones', method: 'POST', path: () => rpc('_diccionario_traducciones'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-140', desc: 'Sin sesión no se piden los totales de comisiones', method: 'POST', path: () => rpc('resumen_mis_comisiones'), body: {}, expect: 'denied' }),
 ];
 
 function evaluate(expect, r) {

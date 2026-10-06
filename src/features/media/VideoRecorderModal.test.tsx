@@ -6,19 +6,22 @@
 // detener y de "Usar video" quedaban fuera de la pantalla, bajo la barra inferior.
 
 import { describe, it, expect, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test/renderWithProviders';
 
 const grabacion = { blob: new Blob(['v'], { type: 'video/webm' }), mime: 'video/webm', duration: 4 };
 
-// Sin cámara en jsdom: el hook se sustituye por uno que ya grabó.
+// Sin cámara en jsdom: el hook se sustituye por uno que ya grabó (o que todavía no, para
+// probar el paso de la cámara en vivo a la toma).
+const hook = vi.hoisted(() => ({ state: 'recorded' as string, recorded: true }));
 vi.mock('./useMediaRecorder', () => ({
   useMediaRecorder: () => ({
     openDevice: vi.fn(),
     stream: null,
-    recording: grabacion,
-    state: 'recorded',
+    recording: hook.recorded ? grabacion : null,
+    state: hook.state,
     elapsed: 4,
     error: null,
     start: vi.fn(),
@@ -100,5 +103,36 @@ describe('VideoRecorderModal', () => {
     expect(video.getAttribute('preload')).toBe('metadata');
     await waitFor(() => expect(video.getAttribute('poster')).toBe('blob:mock/poster'));
     urls.mockRestore();
+  });
+
+  // 06/10/2026: al darle play a la toma la pantalla quedaba en negro. React reusaba el
+  // <video> de la cámara en vivo y le quedaba su `srcObject` (la cámara apagada), que manda
+  // sobre `src`.
+  it('la toma es otro <video>, sin el srcObject de la cámara', () => {
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock/video');
+    hook.state = 'ready';
+    hook.recorded = false;
+    // El estado del hook cambia afuera; este botón solo obliga a redibujar con los providers.
+    function Con() {
+      const [, redibujar] = useState(0);
+      return (
+        <>
+          <button type="button" onClick={() => redibujar((n) => n + 1)}>redibujar</button>
+          <VideoRecorderModal onDone={vi.fn()} onClose={vi.fn()} />
+        </>
+      );
+    }
+    renderWithProviders(<Con />);
+    const enVivo = document.querySelector('.recorder-video') as HTMLVideoElement;
+    enVivo.srcObject = {} as MediaStream;
+
+    hook.state = 'recorded';
+    hook.recorded = true;
+    fireEvent.click(screen.getByText('redibujar'));
+
+    const toma = document.querySelector('.recorder-video') as HTMLVideoElement;
+    expect(toma).not.toBe(enVivo);
+    expect(toma.srcObject ?? null).toBeNull();
+    expect(toma.getAttribute('src')).toBe('blob:mock/video');
   });
 });

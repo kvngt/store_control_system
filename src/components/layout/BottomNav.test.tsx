@@ -27,12 +27,13 @@ describe('BottomNav', () => {
 
   // Reunión con el taller (sept. 2026): Clientes y Vehículos son de administración. Un
   // técnico ve el cliente y el vehículo dentro de sus órdenes.
-  it('a technician gets no Customers or Vehicles tab', () => {
+  // Sin Clientes ni Vehículos; con "Comisiones", sus comisiones y pagos (06/10/2026).
+  it('a technician gets no Customers or Vehicles tab, and gets their commissions', () => {
     auth.rol = 'mecanico';
     renderWithProviders(<BottomNav />);
 
     const hrefs = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
-    expect(hrefs).toEqual(['/', '/work-orders']);
+    expect(hrefs).toEqual(['/', '/work-orders', '/mis-comisiones']);
   });
 
   it('translates every label, including the orders tab', () => {

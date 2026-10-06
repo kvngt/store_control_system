@@ -125,12 +125,15 @@ export interface PortalObservation {
   texto: string;
 }
 
+export type PortalLanguageCode = 'es' | 'en';
+
 export interface PortalReport {
   estado_enlace: 'ok';
   taller: PortalShop;
   enlace: { expira_en: string | null };
   orden: PortalOrder;
-  cliente: { nombre: string; tiene_correo: boolean; acepta_correos: boolean };
+  /** `idioma` desde 20261010000022: en el que le llegan los correos (inglés por defecto). */
+  cliente: { nombre: string; tiene_correo: boolean; acepta_correos: boolean; idioma?: PortalLanguageCode };
   vehiculo: {
     marca: string;
     modelo: string;
@@ -146,6 +149,11 @@ export interface PortalReport {
   presupuesto?: PortalQuote | null;
   presupuestos_respondidos?: PortalQuoteHistory[];
   cuenta: PortalAccount;
+  /**
+   * Texto original → inglés de lo que el taller escribió a mano (20261010000022). Antes solo
+   * el PDF lo usaba y el enlace mostraba todo en español. Ausente en la base anterior.
+   */
+  traducciones?: Record<string, string>;
   urls_vencen_en: string;
 }
 

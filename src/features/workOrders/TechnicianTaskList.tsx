@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, CheckCircle2, Circle, MessageSquarePlus, Clock, X, Plus, Eye, EyeOff } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Circle, MessageSquarePlus, Clock, X, Plus, Eye, EyeOff, XCircle } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import type { LaborItem, PreparedMedia } from '../../types/database';
 import { isApproved } from './lineState';
@@ -8,6 +8,7 @@ import DraftMediaStrip from '../media/DraftMediaStrip';
 import MediaCaptureBar from '../media/MediaCaptureBar';
 import type { WorkOrderDetailApi } from './useWorkOrderDetail';
 import ReportFindingModal from './ReportFindingModal';
+import { findingOutcome } from './techStatus';
 
 interface TechnicianTaskListProps {
   items: LaborItem[];
@@ -35,15 +36,21 @@ export default function TechnicianTaskList({ items, currentUserId, detail }: Tec
         myTasks.map((task) => {
           const approved = isApproved(task);
           const completed = !!task.completado_en;
+          // El cliente no la autorizó: queda cerrada sin ejecutarse, no "esperando" (06/10/2026).
+          const rejected = task.estado === 'rechazado';
 
           return (
-            <div key={task.id} className={`card task-card ${completed ? 'task-done' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <div key={task.id} className={`card task-card ${completed ? 'task-done' : ''} ${rejected ? 'task-rejected' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
                     {t('tasks.taskLabel')}: {task.descripcion}
                   </h3>
-                  {!approved ? (
+                  {rejected ? (
+                    <span className="badge line-state line-state-rechazado" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <XCircle size={12} /> {t('tasks.rejectedBadge')}
+                    </span>
+                  ) : !approved ? (
                     <span className="badge badge-waiting-auth" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       <Clock size={12} /> {t('quotes.waitingBadge')}
                     </span>
@@ -56,6 +63,7 @@ export default function TechnicianTaskList({ items, currentUserId, detail }: Tec
                       <Circle size={12} /> {t('tasks.pendingBadge')}
                     </span>
                   )}
+                  {rejected && <p className="field-hint" style={{ marginTop: 'var(--space-2)' }}>{t('tasks.rejectedHint')}</p>}
                 </div>
               </div>
 
@@ -103,12 +111,16 @@ export default function TechnicianTaskList({ items, currentUserId, detail }: Tec
           {/* No `.card-title`: dentro de una sección plegable del teléfono ese título se esconde. */}
           <h3 className="findings-heading">{t('findings.myFindings')}</h3>
           <ul className="findings-list">
-            {myFindings.map((h) => (
-              <li key={h.id} className="findings-item">
-                <p className="findings-text">{h.descripcion}</p>
-                <span className={`badge findings-badge is-${h.estado}`}>{t(`findings.state.${h.estado}`)}</span>
-              </li>
-            ))}
+            {myFindings.map((h) => {
+              // Cotizado: en qué quedó con el cliente, no solo que se le mandó.
+              const outcome = findingOutcome(h, items);
+              return (
+                <li key={h.id} className="findings-item">
+                  <p className="findings-text">{h.descripcion}</p>
+                  <span className={`badge findings-badge is-${outcome}`}>{t(`findings.state.${outcome}`)}</span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

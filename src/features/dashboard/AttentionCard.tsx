@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, CalendarX, CheckCircle2, ChevronRight, ClipboardCheck, FileQuestion, Mail, UserX } from 'lucide-react';
+import { AlertTriangle, CalendarX, CheckCircle2, ChevronRight, ClipboardCheck, FileQuestion, FileSignature, Mail, UserX } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { dashboardService } from '../../services/dashboard.service';
@@ -59,6 +59,7 @@ export default function AttentionCard({ sedeId }: { sedeId?: string }) {
   const data = query.data;
   const rows: Row[] = [
     { key: 'hallazgos', icon: AlertTriangle, label: t('attention.findings'), group: data.hallazgos, tab: 'resumen' },
+    { key: 'por_autorizar', icon: FileSignature, label: t('attention.toAuthorize'), group: data.por_autorizar ?? { total: 0, ordenes: [] }, tab: 'trabajos' },
     { key: 'presupuestos', icon: FileQuestion, label: t('attention.quotes'), group: data.presupuestos, tab: 'trabajos' },
     { key: 'sin_tecnico', icon: UserX, label: t('attention.unassigned'), group: data.sin_tecnico, tab: 'trabajos' },
     { key: 'por_revisar', icon: ClipboardCheck, label: t('attention.toReview'), group: data.por_revisar ?? { total: 0, ordenes: [] } },

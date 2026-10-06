@@ -198,8 +198,8 @@ PostgREST en cada petición.
 - Un técnico que inserta directo una orden "entregada", con avance, total, firma ajena,
   otro autor y número propio → nace en recepción, en cero, sin firma, con él como autor
   y con número del sistema; el contador no salta.
-- Solo la primera firma autoriza: volver a firmar no aprueba lo agregado después, ni
-  cuando la primera firma no tenía nada que aprobar.
+- La firma no autoriza lo cotizado (desde `20261010000022`): ni la primera ni volver a
+  firmar. Lo cubren la `07`, la `05` y la `29`.
 - Mano de obra negativa, cantidad cero y precio negativo → rechazados (23514).
 - No se borra una orden con comisiones pagadas; deshecho el pago, sí.
 - Un aviso interrumpido 5 veces no se vuelve a tomar y queda en error.

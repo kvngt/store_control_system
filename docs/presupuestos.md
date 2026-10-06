@@ -63,12 +63,13 @@ se apoya: [portal-y-correos.md](portal-y-correos.md).
 Si la firma ocurre con un presupuesto ya enviado por correo, la firma **no** decide
 por él: esas líneas siguen esperando la respuesta del cliente.
 
-**Solo la primera firma de la orden autoriza.** Limpiar la firma y volver a firmar no
-aprueba nada: un trabajo agregado después de la recepción sigue **sin autorizar**. El
-trigger lo sabe porque ya existe un presupuesto "firma de recepción" o porque ya hay
-otro archivo de firma en la carpeta de la orden (limpiar no borra el archivo). Antes de
-la auditoría de septiembre de 2026 cualquier firma nueva aprobaba los borradores
-([auditoria-2026-09.md](auditoria-2026-09.md), AUD-03).
+**La firma no autoriza nada** (desde `20261010000022`, pedido del taller del 06/10/2026).
+Firmar es la conformidad del cliente con cómo entregó el vehículo. Lo cotizado al recibirlo
+queda **sin autorizar** hasta que el cliente responde el presupuesto o el admin registra la
+autorización; mientras tanto la orden sale en "Requiere atención" → *Trabajos cotizados sin
+autorizar*. Hasta esa migración la primera firma aprobaba los borradores
+(`trg_quote_on_signature`, ya eliminado); las órdenes firmadas antes conservan lo que se
+aprobó así, con su presupuesto `firma_recepcion` como evidencia.
 
 ---
 
@@ -196,11 +197,11 @@ marca sí.
 comisiones ya dependían de los totales. Filtrar dos consultas por `aprobado` hizo
 que todo lo demás siguiera correcto sin tocarlo — y sin duplicar lógica de dinero.
 
-**La firma aprueba lo que había, una vez.** Es lo que el taller hace hoy: cotiza al
-recibir el vehículo y el cliente firma. Obligar a mandar un presupuesto por lo que el
-cliente acaba de firmar en persona sería burocracia. Pero una firma repetida días
-después no es el cliente viendo el trabajo nuevo; por eso solo cuenta la primera, y
-ante la duda la firma no aprueba (el admin registra la autorización).
+**La firma ya no aprueba (06/10/2026).** Al principio la primera firma aprobaba lo que
+había, para no obligar a mandar un presupuesto por lo que el cliente acababa de firmar en
+persona. El taller pidió separarlo: el cliente firma cómo dejó el vehículo, y el
+presupuesto se autoriza aparte (desde su enlace, o "Registrar autorización" si lo dice en
+el mostrador).
 
 **Nada marcado en el portal; todo marcado en el diálogo del admin.** El cliente
 decide explícitamente, línea por línea. El admin transcribe una llamada donde casi

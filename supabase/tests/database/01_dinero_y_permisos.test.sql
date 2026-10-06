@@ -18,6 +18,25 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
+-- Desde 20261010000022 la firma de recepción no autoriza lo cotizado. Estas pruebas parten de
+-- una orden ya autorizada: esto la autoriza como lo hacía la firma (mismo presupuesto como
+-- evidencia, vía 'firma_recepcion'), sin depender de la firma.
+CREATE FUNCTION pg_temp.autorizar_cotizado(p_orden UUID) RETURNS VOID
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $h$
+DECLARE
+  v_p presupuestos;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM orden_labor WHERE orden_id = p_orden AND estado = 'borrador')
+     AND NOT EXISTS (SELECT 1 FROM orden_repuestos WHERE orden_id = p_orden AND estado = 'borrador') THEN
+    RETURN;
+  END IF;
+  v_p := public._crear_presupuesto(p_orden);
+  PERFORM public._resolver_presupuesto(
+    v_p.id, public._lineas_pendientes(v_p.id), 'firma_recepcion',
+    (SELECT c.nombre FROM ordenes_trabajo o JOIN clientes c ON c.id = o.cliente_id WHERE o.id = p_orden),
+    NULL, NULL, 'Autorizado en la prueba.', NULL, NULL);
+END $h$;
+
 SELECT plan(27);
 
 -- ------------------------------------------------------------------------------------
@@ -65,10 +84,11 @@ SELECT lives_ok(
        -- entre los de esa tarea, y esta orden solo tiene mano de obra de mecánica.
        '[{"usuario_id":"a0000000-0000-0000-0000-000000000002","tipo_tarea":"mecanica"},
          {"usuario_id":"a0000000-0000-0000-0000-000000000003","tipo_tarea":"mecanica"}]'::jsonb);
-     -- Desde la fase 5 lo cotizado se cobra cuando el cliente lo autoriza: la firma
-     -- de recepción lo aprueba.
+     -- Desde la fase 5 lo cotizado se cobra cuando el cliente lo autoriza; desde
+     -- 20261010000022, aparte de la firma.
      UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma.png'
-     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
+     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
+     SELECT pg_temp.autorizar_cotizado(id) FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
   'Un admin crea una orden con depósito, labor, repuestos y dos técnicos, y el cliente firma'
 );
 
@@ -237,6 +257,7 @@ SELECT lives_ok(
          {"usuario_id":"a0000000-0000-0000-0000-000000000003","tipo_tarea":"pintura"}]'::jsonb);
      UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma.png'
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002';
+     SELECT pg_temp.autorizar_cotizado(id) FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002';
      UPDATE ordenes_trabajo SET estatus = 'entregado' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000002' $$,
   'Se entrega una orden con tres técnicos'
 );

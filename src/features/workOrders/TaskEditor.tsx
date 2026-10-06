@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Check, Plus } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { SPECIALTIES, type Specialty, type WorkType } from '../../types/database';
 import TechnicianSelect from './TechnicianSelect';
 import TradeMismatchDialog from './TradeMismatchDialog';
+import AddedConfirmation from './AddedConfirmation';
+import { useAddedConfirmation } from './useAddedConfirmation';
 import { isTradeMismatch, specialtyForWorkType, type TaskDraft, type Technician } from './tasks';
 
 interface TaskEditorProps {
@@ -24,12 +26,19 @@ interface TaskEditorProps {
    * Abre el formulario con esta descripción (F6: al cotizar un hallazgo). `nonce` cambia en
    * cada pedido, para precargar otra vez aunque el texto sea el mismo.
    */
-  prefill?: { text: string; nonce: number } | null;
+  prefill?: { text: string; nonce: number; technicianId?: string | null } | null;
   /**
    * Avisa si hay una tarea escrita que todavía no se agregó. En el alta, "Crear" la perdería
    * sin decir nada y la orden saldría sin esa mano de obra.
    */
   onPendingChange?: (pending: boolean) => void;
+  /**
+   * Editar una tarea ya agregada (alta de la orden, pedido del taller del 06/10/2026): el
+   * formulario abre con estos valores, el botón dice "Guardar" y al guardar o cancelar llama a
+   * `onClose` en vez de quedar listo para la siguiente.
+   */
+  initial?: TaskDraft;
+  onClose?: () => void;
 }
 
 interface Draft {
@@ -51,16 +60,22 @@ interface Draft {
  * Si el tipo no es del oficio del técnico (pintura a un mecánico), pregunta antes de guardar:
  * la comisión de la tarea va a esa persona.
  */
-export default function TaskEditor({ workType, technicians, defaultTechnicianId, busy = false, onAdd, idPrefix = 'task-editor', prefill, onPendingChange }: TaskEditorProps) {
+export default function TaskEditor({ workType, technicians, defaultTechnicianId, busy = false, onAdd, idPrefix = 'task-editor', prefill, onPendingChange, initial, onClose }: TaskEditorProps) {
   const { t } = useLanguage();
-  const [open, setOpen] = useState(!!prefill);
+  const editing = !!initial;
+  const [open, setOpen] = useState(!!prefill || editing);
   // En un "combinado" el tipo que se usó la última vez: casi siempre se agregan seguidas varias
   // tareas de lo mismo.
   const [lastCombined, setLastCombined] = useState<Specialty>('mecanica');
-  const [draft, setDraft] = useState<Draft>({ descripcion: prefill?.text ?? '', costo: '', especialidad: 'mecanica', asignado_a: '' });
+  const [draft, setDraft] = useState<Draft>(
+    initial
+      ? { descripcion: initial.descripcion, costo: String(initial.costo), especialidad: initial.especialidad, asignado_a: initial.asignado_a ?? '' }
+      : { descripcion: prefill?.text ?? '', costo: '', especialidad: 'mecanica', asignado_a: '' }
+  );
   const [error, setError] = useState('');
   const [mismatch, setMismatch] = useState<{ task: TaskDraft; technician: Technician } | null>(null);
   const [saving, setSaving] = useState(false);
+  const { added, flash: flashAdded } = useAddedConfirmation();
   const descriptionRef = useRef<HTMLInputElement>(null);
   const technicianRef = useRef<HTMLSelectElement>(null);
   // Volver a Descripción después de guardar. No se puede enfocar en `commit`: en ese momento el
@@ -73,8 +88,18 @@ export default function TaskEditor({ workType, technicians, defaultTechnicianId,
   useEffect(() => {
     if (prefill) {
       setOpen(true);
-      setDraft((d) => ({ ...d, descripcion: prefill.text }));
+      setDraft((d) => ({
+        ...d,
+        descripcion: prefill.text,
+        // Quien reportó el hallazgo, si viene y puede recibir la tarea.
+        asignado_a:
+          prefill.technicianId !== undefined
+            ? (prefill.technicianId && technicians.some((tech) => tech.id === prefill.technicianId) ? prefill.technicianId : '')
+            : d.asignado_a,
+      }));
     }
+    // Solo cuando llega otra precarga: la lista de técnicos no la repite.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefill]);
 
   const pending = open && (draft.descripcion.trim() !== '' || draft.costo.trim() !== '');
@@ -103,6 +128,7 @@ export default function TaskEditor({ workType, technicians, defaultTechnicianId,
   const close = () => {
     setOpen(false);
     setError('');
+    onClose?.();
   };
 
   // El precio se recorta a cero, como en el resto de la mano de obra: un negativo sobre una orden
@@ -119,6 +145,11 @@ export default function TaskEditor({ workType, technicians, defaultTechnicianId,
     try {
       const result = await onAdd(task);
       if (result === false) return;
+      if (editing) {
+        onClose?.();
+        return;
+      }
+      flashAdded(task.descripcion);
       if (workType === 'combinado') setLastCombined(task.especialidad);
       // Queda abierto para la siguiente, con el mismo tipo y el mismo técnico.
       setDraft((prev) => ({
@@ -152,6 +183,7 @@ export default function TaskEditor({ workType, technicians, defaultTechnicianId,
   if (!open) {
     return (
       <div className="task-editor-start">
+        <AddedConfirmation text={added} />
         {/* Verde y con su nombre: un "+" gris no le decía al admin que ahí se agrega
             (reunión con el taller, 03/10/2026). */}
         <button type="button" className="btn btn-success" onClick={start} disabled={busy} id={`${idPrefix}-open`}>
@@ -162,7 +194,7 @@ export default function TaskEditor({ workType, technicians, defaultTechnicianId,
   }
 
   return (
-    <div className="task-editor" role="group" aria-label={t('tasks.formTitle')}>
+    <div className="task-editor" role="group" aria-label={editing ? t('tasks.editTitle') : t('tasks.formTitle')}>
       <div className="task-editor-fields">
         <div className="form-group task-editor-type">
           <label className="form-label" htmlFor={`${idPrefix}-type`}>{t('tasks.type')}</label>
@@ -222,13 +254,14 @@ export default function TaskEditor({ workType, technicians, defaultTechnicianId,
         </div>
       </div>
       {error && <p className="task-editor-error" role="alert">{error}</p>}
+      <AddedConfirmation text={added} />
       {!draft.asignado_a && <p className="field-hint">{t('tasks.noTechnicianHint')}</p>}
       <div className="task-editor-actions">
         <button type="button" className="btn btn-ghost" onClick={close} disabled={saving}>
           {t('common.cancel')}
         </button>
         <button type="button" className="btn btn-success" onClick={submit} disabled={disabled} id={`${idPrefix}-submit`}>
-          <Plus size={16} /> {t('common.add')}
+          {editing ? <><Check size={16} /> {t('common.save')}</> : <><Plus size={16} /> {t('common.add')}</>}
         </button>
       </div>
 

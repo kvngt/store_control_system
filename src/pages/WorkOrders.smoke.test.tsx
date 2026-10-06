@@ -589,7 +589,7 @@ describe('WorkOrders — el alta que falla a medio camino lo dice', () => {
     const dialog = await openIntake(user);
     await goToWorkStep(user, dialog);
 
-    expect(within(dialog).getAllByRole('button', { name: /^Agregar$/i })).toHaveLength(1);
+    expect(within(dialog).getByRole('button', { name: /^Agregar repuesto$/i })).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: /^Agregar trabajo$/i })).toBeInTheDocument();
   });
 
@@ -669,6 +669,80 @@ describe('WorkOrders — el alta en cuatro pasos', () => {
       { descripcion: 'Pintar puerta', costo: 350, especialidad: 'pintura', asignado_a: PAINTER.id, reparto_heredado: false },
     ]);
     expect(input.asignaciones).toEqual([{ usuario_id: PAINTER.id, tipo_tarea: 'pintura' }]);
+  });
+
+  // Pedido del taller del 06/10/2026: lo agregado en el alta solo se podía borrar, y no se
+  // sabía si un trabajo o un repuesto ya había entrado.
+  it('un trabajo agregado se edita desde la lista y sale con lo corregido', async () => {
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+    await goToWorkStep(user, dialog);
+
+    await user.click(within(dialog).getByRole('button', { name: /Agregar trabajo/ }));
+    await user.type(document.getElementById('create-order-description') as HTMLInputElement, 'Frenos');
+    await user.type(document.getElementById('create-order-price') as HTMLInputElement, '100');
+    await user.click(document.getElementById('create-order-submit') as HTMLElement);
+    expect(await screen.findByText('Trabajo agregado: Frenos')).toBeInTheDocument();
+    expect(within(dialog).getByText('Trabajos (1)')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Editar Frenos' }));
+    const desc = document.getElementById('edit-task-0-description') as HTMLInputElement;
+    expect(desc).toHaveValue('Frenos');
+    await user.clear(desc);
+    await user.type(desc, 'Frenos delanteros');
+    const price = document.getElementById('edit-task-0-price') as HTMLInputElement;
+    await user.clear(price);
+    await user.type(price, '150');
+    await user.click(document.getElementById('edit-task-0-submit') as HTMLElement);
+    expect(within(dialog).getByText('Frenos delanteros')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await waitFor(() => expect(mocks.createWorkOrder).toHaveBeenCalledTimes(1));
+    expect(mocks.createWorkOrder.mock.calls[0][0].labor_items).toEqual([
+      expect.objectContaining({ descripcion: 'Frenos delanteros', costo: 150 }),
+    ]);
+  });
+
+  it('un repuesto se agrega con su editor, se edita y sale con la orden', async () => {
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+    await goToWorkStep(user, dialog);
+
+    await user.click(within(dialog).getByRole('button', { name: /Agregar repuesto/ }));
+    await user.type(document.getElementById('create-order-part-description') as HTMLInputElement, 'Filtro');
+    await user.type(document.getElementById('create-order-part-price') as HTMLInputElement, '15');
+    await user.click(document.getElementById('create-order-part-submit') as HTMLElement);
+    expect(await screen.findByText('Repuesto agregado: Filtro')).toBeInTheDocument();
+    expect(within(dialog).getByText('Repuestos (1)')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Editar Filtro' }));
+    const qty = document.getElementById('edit-part-0-quantity') as HTMLInputElement;
+    await user.clear(qty);
+    await user.type(qty, '2');
+    await user.click(document.getElementById('edit-part-0-submit') as HTMLElement);
+
+    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await waitFor(() => expect(mocks.createWorkOrder).toHaveBeenCalledTimes(1));
+    expect(mocks.createWorkOrder.mock.calls[0][0].repuestos).toEqual([
+      expect.objectContaining({ descripcion: 'Filtro', cantidad: 2, precio_venta_unitario: 15 }),
+    ]);
+  });
+
+  it('no crea la orden con una línea abierta en edición', async () => {
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+    await goToWorkStep(user, dialog);
+
+    await user.click(within(dialog).getByRole('button', { name: /Agregar repuesto/ }));
+    await user.type(document.getElementById('create-order-part-description') as HTMLInputElement, 'Filtro');
+    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    expect(await within(dialog).findByText(/repuesto escrito sin agregar/i)).toBeInTheDocument();
+
+    await user.click(document.getElementById('create-order-part-submit') as HTMLElement);
+    await user.click(within(dialog).getByRole('button', { name: 'Editar Filtro' }));
+    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    expect(await within(dialog).findByText(/Termina de editar la línea abierta/)).toBeInTheDocument();
+    expect(mocks.createWorkOrder).not.toHaveBeenCalled();
   });
 
   it('no crea la orden con un trabajo escrito sin agregar', async () => {
@@ -834,7 +908,7 @@ describe('WorkOrders — order detail', () => {
     expect(screen.getAllByText('$8.00').length).toBeGreaterThan(0);
   });
 
-  it('re-reads the order after the customer signs, because the signature authorizes the quote', async () => {
+  it('re-reads the order after the customer signs', async () => {
     mocks.uploadSignature.mockResolvedValue({ ruta: 'sede-centro/ord-1/firma-1.png', fecha: '2026-09-14T15:00:00Z' });
     const user = userEvent.setup();
     renderWithProviders(<WorkOrders />);
@@ -844,8 +918,8 @@ describe('WorkOrders — order detail', () => {
     await user.click(screen.getByRole('button', { name: /Guardar firma de prueba/ }));
 
     await waitFor(() => expect(mocks.uploadSignature).toHaveBeenCalled());
-    // Las líneas pasan de "sin autorizar" a autorizadas y cambian los totales: eso
-    // lo hace un trigger, así que la orden se vuelve a leer.
+    // La firma la guarda la base con su fecha y dispara el enlace y el correo de recepción:
+    // la orden se vuelve a leer. (Desde 20261010000022 ya no autoriza lo cotizado.)
     await waitFor(() => expect(mocks.getWorkOrderDetail).toHaveBeenCalledTimes(2));
   });
 
@@ -1429,6 +1503,42 @@ describe('WorkOrders — tareas con técnico', () => {
     expect(within(theirs).queryByRole('combobox')).toBeNull();
   });
 
+  // Pedido del taller del 06/10/2026: un trabajo que el cliente no autorizó seguía "esperando
+  // autorización" para el mecánico, y no sabía en qué iba la orden.
+  it('el técnico ve el estado de la orden y lo rechazado como no autorizado', async () => {
+    mocks.auth.current = authValue(MECHANIC_USER);
+    mocks.getWorkOrderDetail.mockResolvedValue({
+      ...TECH_DETAIL,
+      estatus: 'en_proceso',
+      asignaciones: [{ id: 'asg-1', orden_id: ORDER.id, usuario_id: MECHANIC_USER.id, tipo_tarea: 'mecanica', estatus_tarea: 'pendiente' }],
+      labor_items: [
+        { id: 'lab-1', orden_id: ORDER.id, descripcion: 'Cambio de aceite', costo: 120, estado: 'aprobado', especialidad: 'mecanica', asignado_a: MECHANIC_USER.id, reparto_heredado: false, completado_en: '2026-10-06T12:00:00Z' },
+        { id: 'lab-3', orden_id: ORDER.id, descripcion: 'Frenos traseros', costo: 300, estado: 'rechazado', especialidad: 'mecanica', asignado_a: MECHANIC_USER.id, reparto_heredado: false, presupuesto_id: 'p-2' },
+      ],
+      hallazgos: [{
+        id: 'hal-1', orden_id: ORDER.id, sede_id: SEDE_CENTRO.id, reportado_por: MECHANIC_USER.id, descripcion: 'Frenos traseros gastados',
+        estado: 'cotizado', en_reporte: false, texto_cliente: null, resuelto_por: null, resuelto_en: null, presupuesto_id: 'p-2', avance_id: null,
+        creado_en: '2026-10-06T10:00:00Z',
+      }],
+    });
+    mocks.getEstimate.mockResolvedValue({ bolsas: [], reparto: [], mi_total: 0, tareas: [], sin_asignar: [] });
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+
+    const status = document.querySelector('.tech-order-status') as HTMLElement;
+    expect(status).toHaveTextContent('Estado de la orden');
+    expect(status).toHaveTextContent('1 autorizada(s) por el cliente · 1 hecha(s)');
+    expect(status).toHaveTextContent('El cliente no autorizó: Frenos traseros');
+
+    await user.click(screen.getByRole('button', { name: /^Tareas/ }));
+    const rejected = screen.getByText('Tarea: Frenos traseros').closest('.task-card') as HTMLElement;
+    expect(within(rejected).getByText('No autorizada · no se realiza')).toBeInTheDocument();
+    expect(within(rejected).queryByText('Esperando autorización')).toBeNull();
+    expect(within(rejected).queryByRole('button', { name: /Realizado/ })).toBeNull();
+    expect(screen.getByText('El cliente no lo autorizó')).toBeInTheDocument();
+  });
+
   // Quién entra al reparto por especialidad de los trabajos anteriores lo decide el origen de la
   // asignación (20261010000006). La tarjeta lo dice, y administración lo cambia sin quitar a nadie
   // de la orden (a quien tiene tareas no se le puede quitar).
@@ -1560,6 +1670,7 @@ describe('WorkOrders — trabajo adicional reportado (F6)', () => {
   it('administración lo ve en Resumen y al cotizar precarga la tarea en Trabajos', async () => {
     mocks.getWorkOrderDetail.mockResolvedValue(ADMIN_VIEW);
     mocks.quoteFinding.mockResolvedValue('Pastillas traseras gastadas');
+    mocks.getOperators.mockResolvedValue([PAINTER, MECHANIC_USER]);
     const user = userEvent.setup();
     renderWithProviders(<WorkOrders />);
     await openDetail(user);
@@ -1573,6 +1684,8 @@ describe('WorkOrders — trabajo adicional reportado (F6)', () => {
     expect(mocks.quoteFinding).toHaveBeenCalledWith('hal-1');
     await waitFor(() => expect(screen.getByRole('tab', { name: /^Trabajos/ })).toHaveAttribute('aria-selected', 'true'));
     expect(await screen.findByDisplayValue('Pastillas traseras gastadas')).toBeInTheDocument();
+    // La tarea va de entrada a quien reportó el trabajo (pedido del taller, 06/10/2026).
+    expect(document.getElementById('labor-new-technician')).toHaveValue(MECHANIC_USER.id);
   });
 
   it('al descartar, el admin decide si va al reporte y con qué texto', async () => {

@@ -3,7 +3,10 @@
 import { describe, it, expect } from 'vitest';
 import { escapeHtml, renderEmail, type EmailContext } from '../../supabase/functions/_shared/email/templates.ts';
 
+// Las pruebas de siempre van en español; las del inglés (el idioma por defecto desde el
+// 06/10/2026) están al final.
 const base: EmailContext = {
+  lang: 'es',
   portalUrl: 'https://restorifyauto.net/r/' + 'a'.repeat(64),
   cliente: { nombre: 'Marta Ruiz' },
   taller: {
@@ -142,5 +145,38 @@ describe('renderEmail: reporte', () => {
 describe('escapeHtml', () => {
   it('escapa los cinco caracteres con significado en HTML', () => {
     expect(escapeHtml(`<a href="x" onclick='y'>&</a>`)).toBe('&lt;a href=&quot;x&quot; onclick=&#39;y&#39;&gt;&amp;&lt;/a&gt;');
+  });
+});
+
+// Pedido del taller del 06/10/2026: los correos llegan en inglés salvo que el cliente elija
+// español en su enlace.
+describe('renderEmail en inglés', () => {
+  const en: EmailContext = { ...base, lang: undefined };
+
+  it('sin idioma, el correo sale en inglés', () => {
+    const email = renderEmail('recepcion', { ...en, orden: { ...en.orden, estatus: 'recepcion' } })!;
+    expect(email.subject).toBe('We received your 2019 Toyota Camry · ORD-2026-014');
+    expect(email.html).toContain('<html lang="en">');
+    expect(email.html).toContain('Hi Marta,');
+    expect(email.text).toContain('October 1, 2026');
+    expect(email.text).toContain('This link is personal');
+    expect(email.text).toContain('I do not want to receive these emails');
+    expect(email.text).not.toMatch(/Hola|Orden ORD/);
+  });
+
+  it('cada plantilla tiene su versión en inglés', () => {
+    const quote = { numero: 1, estado: 'enviado', totalPropuesto: 300, lineas: [{ descripcion: 'Brake replacement', monto: 300, estado: 'pendiente' }] };
+    expect(renderEmail('estatus', { ...en, orden: { ...en.orden, estatus: 'finalizado' } })!.subject).toBe('Your 2019 Toyota Camry is ready · ORD-2026-014');
+    expect(renderEmail('presupuesto', { ...en, presupuesto: quote })!.text).toContain('- Brake replacement: $300.00');
+    expect(renderEmail('presupuesto_confirmacion', {
+      ...en,
+      presupuesto: { ...quote, estado: 'respondido', via: 'admin_telefono', lineas: [{ descripcion: 'Brake replacement', monto: 300, estado: 'rechazado' }] },
+    })!.text).toContain('Not authorized: Brake replacement.');
+    expect(renderEmail('reporte', en)!.subject).toBe('Report for your 2019 Toyota Camry · ORD-2026-014');
+    expect(renderEmail('avance', en)!.subject).toBe('Updates on your 2019 Toyota Camry · ORD-2026-014');
+  });
+
+  it('con "es" sale en español', () => {
+    expect(renderEmail('avance', { ...en, lang: 'es' })!.subject).toBe('Novedades de su 2019 Toyota Camry · ORD-2026-014');
   });
 });

@@ -166,15 +166,16 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // controles deshabilitados en vez de un error al apretarlos.
   const canEdit = isAdmin || (isAssignedToMe && !isDelivered);
 
-  // Volver a firmar es distinto de firmar. La primera firma autoriza lo cotizado
-  // y es el respaldo de lo que el cliente aceptó; sustituirla más tarde rehace ese
-  // respaldo, así que no es trabajo del taller y solo tiene sentido mientras la
-  // orden sigue en recepción. Un técnico asignado veía el botón y podía borrar la
+  // Volver a firmar es distinto de firmar. La firma es el respaldo de cómo el cliente
+  // entregó el vehículo (desde 20261010000022 ya no autoriza lo cotizado); sustituirla más
+  // tarde rehace ese respaldo, así que no es trabajo del taller y solo tiene sentido mientras
+  // la orden sigue en recepción. Un técnico asignado veía el botón y podía borrar la
   // firma de un toque.
   const canResign = isAdmin && order?.estatus === 'recepcion';
 
-  // Tomar la firma también es de administración (acordado con el taller, sept. 2026): la
-  // primera firma aprueba lo cotizado, y el técnico podía capturarla en cualquier estado.
+  // Tomar la firma también es de administración (acordado con el taller, sept. 2026): hasta
+  // 20261010000022 la primera firma aprobaba lo cotizado, y el técnico podía capturarla en
+  // cualquier estado.
   // La base lo impone en `trg_guard_order_technician`; el técnico ve la tarjeta sin el pad.
   const canSign = isAdmin;
 
@@ -527,10 +528,10 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     setBusy(true);
     try {
       await workOrdersService.addLaborItem(order.id, task);
-      // Que se vea que entró (reunión del 03/10/2026). Y si la orden ya está firmada, lo nuevo
-      // nace sin autorizar: no se cobra ni paga comisión hasta que el cliente lo autorice. Así
-      // se quedó sin comisión la pintora con su mano de obra extra.
-      showToast('success', t('workOrders.laborAdded'), order.firma_ruta ? t('workOrders.needsAuthorization') : undefined);
+      // Que se vea que entró (reunión del 03/10/2026). Lo nuevo nace sin autorizar: no se cobra
+      // ni paga comisión hasta que el cliente lo autorice (así se quedó sin comisión la pintora
+      // con su mano de obra extra). Desde 20261010000022 tampoco lo autoriza la firma.
+      showToast('success', t('workOrders.laborAdded'), t('workOrders.needsAuthorization'));
       await refresh();
       return true;
     } catch (err) {
@@ -613,16 +614,19 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     costo_unitario?: number | null;
   };
 
-  const addPart = async (item: PartInput) => {
-    if (!order) return;
+  /** `false` si no entró, para que la tabla no vacíe lo escrito. */
+  const addPart = async (item: PartInput): Promise<boolean> => {
+    if (!order) return false;
     setBusy(true);
     try {
       await workOrdersService.addPart(order.id, item);
-      showToast('success', t('workOrders.partAdded'), order.firma_ruta ? t('workOrders.needsAuthorization') : undefined);
+      showToast('success', t('workOrders.partAdded'), t('workOrders.needsAuthorization'));
       await refresh();
+      return true;
     } catch (err) {
       showToast('error', t('workOrders.partAddError'), getErrorMessage(err, language));
       fail(err);
+      return false;
     } finally {
       setBusy(false);
     }

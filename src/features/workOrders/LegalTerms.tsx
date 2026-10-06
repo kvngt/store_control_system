@@ -13,7 +13,7 @@ export function LegalTerms() {
       <div className="legal-terms">
         <strong>By signing, you:</strong>
         <ol>
-          <li><strong>Authorize</strong> the inspection, diagnosis, and the repairs and parts listed in this estimate, including the estimated completion date. Additional work will be quoted and requires your approval. We will not charge more than 10% over the estimate without your consent.</li>
+          <li><strong>Authorize</strong> the inspection and diagnosis of the vehicle. Repairs and parts are quoted to you separately and are done only once you authorize them. We will not charge more than 10% over an authorized estimate without your consent.</li>
           <li><strong>Confirm the vehicle condition</strong> at drop-off: mileage, fuel level, and the intake photos/videos documenting prior damage.</li>
           <li><strong>Authorize our staff to operate the vehicle</strong> for testing, diagnosis, and delivery.</li>
           <li><strong>Accept payment terms</strong>: deposit, final balance due at pickup, and storage fees if the vehicle is not picked up within the specified days after notice. You acknowledge the shop holds a mechanic's lien on the vehicle under Maryland law.</li>
@@ -31,7 +31,7 @@ export function LegalTerms() {
     <div className="legal-terms">
       <strong>Al firmar, usted:</strong>
       <ol>
-        <li><strong>Autoriza</strong> la inspección y el diagnóstico del vehículo, y los trabajos y repuestos de este presupuesto, con su fecha estimada de terminación. Cualquier trabajo adicional se le cotizará y solo se hará si lo autoriza. No le cobraremos más del 10 % sobre lo presupuestado sin su consentimiento.</li>
+        <li><strong>Autoriza</strong> la inspección y el diagnóstico del vehículo. Los trabajos y repuestos se le cotizan aparte y solo se hacen cuando usted los autoriza. No le cobraremos más del 10 % sobre un presupuesto autorizado sin su consentimiento.</li>
         <li><strong>Confirma el estado en que entrega el vehículo</strong>: millas, nivel de gasolina y las fotos y videos de la inspección de recepción, que registran los daños previos.</li>
         <li><strong>Autoriza al personal a manejar el vehículo</strong> para pruebas, diagnóstico y entrega.</li>
         <li><strong>Acepta las condiciones de pago</strong>: el depósito, el pago del saldo al recoger el vehículo y el almacenaje si no lo recoge en el plazo acordado. Reconoce que el taller tiene un gravamen sobre el vehículo por la reparación, las piezas y el almacenaje, según la ley de Maryland.</li>

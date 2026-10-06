@@ -196,7 +196,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--space-6);
-  z-index: var(--z-sticky);
+  /* Por encima del encabezado fijo del detalle de la orden (también --z-sticky y más abajo
+     en el documento): sin esto, los avisos y la búsqueda se abrían detrás de la barra de
+     avance (06/10/2026). */
+  z-index: calc(var(--z-sticky) + 20);
   backdrop-filter: blur(12px);
   transition: left var(--transition-base);
 }
@@ -4934,6 +4937,51 @@ button.intake-step-button:hover:not(:disabled) {
   color: var(--color-text-tertiary);
 }
 
+/* La línea recién agregada se marca un momento: así se ve que entró (06/10/2026). */
+.intake-task.is-new {
+  animation: intakeLineAdded 2.4s ease-out;
+}
+
+@keyframes intakeLineAdded {
+  0%,
+  40% {
+    box-shadow: inset 3px 0 0 var(--color-success);
+    background: var(--color-success-bg);
+  }
+  100% {
+    box-shadow: inset 3px 0 0 transparent;
+  }
+}
+
+/* "Agregado: …" junto al botón que lo agregó (06/10/2026). */
+.added-confirmation {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-success);
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* El editor de un repuesto: descripción, cantidad y precio unitario. */
+.part-editor-fields {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(70px, 100px) minmax(90px, 130px);
+  gap: var(--space-2) var(--space-3);
+  align-items: end;
+}
+
+.part-editor-fields .form-group {
+  margin-bottom: 0;
+}
+
+.intake-task-list + .task-editor,
+.intake-task-list + .task-editor-start {
+  margin-top: var(--space-2);
+}
+
 .intake-footer {
   justify-content: space-between;
 }
@@ -5144,8 +5192,13 @@ button.intake-step-button:hover:not(:disabled) {
   }
 
   .task-editor-description,
-  .task-editor-technician {
+  .task-editor-technician,
+  .part-editor-description {
     grid-column: 1 / -1;
+  }
+
+  .part-editor-fields {
+    grid-template-columns: 1fr 1fr;
   }
 
   .task-editor-actions .btn {
@@ -5334,6 +5387,101 @@ button.intake-step-button:hover:not(:disabled) {
 .findings-badge.is-descartado {
   background: var(--color-bg-tertiary);
   color: var(--color-text-secondary);
+}
+
+/* En qué quedó con el cliente un trabajo adicional cotizado (06/10/2026). */
+.findings-badge.is-esperando {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.findings-badge.is-autorizado {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.findings-badge.is-rechazado {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+/* Una tarea que el cliente no autorizó: cerrada sin ejecutarse. */
+.task-card.task-rejected {
+  opacity: 0.75;
+}
+
+.task-card.task-rejected h3 {
+  text-decoration: line-through;
+  text-decoration-color: var(--color-text-tertiary);
+}
+
+/* Lo primero que ve el técnico en la orden: estado y qué de lo suyo está autorizado. */
+.tech-order-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-surface-border);
+  border-left: 3px solid var(--color-success);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+}
+
+.tech-order-status.is-paused {
+  border-left-color: var(--color-warning);
+  background: var(--color-warning-bg);
+}
+
+.tech-order-status-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.tech-order-status-head strong {
+  color: var(--color-text-primary);
+}
+
+.tech-order-status-note {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.tech-order-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-sm);
+}
+
+.tech-order-status-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.tech-order-status-list li svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.tech-order-status-list .is-authorized svg {
+  color: var(--color-success);
+}
+
+.tech-order-status-list .is-waiting svg {
+  color: var(--color-warning);
+}
+
+.tech-order-status-list .is-rejected svg {
+  color: var(--color-danger);
 }
 
 .delivery-unassigned ul,
@@ -5895,4 +6043,71 @@ button.intake-step-button:hover:not(:disabled) {
 
 .employee-mobile-details .btn {
   justify-self: start;
+}
+
+/* "Mis comisiones" del técnico (06/10/2026). */
+.my-commissions-stats {
+  margin-bottom: var(--space-4);
+}
+
+.my-commissions-empty {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.my-commissions-payments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.my-commissions-payment {
+  padding: var(--space-3);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+}
+
+.my-commissions-payment-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.my-commissions-payment-head strong {
+  color: var(--color-primary-light);
+}
+
+.my-commissions-payment-date {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+.my-commissions-payment-date svg {
+  color: var(--color-success);
+}
+
+.my-commissions-included {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) 0 0;
+  border-top: 1px dashed var(--color-surface-border);
+  list-style: none;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.my-commissions-included li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
 }

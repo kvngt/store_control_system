@@ -60,6 +60,7 @@ export type {
   PayScheme,
   SalaryPeriod,
   Specialty,
+  MyCommissionsSummary,
 } from './domain/payroll.types';
 export { SPECIALTIES } from './domain/payroll.types';
 export type {

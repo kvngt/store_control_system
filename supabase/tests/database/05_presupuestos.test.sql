@@ -2,7 +2,8 @@
 -- RESTORIFY — Pruebas de base de datos: presupuestos y autorización por línea
 -- ====================================================================================
 -- Qué cubre (migración 20260924000000): lo cotizado no se cobra hasta que se
--- autoriza; la firma de recepción aprueba lo que había; un presupuesto bloquea sus
+-- autoriza; la firma de recepción ya no aprueba nada (20261010000022: es la conformidad
+-- con cómo se recibió el vehículo) y lo cotizado se autoriza aparte; un presupuesto bloquea sus
 -- líneas; el cliente responde por línea desde su enlace (con evidencia) y el equipo
 -- se entera; un cambio en el presupuesto invalida la respuesta; no se entrega con un
 -- presupuesto abierto; cancelar devuelve a borrador; el admin registra autorizaciones
@@ -67,18 +68,34 @@ CREATE TEMP VIEW t_lineas AS
   SELECT id, descripcion, estado, 'parte' FROM orden_repuestos WHERE orden_id = (SELECT id FROM t_orden);
 
 -- ------------------------------------------------------------------------------------
--- 1. Borrador: no se cobra; la firma de recepción lo aprueba
+-- 1. Borrador: no se cobra; la firma no lo aprueba; "Registrar autorización" sí
 -- ------------------------------------------------------------------------------------
 SELECT is((SELECT estado FROM t_lineas WHERE descripcion = 'Diagnóstico'), 'borrador', 'Lo cotizado al crear la orden nace como borrador');
 SELECT is((SELECT total_general FROM t_orden), 0.00::numeric, 'Un borrador no suma al total de la orden');
 
 UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma.png' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
-SELECT is((SELECT estado FROM t_lineas WHERE descripcion = 'Diagnóstico'), 'aprobado', 'La firma de recepción aprueba lo cotizado');
-SELECT is((SELECT total_general FROM t_orden), 100.00::numeric, 'Lo aprobado ya suma al total');
+SELECT results_eq(
+  $$ SELECT (SELECT estado FROM t_lineas WHERE descripcion = 'Diagnóstico'), (SELECT COUNT(*)::int FROM presupuestos WHERE orden_id = (SELECT id FROM t_orden)) $$,
+  $$ VALUES ('borrador'::text, 0) $$,
+  'La firma de recepción ya no aprueba lo cotizado ni abre un presupuesto (20261010000022)'
+);
+
+SET LOCAL ROLE authenticated;
+DO $do$ BEGIN
+  PERFORM registrar_autorizacion(
+    (SELECT id FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001'),
+    ARRAY(SELECT l.id FROM orden_labor l JOIN ordenes_trabajo o ON o.id = l.orden_id WHERE o.vehiculo_id = 'd0000000-0000-0000-0000-000000000001'),
+    ARRAY(SELECT l.id FROM orden_labor l JOIN ordenes_trabajo o ON o.id = l.orden_id WHERE o.vehiculo_id = 'd0000000-0000-0000-0000-000000000001'),
+    'admin_presencial'
+  );
+END $do$;
+RESET ROLE;
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000001';
+SELECT is((SELECT total_general FROM t_orden), 100.00::numeric, 'Registrar la autorización la aprueba y ya suma al total');
 SELECT results_eq(
   $$ SELECT estado, respondido_via, respondido_por_nombre FROM presupuestos WHERE orden_id = (SELECT id FROM t_orden) $$,
-  $$ VALUES ('respondido'::text, 'firma_recepcion'::text, 'Marta Ruiz'::text) $$,
-  'La aprobación por firma deja su presupuesto como evidencia'
+  $$ VALUES ('respondido'::text, 'admin_presencial'::text, 'Marta Ruiz'::text) $$,
+  'La autorización deja su presupuesto como evidencia'
 );
 
 -- Después de la firma se agregan trabajos: quedan en borrador.
@@ -222,7 +239,8 @@ SELECT is(
   'El admin se entera de que el cliente respondió'
 );
 SELECT results_eq(
-  $$ SELECT plantilla, estado FROM cola_envios WHERE orden_id = (SELECT id FROM t_orden) AND plantilla LIKE 'presupuesto%' ORDER BY plantilla $$,
+  $$ SELECT plantilla, estado FROM cola_envios WHERE orden_id = (SELECT id FROM t_orden) AND plantilla LIKE 'presupuesto%'
+       AND datos->>'presupuesto_id' = (SELECT id FROM t_p)::text ORDER BY plantilla $$,
   $$ VALUES ('presupuesto'::text, 'omitido'::text), ('presupuesto_confirmacion'::text, 'pendiente'::text) $$,
   'El correo del presupuesto que no salió se omite y se programa la constancia'
 );

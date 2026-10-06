@@ -6,6 +6,7 @@
 //
 //   GET  ?token=<token>                                   → el reporte
 //   POST { token, accion: 'preferencia_correos', acepta }  → alta o baja de correos
+//   POST { token, accion: 'preferencia_idioma', idioma }   → idioma de los correos (es | en)
 //   POST { token, accion: 'responder_presupuesto', presupuesto_id, aprobadas, lineas,
 //          nombre, comentario }                            → autorizar por línea
 //
@@ -144,6 +145,7 @@ async function handlePost(req: Request): Promise<Response> {
     token?: unknown;
     accion?: unknown;
     acepta?: unknown;
+    idioma?: unknown;
     presupuesto_id?: unknown;
     aprobadas?: unknown;
     lineas?: unknown;
@@ -167,6 +169,19 @@ async function handlePost(req: Request): Promise<Response> {
     if (error) {
       console.error('preferencia_correos_portal', error.message);
       return respond({ error: 'No se pudo guardar la preferencia.' }, 500);
+    }
+    const result = data as { ok: boolean };
+    return respond(result, result.ok ? 200 : 404);
+  }
+
+  if (body.accion === 'preferencia_idioma' && (body.idioma === 'es' || body.idioma === 'en')) {
+    const { data, error } = await supabase.rpc('preferencia_idioma_portal', {
+      p_token: token,
+      p_idioma: body.idioma,
+    });
+    if (error) {
+      console.error('preferencia_idioma_portal', error.message);
+      return respond({ error: 'No se pudo guardar el idioma.' }, 500);
     }
     const result = data as { ok: boolean };
     return respond(result, result.ok ? 200 : 404);

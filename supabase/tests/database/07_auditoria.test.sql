@@ -12,6 +12,25 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
+-- Desde 20261010000022 la firma de recepción no autoriza lo cotizado. Estas pruebas parten de
+-- una orden ya autorizada: esto la autoriza como lo hacía la firma (mismo presupuesto como
+-- evidencia, vía 'firma_recepcion'), sin depender de la firma.
+CREATE FUNCTION pg_temp.autorizar_cotizado(p_orden UUID) RETURNS VOID
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $h$
+DECLARE
+  v_p presupuestos;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM orden_labor WHERE orden_id = p_orden AND estado = 'borrador')
+     AND NOT EXISTS (SELECT 1 FROM orden_repuestos WHERE orden_id = p_orden AND estado = 'borrador') THEN
+    RETURN;
+  END IF;
+  v_p := public._crear_presupuesto(p_orden);
+  PERFORM public._resolver_presupuesto(
+    v_p.id, public._lineas_pendientes(v_p.id), 'firma_recepcion',
+    (SELECT c.nombre FROM ordenes_trabajo o JOIN clientes c ON c.id = o.cliente_id WHERE o.id = p_orden),
+    NULL, NULL, 'Autorizado en la prueba.', NULL, NULL);
+END $h$;
+
 SELECT plan(25);
 
 -- ------------------------------------------------------------------------------------
@@ -115,7 +134,7 @@ SELECT is_empty(
 );
 
 -- ------------------------------------------------------------------------------------
--- 3. Solo la primera firma autoriza
+-- 3. La firma no autoriza lo cotizado (antes, solo la primera; desde 20261010000022, ninguna)
 -- ------------------------------------------------------------------------------------
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000001';
@@ -149,8 +168,8 @@ WHERE id = (SELECT id FROM t_orden);
 
 SELECT is(
   (SELECT total_general FROM orden_montos WHERE orden_id = (SELECT id FROM t_orden)),
-  1000.00::numeric,
-  'La primera firma autoriza lo cotizado ($1,000)'
+  0.00::numeric,
+  'La firma ya no autoriza lo cotizado: el total sigue en $0'
 );
 
 -- Limpiar la firma, agregar un trabajo y volver a firmar.
@@ -174,8 +193,8 @@ SELECT is(
 );
 SELECT is(
   (SELECT total_general FROM orden_montos WHERE orden_id = (SELECT id FROM t_orden)),
-  1000.00::numeric,
-  'El total sigue siendo lo autorizado'
+  0.00::numeric,
+  'Ni volviendo a firmar: el total sigue en $0'
 );
 
 -- La segunda orden se firmó sin nada cotizado (no quedó presupuesto); el admin cotiza
@@ -222,6 +241,7 @@ SELECT throws_ok(
 -- 5. No se borra una orden con comisiones pagadas
 -- ------------------------------------------------------------------------------------
 DELETE FROM orden_labor WHERE orden_id = (SELECT id FROM t_orden) AND descripcion = 'Pintura';
+DO $do$ BEGIN PERFORM pg_temp.autorizar_cotizado((SELECT id FROM t_orden)); END $do$;
 UPDATE ordenes_trabajo SET estatus = 'entregado' WHERE id = (SELECT id FROM t_orden);
 DO $do$ BEGIN
   PERFORM aprobar_comisiones(ARRAY(SELECT id FROM comisiones WHERE usuario_id = 'a0000000-0000-0000-0000-000000000002'));

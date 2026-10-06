@@ -44,7 +44,9 @@ export default function Customers() {
   const [viewProfile, setViewProfile] = useState<Customer | null>(null);
   const [profileData, setProfileData] = useState<{ vehicles: Vehicle[]; orders: WorkOrder[] } | null>(null);
 
-  const [form, setForm] = useState({ nombre: '', telefono: '', email: '', direccion: '', notas_crm: '', acepta_correos: true });
+  const [form, setForm] = useState<{
+    nombre: string; telefono: string; email: string; direccion: string; notas_crm: string; acepta_correos: boolean; idioma: 'es' | 'en';
+  }>({ nombre: '', telefono: '', email: '', direccion: '', notas_crm: '', acepta_correos: true, idioma: 'en' });
   const [formError, setFormError] = useState<string | null>(null);
 
   const isAdmin = user?.rol === 'admin';
@@ -122,7 +124,7 @@ export default function Customers() {
 
   const openCreateModal = () => {
     setSelectedCustomer(null);
-    setForm({ nombre: '', telefono: '', email: '', direccion: '', notas_crm: '', acepta_correos: true });
+    setForm({ nombre: '', telefono: '', email: '', direccion: '', notas_crm: '', acepta_correos: true, idioma: 'en' });
     setFormError(null);
     setShowModal(true);
   };
@@ -136,6 +138,7 @@ export default function Customers() {
       direccion: customer.direccion,
       notas_crm: customer.notas_crm || '',
       acepta_correos: customer.acepta_correos !== false,
+      idioma: customer.idioma === 'es' ? 'es' : 'en',
     });
     setFormError(null);
     setShowModal(true);
@@ -151,7 +154,11 @@ export default function Customers() {
     }
     setFormError(null);
     setSaving(true);
-    const payload = { ...form, email: form.email.trim() };
+    // El idioma viaja solo si cambió de lo que ya tiene (inglés al crear): así el formulario
+    // no falla contra una base sin la columna mientras se publica.
+    const { idioma, ...rest } = form;
+    const currentLanguage = selectedCustomer ? (selectedCustomer.idioma ?? 'en') : 'en';
+    const payload = { ...rest, email: form.email.trim(), ...(idioma !== currentLanguage ? { idioma } : {}) };
     try {
       if (selectedCustomer) {
         await customersService.updateCustomer(selectedCustomer.id, payload);
@@ -489,6 +496,19 @@ export default function Customers() {
                   <p className="field-hint">{t('customers.acceptsEmailsHint')}</p>
                 </div>
               )}
+              <div className="form-group">
+                <label className="form-label" htmlFor="customer-language">{t('customers.language')}</label>
+                <select
+                  id="customer-language"
+                  className="form-input form-select"
+                  value={form.idioma}
+                  onChange={(e) => setForm({ ...form, idioma: e.target.value === 'es' ? 'es' : 'en' })}
+                >
+                  <option value="en">English</option>
+                  <option value="es">Español</option>
+                </select>
+                <p className="field-hint">{t('customers.languageHint')}</p>
+              </div>
               <div className="form-group">
                 <label className="form-label">{t('common.address')}</label>
                 <input className="form-input" value={form.direccion} onChange={(e) => setForm({ ...form, direccion: e.target.value })} id="customer-address" />

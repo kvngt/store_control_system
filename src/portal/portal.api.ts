@@ -63,6 +63,20 @@ export async function answerQuote(
   return (await res.json()) as QuoteAnswer;
 }
 
+/**
+ * El idioma que eligió el cliente: con él le llegan los correos (20261010000022). Si falla no
+ * pasa nada visible: el reporte ya cambió de idioma en pantalla.
+ */
+export async function setLanguagePreference(token: string, language: 'es' | 'en'): Promise<void> {
+  const res = await fetch(portalEndpoint(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    referrerPolicy: 'no-referrer',
+    body: JSON.stringify({ token, accion: 'preferencia_idioma', idioma: language }),
+  });
+  if (!res.ok) throw new PortalRequestError(res.status);
+}
+
 export async function setEmailPreference(token: string, accepts: boolean): Promise<boolean> {
   const res = await fetch(portalEndpoint(), {
     method: 'POST',

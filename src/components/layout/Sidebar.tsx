@@ -3,22 +3,7 @@ import { useLanguage } from '../../context/language.context';
 import { useAuth } from '../../context/auth.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import { detachThisDevice } from '../../features/notifications/pushDevice';
-import {
-  LayoutDashboard,
-  Users,
-  Car,
-  ClipboardList,
-  DollarSign,
-  CreditCard,
-  Settings,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  Wrench,
-  Building2,
-  Hexagon,
-  UserCog,
-} from 'lucide-react';
+import { LayoutDashboard, Users, Car, ClipboardList, DollarSign, CreditCard, Settings, LogOut, ChevronLeft, ChevronRight, Wrench, Building2, Hexagon, UserCog, Wallet } from 'lucide-react';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -64,6 +49,8 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
     // Lista y tablero son dos vistas de la misma página (F7): una sola entrada, que abre la
     // vista que cada quien usó la última vez.
     { to: '/work-orders', icon: ClipboardList, label: t('nav.workOrders') },
+    // Mecánicos y pintores: sus comisiones aceptadas y sus pagos (06/10/2026).
+    ...(isAdmin ? [] : [{ to: '/mis-comisiones', icon: Wallet, label: t('nav.myCommissions') }]),
   ];
 
   const financeLinks = isAdmin

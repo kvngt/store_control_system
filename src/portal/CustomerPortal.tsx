@@ -25,9 +25,10 @@ import {
 import { applySedeBranding } from '../lib/branding';
 import { formatDuration } from '../lib/media/mime';
 import { telUrl, whatsAppUrl } from '../lib/phone';
-import { answerQuote, fetchPortal, setEmailPreference } from './portal.api';
+import { answerQuote, fetchPortal, setEmailPreference, setLanguagePreference } from './portal.api';
 import type { PortalMedia, PortalQuote, PortalReport, PortalResponse, PortalShop } from './portal.types';
-import { initialPortalLanguage, portalStrings, savePortalLanguage, type PortalLanguage } from './strings';
+import { initialPortalLanguage, portalStrings, savePortalLanguage, savedPortalLanguage, type PortalLanguage } from './strings';
+import { translateReport } from './translate';
 
 type Strings = (typeof portalStrings)['es'];
 
@@ -92,6 +93,14 @@ export default function CustomerPortal({ token }: { token: string | null }) {
 
   const report = state.kind === 'loaded' && state.data.estado_enlace === 'ok' ? state.data : null;
   const shop = state.kind === 'loaded' ? state.data.taller : undefined;
+  // Lo escrito a mano por el taller, en inglés si el cliente lo pidió (06/10/2026).
+  const shown = useMemo(() => (report ? translateReport(report, language) : null), [report, language]);
+
+  // Quien nunca eligió idioma en este navegador ve el de sus correos (inglés por defecto).
+  const clientLanguage = report?.cliente.idioma;
+  useEffect(() => {
+    if (clientLanguage && !savedPortalLanguage()) setLanguage(clientLanguage);
+  }, [clientLanguage]);
 
   // Las URLs de fotos y videos duran 2 horas. Si la página queda abierta, se piden
   // de nuevo cinco minutos antes de que venzan.
@@ -115,6 +124,8 @@ export default function CustomerPortal({ token }: { token: string | null }) {
     const next = language === 'es' ? 'en' : 'es';
     setLanguage(next);
     savePortalLanguage(next);
+    // Y los correos le llegan en ese idioma.
+    if (token) void setLanguagePreference(token, next).catch(() => undefined);
   };
 
   return (
@@ -145,7 +156,7 @@ export default function CustomerPortal({ token }: { token: string | null }) {
         <Unavailable state={state.data.estado_enlace} shop={state.data.taller} s={s} />
       )}
 
-      {report && token && <Report report={report} token={token} s={s} language={language} onReload={() => load(undefined, true)} />}
+      {shown && token && <Report report={shown} token={token} s={s} language={language} onReload={() => load(undefined, true)} />}
     </div>
   );
 }

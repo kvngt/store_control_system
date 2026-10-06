@@ -12,6 +12,25 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
+-- Desde 20261010000022 la firma de recepción no autoriza lo cotizado. Estas pruebas parten de
+-- una orden ya autorizada: esto la autoriza como lo hacía la firma (mismo presupuesto como
+-- evidencia, vía 'firma_recepcion'), sin depender de la firma.
+CREATE FUNCTION pg_temp.autorizar_cotizado(p_orden UUID) RETURNS VOID
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $h$
+DECLARE
+  v_p presupuestos;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM orden_labor WHERE orden_id = p_orden AND estado = 'borrador')
+     AND NOT EXISTS (SELECT 1 FROM orden_repuestos WHERE orden_id = p_orden AND estado = 'borrador') THEN
+    RETURN;
+  END IF;
+  v_p := public._crear_presupuesto(p_orden);
+  PERFORM public._resolver_presupuesto(
+    v_p.id, public._lineas_pendientes(v_p.id), 'firma_recepcion',
+    (SELECT c.nombre FROM ordenes_trabajo o JOIN clientes c ON c.id = o.cliente_id WHERE o.id = p_orden),
+    NULL, NULL, 'Autorizado en la prueba.', NULL, NULL);
+END $h$;
+
 SELECT plan(27);
 
 -- ------------------------------------------------------------------------------------
@@ -56,10 +75,11 @@ DO $do$ BEGIN
     '[{"descripcion":"Frenos","costo":200}]'::jsonb, '[]'::jsonb,
     '[{"usuario_id":"a0000000-0000-0000-0000-000000000002","tipo_tarea":"mecanica"}]'::jsonb
   );
-  -- La firma de recepción autoriza la mano de obra cotizada (fase 5): sin ella la
+  -- Lo cotizado se autoriza (fase 5; aparte de la firma desde 20261010000022): sin eso la
   -- orden no tendría nada que cobrar ni comisión que generar.
   UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma.png'
   WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
+  PERFORM pg_temp.autorizar_cotizado(id) FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
 END $do$;
 
 -- ------------------------------------------------------------------------------------

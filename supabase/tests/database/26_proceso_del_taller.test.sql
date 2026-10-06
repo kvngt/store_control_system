@@ -24,6 +24,25 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
+-- Desde 20261010000022 la firma de recepción no autoriza lo cotizado. Estas pruebas parten de
+-- una orden ya autorizada: esto la autoriza como lo hacía la firma (mismo presupuesto como
+-- evidencia, vía 'firma_recepcion'), sin depender de la firma.
+CREATE FUNCTION pg_temp.autorizar_cotizado(p_orden UUID) RETURNS VOID
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $h$
+DECLARE
+  v_p presupuestos;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM orden_labor WHERE orden_id = p_orden AND estado = 'borrador')
+     AND NOT EXISTS (SELECT 1 FROM orden_repuestos WHERE orden_id = p_orden AND estado = 'borrador') THEN
+    RETURN;
+  END IF;
+  v_p := public._crear_presupuesto(p_orden);
+  PERFORM public._resolver_presupuesto(
+    v_p.id, public._lineas_pendientes(v_p.id), 'firma_recepcion',
+    (SELECT c.nombre FROM ordenes_trabajo o JOIN clientes c ON c.id = o.cliente_id WHERE o.id = p_orden),
+    NULL, NULL, 'Autorizado en la prueba.', NULL, NULL);
+END $h$;
+
 SELECT plan(82);
 
 -- ------------------------------------------------------------------------------------
@@ -106,8 +125,9 @@ SELECT results_eq(
   'Sin costo, el costo es el precio; con costo, se queda el que mandó administración'
 );
 
--- La firma aprueba lo cotizado.
+-- Lo cotizado está autorizado.
 UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma.png' WHERE id = pg_temp.oa();
+DO $do$ BEGIN PERFORM pg_temp.autorizar_cotizado(pg_temp.oa()); END $do$;
 
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'a2600000-0000-0000-0000-000000000001';
@@ -376,6 +396,7 @@ RESET ROLE;
 CREATE OR REPLACE FUNCTION pg_temp.ob() RETURNS UUID LANGUAGE sql AS
   $$ SELECT id FROM ordenes_trabajo WHERE vehiculo_id = 'd2600000-0000-0000-0000-00000000000b' $$;
 UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma.png' WHERE id = pg_temp.ob();
+DO $do$ BEGIN PERFORM pg_temp.autorizar_cotizado(pg_temp.ob()); END $do$;
 INSERT INTO orden_hallazgos (orden_id, sede_id, reportado_por, descripcion)
 VALUES (pg_temp.ob(), '26000000-0000-0000-0000-000000000001', 'a2600000-0000-0000-0000-000000000002', 'Fuga de aceite');
 
@@ -445,6 +466,7 @@ CREATE OR REPLACE FUNCTION pg_temp.linea_c(p TEXT) RETURNS UUID LANGUAGE sql AS
   $$ SELECT id FROM orden_labor WHERE orden_id = pg_temp.oc() AND descripcion = p
      UNION ALL SELECT id FROM orden_repuestos WHERE orden_id = pg_temp.oc() AND descripcion = p $$;
 UPDATE ordenes_trabajo SET firma_ruta = sede_id || '/' || id || '/firma.png' WHERE id = pg_temp.oc();
+DO $do$ BEGIN PERFORM pg_temp.autorizar_cotizado(pg_temp.oc()); END $do$;
 
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'a2600000-0000-0000-0000-000000000002';
