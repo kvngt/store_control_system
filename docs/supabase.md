@@ -291,7 +291,7 @@ no valores).
 | `EMAIL_FROM_ADDRESS` | Nosotros | Remitente (`notificaciones@restorifyauto.net`) |
 | `SHOP_TIMEZONE` | Nosotros (puesto el 05/10/2026) | Zona de las fechas en los correos; sin ella, `America/Chicago`. El taller está en Maryland: `America/New_York`. Solo la usa `process-outbox`: **la base no la lee**; sus fechas salen de `sedes.zona_horaria` (`hoy_taller`, `20261010000017`) |
 | `GEMINI_API_KEY` | Nosotros (desde el 05/10/2026) | Traducción automática al inglés de los textos de la orden (`process-outbox`, canal `traduccion`). Usar una llave de un proyecto **con facturación**: en la capa gratuita Google puede usar los textos para mejorar sus productos y revisarlos personas |
-| `GEMINI_MODEL` | Opcional | Modelo de Gemini; sin él, `gemini-2.5-flash`. Cuando Google retire un modelo, se cambia aquí sin desplegar |
+| `GEMINI_MODEL` | Opcional | Modelo de Gemini; sin él, `gemini-3.8-flash` (Google retiró el 2.5 para cuentas nuevas el 06/10/2026). Cuando Google retire un modelo, se cambia aquí sin desplegar |
 
 Copia local de los que generamos nosotros: `supabase/.env.secrets.local` (ignorado por git).
 La llave de Resend no está en ningún archivo.

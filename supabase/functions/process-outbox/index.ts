@@ -313,7 +313,7 @@ async function sendTraduccion(job: OutboxJob): Promise<JobResult> {
   // El modelo se elige con GEMINI_MODEL: Google retira modelos (el `gemini-1.5-flash` que estaba
   // aquí ya no existe) y cambiarlo no debe exigir un despliegue. La llave va en el encabezado,
   // no en la URL, para que no quede en los registros de nadie.
-  const model = Deno.env.get('GEMINI_MODEL') || 'gemini-2.5-flash';
+  const model = Deno.env.get('GEMINI_MODEL') || 'gemini-3.8-flash';
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
