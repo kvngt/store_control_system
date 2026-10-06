@@ -14,20 +14,19 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 | Si vas a… | Lee, en este orden |
 |---|---|
 | **Hacerte cargo del proyecto** sin poder preguntarle a quien lo hizo | [traspaso.md](traspaso.md) |
-| **Salir a producción**: bloqueantes, plan del día y vuelta atrás | [salida-a-produccion.md](salida-a-produccion.md) |
+| **Salir a producción**: bloqueantes, plan del día y vuelta atrás | [salida-a-produccion.md](historico/salida-a-produccion.md) |
 | **Entender el sistema** antes de tocar código | [arquitectura.md](arquitectura.md) → [reglas-de-negocio.md](reglas-de-negocio.md) |
 | **Cambiar una parte concreta** (Finanzas, la entrega, el portal…) y no saber a dónde ir | [mapa-de-secciones.md](mapa-de-secciones.md) |
-| Saber **qué tan sano está el proyecto hoy**: estructura, base de datos, operación y qué hacer primero | [evaluacion-2026-10.md](evaluacion-2026-10.md) |
-| Ver **cómo está construido el programa** (los planos: capas, pantallas, ciclo de una orden, tablas, dinero, comisiones, permisos) y dónde modificar cada cosa | [planos.md](planos.md) |
-| Saber **qué sigue**: los cambios que pidió el taller en la reunión del 03/10/2026, por fases y con su estado | [plan-mejoras-2026-10.md](plan-mejoras-2026-10.md) |
-| Saber si el **proceso del taller** (orden → trabajo → cobro → comisiones → ganancia) tiene fallas de lógica y qué agrega valor o solo complejidad (05/10/2026) | [analisis-del-proceso-2026-10.md](analisis-del-proceso-2026-10.md) |
-| Implementar los **pedidos del taller** (05/10/2026) listos para programar | [plan-pedidos-2026-10-05.md](plan-pedidos-2026-10-05.md) |
+| Saber **qué tan sano está el proyecto hoy**: estructura, base de datos, operación y qué hacer primero | [evaluacion-2026-10.md](historico/evaluacion-2026-10.md) |
+| Saber **qué sigue**: los cambios que pidió el taller en la reunión del 03/10/2026, por fases y con su estado | [plan-mejoras-2026-10.md](historico/plan-mejoras-2026-10.md) |
+| Saber si el **proceso del taller** (orden → trabajo → cobro → comisiones → ganancia) tiene fallas de lógica y qué agrega valor o solo complejidad (05/10/2026) | [analisis-del-proceso-2026-10.md](historico/analisis-del-proceso-2026-10.md) |
+| Implementar los **pedidos del taller** (05/10/2026) listos para programar | [plan-pedidos-2026-10-05.md](historico/plan-pedidos-2026-10-05.md) |
 | Preparar la **privacidad, el texto de la firma y la protección legal** (plan del 04/10/2026, pendiente de las decisiones del taller y de un abogado) | [plan-legal-y-privacidad.md](plan-legal-y-privacidad.md) |
 | **Cambiar la base en producción** sin comprometer la operación, o saber qué deuda técnica queda | [mantenimiento.md](mantenimiento.md) |
-| **Probar la plataforma a mano** como tester, sin programar | [manual-de-pruebas.md](manual-de-pruebas.md) |
-| **Probar la plataforma** con casos técnicos (persona o agente de IA) | [plan-de-pruebas.md](plan-de-pruebas.md) |
+| **Probar la plataforma a mano** como tester, sin programar | [manual-de-pruebas.md](historico/manual-de-pruebas.md) |
+| **Probar la plataforma** con casos técnicos (persona o agente de IA) | [plan-de-pruebas.md](historico/plan-de-pruebas.md) |
 | Saber **qué cubren las pruebas automatizadas** y cómo correrlas | [pruebas.md](pruebas.md) |
-| Revisar **qué errores se encontraron** en la última auditoría y cómo se corrigieron | [auditoria-2026-09.md](auditoria-2026-09.md) |
+| Revisar **qué errores se encontraron** en la última auditoría y cómo se corrigieron | [auditoria-2026-09.md](historico/auditoria-2026-09.md) |
 | Ver **la plataforma completa**: qué hay en Supabase, qué servicios externos se usan y quién habla con qué | [supabase.md](supabase.md) |
 | **Desplegar o configurar un entorno** | [deployment.md](deployment.md) |
 | **Usar la aplicación** o capacitar al taller | [manual-usuario.md](manual-usuario.md) |
@@ -50,7 +49,7 @@ solo existe fuera del repositorio, cómo dejar una máquina lista, orden de lect
 trabaja y se publica, qué hacer cuando algo se rompe, instrucciones para agentes de IA y los
 patrones de error de un proyecto construido con IA que conviene seguir vigilando.
 
-**[salida-a-produccion.md](salida-a-produccion.md)** — La revisión con la premisa de atender
+**[salida-a-produccion.md](historico/salida-a-produccion.md)** — La revisión con la premisa de atender
 clientes reales al día siguiente: bloqueantes fuera del código (registro público abierto,
 plan sin respaldos, llaves que rotar), los errores corregidos (totales cortados a 1.000 filas,
 caché compartida en tablets, importación a medias, pagos dobles), el plan del día de la
@@ -67,7 +66,7 @@ presupuestos, comisiones y empleados, finanzas, portal, multimedia…) con su pa
 módulos, su servicio, sus tablas y funciones, sus pruebas y su documento. Para cuando hay que
 cambiar una parte y no se sabe por dónde entrar.
 
-**[evaluacion-2026-10.md](evaluacion-2026-10.md)** — Evaluación del 1/10/2026, la noche antes de
+**[evaluacion-2026-10.md](historico/evaluacion-2026-10.md)** — Evaluación del 1/10/2026, la noche antes de
 la prueba en vivo: inventario y revisión de la base de datos (23 tablas, RLS, tipos, índices),
 cifras y riesgos del código, hallazgos de operación (Hostinger publica `main`, Sentry inactivo,
 sin cuentas de prueba, migraciones con fecha futura), secuelas del cambio de dominio y el plan
@@ -102,13 +101,13 @@ el dinero, qué ve cada quien y diagnóstico.
 cliente y los cambios de la reunión con el taller, las 54 migraciones con lo que hizo cada
 una, las decisiones que se reemplazaron y cómo creció la red de pruebas.
 
-**[manual-de-pruebas.md](manual-de-pruebas.md)** — Para la persona que prueba la
+**[manual-de-pruebas.md](historico/manual-de-pruebas.md)** — Para la persona que prueba la
 plataforma desde la pantalla: qué preparar, una orden de ejemplo con los montos que deben
 salir, 142 casos en 13 sesiones (acceso y contraseñas, personal, órdenes como admin y como
 técnico, presupuestos, enlace del cliente, dinero y comisiones, finanzas, teléfono, uso
 real, borrados), cómo reportar un fallo y la hoja de resultados.
 
-**[plan-de-pruebas.md](plan-de-pruebas.md)** — El plan de pruebas ejecutable: cada caso
+**[plan-de-pruebas.md](historico/plan-de-pruebas.md)** — El plan de pruebas ejecutable: cada caso
 con identificador, prioridad, pasos y resultado esperado, y si lo puede hacer un agente
 de IA o necesita una persona con un teléfono. Niveles humo, publicación y completo;
 seguridad contra la API, matriz de dispositivos, regresiones, lista antes de publicar y
@@ -118,7 +117,7 @@ plantilla del reporte.
 Playwright y `qa:security`; qué cubre cada una, qué no, cómo correrlas y para qué hace
 falta Docker.
 
-**[auditoria-2026-09.md](auditoria-2026-09.md)** — La revisión de errores y seguridad de
+**[auditoria-2026-09.md](historico/auditoria-2026-09.md)** — La revisión de errores y seguridad de
 septiembre de 2026: qué se encontró, qué tan grave era, cómo se corrigió, con qué prueba
 se comprueba y los riesgos que quedan abiertos.
 
@@ -129,20 +128,20 @@ ejecutarlas, buckets y sus rutas, las 6 edge functions, nombres de secretos y de
 Auth, Realtime, tareas programadas, dónde está cada cosa en el panel, el Supabase local y
 lo que falta limpiar.
 
-**[plan-mejoras-2026-10.md](plan-mejoras-2026-10.md)** — El plan de los cambios que pidió el
+**[plan-mejoras-2026-10.md](historico/plan-mejoras-2026-10.md)** — El plan de los cambios que pidió el
 taller después del primer día de pruebas (03/10/2026): historial de la orden y seguimiento de
 errores, reintentar correos, detalle de la orden con pestañas, tareas con técnico y comisión
 por tarea, nueva orden en 4 secciones, tareas por hacer del técnico, hallazgos y la nueva
 "espera de autorización". Con las decisiones del taller, lo que hacen otros sistemas y el
 estado de cada fase.
 
-**[analisis-del-proceso-2026-10.md](analisis-del-proceso-2026-10.md)** — Una orden de punta a
+**[analisis-del-proceso-2026-10.md](historico/analisis-del-proceso-2026-10.md)** — Una orden de punta a
 punta (05/10/2026): qué aporta cada parte y qué solo agrega pasos, las fallas de lógica con su
 evidencia (doble conteo al importar el banco, costo de repuestos igual al precio, sin tarjeta ni
 impuesto de Maryland, el depósito dos veces en el enlace del cliente, correos sin salir, fechas
 en UTC, avance a mano), las preguntas para el taller y el orden propuesto.
 
-**[plan-de-mejora.md](plan-de-mejora.md)** — Análisis de desempeño, deuda técnica y plan de
+**[plan-de-mejora.md](historico/plan-de-mejora.md)** — Análisis de desempeño, deuda técnica y plan de
 acción posterior a la auditoría. Es una foto anterior a la revisión previa a producción:
 lo que se resolvió de ahí está marcado al principio del documento. Al final están las
 **funciones propuestas que esperan la autorización del taller** (hoy: traducir en el portal lo
@@ -192,7 +191,7 @@ decisiones pasadas; **no describen el estado actual**.
 > ([marca-por-dominio.md](marca-por-dominio.md)).
 > Plan Pro activo desde el 30/09. Pendiente fuera del código: staging, Sentry en producción,
 > la rama que publica Hostinger (hoy `main`) y limpiar las suscripciones push del dominio
-> viejo ([evaluacion-2026-10.md](evaluacion-2026-10.md#7-plan-priorizado)).
+> viejo ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#7-plan-priorizado)).
 
 Hay un plan de cambios pedido por el cliente en seis fases. Estado:
 
@@ -208,13 +207,13 @@ Hay un plan de cambios pedido por el cliente en seis fases. Estado:
 Después de las fases hubo dos revisiones: una **auditoría** y una **revisión previa a
 producción** (migración 36). Siguieron las pruebas en el teléfono y los siete cambios de la
 reunión con el taller (migraciones 37 a 54). **Antes de atender clientes reales, completar
-[salida-a-produccion.md §2](salida-a-produccion.md#2-bloqueantes-fuera-del-código)**: el
+[salida-a-produccion.md §2](historico/salida-a-produccion.md#2-bloqueantes-fuera-del-código)**: el
 registro público ya está apagado; falta el plan con respaldos.
 
 La **auditoría completa** (septiembre 2026): 15
 hallazgos corregidos, entre ellos funciones internas de dinero que se podían llamar por
 la API sin sesión. Detalle, pruebas y lo que queda abierto en
-[auditoria-2026-09.md](auditoria-2026-09.md). Su migración
+[auditoria-2026-09.md](historico/auditoria-2026-09.md). Su migración
 (`20260926000000_audit_hardening`) está aplicada en el proyecto enlazado y el build
 que la acompaña está publicado (15 de septiembre de 2026).
 

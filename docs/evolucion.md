@@ -309,7 +309,7 @@ triggers y el frontend en las rutas de dinero, permisos y datos del cliente.
 - **Borrar una orden es una sola operación** y no se puede con comisiones pagadas.
 - **La app no saca al usuario al login por mala señal**, la firma actualiza la pantalla,
   y una orden de otra sede usa los datos de su sede.
-- **Plan de pruebas ejecutable** ([plan-de-pruebas.md](plan-de-pruebas.md)): cada caso con
+- **Plan de pruebas ejecutable** ([plan-de-pruebas.md](historico/plan-de-pruebas.md)): cada caso con
   identificador, prioridad y si lo puede hacer un agente de IA. **`npm run qa:security`**
   prueba la API desplegada, la capa que faltaba: pgTAP prueba la base por dentro, pero
   nadie probaba qué funciones quedaban expuestas afuera.
@@ -319,7 +319,7 @@ que editar empleados fallaba en producción (AUD-26). Se desplegó, `qa:security
 ahora que estén todas las funciones (SEC-17), y [supabase.md](supabase.md) documenta qué hay
 en el proyecto real y dónde, para no depender de revisarlo a mano.
 
-Detalle de los hallazgos corregidos y los abiertos: [auditoria-2026-09.md](auditoria-2026-09.md).
+Detalle de los hallazgos corregidos y los abiertos: [auditoria-2026-09.md](historico/auditoria-2026-09.md).
 
 ---
 
@@ -342,7 +342,7 @@ error típicos de un proyecto hecho con IA:
 - **Índices, cabeceras de seguridad, contraseñas de 8, CI** con pgTAP desde cero,
   `AGENTS.md` y un documento de **traspaso** para quien herede el proyecto.
 
-Detalle, bloqueantes fuera del código y plan del día: [salida-a-produccion.md](salida-a-produccion.md).
+Detalle, bloqueantes fuera del código y plan del día: [salida-a-produccion.md](historico/salida-a-produccion.md).
 
 ### Etapa 9 — Pruebas en el teléfono y la reunión con el taller
 
@@ -504,11 +504,11 @@ temporales que luego se borraron.
 - **Pago a empleados**: esperar las respuestas del taller y hacer la fase 1
   ([pagos-a-empleados.md](pagos-a-empleados.md)).
 - **Fuera del código**: staging, Sentry en producción y la rama que publica Hostinger (el plan
-  Pro ya está) ([evaluacion-2026-10.md](evaluacion-2026-10.md#7-plan-priorizado)).
+  Pro ya está) ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#7-plan-priorizado)).
 - **Mantenibilidad**: esquema actual en un solo archivo, partir `useWorkOrderDetail`,
   retirar la fachada `supabaseService` (mismo plan).
 - **Pendientes de datos**: nombre, logo, correo de contacto y WhatsApp de la sede.
 - **Pendientes de decisión** (ver [reglas-de-negocio.md](reglas-de-negocio.md#10-riesgos-conocidos-y-decisiones-abiertas)):
   borrar movimientos automáticos de Finanzas, correos en inglés, si el correo de
   "Entregado" sale al instante, traducir en el portal lo que escribe el taller
-  ([plan-de-mejora.md](plan-de-mejora.md#funciones-propuestas-pendientes-de-autorización-del-taller)).
+  ([plan-de-mejora.md](historico/plan-de-mejora.md#funciones-propuestas-pendientes-de-autorización-del-taller)).

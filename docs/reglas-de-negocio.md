@@ -2,7 +2,7 @@
 
 Qué hace Restorify y por qué, en lenguaje de negocio. Es la referencia para
 decidir si algo que pasó es un error o el comportamiento esperado, y para
-escribir las pruebas ([plan-de-pruebas.md](plan-de-pruebas.md)).
+escribir las pruebas ([plan-de-pruebas.md](historico/plan-de-pruebas.md)).
 
 Casi todas estas reglas las impone **la base de datos** (RLS y triggers), no la
 interfaz: se cumplen aunque alguien use la API directamente. Donde una regla vive

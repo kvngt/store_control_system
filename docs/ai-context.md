@@ -6,7 +6,7 @@ dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md)
 de una sección, [mapa-de-secciones.md](mapa-de-secciones.md); antes de cambiar la base de
 un proyecto con datos reales, [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación).
 Lo que viene (cambios pedidos por el taller el 03/10/2026, por fases y con decisiones ya
-tomadas): [plan-mejoras-2026-10.md](plan-mejoras-2026-10.md). Léelo antes de tocar tareas,
+tomadas): [plan-mejoras-2026-10.md](historico/plan-mejoras-2026-10.md). Léelo antes de tocar tareas,
 comisiones, el alta de la orden o la "espera de autorización".
 
 ---
@@ -131,7 +131,7 @@ comisiones, el alta de la orden o la "espera de autorización".
 - **Pago "mixto"** (`perfiles_pago.esquema`, `20261010000020`): salario informativo + comisión.
   Todo filtro de comisiones es `esquema <> 'salario'`, nunca `= 'comision'`. Al soltar el CHECK
   del esquema, no uses `LIKE '%comision%'`: soltaba también el del porcentaje 0–100.
-- **Proceso del taller (05/10/2026, `20261010000016`–`18`, [analisis-del-proceso-2026-10.md](analisis-del-proceso-2026-10.md)):**
+- **Proceso del taller (05/10/2026, `20261010000016`–`18`, [analisis-del-proceso-2026-10.md](historico/analisis-del-proceso-2026-10.md)):**
   - **Lo importado del banco es contabilidad aparte.** Un movimiento con `importacion_id` no
     cuenta en `resumen_panel`, `_saldo_orden`, `_balance_orden`, el ajuste de una orden
     entregada ni `datos_portal`. Si sumas `finanzas_movimientos` para algo de la app, filtra
@@ -261,7 +261,7 @@ comisiones, el alta de la orden o la "espera de autorización".
    ya aplicada ni cambies tablas desde el panel. **El nombre va después de la última
    migración, no de la fecha de hoy:** hay migraciones aplicadas fechadas hasta
    `20261010000000`, y una con fecha anterior a la última aplicada no entra con `db push`
-   ([evaluacion-2026-10.md](evaluacion-2026-10.md#4-base-de-datos), B-1).
+   ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#4-base-de-datos), B-1).
 2. **Una función nueva en `public` es una RPC pública.** Postgres da `EXECUTE` a
    `PUBLIC` y Supabase a `anon` y `authenticated` al crearla. Revócala siempre:
    `REVOKE ALL ON FUNCTION ... FROM PUBLIC, anon, authenticated;` y concede solo lo
@@ -269,7 +269,7 @@ comisiones, el alta de la orden o la "espera de autorización".
    rol/sede por dentro. Una función que solo llaman triggers no necesita ningún
    `GRANT` (el trigger corre como su dueño). Olvidarlo dejó
    `reverse_order_delivery_finance` abierta a cualquiera
-   ([auditoria-2026-09.md](auditoria-2026-09.md), AUD-01); `npm run qa:security` lo
+   ([auditoria-2026-09.md](historico/auditoria-2026-09.md), AUD-01); `npm run qa:security` lo
    detecta. Si agregas una función interna, agrega su caso a
    `scripts/qa/api-security.mjs`.
 3. **Prueba con pgTAP** (`supabase/tests/database/`) todo lo que toque dinero o
@@ -352,7 +352,7 @@ comisiones, el alta de la orden o la "espera de autorización".
 | Contextos | `src/context/` (Auth, Language, Theme, Toast, UnsavedChanges) |
 | Listas completas y totales | `fetchAll` en `src/services/support.ts`; `resumen_panel` (panel y Finanzas); `importar_estado_cuenta` (importación bancaria) |
 | Largo mínimo de contraseña | `src/lib/password.ts` (8), igual en `create-employee`, `update-employee` y el panel de Auth |
-| Traspaso, cuentas, operación y emergencias | [traspaso.md](traspaso.md); antes de publicar a clientes reales, [salida-a-produccion.md](salida-a-produccion.md) |
+| Traspaso, cuentas, operación y emergencias | [traspaso.md](traspaso.md); antes de publicar a clientes reales, [salida-a-produccion.md](historico/salida-a-produccion.md) |
 | Formato del dinero | `src/lib/money.ts` (`money`, `moneySigned`); el portal y los correos tienen el suyo |
 | Teléfonos y país | `src/lib/phone.ts` (`PHONE_COUNTRIES`, `parsePhone`, `toE164`, `formatPhone`) y `src/components/PhoneInput.tsx` |
 | Color de la sede en el PDF | `src/lib/brandColor.ts`: el color tal cual para rayas y uno oscurecido para texto, que un amarillo claro no se lee sobre blanco |
@@ -414,7 +414,7 @@ npm run qa:security   # después de aplicar una migración que toque permisos
 ```
 
 Qué cubren las pruebas automatizadas: [pruebas.md](pruebas.md). Qué probar según lo
-que cambiaste, con casos que un agente puede ejecutar: [plan-de-pruebas.md](plan-de-pruebas.md)
+que cambiaste, con casos que un agente puede ejecutar: [plan-de-pruebas.md](historico/plan-de-pruebas.md)
 (§1.4 tiene las instrucciones para agentes; §8, qué módulos probar según el cambio).
 Para comprobar el estado de una orden en la base: `scripts/qa/estado-orden.sql` (solo
 lectura). Las pruebas e2e y `qa:security` corren contra el proyecto de `.env.local`: no
@@ -427,7 +427,7 @@ agregues pruebas que entreguen órdenes o paguen comisiones mientras no exista s
   `@sentry/react`. Llegan los errores del `ErrorBoundary` y las consultas que fallan por algo
   inesperado (`QueryCache`; lo esperado lo filtra `isExpectedFailure`), con quién tenía la
   sesión; Configuración tiene "Reportar un problema". Sin `VITE_SENTRY_DSN` todo es un no-op, y
-  **al 3/10/2026 no está en Hostinger** ([evaluacion-2026-10.md](evaluacion-2026-10.md), O-2).
+  **al 3/10/2026 no está en Hostinger** ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md), O-2).
 - **Historial de la orden** (`historial_orden`, `20261010000004`): quién cambió qué, desde
   dónde y el antes → después. Lo escribe un solo trigger genérico (`trg_historial`) con una
   lista de columnas por tabla; solo un admin lo lee y nadie lo escribe por la API. Si agregas

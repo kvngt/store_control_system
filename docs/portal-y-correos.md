@@ -6,7 +6,7 @@ sistema le **manda correos** cuando hay algo nuevo. Los correos no traen los dat
 traen el enlace.
 
 Reglas en lenguaje de negocio: [reglas-de-negocio.md](reglas-de-negocio.md#7-portal-del-cliente-y-correos).
-Cómo probarlo: [plan-de-pruebas.md](plan-de-pruebas.md#413-portal-del-cliente-y-correos-por).
+Cómo probarlo: [plan-de-pruebas.md](historico/plan-de-pruebas.md#413-portal-del-cliente-y-correos-por).
 
 ---
 

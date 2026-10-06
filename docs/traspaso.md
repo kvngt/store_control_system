@@ -32,10 +32,10 @@ de estados de cuenta de Wells Fargo, comisiones del personal y avisos push al te
 |---|---|
 | **Usuarios** | Personal del taller (admin, mecánico, pintor) y clientes finales (solo el portal) |
 | **Escala esperada** | 2 talleres, ~8 personas cada uno, ~120 órdenes al mes |
-| **Frontend** | React 19 + TypeScript + Vite, sitio estático en Hostinger (`restorifyauto.net`), publicado desde GitHub en cada push (el diseño es la rama `produccion`; **hoy publica `main`**, ver [evaluacion-2026-10.md](evaluacion-2026-10.md#5-operación-y-despliegue)) |
+| **Frontend** | React 19 + TypeScript + Vite, sitio estático en Hostinger (`restorifyauto.net`), publicado desde GitHub en cada push (el diseño es la rama `produccion`; **hoy publica `main`**, ver [evaluacion-2026-10.md](historico/evaluacion-2026-10.md#5-operación-y-despliegue)) |
 | **Backend** | Supabase (proyecto `dbstores`): Postgres con RLS y triggers, Auth, Storage, Realtime, 6 Edge Functions, pg_cron |
 | **Correo** | Resend, dominio `restorifyauto.net` (correos al cliente y SMTP de Auth) |
-| **Estado** | Las seis fases del cliente, una auditoría, una revisión previa a producción y los siete cambios de la reunión con el taller, todos hechos. El 29 de septiembre de 2026 la base se limpió para la prueba del taller: un administrador y una sede. Antes de atender clientes reales: [salida-a-produccion.md](salida-a-produccion.md) §2 y [mantenimiento.md §5](mantenimiento.md#5-plan-priorizado) |
+| **Estado** | Las seis fases del cliente, una auditoría, una revisión previa a producción y los siete cambios de la reunión con el taller, todos hechos. El 29 de septiembre de 2026 la base se limpió para la prueba del taller: un administrador y una sede. Antes de atender clientes reales: [salida-a-produccion.md](historico/salida-a-produccion.md) §2 y [mantenimiento.md §5](mantenimiento.md#5-plan-priorizado) |
 | **Idioma** | La interfaz en español e inglés; la documentación y los comentarios del código, en español (algunos antiguos en inglés) |
 
 La decisión que explica todo: **no hay servidor propio**. El navegador habla directo con
@@ -71,7 +71,7 @@ Esto no se recupera clonando el repositorio. Si se pierde, hay que regenerarlo.
 | Qué | Dónde vive | Si se pierde |
 |---|---|---|
 | `.env.local` (URL y clave anónima de Supabase, llave pública VAPID, DSN de Sentry) | Máquina de desarrollo | Todo se vuelve a leer del panel de Supabase (Project Settings → API Keys) salvo la llave pública VAPID, que también está en `supabase/.env.secrets.local` |
-| `.env.test.local` (cuentas para pruebas e2e y `qa:security`) | Máquina de desarrollo. **Las cuentas que nombra se borraron el 29/09/2026** con la limpieza del proyecto: hay que crearlas de nuevo, idealmente en un proyecto de staging | Crear cuentas de prueba nuevas ([plan-de-pruebas.md §2.2](plan-de-pruebas.md#22-cuentas)) |
+| `.env.test.local` (cuentas para pruebas e2e y `qa:security`) | Máquina de desarrollo. **Las cuentas que nombra se borraron el 29/09/2026** con la limpieza del proyecto: hay que crearlas de nuevo, idealmente en un proyecto de staging | Crear cuentas de prueba nuevas ([plan-de-pruebas.md §2.2](historico/plan-de-pruebas.md#22-cuentas)) |
 | `supabase/.env.secrets.local` (secreto de funciones internas, par VAPID) | Máquina de desarrollo y, sin forma de leerlos de vuelta, en Supabase → Edge Functions → Secrets | Generar un juego nuevo ([deployment.md §7](deployment.md#7-rotar-secretos-y-llaves)): nuevo secreto en Supabase **y** en Vault; nuevo par VAPID en los secretos **y** en `VITE_VAPID_PUBLIC_KEY`, recompilar. Cada persona vuelve a activar el push en su teléfono |
 | Llave de Resend | Solo en Supabase → Edge Functions → Secrets | Crear otra en Resend y cargarla con `npx supabase secrets set` |
 | Configuración de Auth del proyecto real (registro apagado, SMTP, URL del sitio, largo de contraseña) | Panel de Supabase | `supabase/config.toml` describe la local, **no** la real. Ver [supabase.md §8](supabase.md#8-auth) |
@@ -124,9 +124,9 @@ Si todo pasa, la máquina está lista.
 | 1 | [mapa-de-secciones.md](mapa-de-secciones.md) | Dónde está cada parte de la app |
 | 1 | [supabase.md](supabase.md) | Qué hay en el backend y dónde se ve |
 | 2 | [reglas-de-negocio.md](reglas-de-negocio.md) | Qué hace el sistema; para decidir si algo es un error |
-| 2 | [salida-a-produccion.md](salida-a-produccion.md) y [auditoria-2026-09.md](auditoria-2026-09.md) | Qué se rompió, cómo se arregló, qué queda abierto |
+| 2 | [salida-a-produccion.md](historico/salida-a-produccion.md) y [auditoria-2026-09.md](historico/auditoria-2026-09.md) | Qué se rompió, cómo se arregló, qué queda abierto |
 | 3 | [deployment.md](deployment.md) y [mantenimiento.md](mantenimiento.md) | Publicar, rotar llaves, volver atrás; cambiar la base sin cortar el servicio |
-| 3 | [pruebas.md](pruebas.md) y [plan-de-pruebas.md](plan-de-pruebas.md) | Qué está probado y cómo probar lo que cambies |
+| 3 | [pruebas.md](pruebas.md) y [plan-de-pruebas.md](historico/plan-de-pruebas.md) | Qué está probado y cómo probar lo que cambies |
 | Cuando toque | [presupuestos.md](presupuestos.md), [hallazgos.md](hallazgos.md), [portal-y-correos.md](portal-y-correos.md), [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md), [comisiones.md](comisiones.md), [pagos-a-empleados.md](pagos-a-empleados.md) | Cada subsistema a fondo |
 | Cuando toque | [evolucion.md](evolucion.md) | Por qué algo es como es (decisiones que se reemplazaron) |
 | Para el taller | [manual-usuario.md](manual-usuario.md) | La app pantalla por pantalla |
@@ -163,7 +163,7 @@ Si todo pasa, la máquina está lista.
   API corta en 1.000 filas sin avisar.
 - Todo texto visible en `src/i18n/translations.ts` (español e inglés).
 - Fechas con `src/lib/dates.ts`.
-- Qué probar a mano según lo que cambiaste: [plan-de-pruebas.md §8](plan-de-pruebas.md#8-antes-de-cada-publicación).
+- Qué probar a mano según lo que cambiaste: [plan-de-pruebas.md §8](historico/plan-de-pruebas.md#8-antes-de-cada-publicación).
 
 Reglas completas: [ai-context.md](ai-context.md) (sirven igual para personas).
 
@@ -174,7 +174,7 @@ Reglas completas: [ai-context.md](ai-context.md) (sirven igual para personas).
 | Tarea | Cómo |
 |---|---|
 | **Publicar una versión** | [deployment.md §5](deployment.md#5-publicar-una-versión): CI en verde → respaldo → migraciones → funciones que cambiaron → `git push origin main:produccion` (Hostinger compila y publica) → [§6](deployment.md#6-verificación-después-de-publicar) |
-| **Volver atrás** | [deployment.md §8](deployment.md#8-volver-atrás) y [salida-a-produccion.md §5](salida-a-produccion.md#5-volver-atrás) |
+| **Volver atrás** | [deployment.md §8](deployment.md#8-volver-atrás) y [salida-a-produccion.md §5](historico/salida-a-produccion.md#5-volver-atrás) |
 | **Crear o dar de baja a un empleado** | En la app: **Empleados** (menú lateral). Nunca desde Authentication → Users |
 | **Cambiar cómo se le paga a alguien** (su porcentaje o salario) | Empleados → Ver. Recalcula sus comisiones pendientes: ver [comisiones.md](comisiones.md) |
 | **Un empleado olvidó la contraseña** | "¿Olvidaste tu contraseña?" en el login, o un admin le asigna una nueva editando su ficha |
@@ -183,10 +183,10 @@ Reglas completas: [ai-context.md](ai-context.md) (sirven igual para personas).
 | **Ver qué pasó con una orden** | `npx supabase db query --linked -f scripts/qa/estado-orden.sql` (editar el número) |
 | **Restaurar un respaldo** | Supabase → Database → Backups (Pro). Restaura el proyecto entero a esa fecha: se pierde lo posterior |
 | **Exportar datos** | Finanzas → Exportar CSV; o `npx supabase db dump --linked --data-only -f datos.sql` (tiene datos personales: no a git) |
-| **Revisar la salud** | [salida-a-produccion.md §6](salida-a-produccion.md#6-la-primera-semana) |
+| **Revisar la salud** | [salida-a-produccion.md §6](historico/salida-a-produccion.md#6-la-primera-semana) |
 | **Dejar la plataforma sin datos de prueba** | [scripts/admin/limpiar-datos.sql](../scripts/admin/limpiar-datos.sql): conserva los correos que indiques (al menos un admin) y las sedes; termina en `ROLLBACK` hasta que lo cambies. Después, vaciar los buckets **desde el panel**: `supabase storage rm -r ss:///<bucket>` borra también el bucket (pasó el 29/09/2026) |
 | **Encontrar dónde cambiar una parte** | [mapa-de-secciones.md](mapa-de-secciones.md); para una función de la base, `npm run db:donde -- <nombre>` |
-| **Probar la plataforma a mano** | [manual-de-pruebas.md](manual-de-pruebas.md) (142 casos por sesiones) |
+| **Probar la plataforma a mano** | [manual-de-pruebas.md](historico/manual-de-pruebas.md) (142 casos por sesiones) |
 
 ---
 
@@ -194,13 +194,13 @@ Reglas completas: [ai-context.md](ai-context.md) (sirven igual para personas).
 
 | Síntoma | Primero mira | Detalle |
 |---|---|---|
-| El sitio no abre o da 500 | ¿Se subió un `.htaccess` nuevo? ¿Hostinger está arriba? | [salida-a-produccion.md §5](salida-a-produccion.md#5-volver-atrás) |
+| El sitio no abre o da 500 | ¿Se subió un `.htaccess` nuevo? ¿Hostinger está arriba? | [salida-a-produccion.md §5](historico/salida-a-produccion.md#5-volver-atrás) |
 | Aviso "esquema desactualizado" | `npm run db:check`: faltan migraciones o el `dist/` es viejo | [deployment.md §5](deployment.md#5-publicar-una-versión) |
-| Nadie puede iniciar sesión | Supabase → Authentication → Providers: **Email** encendido | [salida-a-produccion.md PRD-16](salida-a-produccion.md#prd-16--media--un-config-push-habría-dejado-a-todos-sin-poder-entrar) |
+| Nadie puede iniciar sesión | Supabase → Authentication → Providers: **Email** encendido | [salida-a-produccion.md PRD-16](historico/salida-a-produccion.md#prd-16--media--un-config-push-habría-dejado-a-todos-sin-poder-entrar) |
 | **No queda ningún administrador** (se borró, o la base quedó sin usuarios) | Nadie puede crear cuentas desde la app y el registro público está apagado a propósito | Crear la cuenta en Authentication → Users → Add user y correr [scripts/admin/crear-primer-admin.sql](../scripts/admin/crear-primer-admin.sql) |
 | "Esta cuenta no tiene acceso al taller" | La cuenta existe en Auth pero no tiene fila en `perfiles` (se creó en el panel, no en la app) | Borrarla en Authentication → Users y crearla desde **Empleados** |
 | Fotos, logos o comprobantes no suben ("Bucket not found") | Storage → ¿existen los 8 buckets? | Recrearlos con su configuración: [supabase.md §5](supabase.md#5-storage) |
-| No llega el correo de "¿Olvidaste tu contraseña?" | Authentication → Logs; ¿hay SMTP propio? El correo de fábrica de Supabase manda muy pocos por hora y solo a correos del equipo del proyecto | [salida-a-produccion.md PRD-05](salida-a-produccion.md#2-bloqueantes-fuera-del-código) |
+| No llega el correo de "¿Olvidaste tu contraseña?" | Authentication → Logs; ¿hay SMTP propio? El correo de fábrica de Supabase manda muy pocos por hora y solo a correos del equipo del proyecto | [salida-a-produccion.md PRD-05](historico/salida-a-produccion.md#2-bloqueantes-fuera-del-código) |
 | Una pantalla dice "no tienes permiso" | Rol de la cuenta; política RLS de la tabla | [reglas-de-negocio.md §3](reglas-de-negocio.md#3-qué-puede-hacer-cada-rol) |
 | No llegan correos al cliente | Tarjeta "Enlace del cliente" de la orden; `cola_envios` | [portal-y-correos.md §9](portal-y-correos.md#9-diagnóstico) |
 | No llegan push | Configuración → Notificaciones → Enviar prueba; secretos VAPID | [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md#diagnóstico-1) |
@@ -224,7 +224,7 @@ Logs: Supabase → Logs & Analytics (API, Auth, Storage) y Edge Functions → la
    subas archivos a Hostinger sin que la persona responsable lo pida explícitamente.
 4. Nunca leas, copies ni escribas valores de secretos; solo nombres.
 5. Para probar, usa el Supabase local (`npx supabase start`) y
-   [plan-de-pruebas.md](plan-de-pruebas.md) §1.4. Contra el proyecto real, solo consultas
+   [plan-de-pruebas.md](historico/plan-de-pruebas.md) §1.4. Contra el proyecto real, solo consultas
    de lectura.
 6. Al terminar un cambio, todo en verde (sección 4) y la documentación afectada actualizada.
 

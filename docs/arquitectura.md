@@ -39,7 +39,7 @@ Guía para quien llega nuevo al código y necesita entender cómo está armado e
 | **Portal del cliente** | Paquete aparte en `/r/<token>`, sin cuenta; datos por una edge function pública |
 | **Presupuestos** | Estado por línea (borrador → pendiente → aprobado/rechazado); solo lo aprobado se cobra |
 | **Pruebas** | Vitest (unitarias y componentes), pgTAP (base de datos), Playwright (e2e) |
-| **Hosting** | Sitio estático en Hostinger, dominio `restorifyauto.net`; Hostinger compila y publica desde GitHub en cada push. El diseño es la rama `produccion`; hoy publica `main` ([evaluacion-2026-10.md](evaluacion-2026-10.md#5-operación-y-despliegue)) |
+| **Hosting** | Sitio estático en Hostinger, dominio `restorifyauto.net`; Hostinger compila y publica desde GitHub en cada push. El diseño es la rama `produccion`; hoy publica `main` ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#5-operación-y-despliegue)) |
 
 Unas 33 600 líneas de TypeScript (con pruebas), 5 600 de CSS, 54 migraciones y 26 tablas (1/10/2026).
 Cómo se llegó hasta aquí, etapa por etapa: [evolucion.md](evolucion.md). Estado de la estructura y deuda técnica: [mantenimiento.md](mantenimiento.md).

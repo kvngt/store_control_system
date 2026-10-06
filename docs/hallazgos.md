@@ -1,8 +1,8 @@
 # Trabajo adicional reportado (hallazgos) — F6
 
-> Fase 6 del [plan de mejoras](plan-mejoras-2026-10.md#f6--hallazgos-y-nueva-espera-de-autorización).
+> Fase 6 del [plan de mejoras](historico/plan-mejoras-2026-10.md#f6--hallazgos-y-nueva-espera-de-autorización).
 > Migraciones `20261010000010` y `20261010000011`. Estado y siguiente paso: la fila F6 de la
-> [tabla de estado](plan-mejoras-2026-10.md#estado) y la [bitácora](plan-mejoras-2026-10.md#bitácora-de-traspaso-entre-agentes).
+> [tabla de estado](historico/plan-mejoras-2026-10.md#estado) y la [bitácora](historico/plan-mejoras-2026-10.md#bitácora-de-traspaso-entre-agentes).
 
 ## 1. Qué cambia para el taller
 #despilegue
@@ -76,7 +76,7 @@ que ya tiene la pantalla. Así la app publicada no se rompe si llega antes que e
 - Vitest: `WorkOrders.smoke.test.tsx` (describe "trabajo adicional reportado (F6)"),
   `KanbanBoard.test.tsx`, `CustomerPortal.test.tsx`, `reportMedia.test.ts`.
 - `qa:security`: SEC-106 a SEC-112 (ninguno escribe).
-- A mano: HAL-01 a HAL-07 en [plan-de-pruebas.md](plan-de-pruebas.md).
+- A mano: HAL-01 a HAL-07 en [plan-de-pruebas.md](historico/plan-de-pruebas.md).
 
 ## 6. Lo que falta (en orden)
 
