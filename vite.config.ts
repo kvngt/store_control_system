@@ -95,7 +95,7 @@ export default defineConfig(({ mode }) => {
     warnMissingSiteUrl(env.VITE_PUBLIC_SITE_URL),
     warnMissingVapidKey(env.VITE_VAPID_PUBLIC_KEY),
     sentryVitePlugin({
-      org: "restorify",
+      org: "reinventa-ow",
       project: "restorify-frontend",
     })
   ],
