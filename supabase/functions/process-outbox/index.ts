@@ -315,8 +315,7 @@ async function sendTraduccion(job: OutboxJob): Promise<JobResult> {
       parts: [{ text: "Eres un traductor técnico de un taller automotriz. Traduce el siguiente array JSON de español a inglés. Si una frase ya está en inglés, o es un nombre propio/marca, consérvala o corrígela si tiene errores. Devuelve estrictamente un objeto JSON con la forma {\"traducciones\": [\"texto1\", \"texto2\"]} manteniendo el mismo orden y longitud del array original. No incluyas markdown ni explicaciones." }]
     },
     generationConfig: {
-      responseMimeType: "application/json",
-      temperature: 0.1
+      responseMimeType: "application/json"
     }
   };
 
