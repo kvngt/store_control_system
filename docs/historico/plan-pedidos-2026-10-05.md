@@ -175,7 +175,7 @@ Una marca `ordenes_trabajo.lista_para_entregar_en` (+ `_por`). Estado que ve el 
 - `docs/portal-y-correos.md` (líneas ~150 y ~319): el correo de "listo" sale al marcarla.
 - `docs/comisiones.md` y `docs/pagos-a-empleados.md`: el esquema mixto (salario informativo).
 - `docs/plan-de-pruebas.md`: NOT-05 y POR-08, más casos nuevos de "listo para entregar" y Mixto.
-- `docs/planos.md`: diagrama 3 (ciclo de la orden) con el paso "Listo para entregar" y la flecha "solo admin reabre"; diagrama 9 (correos).
+- `docs/radiografia.md`: diagrama 3 (ciclo de la orden) con el paso "Listo para entregar" y la flecha "solo admin reabre"; diagrama 9 (correos).
 - `docs/ai-context.md`: la marca lista_para_entregar_en (solo por la RPC; el correo de "listo" sale de ahí; datos_correo traduce el estatus del cliente) y el esquema mixto.
 - `docs/pruebas.md`: conteos nuevos.
 - Bitácora en `docs/plan-mejoras-2026-10.md`.

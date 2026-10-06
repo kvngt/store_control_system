@@ -7,7 +7,7 @@ seguro que la hoja con la que empezaron, o solo agrega pasos?**
 
 Fuentes: el código vigente, los datos de producción (consultas de solo lectura del
 05/10/2026, con las órdenes de prueba del taller) y las reglas de Maryland de
-[plan-legal-y-privacidad.md](plan-legal-y-privacidad.md).
+[plan-legal-y-privacidad.md](../plan-legal-y-privacidad.md).
 
 **Veredicto corto.** El corazón de la orden aporta valor real y la hoja no lo tenía: la
 firma con texto legal, las fotos de recepción, la autorización de cada trabajo, el cálculo
@@ -40,7 +40,7 @@ El taller comentó cada punto (los comentarios están en su sección, abajo). Lo
 | J | (Se creía implementado) | **Hecho en la base.** `SHOP_TIMEZONE` ya estaba puesto (sirve para los correos), pero la base seguía fechando en UTC. Ahora `hoy_taller(sede)` con `sedes.zona_horaria` (America/New_York) en todos los movimientos automáticos y en el recordatorio de entrega vencida |
 | K | Descuento desde administración, absorbido por el taller | **Hecho.** "Aplicar descuento" en Totales: baja el total, no las comisiones; con motivo y en el historial |
 | L | PDF en inglés o en español, a elección | **Hecho.** Selector ES/EN junto a "Descargar PDF"; en inglés usa la traducción automática de los textos del taller cuando ya existe. Las leyendas de Maryland siguen en el plan legal (L4) |
-| M | Actualizar las reglas de negocio | **Hecho:** [reglas-de-negocio.md](reglas-de-negocio.md) |
+| M | Actualizar las reglas de negocio | **Hecho:** [reglas-de-negocio.md](../reglas-de-negocio.md) |
 
 De paso:
 - La tarjeta **Totales** de la orden sumaba las líneas en el navegador y restaba el depósito;
@@ -83,7 +83,7 @@ Shop-Ware, AutoLeap). Lo que todos traen y cómo queda Restorify:
 | # | Paso | Qué hace la app | ¿Agrega valor? | Problema |
 |---|---|---|---|---|
 | 1 | Llega el cliente | Alta en 4 pasos: cliente, vehículo y recepción (millas, gasolina, fotos 360, voz), depósito, trabajos | **Sí**: historial por cliente y vehículo, fotos del estado en que llegó | Hay que cronometrarlo con el taller (meta: menos de 3 minutos) |
-| 2 | Firma | La primera firma aprueba lo cotizado y guarda el texto legal | **Sí**, y alto: es la defensa ante un reclamo | El texto aún sin revisión de abogado ([plan legal](plan-legal-y-privacidad.md)) |
+| 2 | Firma | La primera firma aprueba lo cotizado y guarda el texto legal | **Sí**, y alto: es la defensa ante un reclamo | El texto aún sin revisión de abogado ([plan legal](../plan-legal-y-privacidad.md)) |
 | 3 | Se trabaja | Tareas por técnico, "Realizado", avances con fotos, **% de avance a mano** | Tareas y avances, sí. El % a mano, **no** | [G](#g-dos-medidores-de-avance-que-no-coinciden) |
 | 4 | Aparece trabajo extra | El técnico reporta un hallazgo → la orden se pausa → la oficina cotiza → el cliente autoriza | **Sí**: Maryland exige autorización para el trabajo adicional | Sin correos, la autorización depende de que alguien mande el enlace a mano ([F](#f-ningún-correo-le-ha-llegado-a-un-cliente)) |
 | 5 | Se piden repuestos | Línea con precio de venta | Parcial | Costo = precio ([B](#b-el-costo-de-un-repuesto-es-su-precio-de-venta)); no hay "esperando repuestos" ([H](#h-no-existen-esperando-repuestos-ni-cancelada)) |
@@ -324,12 +324,12 @@ Actualiza el pdf para que pueda salir en inglés o en español de acuerdo a como
 
 ### M. Documentación desactualizada
 
-[reglas-de-negocio.md](reglas-de-negocio.md) §1 todavía describe el estado "Espera de
+[reglas-de-negocio.md](../reglas-de-negocio.md) §1 todavía describe el estado "Espera de
 repuestos" y dice que un técnico puede crear órdenes. Las dos cosas cambiaron
 (`20260929000000` y `20261004000000`). Puede confundir a quien lea las reglas o a otro
 agente.
 
-actualiza el archivo [reglas-de-negocio.md](reglas-de-negocio.md) para que refleje los cambios realizados.
+actualiza el archivo [reglas-de-negocio.md](../reglas-de-negocio.md) para que refleje los cambios realizados.
 
 ---
 
@@ -394,7 +394,7 @@ actualiza el archivo [reglas-de-negocio.md](reglas-de-negocio.md) para que refle
 | 9 | Comisiones: aceptar en bloque al pagar (I) | S | **Sí** (pregunta 6) |
 | 10 | PDF bilingüe con las leyendas de Maryland (L) | M | Parte del plan legal |
 | 11 | Descuentos (K) | M | **Sí** (pregunta 5) |
-| — | Corregir [reglas-de-negocio.md](reglas-de-negocio.md) §1 (M) | S | No |
+| — | Corregir [reglas-de-negocio.md](../reglas-de-negocio.md) §1 (M) | S | No |
 
 Las prioridades 2 a 5 no cambian ninguna regla de dinero que el taller haya decidido. La 6
 en adelante cambia cómo se leen sus números: va después de las preguntas.

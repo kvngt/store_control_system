@@ -1,7 +1,7 @@
 # Contexto para agentes de IA
 
 Léelo antes de modificar Restorify. Es corto a propósito: dice qué no romper y
-dónde está el detalle. Para todo lo demás, [arquitectura.md](arquitectura.md) y
+dónde está el detalle. Para todo lo demás, [radiografia.md](radiografia.md) y
 [reglas-de-negocio.md](reglas-de-negocio.md). Para ubicar los archivos, tablas y pruebas
 de una sección, [mapa-de-secciones.md](mapa-de-secciones.md); antes de cambiar la base de
 un proyecto con datos reales, [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación).

@@ -14,7 +14,7 @@ cómo publicar sin romper nada. Complementa la [auditoría de septiembre](audito
 > `/auth/v1/settings`), PRD-04 (queda solo el administrador del taller; no hay cuentas ni datos
 > de prueba) y PRD-08 (buckets vaciados). **Pendientes:** PRD-02 (Pro, sin respaldos
 > automáticos hasta entonces) y PRD-06 (Sentry). **Sin confirmar:** PRD-03, PRD-05 y PRD-07.
-> Antes de atender clientes reales conviene además lo P0 de [mantenimiento.md](mantenimiento.md#5-plan-priorizado):
+> Antes de atender clientes reales conviene además lo P0 de [mantenimiento.md](../mantenimiento.md#5-plan-priorizado):
 > staging y un respaldo antes de cada `db push`.
 
 > **30 de septiembre de 2026: dominio definitivo `restorifyauto.net`.** `reinventa.shop` se dio
@@ -84,7 +84,7 @@ Nadie más que quien administra las cuentas puede hacer esto. Marca cada uno.
 | **PRD-05** | **Alta** | **SMTP de Auth con Resend** | El correo propio de Supabase permite unos 2 por hora y, según la política de Supabase para ese servidor de fábrica, solo entrega a correos del equipo de la organización: el "¿Olvidaste tu contraseña?" de un técnico puede no llegarle nunca. Comprobar con un correo que no sea del equipo (manual-de-pruebas A-08, B-13) | [deployment.md §4.2](deployment.md#42-auth) |
 | **PRD-06** | Media | **Sentry** | `VITE_SENTRY_DSN` está vacía: un error en el teléfono de un técnico no llega a nadie | Crear el proyecto en Sentry (org `restorify`, proyecto `restorify-frontend`, ya configurados en `vite.config.ts`), poner el DSN en `VITE_SENTRY_DSN` en las variables del sitio en Hostinger y volver a desplegar |
 | **PRD-07** | Media | **Contraseñas de 8 caracteres en Auth** | La app y las funciones ya exigen 8; Auth en el panel sigue en 6 y aceptaría una de 6 desde la recuperación de contraseña | Authentication → Sign In / Providers → Email → Minimum password length: 8 |
-| **PRD-08** | Baja | **Vaciar los buckets de prueba** | `vehiculos_fotos` (78 MB), `firmas` y `reportes` guardan datos de antes de las fases | [supabase.md §14](supabase.md#14-pendientes-y-limpieza) |
+| **PRD-08** | Baja | **Vaciar los buckets de prueba** | `vehiculos_fotos` (78 MB), `firmas` y `reportes` guardan datos de antes de las fases | [supabase.md §14](../supabase.md#14-pendientes-y-limpieza) |
 
 ---
 
@@ -233,7 +233,7 @@ agentes de IA en la raíz y sin documento de traspaso.
 
 **Corrección.** `.github/workflows/ci.yml` (lint, tipos, pruebas, build y pgTAP con las
 migraciones desde cero), `.nvmrc` y `engines` (Node 22), `AGENTS.md` y `CLAUDE.md`,
-[traspaso.md](traspaso.md).
+[traspaso.md](../traspaso.md).
 
 ### PRD-24 · Media · Borrar una línea o una asignación podía fingir éxito
 
@@ -420,4 +420,4 @@ No bloquea la salida, pero conviene planearla:
 | No hay staging | Cada migración se prueba en local y va directo a producción | Segundo proyecto de Supabase |
 | Pruebas e2e contra producción | Con staging | Apuntarlas a staging |
 | ~~Depósito mayor que lo autorizado sin reembolso~~ | — | **Resuelto:** `entregar_orden` registra la devolución con su método (`20261008000000`) |
-| Sin respaldo antes de migrar y sin staging | Cada `db push` | Ver [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación) |
+| Sin respaldo antes de migrar y sin staging | Cada `db push` | Ver [mantenimiento.md §4](../mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación) |

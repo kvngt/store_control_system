@@ -15,7 +15,7 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 |---|---|
 | **Hacerte cargo del proyecto** sin poder preguntarle a quien lo hizo | [traspaso.md](traspaso.md) |
 | **Salir a producción**: bloqueantes, plan del día y vuelta atrás | [salida-a-produccion.md](historico/salida-a-produccion.md) |
-| **Entender el sistema** antes de tocar código | [arquitectura.md](arquitectura.md) → [reglas-de-negocio.md](reglas-de-negocio.md) |
+| **Entender el sistema** antes de tocar código | [radiografia.md](radiografia.md) → [reglas-de-negocio.md](reglas-de-negocio.md) |
 | **Cambiar una parte concreta** (Finanzas, la entrega, el portal…) y no saber a dónde ir | [mapa-de-secciones.md](mapa-de-secciones.md) |
 | Saber **qué tan sano está el proyecto hoy**: estructura, base de datos, operación y qué hacer primero | [evaluacion-2026-10.md](historico/evaluacion-2026-10.md) |
 | Saber **qué sigue**: los cambios que pidió el taller en la reunión del 03/10/2026, por fases y con su estado | [plan-mejoras-2026-10.md](historico/plan-mejoras-2026-10.md) |
@@ -55,7 +55,7 @@ plan sin respaldos, llaves que rotar), los errores corregidos (totales cortados 
 caché compartida en tablets, importación a medias, pagos dobles), el plan del día de la
 salida, cómo volver atrás y qué vigilar la primera semana.
 
-**[arquitectura.md](arquitectura.md)** — Cómo está construido. La decisión central
+**[radiografia.md](radiografia.md)** — Cómo está construido. La decisión central
 (no hay servidor propio: el navegador habla directo con Supabase, así que la
 seguridad vive en la base de datos), el mapa del repositorio, el modelo de datos,
 los triggers, el frontend por dentro, cómo se escriben migraciones y las trampas

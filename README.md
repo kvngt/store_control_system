@@ -12,7 +12,7 @@ Restorify administra talleres mecánicos y de pintura con varias sedes. Cubre:
 
 **En producción en [restorifyauto.net](https://restorifyauto.net)** (antes `reinventa.shop`,
 dado de baja). Se puede instalar como app en Android y en iPhone.
-Estado y pendientes: [docs/evaluacion-2026-10.md](docs/evaluacion-2026-10.md).
+Estado y pendientes: [docs/historico/evaluacion-2026-10.md](docs/historico/evaluacion-2026-10.md).
 
 ---
 
@@ -100,7 +100,7 @@ docs/             documentación (empieza por docs/README.md)
 ```
 
 Unas 25 000 líneas de TypeScript (33 600 con pruebas) y 5 600 de CSS. Mapa detallado en
-[docs/arquitectura.md §3](docs/arquitectura.md#3-mapa-del-repositorio); qué archivos, tablas y
+[docs/radiografia.md §3](docs/radiografia.md#3-mapa-del-repositorio); qué archivos, tablas y
 pruebas tiene cada sección, en [docs/mapa-de-secciones.md](docs/mapa-de-secciones.md).
 
 ---
@@ -119,7 +119,7 @@ pruebas tiene cada sección, en [docs/mapa-de-secciones.md](docs/mapa-de-seccion
 | Avisos | `notificaciones`, `push_suscripciones`, `cola_envios` |
 
 Además: 114 funciones, 55 triggers y 125 políticas. Diagrama y detalles en
-[docs/arquitectura.md §4](docs/arquitectura.md#4-modelo-de-datos). Evaluación de su estado en
+[docs/radiografia.md §4](docs/radiografia.md#4-modelo-de-datos). Evaluación de su estado en
 [docs/evaluacion-2026-10.md §4](docs/evaluacion-2026-10.md#4-base-de-datos).
 
 ---
@@ -208,12 +208,12 @@ Toda la documentación vigente está en **[docs/](docs/README.md)**:
 | Si vas a… | Lee |
 |---|---|
 | **Hacerte cargo del proyecto** (persona o agente de IA) | [docs/traspaso.md](docs/traspaso.md) y [AGENTS.md](AGENTS.md) |
-| Saber **qué tan sano está y qué hacer primero** | [docs/evaluacion-2026-10.md](docs/evaluacion-2026-10.md) |
-| **Entender el sistema** | [docs/arquitectura.md](docs/arquitectura.md) → [docs/reglas-de-negocio.md](docs/reglas-de-negocio.md) |
+| Saber **qué tan sano está y qué hacer primero** | [docs/historico/evaluacion-2026-10.md](docs/historico/evaluacion-2026-10.md) |
+| **Entender el sistema** | [docs/radiografia.md](docs/radiografia.md) → [docs/reglas-de-negocio.md](docs/reglas-de-negocio.md) |
 | **Cambiar una sección** y no saber por dónde entrar | [docs/mapa-de-secciones.md](docs/mapa-de-secciones.md) |
 | **Desplegar** o cambiar la base sin cortar el servicio | [docs/deployment.md](docs/deployment.md) y [docs/mantenimiento.md](docs/mantenimiento.md) |
 | Saber qué hay en **Supabase** | [docs/supabase.md](docs/supabase.md) |
-| **Probar** la plataforma | [docs/plan-de-pruebas.md](docs/plan-de-pruebas.md), [docs/pruebas.md](docs/pruebas.md) y [docs/manual-de-pruebas.md](docs/manual-de-pruebas.md) |
+| **Probar** la plataforma | [docs/historico/plan-de-pruebas.md](docs/historico/plan-de-pruebas.md), [docs/pruebas.md](docs/pruebas.md) y [docs/historico/manual-de-pruebas.md](docs/historico/manual-de-pruebas.md) |
 | **Usar** la aplicación o capacitar al taller | [docs/manual-usuario.md](docs/manual-usuario.md) |
 | Entender **cómo evolucionó** y por qué | [docs/evolucion.md](docs/evolucion.md) |
 | Modificar el código con un **agente de IA** | [docs/ai-context.md](docs/ai-context.md) |

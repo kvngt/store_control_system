@@ -11,10 +11,10 @@
 | F0 | Configuración: llave de Resend, DSN de Sentry, push pendiente, diagnóstico de la orden de la pintora | **Pendiente (lo hace el usuario)** |
 | F1 | Trazabilidad (historial de la orden, Sentry en el código, reportar problema) y reintentar correos | **Publicado** (commit `ead2a17` en `main` y `db push` de `20261010000004` a `20261010000007` el 04/10/2026; el push a `main` salió antes que el `db push` y el sitio estuvo ~1 h con la base atrasada). Migraciones `20261010000004` (historial) y `20261010000005` (reintentar correos), pgTAP 17 y 18, Sentry en `lib/monitoring.ts`, "Reportar un problema" y "Correos al cliente" en Configuración, botón Reintentar, pestaña Historial. `process-outbox` cambiado: **falta desplegarla** |
 | F2 | Detalle de la orden con pestañas, textos "Mano de obra"/"Tareas", botones verdes, avisos | **Publicado** (`ead2a17`). `components/Tabs.tsx`, encabezado fijo, pestañas por rol, enlace `?open=&tab=`, `.btn-success`, avisos al agregar (con "falta la autorización" si la orden ya está firmada). Revisado con capturas contra el Supabase local en escritorio y teléfono |
-| F3 | Tareas con técnico y comisión por tarea | **Publicado** (`ead2a17` y `db push` del 04/10/2026; revisión adversarial corregida el 04/10/2026). Migración `20261010000006` (pgTAP 19 con 68 aserciones, ajuste de la 03, SEC-99 a SEC-105). Pantalla: editor de tareas `TaskEditor` (reutilizable para F4), tipo y técnico por fila con el diálogo de oficio distinto (también al cambiar el tipo), "Sin técnico", candado y Borrar apagado en lo ya pagado, reparto por tarea en la tarjeta de comisión, avisos en Resumen y al entregar (el diálogo los lee de la base, así que salen también desde el Kanban), "Por tarea" / "En el reparto" con Sacar/Sumar al reparto en la tarjeta de técnicos, avisos `tarea_*`, campos `tecnico` y `reparto` del historial. La red de seguridad compara la fórmula vieja contra la nueva sin reescribir comisiones. **Pendiente:** (1) confirmar con el taller que asignar técnico a una línea heredada la saca del reparto para siempre ([pagos-a-empleados.md](pagos-a-empleados.md#5-preguntas-enviadas-al-taller)); (2) ~~publicar: commit, `db push` de `20261010000004` a `20261010000006`~~ hecho el 04/10/2026; falta el deploy de `process-outbox` y correr `npm run qa:security` con `TOKEN_ADMIN`/`TOKEN_TECH` (SEC-91 a SEC-105 quedaron en SKIP); (3) ~~una migración posterior que contrae (`ALTER TABLE orden_labor ALTER COLUMN reparto_heredado SET DEFAULT false`)~~ hecha en `20261010000008`; queda el respaldo de `create_work_order` (sin `reparto_heredado`, una línea sin técnico nace heredada), que ya no importa porque la app lo manda siempre desde el 04/10/2026 (noche). **Queda para F4:** que `create_work_order` acepte `asignado_a` y `reparto_heredado` en `p_labor` (hoy las líneas del alta nacen heredadas) y usar `TaskEditor` en el alta |
+| F3 | Tareas con técnico y comisión por tarea | **Publicado** (`ead2a17` y `db push` del 04/10/2026; revisión adversarial corregida el 04/10/2026). Migración `20261010000006` (pgTAP 19 con 68 aserciones, ajuste de la 03, SEC-99 a SEC-105). Pantalla: editor de tareas `TaskEditor` (reutilizable para F4), tipo y técnico por fila con el diálogo de oficio distinto (también al cambiar el tipo), "Sin técnico", candado y Borrar apagado en lo ya pagado, reparto por tarea en la tarjeta de comisión, avisos en Resumen y al entregar (el diálogo los lee de la base, así que salen también desde el Kanban), "Por tarea" / "En el reparto" con Sacar/Sumar al reparto en la tarjeta de técnicos, avisos `tarea_*`, campos `tecnico` y `reparto` del historial. La red de seguridad compara la fórmula vieja contra la nueva sin reescribir comisiones. **Pendiente:** (1) confirmar con el taller que asignar técnico a una línea heredada la saca del reparto para siempre ([pagos-a-empleados.md](../pagos-a-empleados.md#5-preguntas-enviadas-al-taller)); (2) ~~publicar: commit, `db push` de `20261010000004` a `20261010000006`~~ hecho el 04/10/2026; falta el deploy de `process-outbox` y correr `npm run qa:security` con `TOKEN_ADMIN`/`TOKEN_TECH` (SEC-91 a SEC-105 quedaron en SKIP); (3) ~~una migración posterior que contrae (`ALTER TABLE orden_labor ALTER COLUMN reparto_heredado SET DEFAULT false`)~~ hecha en `20261010000008`; queda el respaldo de `create_work_order` (sin `reparto_heredado`, una línea sin técnico nace heredada), que ya no importa porque la app lo manda siempre desde el 04/10/2026 (noche). **Queda para F4:** que `create_work_order` acepte `asignado_a` y `reparto_heredado` en `p_labor` (hoy las líneas del alta nacen heredadas) y usar `TaskEditor` en el alta |
 | F4 | Nueva orden en 4 secciones y depósito con método | **Publicado** (`370bf12`, `e6bfced`; migración `20261010000007`). **Revisado y corregido el 04/10/2026 (noche), publicado por el usuario** (`93bdade`, `830961a`): el servicio mandaba el número de cheque y el comprobante con nombres que la base no lee (se perdían sin error), las tareas perdían su tipo en órdenes de un solo tipo y las sin técnico nacían en el reparto heredado; además Enter o doble clic creaban la orden a medio asistente, una tarea escrita sin agregar se perdía y había textos sin i18n. Las 11 pruebas rotas, adaptadas, y 7 nuevas. Detalle y consulta para revisar lo afectado en producción: [bitácora](#04102026-noche-2--claude-code-alta-y-f7) |
 | F5 | "Tareas por hacer" del técnico | **Publicado** (`2ce08c0`, `cbdf995` en `main`; `db push` de `20261010000009` el 04/10/2026). Pantalla en `TechnicianTaskList.tsx`; pgTAP 21 |
-| F6 | Hallazgos y nueva "espera de autorización" | **Publicado** (04/10/2026: app en `main`; `db push` de `009`, `010` y `011` por el usuario). Detalle completo en [hallazgos.md](hallazgos.md). Migraciones `20261010000010` y `20261010000011`; pgTAP 22 (44) y ajuste de la 03; SEC-106 a SEC-112. **Pendiente:** `qa:security` con tokens; la migración que contrae (guardia del técnico, [hallazgos.md §6](hallazgos.md#6-lo-que-falta-en-orden)); casos HAL en un teléfono real; ~~adaptar las 11 pruebas Vitest del alta~~ hecho el 04/10/2026 (noche) |
+| F6 | Hallazgos y nueva "espera de autorización" | **Publicado** (04/10/2026: app en `main`; `db push` de `009`, `010` y `011` por el usuario). Detalle completo en [hallazgos.md](../hallazgos.md). Migraciones `20261010000010` y `20261010000011`; pgTAP 22 (44) y ajuste de la 03; SEC-106 a SEC-112. **Pendiente:** `qa:security` con tokens; la migración que contrae (guardia del técnico, [hallazgos.md §6](../hallazgos.md#6-lo-que-falta-en-orden)); casos HAL en un teléfono real; ~~adaptar las 11 pruebas Vitest del alta~~ hecho el 04/10/2026 (noche) |
 | F7 | Navegación del sitio | **Publicado** (04/10/2026, noche: `93bdade` y `830961a` en `main`, `db push` de la `012`; `db:check` ✓ con 66 migraciones). `requiere_atencion` comprobada en producción (admin 200, mecánico 42501). Órdenes y Kanban en una página (Lista \| Tablero, misma búsqueda, vista recordada, `/kanban` redirige); grupos del menú traducidos (Taller / Finanzas / Sistema); "Requiere atención" en el panel del admin (migración `20261010000012`, RPC `requiere_atencion`, pgTAP 23 con 15 aserciones, SEC-113 y SEC-114); "Mis tareas" en el panel del técnico. Casos NAV en [plan-de-pruebas.md](plan-de-pruebas.md) |
 | Pedidos | Implementar los pedidos del taller del 05/10/2026 | **Para implementar** (ver [plan-pedidos-2026-10-05.md](plan-pedidos-2026-10-05.md)) |
 | Pedidos 06/10 | Revisión desde el teléfono (PDF del 06/10/2026): firma sin autorizar, idioma y traducciones del cliente, lo rechazado para el técnico, "Mis comisiones", alta editable y arreglos de pantalla | **Hecho, sin publicar** (migración `20261010000022`; ver la [bitácora](#06102026-tarde--claude-code-pedidos-del-0610-revisión-desde-el-teléfono)) |
@@ -43,7 +43,7 @@ cubre todo lo demás:
 8. La "espera de autorización" pasa a ser una pausa. El mecánico ya no la elige: reporta
    hallazgos y el admin los cotiza o los descarta.
 
-Restricciones del proyecto ([docs/ai-context.md](ai-context.md)):
+Restricciones del proyecto ([docs/ai-context.md](../ai-context.md)):
 - Dinero y permisos viven en la base.
 - Cada cambio de esquema es una migración nueva, numerada desde `20261010000004`.
 - Toda función nueva lleva `REVOKE`.
@@ -607,7 +607,7 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
   **no se habría podido entregar**); una aceptada sobrevivía a sacar la orden de Entregado o a
   cambiar el técnico de la tarea (pago doble); montos negativos; la política de `comisiones` y
   el aviso de "comisión generada" dejaban ver el monto sugerido. pgTAP 25 nueva; 02, 12 y 19
-  ajustadas a la regla nueva. Documentado en [comisiones.md](comisiones.md#administración-acepta-cada-comisión-20261010000014).
+  ajustadas a la regla nueva. Documentado en [comisiones.md](../comisiones.md#administración-acepta-cada-comisión-20261010000014).
 - **Pantalla:** `CommissionEstimateCard` sin textos fijos ("Pendiente") ni claves inexistentes
   (`common.approved`, `common.accept`, `commission.approvedSuccess`…), y al editar manda solo lo
   que cambió (antes mandaba el monto viejo junto al porcentaje nuevo). Aviso de privacidad
@@ -645,7 +645,7 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
   dos clientes desde la app.
 - **`qa:security` contra producción: 109 PASS · 0 FAIL · 0 SKIP.** `api-security.mjs` ahora
   también saca `CLIENTE_AJENO` de una `ORDEN_AJENA` fija (SEC-78 se saltaba).
-- **Plan nuevo:** [plan-legal-y-privacidad.md](plan-legal-y-privacidad.md) (minuta: políticas de
+- **Plan nuevo:** [plan-legal-y-privacidad.md](../plan-legal-y-privacidad.md) (minuta: políticas de
   privacidad y texto de la firma). **El taller está en Maryland** (dato del usuario; la primera
   versión suponía Texas y se rehízo). Investigación con fuentes oficiales; fases L0–L8; las
   preguntas que tiene que contestar el taller (§3) y la revisión de un abogado de Maryland van
@@ -697,7 +697,7 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
   los depósitos del alta; (3) F0: la llave de Resend y reintentar los correos con error
   (Configuración → Correos al cliente); (4) decidir si se crea en producción una orden de
   prueba asignada al mecánico de prueba para cubrir los 28 SKIP de `qa:security`; (5) las
-  migraciones que contraen ([hallazgos.md §6](hallazgos.md#6-lo-que-falta-en-orden)); (6) casos
+  migraciones que contraen ([hallazgos.md §6](../hallazgos.md#6-lo-que-falta-en-orden)); (6) casos
   ALT, NAV y HAL en un teléfono real.
 
 ### 04/10/2026, noche (2) — Claude Code (alta y F7)
@@ -777,12 +777,12 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
   un proyecto de staging, P0-1).
 - **Sin commit:** todo lo de esta entrada (código, migración `012`, pruebas y documentación:
   `ai-context.md`, `pruebas.md`, `plan-de-pruebas.md`, `mapa-de-secciones.md`,
-  `manual-usuario.md`, `manual-de-pruebas.md`, `arquitectura.md`, `hallazgos.md`, este archivo).
+  `manual-usuario.md`, `manual-de-pruebas.md`, `radiografia.md`, `hallazgos.md`, este archivo).
 - **Siguiente:** (1) que el usuario revise y pida el commit; (2) publicar en orden: `db push` de
   la `012` → push a `main` (las correcciones del alta no necesitan migración; el arreglo del
   depósito conviene publicarlo cuanto antes); (3) correr las consultas de arriba en producción;
   (4) `qa:security` con tokens (SEC-91 a SEC-114 siguen en SKIP); (5) las migraciones que
-  contraen: el guardia del técnico ([hallazgos.md §6](hallazgos.md#6-lo-que-falta-en-orden)) y,
+  contraen: el guardia del técnico ([hallazgos.md §6](../hallazgos.md#6-lo-que-falta-en-orden)) y,
   opcional, el respaldo `asignado_a IS NULL` de `create_work_order`; (6) casos ALT, NAV y HAL en
   un teléfono real.
 
@@ -815,11 +815,11 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
   usuario corrió `db push` desde una copia sin la `011`: entraron `009` y `010`, **la `011` no**.
   El servicio quedó tolerante a la forma vieja de las RPC. Después el usuario aplicó la `011`:
   la base está al día y los huecos de la `010` quedaron cerrados.
-- **Documentación para seguir:** [hallazgos.md](hallazgos.md) (qué hace, tablas, RPC,
+- **Documentación para seguir:** [hallazgos.md](../hallazgos.md) (qué hace, tablas, RPC,
   archivos, pruebas, qué falta y cómo levantarlo en local).
 - **Siguiente:** (1) ~~`db push` de la `011`~~ hecho;
   (2) `qa:security` con `TOKEN_ADMIN`/`TOKEN_TECH`; (3) la migración que contrae
-  ([hallazgos.md §6](hallazgos.md#6-lo-que-falta-en-orden)); (4) adaptar las 11 pruebas del
+  ([hallazgos.md §6](../hallazgos.md#6-lo-que-falta-en-orden)); (4) adaptar las 11 pruebas del
   alta en `WorkOrders.smoke.test.tsx` (y pasar a i18n los textos fijos del asistente: "Paso
   {step} de 4", "Siguiente"); (5) F7.
 

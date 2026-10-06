@@ -40,7 +40,7 @@ de estados de cuenta de Wells Fargo, comisiones del personal y avisos push al te
 
 La decisión que explica todo: **no hay servidor propio**. El navegador habla directo con
 Supabase, así que la seguridad y las reglas de dinero viven en la base de datos.
-[arquitectura.md §2](arquitectura.md#2-la-decisión-que-explica-todo-lo-demás).
+[radiografia.md §2](radiografia.md#2-la-decisión-que-explica-todo-lo-demás).
 
 ---
 
@@ -120,7 +120,7 @@ Si todo pasa, la máquina está lista.
 | Día | Documento | Para qué |
 |---|---|---|
 | 1 | [README.md](README.md) | Mapa de la documentación |
-| 1 | [arquitectura.md](arquitectura.md) | Cómo está construido y por qué |
+| 1 | [radiografia.md](radiografia.md) | Cómo está construido y por qué |
 | 1 | [mapa-de-secciones.md](mapa-de-secciones.md) | Dónde está cada parte de la app |
 | 1 | [supabase.md](supabase.md) | Qué hay en el backend y dónde se ve |
 | 2 | [reglas-de-negocio.md](reglas-de-negocio.md) | Qué hace el sistema; para decidir si algo es un error |

@@ -4,9 +4,9 @@ Lo que hay que probar para confiar en una versión, escrito para que lo ejecute 
 persona o un agente de IA** sin conocer el proyecto. Cada caso tiene un identificador,
 una prioridad, quién puede ejecutarlo, los pasos y el resultado esperado.
 
-- Qué cubren las pruebas automatizadas y cómo correrlas: [pruebas.md](pruebas.md).
+- Qué cubren las pruebas automatizadas y cómo correrlas: [pruebas.md](../pruebas.md).
 - Qué hace el sistema y por qué (para decidir si algo es un error):
-  [reglas-de-negocio.md](reglas-de-negocio.md).
+  [reglas-de-negocio.md](../reglas-de-negocio.md).
 - Hallazgos de la última auditoría y qué caso comprueba cada uno:
   [auditoria-2026-09.md](auditoria-2026-09.md).
 
@@ -106,13 +106,13 @@ npm run dev                            # http://localhost:5173
 ```
 
 Si `db:check` dice que faltan migraciones, **no ejecutes el plan**: la app mostrará errores
-que no son de la app (ver [deployment.md](deployment.md)).
+que no son de la app (ver [deployment.md](../deployment.md)).
 
 ### 2.2 Cuentas
 
 Créalas en **Empleados** (menú lateral). Las que había se borraron el 29/09/2026 con la
 limpieza del proyecto real; créalas de nuevo, idealmente en un proyecto de staging
-([mantenimiento.md P0-1](mantenimiento.md#5-plan-priorizado)), y **no** en el proyecto
+([mantenimiento.md P0-1](../mantenimiento.md#5-plan-priorizado)), y **no** en el proyecto
 que usa el taller mientras dure su prueba:
 
 | Clave en el plan | Rol | Sede | Variables en `.env.test.local` |
@@ -416,7 +416,7 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 
 ### 4.13 Portal del cliente y correos (POR)
 
-Reglas: [portal-y-correos.md](portal-y-correos.md).
+Reglas: [portal-y-correos.md](../portal-y-correos.md).
 
 | ID | P | Ejecuta | Pasos → Esperado |
 |---|---|---|---|
@@ -440,7 +440,7 @@ Reglas: [portal-y-correos.md](portal-y-correos.md).
 
 ### 4.14 Presupuestos (PRE)
 
-Reglas: [presupuestos.md](presupuestos.md). Orden de **A** con cliente D-02 y **M** asignado.
+Reglas: [presupuestos.md](../presupuestos.md). Orden de **A** con cliente D-02 y **M** asignado.
 
 | ID | P | Ejecuta | Pasos → Esperado |
 |---|---|---|---|
@@ -480,7 +480,7 @@ asignado. Probar en un teléfono real (las fotos del reporte suben por la cola).
 
 ### 4.15 Reporte (REP)
 
-Reglas: [portal-y-correos.md](portal-y-correos.md#10-el-reporte-web). Orden con cliente
+Reglas: [portal-y-correos.md](../portal-y-correos.md#10-el-reporte-web). Orden con cliente
 D-02, fotos de recepción, un avance con una foto publicada, otra interna y una nota.
 
 | ID | P | Ejecuta | Pasos → Esperado |
@@ -695,4 +695,4 @@ Estado en base:  (salida de scripts/qa/estado-orden.sql, si aplica)
 ```
 
 Para subidas: el motivo que muestra la bandeja al expandirla. Para push: los pasos de
-diagnóstico en [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md#diagnóstico-1).
+diagnóstico en [multimedia-y-notificaciones.md](../multimedia-y-notificaciones.md#diagnóstico-1).

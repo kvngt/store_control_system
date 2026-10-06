@@ -6,7 +6,7 @@ cómo se corrigió y con qué prueba se comprueba**. Lo que no se corrigió est�
 con la razón.
 
 Para ejecutar las pruebas: [plan-de-pruebas.md](plan-de-pruebas.md). Para las pruebas
-automatizadas: [pruebas.md](pruebas.md).
+automatizadas: [pruebas.md](../pruebas.md).
 
 > Después de esta auditoría se hizo una **revisión previa a producción** con hallazgos
 > nuevos (PRD-01 a PRD-28), entre ellos dos bloqueantes: [salida-a-produccion.md](salida-a-produccion.md).
@@ -295,8 +295,8 @@ pero no depender de una sola capa es la regla del proyecto.
 | AUD-20 | Media | **Depósito mayor que lo autorizado**: si el cliente dejó $500 y solo autorizó $300, al entregar no se asienta un reembolso; el portal muestra saldo $0. | Es una decisión de negocio (¿se reembolsa, queda a favor?). | Decidirlo; si se reembolsa, asentar un egreso "Reembolso" al entregar. |
 | AUD-21 | Baja | **La IP de la autorización desde el enlace** es la primera de `X-Forwarded-For`, que quien envía la petición puede escribir. | Es evidencia de apoyo, no una firma; cambiar la cabecera sin saber cuál agrega el proxy de Supabase puede dejarla vacía. | Registrar también `cf-connecting-ip` o la última IP de la cadena, y verificarlo en los logs. |
 | AUD-22 | Baja | **La lista de órdenes no pagina**: carga todas las de la sede con cliente, vehículo y asignaciones. | A la escala actual (~120 órdenes/mes) no se nota. | Antes de ~2.000 órdenes por sede: filtrar entregadas antiguas o paginar. |
-| AUD-23 | Baja | **Movimientos automáticos de Finanzas se pueden borrar a mano** (ya documentado). | Decisión pendiente del taller. | Ver [reglas-de-negocio.md](reglas-de-negocio.md#10-riesgos-conocidos-y-decisiones-abiertas). |
-| AUD-24 | Baja | ~~Las 158 aserciones pgTAP nunca se habían ejecutado.~~ **Resuelto el 15 de septiembre de 2026**: 158 en verde con Docker. | — | Correrlas antes de aplicar cada migración ([pruebas.md §2.4](pruebas.md#24-para-qué-hace-falta-docker)). |
+| AUD-23 | Baja | **Movimientos automáticos de Finanzas se pueden borrar a mano** (ya documentado). | Decisión pendiente del taller. | Ver [reglas-de-negocio.md](../reglas-de-negocio.md#10-riesgos-conocidos-y-decisiones-abiertas). |
+| AUD-24 | Baja | ~~Las 158 aserciones pgTAP nunca se habían ejecutado.~~ **Resuelto el 15 de septiembre de 2026**: 158 en verde con Docker. | — | Correrlas antes de aplicar cada migración ([pruebas.md §2.4](../pruebas.md#24-para-qué-hace-falta-docker)). |
 | AUD-25 | Baja | **Las pruebas e2e y `qa:security` corren contra el proyecto real** (no hay staging). | Plan gratuito; no hay clientes reales todavía. | Crear un proyecto de staging antes de atender clientes. |
 
 ---

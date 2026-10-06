@@ -5,7 +5,7 @@ encontrados y plan de accion priorizado. Complementa la auditoria ya documentada
 [auditoria-2026-09.md](auditoria-2026-09.md).
 
 > **Foto anterior a la revisión previa a producción.** Los números de pruebas de abajo son de
-> ese momento; los actuales están en [pruebas.md](pruebas.md). Qué pasó con cada punto
+> ese momento; los actuales están en [pruebas.md](../pruebas.md). Qué pasó con cada punto
 > ([salida-a-produccion.md](salida-a-produccion.md)):
 >
 > | Punto | Estado |

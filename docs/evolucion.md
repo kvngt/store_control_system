@@ -7,7 +7,7 @@ autorización, cobro con método de pago y comisiones por especialidad y por emp
 
 Este documento cuenta **por qué** el sistema es como es: qué se construyó en cada
 etapa, qué problema resolvía y qué decisiones se reemplazaron después. Para saber
-cómo funciona hoy, lee [arquitectura.md](arquitectura.md) y
+cómo funciona hoy, lee [radiografia.md](radiografia.md) y
 [reglas-de-negocio.md](reglas-de-negocio.md).
 
 > Las migraciones llevan fechas correlativas en el nombre (`AAAAMMDD…`) para fijar su

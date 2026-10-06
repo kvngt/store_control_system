@@ -147,7 +147,7 @@ que haga falta", no "sobra". Esa métrica solo dice algo con meses de uso real.
 
 ## Qué falta fuera de la base
 
-De [salida-a-produccion.md](../salida-a-produccion.md) §2, comprobado hoy contra el proyecto:
+De [salida-a-produccion.md](salida-a-produccion.md) §2, comprobado hoy contra el proyecto:
 
 | | Estado |
 |---|---|

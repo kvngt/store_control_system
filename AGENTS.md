@@ -3,12 +3,12 @@
 Restorify es un sistema en producción que maneja dinero, datos de clientes y permisos
 por rol. Antes de cambiar algo, lee **[docs/ai-context.md](docs/ai-context.md)**: son
 las reglas que no se pueden romper y dónde está cada cosa. Si vas a tomar el proyecto
-completo, empieza por **[docs/traspaso.md](docs/traspaso.md)**. Para ver cómo está construido todo en diagramas (los "planos"), **[docs/planos.md](docs/planos.md)**; para ubicar una sección
+completo, empieza por **[docs/traspaso.md](docs/traspaso.md)**. Para ver cómo está construido todo en diagramas (los "planos"), **[docs/radiografia.md](docs/radiografia.md)**; para ubicar una sección
 (archivos, tablas, pruebas), **[docs/mapa-de-secciones.md](docs/mapa-de-secciones.md)**.
 
 **Si retomas trabajo en curso** (varios modelos se turnan): la tabla de estado y la
 **bitácora de traspaso** están en
-**[docs/plan-mejoras-2026-10.md](docs/plan-mejoras-2026-10.md#bitácora-de-traspaso-entre-agentes)**.
+**[docs/historico/plan-mejoras-2026-10.md](docs/historico/plan-mejoras-2026-10.md#bitácora-de-traspaso-entre-agentes)**.
 Léela antes de empezar y agrega tu entrada al terminar cada bloque de trabajo.
 
 ## Lo mínimo
@@ -30,7 +30,7 @@ Léela antes de empezar y agrega tu entrada al terminar cada bloque de trabajo.
 - **No despliegues ni apliques migraciones al proyecto real** (`supabase db push`,
   `functions deploy`, un push a `main` o a `produccion`) sin que la persona responsable lo
   pida. **Hoy Hostinger publica la rama `main`** (verificado el 30/09/2026; la
-  documentación decía `produccion`, ver [docs/evaluacion-2026-10.md](docs/evaluacion-2026-10.md#5-operación-y-despliegue)):
+  documentación decía `produccion`, ver [docs/historico/evaluacion-2026-10.md](docs/historico/evaluacion-2026-10.md#5-operación-y-despliegue)):
   un push a `main` sale en vivo en uno o dos minutos, sin esperar al CI.
 - **Migraciones nuevas: nómbralas después de `20261010000000`** mientras la fecha real sea
   anterior. Hay migraciones aplicadas con fecha futura y una más vieja que la última no se
@@ -45,4 +45,4 @@ npx supabase start && npm run test:db     # si tocaste SQL (necesita Docker)
 npm run qa:security                       # después de aplicar migraciones de permisos
 ```
 
-Qué probar a mano según lo que cambiaste: [docs/plan-de-pruebas.md](docs/plan-de-pruebas.md) §8.
+Qué probar a mano según lo que cambiaste: [docs/historico/plan-de-pruebas.md](docs/historico/plan-de-pruebas.md) §8.

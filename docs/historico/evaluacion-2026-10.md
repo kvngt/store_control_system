@@ -2,8 +2,8 @@
 
 Estado de la estructura del código, de la base de datos y de la operación, revisado la noche
 anterior a la primera prueba en vivo con el taller. Parte de la revisión del 29/09
-([mantenimiento.md](mantenimiento.md)) y registra lo que cambió desde entonces. Para entender
-*cómo* está construido el sistema, [arquitectura.md](arquitectura.md); este documento dice
+([mantenimiento.md](../mantenimiento.md)) y registra lo que cambió desde entonces. Para entender
+*cómo* está construido el sistema, [radiografia.md](../radiografia.md); este documento dice
 *qué tan sano está* y qué hacer primero.
 
 ## Índice
@@ -40,7 +40,7 @@ anterior a la primera prueba en vivo con el taller. Parte de la revisión del 29
 | Cambio | Dónde | Efecto |
 |---|---|---|
 | **Dominio definitivo `restorifyauto.net`** (antes `reinventa.shop`, dado de baja) | Código, Hostinger, Resend, Auth | El código y el sitio publicado ya no mencionan el dominio viejo. Quedan secuelas fuera del código: [§6](#6-secuelas-del-cambio-de-dominio) |
-| **Supabase Pro** | Panel de Supabase | Respaldos diarios. Cierra R-B4 y P0-2 de [mantenimiento.md](mantenimiento.md) |
+| **Supabase Pro** | Panel de Supabase | Respaldos diarios. Cierra R-B4 y P0-2 de [mantenimiento.md](../mantenimiento.md) |
 | **Secciones plegables en el detalle de la orden** (teléfono) | `components/MobileSection.tsx`, `features/workOrders/WorkOrderDetail.tsx` | Cada tarjeta es una pestaña con un dato en el encabezado; Avances abre desplegada para el técnico. En escritorio no cambia nada |
 | **Ícono de la app con el logo del login** | `scripts/generate-pwa-icons.mjs`, `public/icons/` | Los íconos se generan desde `src/assets/restorify-logo.webp`; las URLs llevan `?v=2` porque Hostinger los guarda 7 días |
 | **Recarga sola tras una publicación** | `lib/staleChunk.ts`, `components/ErrorBoundary.tsx`, `public/.htaccess` | Antes, quien tenía la app abierta al publicar veía "Algo salió mal" al entrar a una sección. Ahora la página se recarga una vez y un archivo inexistente de `assets/` responde 404 |
@@ -108,8 +108,8 @@ migraciones (11 500 líneas de SQL).
 | **Avisos y envíos** | `notificaciones`, `push_suscripciones`, `cola_envios` |
 
 El diagrama de relaciones y los detalles que no son obvios están en
-[arquitectura.md §4](arquitectura.md#4-modelo-de-datos); los triggers por tabla, en
-[§5](arquitectura.md#5-dónde-vive-la-lógica-de-negocio).
+[radiografia.md §4](radiografia.md#4-modelo-de-datos); los triggers por tabla, en
+[§5](radiografia.md#5-dónde-vive-la-lógica-de-negocio).
 
 ### Revisión
 
@@ -138,7 +138,7 @@ El diagrama de relaciones y los detalles que no son obvios están en
 
 | # | Hallazgo | Evidencia | Riesgo | Qué hacer |
 |---|---|---|---|---|
-| **O-1** | **Hostinger publica la rama `main`, no `produccion`** | El 30/09 el sitio cambió 1–2 minutos después de cada uno de tres pushes a `main`; `produccion` no se movió desde el 29/09 | Un push a `main` sale a producción **antes** de que el CI termine y antes de un `db push`. Si la versión necesita una migración, la app falla hasta aplicarla | Decidir: **(a)** cambiar en el panel de Hostinger la rama a `produccion` (lo que describe [deployment.md](deployment.md)) o **(b)** aceptar `main` y no empujar a `main` nada que no esté listo para producción. Mientras no se decida, **un push a `main` es un despliegue** |
+| **O-1** | **Hostinger publica la rama `main`, no `produccion`** | El 30/09 el sitio cambió 1–2 minutos después de cada uno de tres pushes a `main`; `produccion` no se movió desde el 29/09 | Un push a `main` sale a producción **antes** de que el CI termine y antes de un `db push`. Si la versión necesita una migración, la app falla hasta aplicarla | Decidir: **(a)** cambiar en el panel de Hostinger la rama a `produccion` (lo que describe [deployment.md](../deployment.md)) o **(b)** aceptar `main` y no empujar a `main` nada que no esté listo para producción. Mientras no se decida, **un push a `main` es un despliegue** |
 | **O-2** | **Sentry no está activo en producción** | El sitio publicado no contiene un DSN; `appStart.tsx` solo inicia Sentry si `VITE_SENTRY_DSN` existe | Un error en el teléfono de un técnico no queda registrado en ningún lado | Crear el proyecto en Sentry y poner `VITE_SENTRY_DSN` en las variables de Hostinger (P0-3) |
 | **O-3** | **Las cuentas de prueba ya no existen** | Las 6 de `.env.test.local` responden `invalid_credentials` (se borraron con la limpieza del 29/09) | `qa:security` salta 62 de 85 casos y los e2e no pueden entrar | Crearlas en un proyecto de staging (P0-1), no en el del taller |
 | O-4 | **No hay staging** | Un solo proyecto de Supabase | Toda prueba que escribe datos (e2e, entregar, pagar) lo hace sobre los datos del taller | P0-1 |
@@ -163,8 +163,8 @@ menciona `reinventa.shop`, y la URL pública configurada en Hostinger es
 | **Suscripciones push creadas en `reinventa.shop`** | El navegador del teléfono conserva la suscripción del dominio viejo y el servicio de push la sigue aceptando, así que `process-outbox` no la borra. Quien activó los avisos en los dos dominios los recibe dos veces, y tocar el viejo abre un dominio muerto | Revisar `push_suscripciones` por `creado_en` y borrar las anteriores al 30/09; esas personas reactivan los avisos en Configuración |
 | **App instalada desde `reinventa.shop`** | El ícono abre el dominio muerto | Borrarla e instalarla desde `restorifyauto.net` |
 | **Enlaces del portal ya enviados** (`reinventa.shop/r/…`) | No abren | El token sigue vigente: reenviar desde la orden ("Enviar reporte") |
-| **Plantilla del correo de recuperación** | El ejemplo de [password-reset.md](password-reset.md) firmaba "Taller Reinventa" | Revisar la plantilla en Authentication → Emails |
-| **Configuración del panel** | Site URL, Redirect URLs, `PUBLIC_SITE_URL`, `EMAIL_FROM_ADDRESS` | Según [deployment.md](deployment.md) se cambiaron el 30/09; confirmarlo a la vista |
+| **Plantilla del correo de recuperación** | El ejemplo de [password-reset.md](../password-reset.md) firmaba "Taller Reinventa" | Revisar la plantilla en Authentication → Emails |
+| **Configuración del panel** | Site URL, Redirect URLs, `PUBLIC_SITE_URL`, `EMAIL_FROM_ADDRESS` | Según [deployment.md](../deployment.md) se cambiaron el 30/09; confirmarlo a la vista |
 
 Si todavía se controla `reinventa.shop`, una redirección 301 a `restorifyauto.net` resolvería
 de golpe los enlaces viejos y las apps instaladas.
@@ -173,7 +173,7 @@ de golpe los enlaces viejos y las apps instaladas.
 
 ## 7. Plan priorizado
 
-Actualiza el plan de [mantenimiento.md §5](mantenimiento.md#5-plan-priorizado).
+Actualiza el plan de [mantenimiento.md §5](../mantenimiento.md#5-plan-priorizado).
 
 ### Antes de atender clientes reales
 
@@ -184,16 +184,16 @@ Actualiza el plan de [mantenimiento.md §5](mantenimiento.md#5-plan-priorizado).
 | P0-2 | Plan Pro (respaldos) | **Hecho** (30/09) |
 | P0-3 | Sentry en producción | **Pendiente:** falta `VITE_SENTRY_DSN` en Hostinger |
 | — | Limpiar las suscripciones push del dominio viejo ([§6](#6-secuelas-del-cambio-de-dominio)) | Pendiente |
-| B-1 | Regla de nombres para migraciones nuevas | Documentada en [ai-context.md](ai-context.md) y [arquitectura.md §9](arquitectura.md#9-migraciones-el-flujo-de-trabajo) |
+| B-1 | Regla de nombres para migraciones nuevas | Documentada en [ai-context.md](../ai-context.md) y [radiografia.md §9](radiografia.md#9-migraciones-el-flujo-de-trabajo) |
 
 ### Bajo riesgo, alto valor
 
-Sin cambios respecto a [mantenimiento.md](mantenimiento.md): P1-1 (esquema en un archivo), P1-2
+Sin cambios respecto a [mantenimiento.md](../mantenimiento.md): P1-1 (esquema en un archivo), P1-2
 (partir `useWorkOrderDetail`), P1-3 (retirar `supabaseService`), P1-4 (pagos a empleados).
 
 ### Cuando toque esa parte
 
-P2-1 a P2-7 de [mantenimiento.md](mantenimiento.md), sin cambios. A la lista de compactar el
+P2-1 a P2-7 de [mantenimiento.md](../mantenimiento.md), sin cambios. A la lista de compactar el
 teléfono se agrega el **encabezado del detalle de la orden** (número, botones, estado y avance
 ocupan media pantalla antes de la primera sección).
 

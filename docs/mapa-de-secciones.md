@@ -132,7 +132,7 @@ Decisiones en [analisis-del-proceso-2026-10.md](historico/analisis-del-proceso-2
 
 **El dinero automático** (depósito, pago final, costo de repuestos, ajustes, reversiones,
 egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
-[arquitectura.md §5](arquitectura.md#5-dónde-vive-la-lógica-de-negocio).
+[radiografia.md §5](radiografia.md#5-dónde-vive-la-lógica-de-negocio).
 
 ## Panel
 

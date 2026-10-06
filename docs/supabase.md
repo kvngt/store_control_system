@@ -4,7 +4,7 @@ Todo el backend de Restorify vive en un proyecto de Supabase. Este documento es 
 inventario: qué servicios de Supabase se usan, qué hay dentro de cada uno, quién lo
 llama, dónde se ve en el panel y qué no está en el código.
 
-Para **por qué** está construido así: [arquitectura.md](arquitectura.md). Para
+Para **por qué** está construido así: [radiografia.md](radiografia.md). Para
 **configurar un entorno nuevo o publicar**: [deployment.md](deployment.md).
 
 > Foto del proyecto real tomada el **15 de septiembre de 2026** con consultas de solo
@@ -133,7 +133,7 @@ Supabase local, para las pruebas.
 
 ### 4.2 Tablas de `public`
 
-Las 23 tienen **RLS activado**. Columnas y relaciones: [arquitectura.md §4](arquitectura.md#4-modelo-de-datos).
+Las 23 tienen **RLS activado**. Columnas y relaciones: [radiografia.md §4](radiografia.md#4-modelo-de-datos).
 
 | Dominio | Tabla | Qué guarda | Quién lee |
 |---|---|---|---|
@@ -181,7 +181,7 @@ a mano: la anterior se quedó cinco funciones atrás sin que nadie lo notara.
 | **Internas** | 30 | Dinero (`_saldo_orden`, `_reparto_comisiones`, `_balance_orden`, `recalculate_order_totals`, `sync_order_commissions`, `sync_order_parts_expense`, `reverse_order_delivery_finance`); avisos (`notificar`, `admins_de_sede`, `datos_orden_aviso`); cola (`claim_outbox`, `finish_outbox`, `dispatch_outbox_if_due`, `invoke_edge_function`, `purge_old_notifications`, `archivos_huerfanos`); portal y correos (`datos_portal`, `datos_correo`, `encolar_correo_cliente`, `asegurar_enlace_orden`, `preferencia_correos_portal`, `responder_presupuesto_portal`, `marcar_estatus_enviado`, `es_correo_valido`); presupuestos (`_crear_presupuesto`, `_agregar_borradores`, `_lineas_pendientes`, `_resolver_presupuesto`, `recordar_presupuestos_sin_respuesta`); recordatorios (`recordar_ordenes_vencidas`) | Solo `service_role` (Edge Functions), triggers y pg_cron |
 | **De trigger** | 47 | `trg_*`, `handle_*`, `cleanup_order_finance` | Solo como trigger |
 
-Qué hace cada trigger, por tabla: [arquitectura.md §5](arquitectura.md#5-dónde-vive-la-lógica-de-negocio).
+Qué hace cada trigger, por tabla: [radiografia.md §5](radiografia.md#5-dónde-vive-la-lógica-de-negocio).
 
 > **Regla:** una función nueva nace ejecutable por `anon` y `authenticated`. Revócala en
 > la misma migración y comprueba con `npm run qa:security` después de aplicarla

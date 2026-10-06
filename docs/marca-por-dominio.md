@@ -296,7 +296,7 @@ Por ejemplo, alguien del taller 2 abre `taller2.com`:
   - La marca antes de iniciar sesión sale de `public/marcas/<dominio>`, nunca de la base.
   - El bloque de `.htaccess` es generado.
 - **El resto:**
-  - [arquitectura.md](arquitectura.md) y [mapa-de-secciones.md](mapa-de-secciones.md): la marca por
+  - [radiografia.md](radiografia.md) y [mapa-de-secciones.md](mapa-de-secciones.md): la marca por
     dominio.
   - [password-reset.md](password-reset.md): varios dominios y `{{ .RedirectTo }}`.
   - [portal-y-correos.md](portal-y-correos.md): el enlace y el remitente de cada sede.
