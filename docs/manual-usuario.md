@@ -1184,6 +1184,7 @@ según el rol.
 - **Idioma** (Español / English) y **tema** (oscuro / claro).
 - **Notificaciones en este dispositivo**: activar, probar y desactivar push
   (sección 11).
+- **Reportar un problema**: Botón para notificar a soporte si encuentras un error o falla en el sistema. Adjunta automáticamente un diagnóstico de los últimos 30 segundos de la pantalla (ocultando datos privados y fotos).
 
 <!-- IMAGEN: sección de perfil, idioma, tema y notificaciones -->
 
@@ -1209,6 +1210,8 @@ personal. Al borrar una sede, el sistema muestra antes todo lo que se va a borra
 Configuración deja un enlace. Junto a cada persona, un ícono de campana indica en
 cuántos dispositivos tiene push activo: si alguien dice que no le llegan los avisos,
 empieza por ahí.
+
+**Correos al cliente.** Muestra el estado de los correos automáticos. Si hay correos que no se pudieron enviar (por fallas de red del servidor o de Resend), aparece el botón **Reintentar** para volver a mandarlos.
 
 Con **Nuevo Empleado** se da de alta a alguien:
 
@@ -1468,6 +1471,9 @@ Si todavía tiene órdenes asignadas hay que reasignarlas primero.
 **«Registré un vehículo de subasta y me pide la placa.»**
 Marca la casilla **Sin placa**.
 
+**«Encontré un error en el sistema o la aplicación falló, ¿qué hago?»**
+Ve a Configuración (tocando tu avatar arriba a la derecha) y usa el botón **Reportar un problema**. Describe qué intentabas hacer y envíalo. El sistema adjuntará un diagnóstico y un video de la pantalla de forma segura para que podamos revisarlo.
+
 ---
 
-*Fin del documento. Última revisión del contenido: septiembre de 2026.*
+*Fin del documento. Última revisión del contenido: octubre de 2026.*
