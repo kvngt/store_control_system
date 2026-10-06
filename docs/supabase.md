@@ -86,7 +86,7 @@ Para **por qué** está construido así: [arquitectura.md](arquitectura.md). Par
 
 | Servicio | Para qué | Dónde se configura |
 |---|---|---|
-| **Hostinger** | Compila la rama configurada de GitHub (el diseño es `produccion`; hoy `main`, ver [evaluacion-2026-10.md](evaluacion-2026-10.md#5-operación-y-despliegue)) y sirve `dist/` en `restorifyauto.net`; DNS del dominio (incluidos los registros de Resend) | hPanel |
+| **Hostinger** | Compila la rama configurada de GitHub (el diseño es `produccion`; hoy `main`, ver [evaluacion-2026-10.md](historico/evaluacion-2026-10.md#5-operación-y-despliegue)) y sirve `dist/` en `restorifyauto.net`; DNS del dominio (incluidos los registros de Resend) | hPanel |
 | **Resend** | Envía los correos al cliente y los de Auth (SMTP) desde `notificaciones@restorifyauto.net` | resend.com; una llave en los secretos de las funciones y otra en el SMTP de Auth |
 | **Servicios push** (Google, Apple, Mozilla) | Entregan los avisos al teléfono con la app cerrada | Nada: el navegador elige el servicio; las llaves VAPID van en los secretos |
 | **NHTSA vPIC** | Llena marca, modelo y año a partir del VIN, desde el navegador | Nada (API pública) |
@@ -185,7 +185,7 @@ Qué hace cada trigger, por tabla: [arquitectura.md §5](arquitectura.md#5-dónd
 
 > **Regla:** una función nueva nace ejecutable por `anon` y `authenticated`. Revócala en
 > la misma migración y comprueba con `npm run qa:security` después de aplicarla
-> ([auditoria-2026-09.md](auditoria-2026-09.md), AUD-01).
+> ([auditoria-2026-09.md](historico/auditoria-2026-09.md), AUD-01).
 
 ### 4.4 Migraciones
 

@@ -5,7 +5,7 @@ mano de obra o repuesto tiene un estado, y solo lo autorizado entra en los total
 el cobro, el costo de repuestos y las comisiones.
 
 Reglas en lenguaje de negocio: [reglas-de-negocio.md](reglas-de-negocio.md#8-presupuestos-y-autorización).
-Cómo probarlo: [plan-de-pruebas.md](plan-de-pruebas.md#414-presupuestos-pre). Portal y correos en los que
+Cómo probarlo: [plan-de-pruebas.md](historico/plan-de-pruebas.md#414-presupuestos-pre). Portal y correos en los que
 se apoya: [portal-y-correos.md](portal-y-correos.md).
 
 ---

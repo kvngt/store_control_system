@@ -8,7 +8,7 @@ Dónde está cada parte: [mapa-de-secciones.md](mapa-de-secciones.md). Reglas qu
 [ai-context.md](ai-context.md).
 
 > **Actualización:** la revisión del 1 de octubre de 2026 está en
-> [evaluacion-2026-10.md](evaluacion-2026-10.md): qué cambió desde esta, el estado del plan
+> [evaluacion-2026-10.md](historico/evaluacion-2026-10.md): qué cambió desde esta, el estado del plan
 > (P0-2 hecho) y riesgos nuevos (migraciones con fecha futura, Hostinger publicando `main`,
 > Sentry inactivo). Las secciones 4 y 5 de este documento siguen vigentes.
 

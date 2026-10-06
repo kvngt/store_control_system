@@ -56,7 +56,7 @@ la base sin comprometer la operación: [mantenimiento.md §4](mantenimiento.md#4
   descarta (y decide si sale como "Observación del taller" en el portal y el PDF:
   `datos_portal.observaciones`, `customerObservations` en `lib/reportMedia.ts`). Migraciones
   `20261010000010` y `20261010000011`. Detalle: [hallazgos.md](hallazgos.md).
-- **Un estado nuevo** de la orden toca muchos lugares: [plan-de-mejora.md, al final](plan-de-mejora.md#si-el-taller-echa-de-menos-espera-de-repuestos).
+- **Un estado nuevo** de la orden toca muchos lugares: [plan-de-mejora.md, al final](historico/plan-de-mejora.md#si-el-taller-echa-de-menos-espera-de-repuestos).
 
 ## Tablero (Kanban)
 
@@ -103,7 +103,7 @@ Desde F7 es la vista **Tablero** de Órdenes, no una ruta aparte (`/kanban` redi
 
 ## Proceso del taller (05/10/2026, `20261010000016`–`18`)
 
-Diagramas en [planos.md](planos.md). Decisiones en [analisis-del-proceso-2026-10.md](analisis-del-proceso-2026-10.md).
+Decisiones en [analisis-del-proceso-2026-10.md](historico/analisis-del-proceso-2026-10.md).
 
 | Qué | Dónde |
 |---|---|

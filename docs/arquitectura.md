@@ -1,24 +1,24 @@
-# Arquitectura de Restorify
+# Arquitectura y Planos de Restorify
 
-Guía para quien llega nuevo al código y necesita entender cómo está armado el
-sistema antes de tocarlo. Para *qué* hace y *por qué* (reglas de dinero, roles,
-avisos), el complemento es [reglas-de-negocio.md](reglas-de-negocio.md).
+Guía para quien llega nuevo al código y necesita entender cómo está armado el sistema antes de tocarlo. Esto combina la arquitectura general y los "planos" visuales de cómo se conectan las piezas. Para *qué* hace y *por qué* (reglas de dinero, roles, avisos), el complemento es [reglas-de-negocio.md](reglas-de-negocio.md). Para el detalle de archivos por sección, [mapa-de-secciones.md](mapa-de-secciones.md).
 
 ---
 
 ## Índice
 
 1. [Lo esencial en un minuto](#1-lo-esencial-en-un-minuto)
-2. [La decisión que explica todo lo demás](#2-la-decisión-que-explica-todo-lo-demás)
-3. [Mapa del repositorio](#3-mapa-del-repositorio)
-4. [Modelo de datos](#4-modelo-de-datos)
-5. [Dónde vive la lógica de negocio](#5-dónde-vive-la-lógica-de-negocio)
-6. [Seguridad y permisos](#6-seguridad-y-permisos)
-7. [Servidor: edge functions, cola de envíos y tareas programadas](#7-servidor-edge-functions-cola-de-envíos-y-tareas-programadas)
-8. [El frontend por dentro](#8-el-frontend-por-dentro)
-9. [Migraciones: el flujo de trabajo](#9-migraciones-el-flujo-de-trabajo)
-10. [Levantar el proyecto](#10-levantar-el-proyecto)
-11. [Trampas conocidas](#11-trampas-conocidas)
+2. [Las capas de la casa y la decisión principal](#2-las-capas-de-la-casa-y-la-decisión-principal)
+3. [Mapa del repositorio y de pantallas](#3-mapa-del-repositorio-y-de-pantallas)
+4. [Modelo de datos y tablas](#4-modelo-de-datos-y-tablas)
+5. [El ciclo de vida de una orden](#5-el-ciclo-de-vida-de-una-orden)
+6. [Dónde vive la lógica de negocio y cómo viaja un dato](#6-dónde-vive-la-lógica-de-negocio-y-cómo-viaja-un-dato)
+7. [El camino del dinero y comisiones](#7-el-camino-del-dinero-y-comisiones)
+8. [Seguridad, permisos y roles](#8-seguridad-permisos-y-roles)
+9. [Servidor: edge functions, portal y correos](#9-servidor-edge-functions-portal-y-correos)
+10. [El frontend por dentro](#10-el-frontend-por-dentro)
+11. [Migraciones, flujo de trabajo y cómo sale un cambio](#11-migraciones-flujo-de-trabajo-y-cómo-sale-un-cambio)
+12. [Levantar el proyecto](#12-levantar-el-proyecto)
+13. [Solución de problemas y trampas conocidas](#13-solución-de-problemas-y-trampas-conocidas)
 
 ---
 
@@ -39,63 +39,82 @@ avisos), el complemento es [reglas-de-negocio.md](reglas-de-negocio.md).
 | **Portal del cliente** | Paquete aparte en `/r/<token>`, sin cuenta; datos por una edge function pública |
 | **Presupuestos** | Estado por línea (borrador → pendiente → aprobado/rechazado); solo lo aprobado se cobra |
 | **Pruebas** | Vitest (unitarias y componentes), pgTAP (base de datos), Playwright (e2e) |
-| **Hosting** | Sitio estático en Hostinger, dominio `restorifyauto.net`; Hostinger compila y publica desde GitHub en cada push. El diseño es la rama `produccion`; hoy publica `main` ([evaluacion-2026-10.md](evaluacion-2026-10.md#5-operación-y-despliegue)) |
+| **Hosting** | Sitio estático en Hostinger, dominio `restorifyauto.net`; Hostinger compila y publica desde GitHub en cada push. El diseño es la rama `produccion`; hoy publica `main` ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#5-operación-y-despliegue)) |
 
-Unas 33 600 líneas de TypeScript (con pruebas), 5 600 de CSS, 54 migraciones y 23 tablas (1/10/2026).
-Cómo se llegó hasta aquí, etapa por etapa: [evolucion.md](evolucion.md). Qué tocar para
-cambiar cada parte: [mapa-de-secciones.md](mapa-de-secciones.md). Estado de la estructura y
-deuda técnica: [mantenimiento.md](mantenimiento.md).
+Unas 33 600 líneas de TypeScript (con pruebas), 5 600 de CSS, 54 migraciones y 26 tablas (1/10/2026).
+Cómo se llegó hasta aquí, etapa por etapa: [evolucion.md](evolucion.md). Estado de la estructura y deuda técnica: [mantenimiento.md](mantenimiento.md).
 
 ---
 
-## 2. La decisión que explica todo lo demás
+## 2. Las capas de la casa y la decisión principal
 
-**No hay servidor propio.** El navegador habla directamente con Supabase a
-través de PostgREST. No existe una capa de API intermedia donde poner
-validaciones, permisos ni reglas de negocio.
+La idea que explica todo lo demás: **no hay servidor propio.** El navegador habla directamente con Supabase a través de PostgREST. No existe una capa de API intermedia (Node, Python) donde poner validaciones, permisos ni reglas de negocio.
 
-```
-Navegador (React)  ──  supabase-js  ──►  https://<proyecto>.supabase.co
-                                              │
-            ┌─────────────────────────────────┼──────────────────────────────┐
-            │                                 │                              │
-       PostgREST ──► PostgreSQL          Storage (buckets)             Realtime
-                      │  RLS               fotos, videos, firmas        avisos nuevos
-                      │  triggers ──► pg_net ──► Edge Functions (Deno) ──► push / correo
-                      │  pg_cron  ──────────────┘   (clave de servicio)
-                      └─ funciones RPC
+```mermaid
+flowchart TB
+  subgraph Navegador["Navegador / teléfono (React)"]
+    P["pages/ — las pantallas"]
+    F["features/ — piezas de cada sección"]
+    S["services/ — único lugar que habla con Supabase"]
+    Q["TanStack Query — caché de lecturas"]
+    I["i18n — todo texto, español e inglés"]
+    P --> F --> S
+    F --> Q --> S
+    P --> I
+  end
+
+  subgraph Portal["Portal del cliente (src/portal/ — paquete aparte)"]
+    PO["CustomerPortal.tsx"]
+  end
+
+  subgraph Supabase["Supabase (todo el 'backend')"]
+    API["API REST/RPC + Realtime"]
+    RLS["RLS: quién ve qué fila"]
+    TR["Triggers: calculan dinero y reglas"]
+    RPC["RPC: operaciones completas (entregar, cobrar…)"]
+    DB[("Postgres: 26 tablas")]
+    ST[("Storage: fotos, firmas, comprobantes")]
+    EF["Edge functions (Deno)"]
+    API --> RLS --> DB
+    API --> RPC --> DB
+    DB --> TR --> DB
+    API --> ST
+  end
+
+  S -->|"clave pública + sesión"| API
+  PO -->|"fetch, sin sesión"| EF
+  EF --> RPC
+
+  subgraph Fuera["Servicios externos"]
+    RES["Resend (correos)"]
+    GEM["Google Gemini (traducción)"]
+    NHT["NHTSA (decodifica VIN)"]
+    SEN["Sentry (errores)"]
+    HOS["Hostinger (publica el sitio)"]
+  end
+  EF --> RES
+  EF --> GEM
+  Navegador -.-> NHT
+  Navegador -.-> SEN
 ```
 
 De esto se derivan tres consecuencias que hay que tener presentes **siempre**:
 
-**1. La clave anónima y todas las tablas son públicas.** Viajan dentro del bundle
-de JavaScript. Cualquiera con las herramientas de desarrollo abiertas puede
-hacerle a la API las mismas peticiones que hace la aplicación, con su propio
-token de sesión legítimo.
+**1. La clave anónima y todas las tablas son públicas.** Viajan dentro del bundle de JavaScript. Cualquiera con las herramientas de desarrollo abiertas puede hacerle a la API las mismas peticiones que hace la aplicación, con su propio token de sesión legítimo.
 
-**2. Esconder un botón en React no es una restricción, es una sugerencia
-visual.** Un `{isAdmin && <button/>}` mejora la experiencia; no protege nada. Lo
-único que sostiene un límite de verdad son las políticas RLS y los triggers de
-Postgres.
+**2. Esconder un botón en React no es una restricción, es una sugerencia visual.** Un `{isAdmin && <button/>}` mejora la experiencia; no protege nada. Lo único que sostiene un límite de verdad son las políticas RLS y los triggers de Postgres.
 
-**3. La lógica que debe cumplirse siempre va en la base de datos.** Si una regla
-solo existe en el frontend, se la salta cualquiera que llame la API directamente,
-y también cualquier pantalla futura que olvide replicarla.
+**3. La lógica que debe cumplirse siempre va en la base de datos.** Si una regla solo existe en el frontend, se la salta cualquiera que llame la API directamente, y también cualquier pantalla futura que olvide replicarla.
 
-> Cuando agregues una restricción, la pregunta correcta no es «¿escondí el
-> botón?» sino «¿qué pasa si alguien manda esta petición a mano?». La migración
-> `20260908000000_destructive_action_hardening.sql` documenta el modelo de
-> amenaza: un técnico con sesión válida que está por irse del taller.
+> Cuando agregues una restricción, la pregunta correcta no es «¿escondí el botón?» sino «¿qué pasa si alguien manda esta petición a mano?».
 
-Un ejemplo concreto de este principio: los montos de una orden (totales,
-repuestos con precio, depósito) no están en `ordenes_trabajo` con columnas
-escondidas, sino en tablas que un técnico **no puede leer** (`orden_montos`,
-`orden_repuestos`). Esconder columnas habría dejado el dinero en la respuesta
-de red, a un clic de las herramientas del navegador.
+Un ejemplo concreto de este principio: los montos de una orden (totales, repuestos con precio, depósito) no están en `ordenes_trabajo` con columnas escondidas, sino en tablas que un técnico **no puede leer** (`orden_montos`, `orden_repuestos`). Esconder columnas habría dejado el dinero en la respuesta de red, a un clic de las herramientas del navegador.
 
 ---
 
-## 3. Mapa del repositorio
+## 3. Mapa del repositorio y de pantallas
+
+### Mapa de carpetas
 
 ```
 src/
@@ -104,515 +123,333 @@ src/
   App.tsx                        proveedores + rutas + guardias de acceso
 
   portal/                        reporte web del cliente (paquete aparte, sin Supabase JS)
-    start.tsx                    metas de privacidad, tema claro, render
-    CustomerPortal.tsx           la página; strings.ts (es/en), portal.api.ts, portal.css
-
   pages/                         una pantalla por archivo
-    Login.tsx, ResetPassword.tsx acceso y recuperación de contraseña
-    Dashboard.tsx                panel principal
-    Customers.tsx, Vehicles.tsx  clientes y vehículos (VIN, placa); solo administración
-    WorkOrders.tsx               lista de órdenes + alta (delegada a features/)
-    KanbanBoard.tsx              tablero por estado (desde F7, vista de WorkOrders)
-    Finance.tsx                  movimientos, margen por orden e importación bancaria
-      finance/ImportStatementModal.tsx
-    Payroll.tsx                  comisiones y pagos (ruta /payroll)
-    Employees.tsx                pago de cada empleado y alta del personal (ruta /employees)
-    Settings.tsx                 perfil, idioma, tema, push, sedes
-
   features/                      módulos con estado propio, extraídos de las páginas
-    workOrders/                  detalle de orden, alta, tablas de labor y repuestos,
-                                 firma, bitácora de avances, reporte, comisión estimada,
-                                 entrega (DeliveryModal), enlace del cliente
-                                 (CustomerLinkCard), presupuesto (QuoteCard) e insignia de
-                                 estado de línea
-    dashboard/                   tarjetas del panel: Requiere atención (admin) y Mis tareas (técnico)
-    media/                       captura, grabadores, galería, visor, cola de subida, bandeja
-    notifications/               campana, push del dispositivo
-    vehicles/                    formulario de vehículo con VIN
-    employees/                   detalle de un empleado: su pago, lo que se le debe, actividad
-    finance/                     balance de una orden y margen por orden
-    settings/                    tarjeta de usuarios (se usa en Empleados)
-
-  components/
-    layout/                      AppLayout (monta la cola de subidas), Sidebar, Header, BottomNav
-    SchemaDriftBanner.tsx        avisa si la base está atrasada respecto al build
-    BodyPortal.tsx               capas de pantalla completa fuera de las tarjetas
-    CollapsibleSection.tsx       pliega una tarjeta (detalle de la orden, cerradas al entrar)
-    Combobox, CustomerPicker, LazyModal, PasswordInput, PhoneInput, ErrorBoundary
-
-  context/                       estado global, uno por preocupación
-    Auth, Language, Theme, Toast, UnsavedChanges
-    (el contexto va en *.context.ts y el proveedor en *Context.tsx: Vite solo
-     preserva el estado en recarga en caliente si un módulo exporta únicamente
-     componentes)
-
+  components/                    componentes reutilizables y layout global
+  context/                       estado global (Auth, Language, Theme, Toast, UnsavedChanges)
   services/                      TODAS las consultas a Supabase, un módulo por dominio
-    workOrders, customers, vehicles, finance, commissions, employees, dashboard,
-    media, notifications, customerPortal, quotes, reports, search, sedes, users
-    support.ts                   fetchAll, assertAffected, assertDeleted
-    supabaseService.ts           fachada que re-exporta los anteriores (compatibilidad;
-                                 se propone retirarla, mantenimiento.md P1-3)
-
-  lib/                           lógica sin React
-    media/                       compresión, formatos, cola de subida, video de galería
-    push.ts                      soporte y suscripción Web Push
-    dates.ts                     fechas del taller (zona horaria local)
-    errors.ts                    traduce errores de Postgres y Auth
-    money.ts                     el único formato de dinero de la app
-    vin.ts, bankStatementParser.ts, categorizationRules.ts, workOrderPdf.ts,
-    signature.ts, branding.ts, brandColor.ts, schemaVersion.ts, queryClient.ts,
-    siteUrl.ts, orderDue.ts, phone.ts (país, formato, WhatsApp y tel:),
-    email.ts (formato de correo), reportMedia.ts (qué fotos lleva el PDF),
-    staleChunk.ts (recarga sola si una página es de una versión anterior)
-
+  lib/                           lógica sin React (pura, muy testeable)
   types/                         database.ts reexporta domain/*.types.ts
   i18n/translations.ts           español e inglés
   styles/                        index.css (variables, temas) + components.css
-  test/                          utilidades de prueba (proveedores, matchMedia)
+  test/                          utilidades de prueba
 
-public/
-  sw.js                          service worker: solo push, sin caché
-  manifest.webmanifest, icons/   app instalable (PWA); íconos generados del logo del login
-  .htaccess                      reescritura SPA (assets/ inexistente → 404), www → sin www,
-                                 cabeceras de seguridad y caché
-
+public/                          sw.js (service worker), iconos PWA, .htaccess
 supabase/
-  migrations/                    54 migraciones, en orden cronológico (historia en evolucion.md;
-                                 la versión vigente de una función: npm run db:donde)
+  migrations/                    54 migraciones, en orden cronológico
   functions/                     edge functions (Deno)
-    create-employee, update-employee, delete-employee   con clave de servicio
-    process-outbox, cleanup-storage                     internas, llamadas por la base
-    portal                                              pública: el reporte del cliente
-    _shared/internal.ts                                 autenticación de las internas
-    _shared/email/templates.ts                          plantillas de correo (TS puro)
   tests/database/                pruebas pgTAP
   config.toml
-
-e2e/                             pruebas Playwright
-scripts/                         check-migrations (db:check), db-donde (db:donde),
-                                 copy-pdf-worker, generate-pwa-icons, reset-test-data.sql
-  admin/                         limpiar-datos.sql y crear-primer-admin.sql (solo quien
-                                 administra, con su aprobación)
-  qa/api-security.mjs            npm run qa:security: seguridad contra la API desplegada
-  qa/estado-orden.sql            todo lo que la base sabe de una orden (solo lectura)
-docs/                            esta documentación
 ```
 
-### Reglas de organización
+**Reglas de organización**
+1. **Ninguna pantalla llama a Supabase directamente.** Todo pasa por un módulo de `services/`.
+2. **`lib/` no sabe que existe React** (salvo `useMediaQuery`).
+3. **Una página que crece se parte en `features/`.**
 
-**Ninguna pantalla llama a Supabase directamente.** Todo pasa por un módulo de
-`services/`. Mantiene las consultas en un solo lugar y permite probar pantallas
-simulando un solo módulo. Código nuevo importa el servicio del dominio
-(`workOrdersService`), no la fachada `supabaseService`.
+### El mapa de pantallas
 
-**`lib/` no sabe que existe React** (salvo `useMediaQuery`). Entra un dato, sale
-otro. Por eso está bien cubierto por pruebas rápidas.
+```mermaid
+flowchart LR
+  L["/login"] --> D
+  RP["/reset-password"]
+  PV["/privacidad (pública)"]
+  CL["/r/token — portal del cliente (público)"]
 
-**Una página que crece se parte en `features/`.** `WorkOrders.tsx` tenía más de
-2 000 líneas; hoy la página es la lista, y el detalle, el alta y cada tarjeta
-viven en `features/workOrders/` con sus propios hooks.
+  subgraph App["Con sesión (Layout: barra lateral + encabezado)"]
+    D["/ Panel principal"]
+    C["/customers Clientes"]
+    V["/vehicles Vehículos"]
+    W["/work-orders Órdenes (lista | tablero)"]
+    FI["/finance Finanzas (admin)"]
+    PA["/payroll Comisiones (admin)"]
+    E["/employees Empleados (admin)"]
+    SE["/settings Configuración"]
+  end
+
+  D -->|"Requiere atención"| W
+  C --> V --> W
+  W -->|"abrir una orden"| DET["Detalle de la orden<br/>pestañas: Resumen · Trabajos · Fotos · Cobro · Historial"]
+  FI -->|"movimiento vinculado"| DET
+  PA -->|"cada comisión"| DET
+```
 
 ---
 
-## 4. Modelo de datos
+## 4. Modelo de datos y tablas
 
-23 tablas. El eje es la **sede**: casi todo cuelga de ella y no se mezcla entre
-talleres. Dentro de la sede, un técnico solo ve las órdenes que tiene asignadas.
+El eje es la **sede**: casi todo cuelga de ella y no se mezcla entre talleres. Dentro de la sede, un técnico solo ve las órdenes que tiene asignadas.
 
-```
-sedes ──┬── perfiles ── perfiles_pago usuarios; rol: admin | mecanico | pintor
-        │                             perfiles_pago: comisión (% propio o de la sede) o salario · ADMIN
-        ├── clientes ── vehiculos     vehiculos.sede_id derivado por trigger
-        ├── ordenes_trabajo ─┬── orden_montos          1:1 · totales y depósito · SOLO ADMIN
-        │                    ├── orden_labor ────┐     mano de obra · estado y especialidad por línea
-        │                    ├── orden_repuestos ─┤     con precio · SOLO ADMIN · estado por línea
-        │                    ├── presupuestos ◄───┘     evidencia de cada autorización · SOLO ADMIN
-        │                    ├── orden_asignaciones ── perfiles
-        │                    ├── orden_avances ─┐      bitácora del técnico
-        │                    ├── orden_media ◄──┘      fotos, videos, audio (bucket privado)
-        │                    ├── orden_enlaces         enlace del cliente (token) · SOLO ADMIN
-        │                    └── comisiones ── comision_pagos   una por tarea (labor_id) y una por (persona, bolsa heredada)
-        ├── finanzas_movimientos ──┬── ordenes_trabajo      referencia_orden_id
-        │                          ├── finanzas_importaciones
-        │                          └── comision_pagos       comision_pago_id (FK en cascada)
-        └── notificaciones ── perfiles
+```mermaid
+erDiagram
+  sedes ||--o{ perfiles : "tiene personal"
+  sedes ||--o{ clientes : ""
+  sedes ||--o{ ordenes_trabajo : ""
+  clientes ||--o{ vehiculos : "tiene"
+  clientes ||--o{ ordenes_trabajo : "pide"
+  vehiculos ||--o{ ordenes_trabajo : "se repara en"
 
-push_suscripciones ── perfiles       teléfonos con push
-cola_envios                          outbox de push y de correos al cliente
-finanzas_reglas_categorizacion       configuración global
-numero_orden_contadores              folios; solo lo tocan triggers
+  ordenes_trabajo ||--|| orden_montos : "total, depósito, descuento"
+  ordenes_trabajo ||--o{ orden_labor : "mano de obra (tareas)"
+  ordenes_trabajo ||--o{ orden_repuestos : "piezas (precio y costo)"
+  ordenes_trabajo ||--o{ orden_asignaciones : "técnicos"
+  ordenes_trabajo ||--o{ orden_avances : "notas del técnico"
+  ordenes_trabajo ||--o{ orden_media : "fotos, videos, voz"
+  ordenes_trabajo ||--o{ presupuestos : "lo que el cliente autoriza"
+  ordenes_trabajo ||--o{ orden_hallazgos : "trabajo adicional reportado"
+  ordenes_trabajo ||--o{ orden_enlaces : "enlace del cliente"
+  ordenes_trabajo ||--o{ historial_orden : "quién cambió qué"
+
+  orden_labor }o--o| perfiles : "técnico de la tarea"
+  orden_labor ||--o{ comisiones : "la paga"
+  perfiles ||--o{ comisiones : "cobra"
+  comisiones }o--o| comision_pagos : "se paga en"
+  perfiles ||--o| perfiles_pago : "esquema de pago"
+
+  ordenes_trabajo ||--o{ finanzas_movimientos : "cobros y costos"
+  comision_pagos ||--o{ finanzas_movimientos : "un egreso por orden"
+  finanzas_importaciones ||--o{ finanzas_movimientos : "contabilidad aparte"
+
+  ordenes_trabajo ||--o{ cola_envios : "correos y traducciones"
+  perfiles ||--o{ notificaciones : "campana"
+  perfiles ||--o{ push_suscripciones : ""
 ```
 
 ### Detalles que no son obvios
 
-**El dinero de una orden está repartido a propósito.** `ordenes_trabajo.total_labor`
-es visible para el técnico asignado, porque es la base de su comisión.
-`orden_montos` (total de repuestos, total general, depósito) y `orden_repuestos`
-son admin-only por RLS. PostgREST devuelve `null` en un embed bloqueado por RLS,
-así que `select('*, montos:orden_montos(*)')` sirve para los dos roles.
-
-**Los repuestos son de traspaso.** Se captura solo el precio; el trigger copia el
-precio al costo (`costo_unitario`). La comisión sale solo de la mano de obra
-autorizada: cada tarea le paga a su técnico (`orden_labor.asignado_a`, desde `20261010000006`) y
-las líneas de antes se reparten por especialidad (`reparto_heredado`). Ver [comisiones.md](comisiones.md).
-
-**El cobro al entregar lleva su método.** `finanzas_movimientos.metodo_pago`
-(efectivo, cheque, transferencia) y `comprobante_ruta` (foto en el bucket privado
-`comprobantes`). Una orden entregada se puede **archivar** a mano
-(`ordenes_trabajo.archivada_en`) sin dejar de estar entregada.
-
-**`vehiculos.sede_id` es redundante a propósito.** Hace la frontera de sede
-explícita e indexable para RLS. Lo llena `trg_vehiculo_sede`; el cliente nunca lo
-envía. **`vehiculos.placa` acepta NULL**: las unidades de subasta no tienen placa.
-
-**La multimedia no son URLs.** `orden_media` guarda la **ruta** en el bucket
-privado `orden_media` (`{sede}/{orden}/{uuid}.{ext}`), tipo, duración, tamaño y
-si es visible para el cliente. La firma también es una ruta (`firma_ruta`). Para
-ver cualquier archivo se pide una URL firmada de vida corta.
-
-**El enlace del cliente guarda el token tal cual.** El admin tiene que poder copiarlo
-de nuevo; lo protege RLS (solo admin). Uno activo por orden (índice único parcial).
-`clientes.acepta_correos` guarda la baja del cliente; `sedes.email_contacto` y
-`sedes.whatsapp`, el contacto que usan los correos y el portal.
-
-**Cada línea tiene estado** (`borrador`, `pendiente`, `aprobado`, `rechazado`) y
-**solo lo aprobado entra en los totales** — y por lo tanto en el cobro, el costo de
-repuestos y las comisiones. El estado lo cambian únicamente las funciones de
-presupuesto (bandera `restorify.presupuesto`); cada cambio deja una fila en
-`presupuestos` con quién, cómo y cuándo. Ver [presupuestos.md](presupuestos.md).
-
-**Las eliminaciones tienen intenciones distintas.** Borrar un cliente se lleva
-sus vehículos (`CASCADE`); una orden bloquea el borrado del cliente y del vehículo
-(`RESTRICT`): el historial de trabajo no se pierde por accidente. Borrar una
-orden se lleva sus hijos, y el servicio borra además sus archivos de Storage.
+- **El dinero está repartido a propósito:** `ordenes_trabajo.total_labor` es visible para el técnico (base de su comisión), pero `orden_montos` y `orden_repuestos` son admin-only por RLS.
+- **Los repuestos son de traspaso:** Se captura precio; un trigger copia el precio al costo (`costo_unitario`).
+- **`vehiculos.sede_id` es redundante:** Lo llena `trg_vehiculo_sede` explícitamente para RLS.
+- **La multimedia no son URLs:** `orden_media` guarda la ruta. Se ven con URLs firmadas de vida corta.
+- **El enlace del cliente guarda el token tal cual:** Lo protege RLS (solo admin).
+- **Cada línea (labor/repuesto) tiene estado:** Solo lo `aprobado` entra en los totales, comisiones y costos.
 
 ---
 
-## 5. Dónde vive la lógica de negocio
+## 5. El ciclo de vida de una orden
 
-**En triggers y funciones de PostgreSQL**, no en el frontend. Cambiar el estatus
-de una orden desde cualquier pantalla —o desde la API a mano— mueve dinero,
-devenga comisiones y genera avisos automáticamente. Las reglas, en lenguaje de
-negocio, están en [reglas-de-negocio.md](reglas-de-negocio.md). Aquí va el mapa
-técnico.
+El corazón del programa. Cada flecha dice **quién** la mueve y **qué hace la base** solita.
 
-### Triggers por tabla
+```mermaid
+stateDiagram-v2
+  [*] --> Recepcion: Admin crea la orden (create_work_order)
+  Recepcion --> EnProceso: Firma del cliente (autoriza lo cotizado) o admin/técnico lo mueve
+  EnProceso --> EsperaAutorizacion: Técnico reporta trabajo adicional (reportar_hallazgo)
+  EsperaAutorizacion --> EnProceso: Cliente responde / admin descarta / se cancela el presupuesto
+  EnProceso --> Finalizado: Técnico o admin (avance 100 %, aviso a admin: "trabajo terminado")
+  Finalizado --> ListoParaEntregar: SOLO admin (marcar_lista_para_entregar) — aquí sale el correo al cliente
+  ListoParaEntregar --> Entregado: SOLO admin (entregar_orden: cobra el saldo)
+  Finalizado --> Entregado: SOLO admin (entregar_orden)
+  Finalizado --> EnProceso: SOLO admin reabre (el técnico no puede)
+  Finalizado --> RetiradaSinReparar: SOLO admin (retirar_sin_reparar)
+  EnProceso --> RetiradaSinReparar: SOLO admin
+  Entregado --> EnProceso: Admin la saca de Entregado (se revierte el dinero)
+  Entregado --> [*]
+  RetiradaSinReparar --> [*]
+```
 
-| Tabla | Trigger | Qué hace |
-|---|---|---|
-| `ordenes_trabajo` | `trg_guard_order_insert` | Alta de quien no es admin: nace en recepción, avance 0, sin firma, número del sistema, autor = quien llama. Hoy solo un admin abre órdenes: queda como red |
-| | `trg_numero_orden` | Genera `ORD-AAAA-###` de forma atómica |
-| | `trg_orden_sede_coherente` | Rechaza órdenes que mezclan sedes |
-| | `trg_order_money_guard` | Técnico: no entrega, no cambia sede/número, no escribe `total_labor` |
-| | `trg_order_technician_guard` | Técnico: solo asignado, orden sin entregar, y solo estado y avance; la firma es de administración (`20261006000000`). Firma en la carpeta de su orden (para todos) |
-| | `trg_order_quote_delivery_guard` | No se entrega con un presupuesto esperando respuesta |
-| | `trg_order_portal` | Firma → enlace del cliente y correo de recepción; estatus → correo con espera y vencimiento del enlace |
-| | `trg_order_quote_signature` | La **primera** firma de la orden aprueba los borradores; volver a firmar no |
-| | `trg_order_montos_create` | Crea la fila de `orden_montos` |
-| | `trg_progress_on_status` | Avance en 100 % mientras la orden esté finalizada o entregada, no solo al cerrarla: una escritura del avance que llegue después no la deja por debajo (`20261010000001`). Reabierta, conserva el 100 y se puede bajar |
-| | `trg_order_delivery_payment` | Al entregar por otra vía que `entregar_orden`: cobra el saldo pendiente o asienta la devolución, sin método |
-| | `trg_order_parts_expense` | Al entregar: asienta el costo de repuestos |
-| | `trg_order_delivery_reversal` | Al sacar de entregado: revierte cobro final (o devolución) y costo de repuestos |
-| | `trg_order_unarchive_on_reopen` | Sacar una orden de entregado la desarchiva |
-| | `trg_order_auth_request_notify` | Aviso a admins cuando un técnico pide autorización (con su motivo) |
-| | `trg_order_commissions` | Recalcula comisiones al cambiar el estatus |
-| | `trg_order_created_notify`, `trg_order_finished_notify` | Avisos a admins. El primero solo actuaba cuando la orden la creaba quien no es admin, así que desde 20261004000000 no tiene caso; se deja como red |
-| | `trg_cleanup_order_finance` | Al borrar la orden: borra sus movimientos automáticos (en la misma transacción) |
-| | `trg_order_delete_paid_guard` | No se borra una orden con comisiones pagadas |
-| `orden_montos` | `trg_order_montos_guard` | Totales solo por recálculo; depósito fijo tras entregar |
-| | `trg_order_montos_deposit` | Asienta el depósito (o su ajuste) |
-| | `trg_order_montos_delivered_adjustment` | Si cambia el total de una orden entregada, asienta la diferencia |
-| `orden_labor` | `trg_labor_totals`, `trg_labor_delivered_guard` | Recalcula totales (solo aprobado); técnico no toca orden entregada |
-| | `trg_labor_quote_guard` | Línea nueva = borrador; pendiente no se edita (salvo especialidad, técnico y `reparto_heredado`, que no son lo cotizado ni mueven el estado); el estado solo lo cambia un presupuesto; corregir una rechazada la vuelve a borrador |
-| | `trg_labor_especialidad` | Una línea sin especialidad toma la del tipo de orden (mecánica en "combinado") |
-| | `trg_labor_tecnico_guard` | El técnico de una tarea es mecánico o pintor de la sede de la orden; con la comisión pagada (o la bolsa heredada pagada) no se cambia técnico, especialidad ni reparto ni se borra; nada entra a una bolsa pagada; una línea no se muda de orden |
-| | `trg_labor_tecnico_asignado` | Quien recibe una tarea entra a la orden (`origen = 'tarea'`); avisos `tarea_asignada` / `tarea_reasignada` |
-| | `trg_labor_commissions` | Recalcula las comisiones pendientes al cambiar estado, costo, técnico, reparto o especialidad (reemplaza a `trg_labor_specialty_commissions` y a `trg_order_montos_commissions`, eliminados en `20261010000006`) |
-| `orden_repuestos` | `trg_parts_subtotal`, `trg_part_cost_passthrough` | Subtotal y costo = precio |
-| | `trg_parts_quote_guard` | Igual que en mano de obra |
-| | `trg_parts_totals`, `trg_parts_expense_sync` | Totales y ajuste de egreso en orden entregada |
-| | `trg_parts_delivered_guard` | Técnico no toca los repuestos de una orden entregada |
-| `orden_asignaciones` | `trg_assignment_commissions` | Re-reparte las bolsas heredadas de comisión |
-| | `trg_assignment_tasks_guard` | No se quita de la orden a quien tiene tareas (salvo al borrar la orden o al empleado); no se cambia quién reparte una bolsa ya pagada (`origen`, `tipo_tarea`) |
-| | `trg_assignments_delivered_guard` | Técnico no toca las asignaciones de una orden entregada |
-| | `trg_assignment_owner_immutable` | Una asignación no cambia de orden ni de persona |
-| | `trg_assignment_notify` | Aviso al técnico asignado (no si entró por una tarea) / quitado |
-| `orden_avances` | `trg_progress_notify` | Aviso a admins cuando un técnico documenta |
-| | `trg_avance_publicar_archivos` | Publicar un avance al cliente publica sus archivos |
-| | `trg_avance_owner_immutable` | Un avance no cambia de orden ni de autor |
-| `orden_media` | `trg_orden_media_prepare`, `trg_orden_media_guard` | Sede, ruta válida, visibilidad inicial; inmutable salvo visibilidad |
-| `comisiones` | `trg_commission_notify` | Aviso "comisión generada", uno por orden y persona (por sentencia) |
-| `comision_pagos` | — | Desde `20261010000000` el egreso lo asienta `pay_commissions`, uno por orden (antes, un trigger con un egreso único) |
-| `perfiles_pago` | `trg_perfiles_pago_sello`, `trg_pay_scheme_commissions` | Quién y cuándo cambió el esquema; recalcula las comisiones pendientes de esa persona |
-| `sedes` | `trg_sede_commission_rate` | Re-precia comisiones pendientes al cambiar el % |
-| `perfiles` | `trg_perfil_privilegios` | Nadie cambia su propio rol o sede |
-| `vehiculos` | `trg_vehiculo_sede` | Deriva la sede del cliente |
-| `notificaciones` | `trg_notificacion_guard` | Solo se puede marcar leída |
+Qué dispara cada paso (todo en la base, `supabase/migrations/`):
 
-Casi todos son `SECURITY DEFINER`: corren con los permisos de su dueño, para que
-un técnico que finaliza una orden dispare efectos en tablas que él no puede
-escribir. Por eso **los guards validan explícitamente quién llama** con
-`is_admin()` y `auth.role()`.
+```mermaid
+flowchart TD
+  A["Alta: cliente → vehículo/recepción → depósito → tareas"] --> B["Orden en Recepción<br/>+ fila en orden_montos<br/>+ 'Depósito inicial' en Finanzas"]
+  B --> C["Cliente firma"]
+  C --> D["trg_quote_on_signature:<br/>lo cotizado pasa a APROBADO<br/>+ se crea el enlace del cliente<br/>+ correo de recepción"]
+  D --> E["Trabajo: técnico marca tareas hechas<br/>(marcar_labor_completada)"]
+  E --> F["trg_labor_avance: recalcula el avance<br/>(peso = precio de la tarea)"]
+  E --> G{"¿Algo más que hacer?"}
+  G -->|sí| H["reportar_hallazgo → orden en pausa<br/>→ admin cotiza → presupuesto → cliente autoriza"]
+  H --> E
+  G -->|no| I["Finalizado (técnico) → aviso a admin: trabajo terminado<br/>el cliente ve 'En revisión final' y NO recibe correo"]
+  I --> I2["Admin revisa y presiona 'Marcar listo para entregar'<br/>→ correo 'Su vehículo está listo'"]
+  I2 --> J["Entrega: diálogo con saldo y método de pago"]
+  J --> K["entregar_orden (1 transacción)"]
+  K --> K1["Ingreso 'Pago final' (con método)<br/>o egreso 'Devolución'"]
+  K --> K2["Egreso 'Costo de repuestos'"]
+  K --> K3["sync_order_commissions: comisiones SUGERIDAS"]
+  K --> K4["Estado = Entregado, fecha del taller"]
+```
 
-**Los triggers de un mismo momento corren en orden alfabético de su nombre.**
-`ordenes_trabajo` tiene 20; hoy ninguno depende de que otro corra antes. No renombres
-uno sin revisar eso ([mantenimiento.md R-B2](mantenimiento.md#riesgos-para-el-mantenimiento)).
+---
 
-### El recálculo de totales se identifica
+## 6. Dónde vive la lógica de negocio y cómo viaja un dato
 
-`recalculate_order_totals` escribe los totales con la bandera de transacción
-`restorify.recalc = on`. Los guards de `ordenes_trabajo` y `orden_montos` solo
-permiten cambiar totales con esa bandera: un `PATCH` directo a la API no la tiene.
+**En triggers y funciones de PostgreSQL**, no en el frontend.
+
+### Cómo viaja un dato (de pantalla a base y de vuelta)
+
+```mermaid
+sequenceDiagram
+  actor U as Persona
+  participant C as Componente (features/)
+  participant H as Hook (use…)
+  participant S as Servicio (services/)
+  participant API as Supabase API
+  participant DB as Postgres (RLS + triggers)
+
+  U->>C: toca un botón
+  C->>H: llama a la acción
+  H->>S: workOrdersService.algo()
+  S->>API: rpc() o from().insert()
+  API->>DB: ¿tiene permiso? (RLS)
+  DB->>DB: triggers recalculan totales, comisiones, historial
+  DB-->>API: fila o error con código
+  API-->>S: datos / error
+  S-->>H: resultado (o lanza el error)
+  H->>H: invalida la caché (la base cambia cosas que el cliente no predice)
+  H-->>C: re-lee y vuelve a pintar
+  C-->>U: aviso (toast) o error traducido
+```
+
+### Triggers principales (Resumen)
+- **`ordenes_trabajo`**: guards para que el técnico no toque órdenes entregadas, generación atómica del número de orden, cálculo de `orden_montos`, recálculo de avance (`trg_progress_on_status`), asentar finanzas al entregar (`trg_order_delivery_payment`, `trg_order_parts_expense`), recalcular comisiones.
+- **`orden_montos`**: recálculo de depósito, ajuste de totales post-entrega.
+- **`orden_labor` y `orden_repuestos`**: recalculo de totales cuando cambia un precio aprobado, guards de presupuesto, cálculo de comisiones.
+- **`orden_asignaciones`**: inmutabilidad del owner, re-reparto de bolsas heredadas.
+
+Casi todos son `SECURITY DEFINER` (corren con permisos del dueño) y usan `is_admin()` o `auth.role()` para validar los guards.
 
 ### Funciones RPC que llama el frontend
-
-| Función | Quién | Para qué |
-|---|---|---|
-| `create_work_order` | admin | Alta transaccional de orden, labor, repuestos y asignaciones (la RLS de `ordenes_trabajo_insert` la cierra a un técnico) |
-| `repuestos_de_orden` | todos | Repuestos sin precio (lo que ve un técnico, solo de sus órdenes) |
-| `saldo_orden` | admin | Lo que falta cobrar (o devolver) de una orden: total autorizado − cobrado neto |
-| `entregar_orden` | admin | Diálogo de entrega: asienta el pago final con su método (o la devolución) y marca la orden entregada, en una transacción; rechaza una segunda entrega |
-| `comisiones_estimadas` | admin y técnico asignado | Bolsas heredadas, reparto por persona, cada tarea con su comisión y las tareas sin técnico (`sin_asignar`); el técnico recibe solo lo suyo y su total |
-| `resumen_empleado` | admin | Comisiones pendientes y pagadas, órdenes activas y entregadas de un empleado |
-| `balance_orden` | admin | Cobrado, costo de repuestos, comisiones devengadas y margen de una orden; lo demás vinculado, aparte |
-| `margen_ordenes` | admin | Órdenes entregadas de un periodo con su margen, paginadas, y las sumas del periodo |
-| `pay_commissions` | admin | Paga comisiones; el monto lo suma el servidor |
-| `sede_delete_impact`, `delete_sede_cascade` | admin | Borrado de sede con vista previa |
-| `registrar_push`, `eliminar_push`, `probar_push` | todos | Push del dispositivo |
-| `usuarios_con_push` | admin | Quién tiene push activo |
-| `app_schema_version` | todos | Detección de desfase entre build y base |
-| `crear_enlace_cliente`, `regenerar_enlace_cliente`, `revocar_enlace_cliente` | admin | Tarjeta del enlace del cliente |
-| `notificar_cliente_avance` | admin | "Avisar novedades" por correo |
-| `enviar_reporte_cliente` | admin | "Enviar reporte → Enviar por correo" (asegura el enlace) |
-| `enviar_presupuesto`, `registrar_autorizacion`, `cancelar_presupuesto` | admin | Tarjeta de presupuesto |
-| `ordenes_esperando_autorizacion` | todos | Marca "Esperando autorización" en lista y tablero, sin montos |
-| `resumen_panel` | todos (RLS decide) | KPIs del panel y totales de Finanzas, sumados en la base con la zona horaria del taller. Un técnico recibe ceros en dinero |
-| `importar_estado_cuenta` | admin | El lote de un estado de cuenta y todos sus movimientos, en una transacción |
-
-> **Antes de calcular algo en el frontend, revisa si un trigger ya lo hace.** Los
-> totales de una orden no se calculan a mano en React: se releen de la base
-> después de guardar.
+- `create_work_order`, `entregar_orden`: Operaciones transaccionales grandes.
+- `repuestos_de_orden`: Ve repuestos pero omite precios para técnicos.
+- `comisiones_estimadas`, `resumen_empleado`, `balance_orden`, `margen_ordenes`: Vistas calculadas.
+- `pay_commissions`: Asienta pagos de comisiones con total del servidor.
+- `app_schema_version`: Detecta desfase entre build y base.
+- `resumen_panel`: KPIs del dashboard.
+- `importar_estado_cuenta`: Importación bancaria en una transacción.
 
 ---
 
-## 6. Seguridad y permisos
+## 7. El camino del dinero y comisiones
 
-### Row Level Security
+Lo único que **nadie escribe a mano**: lo asientan triggers y RPC, siempre con signo e idempotentes.
 
-RLS está activo en todas las tablas. Las políticas se apoyan en funciones
-`SECURITY DEFINER` que evitan recursión al consultar `perfiles`:
-`is_admin()`, `current_user_role()`, `current_user_sede_id()`,
-`is_assigned_to_order(orden_id)` y `mis_ordenes_asignadas()` (las dos últimas evitan la
-recursión entre las políticas de `ordenes_trabajo` y `orden_asignaciones`). Las
-políticas las llaman envueltas en `(SELECT …)` para que se calculen una vez por consulta.
+```mermaid
+flowchart LR
+  subgraph Entradas
+    DEP["Depósito del alta"]
+    ANT["Anticipo (registrar_anticipo)"]
+    PF["Pago final al entregar"]
+  end
+  subgraph Salidas
+    CR["Costo de repuestos<br/>(costo real, no precio)"]
+    COM["Pago de comisiones<br/>(un egreso por orden)"]
+    DEV["Devolución al cliente"]
+  end
+  FM[("finanzas_movimientos<br/>(sin importacion_id)")]
+  DEP --> FM
+  ANT --> FM
+  PF --> FM
+  CR --> FM
+  COM --> FM
+  DEV --> FM
 
-Dos patrones:
+  FM --> KPI["resumen_panel → panel y Finanzas"]
+  FM --> SAL["_saldo_orden → saldo, entrega, enlace del cliente"]
+  FM --> BAL["_balance_orden → margen por orden"]
 
-- **Datos de la sede** (sedes, perfiles, catálogos): `is_admin() OR sede_id = current_user_sede_id()`.
-- **Datos de una orden** (la orden, su mano de obra, avances, archivos, asignaciones, y el
-  cliente y el vehículo que cuelgan de ella): un técnico solo los de **sus órdenes
-  asignadas**, `id = ANY ((SELECT mis_ordenes_asignadas())::uuid[])` (desde
-  `20261007000000`). Para él, una orden ajena no existe: cero filas, no un 42501.
+  BAN["Estado de cuenta del banco<br/>(importar_estado_cuenta)"] --> FM2[("finanzas_movimientos<br/>(CON importacion_id)")]
+  FM2 --> CSV["Vista 'Estados de cuenta' + CSV para el contador"]
+```
 
-Sobre eso:
+### Comisiones
 
-- **Solo admin:** `orden_montos`, `orden_repuestos`, `finanzas_*`, escritura de
-  `comisiones`, `comision_pagos` y `perfiles_pago`, escritura de `orden_labor`, **alta,
-  edición y borrado de clientes y vehículos**, borrado de órdenes, publicar multimedia
-  suelta al cliente, **tomar la firma de recepción**, **entregar** (`entregar_orden`), **abrir una orden**
-  (`ordenes_trabajo_insert`) y **alta y baja de asignaciones**
-  (`orden_asignaciones_insert` / `_delete`) — asignar reparte la comisión de la mano de
-  obra, así que no es una etiqueta. Desde `20261010000006` también **editar una asignación**
-  (`orden_asignaciones_update`) y **asignar el técnico de una tarea** (escritura de
-  `orden_labor`).
-- **Propio:** `notificaciones` y `push_suscripciones` (cada quien las suyas);
-  `comisiones` las lee el técnico dueño; avances y archivos se borran por su autor.
-- **Asignado:** modificar una orden (estado y avance), escribir avances y subir
-  multimedia exige estar asignado y que la orden no esté entregada. Qué columnas y qué
-  estados puede tocar lo decide el trigger `trg_guard_order_technician`, para responder
-  con un 42501 y un motivo; sobre qué filas, la política.
+```mermaid
+flowchart TD
+  T["Cada tarea (orden_labor) tiene su técnico"] --> E["Entrega de la orden"]
+  E --> R["_reparto_comisiones:<br/>costo de la tarea × % del técnico (perfiles_pago o el de la sede)"]
+  R --> SUG["Comisión SUGERIDA<br/>(el técnico NO ve el monto)"]
+  SUG --> ACE["Admin acepta<br/>(Aceptar todas, o edita % / $ de una)"]
+  ACE --> VE["Aviso al técnico: 'Comisión aprobada'"]
+  ACE --> PAG["pay_commissions: SOLO lo aceptado<br/>→ comision_pagos + un egreso por orden"]
+  PAG --> BL["Lo pagado bloquea la línea:<br/>no cambia de técnico ni se borra"]
+```
 
-La matriz completa por rol, en lenguaje de negocio, está en
-[reglas-de-negocio.md](reglas-de-negocio.md#3-qué-puede-hacer-cada-rol).
+- **Retirada sin reparar**: Modifica qué tareas se cobran/pagan comisión dependiendo del estado.
 
-**Un `DELETE` o `UPDATE` que RLS rechaza no es un error**: PostgREST informa éxito
-con cero filas. Los borrados sensibles usan `.select('id')` y `assertDeleted()`
-para convertir ese silencio en un error visible.
+---
+
+## 8. Seguridad, permisos y roles
+
+### Quién puede hacer qué
+
+```mermaid
+flowchart TD
+  U["Persona con sesión"] --> R{"Rol"}
+  R -->|admin| A["Todo en su(s) sede(s):<br/>abre órdenes, asigna, cotiza, cobra, entrega,<br/>acepta y paga comisiones, finanzas, empleados"]
+  R -->|"mecánico / pintor"| T["Solo órdenes donde está ASIGNADO"]
+  T --> T1["Ve: tareas, mano de obra, piezas sin precio,<br/>avances, fotos, a sus compañeros"]
+  T --> T2["Hace: marcar sus tareas hechas, avance, estado<br/>(En proceso / Finalizado), fotos, reportar hallazgo"]
+  T --> T3["NO hace: abrir órdenes, asignar, ver precios o totales,<br/>entregar, firmar, publicar al cliente, ver comisiones sugeridas"]
+```
+
+La impone **la base** (RLS y triggers), no la pantalla. Las políticas RLS de Postgres usan funciones `SECURITY DEFINER` para evitar recursiones.
+- **Datos de la sede**: `is_admin() OR sede_id = current_user_sede_id()`.
+- **Datos de una orden**: un técnico ve **solo sus órdenes asignadas**. Una orden ajena le devuelve cero filas, no error 42501.
+
+Un borrado que RLS rechaza no da error directo; por eso PostgREST usa `.select('id')` con `assertDeleted()`.
 
 ### Storage
-
-| Bucket | Público | Contenido | Escritura |
-|---|---|---|---|
-| `orden_media` | **no** | fotos, videos, audio y firmas de órdenes; un técnico lee solo las carpetas de sus órdenes | admin, o asignado a la orden sin entregar; borrar: admin, o el dueño mientras la orden no esté entregada |
-| `comprobantes` | **no** | fotos de cheques y de comprobantes de cobro al entregar | admin |
-| `reportes` | **no** | PDF compartidos antes de la fase 6; lectura y borrado solo admin | nadie (el reporte es el enlace del portal) |
-| `estados_cuenta_bancarios` | no | PDF del banco | admin |
-| `sede_logos`, `avatares` | sí | logos e imágenes de perfil | admin / cada usuario |
-| `vehiculos_fotos`, `firmas` | **no** (cerrados en septiembre de 2026) | **en desuso** desde la fase 2; lectura solo admin | nadie |
-
-Lo privado se ve con URLs firmadas (1 hora para galerías, 10 minutos para el PDF).
-
-### Edge functions
-
-- `create-employee`, `update-employee`, `delete-employee` — usan la API de
-  administración de Auth; verifican que quien llama sea admin.
-- `process-outbox`, `cleanup-storage` — **internas**: se despliegan sin
-  verificación de JWT y exigen el secreto compartido `x-restorify-secret`.
-- `portal` — **pública** (sin JWT): la protege el token de 64 hexadecimales. Solo
-  llama `datos_portal` y `preferencia_correos_portal`, que están concedidas
-  únicamente a `service_role` y arman la respuesta campo por campo.
-
-Todas corren con la clave de servicio y **saltan RLS**: cada una valida permisos
-por su cuenta. Versiones desplegadas, secretos que usa cada una y cómo comprobar que
-están todas: [supabase.md §6](supabase.md#6-edge-functions).
+- `orden_media`: Privado. Lectura de técnico solo de sus órdenes. Escritura solo asignado de orden sin entregar.
+- `comprobantes`, `reportes`: Privado. Solo admin.
+- `sede_logos`, `avatares`: Público.
 
 ---
 
-## 7. Servidor: edge functions, cola de envíos y tareas programadas
+## 9. Servidor: edge functions, portal y correos
 
+Las **Edge Functions (Deno)**, **pg_net**, y **pg_cron** manejan el trabajo en segundo plano.
+
+### Lo que ve el cliente (El Portal)
+
+```mermaid
+flowchart LR
+  F["Firma de recepción"] --> L["orden_enlaces:<br/>token de 64 hex"]
+  L --> URL["restorifyauto.net/r/<token>"]
+  URL --> EF["Edge function 'portal'<br/>(sin sesión, verify_jwt = false)"]
+  EF --> DP["datos_portal(token)<br/>arma el JSON a mano, campo por campo"]
+  DP --> UI["src/portal/CustomerPortal.tsx"]
+  UI -->|"responder presupuesto"| EF
 ```
-trigger ─► notificar() ─► notificaciones        (la campana lo ve por Realtime)
-                     └─► cola_envios (push) ─► invoke_edge_function() ─pg_net─► process-outbox ─► Web Push
-trg_order_portal ─► encolar_correo_cliente() ─► cola_envios (email, con espera) ────────┘      └─► Resend
-                                                     ▲
-pg_cron "restorify-outbox" (cada minuto) ────────────┘  reintento si quedó algo pendiente
-pg_cron "restorify-maintenance" (09:00 UTC) ─► purge_old_notifications() + cleanup-storage
-pg_cron "restorify-quote-reminders" (15:00 UTC) ─► recordar_presupuestos_sin_respuesta()
-pg_cron "restorify-due-reminders" (15:15 UTC) ─► recordar_ordenes_vencidas()
+
+- Todo dato nuevo se agrega a mano en la función `datos_portal` que corre con privilegios elevados, ignorando RLS.
+
+### Avisos, correos y traducciones
+
+```mermaid
+flowchart TD
+  EV["Algo pasa en la base<br/>(trigger trg_*_notify)"] --> N["notificar()"]
+  N --> NO[("notificaciones → la campana")]
+  N --> CE[("cola_envios")]
+  EV2["Cambia un texto que ve el cliente<br/>(trg_encolar_traduccion)"] --> CE
+  EV3["Cambio de estado / presupuesto<br/>(trg_order_portal)"] --> CE
+  CRON["Tarea programada (pg_cron)"] --> OUT["process-outbox (edge function)"]
+  CE --> OUT
+  OUT -->|"correo"| RES["Resend"]
+  OUT -->|"traducir al inglés"| GEM["Gemini"]
+  OUT -->|"push"| PUSH["Notificaciones del teléfono"]
+  GEM --> TR[("traducciones")]
+  TR --> POR["portal y PDF en inglés"]
 ```
 
-- **La cola (`cola_envios`) es el único camino de salida.** Lleva push al equipo y
-  correos al cliente. Deja registro de cada envío y reintenta con espera
-  creciente (1, 4, 16, 64 minutos; error al quinto intento).
-- `claim_outbox` toma filas con `FOR UPDATE SKIP LOCKED`: el aviso inmediato y el
-  cron no envían dos veces lo mismo. Una fila que quedó "procesando" (la función murió
-  a mitad) vuelve a la cola a los 5 minutos; al quinto intento interrumpido queda en
-  error.
-- La URL del proyecto y el secreto viven en **Vault**, no en migraciones. Sin
-  ellos los avisos se guardan igual y la cola espera.
-
-Detalle completo y diagnóstico en
-[multimedia-y-notificaciones.md](multimedia-y-notificaciones.md) (push) y
-[portal-y-correos.md](portal-y-correos.md) (correos y portal).
+- La cola (`cola_envios`) es el único camino de salida. Trata correos, traducciones y push.
 
 ---
 
-## 8. El frontend por dentro
+## 10. El frontend por dentro
 
-### Proveedores
-
-```
-ErrorBoundary → QueryClientProvider → BrowserRouter → Theme → Language → Toast
-  → UnsavedChanges → Auth → Rutas
-       └─ AppLayout → MediaUploadsProvider (cola de subidas de la sesión)
-```
-
-`AuthContext` expone sesión, perfil, sede activa y `passwordRecovery`, que gana
-sobre todas las rutas (el enlace de recuperación inicia sesión). Al renovar el token no
-vuelve a pedir el perfil, y si una consulta del perfil o de las sedes falla por red
-conserva lo que ya tenía: solo una cuenta sin fila en `perfiles` (`PGRST116`) cierra la
-sesión en pantalla.
-
-**La sede elegida no es la sede de la orden.** `currentSede` es la que el admin eligió
-arriba; una orden abierta desde un aviso puede ser de otra. `useWorkOrderDetail` usa
-`orderSede` (la de `order.sede_id`) para el PDF, el mensaje de WhatsApp, la comisión
-estimada y la lista de personal asignable.
-
-`MediaUploadsProvider` vive en el layout y no en una pantalla: un técnico que
-graba un video y se va al Kanban no debe cortar la subida.
-
-### Datos remotos: TanStack Query
-
-**Listas completas con `fetchAll`.** PostgREST devuelve como máximo 1.000 filas por
-consulta (Project Settings → API → Max rows) y no avisa cuando corta. Toda lista que crece
-(órdenes, clientes, vehículos, movimientos, comisiones, pagos) se lee con `fetchAll`
-(`services/support.ts`), que pide páginas con `.range()` y un orden que termina en `id`.
-Los totales no se calculan con esas listas: los hace la base (`resumen_panel`).
-
-**La caché es de quien inició sesión.** `AuthContext` la vacía al cerrar sesión o si entra
-otra persona: en la tablet compartida del taller, quien entraba después veía por un momento
-lo que había cargado el anterior.
-
-Cada lectura es un `useQuery` con clave en `lib/queryClient.ts`. Las mutaciones
-invalidan las claves afectadas en vez de parchear a mano, porque la base recalcula
-totales y dispara efectos que el cliente no puede predecir. Los errores se guardan
-crudos y se traducen al pintar: cambiar de idioma no vuelve a consultar nada.
-
-### Guardias de ruta
-
-`ProtectedRoute` redirige sin sesión y con `adminOnly` saca a quien no es admin.
-**Es comodidad, no seguridad.**
-
-### Manejo de errores
-
-`lib/errors.ts` traduce códigos de Postgres (`23502`, `23503`, `23505`, `23514`,
-`42501`…) y de Auth a texto en los dos idiomas. Un `42501` que la base lanza con una
-oración para el taller ("La orden ya fue entregada…") se muestra tal cual en español;
-los de RLS ("new row violates row-level security…") y de privilegios siguen con el
-mensaje genérico. `lib/media/errors.ts` hace lo mismo con los errores
-de cámara, micrófono y conversión de video. **Nunca muestres el mensaje crudo del
-backend.**
-
-**Archivos de una versión anterior.** Las páginas se descargan al abrirlas
-(`React.lazy`), con un hash en el nombre. Quien tiene la app abierta cuando se publica
-pide archivos que ya no existen. `lib/staleChunk.ts` reconoce ese error (el evento
-`vite:preloadError` y los mensajes de Chrome, Safari y Firefox) y recarga la página una
-vez; el `ErrorBoundary` de la raíz hace lo mismo antes de mostrar "Algo salió mal". Si a
-los 10 s vuelve a fallar, ya no es una versión vieja y se muestra el error. El
-`.htaccess` responde 404 a un archivo inexistente de `assets/` en vez de servir
-`index.html`. Los diálogos diferidos tienen además su propio aviso (`LazyModal`).
-
-### Fechas
-
-`lib/dates.ts`. Una columna `DATE` llega como `'2026-09-01'`, y
-`new Date('2026-09-01')` es medianoche **UTC**: en EE. UU. eso es el 31 de agosto.
-Usa `isSameMonth`, `todayLocal` y `daysFromTodayLocal`, nunca `toISOString().split('T')[0]`.
-
-### Estilos
-
-CSS plano en dos archivos. `index.css` define variables y los dos temas;
-`components.css` las usa. **Nunca escribas un color literal** en un componente.
-
-Capas: `--z-dropdown 100`, `--z-sticky 200`, `--z-overlay 300`, `--z-modal 400`,
-`--z-toast 500`. Los toasts van sobre los modales: es la única forma de avisar
-algo con un diálogo abierto.
-
-### Móvil
-
-- `cards-on-mobile` en `.table-container` + `data-label` en cada `<td>`: la tabla
-  se vuelve tarjetas.
-- `.mobile-only` (bloque) y `.mobile-flex` (contenedor flex): no uses `.mobile-only`
-  en algo que tiene que seguir siendo flex, el `!important` le quita el `gap`.
-- `useIsMobile()` cuando conviene renderizar una sola versión en vez de esconder
-  la otra.
-- `<CollapsibleSection>` (`components/CollapsibleSection.tsx`) pliega una tarjeta:
-  encabezado con ícono, título y un dato corto (fotos, total, líneas), y el contenido
-  escondido con `hidden` para no perder lo que se está escribiendo. Lo usa el detalle de la
-  orden, en escritorio dentro de cada pestaña y en el teléfono todas apiladas, cerradas al
-  entrar (04/10/2026; antes era `MobileSection` y en escritorio no plegaba). Los estilos están
-  al final de `components.css`.
-- Inputs a 16 px bajo 768 px: Safari de iOS hace zoom en cualquier campo menor.
-- `100dvh` junto a `100vh`, y `env(safe-area-inset-*)` con `viewport-fit=cover`.
-
-### PWA y service worker
-
-`public/sw.js` **solo** maneja push y el toque en la notificación. No tiene
-manejador de `fetch` y no cachea la app: un despliegue nuevo llega siempre, sin
-versiones viejas atrapadas en caché. Chrome la considera instalable sin él.
-
-Los íconos de `public/icons/` (192, 512, maskable, el de iPhone y el favicon) se generan
-del logo del login con `node scripts/generate-pwa-icons.mjs`; el maskable va más chico
-para caber en el recorte del launcher. Hostinger guarda los íconos 7 días, así que las
-URLs llevan versión (`?v=2` en `index.html`, el manifiesto y `sw.js`): **súbela si
-cambias el logo**. iPhone no actualiza el ícono de una app ya instalada; hay que
-reinstalarla.
+- **Proveedores**: `ErrorBoundary → QueryClientProvider → BrowserRouter → Theme...`. La caché (`QueryClient`) es de quien inició sesión.
+- **Datos remotos**: Todo pasa por TanStack Query. Listas completas usan `fetchAll` con paginación explícita (la API corta en 1000 filas por defecto).
+- **Manejo de errores**: `lib/errors.ts` traduce errores crudos de Postgres a texto en el idioma del usuario. Jamás se muestra el mensaje crudo.
+- **Estilos**: CSS plano (`index.css`, `components.css`). Capas z-index muy controladas (`--z-toast 500`).
+- **Móvil**: Tarjetas responsivas, pliegues condicionales, e integraciones PWA (service worker para push, PWA instalable sin caché).
+- **Fechas**: Usar `lib/dates.ts` para manejar fechas UTC de medianoche como fechas locales del taller.
 
 ---
 
-## 9. Migraciones: el flujo de trabajo
+## 11. Migraciones, flujo de trabajo y cómo sale un cambio
 
-Las migraciones son **la única forma** de cambiar el esquema. Nunca edites tablas
-desde el panel de Supabase.
+Las migraciones son **la única forma** de cambiar el esquema.
 
 ```bash
 npm run db:check                          # qué falta aplicar en el proyecto enlazado
@@ -621,145 +458,63 @@ npx supabase db push --dry-run            # simulacro
 npx supabase db push --linked             # aplicar
 ```
 
-Antes de aplicar a producción: respaldo, staging y orden de publicación en
-[mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación).
+### Cómo sale un cambio a producción
 
-Nombre: `AAAAMMDDHHMMSS_descripcion.sql`, **posterior a la última migración**. Once
-migraciones aplicadas tienen fecha futura (`20261002…` a `20261010000000`): hasta que la
-fecha real las pase, una migración nueva con la fecha de hoy quedaría antes de ellas y
-`db push` no la aplica sin `--include-all`. Usa `20261011000000_…` o posterior. El build estampa la migración
-más nueva (`__SCHEMA_VERSION__`) y la app la compara con `app_schema_version()`:
-si la base está atrasada, `SchemaDriftBanner` lo dice en pantalla.
+```mermaid
+flowchart LR
+  DEV["Cambio en tu máquina"] --> V["npm run lint · npx tsc -b · npm test · npm run build<br/>+ npm run test:db si tocaste SQL (Docker)"]
+  V --> CM["git commit (solo cuando se pide)"]
+  CM --> DB{"¿Hay migración nueva?"}
+  DB -->|sí| PUSH1["1º npx supabase db push<br/>(con permiso de la persona responsable)"]
+  DB -->|no| PUSH2
+  PUSH1 --> PUSH2["2º git push a main"]
+  PUSH2 --> HOS["Hostinger compila y publica en 1–2 min<br/>(no espera al CI)"]
+  PUSH2 --> CI["GitHub Actions: lint, tipos, pruebas, base de datos"]
+  HOS --> SEC["3º npm run qa:security (si tocaste permisos)"]
+```
 
-### Cómo escribirlas
-
-- **Idempotentes**: `IF EXISTS`, `CREATE OR REPLACE`, `ON CONFLICT`.
-- **Una función se reescribe entera, partiendo de su versión vigente** (`npm run
-  db:donde`). Copiar una versión vieja deshace arreglos posteriores sin error.
-- **Borrar o renombrar, en dos pasos**: expandir primero, contraer después.
-- **Explica el porqué.** Las migraciones de este proyecto son la mejor
-  documentación de sus decisiones; léelas en orden si quieres entender cómo llegó
-  el sistema a donde está.
-- **Revoca lo interno.** Una función en `public` queda expuesta como RPC a `anon` y
-  `authenticated` por defecto: `REVOKE ALL ... FROM PUBLIC, anon, authenticated`. Una
-  función que solo llaman triggers no necesita ningún permiso (el trigger corre como
-  su dueño). Después de aplicar, `npm run qa:security` lo confirma contra la API real.
-- **Protege el INSERT además del UPDATE.** Un guard `BEFORE UPDATE` no dice nada de una
-  fila que alguien inserta ya con los valores que el guard prohíbe.
-- **Prueba con pgTAP** lo que toque permisos o dinero (`supabase/tests/database/`).
-- **Coordina con el frontend**: si una migración elimina columnas, la base y el
-  `dist` se despliegan juntos (ver [deployment.md](deployment.md)).
+- La base va **antes** que el sitio web, sino la app nueva rompe contra la base vieja.
+- Las migraciones nuevas se nombran cronológicamente después de la última conocida.
 
 ---
 
-## 10. Levantar el proyecto
+## 12. Levantar el proyecto
 
 ```bash
 npm install          # el postinstall copia el worker de pdfjs a public/
 npm run dev          # http://localhost:5173
 ```
 
-`.env.local`:
-
+`.env.local` requiere:
 ```
 VITE_SUPABASE_URL=https://<proyecto>.supabase.co
 VITE_SUPABASE_ANON_KEY=<clave anónima>
 VITE_PUBLIC_SITE_URL=https://restorifyauto.net
-VITE_VAPID_PUBLIC_KEY=<llave pública VAPID>      # opcional: sin ella no hay push
-VITE_SENTRY_DSN=<dsn>                            # opcional
 ```
-
-Vite **incrusta** estas variables en el build: cambiarlas exige recompilar. En producción
-no salen de `.env.local` sino del panel de Hostinger, que compila la rama configurada (hoy `main`)
-([deployment.md §3](deployment.md#3-variables-del-frontend)).
-
-```bash
-npm run build     # tsc -b && vite build → dist/
-npm run lint      # oxlint
-npm test          # Vitest
-npm run test:db   # pgTAP (requiere `npx supabase start`, con Docker)
-npm run test:e2e  # Playwright
-```
-
-Hoy se trabaja contra el proyecto alojado; Supabase local requiere Docker. Ver
-[pruebas.md](pruebas.md) para cuándo conviene cada uno.
+*Opcionales*: VAPID para push, Sentry DSN. (Estas variables se incrustan en Vite en tiempo de build).
 
 ---
 
-## 11. Trampas conocidas
+## 13. Solución de problemas y trampas conocidas
 
-**La API corta en 1.000 filas y no avisa.** Una consulta sin `.range()` sobre una tabla que
-crece funciona en desarrollo y devuelve datos incompletos en producción. Pasó con los totales
-del panel y de Finanzas ([salida-a-produccion.md](salida-a-produccion.md), PRD-10/11). Usa
-`fetchAll` para listas y una RPC para sumas.
+| Síntoma | Mira primero |
+|---|---|
+| Un número de dinero está mal | La función SQL que lo calcula (`npm run db:donde -- <nombre>`), no la pantalla. |
+| "Algo salió mal" tras publicar | Archivos viejos atrapados (`lib/staleChunk.ts`); recargar limpia esto. |
+| Una pantalla muestra clave `x.algo` | Falta la traducción en `src/i18n/translations.ts`. |
+| Técnico no ve algo / ve de más | Políticas RLS de la tabla en `supabase/migrations/`. |
+| Un correo no llegó | `cola_envios` (estado, error); logs de la edge function `process-outbox`. |
+| Cliente ve algo raro en su enlace | `datos_portal` y `src/portal/`. |
+| Una lista parece cortada en 1000 | ¿Usa `fetchAll`? PostgREST tiene un hard cap por defecto. |
+| Fechas corridas un día | ¿Usa `hoy_taller()` / `lib/dates.ts`? Nunca uses `toISOString()`. |
+| Un cambio no aparece en pantalla | `ORDER_TABLES` y la configuración de Realtime de esa tabla. |
 
-**`.in('columna', [cientos de ids])` rompe por largo de URL.** La lista de clientes dejaba
-de cargar con unos cientos de clientes (PRD-12). Conteos embebidos o una RPC.
-
-**`supabase/config.toml` no es la configuración real.** Y `[auth.email] enable_signup =
-false` no apaga solo el registro: apaga el inicio de sesión con correo (PRD-16).
-
-**El cuerpo de una función plpgsql no se valida al crearla.** Una migración con un
-error dentro de una función se aplica sin quejarse y falla la primera vez que el
-trigger corre de verdad. Pasó con `create_work_order` y `pay_commissions`. Las
-pruebas pgTAP existen para esto.
-
-**Un `CASE` sin cast no entra en una columna enum.** `CASE ... THEN 'egreso' END`
-resuelve a `text`. Escribe `(CASE ... END)::transaction_type`.
-
-**`str.replace` en un script de parche reemplaza todas las ocurrencias.** Si el
-mismo bloque aparece en dos interfaces, cambias las dos.
-
-**Un `return` mudo en un diálogo se ve igual que un botón roto.** El modal (capa
-400) tapa el recuadro de error de la página. Usa un error propio del diálogo o un
-toast (capa 500).
-
-**Un `<select>` controlado no vuelve atrás si cancelas un `confirm`.** Sin cambio
-de estado no hay render. Se remonta con una `key` que cambia al cancelar
-(`statusEpoch` en el detalle, `moveEpoch` en el Kanban).
-
-**Un `DELETE` que RLS rechaza informa éxito.** Ver sección 6.
-
-**Un admin puede borrar cualquier movimiento de Finanzas, incluso los
-automáticos.** Borrar un "Pago final" descuadra la orden: una re-entrega o una
-reversión posterior calculan contra un libro incompleto. Hasta que se decida
-restringirlo, corrige con un movimiento de ajuste en vez de borrar.
-
-**Importar dos veces el mismo estado de cuenta duplica el mes.** Hay tres defensas
-y una salida: revertir la importación.
-
-**En iPhone no existe push fuera de la app instalada.** Safari solo lo ofrece a una
-web agregada a la pantalla de inicio (iOS 16.4+).
-
-**Chrome viejo y Firefox graban video en WebM**, que un iPhone antiguo puede no
-reproducir. Chrome ≥ 126 y Safari graban MP4.
-
-**Borrar una sede deja sus archivos en Storage** hasta la limpieza nocturna
-(`cleanup-storage`): la base no puede borrar objetos de Storage.
-
-**`supabase storage rm -r ss:///<bucket>` borra el bucket, no solo sus archivos.** Pasó
-el 29/09/2026 al limpiar el proyecto; se recrearon con [supabase.md §5](supabase.md#5-storage).
-Para vaciar un bucket, el panel.
-
-**`= ANY ((SELECT f()))` se lee como `ANY (subconsulta)`.** Para comparar contra un arreglo
-que devuelve una función, con el `SELECT` que la calcula una vez por consulta, hace falta
-el cast: `= ANY ((SELECT mis_ordenes_asignadas())::uuid[])`.
-
-**Rellenar una columna con `UPDATE` dispara los triggers de la tabla.** En `orden_labor`
-eso llega a los guardias de presupuesto y al recálculo de totales. `20261009000000` los
-deshabilita solo durante el relleno.
-
-**Los permisos de una función no se ven en la migración que la crea.** Postgres y
-Supabase le dan `EXECUTE` a `PUBLIC`, `anon` y `authenticated` al crearla; `CREATE OR
-REPLACE` conserva lo que tenga. Cuatro funciones internas de dinero quedaron abiertas
-por eso hasta la auditoría de septiembre de 2026. Para ver lo vigente:
-`SELECT proname, proacl FROM pg_proc WHERE pronamespace = 'public'::regnamespace`.
-
-**Dos peticiones no son una transacción.** Borrar en el navegador los movimientos de una
-orden y después la orden dejaba la orden sin su dinero si la segunda fallaba. Si algo
-debe pasar junto, que lo haga un trigger o una RPC.
+### Otras trampas comunes
+- **El cuerpo de funciones plpgsql no se valida al crear.** Una migración errónea pasa y luego crashea en uso real.
+- **Un `DELETE` o `UPDATE` sin RLS informa éxito.** Cero filas afectadas no tira error por defecto; usar `.select('id')` con asserts.
+- **`supabase storage rm -r` borra todo el bucket.** Para vaciar un bucket usar panel.
+- **Dos peticiones HTTP en JS no son transaccionales.** Si algo debe ir atómico, crear una RPC.
 
 ---
 
-*Última revisión: 29 de septiembre de 2026 (fases 1–6, auditoría, revisión previa a
-producción y los cambios de la reunión con el taller).*
+*Última revisión: (Actualizado recientemente con la fusión de planos y arquitectura. Fases 1–6.)*

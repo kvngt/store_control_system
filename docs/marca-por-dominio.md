@@ -68,7 +68,7 @@ separación total de datos no hace falta, porque los dos talleres son del mismo 
 ## 3. Cómo funcionaría
 
 Son dos capas. Ninguna crea una función pública para usuarios sin sesión, así que se mantiene
-la regla "sin sesión, sin funciones" de [plan-de-pruebas.md](plan-de-pruebas.md).
+la regla "sin sesión, sin funciones" de [plan-de-pruebas.md](historico/plan-de-pruebas.md).
 
 1. **Lo que se ve antes de entrar sale de archivos fijos por dominio, que sirve el hosting.**
    - Cada taller con dominio propio tiene una carpeta `public/marcas/<dominio>/` con su nombre,
@@ -280,7 +280,7 @@ Por ejemplo, alguien del taller 2 abre `taller2.com`:
   - `CustomerLinkCard.test.tsx` y `ShareReportModal.test.tsx`, por la nueva firma de `portalUrl`;
   - los datos de prueba de `Sede` en `src/test/renderWithProviders.tsx`;
   - `translations.test.ts`, por los marcadores nuevos en los dos idiomas.
-- **Casos manuales** `DOM-01…` en [plan-de-pruebas.md](plan-de-pruebas.md): son los de la
+- **Casos manuales** `DOM-01…` en [plan-de-pruebas.md](historico/plan-de-pruebas.md): son los de la
   [sección 8](#8-verificación).
 
 ## 6. Documentación que habría que actualizar

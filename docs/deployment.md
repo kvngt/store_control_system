@@ -306,7 +306,7 @@ a `main` se publica hasta el push a `produccion`.
 > **un push a `main` es un despliegue**, antes de que termine el CI y antes de cualquier
 > `db push`. Para volver al flujo de esta sección, cambia la rama a `produccion` y haz
 > `git push origin main:produccion` para ponerla al día. Ver
-> [evaluacion-2026-10.md](evaluacion-2026-10.md#5-operación-y-despliegue).
+> [evaluacion-2026-10.md](historico/evaluacion-2026-10.md#5-operación-y-despliegue).
 - Para volver a compilar sin cambios en el código (por ejemplo, tras cambiar una variable),
   vuelve a desplegar desde el panel de Hostinger.
 
@@ -325,7 +325,7 @@ llega a `produccion` antes de aplicarse ya está publicada.
 
 **Ya desplegada en el proyecto enlazado** (15 de septiembre de 2026). Para otro entorno: si
 `db:check` lista `20260926000000_audit_hardening`, esta versión cierra los hallazgos de
-[auditoria-2026-09.md](auditoria-2026-09.md). No mueve columnas: se puede aplicar en
+[auditoria-2026-09.md](historico/auditoria-2026-09.md). No mueve columnas: se puede aplicar en
 horario de trabajo.
 
 ```bash
@@ -343,7 +343,7 @@ Si la versión incluye migraciones nuevas, **los pasos 4 y 6 van seguidos**.
 ## 6. Verificación después de publicar
 
 Diez minutos. Es el nivel **humo** del plan de pruebas; si algo falla,
-[plan-de-pruebas.md](plan-de-pruebas.md) tiene el detalle de cada caso.
+[plan-de-pruebas.md](historico/plan-de-pruebas.md) tiene el detalle de cada caso.
 
 - [ ] `npm run qa:security` → 0 FAIL (SEC-17 confirma que las 6 edge functions están desplegadas).
 - [ ] `npx supabase functions list` → `portal`, `process-outbox`, `cleanup-storage`, `create-employee`, `update-employee`, `delete-employee`.

@@ -12,7 +12,7 @@ describía cómo se paga a nadie en el taller.
 ## Cómo se calcula
 
 Desde el 03/10/2026 (migración `20261010000006`, fase F3 del
-[plan de mejoras](plan-mejoras-2026-10.md)) la comisión es **por tarea**: cada línea de mano
+[plan de mejoras](historico/plan-mejoras-2026-10.md)) la comisión es **por tarea**: cada línea de mano
 de obra tiene **su técnico** y su comisión es de esa persona. Se pidió porque "la pintora no
 cobró una mano de obra extra": con el reparto por especialidad, quién cobraba una línea
 dependía de quién estuviera asignado a la orden, y eso no lo veía nadie al agregarla.

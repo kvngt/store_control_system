@@ -5,7 +5,7 @@ Propuesta para quitar la ambigüedad del pago al personal antes de salir a produ
 > **Estado (4 de octubre de 2026):** propuesta. Las preguntas de la
 > [sección 5](#5-preguntas-enviadas-al-taller) se enviaron al taller; la 5 se contestó el
 > 03/10/2026 (comisión **por tarea**, ya hecha en local: migración `20261010000006`, fase F3
-> del [plan de mejoras](plan-mejoras-2026-10.md)) y las demás esperan respuesta. Lo de la
+> del [plan de mejoras](historico/plan-mejoras-2026-10.md)) y las demás esperan respuesta. Lo de la
 > sección 4 no está implementado todavía. Cómo funciona **hoy**: [comisiones.md](comisiones.md).
 
 ---
