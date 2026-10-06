@@ -60,19 +60,19 @@ export default function EmployeeDetailModal({ employee, sede, scheme, onClose }:
 
   const save = async () => {
     const rate = porcentaje.trim() === '' ? null : Number(porcentaje);
-    if (esquema === 'comision' && rate !== null && (!Number.isFinite(rate) || rate < 0 || rate > 100)) {
+    if ((esquema === 'comision' || esquema === 'mixto') && rate !== null && (!Number.isFinite(rate) || rate < 0 || rate > 100)) {
       setError(t('employees.rateInvalid'));
       return;
     }
     const amount = salario.trim() === '' ? null : Number(salario);
-    if (esquema === 'salario' && amount !== null && (!Number.isFinite(amount) || amount < 0)) {
+    if ((esquema === 'salario' || esquema === 'mixto') && amount !== null && (!Number.isFinite(amount) || amount < 0)) {
       setError(t('employees.salaryInvalid'));
       return;
     }
     // Pasar a salario recalcula lo pendiente, y a un asalariado no le toca comisión: lo que
     // se le debía deja de contar. Se dice con el monto antes de hacerlo.
     const pending = Number(summary?.comisiones_pendientes ?? 0);
-    const wasCommission = (scheme?.esquema ?? 'comision') === 'comision';
+    const wasCommission = (scheme?.esquema ?? 'comision') === 'comision' || scheme?.esquema === 'mixto';
     if (esquema === 'salario' && wasCommission && pending > 0 &&
         !confirm(t('employees.confirmSalary').replace('{monto}', money(pending)))) {
       return;
@@ -84,9 +84,9 @@ export default function EmployeeDetailModal({ employee, sede, scheme, onClose }:
       await employeesService.savePayScheme({
         usuario_id: employee.id,
         esquema,
-        comision_porcentaje: esquema === 'comision' ? rate : null,
-        salario_monto: esquema === 'salario' ? amount : null,
-        salario_periodo: esquema === 'salario' ? periodo : null,
+        comision_porcentaje: esquema === 'comision' || esquema === 'mixto' ? rate : null,
+        salario_monto: esquema === 'salario' || esquema === 'mixto' ? amount : null,
+        salario_periodo: esquema === 'salario' || esquema === 'mixto' ? periodo : null,
       });
       // Lo pendiente se recalculó en la base: Comisiones y el resumen cambian.
       void queryClient.invalidateQueries({ queryKey: queryKeys.paySchemes() });
@@ -153,7 +153,7 @@ export default function EmployeeDetailModal({ employee, sede, scheme, onClose }:
           <fieldset className="employee-pay">
             <legend className="form-label">{t('employees.payScheme')}</legend>
             <div className="employee-pay-kinds" role="radiogroup">
-              {(['comision', 'salario'] as PayKind[]).map((kind) => (
+              {(['comision', 'salario', 'mixto'] as PayKind[]).map((kind) => (
                 <label key={kind} className={'employee-pay-kind' + (esquema === kind ? ' is-selected' : '')}>
                   <input
                     type="radio"
@@ -168,8 +168,8 @@ export default function EmployeeDetailModal({ employee, sede, scheme, onClose }:
               ))}
             </div>
 
-            {esquema === 'comision' ? (
-              <div className="form-group">
+            {esquema === 'comision' || esquema === 'mixto' ? (
+              <div className="form-group" style={{ marginBottom: esquema === 'mixto' ? 'var(--space-4)' : undefined }}>
                 <label className="form-label" htmlFor="employee-rate">{t('employees.rate')}</label>
                 <input
                   id="employee-rate"
@@ -186,7 +186,8 @@ export default function EmployeeDetailModal({ employee, sede, scheme, onClose }:
                 />
                 <p className="field-hint">{t('employees.rateHint').replace('{rate}', String(sedeRate))}</p>
               </div>
-            ) : (
+            ) : null}
+            {esquema === 'salario' || esquema === 'mixto' ? (
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label" htmlFor="employee-salary">{t('employees.salary')}</label>
@@ -217,8 +218,8 @@ export default function EmployeeDetailModal({ employee, sede, scheme, onClose }:
                   </select>
                 </div>
               </div>
-            )}
-            <p className="field-hint">{esquema === 'salario' ? t('employees.salaryHint') : t('employees.recalcHint')}</p>
+            ) : null}
+            <p className="field-hint">{esquema === 'salario' ? t('employees.salaryHint') : esquema === 'mixto' ? t('employees.mixedHint') : t('employees.recalcHint')}</p>
           </fieldset>
 
           <h3 className="employee-section-title">

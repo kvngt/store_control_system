@@ -16,6 +16,7 @@
 | F5 | "Tareas por hacer" del técnico | **Publicado** (`2ce08c0`, `cbdf995` en `main`; `db push` de `20261010000009` el 04/10/2026). Pantalla en `TechnicianTaskList.tsx`; pgTAP 21 |
 | F6 | Hallazgos y nueva "espera de autorización" | **Publicado** (04/10/2026: app en `main`; `db push` de `009`, `010` y `011` por el usuario). Detalle completo en [hallazgos.md](hallazgos.md). Migraciones `20261010000010` y `20261010000011`; pgTAP 22 (44) y ajuste de la 03; SEC-106 a SEC-112. **Pendiente:** `qa:security` con tokens; la migración que contrae (guardia del técnico, [hallazgos.md §6](hallazgos.md#6-lo-que-falta-en-orden)); casos HAL en un teléfono real; ~~adaptar las 11 pruebas Vitest del alta~~ hecho el 04/10/2026 (noche) |
 | F7 | Navegación del sitio | **Publicado** (04/10/2026, noche: `93bdade` y `830961a` en `main`, `db push` de la `012`; `db:check` ✓ con 66 migraciones). `requiere_atencion` comprobada en producción (admin 200, mecánico 42501). Órdenes y Kanban en una página (Lista \| Tablero, misma búsqueda, vista recordada, `/kanban` redirige); grupos del menú traducidos (Taller / Finanzas / Sistema); "Requiere atención" en el panel del admin (migración `20261010000012`, RPC `requiere_atencion`, pgTAP 23 con 15 aserciones, SEC-113 y SEC-114); "Mis tareas" en el panel del técnico. Casos NAV en [plan-de-pruebas.md](plan-de-pruebas.md) |
+| Pedidos | Implementar los pedidos del taller del 05/10/2026 | **Para implementar** (ver [plan-pedidos-2026-10-05.md](plan-pedidos-2026-10-05.md)) |
 
 Nada se publica sin que la persona responsable lo pida: cada `db push`, `functions deploy`,
 push a `main` y commit se piden aparte.
@@ -456,6 +457,29 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 06/10/2026 — Claude Code (revisión del trabajo de otra IA y Bloque E: listo para entregar)
+
+- **Pedido:** revisar lo que otra IA hizo de [plan-pedidos-2026-10-05.md](plan-pedidos-2026-10-05.md)
+  y terminar. Los cinco pedidos del taller: pago Mixto, Empleados plegable en el teléfono,
+  "Información del vehículo", avisos flotantes en el teléfono, y finalizar / "Listo para
+  entregar".
+- **Encontrado en la revisión (y corregido):** la migración `020` soltaba también el CHECK del
+  porcentaje 0–100 (el filtro era `LIKE '%comision%'`; pasaba en su base local porque estaba
+  aplicada antes de editarla); el contenedor de avisos vacío tenía `role="status"` y rompía cuatro
+  pruebas y los estados de otras pantallas (ahora el rol va en cada aviso); la sección de
+  Empleados en el teléfono usaba variables CSS que no existen y estilos en línea; había errores
+  de tipos en sus pruebas (`tsc` fallaba aunque Vitest pasara). Dijo además que la llave de
+  Resend fallaba: **falso**, los correos salen (el 02/10 sí fallaba; ya se cambió).
+- **Hecho (Bloque E, migración `20261010000021`):** una finalizada solo la reabre administración
+  (guardia del técnico y `reportar_hallazgo`); finalizar ya no avisa al cliente; marca
+  `lista_para_entregar_en` con la RPC `marcar_lista_para_entregar` (que encola el correo);
+  `datos_correo` / `datos_portal` / `requiere_atencion` (grupo `por_revisar`) / historial al día;
+  portal con "En revisión final"; botón "Marcar listo para entregar", etiquetas "Por revisar" y
+  "Listo para entregar", selector y tablero bloqueados para el técnico. pgTAP 28 nueva (23);
+  03, 04, 14 y 23 ajustadas.
+- **Sin publicar.** Orden: `db push` (020 → 021) → push a `main` → `npm run qa:security`
+  (SEC-134 a 136 nuevos). El `process-outbox` no cambió: no hace falta desplegar funciones.
 
 ### 05/10/2026, noche (2) — Claude Code (retiro con tres salidas, mejoras de los programas comerciales, publicación de la base)
 

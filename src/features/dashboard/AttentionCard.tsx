@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, CalendarX, CheckCircle2, ChevronRight, FileQuestion, Mail, UserX } from 'lucide-react';
+import { AlertTriangle, CalendarX, CheckCircle2, ChevronRight, ClipboardCheck, FileQuestion, Mail, UserX } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { dashboardService } from '../../services/dashboard.service';
@@ -61,6 +61,7 @@ export default function AttentionCard({ sedeId }: { sedeId?: string }) {
     { key: 'hallazgos', icon: AlertTriangle, label: t('attention.findings'), group: data.hallazgos, tab: 'resumen' },
     { key: 'presupuestos', icon: FileQuestion, label: t('attention.quotes'), group: data.presupuestos, tab: 'trabajos' },
     { key: 'sin_tecnico', icon: UserX, label: t('attention.unassigned'), group: data.sin_tecnico, tab: 'trabajos' },
+    { key: 'por_revisar', icon: ClipboardCheck, label: t('attention.toReview'), group: data.por_revisar ?? { total: 0, ordenes: [] } },
     { key: 'vencidas', icon: CalendarX, label: t('attention.overdue'), group: data.vencidas },
   ].filter((row) => row.group.total > 0);
   const emails = data.correos.total;

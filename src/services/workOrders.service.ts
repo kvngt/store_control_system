@@ -657,6 +657,16 @@ export const workOrdersService = {
     return data as WorkOrderPart;
   },
 
+  /**
+   * Administración confirma que el vehículo está listo (`marcar_lista_para_entregar`): queda la
+   * marca y se le avisa al cliente. Solo con la orden finalizada.
+   */
+  markReadyForPickup: async (orderId: string) => {
+    const { data, error } = await supabase.rpc('marcar_lista_para_entregar', { p_orden_id: orderId });
+    if (error) throw error;
+    return data as { lista_para_entregar_en: string; ya_estaba: boolean };
+  },
+
   /** Pedido → llegó (o nulo: no se sigue). Al llegar, la base avisa a los técnicos de la orden. */
   setPartOrderState: async (id: string, estado: PartOrderState | null) => {
     const { data, error } = await supabase

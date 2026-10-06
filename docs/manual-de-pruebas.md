@@ -290,7 +290,8 @@ Cuenta: administrador. Ten a mano la [tabla de resultados esperados](#03-el-caso
 
 | # | Pri | Pasos | Debe pasar |
 |---|---|---|---|
-| H-01 | 🔴 | Estado **Finalizado** | Avance 100 %; el admin recibe "Lista para entregar"; al cliente "Su vehículo está listo" |
+| H-01 | 🔴 | Estado **Finalizado** (como mecánico) | Avance 100 %; el admin recibe "Trabajo terminado"; **al cliente no le llega nada** y su enlace dice "En revisión final"; el mecánico ya no puede regresarla a En Proceso |
+| H-01b | 🔴 | Como admin, **Marcar listo para entregar** | Sale el correo "Su vehículo está listo"; el enlace dice "Listo para recoger"; la orden lleva la etiqueta "Listo para entregar"; reabrirla borra la etiqueta |
 | H-02 | 🔴 | Estado **Entregado**: se abre el diálogo **Entregar ORD-…**. Ciérralo con **Cancelar** | El selector vuelve a Finalizado; no se registra nada |
 | H-03 | 🔴 | Estado **Entregado** otra vez. Revisa el diálogo, elige **Cheque** sin número ni foto e intenta entregar; luego elige **Efectivo** → **Entregar y cobrar $1,050.00** | El diálogo muestra total autorizado $1,350, ya cobrado $300 y **falta cobrar $1,050**. Con cheque sin número no deja ("Anota el número del cheque o sube su foto."). Con efectivo: "Orden entregada." |
 | H-04 | 🔴 | **Finanzas** | Ingreso **"Pago final" $1,050 con método Efectivo** y egreso **"Costo de repuestos" $200**, además del depósito de $300 |

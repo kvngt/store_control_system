@@ -355,7 +355,7 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 | NOT-02 | P1 | IA | **M** toca el aviso → abre la orden y lo marca leído. |
 | NOT-03 | P2 | IA | "Marcar todo leído" → contador en cero. |
 | NOT-04 | P2 | IA | Idioma inglés → los avisos se leen en inglés. |
-| NOT-05 | P1 | IA | Quién recibe cada evento: asignar → técnico; quitar → técnico ("Ya no estás asignado"); **M** registra recepción → admins; **M** agrega un avance con varios archivos → admins, **un** aviso; **M** finaliza → admins ("Lista para entregar"); **A** entrega → cada técnico ("Comisión generada" con su monto). Quien hace la acción nunca recibe su propio aviso. |
+| NOT-05 | P1 | IA | Quién recibe cada evento: asignar → técnico; quitar → técnico ("Ya no estás asignado"); **M** registra recepción → admins; **M** agrega un avance con varios archivos → admins, **un** aviso; **M** finaliza → admins ("Trabajo terminado · revisarla y marcarla lista"); **A** la marca "Listo para entregar" → **entonces** sale el correo al cliente (antes no); **A** entrega → cada técnico ("Comisión generada" con su monto). Quien hace la acción nunca recibe su propio aviso. |
 | NOT-06 | P1 | H | Android: Configuración → activar en este dispositivo → "Enviar prueba" llega en segundos; con Chrome **cerrado**, asignar una orden → llega y abre la orden; en Empleados (**A**) el técnico muestra la campana con "1". |
 | NOT-07 | P1 | H | iPhone: en Safari sin instalar, la tarjeta explica los 3 pasos; desde el ícono de inicio se activa; con la app cerrada, una asignación llega. |
 | NOT-08 | P2 | H | Tablet compartida: **M** activa push y cierra sesión; entra **P** en el mismo dispositivo → los avisos de **M** ya no llegan ahí; los de **P** sí. |

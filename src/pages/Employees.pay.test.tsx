@@ -23,6 +23,7 @@ const tecnico = (id: string, nombre: string, rol: 'mecanico' | 'pintor' = 'mecan
 const MARIO = tecnico('u-mario', 'Mario Mecánico');
 const PAULA = tecnico('u-paula', 'Paula Pintora', 'pintor');
 const MEMO = tecnico('u-memo', 'Memo Mecánico');
+const ALAN = tecnico('u-alan', 'Alan Mixto');
 
 const mocks = vi.hoisted(() => ({
   auth: { current: null as ReturnType<typeof import('../test/renderWithProviders').authValue> | null },
@@ -45,7 +46,7 @@ vi.mock('../services/employees.service', () => ({
 }));
 vi.mock('../services/supabaseService', () => {
   const sedes = { getSedes: vi.fn().mockResolvedValue([{ ...SEDE_CENTRO, comision_porcentaje: 35 }]) };
-  const users = { getUsers: vi.fn().mockResolvedValue([ADMIN_USER, MARIO, PAULA, MEMO]) };
+  const users = { getUsers: vi.fn().mockResolvedValue([ADMIN_USER, MARIO, PAULA, MEMO, ALAN]) };
   return { sedesService: sedes, usersService: users, supabaseService: { ...sedes, ...users } };
 });
 
@@ -54,6 +55,7 @@ const { default: Employees } = await import('./Employees');
 const SCHEMES: PayScheme[] = [
   { usuario_id: 'u-paula', esquema: 'comision', comision_porcentaje: 40, salario_monto: null, salario_periodo: null },
   { usuario_id: 'u-memo', esquema: 'salario', comision_porcentaje: null, salario_monto: 900, salario_periodo: 'quincenal' },
+  { usuario_id: 'u-alan', esquema: 'mixto', comision_porcentaje: 20, salario_monto: 1000, salario_periodo: 'semanal' },
 ];
 
 const payRow = (name: string) =>
@@ -77,6 +79,7 @@ describe('Empleados: el pago de cada quien', () => {
     await waitFor(() => expect(within(payRow('Paula Pintora')).getByText('Comisión · 40%')).toBeInTheDocument());
     expect(within(payRow('Mario Mecánico')).getByText('Comisión · 35% (el de la sede)')).toBeInTheDocument();
     expect(within(payRow('Memo Mecánico')).getByText('Salario · $900.00 quincenal')).toBeInTheDocument();
+    expect(within(payRow('Alan Mixto')).getByText('Mixto · $1,000.00 semanal + 20%')).toBeInTheDocument();
   });
 
   it('guarda un porcentaje propio', async () => {
@@ -112,6 +115,31 @@ describe('Empleados: el pago de cada quien', () => {
 
     expect(within(dialog).getByText('El porcentaje tiene que estar entre 0 y 100.')).toBeInTheDocument();
     expect(mocks.savePayScheme).not.toHaveBeenCalled();
+  });
+
+  it('elegir "Mixto" muestra los dos campos y guarda los tres valores', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Employees />);
+
+    await screen.findAllByText('Mario Mecánico');
+    await user.click(within(payRow('Mario Mecánico')).getByRole('button', { name: 'Ver' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Mario Mecánico' });
+    await user.click(within(dialog).getByRole('radio', { name: 'Mixto' }));
+    
+    await user.type(within(dialog).getByLabelText('Porcentaje de comisión'), '40');
+    await user.type(within(dialog).getByLabelText('Monto del salario'), '900');
+    await user.selectOptions(within(dialog).getByLabelText('Cada'), 'quincenal');
+    await user.click(within(dialog).getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() =>
+      expect(mocks.savePayScheme).toHaveBeenCalledWith({
+        usuario_id: 'u-mario',
+        esquema: 'mixto',
+        comision_porcentaje: 40,
+        salario_monto: 900,
+        salario_periodo: 'quincenal',
+      })
+    );
   });
 
   it('pasar a salario con comisiones pendientes lo avisa con el monto', async () => {

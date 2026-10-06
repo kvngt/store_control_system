@@ -43,6 +43,13 @@ export interface WorkOrder {
    * estatus `entregado`; en pantalla y para el cliente es otro estado.
    */
   retirada_sin_reparar?: boolean;
+  /**
+   * Cuándo administración confirmó que el vehículo está listo para entregar
+   * (`marcar_lista_para_entregar`, 20261010000021). Solo con estatus finalizado o entregado; se
+   * borra al reabrir. Hasta entonces el cliente ve "En revisión final" y no recibe correo.
+   */
+  lista_para_entregar_en?: string | null;
+  lista_para_entregar_por?: string | null;
   creado_por: string;
   creado_en: string;
   // Virtual fields from joins

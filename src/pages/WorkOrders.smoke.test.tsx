@@ -32,6 +32,8 @@ const mocks = vi.hoisted(() => ({
   createCustomer: vi.fn(),
   createVehicle: vi.fn(),
   addLaborItem: vi.fn(),
+  addPart: vi.fn(),
+  markReadyForPickup: vi.fn(),
   setLaborTechnician: vi.fn(),
   setAssignmentOrigin: vi.fn(),
   addAssignment: vi.fn(),
@@ -81,6 +83,8 @@ vi.mock('../services/supabaseService', () => {
     getWorkOrderDetail: mocks.getWorkOrderDetail,
     createWorkOrder: mocks.createWorkOrder,
     addLaborItem: mocks.addLaborItem,
+    addPart: mocks.addPart,
+    markReadyForPickup: mocks.markReadyForPickup,
     setLaborTechnician: mocks.setLaborTechnician,
     setLaborSpecialty: vi.fn(),
     setAssignmentOrigin: mocks.setAssignmentOrigin,
@@ -1062,6 +1066,50 @@ describe('WorkOrders — avance de la orden', () => {
   });
 });
 
+// Pedido del taller (05/10/2026): finalizar lo hace el técnico, "listo para entregar" lo confirma
+// administración (y recién entonces se le avisa al cliente); solo administración reabre.
+describe('WorkOrders — finalizar y listo para entregar', () => {
+  const FINALIZADA = { ...DETAIL, estatus: 'finalizado' as const, porcentaje_avance: 100 };
+
+  it('administración ve "Por revisar" y "Marcar listo para entregar", y al marcarla se llama a la base', async () => {
+    mocks.getWorkOrderDetail.mockResolvedValue(FINALIZADA);
+    mocks.markReadyForPickup.mockResolvedValue({ lista_para_entregar_en: '2026-10-06T10:00:00Z', ya_estaba: false });
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+
+    expect(screen.getAllByText('Por revisar').length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('button', { name: /Marcar listo para entregar/ }));
+    expect(mocks.markReadyForPickup).toHaveBeenCalledWith(ORDER.id);
+  });
+
+  it('ya marcada, administración ve "Listo para entregar" y no el botón', async () => {
+    mocks.getWorkOrderDetail.mockResolvedValue({ ...FINALIZADA, lista_para_entregar_en: '2026-10-06T10:00:00Z' });
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+
+    expect(screen.getAllByText('Listo para entregar').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /Marcar listo para entregar/ })).not.toBeInTheDocument();
+  });
+
+  it('un técnico no ve el botón y no puede reabrir la orden finalizada', async () => {
+    mocks.auth.current = authValue(MECHANIC_USER);
+    mocks.getWorkOrderDetail.mockResolvedValue({
+      ...TECH_DETAIL,
+      estatus: 'finalizado',
+      porcentaje_avance: 100,
+      asignaciones: [{ id: 'asg-1', orden_id: ORDER.id, usuario_id: MECHANIC_USER.id, tipo_tarea: 'mecanica', estatus_tarea: 'pendiente' }],
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+
+    expect(screen.queryByRole('button', { name: /Marcar listo para entregar/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox')).toBeDisabled();
+  });
+});
+
 // Reunión con el taller (03/10/2026): en escritorio había que recorrer hasta doce tarjetas. El
 // detalle va en pestañas, cada rol con las suyas.
 describe('WorkOrders — pestañas del detalle', () => {
@@ -1158,7 +1206,7 @@ describe('WorkOrders — secciones plegables del detalle', () => {
     const user = userEvent.setup();
     await openClosed(user);
 
-    const vehicle = section(/Servicio y Reparación del Vehículo/);
+    const vehicle = section(/Información del Vehículo/);
     expect(vehicle).toHaveAttribute('aria-expanded', 'false');
     // El resumen del encabezado: la placa.
     expect(vehicle).toHaveTextContent(VEHICLE.placa!);
@@ -1186,11 +1234,11 @@ describe('WorkOrders — secciones plegables del detalle', () => {
   it('lo abierto sigue abierto al cambiar de pestaña y volver', async () => {
     const user = userEvent.setup();
     await openClosed(user);
-    await user.click(section(/Servicio y Reparación del Vehículo/));
+    await user.click(section(/Información del Vehículo/));
 
     await user.click(screen.getByRole('tab', { name: /^Trabajos/ }));
     await user.click(screen.getByRole('tab', { name: /^Resumen/ }));
-    expect(section(/Servicio y Reparación del Vehículo/)).toHaveAttribute('aria-expanded', 'true');
+    expect(section(/Información del Vehículo/)).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('un enlace a Trabajos abre Mano de obra y deja lo demás cerrado', async () => {
@@ -1319,6 +1367,20 @@ describe('WorkOrders — tareas con técnico', () => {
     await user.click(within(laborCard).getByRole('button', { name: 'Agregar' }));
 
     expect(await screen.findByText('Mano de obra agregada')).toBeInTheDocument();
+    expect(screen.getByText(/Falta la autorización del cliente/)).toBeInTheDocument();
+  });
+  it('agregar un repuesto a una orden firmada avisa que falta la autorización', async () => {
+    mocks.addPart.mockResolvedValue({});
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user, 'Trabajos');
+
+    const partsCard = screen.getAllByText(/Descripción de Repuestos/).map((el) => el.closest('.card')).find(Boolean) as HTMLElement;
+    const descInput = within(partsCard).getByPlaceholderText('Descripción');
+    await user.type(descInput, 'Bujías');
+    await user.click(within(partsCard).getByRole('button', { name: 'Agregar' }));
+
+    expect(await screen.findByText('Repuesto agregado')).toBeInTheDocument();
     expect(screen.getByText(/Falta la autorización del cliente/)).toBeInTheDocument();
   });
 

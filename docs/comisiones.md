@@ -186,6 +186,9 @@ de 0–100 se rechazan, y lo ya pagado no se cambia (`aprobar_comision`, que blo
   monto. Pero se borra, como cualquier otra sin pagar, si la orden deja de estar entregada (al
   volver a entregarla, se acepta de nuevo) o si la tarea pasa a otro técnico (si no, se pagaría
   la misma tarea dos veces).
+- **Esquema mixto** (`20261010000020`): salario informativo + comisión normal. Solo `salario`
+  queda fuera del reparto (`esquema <> 'salario'` en `sync_order_commissions` y
+  `comisiones_estimadas`).
 - **Solo se paga lo aceptado** (desde `20261010000018`, decisión del taller del 05/10/2026):
   `pay_commissions` rechaza pagar lo que sigue sugerido ("Esas comisiones todavía no están
   aceptadas…"). Antes pagaba también lo sugerido, y aceptar orden por orden no cambiaba nada del

@@ -216,6 +216,10 @@ function Report({
   const observations = report.observaciones ?? [];
   const updateIds = new Set(updates.map((u) => u.id));
   const looseProgress = progress.filter((m) => !m.avance_id || !updateIds.has(m.avance_id));
+  // Finalizada por el técnico, pero administración todavía no confirma que está lista: para el
+  // cliente sigue en proceso, con su propio texto ("En revisión final").
+  const reviewing = orden.estatus === 'finalizado' && orden.lista_para_entregar === false;
+  const shownStatus = reviewing ? 'en_proceso' : orden.estatus;
   const vehicleTitle = [vehiculo.anio, vehiculo.marca, vehiculo.modelo].filter(Boolean).join(' ');
   // La confirmación de una respuesta vive aquí y no en la sección del presupuesto:
   // al responder, el presupuesto desaparece de la página.
@@ -238,6 +242,8 @@ function Report({
           </span>
           {orden.retirada_sin_reparar ? (
             <span className="badge badge-retirada">{s.withdrawnStatus}</span>
+          ) : reviewing ? (
+            <span className="badge badge-en_proceso">{s.finalReview}</span>
           ) : (
             <span className={`badge badge-${orden.estatus}`}>{s.status[orden.estatus]}</span>
           )}
@@ -256,8 +262,8 @@ function Report({
           <p className="portal-status-hint">{s.withdrawnHint}</p>
         ) : (
           <>
-            <StatusSteps status={orden.estatus} s={s} />
-            <p className="portal-status-hint">{s.statusHint[orden.estatus]}</p>
+            <StatusSteps status={shownStatus} s={s} />
+            <p className="portal-status-hint">{reviewing ? s.finalReviewHint : s.statusHint[orden.estatus]}</p>
           </>
         )}
 
@@ -273,7 +279,7 @@ function Report({
           </div>
         )}
 
-        {orden.fecha_estimada_entrega && !['finalizado', 'entregado'].includes(orden.estatus) && (
+        {orden.fecha_estimada_entrega && !['finalizado', 'entregado'].includes(shownStatus) && (
           <p className="portal-eta">
             <Calendar size={14} /> {s.estimatedDelivery}: <strong>{fmt.date(orden.fecha_estimada_entrega)}</strong>
           </p>

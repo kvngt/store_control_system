@@ -158,6 +158,31 @@ describe('Kanban board without dragging', () => {
     expect(moveSelectFor('ORD-2026-003')).toBeNull();
   });
 
+  it('offers no move control on the technician’s own finalized order', async () => {
+    // Pedido del taller (05/10/2026): una finalizada solo la reabre administración.
+    mocks.auth.current = authValue(MECHANIC_USER);
+    mocks.getWorkOrders.mockResolvedValue([
+      order({ ...MINE, id: 'ord-final', numero_orden: 'ORD-2026-004', estatus: 'finalizado' }),
+    ]);
+
+    renderWithProviders(<KanbanBoard />);
+
+    await screen.findByText('ORD-2026-004');
+    expect(moveSelectFor('ORD-2026-004')).toBeNull();
+  });
+
+  it('lets an admin reopen a finalized order', async () => {
+    mocks.auth.current = authValue(ADMIN_USER);
+    mocks.getWorkOrders.mockResolvedValue([
+      order({ ...MINE, id: 'ord-final', numero_orden: 'ORD-2026-004', estatus: 'finalizado' }),
+    ]);
+
+    renderWithProviders(<KanbanBoard />);
+
+    await screen.findByText('ORD-2026-004');
+    expect(moveSelectFor('ORD-2026-004')).toBeTruthy();
+  });
+
   it('lets an admin move any order', async () => {
     mocks.auth.current = authValue(ADMIN_USER);
     mocks.getWorkOrders.mockResolvedValue([SOMEONE_ELSES]);

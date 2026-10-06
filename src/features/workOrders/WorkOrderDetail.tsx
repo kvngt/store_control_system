@@ -217,11 +217,11 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   // acomodan abajo (`TAB_SECTIONS`): en pestañas (escritorio) o apiladas (teléfono).
 
   const vehicleSection = (
-    <CollapsibleSection {...sectionState('vehiculo')} title={t('workOrders.vehicleServiceRepair')} icon={<Car size={18} />} summary={vehicle?.placa || undefined}>
+    <CollapsibleSection {...sectionState('vehiculo')} title={t('workOrders.vehicleInfo')} icon={<Car size={18} />} summary={vehicle?.placa || undefined}>
       <div className="card">
         <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>
           <Car size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
-          {t('workOrders.vehicleServiceRepair')}
+          {t('workOrders.vehicleInfo')}
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
           {[
@@ -748,6 +748,12 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
               <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
             )}
             <span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span>
+            {/* Finalizada: o falta que administración la revise, o ya está lista para el cliente. */}
+            {order.estatus === 'finalizado' && !order.retirada_sin_reparar && (
+              order.lista_para_entregar_en
+                ? <span className="badge badge-success">{t('workOrders.readyForPickup')}</span>
+                : <span className="badge badge-waiting-auth">{t('workOrders.pendingReview')}</span>
+            )}
             {waitingParts && !detail.isDelivered && (
               <span className="badge badge-waiting-parts">{t('parts.waitingBadge')}</span>
             )}
@@ -757,8 +763,20 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
             {detail.isArchived && <span className="badge badge-archived">{t('workOrders.archivedBadge')}</span>}
           </h1>
           <p className="page-subtitle">{customer?.nombre} — {vehicle?.anio} {vehicle?.marca} {vehicle?.modelo}</p>
-          {(detail.canSendReport || detail.canArchive || detail.canWithdraw) && (
+          {(detail.canSendReport || detail.canArchive || detail.canWithdraw || detail.canMarkReady) && (
             <div className="order-detail-actions">
+              {/* Lo termina el técnico; administración lo revisa y confirma. Ahí sale el correo. */}
+              {detail.canMarkReady && (
+                <button
+                  type="button"
+                  className="btn btn-success btn-sm"
+                  onClick={() => void detail.markReadyForPickup()}
+                  disabled={detail.busy}
+                  id="order-mark-ready"
+                >
+                  <CheckCircle2 size={14} /> {t('workOrders.markReady')}
+                </button>
+              )}
               {/* Solo administración: el reporte lleva precios y totales, y el
                   cliente pidió que los técnicos no lo manden desde su perfil. */}
               {detail.canSendReport && (
@@ -836,8 +854,18 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
             onChange={(e) => detail.changeStatus(e.target.value as OrderStatus)}
             // F6: la pausa la quita administración (al cotizar, descartar o con la respuesta del
             // cliente); el técnico no la levanta por su cuenta.
-            disabled={!detail.canEdit || (!detail.isAdmin && order.estatus === 'espera_autorizacion')}
-            title={!detail.isAdmin && order.estatus === 'espera_autorizacion' ? t('findings.pausedByOffice') : undefined}
+            // Una finalizada solo la reabre administración (05/10/2026).
+            disabled={
+              !detail.canEdit ||
+              (!detail.isAdmin && (order.estatus === 'espera_autorizacion' || order.estatus === 'finalizado'))
+            }
+            title={
+              !detail.isAdmin && order.estatus === 'espera_autorizacion'
+                ? t('findings.pausedByOffice')
+                : !detail.isAdmin && order.estatus === 'finalizado'
+                  ? t('workOrders.onlyAdminReopens')
+                  : undefined
+            }
             style={{ flex: '1 1 160px' }}
           >
             {Object.keys(statusLabels)

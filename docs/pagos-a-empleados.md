@@ -22,6 +22,9 @@ Propuesta para quitar la ambigüedad del pago al personal antes de salir a produ
   darle técnico a una de esas líneas sale de la bolsa (ver la decisión pendiente abajo).
 - Quien está **a salario** no cobra comisión. El monto del salario es solo informativo: no
   se paga ni se asienta en ningún lado.
+- Quien está en **mixto** (desde `20261010000020`, 05/10/2026) tiene salario **y** comisión: su
+  salario es informativo igual que arriba, y su comisión se calcula, acepta y paga como la de
+  quien va por comisión.
 - Un **pago** es una selección libre de comisiones pendientes de una persona. Deja un egreso
   por orden en Finanzas.
 - **Lo pendiente sigue la configuración vigente.** Cambiar el porcentaje de la sede o de

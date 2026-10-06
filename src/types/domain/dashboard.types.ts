@@ -34,6 +34,8 @@ export interface AttentionSummary {
   presupuestos: AttentionGroup;
   sin_tecnico: AttentionGroup;
   vencidas: AttentionGroup;
+  /** Finalizadas por el técnico que administración todavía no marca listas para entregar. */
+  por_revisar: AttentionGroup;
   correos: { total: number };
 }
 

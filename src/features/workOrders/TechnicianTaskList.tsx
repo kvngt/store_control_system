@@ -85,7 +85,8 @@ export default function TechnicianTaskList({ items, currentUserId, detail }: Tec
         })
       )}
 
-      {detail.canEdit && (
+      {/* Una orden finalizada solo la reabre administración: tampoco se pausa reportando trabajo. */}
+      {detail.canEdit && detail.order?.estatus !== 'finalizado' && (
         <button
           type="button"
           className="btn btn-secondary"

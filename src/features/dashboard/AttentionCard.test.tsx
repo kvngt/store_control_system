@@ -30,6 +30,7 @@ const SUMMARY: AttentionSummary = {
   presupuestos: EMPTY,
   sin_tecnico: { total: 2, ordenes: [{ id: 'o9', numero_orden: 'OT-9' }] },
   vencidas: EMPTY,
+  por_revisar: EMPTY,
   correos: { total: 3 },
 };
 
@@ -97,6 +98,7 @@ describe('AttentionCard', () => {
       presupuestos: EMPTY,
       sin_tecnico: EMPTY,
       vencidas: EMPTY,
+      por_revisar: EMPTY,
       correos: { total: 0 },
     });
     renderCard();

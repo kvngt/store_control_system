@@ -378,6 +378,10 @@ const CASES = [
   tech({ id: 'SEC-131', desc: 'Un técnico no registra anticipos', method: 'POST', path: () => rpc('registrar_anticipo'), body: { p_orden_id: ZERO_UUID, p_monto: 1, p_metodo: 'efectivo' }, expect: 'denied' }),
   anon({ id: 'SEC-132', desc: 'Sin sesión no se registran anticipos', method: 'POST', path: () => rpc('registrar_anticipo'), body: { p_orden_id: ZERO_UUID, p_monto: 1, p_metodo: 'efectivo' }, expect: 'denied' }),
   tech({ id: 'SEC-133', desc: 'Un técnico no ve los pendientes de un vehículo', method: 'POST', path: () => rpc('trabajos_pendientes_vehiculo'), body: { p_vehiculo_id: ZERO_UUID }, expect: 'denied' }),
+  // 20261010000021 (listo para entregar, 05/10/2026).
+  tech({ id: 'SEC-134', desc: 'Un técnico no marca una orden lista para entregar', method: 'POST', path: () => rpc('marcar_lista_para_entregar'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-135', desc: 'Sin sesión no se marca una orden lista para entregar', method: 'POST', path: () => rpc('marcar_lista_para_entregar'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  admin({ id: 'SEC-136', desc: 'Ni un admin llama _estatus_cliente ni el guardia de la marca como RPC', method: 'POST', path: () => rpc('trg_guard_lista_para_entregar'), body: {}, expect: 'denied' }),
 ];
 
 function evaluate(expect, r) {

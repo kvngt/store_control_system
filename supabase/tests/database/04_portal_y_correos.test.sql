@@ -140,8 +140,8 @@ UPDATE ordenes_trabajo SET estatus = 'en_proceso' WHERE vehiculo_id = 'd0000000-
 UPDATE ordenes_trabajo SET estatus = 'finalizado' WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
 SELECT results_eq(
   $$ SELECT datos->>'estatus', enviar_despues_de > NOW() + INTERVAL '150 seconds' FROM t_correos WHERE plantilla = 'estatus' $$,
-  $$ VALUES ('finalizado'::text, true) $$,
-  'Dos cambios seguidos quedan en un solo aviso pendiente, con el último estado y tres minutos de espera'
+  $$ VALUES ('en_proceso'::text, true) $$,
+  'Finalizar ya no avisa al cliente: sigue un solo aviso pendiente, el de en proceso, con tres minutos de espera'
 );
 
 -- Colapsar una ráfaga está bien; aplazarla, no. Antes cada cambio REINICIABA la

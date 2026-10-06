@@ -371,4 +371,27 @@ describe('CustomerPortal — la cuenta', () => {
     render(<CustomerPortal token={TOKEN} />);
     expect(await screen.findByText('No realizados (no se cobran)')).toBeInTheDocument();
   });
+
+  // Pedido del taller (05/10/2026): finalizar lo hace el técnico; el cliente se entera cuando
+  // administración confirma que está lista.
+  it('finalizada pero sin confirmar, el cliente ve "En revisión final", no "Listo para recoger"', async () => {
+    mocks.fetchPortal.mockResolvedValue(
+      report({ orden: { ...report().orden, estatus: 'finalizado', lista_para_entregar: false } })
+    );
+    render(<CustomerPortal token={TOKEN} />);
+
+    expect(await screen.findByText('En revisión final')).toBeInTheDocument();
+    expect(screen.getByText(/lo estamos revisando/)).toBeInTheDocument();
+    expect(screen.queryByText('Listo para recoger')).not.toBeInTheDocument();
+  });
+
+  it('confirmada por administración, el cliente ve "Listo para recoger"', async () => {
+    mocks.fetchPortal.mockResolvedValue(
+      report({ orden: { ...report().orden, estatus: 'finalizado', lista_para_entregar: true } })
+    );
+    render(<CustomerPortal token={TOKEN} />);
+
+    expect((await screen.findAllByText('Listo para recoger')).length).toBeGreaterThan(0);
+    expect(screen.queryByText('En revisión final')).not.toBeInTheDocument();
+  });
 });

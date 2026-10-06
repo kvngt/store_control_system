@@ -39,7 +39,8 @@ Recepción ──► En proceso ◄──► Espera de autorización ──► F
 | **Recepción** | El vehículo ingresó; no se trabaja todavía | — |
 | **En proceso** | Se está trabajando | — |
 | **Espera de autorización** | Pausa: hay trabajo adicional que el cliente tiene que autorizar. El técnico la provoca **reportando un hallazgo** (`reportar_hallazgo`); no la elige en el selector | Aviso a administración. Sale sola a En proceso al responder el cliente, al descartar el hallazgo o al cancelar el presupuesto ([hallazgos.md](hallazgos.md)) |
-| **Finalizado** | Trabajo terminado | Avance al 100 %, fecha de finalización, **aviso a admins: "Lista para entregar"** |
+| **Finalizado** | El técnico terminó el trabajo. **Todavía no es "listo para el cliente"**: administración lo revisa y lo marca "Listo para entregar" | Avance al 100 %, fecha de finalización, **aviso a admins: "Trabajo terminado"** (hay que revisarlo). **No se le avisa al cliente.** Su enlace dice "En revisión final" |
+| ↳ **Listo para entregar** | Marca sobre Finalizado que pone **solo administración** (`marcar_lista_para_entregar`) | **Ahora sí** sale el correo "Su vehículo está listo" y el enlace dice "Listo para recoger". Queda quién y cuándo (historial). Se borra sola si la orden se reabre |
 | **Entregado** | El cliente se llevó el vehículo y pagó | Avance 100 %, **cobro del saldo, costo de repuestos, comisiones** (sección 2 y 4) |
 | **Retirada sin reparar** | El cliente se llevó el vehículo **sin que se hiciera (todo) el trabajo**: no autorizó, cambió de idea, o solo se hizo una parte | Ver [Retirada sin reparar](#retirada-sin-reparar) |
 
@@ -57,6 +58,10 @@ cualquier otro, con estas restricciones:
 - **El técnico elige solo** En proceso y Finalizado (y no saca la orden de la espera de
   autorización: eso pasa al resolver lo que la puso ahí). Devolver una orden a Recepción es
   de administración.
+- **Una orden finalizada solo la reabre administración** (pedido del taller, 05/10/2026,
+  `20261010000021`): el técnico no la devuelve a En proceso, ni desde la orden ni arrastrándola
+  en el tablero, ni reportando trabajo adicional (que pausaría la orden). La base lo rechaza
+  (`42501`); la pantalla bloquea el selector y las tarjetas.
 - **Sacar una orden de Entregado** (una entrega marcada por error) revierte el
   dinero: ver [Des-entregar](#des-entregar).
 
@@ -363,6 +368,10 @@ línea de antes de F3   = reparto por especialidad: bolsa ÷ asignados a mano co
   esas líneas la saca del reparto para siempre (decisión pendiente de confirmar,
   [pagos-a-empleados.md](pagos-a-empleados.md#5-preguntas-enviadas-al-taller)).
 - **A salario** no se cobra comisión: ni por sus tareas ni por su parte de una bolsa.
+  **Mixto** (desde `20261010000020`, pedido del taller del 05/10/2026): salario **y** comisión.
+  La comisión de sus tareas se calcula, se acepta y se paga como la de quien va solo por
+  comisión (con su porcentaje o el de la sede); el salario es **informativo**, como el de
+  "Salario": no se paga ni se asienta desde la app.
 - Se generan **al entregar**, **sugeridas**. Se recalculan si cambia una línea (autorización,
   precio, técnico, especialidad, reparto), el equipo asignado, el porcentaje de la sede o el
   esquema de un empleado — **solo lo sugerido**; lo aceptado conserva su monto y lo pagado no
@@ -430,7 +439,7 @@ línea de antes de F3   = reparto por especialidad: bolsa ÷ asignados a mano co
 | Te quitan de una orden | El técnico | "Ya no estás asignado · ORD-…" |
 | ~~Un **técnico** registra una recepción~~ | Admins de la sede | "Recepción registrada · ORD-… Falta cotizar." **Ya no ocurre:** abrir una orden es de administración (20261004000000), así que `trg_order_created_notify` quedó sin caso. El trigger se deja como red |
 | Un **técnico** agrega un avance | Admins de la sede | "Nuevo avance · ORD-…" con su nota |
-| Una orden pasa a **Finalizado** | Admins de la sede | "Lista para entregar · ORD-…" |
+| Una orden pasa a **Finalizado** | Admins de la sede | "Trabajo terminado · ORD-…": revísala y márcala lista para entregar |
 | Se genera tu comisión (al entregar) | El técnico | "Comisión generada · ORD-… $175.00": **uno** por orden y persona, con la suma de sus tareas y su parte de las bolsas |
 | Se responde un presupuesto (cliente, admin o firma de recepción) | Técnicos asignados | "Trabajos autorizados · ORD-…" / "Presupuesto rechazado · ORD-…" con "Autorizado: … No realizar: …" |
 | El **cliente** responde un presupuesto desde su enlace | Admins de la sede | "El cliente respondió el presupuesto · ORD-… Autorizó 2 de 3 ($450.00)" y su comentario |

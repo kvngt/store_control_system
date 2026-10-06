@@ -344,7 +344,7 @@ por estado**.
 | **Recepción** | El vehículo acaba de ingresar. Aún no se trabaja en él. |
 | **En Proceso** | Se está trabajando. |
 | **Espera Autorización** | El técnico reportó trabajo adicional y la orden espera a que el cliente lo autorice. Cuando el cliente responde (o administración descarta el hallazgo), la orden vuelve sola a En Proceso. |
-| **Finalizado** | El trabajo terminó. El avance pasa a 100 % y **se avisa a administración** que está lista para entregar. |
+| **Finalizado** | El técnico terminó el trabajo. El avance pasa a 100 % y **se avisa a administración** para que lo revise. **Al cliente todavía no**: ve "En revisión final". El técnico **no puede regresarla** a En Proceso; solo administración la reabre. |
 | **Entregado** | El cliente se llevó el vehículo. **Solo un administrador** la marca. Registra el cobro en Finanzas y genera las comisiones (sección 17). |
 | **Retirada sin reparar** | El cliente se llevó el vehículo **sin que se hiciera el trabajo**. **Solo un administrador**, con el botón **Retirada sin reparar** de la orden (ver abajo). |
 
@@ -932,7 +932,7 @@ mientras la app está abierta, con un mensaje breve en pantalla.
 | **Ya no estás asignado** | El técnico al que quitan |
 | **Recepción registrada · Falta cotizar** | Administradores, cuando un técnico crea una orden. **Ya no se emite:** abrir una orden es de administración desde 20261004000000. Los avisos de este tipo que ya existían se siguen leyendo |
 | **Nuevo avance** | Administradores, cuando un técnico agrega un avance |
-| **Lista para entregar** | Administradores, cuando una orden pasa a Finalizado |
+| **Trabajo terminado** | Administradores, cuando un técnico finaliza una orden: hay que revisarla y marcarla "Listo para entregar" |
 | **Comisión generada** | Cada técnico, cuando se entrega su orden: **uno** por orden, con la suma de lo suyo |
 | **Pasó la fecha de entrega** | Administradores y técnicos asignados, una vez al día por cada orden atrasada. **Reemplaza al del día anterior**: hay uno solo por orden, con los días de retraso al día |
 

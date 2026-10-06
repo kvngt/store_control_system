@@ -117,6 +117,20 @@ comisiones, el alta de la orden o la "espera de autorización".
   `balance_orden` (comisiones devengadas; repuestos = el costo automático de las líneas,
   lo demás vinculado aparte). Si agregas un movimiento automático de una orden, decide si
   entra en esa cuenta.
+- **"Listo para entregar" lo confirma administración** (`20261010000021`). El técnico finaliza
+  (`finalizado`), pero eso **no** avisa al cliente: `trg_portal_on_order_change` ya no encola el
+  correo al pasar a `finalizado`. La marca `ordenes_trabajo.lista_para_entregar_en` solo la
+  escribe la RPC `marcar_lista_para_entregar` (la guarda `trg_guard_lista_para_entregar`, con
+  `restorify.lista`; se borra sola si la orden deja de estar finalizada o entregada), y ella
+  encola el correo "listo". `datos_correo` entrega al `process-outbox` el **estatus del
+  cliente** (`_estatus_cliente`: finalizado sin marca = en proceso), así que el
+  `process-outbox` no cambió; `datos_portal` manda `orden.lista_para_entregar` y el portal
+  muestra "En revisión final". Un técnico **no** reabre una finalizada (`trg_guard_order_technician`),
+  ni reportando un hallazgo (`reportar_hallazgo`); solo administración. Si agregas una forma
+  nueva de pausar o reabrir una orden, cúbrela igual.
+- **Pago "mixto"** (`perfiles_pago.esquema`, `20261010000020`): salario informativo + comisión.
+  Todo filtro de comisiones es `esquema <> 'salario'`, nunca `= 'comision'`. Al soltar el CHECK
+  del esquema, no uses `LIKE '%comision%'`: soltaba también el del porcentaje 0–100.
 - **Proceso del taller (05/10/2026, `20261010000016`–`18`, [analisis-del-proceso-2026-10.md](analisis-del-proceso-2026-10.md)):**
   - **Lo importado del banco es contabilidad aparte.** Un movimiento con `importacion_id` no
     cuenta en `resumen_panel`, `_saldo_orden`, `_balance_orden`, el ajuste de una orden

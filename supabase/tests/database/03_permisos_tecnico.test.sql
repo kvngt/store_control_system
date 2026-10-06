@@ -14,7 +14,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(44);
+SELECT plan(46);
 
 -- ------------------------------------------------------------------------------------
 -- Datos de prueba: un admin, un mecánico asignado y uno que no lo está
@@ -164,11 +164,25 @@ SELECT lives_ok(
   'El técnico asignado sí puede darla por finalizada'
 );
 
+-- Una finalizada solo la reabre administración (pedido del taller, 05/10/2026).
+SELECT throws_ok(
+  $$ UPDATE ordenes_trabajo SET estatus = 'en_proceso', fecha_finalizacion = NULL
+     WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
+  '42501', 'La orden ya está finalizada. Solo un administrador puede reabrirla.',
+  'El técnico NO puede volver a ponerla en proceso'
+);
+SELECT throws_ok(
+  $$ SELECT reportar_hallazgo((SELECT id FROM t_orden), 'Algo más') $$,
+  '42501', 'La orden ya está finalizada. Solo un administrador puede reabrirla.',
+  'Ni reabrirla por la puerta de atrás, reportando trabajo adicional'
+);
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000001';
 SELECT lives_ok(
   $$ UPDATE ordenes_trabajo SET estatus = 'en_proceso', fecha_finalizacion = NULL
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
-  'Y volver a ponerla en proceso'
+  'Administración sí la reabre'
 );
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
 
 -- Pedir autorización es lo que un mecánico hace cuando descubre que falta algo. Desde F6
 -- (20261010000011) lo hace con `reportar_hallazgo`; mientras no se contraiga el guardia, el

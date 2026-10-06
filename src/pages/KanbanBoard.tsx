@@ -155,9 +155,12 @@ export default function KanbanBoard({ embedded = false, search = '', onOpen }: K
   // Misma regla que `canEdit` en el detalle y que `trg_order_technician_guard` en
   // la base: un técnico mueve solo sus órdenes, y nunca una ya entregada — sacarla
   // de Entregado revierte el cobro y borra comisiones, y eso es de administración.
+  // Una finalizada tampoco: solo administración la reabre (05/10/2026).
   const canMove = (order: WorkOrder) =>
     isAdmin ||
-    (order.estatus !== 'entregado' && (order.asignaciones || []).some((a) => a.usuario_id === user?.id));
+    (order.estatus !== 'entregado' &&
+      order.estatus !== 'finalizado' &&
+      (order.asignaciones || []).some((a) => a.usuario_id === user?.id));
 
   const handleDragStart = (order: WorkOrder, e: React.DragEvent) => {
     if (!canMove(order)) {
@@ -217,6 +220,11 @@ export default function KanbanBoard({ embedded = false, search = '', onOpen }: K
     if (order.estatus === 'espera_autorizacion' && !isAdmin) {
       discard();
       showToast('error', t('findings.pausedByOffice'));
+      return;
+    }
+    if (order.estatus === 'finalizado' && !isAdmin) {
+      discard();
+      showToast('error', t('workOrders.onlyAdminReopens'));
       return;
     }
     if (order.estatus === 'entregado' && !confirm(t('workOrders.confirmUndeliver'))) {
@@ -328,6 +336,11 @@ export default function KanbanBoard({ embedded = false, search = '', onOpen }: K
                         )}
                         {order.esperando_repuestos && (
                           <span className="badge badge-waiting-parts" style={{ fontSize: '10px' }}>{t('parts.waitingBadge')}</span>
+                        )}
+                        {order.estatus === 'finalizado' && !order.retirada_sin_reparar && (
+                          order.lista_para_entregar_en
+                            ? <span className="badge badge-success" style={{ fontSize: '10px' }}>{t('workOrders.readyForPickup')}</span>
+                            : <span className="badge badge-waiting-auth" style={{ fontSize: '10px' }}>{t('workOrders.pendingReview')}</span>
                         )}
                         {order.retirada_sin_reparar && (
                           <span className="badge badge-retirada" style={{ fontSize: '10px' }}>{t('withdrawal.status')}</span>

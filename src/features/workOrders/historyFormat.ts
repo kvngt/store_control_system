@@ -105,6 +105,8 @@ function describeToggle(field: string, change: HistoryChange, t: Ctx['t']): stri
     case 'reparto':
       return t(change.despues === true ? 'history.value.joinedSplit' : 'history.value.leftSplit');
     // Se cerró sin hacer el trabajo, o se reabrió (20261010000017).
+    case 'lista_para_entregar_en':
+      return after ? t('history.value.markedReady') : null;
     case 'retirada_sin_reparar':
       return t(change.despues === true ? 'history.value.withdrawn' : 'history.value.unwithdrawn');
     default:

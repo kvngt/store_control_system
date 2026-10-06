@@ -34,6 +34,12 @@ export interface PortalOrder {
   estatus: 'recepcion' | 'en_proceso' | 'espera_autorizacion' | 'finalizado' | 'entregado';
   /** Se cerró sin hacer el trabajo: el cliente lo ve como otro estado, no como "Entregado". */
   retirada_sin_reparar?: boolean;
+  /**
+   * Administración confirmó que está lista para recoger. Finalizada y `false` = el taller
+   * terminó y la está revisando ("En revisión final"). Ausente en la base anterior: se lee como
+   * antes (finalizada = lista).
+   */
+  lista_para_entregar?: boolean;
   tipo_trabajo: string;
   porcentaje_avance: number;
   fecha_ingreso: string;

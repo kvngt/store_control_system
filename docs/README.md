@@ -21,6 +21,7 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 | Ver **cómo está construido el programa** (los planos: capas, pantallas, ciclo de una orden, tablas, dinero, comisiones, permisos) y dónde modificar cada cosa | [planos.md](planos.md) |
 | Saber **qué sigue**: los cambios que pidió el taller en la reunión del 03/10/2026, por fases y con su estado | [plan-mejoras-2026-10.md](plan-mejoras-2026-10.md) |
 | Saber si el **proceso del taller** (orden → trabajo → cobro → comisiones → ganancia) tiene fallas de lógica y qué agrega valor o solo complejidad (05/10/2026) | [analisis-del-proceso-2026-10.md](analisis-del-proceso-2026-10.md) |
+| Implementar los **pedidos del taller** (05/10/2026) listos para programar | [plan-pedidos-2026-10-05.md](plan-pedidos-2026-10-05.md) |
 | Preparar la **privacidad, el texto de la firma y la protección legal** (plan del 04/10/2026, pendiente de las decisiones del taller y de un abogado) | [plan-legal-y-privacidad.md](plan-legal-y-privacidad.md) |
 | **Cambiar la base en producción** sin comprometer la operación, o saber qué deuda técnica queda | [mantenimiento.md](mantenimiento.md) |
 | **Probar la plataforma a mano** como tester, sin programar | [manual-de-pruebas.md](manual-de-pruebas.md) |

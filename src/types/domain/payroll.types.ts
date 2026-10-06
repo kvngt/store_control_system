@@ -5,7 +5,7 @@ export type Specialty = 'mecanica' | 'pintura';
 export const SPECIALTIES: Specialty[] = ['mecanica', 'pintura'];
 
 /** Cómo se le paga a un empleado. Sin fila en `perfiles_pago` = comisión al % de la sede. */
-export type PayKind = 'comision' | 'salario';
+export type PayKind = 'comision' | 'salario' | 'mixto';
 export type SalaryPeriod = 'semanal' | 'quincenal' | 'mensual';
 
 export interface PayScheme {

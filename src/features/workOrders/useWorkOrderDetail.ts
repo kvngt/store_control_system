@@ -347,6 +347,12 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
       discard();
       return;
     }
+    // Una orden finalizada solo la reabre administración (pedido del taller, 05/10/2026).
+    if (order.estatus === 'finalizado' && !isAdmin) {
+      discard();
+      showToast('error', t('workOrders.onlyAdminReopens'));
+      return;
+    }
     // F6: la pausa la pone la oficina. El técnico la provoca reportando trabajo adicional.
     if (status === 'espera_autorizacion' && !isAdmin) {
       discard();
@@ -384,6 +390,22 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     setWithdrawing(false);
     if (order) void queryClient.invalidateQueries({ queryKey: queryKeys.orderBalance(order.id) });
     await refresh();
+  };
+
+  // Administración revisa lo que terminó el técnico y confirma que está listo: ahí se le avisa al
+  // cliente. Antes, finalizar avisaba solo (y el técnico podía hacerlo sin que nadie lo revisara).
+  const markReadyForPickup = async () => {
+    if (!order || !isAdmin) return;
+    setBusy(true);
+    try {
+      await workOrdersService.markReadyForPickup(order.id);
+      await refresh();
+      showToast('success', t('workOrders.markReadyDone'));
+    } catch (err) {
+      showToast('error', t('workOrders.markReadyError'), getErrorMessage(err, language));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const finishAdvance = async () => {
@@ -505,11 +527,11 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     setBusy(true);
     try {
       await workOrdersService.addLaborItem(order.id, task);
-      await refresh();
       // Que se vea que entró (reunión del 03/10/2026). Y si la orden ya está firmada, lo nuevo
       // nace sin autorizar: no se cobra ni paga comisión hasta que el cliente lo autorice. Así
       // se quedó sin comisión la pintora con su mano de obra extra.
       showToast('success', t('workOrders.laborAdded'), order.firma_ruta ? t('workOrders.needsAuthorization') : undefined);
+      await refresh();
       return true;
     } catch (err) {
       // Dentro del aviso y no en el recuadro de arriba: el editor está a media pestaña.
@@ -596,9 +618,10 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     setBusy(true);
     try {
       await workOrdersService.addPart(order.id, item);
-      await refresh();
       showToast('success', t('workOrders.partAdded'), order.firma_ruta ? t('workOrders.needsAuthorization') : undefined);
+      await refresh();
     } catch (err) {
+      showToast('error', t('workOrders.partAddError'), getErrorMessage(err, language));
       fail(err);
     } finally {
       setBusy(false);
@@ -936,6 +959,9 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     finishDelivery,
     withdrawing,
     canWithdraw: isAdmin && !isDelivered,
+    markReadyForPickup,
+    canMarkReady: isAdmin && order?.estatus === 'finalizado' && !order?.lista_para_entregar_en,
+    isReadyForPickup: order?.estatus === 'finalizado' && !!order?.lista_para_entregar_en,
     advancing,
     canRegisterAdvance: isAdmin && !isDelivered,
     startAdvance: () => setAdvancing(true),

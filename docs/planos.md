@@ -138,8 +138,11 @@ stateDiagram-v2
   Recepcion --> EnProceso: Firma del cliente (autoriza lo cotizado) o admin/técnico lo mueve
   EnProceso --> EsperaAutorizacion: Técnico reporta trabajo adicional (reportar_hallazgo)
   EsperaAutorizacion --> EnProceso: Cliente responde / admin descarta / se cancela el presupuesto
-  EnProceso --> Finalizado: Técnico o admin (avance 100 %, aviso "lista para entregar")
-  Finalizado --> Entregado: SOLO admin (entregar_orden: cobra el saldo)
+  EnProceso --> Finalizado: Técnico o admin (avance 100 %, aviso a admin: "trabajo terminado")
+  Finalizado --> ListoParaEntregar: SOLO admin (marcar_lista_para_entregar) — aquí sale el correo al cliente
+  ListoParaEntregar --> Entregado: SOLO admin (entregar_orden: cobra el saldo)
+  Finalizado --> Entregado: SOLO admin (entregar_orden)
+  Finalizado --> EnProceso: SOLO admin reabre (el técnico no puede)
   Finalizado --> RetiradaSinReparar: SOLO admin (retirar_sin_reparar)
   EnProceso --> RetiradaSinReparar: SOLO admin
   Entregado --> EnProceso: Admin la saca de Entregado (se revierte el dinero)
@@ -159,8 +162,9 @@ flowchart TD
   E --> G{"¿Algo más que hacer?"}
   G -->|sí| H["reportar_hallazgo → orden en pausa<br/>→ admin cotiza → presupuesto → cliente autoriza"]
   H --> E
-  G -->|no| I["Finalizado → aviso a administración"]
-  I --> J["Entrega: diálogo con saldo y método de pago"]
+  G -->|no| I["Finalizado (técnico) → aviso a admin: trabajo terminado<br/>el cliente ve 'En revisión final' y NO recibe correo"]
+  I --> I2["Admin revisa y presiona 'Marcar listo para entregar'<br/>→ correo 'Su vehículo está listo'"]
+  I2 --> J["Entrega: diálogo con saldo y método de pago"]
   J --> K["entregar_orden (1 transacción)"]
   K --> K1["Ingreso 'Pago final' (con método)<br/>o egreso 'Devolución'"]
   K --> K2["Egreso 'Costo de repuestos'"]

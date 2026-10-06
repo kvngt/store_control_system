@@ -177,7 +177,8 @@ SELECT is((SELECT v->'vencidas' FROM t_res WHERE k = 'antes'), '{"total": 0, "or
   'Con la fecha local de antes, nada está vencido');
 SELECT is((SELECT v FROM t_res WHERE k = 'sur') - 'hallazgos',
   '{"presupuestos": {"total": 0, "ordenes": []}, "sin_tecnico": {"total": 0, "ordenes": []},
-    "vencidas": {"total": 0, "ordenes": []}, "correos": {"total": 1}}'::jsonb,
+    "vencidas": {"total": 0, "ordenes": []}, "por_revisar": {"total": 0, "ordenes": []},
+    "correos": {"total": 1}}'::jsonb,
   'Los grupos vacíos llegan en cero, con la misma forma');
 SELECT is((SELECT pg_temp.numeros(v->'hallazgos') FROM t_res WHERE k = 'sur'), pg_temp.de(ARRAY[6]),
   'Y la otra sede ve solo lo suyo');

@@ -544,6 +544,11 @@ export default function WorkOrders() {
                 )}
                 {order.esperando_autorizacion && <span className="badge badge-waiting-auth">{t('quotes.waitingBadge')}</span>}
                 {order.esperando_repuestos && <span className="badge badge-waiting-parts">{t('parts.waitingBadge')}</span>}
+                {order.estatus === 'finalizado' && !order.retirada_sin_reparar && (
+                  order.lista_para_entregar_en
+                    ? <span className="badge badge-success">{t('workOrders.readyForPickup')}</span>
+                    : <span className="badge badge-waiting-auth">{t('workOrders.pendingReview')}</span>
+                )}
               </div>
               <div className="workorder-card-progress">
                 <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
@@ -622,6 +627,11 @@ export default function WorkOrders() {
                     )}
                     {order.esperando_repuestos && (
                       <span className="badge badge-waiting-parts" style={{ marginLeft: 4 }}>{t('parts.waitingBadge')}</span>
+                    )}
+                    {order.estatus === 'finalizado' && !order.retirada_sin_reparar && (
+                      order.lista_para_entregar_en
+                        ? <span className="badge badge-success" style={{ marginLeft: 4 }}>{t('workOrders.readyForPickup')}</span>
+                        : <span className="badge badge-waiting-auth" style={{ marginLeft: 4 }}>{t('workOrders.pendingReview')}</span>
                     )}
                   </td>
                   <td>
