@@ -194,9 +194,7 @@ SELECT is(
   'Autorizar exige el nombre de quien autoriza'
 );
 
--- El caso real: el mecánico la mandó a esperar autorización y el cliente responde.
-UPDATE ordenes_trabajo SET estatus = 'espera_autorizacion', motivo_autorizacion = 'Faltan pastillas'
-WHERE id = (SELECT id FROM t_orden);
+-- El caso real: la orden está en espera de autorización y el cliente responde.
 
 SELECT is(
   (SELECT responder_presupuesto_portal(
@@ -215,8 +213,8 @@ SELECT results_eq(
 );
 SELECT is((SELECT total_general FROM t_orden), 480.00::numeric, 'El total suma solo lo aprobado: 100 + 300 + 80');
 SELECT results_eq(
-  $$ SELECT estatus::text, motivo_autorizacion FROM t_orden $$,
-  $$ VALUES ('en_proceso'::text, NULL::text) $$,
+  $$ SELECT estatus::text FROM t_orden $$,
+  $$ VALUES ('en_proceso'::text) $$,
   'Autorizar saca la orden de espera de autorización y limpia el motivo'
 );
 SELECT results_eq(

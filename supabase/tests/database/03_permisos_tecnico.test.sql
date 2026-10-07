@@ -201,8 +201,8 @@ SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
 SELECT throws_ok(
   $$ UPDATE ordenes_trabajo SET estatus = 'espera_autorizacion'
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
-  '42501', NULL,
-  'El técnico no puede pedir autorización sin decir por qué'
+  '42501', 'Solo puedes pedir autorización reportando trabajo adicional.',
+  'El técnico no puede pedir autorización con un UPDATE directo'
 );
 
 SELECT throws_ok(
@@ -228,11 +228,26 @@ SELECT is(
   'El motivo es lo que reportó, sin los espacios de los extremos'
 );
 
--- Al salir del estado, el motivo deja de ser cierto y no debe quedar colgado.
-SELECT lives_ok(
+-- El hallazgo está pendiente, la orden no sale de espera a mano.
+SELECT throws_ok(
   $$ UPDATE ordenes_trabajo SET estatus = 'en_proceso'
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
-  'El técnico saca la orden de espera de autorización'
+  '42501', 'La orden no puede salir de espera de autorización mientras haya hallazgos pendientes o presupuestos enviados.',
+  'El técnico no saca la orden de espera de autorización a mano'
+);
+
+-- Simular que admin descarta el hallazgo, para que pueda salir.
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000001';
+DO $do$ BEGIN
+  PERFORM descartar_hallazgo((SELECT id FROM orden_hallazgos WHERE orden_id = (SELECT id FROM t_orden) LIMIT 1), false, null);
+END $do$;
+SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
+
+-- Al descartar_hallazgo la orden volvió sola a en_proceso y borró el motivo.
+SELECT is(
+  (SELECT estatus::text FROM t_orden),
+  'en_proceso',
+  'Al descartar el hallazgo la orden vuelve a en_proceso'
 );
 
 SELECT is(

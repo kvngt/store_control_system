@@ -9,6 +9,7 @@ describe('isStaleChunkError', () => {
     'error loading dynamically imported module',
     "Failed to load module script: Expected a JavaScript module script but the server responded with a MIME type of \"text/html\". 'text/html' is not a valid JavaScript MIME type.",
     'Unable to preload CSS for /assets/Finance-abc12345.css',
+    "TypeError: Cannot read properties of undefined (reading 'default')",
   ])('reconoce "%s"', (message) => {
     expect(isStaleChunkError(new Error(message))).toBe(true);
   });

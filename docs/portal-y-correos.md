@@ -414,7 +414,7 @@ que el portal**:
 - ~~**Reporte web** (fase 6)~~ **hecho**: ver la sección 10.
 - **PDFs viejos** en el bucket `reportes`: se pueden borrar desde el panel de Storage
   cuando ya no hagan falta.
-- **Correos en inglés**: agregar `clientes.idioma` y un segundo juego de textos en
+- ~~**Correos en inglés**~~ **hecho**: agregar `clientes.idioma` y un segundo juego de textos en
   `templates.ts`.
 - **Datos de contacto de las sedes**: el correo y el WhatsApp quedaron pendientes de
   cargar en Configuración.

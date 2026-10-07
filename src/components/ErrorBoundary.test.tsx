@@ -60,4 +60,16 @@ describe('ErrorBoundary', () => {
     expect(await screen.findByText('Algo salió mal')).toBeInTheDocument();
     expect(reload).not.toHaveBeenCalled();
   });
+
+  it('un error de lectura de modulo (reading default) causado por un index.html se trata como version vieja y recarga', async () => {
+    // Si Vite recibe un index.html en vez de un chunk js, al querer leer default (React.lazy) arroja TypeError
+    const Page = failingPage("TypeError: Cannot read properties of undefined (reading 'default')");
+    render(
+      <ErrorBoundary>
+        <Suspense fallback={null}><Page /></Suspense>
+      </ErrorBoundary>
+    );
+    await vi.waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText('Algo salió mal')).toBeNull();
+  });
 });

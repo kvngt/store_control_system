@@ -20,6 +20,7 @@ const PATTERNS = [
   'is not a valid javascript mime type', // el servidor respondió HTML en vez del archivo
   'unable to preload css',
   'chunkloaderror',
+  "reading 'default'", // Hostinger 200 OK con index.html en vez de 404 para archivos viejos
 ];
 
 export function isStaleChunkError(error: unknown): boolean {

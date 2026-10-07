@@ -82,7 +82,7 @@ cerrada se borra su fecha de finalización y el avance se conserva.
 - Se hace en cuatro pasos: cliente, vehículo y recepción, depósito (con su método y
   comprobante) y trabajos (cada tarea con su técnico).
 - Lo que un admin cotiza al crear la orden nace **sin autorizar** y se autoriza
-  cuando el cliente **firma la recepción** por primera vez (sección 8).
+  solo mediante un presupuesto o registrando la autorización manualmente (sección 8).
 - El número `ORD-AAAA-###` se genera de forma atómica: dos órdenes simultáneas
   nunca reciben el mismo.
 - La orden y sus líneas se crean en **una sola transacción**: o entra todo, o nada.
@@ -563,20 +563,15 @@ Las líneas anteriores a los presupuestos quedaron autorizadas.
 
 ### Cómo se autoriza
 
-1. **Firma de recepción**: lo cotizado antes de la firma queda autorizado ("lo que
-   firmó, lo aprobó"), salvo que ya hubiera un presupuesto enviado. **Solo la primera
-   firma de la orden autoriza.** Si se limpia la firma y se vuelve a firmar (por
-   ejemplo, porque salió mal), lo agregado después de la recepción sigue sin
-   autorizar: se presenta con un presupuesto o se registra la autorización.
-2. **Desde su enlace**: el admin pulsa **Enviar presupuesto**; el cliente marca línea
+1. **Desde su enlace**: el admin pulsa **Enviar presupuesto**; el cliente marca línea
    por línea, escribe su nombre y confirma. Se guardan su nombre, su comentario, la
    IP y el navegador. Nada viene marcado.
-3. **Registrada por el admin**: el cliente respondió **por teléfono, en persona o por
+2. **Registrada por el admin**: el cliente respondió **por teléfono, en persona o por
    WhatsApp**. El admin marca lo autorizado en "Trabajos autorizados por el cliente";
    se guarda quién autorizó, quién lo registró y una nota.
 
-En los tres casos queda un registro en la tabla de presupuestos, y lo no marcado
-queda **rechazado**.
+En ambos casos queda un registro en la tabla de presupuestos, y lo no marcado
+queda **rechazado**. *(Nota: antes del 06/10/2026, la firma de recepción autorizaba lo cotizado; esto se eliminó para separar la recepción de la autorización).*
 
 ### Reglas del presupuesto
 

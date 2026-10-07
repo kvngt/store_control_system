@@ -13,7 +13,7 @@ se apoya: [portal-y-correos.md](portal-y-correos.md).
 ## Índice
 
 1. [El estado de una línea](#1-el-estado-de-una-línea)
-2. [Las tres formas de autorizar](#2-las-tres-formas-de-autorizar)
+2. [Las dos formas de autorizar](#2-las-dos-formas-de-autorizar)
 3. [El recorrido de un presupuesto](#3-el-recorrido-de-un-presupuesto)
 4. [Qué cambia en el dinero](#4-qué-cambia-en-el-dinero)
 5. [Qué ve cada quien](#5-qué-ve-cada-quien)
@@ -26,9 +26,7 @@ se apoya: [portal-y-correos.md](portal-y-correos.md).
 
 ## 1. El estado de una línea
 
-```
-            firma de recepción ─────────────────────────┐
-                                                        ▼
+```text
  (nueva) ─► borrador ──enviar presupuesto──► pendiente ──responde──► aprobado
                ▲    ╲                           │                    rechazado
                │     ╲── registrar autorización ─┼──────────────────►   │
@@ -52,16 +50,12 @@ se apoya: [portal-y-correos.md](portal-y-correos.md).
 
 ---
 
-## 2. Las tres formas de autorizar
+## 2. Las dos formas de autorizar
 
 | Forma | Quién | Cuándo se usa | Evidencia en `presupuestos` |
 |---|---|---|---|
-| **Firma de recepción** | El cliente, al firmar | El admin cotizó al crear la orden y el cliente firma al dejar el vehículo: "lo que firmó, lo aprobó" | `respondido_via = firma_recepcion`, nombre del cliente |
 | **Desde su enlace** | El cliente | El admin pulsa **Enviar presupuesto**; el cliente marca línea por línea en el portal | `cliente_portal`, nombre escrito, comentario, IP, navegador |
 | **Registrar autorización** | Un admin | El cliente respondió por teléfono, en persona o por WhatsApp | `admin_telefono` / `admin_presencial` / `admin_whatsapp`, quién autorizó, admin que lo registró, nota |
-
-Si la firma ocurre con un presupuesto ya enviado por correo, la firma **no** decide
-por él: esas líneas siguen esperando la respuesta del cliente.
 
 **La firma no autoriza nada** (desde `20261010000022`, pedido del taller del 06/10/2026).
 Firmar es la conformidad del cliente con cómo entregó el vehículo. Lo cotizado al recibirlo
