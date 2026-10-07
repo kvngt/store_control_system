@@ -465,7 +465,7 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
 - **Pedido:** Revisar la documentación contra el código actual, actualizarla, escribir pruebas faltantes y proponer mejoras.
 - **Documentación:** Se corrigieron `docs/reglas-de-negocio.md` y `docs/presupuestos.md` para reflejar que la firma de recepción ya no aprueba los cotizados (un desfase desde la migración `022`).
 - **Código y pruebas:** Se agregó el patrón `"reading 'default'"` a `staleChunk.ts` para que un chunk viejo respondido con `index.html` (200 OK) dispare un reload en vez de crashear la app en un Sentry ErrorBoundary ciego (error reportado por el cliente hoy). Se escribieron sus pruebas unitarias en `staleChunk.test.ts` y `ErrorBoundary.test.tsx`.
-- **Mejoras aplicadas:** Se implementó el paso pendiente F6 detallado en `docs/hallazgos.md`. Se creó la migración `20261010000023_guardia_espera_hallazgos.sql` que contrae el `trg_guard_order_technician`, obligando a que la pausa por espera de autorización se rija enteramente por los hallazgos y presupuestos (se actualizaron las pruebas `03` y `05` acordemente).
+- **Mejoras aplicadas:** Se implementó el paso pendiente F6 detallado en `docs/hallazgos.md`. Se creó la migración `20261010000024_guardia_espera_hallazgos.sql` que contrae el `trg_guard_order_technician`, obligando a que la pausa por espera de autorización se rija enteramente por los hallazgos y presupuestos (se actualizaron las pruebas `03` y `05` acordemente).
 - **Verificado:** Todo validado.
 
 ### 07/10/2026 — Claude Code (pedidos del 06/10, segunda tanda)
