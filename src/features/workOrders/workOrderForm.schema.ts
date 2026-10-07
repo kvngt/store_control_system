@@ -26,14 +26,14 @@ const laborRow = z.object({
   asignado_a: stringField,
 });
 
-// One money column, not two. A part is billed on at what it cost the shop, so
-// the separate "costo unitario" field was a box nobody filled in that still had
-// to be tabbed past on every line. The database keeps the two in step; see the
-// 20260913000000 migration.
+// El precio es lo que se le cobra al cliente; el costo (lo que pagó el taller) es opcional y
+// vacío quiere decir "igual al precio", como en la tabla de repuestos de la orden (decisión del
+// taller del 05/10/2026; en el alta desde el 06/10/2026).
 const partRow = z.object({
   descripcion: stringField,
   cantidad: stringField,
   precio_venta_unitario: stringField,
+  costo_unitario: z.optional(stringField),
 });
 
 /**
@@ -154,19 +154,23 @@ export const workOrderFormSchema = baseShape.check((ctx) => {
     if (parseFloat(part.precio_venta_unitario) < 0) {
       reject(['parts', i, 'precio_venta_unitario'], 'workOrders.validation.priceNegative');
     }
+    if (parseFloat(part.costo_unitario ?? '') < 0) {
+      reject(['parts', i, 'costo_unitario'], 'workOrders.validation.priceNegative');
+    }
   });
 });
 
 /**
  * Los cuatro pasos del alta (F4, reunión con el taller del 03/10/2026) y los campos de cada
- * uno. "Siguiente" valida solo los del paso que se deja; al crear se valida todo, y un error
+ * uno. Desde el 06/10/2026 los trabajos van antes que el depósito: el taller cotiza y después
+ * cobra, y la fecha estimada de entrega se decide al final de los trabajos. "Siguiente" valida solo los del paso que se deja; al crear se valida todo, y un error
  * de un paso anterior manda de vuelta a ese paso, porque en el paso 4 no se vería.
  */
 export const INTAKE_STEPS = [
   { key: 'customer', fields: ['selectedCustomer', 'newCustomer'] },
   { key: 'vehicle', fields: ['selectedVehicle', 'newVehicle', 'fuelLevel', 'milesIn', 'inspectionNotes'] },
-  { key: 'deposit', fields: ['deposit', 'paymentMethod', 'checkNumber'] },
   { key: 'work', fields: ['workType', 'estimatedDate', 'laborItems', 'parts', 'selectedOperators'] },
+  { key: 'deposit', fields: ['deposit', 'paymentMethod', 'checkNumber'] },
 ] as const satisfies readonly { key: string; fields: readonly (keyof WorkOrderFormValues)[] }[];
 
 /** El primer paso (1–4) que tiene un error, o `null` si no hay ninguno. */

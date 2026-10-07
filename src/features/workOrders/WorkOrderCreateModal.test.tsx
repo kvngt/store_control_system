@@ -116,17 +116,9 @@ describe('WorkOrderCreateModal - Assistant (Wizard)', () => {
     await user.type(milesIn, '50000');
     await user.click(screen.getByRole('button', { name: /Siguiente/ }));
 
-    // Paso 3: Depósito
-    await waitFor(() => expect(currentStep()).toMatch(/Depósito/));
-    const depositInput = document.getElementById('order-deposit') as HTMLInputElement;
-    await user.type(depositInput, '100');
-    const paymentMethodSelect = document.getElementById('payment-method') as HTMLSelectElement;
-    await user.selectOptions(paymentMethodSelect, 'efectivo');
-    await user.click(screen.getByRole('button', { name: /Siguiente/ }));
-
-    // Paso 4: Trabajos
+    // Paso 3: Trabajos (antes que el depósito desde el 06/10/2026)
     await waitFor(() => expect(currentStep()).toMatch(/Trabajos/));
-    
+
     // Fill Labor using TaskEditor
     await user.click(document.getElementById('create-order-open') as HTMLElement);
     const laborDesc = document.getElementById('create-order-description') as HTMLInputElement;
@@ -136,7 +128,15 @@ describe('WorkOrderCreateModal - Assistant (Wizard)', () => {
     const assignSelect = document.getElementById('create-order-technician') as HTMLSelectElement;
     await user.selectOptions(assignSelect, OPERATOR.id);
     await user.click(document.getElementById('create-order-submit') as HTMLElement);
-    
+    await user.click(screen.getByRole('button', { name: /Siguiente/ }));
+
+    // Paso 4: Depósito, el último
+    await waitFor(() => expect(currentStep()).toMatch(/Depósito/));
+    const depositInput = document.getElementById('order-deposit') as HTMLInputElement;
+    await user.type(depositInput, '100');
+    const paymentMethodSelect = document.getElementById('payment-method') as HTMLSelectElement;
+    await user.selectOptions(paymentMethodSelect, 'efectivo');
+
     await user.click(screen.getByRole('button', { name: /^Crear$/i }));
 
     await waitFor(() => {

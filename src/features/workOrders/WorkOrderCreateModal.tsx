@@ -146,25 +146,30 @@ export default function WorkOrderCreateModal({
     photos.removePhoto(zoneKey);
   };
 
+  const currentKey = INTAKE_STEPS[step - 1]?.key;
+
   // Enter dentro de un paso avanza al siguiente; solo en el último crea la orden. Antes de
-  // esto, un Enter en el depósito (el único campo de texto del paso 3) enviaba el formulario
-  // entero desde la mitad del asistente.
+  // esto, un Enter en el depósito enviaba el formulario entero desde la mitad del asistente.
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Salir de Trabajos con algo escrito sin agregar, o con una línea abierta, lo perdería: el
+    // editor se desmonta al cambiar de paso.
+    if (currentKey === 'work') {
+      if (editingTask !== null || editingPart !== null) {
+        setPendingWarning('edit');
+        return;
+      }
+      if (taskPending) {
+        setPendingWarning('task');
+        return;
+      }
+      if (partPending) {
+        setPendingWarning('part');
+        return;
+      }
+    }
     if (step < TOTAL_STEPS) {
       void nextStep();
-      return;
-    }
-    if (editingTask !== null || editingPart !== null) {
-      setPendingWarning('edit');
-      return;
-    }
-    if (taskPending) {
-      setPendingWarning('task');
-      return;
-    }
-    if (partPending) {
-      setPendingWarning('part');
       return;
     }
     onSubmit();
@@ -451,19 +456,13 @@ export default function WorkOrderCreateModal({
       {form.vehicleMode === 'existing' && chosenVehicle && chosenVehicle !== '__new__' && (
         <PendingWorkNotice vehicleId={chosenVehicle} />
       )}
-      <div className="form-row">
-        <div className="form-group">
-          <label className="form-label" htmlFor="order-work-type">{t('workOrders.workType')}</label>
-          <select id="order-work-type" className="form-input form-select" {...register('workType')}>
-            <option value="mecanica">{t('workOrders.mechanical')}</option>
-            <option value="pintura">{t('workOrders.painting')}</option>
-            <option value="combinado">{t('workOrders.combined')}</option>
-          </select>
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="order-estimated-date">{t('workOrders.estimatedDelivery')}</label>
-          <input id="order-estimated-date" className="form-input" type="date" {...register('estimatedDate')} />
-        </div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="order-work-type">{t('workOrders.workType')}</label>
+        <select id="order-work-type" className="form-input form-select" {...register('workType')}>
+          <option value="mecanica">{t('workOrders.mechanical')}</option>
+          <option value="pintura">{t('workOrders.painting')}</option>
+          <option value="combinado">{t('workOrders.combined')}</option>
+        </select>
       </div>
 
       {/* Mano de obra y repuestos: solo administración cotiza. Cada línea se agrega con su
@@ -585,7 +584,7 @@ export default function WorkOrderCreateModal({
                   return (
                     <li key={field.id}>
                       <PartEditor
-                        initial={{ descripcion: field.descripcion, cantidad: field.cantidad, precio_venta_unitario: field.precio_venta_unitario }}
+                        initial={{ descripcion: field.descripcion, cantidad: field.cantidad, precio_venta_unitario: field.precio_venta_unitario, costo_unitario: field.costo_unitario ?? '' }}
                         onSave={(part) => {
                           form.parts.update(i, part);
                           showToast('success', t('intake.lineUpdated'));
@@ -611,6 +610,7 @@ export default function WorkOrderCreateModal({
                       <strong>{field.descripcion}</strong>
                       <span>
                         {field.cantidad} × {money(parseFloat(field.precio_venta_unitario) || 0)}
+                        {field.costo_unitario?.trim() ? ` · ${t('parts.cost')} ${money(parseFloat(field.costo_unitario) || 0)}` : ''}
                       </span>
                       <FieldError messageKey={rowError} />
                     </div>
@@ -661,6 +661,13 @@ export default function WorkOrderCreateModal({
           )}
         </>
       )}
+
+      {/* Al final: con los trabajos y repuestos a la vista ya se sabe cuándo puede estar listo
+          (pedido del taller, 06/10/2026). */}
+      <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
+        <label className="form-label" htmlFor="order-estimated-date">{t('workOrders.estimatedDelivery')}</label>
+        <input id="order-estimated-date" className="form-input" type="date" {...register('estimatedDate')} />
+      </div>
     </>
   );
 
@@ -716,8 +723,8 @@ export default function WorkOrderCreateModal({
 
             {step === 1 && renderCustomerStep()}
             {step === 2 && renderVehicleStep()}
-            {step === 3 && renderDepositStep()}
-            {step === 4 && renderWorkStep()}
+            {currentKey === 'work' && renderWorkStep()}
+            {currentKey === 'deposit' && renderDepositStep()}
           </div>
           <div className="modal-footer intake-footer">
             <div>
@@ -733,8 +740,8 @@ export default function WorkOrderCreateModal({
               </button>
               {/* Mientras una foto se comprime o un video se convierte, seguir lo dejaría afuera. */}
               {step < TOTAL_STEPS ? (
-                <button key="next" type="submit" className="btn btn-primary" disabled={saving || preparing}>
-                  {preparing ? t('media.processing') : t('common.next')} {!preparing && <ChevronRight size={16} />}
+                <button key="next" type="submit" className="btn btn-primary" disabled={saving || preparing || form.leaving}>
+                  {preparing ? t('media.processing') : form.leaving ? t('common.loading') : t('common.next')} {!preparing && !form.leaving && <ChevronRight size={16} />}
                 </button>
               ) : (
                 <button
@@ -743,7 +750,7 @@ export default function WorkOrderCreateModal({
                   className="btn btn-primary"
                   disabled={saving || preparing}
                   // "Crear" aparece donde estaba "Siguiente": un doble clic en el paso 3 no
-                  // debe crear la orden sin que nadie haya visto el paso 4.
+                  // debe crear la orden sin que nadie haya visto el último.
                   onClick={(e) => {
                     if (e.detail > 1) e.preventDefault();
                   }}

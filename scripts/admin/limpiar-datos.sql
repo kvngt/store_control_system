@@ -7,6 +7,7 @@
 --             multimedia, enlaces y presupuestos), movimientos e importaciones de
 --             Finanzas, comisiones y pagos, notificaciones, cola de correos y push,
 --             suscripciones push, contadores de folio (la próxima orden vuelve a -001),
+--             hallazgos, historial de las órdenes, traducciones guardadas,
 --             y todas las cuentas que NO estén en la lista de abajo.
 -- Qué deja:   las cuentas de la lista (con su perfil), las sedes y sus logos, las reglas
 --             de categorización bancaria, la estructura y la configuración.
@@ -22,7 +23,8 @@
 --   1. Escribe en la lista los correos que se quedan. Al menos un administrador.
 --   2. Córrelo tal cual: termina en ROLLBACK, así que solo muestra el resumen.
 --   3. Si el resumen es el esperado, cambia el ROLLBACK final por COMMIT y córrelo otra vez.
--- Probado contra el Supabase local con las 36 migraciones.
+-- Probado contra el Supabase local con las 36 migraciones y otra vez con 77 (07/10/2026,
+-- cuando se le sumaron hallazgos, historial y traducciones: sin ellas fallaba sin borrar nada).
 -- =====================================================================================
 BEGIN;
 
@@ -69,7 +71,8 @@ TRUNCATE
   orden_montos, orden_labor, orden_repuestos, orden_asignaciones, orden_avances,
   orden_media, orden_enlaces, presupuestos, comisiones, comision_pagos,
   finanzas_movimientos, finanzas_importaciones, notificaciones, cola_envios,
-  push_suscripciones, ordenes_trabajo, vehiculos, clientes, numero_orden_contadores;
+  push_suscripciones, ordenes_trabajo, vehiculos, clientes, numero_orden_contadores,
+  orden_hallazgos, historial_orden, traducciones;
 
 -- Cuentas. El perfil se va en cascada con la cuenta de Auth. También quita los perfiles
 -- de demostración que dejó la migración inicial (cuentas sin contraseña).

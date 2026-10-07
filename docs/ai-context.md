@@ -171,7 +171,8 @@ comisiones, el alta de la orden o la "espera de autorización".
   (`20261010000007`); una clave con otro nombre **se ignora sin error**. Pasó: del 04/10/2026
   hasta el arreglo, el alta mandaba `deposito_cheque`/`deposito_comprobante` y el número de
   cheque y el comprobante se perdían. Lo fija `workOrders.service.test.ts`. El alta va en
-  cuatro pasos (`INTAKE_STEPS` en `workOrderForm.schema.ts`); un campo nuevo del formulario
+  cuatro pasos (`INTAKE_STEPS` en `workOrderForm.schema.ts`: cliente, vehículo, trabajos, depósito;
+  el cliente y el vehículo nuevos se guardan al salir de su paso y al cancelar, `onLeaveStep`); un campo nuevo del formulario
   va en uno de ellos (lo exige `workOrderForm.schema.test.ts`).
 - **Entregar es `entregar_orden`, no un UPDATE de estatus.** La RPC bloquea la orden,
   asienta el pago final **con su método** (o la devolución si el depósito supera el
@@ -195,6 +196,14 @@ comisiones, el alta de la orden o la "espera de autorización".
   rechazada como "No autorizada · no se realiza" (`techStatus.ts`). "Mis comisiones"
   (`/mis-comisiones`) muestra lo suyo aceptado y sus pagos; los totales salen de
   `resumen_mis_comisiones`.
+- **Correo al técnico** (`20261010000023`): `notificar` encola un correo (plantilla `empleado`)
+  al mecánico o pintor en `asignacion`, `tarea_asignada` y `presupuesto_respondido`, **sin
+  `orden_id`** en `cola_envios` para que nunca tome el camino del correo al cliente. Si agregas
+  otro aviso con correo, súmalo al `v_grupo` de esa función.
+- **Un avance puede ser de una tarea** (`orden_avances.labor_id`): `ProgressLog` deja elegirla y
+  la tarea muestra los suyos. Arriba del Resumen (admin) y de Tareas (técnico) van las acciones
+  rápidas (`QuickActions`) y, para el admin, `AuthorizationPanel` (cotizado sin enviar, en
+  espera, qué autorizó el cliente).
 - **Roles:** `admin`, `mecanico`, `pintor`. Mecánico y pintor tienen los mismos
   permisos.
 - **Las seis fases del cliente están hechas** (restricciones de técnicos, multimedia,

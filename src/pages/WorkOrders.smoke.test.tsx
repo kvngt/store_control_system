@@ -282,14 +282,24 @@ async function pickCustomer(user: ReturnType<typeof userEvent.setup>, dialog: HT
   await waitFor(() => expect(currentStep(dialog)).toMatch(/Vehículo/));
 }
 
-/** Cliente y vehículo existentes, sin depósito: deja el asistente en el paso 4 (Trabajos). */
+/** Cliente y vehículo existentes: deja el asistente en el paso 3 (Trabajos). */
 async function goToWorkStep(user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement) {
   await pickCustomer(user, dialog);
   await user.selectOptions(document.getElementById('intake-vehicle') as HTMLSelectElement, VEHICLE.id);
   await next(user, dialog);
-  await waitFor(() => expect(currentStep(dialog)).toMatch(/Depósito/));
-  await next(user, dialog);
   await waitFor(() => expect(currentStep(dialog)).toMatch(/Trabajos/));
+}
+
+/**
+ * Desde Trabajos: "Siguiente" al depósito (el último paso desde el 06/10/2026) y "Crear". Si
+ * ya se está en el depósito, solo "Crear".
+ */
+async function crear(user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement) {
+  if (!/Depósito/.test(currentStep(dialog))) {
+    await next(user, dialog);
+    await waitFor(() => expect(currentStep(dialog)).toMatch(/Depósito/));
+  }
+  await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
 }
 
 describe('WorkOrders', () => {
@@ -545,6 +555,68 @@ describe('WorkOrders — intake validation', () => {
   });
 });
 
+// Pedido del taller del 06/10/2026: el cliente y el vehículo nuevos quedan registrados aunque
+// la orden se cancele, para no volver a escribirlos.
+describe('WorkOrders — el cliente nuevo del alta queda guardado', () => {
+  async function typeNewCustomer(user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement) {
+    await user.selectOptions(document.getElementById('intake-customer') as HTMLSelectElement, '__new__');
+    await user.type(within(dialog).getByPlaceholderText('Nombre'), 'Pedro Pérez');
+    const phone = dialog.querySelector('input[type="tel"]') as HTMLInputElement;
+    await user.type(phone, '5551234567');
+  }
+
+  it('se guarda al pasar al vehículo, y la orden ya no lo vuelve a crear', async () => {
+    mocks.createCustomer.mockResolvedValue({ ...CUSTOMER, id: 'cli-nuevo', nombre: 'Pedro Pérez' });
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+    await typeNewCustomer(user, dialog);
+    await next(user, dialog);
+
+    await waitFor(() => expect(currentStep(dialog)).toMatch(/Vehículo/));
+    expect(mocks.createCustomer).toHaveBeenCalledTimes(1);
+    expect(mocks.createCustomer.mock.calls[0][0]).toMatchObject({ nombre: 'Pedro Pérez' });
+    expect(await screen.findByText('Cliente guardado')).toBeInTheDocument();
+  });
+
+  it('al cancelar, guarda el cliente nuevo que ya estaba completo', async () => {
+    mocks.createCustomer.mockResolvedValue({ ...CUSTOMER, id: 'cli-nuevo', nombre: 'Pedro Pérez' });
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+    await typeNewCustomer(user, dialog);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+
+    await waitFor(() => expect(mocks.createCustomer).toHaveBeenCalledTimes(1));
+    expect(confirmSpy.mock.calls[0][0]).toMatch(/se guardan igual/);
+    expect(mocks.createWorkOrder).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it('el costo del repuesto viaja con la orden; vacío, sale como nulo', async () => {
+    mocks.createWorkOrder.mockResolvedValue({ ...ORDER, id: 'ord-nueva', numero_orden: 'OT-2026-0043' });
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+    await goToWorkStep(user, dialog);
+
+    for (const [desc, price, cost] of [['Filtro', '15', '9'], ['Aceite', '30', '']]) {
+      await user.click(within(dialog).getByRole('button', { name: /Agregar repuesto/ }));
+      await user.type(document.getElementById('create-order-part-description') as HTMLInputElement, desc);
+      await user.type(document.getElementById('create-order-part-price') as HTMLInputElement, price);
+      if (cost) await user.type(document.getElementById('create-order-part-cost') as HTMLInputElement, cost);
+      await user.click(document.getElementById('create-order-part-submit') as HTMLElement);
+      await user.click(within(dialog).getAllByRole('button', { name: 'Cancelar' })[0]);
+    }
+    await crear(user, dialog);
+
+    await waitFor(() => expect(mocks.createWorkOrder).toHaveBeenCalledTimes(1));
+    expect(mocks.createWorkOrder.mock.calls[0][0].repuestos).toEqual([
+      expect.objectContaining({ descripcion: 'Filtro', precio_venta_unitario: 15, costo_unitario: 9 }),
+      expect.objectContaining({ descripcion: 'Aceite', precio_venta_unitario: 30, costo_unitario: null }),
+    ]);
+  });
+});
+
 // Lo que se guarda antes que la orden no se deshace — un cliente y un vehículo sin orden
 // son filas válidas, se crean igual desde sus propias pantallas — pero hay que decirlo. Sin
 // el aviso, quien lee "no se pudo crear la orden" da por hecho que no quedó nada y vuelve a
@@ -564,8 +636,6 @@ describe('WorkOrders — el alta que falla a medio camino lo dice', () => {
     await user.type(document.getElementById('vehicle-vin') as HTMLInputElement, '1HGCM82633A004352');
 
     await next(user, dialog);
-    await waitFor(() => expect(currentStep(dialog)).toMatch(/Depósito/));
-    await next(user, dialog);
     await waitFor(() => expect(currentStep(dialog)).toMatch(/Trabajos/));
     return { user, dialog };
   };
@@ -575,7 +645,7 @@ describe('WorkOrders — el alta que falla a medio camino lo dice', () => {
     mocks.createWorkOrder.mockRejectedValue(new Error('Se cayó la red'));
 
     const { user, dialog } = await abrirConVehiculoNuevo();
-    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await crear(user, dialog);
     expect(await within(dialog).findByText(/Se cayó la red/)).toBeInTheDocument();
     expect(within(dialog).getByText(/El vehículo nuevo ya quedó guardado/)).toBeInTheDocument();
   });
@@ -598,7 +668,7 @@ describe('WorkOrders — el alta que falla a medio camino lo dice', () => {
     const user = userEvent.setup();
     const dialog = await openIntake(user);
     await goToWorkStep(user, dialog);
-    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await crear(user, dialog);
 
     expect(await within(dialog).findByText(/Se cayó la red/)).toBeInTheDocument();
     expect(within(dialog).queryByText(/ya quedó guardado/)).not.toBeInTheDocument();
@@ -612,7 +682,7 @@ describe('WorkOrders — el alta en cuatro pasos', () => {
     mocks.createWorkOrder.mockResolvedValue({ ...ORDER, id: 'ord-nueva', numero_orden: 'OT-2026-0043' });
   });
 
-  /** Paso 3 con un depósito: monto, método y (opcional) el archivo del comprobante. */
+  /** El depósito (paso 4) con: monto, método y (opcional) el archivo del comprobante. */
   async function fillDeposit(
     user: ReturnType<typeof userEvent.setup>,
     dialog: HTMLElement,
@@ -620,8 +690,7 @@ describe('WorkOrders — el alta en cuatro pasos', () => {
     method: string,
     receipt?: File
   ) {
-    await pickCustomer(user, dialog);
-    await user.selectOptions(document.getElementById('intake-vehicle') as HTMLSelectElement, VEHICLE.id);
+    await goToWorkStep(user, dialog);
     await next(user, dialog);
     await waitFor(() => expect(currentStep(dialog)).toMatch(/Depósito/));
     const deposit = document.getElementById('order-deposit') as HTMLInputElement;
@@ -635,12 +704,9 @@ describe('WorkOrders — el alta en cuatro pasos', () => {
     const user = userEvent.setup();
     const dialog = await openIntake(user);
     await pickCustomer(user, dialog);
+    // Un Enter en las millas (paso 2) enviaba el formulario entero desde la mitad del asistente.
     await user.selectOptions(document.getElementById('intake-vehicle') as HTMLSelectElement, VEHICLE.id);
-    await next(user, dialog);
-    await waitFor(() => expect(currentStep(dialog)).toMatch(/Depósito/));
-
-    // El depósito es el único campo de texto del paso 3: un Enter ahí enviaba el formulario.
-    await user.type(document.getElementById('order-deposit') as HTMLInputElement, '{Enter}');
+    await user.type(document.getElementById('order-miles-in') as HTMLInputElement, '45000{Enter}');
 
     await waitFor(() => expect(currentStep(dialog)).toMatch(/Trabajos/));
     expect(mocks.createWorkOrder).not.toHaveBeenCalled();
@@ -660,7 +726,7 @@ describe('WorkOrders — el alta en cuatro pasos', () => {
     await user.click(document.getElementById('create-order-submit') as HTMLElement);
     expect(within(dialog).getByText('Pintar puerta')).toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await crear(user, dialog);
 
     await waitFor(() => expect(mocks.createWorkOrder).toHaveBeenCalledTimes(1));
     const input = mocks.createWorkOrder.mock.calls[0][0];
@@ -696,7 +762,7 @@ describe('WorkOrders — el alta en cuatro pasos', () => {
     await user.click(document.getElementById('edit-task-0-submit') as HTMLElement);
     expect(within(dialog).getByText('Frenos delanteros')).toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await crear(user, dialog);
     await waitFor(() => expect(mocks.createWorkOrder).toHaveBeenCalledTimes(1));
     expect(mocks.createWorkOrder.mock.calls[0][0].labor_items).toEqual([
       expect.objectContaining({ descripcion: 'Frenos delanteros', costo: 150 }),
@@ -721,7 +787,7 @@ describe('WorkOrders — el alta en cuatro pasos', () => {
     await user.type(qty, '2');
     await user.click(document.getElementById('edit-part-0-submit') as HTMLElement);
 
-    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await crear(user, dialog);
     await waitFor(() => expect(mocks.createWorkOrder).toHaveBeenCalledTimes(1));
     expect(mocks.createWorkOrder.mock.calls[0][0].repuestos).toEqual([
       expect.objectContaining({ descripcion: 'Filtro', cantidad: 2, precio_venta_unitario: 15 }),
@@ -735,13 +801,16 @@ describe('WorkOrders — el alta en cuatro pasos', () => {
 
     await user.click(within(dialog).getByRole('button', { name: /Agregar repuesto/ }));
     await user.type(document.getElementById('create-order-part-description') as HTMLInputElement, 'Filtro');
-    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    // Salir de Trabajos lo perdería: no deja seguir al depósito.
+    await next(user, dialog);
     expect(await within(dialog).findByText(/repuesto escrito sin agregar/i)).toBeInTheDocument();
+    expect(currentStep(dialog)).toMatch(/Trabajos/);
 
     await user.click(document.getElementById('create-order-part-submit') as HTMLElement);
     await user.click(within(dialog).getByRole('button', { name: 'Editar Filtro' }));
-    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await next(user, dialog);
     expect(await within(dialog).findByText(/Termina de editar la línea abierta/)).toBeInTheDocument();
+    expect(currentStep(dialog)).toMatch(/Trabajos/);
     expect(mocks.createWorkOrder).not.toHaveBeenCalled();
   });
 
@@ -752,9 +821,10 @@ describe('WorkOrders — el alta en cuatro pasos', () => {
 
     await user.click(within(dialog).getByRole('button', { name: /Agregar trabajo/ }));
     await user.type(document.getElementById('create-order-description') as HTMLInputElement, 'Frenos');
-    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await next(user, dialog);
 
     expect(await within(dialog).findByText(/trabajo escrito sin agregar/i)).toBeInTheDocument();
+    expect(currentStep(dialog)).toMatch(/Trabajos/);
     expect(mocks.createWorkOrder).not.toHaveBeenCalled();
   });
 
@@ -762,6 +832,8 @@ describe('WorkOrders — el alta en cuatro pasos', () => {
     const user = userEvent.setup();
     const dialog = await openIntake(user);
     await goToWorkStep(user, dialog);
+    await next(user, dialog);
+    await waitFor(() => expect(currentStep(dialog)).toMatch(/Depósito/));
 
     // El segundo clic de un doble clic llega con detail = 2.
     fireEvent.click(within(dialog).getByRole('button', { name: /^Crear$/i }), { detail: 2 });
@@ -776,30 +848,31 @@ describe('WorkOrders — el alta en cuatro pasos', () => {
     await user.type(document.getElementById('order-miles-in') as HTMLInputElement, '45000');
     await user.selectOptions(document.getElementById('intake-vehicle') as HTMLSelectElement, VEHICLE.id);
     await next(user, dialog);
-    await waitFor(() => expect(currentStep(dialog)).toMatch(/Depósito/));
+    await waitFor(() => expect(currentStep(dialog)).toMatch(/Trabajos/));
 
     await user.click(within(dialog).getByRole('button', { name: /Vehículo y recepción/ }));
     expect(currentStep(dialog)).toMatch(/Vehículo/);
     expect((document.getElementById('order-miles-in') as HTMLInputElement).value).toBe('45000');
     // Los pasos de adelante que nunca se abrieron no se pueden saltar.
-    expect(within(dialog).queryByRole('button', { name: /^Trabajos$/ })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: /^Depósito$/ })).not.toBeInTheDocument();
   });
 
   it('pide el método si hay depósito, y manda el método, el número y el comprobante', async () => {
     mocks.uploadReceipt.mockResolvedValue(`${SEDE_CENTRO.id}/comprobante-alta-1.jpg`);
     const user = userEvent.setup();
     const dialog = await openIntake(user);
-    await pickCustomer(user, dialog);
-    await user.selectOptions(document.getElementById('intake-vehicle') as HTMLSelectElement, VEHICLE.id);
+    await goToWorkStep(user, dialog);
     await next(user, dialog);
     await waitFor(() => expect(currentStep(dialog)).toMatch(/Depósito/));
 
     const deposit = document.getElementById('order-deposit') as HTMLInputElement;
     await user.clear(deposit);
     await user.type(deposit, '200');
-    await next(user, dialog);
+    // Es el último paso: "Crear" valida el método antes de crear.
+    await crear(user, dialog);
     expect(currentStep(dialog)).toMatch(/Depósito/);
     expect(dialog.querySelector('[role="alert"]')).toBeTruthy();
+    expect(mocks.createWorkOrder).not.toHaveBeenCalled();
 
     await user.selectOptions(document.getElementById('payment-method') as HTMLSelectElement, 'cheque');
     await user.type(document.getElementById('payment-check') as HTMLInputElement, '1042');
@@ -807,9 +880,7 @@ describe('WorkOrders — el alta en cuatro pasos', () => {
       document.getElementById('payment-receipt') as HTMLInputElement,
       new File(['x'], 'cheque.jpg', { type: 'image/jpeg' })
     );
-    await next(user, dialog);
-    await waitFor(() => expect(currentStep(dialog)).toMatch(/Trabajos/));
-    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await crear(user, dialog);
 
     await waitFor(() => expect(mocks.createWorkOrder).toHaveBeenCalledTimes(1));
     expect(mocks.uploadReceipt).toHaveBeenCalledWith(SEDE_CENTRO.id, 'alta', expect.any(File));
@@ -827,22 +898,20 @@ describe('WorkOrders — el alta en cuatro pasos', () => {
     const user = userEvent.setup();
     const dialog = await openIntake(user);
     await fillDeposit(user, dialog, '50', 'efectivo', new File(['x'], 'recibo.jpg', { type: 'image/jpeg' }));
-    await next(user, dialog);
-    await waitFor(() => expect(currentStep(dialog)).toMatch(/Trabajos/));
 
-    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await crear(user, dialog);
     await waitFor(() => expect(mocks.removeDeliveryReceipt).toHaveBeenCalledWith(`${SEDE_CENTRO.id}/comprobante-alta-1.jpg`));
 
     // Segundo intento: se sube de nuevo (el anterior se borró) y ahora falla la red.
     mocks.createWorkOrder.mockRejectedValueOnce({ code: '', message: 'TypeError: Failed to fetch' });
     mocks.removeDeliveryReceipt.mockClear();
-    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await crear(user, dialog);
     await waitFor(() => expect(mocks.createWorkOrder).toHaveBeenCalledTimes(2));
     expect(mocks.uploadReceipt).toHaveBeenCalledTimes(2);
     expect(mocks.removeDeliveryReceipt).not.toHaveBeenCalled();
 
     // Tercer intento: usa el comprobante que quedó, sin subirlo otra vez.
-    await user.click(within(dialog).getByRole('button', { name: /^Crear$/i }));
+    await crear(user, dialog);
     await waitFor(() => expect(mocks.createWorkOrder).toHaveBeenCalledTimes(3));
     expect(mocks.uploadReceipt).toHaveBeenCalledTimes(2);
     expect(mocks.createWorkOrder.mock.calls[2][0].deposito_comprobante).toBe(`${SEDE_CENTRO.id}/comprobante-alta-1.jpg`);
@@ -1342,7 +1411,7 @@ describe('WorkOrders — secciones plegables del detalle', () => {
     expect(screen.getAllByRole('button', { name: /Desplegar todo/ })).toHaveLength(1);
 
     await user.click(screen.getByRole('button', { name: /Desplegar todo/ }));
-    expect(screen.getByText('Cambio de aceite')).toBeVisible();
+    expect(screen.getByText('Cambio de aceite', { selector: '.line-desc' })).toBeVisible();
     expect(screen.getByText(VEHICLE.vin)).toBeVisible();
   });
 });
@@ -1631,7 +1700,7 @@ describe('WorkOrders — tareas con técnico', () => {
     await screen.findByText(/OT-2026-0042/);
 
     await user.click(screen.getByRole('button', { name: /^Mano de obra/ }));
-    await user.click(screen.getByRole('button', { name: 'Agregar trabajo' }));
+    await user.click(document.getElementById('labor-new-open') as HTMLElement);
     await user.type(screen.getByLabelText('Descripción'), 'Pulido');
 
     await user.click(screen.getByRole('button', { name: 'abrir la 99' }));
@@ -1728,7 +1797,8 @@ describe('WorkOrders — trabajo adicional reportado (F6)', () => {
     const status = screen.getAllByRole('combobox').find((el) => (el as HTMLSelectElement).value === 'en_proceso') as HTMLSelectElement;
     expect(Array.from(status.options).map((o) => o.value)).not.toContain('espera_autorizacion');
 
-    await user.click(screen.getByRole('button', { name: /Reportar trabajo adicional/ }));
+    // Desde el atajo de arriba de la orden (06/10/2026), que abre el mismo diálogo.
+    await user.click(within(screen.getByRole('toolbar', { name: 'Acciones rápidas' })).getByRole('button', { name: /Reportar trabajo adicional/ }));
     const dialog = screen.getByRole('dialog', { name: 'Reportar trabajo adicional' });
     const confirm = within(dialog).getByRole('button', { name: 'Reportar y pausar la orden' });
     expect(confirm).toBeDisabled();

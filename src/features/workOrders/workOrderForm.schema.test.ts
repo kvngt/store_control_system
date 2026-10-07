@@ -139,7 +139,9 @@ describe('pasos del alta', () => {
 
   it('el primer paso con error es el que se muestra', () => {
     expect(firstStepWithErrors({})).toBeNull();
-    expect(firstStepWithErrors({ laborItems: [{}] })).toBe(4);
+    // Desde el 06/10/2026 los trabajos son el paso 3 y el depósito el 4.
+    expect(firstStepWithErrors({ laborItems: [{}] })).toBe(3);
+    expect(firstStepWithErrors({ paymentMethod: {} })).toBe(4);
     expect(firstStepWithErrors({ paymentMethod: {}, parts: [] })).toBe(3);
     expect(firstStepWithErrors({ milesIn: {}, newCustomer: { nombre: {} } })).toBe(1);
   });

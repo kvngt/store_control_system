@@ -15,6 +15,8 @@ interface CollapsibleSectionProps {
   onToggle?: () => void;
   /** Solo sin `open`: cómo arranca. */
   defaultOpen?: boolean;
+  /** Para llegar a la sección desde un botón (las acciones rápidas de la orden). */
+  sectionId?: string;
   children: ReactNode;
 }
 
@@ -40,6 +42,7 @@ export default function CollapsibleSection({
   open: controlledOpen,
   onToggle,
   defaultOpen = false,
+  sectionId,
   children,
 }: CollapsibleSectionProps) {
   const [ownOpen, setOwnOpen] = useState(defaultOpen);
@@ -48,7 +51,7 @@ export default function CollapsibleSection({
   const toggle = onToggle ?? (() => setOwnOpen((o) => !o));
 
   return (
-    <section className={`card collapsible-section${open ? ' open' : ''}`}>
+    <section className={`card collapsible-section${open ? ' open' : ''}`} data-section={sectionId}>
       <button
         type="button"
         className="collapsible-section-toggle"

@@ -17,7 +17,8 @@
 | F6 | Hallazgos y nueva "espera de autorización" | **Publicado** (04/10/2026: app en `main`; `db push` de `009`, `010` y `011` por el usuario). Detalle completo en [hallazgos.md](../hallazgos.md). Migraciones `20261010000010` y `20261010000011`; pgTAP 22 (44) y ajuste de la 03; SEC-106 a SEC-112. **Pendiente:** `qa:security` con tokens; la migración que contrae (guardia del técnico, [hallazgos.md §6](../hallazgos.md#6-lo-que-falta-en-orden)); casos HAL en un teléfono real; ~~adaptar las 11 pruebas Vitest del alta~~ hecho el 04/10/2026 (noche) |
 | F7 | Navegación del sitio | **Publicado** (04/10/2026, noche: `93bdade` y `830961a` en `main`, `db push` de la `012`; `db:check` ✓ con 66 migraciones). `requiere_atencion` comprobada en producción (admin 200, mecánico 42501). Órdenes y Kanban en una página (Lista \| Tablero, misma búsqueda, vista recordada, `/kanban` redirige); grupos del menú traducidos (Taller / Finanzas / Sistema); "Requiere atención" en el panel del admin (migración `20261010000012`, RPC `requiere_atencion`, pgTAP 23 con 15 aserciones, SEC-113 y SEC-114); "Mis tareas" en el panel del técnico. Casos NAV en [plan-de-pruebas.md](plan-de-pruebas.md) |
 | Pedidos | Implementar los pedidos del taller del 05/10/2026 | **Para implementar** (ver [plan-pedidos-2026-10-05.md](plan-pedidos-2026-10-05.md)) |
-| Pedidos 06/10 | Revisión desde el teléfono (PDF del 06/10/2026): firma sin autorizar, idioma y traducciones del cliente, lo rechazado para el técnico, "Mis comisiones", alta editable y arreglos de pantalla | **Hecho, sin publicar** (migración `20261010000022`; ver la [bitácora](#06102026-tarde--claude-code-pedidos-del-0610-revisión-desde-el-teléfono)) |
+| Pedidos 06/10 | Revisión desde el teléfono (PDF del 06/10/2026): firma sin autorizar, idioma y traducciones del cliente, lo rechazado para el técnico, "Mis comisiones", alta editable y arreglos de pantalla | **Publicado** (`e514655` en `main`, `db push` de la `022`, `functions deploy portal process-outbox`; ver la [bitácora](#06102026-tarde--claude-code-pedidos-del-0610-revisión-desde-el-teléfono)) |
+| Pedidos 06/10 (2) | Alta (cliente y vehículo se guardan al cancelar, trabajos paso 3, depósito paso 4, fecha al final, costo del repuesto), correo al técnico, "Autorización del cliente" en Resumen, avances por tarea, acciones rápidas | **Hecho, sin publicar** (migración `20261010000023`; ver la [bitácora](#07102026--claude-code-pedidos-del-0610-segunda-tanda)) |
 
 Nada se publica sin que la persona responsable lo pida: cada `db push`, `functions deploy`,
 push a `main` y commit se piden aparte.
@@ -458,6 +459,34 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 07/10/2026 — Claude Code (pedidos del 06/10, segunda tanda)
+
+- **Alta de la orden:** el cliente y el vehículo nuevos se guardan al pasar de paso
+  (`useWorkOrderForm.onLeaveStep`, `saveNewCustomer`/`saveNewVehicle` en `WorkOrders.tsx`) y, si
+  se cancela antes, el diálogo de cancelar avisa y los guarda. Pasos: cliente, vehículo,
+  **trabajos** (tipo, mano de obra, repuestos, técnicos y la fecha estimada al final),
+  **depósito**. El repuesto del alta lleva costo opcional (`costo_unitario`; vacío = el precio,
+  como siempre). El ícono del calendario no se veía en modo oscuro: faltaba `color-scheme`.
+- **Correo al técnico** (`20261010000023`): `notificar` encola además un correo (plantilla
+  `empleado`, `renderEmployeeEmail`) al mecánico o pintor en `asignacion`, `tarea_asignada` y
+  `presupuesto_respondido`. Uno por orden y motivo (las tareas seguidas se juntan, sale a los 2
+  min). La fila va **sin `orden_id`**: un `process-outbox` viejo la descarta en vez de
+  mandarla al cliente. pgTAP `30_correo_al_tecnico` (8).
+- **Resumen del admin:** `AuthorizationPanel` dice si hay trabajos cotizados sin enviar (con
+  "Enviar presupuesto" ahí mismo), si el presupuesto espera respuesta, y qué autorizó o rechazó
+  el cliente en el último.
+- **Avances por tarea:** `ProgressLog` deja elegir la tarea (`orden_avances.labor_id`, columna de
+  la `009`) y lo marca; la tarea muestra sus últimos avances.
+- **Acciones rápidas** (`QuickActions`): admin — entregar (si está lista), agregar trabajo, tomar
+  firma, registrar avance, anticipo, cobro y totales; técnico — mis tareas, registrar avance,
+  reportar trabajo adicional, datos del vehículo. Abren la pestaña y la sección.
+- **Verificado:** lint, `tsc -b`, 746 pruebas, build, pgTAP 30 archivos / 746 PASS, y a mano con
+  Playwright en local (alta cancelada deja cliente y vehículo; panel antes y después de enviar;
+  vista del mecánico en el teléfono).
+- **Para publicar, en este orden:** `npx supabase db push` (`023`), `npx supabase functions
+  deploy process-outbox`, push a `main`. La app nueva funciona con la base vieja (solo no salen
+  los correos al técnico).
 
 ### 06/10/2026, tarde — Claude Code (pedidos del 06/10: revisión desde el teléfono)
 

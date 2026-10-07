@@ -9,6 +9,8 @@ export interface PartDraft {
   descripcion: string;
   cantidad: string;
   precio_venta_unitario: string;
+  /** Lo que pagó el taller. Vacío = igual al precio. */
+  costo_unitario?: string;
 }
 
 interface PartEditorProps {
@@ -23,7 +25,7 @@ interface PartEditorProps {
   idPrefix?: string;
 }
 
-const EMPTY: PartDraft = { descripcion: '', cantidad: '1', precio_venta_unitario: '' };
+const EMPTY: PartDraft = { descripcion: '', cantidad: '1', precio_venta_unitario: '', costo_unitario: '' };
 
 /** Bloquea las teclas que meten un signo menos en un `type="number"`. */
 const blockNegativeKeys = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -66,6 +68,7 @@ export default function PartEditor({ onSave, initial, onClose, onPendingChange, 
       descripcion: draft.descripcion.trim(),
       cantidad: draft.cantidad.trim() || '1',
       precio_venta_unitario: draft.precio_venta_unitario.trim() || '0',
+      costo_unitario: (draft.costo_unitario ?? '').trim(),
     };
     if (!part.descripcion) {
       setError(t('parts.descriptionRequired'));
@@ -76,7 +79,7 @@ export default function PartEditor({ onSave, initial, onClose, onPendingChange, 
       setError(t('workOrders.validation.quantityMin'));
       return;
     }
-    if (!(parseFloat(part.precio_venta_unitario) >= 0)) {
+    if (!(parseFloat(part.precio_venta_unitario) >= 0) || parseFloat(part.costo_unitario || '0') < 0) {
       setError(t('workOrders.validation.priceNegative'));
       return;
     }
@@ -156,6 +159,26 @@ export default function PartEditor({ onSave, initial, onClose, onPendingChange, 
             placeholder="$"
             value={draft.precio_venta_unitario}
             onChange={(e) => setDraft({ ...draft, precio_venta_unitario: e.target.value })}
+            onKeyDown={(e) => {
+              blockNegativeKeys(e);
+              onEnter(e);
+            }}
+            disabled={disabled}
+          />
+        </div>
+        {/* Lo que pagó el taller: opcional, vacío = el precio. Solo lo ve administración. */}
+        <div className="form-group">
+          <label className="form-label" htmlFor={`${idPrefix}-cost`} title={t('parts.costHint')}>{t('parts.cost')}</label>
+          <input
+            id={`${idPrefix}-cost`}
+            className="form-input"
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="0.01"
+            placeholder={t('parts.costOptional')}
+            value={draft.costo_unitario ?? ''}
+            onChange={(e) => setDraft({ ...draft, costo_unitario: e.target.value })}
             onKeyDown={(e) => {
               blockNegativeKeys(e);
               onEnter(e);

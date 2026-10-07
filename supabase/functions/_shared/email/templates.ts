@@ -498,3 +498,72 @@ ${ctx.taller.email ? `<p style="margin:0 0 6px;font-size:13px;line-height:1.5;co
 
   return { subject: copy.subject, html, text };
 }
+
+// ------------------------------------------------------------------------------------
+// Correo al técnico (06/10/2026): orden o tarea asignada y respuesta del presupuesto.
+// ------------------------------------------------------------------------------------
+// Va al equipo del taller, siempre en español, con el texto del aviso de la campana y un botón
+// a la orden. No lleva datos del cliente más allá del vehículo y el número de orden.
+
+export interface EmployeeEmailContext {
+  /** Enlace a la orden dentro de la app: https://restorifyauto.net/work-orders?open=<id> */
+  appUrl: string;
+  taller: { nombre: string; logoUrl?: string | null; color?: string | null };
+  /** asignacion | tarea_asignada | presupuesto_respondido */
+  tipo: string;
+  /** El título del aviso ("Nueva tarea · ORD-2026-014"). */
+  titulo: string;
+  /** Una línea por aviso juntado en este correo (varias tareas asignadas seguidas). */
+  lineas: string[];
+}
+
+export function renderEmployeeEmail(ctx: EmployeeEmailContext): RenderedEmail {
+  const color = safeColor(ctx.taller.color);
+  const buttonText = textOn(color);
+  const logo = safeHttpsUrl(ctx.taller.logoUrl);
+  const url = safeHttpsUrl(ctx.appUrl) ?? ctx.appUrl;
+  const lineas = ctx.lineas.map((l) => String(l ?? '').trim()).filter(Boolean);
+  const intro =
+    ctx.tipo === 'presupuesto_respondido'
+      ? 'El cliente respondió el presupuesto de tu orden.'
+      : 'Tienes trabajo nuevo asignado.';
+  const button = 'Abrir la orden';
+  const heading = ctx.titulo;
+
+  const html = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>${escapeHtml(heading)}</title>
+</head>
+<body style="margin:0;padding:0;background:#F4F4F6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1A1A1F;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F4F6;padding:24px 12px;">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border-radius:12px;overflow:hidden;">
+<tr><td style="height:6px;background:${color};font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td style="padding:24px 28px 8px;">
+${logo ? `<img src="${escapeHtml(logo)}" alt="${escapeHtml(ctx.taller.nombre)}" height="40" style="display:block;height:40px;max-width:200px;border:0;margin-bottom:12px;">` : ''}
+<div style="font-size:14px;font-weight:600;color:#5A5A66;">${escapeHtml(ctx.taller.nombre)}</div>
+</td></tr>
+<tr><td style="padding:8px 28px 0;">
+<h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:#111111;">${escapeHtml(heading)}</h1>
+<p style="margin:0 0 12px;font-size:16px;line-height:1.55;">${escapeHtml(intro)}</p>
+${lineas.map((l) => `<p style="margin:0 0 8px;font-size:15px;line-height:1.5;">• ${escapeHtml(l)}</p>`).join('\n')}
+</td></tr>
+<tr><td style="padding:12px 28px 24px;">
+<a href="${escapeHtml(url)}" style="display:inline-block;background:${color};color:${buttonText};text-decoration:none;font-weight:700;font-size:16px;padding:14px 24px;border-radius:8px;">${escapeHtml(button)}</a>
+</td></tr>
+<tr><td style="padding:16px 28px 24px;border-top:1px solid #EDEDF0;">
+<p style="margin:0;font-size:12px;line-height:1.5;color:#9A9AA6;">Aviso automático de Restorify para el equipo de ${escapeHtml(ctx.taller.nombre)}.</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+  const text = [heading, '', intro, ...lineas.map((l) => `- ${l}`), '', `${button}: ${url}`].join('\n');
+  return { subject: heading, html, text };
+}

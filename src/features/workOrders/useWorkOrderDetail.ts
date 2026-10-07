@@ -959,6 +959,8 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     isDelivered,
     statusEpoch,
     delivering,
+    /** Abre el diálogo de entrega (cobro final), como elegir "Entregado" en el estado. */
+    startDelivery: () => setDelivering(true),
     cancelDelivery,
     finishDelivery,
     withdrawing,

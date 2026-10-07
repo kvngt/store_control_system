@@ -15,7 +15,7 @@ import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { useIsMobile } from '../lib/useMediaQuery';
 import { useMediaUploads } from '../features/media/mediaUploads.context';
-import { useWorkOrderForm } from '../features/workOrders/useWorkOrderForm';
+import { useWorkOrderForm, type WorkOrderFormValues } from '../features/workOrders/useWorkOrderForm';
 import { firstStepWithErrors } from '../features/workOrders/workOrderForm.schema';
 import { useWorkOrderDetail } from '../features/workOrders/useWorkOrderDetail';
 import WorkOrderCreateModal from '../features/workOrders/WorkOrderCreateModal';
@@ -244,15 +244,125 @@ export default function WorkOrders() {
     return '';
   };
 
-  const handleCloseCreateModal = () => {
+  // El cliente y el vehículo nuevos del alta. Se guardan en cuanto se completan sus pasos
+  // ("Siguiente"), al cancelar el alta si ya estaban completos, y al crear la orden si todavía
+  // no: un cliente y un vehículo sin orden son filas válidas, y así la próxima vez ya están
+  // (pedido del taller del 06/10/2026). Cada uno pasa el formulario a "existente" en cuanto
+  // existe, así que nunca se crean dos veces.
+  const saveNewCustomer = async (values: WorkOrderFormValues): Promise<string> => {
+    if (values.customerMode !== 'new') return values.selectedCustomer;
+    const targetSedeId = sedeId || currentSede?.id || '';
+    const created = await customersService.createCustomer({
+      nombre: values.newCustomer.nombre,
+      telefono: values.newCustomer.telefono,
+      email: values.newCustomer.email,
+      direccion: values.newCustomer.direccion,
+      notas_crm: '',
+      sede_id: targetSedeId,
+    });
+    guardadoAntesDeFallar.current.cliente = true;
+    form.markCustomerCreated(created.id);
+    // Put it in the picker straight away. `markCustomerCreated` switches
+    // the form to "existing" so a retry cannot create the customer twice —
+    // but the dropdown is fed from the query cache, which does not know
+    // about them yet.
+    queryClient.setQueryData<Customer[]>(queryKeys.customers(sedeId), (prev) =>
+      prev ? [created, ...prev] : [created]
+    );
+    return created.id;
+  };
+
+  const saveNewVehicle = async (values: WorkOrderFormValues, customerId: string): Promise<string> => {
+    if (values.vehicleMode !== 'new') return values.selectedVehicle;
+    const v = values.newVehicle;
+    // NULL, never an empty string: `placa` is nullable precisely so a unit
+    // with no plate reads as "no plate" everywhere.
+    const plate = v.sin_placa ? null : checkUsPlate(v.placa, v.placa_estado || undefined).normalized || null;
+    const createdVehicle = await vehiclesService.createVehicle({
+      cliente_id: customerId,
+      marca: v.marca.trim(),
+      modelo: v.modelo.trim(),
+      anio: parseInt(v.anio, 10) || new Date().getFullYear(),
+      vin: checkVin(v.vin).normalized,
+      placa: plate,
+      // A plate state with no plate is meaningless, and the column carries
+      // a CHECK constraint saying so.
+      placa_estado: plate ? v.placa_estado || null : null,
+      color: v.color.trim(),
+    });
+    guardadoAntesDeFallar.current.vehiculo = true;
+    form.markVehicleCreated(createdVehicle.id);
+    queryClient.setQueryData<Vehicle[]>(queryKeys.vehicles(sedeId), (prev) =>
+      prev ? [createdVehicle, ...prev] : [createdVehicle]
+    );
+    return createdVehicle.id;
+  };
+
+  // Al salir del paso del cliente o del vehículo con "Siguiente", ya validado.
+  form.onLeaveStep.current = async (key, values) => {
+    if (!(key === 'customer' && values.customerMode === 'new') && !(key === 'vehicle' && values.vehicleMode === 'new')) {
+      return true;
+    }
+    try {
+      if (key === 'customer') {
+        await saveNewCustomer(values);
+        showToast('success', t('intake.customerSaved'));
+      } else {
+        await saveNewVehicle(values, values.selectedCustomer);
+        showToast('success', t('intake.vehicleSaved'));
+      }
+      return true;
+    } catch (err) {
+      showToast('error', t('workOrders.orderCreatedError'), getErrorMessage(err, language));
+      return false;
+    }
+  };
+
+  /**
+   * Lo que se guarda al cancelar: el cliente o el vehículo nuevos que ya están completos y aún
+   * no se guardaron. Lo incompleto no se guarda (no se inventan datos) y no frena el cierre.
+   */
+  const savePendingRecordsOnCancel = async (): Promise<{ cliente: boolean; vehiculo: boolean }> => {
+    const saved = { cliente: false, vehiculo: false };
+    const values = form.form.getValues();
+    let customerId = values.customerMode === 'existing' ? values.selectedCustomer : '';
+    if (values.customerMode === 'new' && (await form.form.trigger(['newCustomer']))) {
+      customerId = await saveNewCustomer(form.form.getValues());
+      saved.cliente = true;
+    }
+    const after = form.form.getValues();
+    if (customerId && after.vehicleMode === 'new' && (await form.form.trigger(['newVehicle']))) {
+      await saveNewVehicle(after, customerId);
+      saved.vehiculo = true;
+    }
+    return saved;
+  };
+
+  const handleCloseCreateModal = async () => {
     // Al cerrar es cuando se pierde el hilo: el formulario se vacía y el cliente recién
     // creado deja de estar seleccionado, así que la confirmación tiene que decir que sigue
     // guardado.
     const aviso = avisoDeLoGuardado();
-    const texto = [t('workOrders.confirmDiscard'), aviso].filter(Boolean).join('\n\n');
+    const values = form.form.getValues();
+    const pendingNew = values.customerMode === 'new' || values.vehicleMode === 'new';
+    const texto = [t('workOrders.confirmDiscard'), aviso, pendingNew ? t('intake.keepNewOnCancel') : '']
+      .filter(Boolean)
+      .join('\n\n');
     if (form.isDirty && !confirm(texto)) {
       return;
     }
+    if (pendingNew) {
+      try {
+        const saved = await savePendingRecordsOnCancel();
+        if (saved.cliente || saved.vehiculo) {
+          showToast('success', saved.vehiculo ? t('intake.savedOnCancelBoth') : t('intake.customerSaved'));
+        }
+      } catch (err) {
+        showToast('error', t('intake.saveOnCancelError'), getErrorMessage(err, language));
+        return;
+      }
+    }
+    if (guardadoAntesDeFallar.current.cliente || guardadoAntesDeFallar.current.vehiculo) reloadPickers();
     createdOrderRef.current = null;
     receiptPathRef.current = null;
     guardadoAntesDeFallar.current = { cliente: false, vehiculo: false };
@@ -285,57 +395,8 @@ export default function WorkOrders() {
     try {
       const targetSedeId = sedeId || currentSede?.id || '';
 
-      let customerId = values.selectedCustomer;
-      if (values.customerMode === 'new') {
-        const created = await customersService.createCustomer({
-          nombre: values.newCustomer.nombre,
-          telefono: values.newCustomer.telefono,
-          email: values.newCustomer.email,
-          direccion: values.newCustomer.direccion,
-          notas_crm: '',
-          sede_id: targetSedeId,
-        });
-        customerId = created.id;
-        guardadoAntesDeFallar.current.cliente = true;
-        form.markCustomerCreated(created.id);
-        // Put it in the picker straight away. `markCustomerCreated` switches
-        // the form to "existing" so a retry cannot create the customer twice —
-        // but the dropdown is fed from the query cache, which does not know
-        // about them yet. If a later step then failed, the admin was looking at
-        // a customer select that had gone blank, with no way to tell whether
-        // their customer had been saved.
-        queryClient.setQueryData<Customer[]>(queryKeys.customers(sedeId), (prev) =>
-          prev ? [created, ...prev] : [created]
-        );
-      }
-
-      let vehicleId = values.selectedVehicle;
-      if (values.vehicleMode === 'new') {
-        const v = values.newVehicle;
-        // NULL, never an empty string: `placa` is nullable precisely so a unit
-        // with no plate reads as "no plate" everywhere. Quick-create used to
-        // write '' here, which is neither a plate nor the absence of one, and
-        // which the Vehículos screen is careful never to store.
-        const plate = v.sin_placa ? null : checkUsPlate(v.placa, v.placa_estado || undefined).normalized || null;
-        const createdVehicle = await vehiclesService.createVehicle({
-          cliente_id: customerId,
-          marca: v.marca.trim(),
-          modelo: v.modelo.trim(),
-          anio: parseInt(v.anio, 10) || new Date().getFullYear(),
-          vin: checkVin(v.vin).normalized,
-          placa: plate,
-          // A plate state with no plate is meaningless, and the column carries
-          // a CHECK constraint saying so.
-          placa_estado: plate ? v.placa_estado || null : null,
-          color: v.color.trim(),
-        });
-        vehicleId = createdVehicle.id;
-        guardadoAntesDeFallar.current.vehiculo = true;
-        form.markVehicleCreated(createdVehicle.id);
-        queryClient.setQueryData<Vehicle[]>(queryKeys.vehicles(sedeId), (prev) =>
-          prev ? [createdVehicle, ...prev] : [createdVehicle]
-        );
-      }
+      const customerId = await saveNewCustomer(values);
+      const vehicleId = await saveNewVehicle(values, customerId);
 
       // Los técnicos salen de las tareas (F4). La base ya los mete a la orden al guardar cada
       // tarea (origen 'tarea') y `create_work_order` no los duplica; mandarlos también aquí es
@@ -388,13 +449,13 @@ export default function WorkOrders() {
               // 03/10/2026). Sin esto, `create_work_order` la dejaba heredada.
               reparto_heredado: false,
             })),
-            // No separate cost: a part is billed on at what it cost the shop, and
-            // the database mirrors the price into `costo_unitario` so Finanzas
-            // books the expense and the commission base subtracts it.
+            // El costo es opcional: vacío = el precio (el servicio lo completa), como en la
+            // tabla de repuestos de la orden. Escrito, es lo que pagó el taller.
             repuestos: (isAdmin ? values.parts : []).map((p) => ({
               descripcion: p.descripcion,
               cantidad: Math.max(1, parseInt(p.cantidad, 10) || 1),
               precio_venta_unitario: Math.max(0, parseFloat(p.precio_venta_unitario) || 0),
+              costo_unitario: p.costo_unitario?.trim() ? Math.max(0, parseFloat(p.costo_unitario) || 0) : null,
             })),
             asignaciones,
             creado_por: user.id,
