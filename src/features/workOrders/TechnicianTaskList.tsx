@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Circle, MessageSquarePlus, Clock, X, Plus, Eye, EyeOff, XCircle } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
-import type { LaborItem, PreparedMedia } from '../../types/database';
+import type { LaborItem, OrderProgressUpdate, PreparedMedia } from '../../types/database';
 import { isApproved } from './lineState';
 import LaborTable from './LaborTable';
 import DraftMediaStrip from '../media/DraftMediaStrip';
@@ -14,16 +14,26 @@ interface TechnicianTaskListProps {
   items: LaborItem[];
   currentUserId: string;
   detail: WorkOrderDetailApi;
+  /** Cambia cada vez que una acción rápida pide abrir "Reportar trabajo adicional". */
+  reportRequest?: number;
 }
 
-export default function TechnicianTaskList({ items, currentUserId, detail }: TechnicianTaskListProps) {
+export default function TechnicianTaskList({ items, currentUserId, detail, reportRequest = 0 }: TechnicianTaskListProps) {
   const { t } = useLanguage();
   const [addingProgressTo, setAddingProgressTo] = useState<LaborItem | null>(null);
   const [reporting, setReporting] = useState(false);
+  useEffect(() => {
+    if (reportRequest > 0) setReporting(true);
+  }, [reportRequest]);
   // Lo que reportó: así sabe si administración ya lo vio y qué decidió.
   const myFindings = (detail.order?.hallazgos || []).filter((h) => h.reportado_por === currentUserId);
 
   const myTasks = items.filter((item) => item.asignado_a === currentUserId);
+  // Los avances de cada tarea (06/10/2026: se guardaban con su tarea pero no se veían ahí).
+  const updatesByTask = new Map<string, OrderProgressUpdate[]>();
+  for (const avance of detail.order?.avances || []) {
+    if (avance.labor_id) updatesByTask.set(avance.labor_id, [...(updatesByTask.get(avance.labor_id) ?? []), avance]);
+  }
   const otherTasks = items.filter((item) => item.asignado_a !== currentUserId);
 
   return (
@@ -66,6 +76,25 @@ export default function TechnicianTaskList({ items, currentUserId, detail }: Tec
                   {rejected && <p className="field-hint" style={{ marginTop: 'var(--space-2)' }}>{t('tasks.rejectedHint')}</p>}
                 </div>
               </div>
+
+              {(updatesByTask.get(task.id) ?? []).length > 0 && (
+                <div className="task-updates">
+                  <div className="task-updates-title">
+                    {t('workOrders.taskProgressCount').replace('{n}', String(updatesByTask.get(task.id)!.length))}
+                  </div>
+                  <ul>
+                    {[...updatesByTask.get(task.id)!]
+                      .sort((a, b) => b.creado_en.localeCompare(a.creado_en))
+                      .slice(0, 3)
+                      .map((u) => (
+                        <li key={u.id}>
+                          <span className="task-updates-date">{new Date(u.creado_en).toLocaleDateString()}</span>{' '}
+                          {u.descripcion || t('workOrders.progressFilesOnly')}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
 
               {approved && (
                 <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>

@@ -69,7 +69,23 @@ describe('ProgressLog', () => {
     expect(submit).toBeEnabled();
 
     await user.click(submit);
-    expect(props.onAdd).toHaveBeenCalledWith('', [VOICE_NOTE]);
+    expect(props.onAdd).toHaveBeenCalledWith('', [VOICE_NOTE], undefined, undefined);
+  });
+
+  // 06/10/2026: un avance registrado desde una tarea no decía de cuál era.
+  it('asocia el avance a la tarea elegida y marca de qué tarea es cada uno', async () => {
+    const props = renderLog({
+      tasks: [{ id: 'lab-1', descripcion: 'Cambio de frenos' }],
+      taskNames: { 'lab-1': 'Cambio de frenos' },
+      entries: [{ id: 'av-1', orden_id: 'o-1', usuario_id: 'user-mecanico', descripcion: 'Pastillas puestas', creado_en: '2026-10-06T15:00:00Z', labor_id: 'lab-1' }],
+    });
+    const user = userEvent.setup();
+
+    expect(screen.getByText('Tarea: Cambio de frenos')).toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText(/.+/), 'Discos rectificados');
+    await user.selectOptions(screen.getByLabelText('Tarea'), 'lab-1');
+    await user.click(screen.getByRole('button', { name: /Agregar Avance/i }));
+    expect(props.onAdd).toHaveBeenCalledWith('Discos rectificados', [], undefined, 'lab-1');
   });
 
   // El aviso cambió con los avances publicables: ya no es administración quien decide,

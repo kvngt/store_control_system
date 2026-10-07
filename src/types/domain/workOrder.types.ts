@@ -136,6 +136,8 @@ export interface OrderProgressUpdate {
    * texto y sus archivos. Al cliente no le llega el autor.
    */
   visible_cliente?: boolean;
+  /** La tarea (`orden_labor`) de la que es este avance, si se registró desde una (20261010000009). */
+  labor_id?: string | null;
   // Virtual
   usuario?: UserProfile;
 }

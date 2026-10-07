@@ -7,6 +7,11 @@
 
 /* ===== CSS Custom Properties / Design Tokens ===== */
 :root {
+  /* Los controles nativos (el ícono del calendario de un campo de fecha, la ruedita de un
+     número, las barras de desplazamiento) se pintan para fondo oscuro. Sin esto el ícono del
+     calendario salía negro sobre negro en "Fecha estimada de entrega" (06/10/2026). */
+  color-scheme: dark;
+
   /* Brand Colors — el amarillo del logo.
      These are overwritten at runtime when a sede defines its own
      color_tema (see src/lib/branding.ts), so every surface that references
@@ -140,6 +145,7 @@
 
 /* ===== Light Theme ===== */
 :root[data-theme='light'] {
+  color-scheme: light;
   /* El amarillo del logo sobre blanco da 1.7:1: como relleno de un botón con texto oscuro
      se lee de sobra (10.6:1), pero un borde de foco o una pestaña activa casi no se verían.
      Por eso en claro se separan: el relleno es el amarillo del logo y lo que es línea o

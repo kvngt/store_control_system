@@ -1,7 +1,7 @@
 // Las plantillas viven con las edge functions (supabase/functions/_shared/email),
 // pero son TypeScript puro: se prueban aquí, con el resto.
 import { describe, it, expect } from 'vitest';
-import { escapeHtml, renderEmail, type EmailContext } from '../../supabase/functions/_shared/email/templates.ts';
+import { escapeHtml, renderEmail, renderEmployeeEmail, type EmailContext } from '../../supabase/functions/_shared/email/templates.ts';
 
 // Las pruebas de siempre van en español; las del inglés (el idioma por defecto desde el
 // 06/10/2026) están al final.
@@ -178,5 +178,35 @@ describe('renderEmail en inglés', () => {
 
   it('con "es" sale en español', () => {
     expect(renderEmail('avance', { ...en, lang: 'es' })!.subject).toBe('Novedades de su 2019 Toyota Camry · ORD-2026-014');
+  });
+});
+
+// 06/10/2026: el técnico recibe un correo con la orden asignada y la respuesta del cliente.
+describe('renderEmployeeEmail', () => {
+  it('lleva el aviso, cada línea juntada y el botón a la orden; escapa lo escrito', () => {
+    const email = renderEmployeeEmail({
+      appUrl: 'https://restorifyauto.net/work-orders?open=o-1',
+      taller: { nombre: 'Reinventa Norte', color: '#1E40AF' },
+      tipo: 'tarea_asignada',
+      titulo: 'Nueva tarea · ORD-2026-014',
+      lineas: ['Cambio de frenos — 2019 Toyota Camry', '<b>Alineación</b>'],
+    });
+    expect(email.subject).toBe('Nueva tarea · ORD-2026-014');
+    expect(email.text).toContain('Tienes trabajo nuevo asignado.');
+    expect(email.text).toContain('- Cambio de frenos — 2019 Toyota Camry');
+    expect(email.text).toContain('Abrir la orden: https://restorifyauto.net/work-orders?open=o-1');
+    expect(email.html).toContain('&lt;b&gt;Alineación&lt;/b&gt;');
+  });
+
+  it('la respuesta del presupuesto se presenta como tal', () => {
+    const email = renderEmployeeEmail({
+      appUrl: 'https://restorifyauto.net/work-orders?open=o-1',
+      taller: { nombre: 'Reinventa Norte' },
+      tipo: 'presupuesto_respondido',
+      titulo: 'Trabajo no autorizado · ORD-2026-014',
+      lineas: ['No realizar: Frenos.'],
+    });
+    expect(email.text).toContain('El cliente respondió el presupuesto de tu orden.');
+    expect(email.text).toContain('- No realizar: Frenos.');
   });
 });

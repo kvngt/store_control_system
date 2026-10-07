@@ -28,6 +28,9 @@ import {
   Wallet,
   Wrench,
   X,
+  Banknote,
+  PackageCheck,
+  ListChecks,
 } from 'lucide-react';
 import CollapsibleSection from '../../components/CollapsibleSection';
 import Tabs, { TabPanel, type TabItem } from '../../components/Tabs';
@@ -42,6 +45,8 @@ import PartsSummaryCard from './PartsSummaryCard';
 import CommissionEstimateCard from './CommissionEstimateCard';
 import TechnicianTaskList from './TechnicianTaskList';
 import TechOrderStatus from './TechOrderStatus';
+import AuthorizationPanel from './AuthorizationPanel';
+import QuickActions, { type QuickAction } from './QuickActions';
 import ProgressLog from './ProgressLog';
 import ShareReportModal from './ShareReportModal';
 import FindingsCard from './FindingsCard';
@@ -126,6 +131,8 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
 
   const orderId = detail.order?.id;
   // La tarea que se precarga al cotizar un hallazgo (F6).
+  // "Reportar trabajo adicional" desde las acciones rápidas abre el diálogo de la lista de tareas.
+  const [reportRequest, setReportRequest] = useState(0);
   const [prefill, setPrefill] = useState<{ text: string; nonce: number; technicianId?: string | null } | null>(null);
   // Qué secciones están abiertas: ninguna al entrar a una orden, salvo la que pide un enlace.
   const [openSections, setOpenSections] = useState<ReadonlySet<string>>(() => new Set());
@@ -151,6 +158,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   const openSection = (id: string) => setOpenSections((prev) => new Set(prev).add(id));
   // Lo que recibe cada `CollapsibleSection`: si está abierta y cómo se abre o se cierra.
   const sectionState = (id: string) => ({
+    sectionId: id,
     open: openSections.has(id),
     onToggle: () =>
       setOpenSections((prev) => {
@@ -343,7 +351,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
 
   const techLaborSection = !isAdmin && (
     <CollapsibleSection {...sectionState('tareas')} title={t('workOrders.tasks')} icon={<Wrench size={18} />} summary={laborList.length || undefined}>
-      <TechnicianTaskList items={laborList} currentUserId={detail.userId ?? ''} detail={detail} />
+      <TechnicianTaskList items={laborList} currentUserId={detail.userId ?? ''} detail={detail} reportRequest={reportRequest} />
     </CollapsibleSection>
   );
 
@@ -563,6 +571,12 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         onToggleEntryVisibility={detail.toggleProgressVisibility}
         onDeleteMedia={detail.deleteMedia}
         findingEntryIds={findingEntryIds}
+        // Un avance puede ser de una tarea (06/10/2026): el técnico elige entre las suyas
+        // autorizadas; administración, entre todas las autorizadas.
+        tasks={laborList
+          .filter((l) => (l.estado ?? 'aprobado') === 'aprobado' && (isAdmin || l.asignado_a === detail.userId))
+          .map((l) => ({ id: l.id, descripcion: l.descripcion }))}
+        taskNames={Object.fromEntries(laborList.map((l) => [l.id, l.descripcion]))}
       />
     </CollapsibleSection>
   );
@@ -673,10 +687,50 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     );
   };
 
+  // Abre la sección (y en escritorio su pestaña) y la trae a la vista: las acciones rápidas.
+  const goTo = (tabId: string, sectionId: string) => {
+    if (tabIds.includes(tabId)) selectTab(tabId);
+    openSection(sectionId);
+    setTimeout(() => {
+      document.querySelector(`[data-section="${sectionId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+  };
+
+  // Los atajos de cada rol (pedido del taller, 06/10/2026). Lo que toca ahora va resaltado.
+  const hasLabor = laborList.length > 0;
+  const adminActions: QuickAction[] = isAdmin && !detail.isDelivered
+    ? [
+        ...(detail.isReadyForPickup && detail.canDeliver
+          ? [{ key: 'deliver', icon: PackageCheck, label: 'quickActions.deliver', onClick: detail.startDelivery, primary: true }]
+          : []),
+        { key: 'work', icon: Plus, label: 'quickActions.addWork', onClick: () => goTo('trabajos', 'mano_obra'), primary: !hasLabor },
+        ...(!order.firma_ruta && detail.canSign
+          ? [{ key: 'sign', icon: PenLine, label: 'quickActions.sign', onClick: () => goTo('resumen', 'firma'), primary: order.estatus === 'recepcion' && hasLabor }]
+          : []),
+        { key: 'progress', icon: MessageSquarePlus, label: 'quickActions.progress', onClick: () => goTo('fotos', 'avances') },
+        ...(detail.canRegisterAdvance
+          ? [{ key: 'advance', icon: Banknote, label: 'quickActions.advance', onClick: detail.startAdvance }]
+          : []),
+        { key: 'payments', icon: Receipt, label: 'quickActions.payments', onClick: () => goTo('cobro', 'totales') },
+      ]
+    : [];
+  const techActions: QuickAction[] = !isAdmin && detail.canEdit
+    ? [
+        { key: 'tasks', icon: ListChecks, label: 'quickActions.myTasks', onClick: () => goTo('tareas', 'tareas'), primary: true },
+        { key: 'progress', icon: MessageSquarePlus, label: 'quickActions.progress', onClick: () => goTo('avances', 'avances') },
+        ...(order.estatus !== 'finalizado'
+          ? [{ key: 'finding', icon: AlertTriangle, label: 'quickActions.reportFinding', onClick: () => setReportRequest((n) => n + 1) }]
+          : []),
+        { key: 'vehicle', icon: Car, label: 'quickActions.vehicle', onClick: () => goTo('orden', 'vehiculo') },
+      ]
+    : [];
+
   // Los avisos van arriba de las secciones y no se pliegan: son lo que hay que atender.
   const tabTop: Record<string, ReactNode> = {
     resumen: (
       <>
+        <QuickActions actions={adminActions} />
+        {isAdmin && <AuthorizationPanel order={order} onOpenQuote={() => goTo('trabajos', 'presupuesto')} />}
         {findingsSection}
         {unassignedNotice}
         {/* Lo que el cliente dejó pendiente en otras visitas: el momento de ofrecerlo es ahora. */}
@@ -686,11 +740,14 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     trabajos: !isMobile && findingsSection,
     // El técnico ve primero en qué va la orden y qué de lo suyo está autorizado (06/10/2026).
     tareas: !isAdmin && (
+      <>
+      <QuickActions actions={techActions} />
       <TechOrderStatus
         order={order}
         myTasks={laborList.filter((l) => l.asignado_a === detail.userId)}
         statusLabel={statusLabels[order.estatus] ?? order.estatus}
       />
+      </>
     ),
   };
 

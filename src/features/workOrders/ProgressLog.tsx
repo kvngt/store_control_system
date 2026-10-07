@@ -19,7 +19,14 @@ interface ProgressLogProps {
   isAdmin: boolean;
   userId?: string;
   /** Resolves true when the entry was stored, so the draft can be cleared. */
-  onAdd: (note: string, media: PreparedMedia[]) => Promise<boolean>;
+  onAdd: (note: string, media: PreparedMedia[], isVisible?: boolean, laborId?: string) => Promise<boolean>;
+  /**
+   * Las tareas a las que se puede asociar un avance nuevo, y el nombre de todas para la marca
+   * "Tarea: …" de cada avance (pedido del taller, 06/10/2026: un avance de una tarea no decía
+   * de cuál era).
+   */
+  tasks?: { id: string; descripcion: string }[];
+  taskNames?: Readonly<Record<string, string>>;
   onRemove: (id: string) => Promise<void>;
   onToggleVisibility: (media: OrderMedia) => void;
   /** Mostrar u ocultar el avance completo al cliente: su texto y sus archivos. */
@@ -56,10 +63,13 @@ export default function ProgressLog({
   onToggleEntryVisibility,
   onDeleteMedia,
   findingEntryIds = NO_FINDINGS,
+  tasks = [],
+  taskNames = {},
 }: ProgressLogProps) {
   const { t, language } = useLanguage();
   const [note, setNote] = useState('');
   const [drafts, setDrafts] = useState<PreparedMedia[]>([]);
+  const [taskId, setTaskId] = useState('');
   const { registerGuard } = useUnsavedChanges();
 
   // Un avance a medias es trabajo real: una nota escrita con guantes, un video
@@ -75,7 +85,7 @@ export default function ProgressLog({
   );
 
   const submit = async () => {
-    if (await onAdd(note, drafts)) {
+    if (await onAdd(note, drafts, undefined, taskId || undefined)) {
       setNote('');
       setDrafts([]);
     }
@@ -101,6 +111,17 @@ export default function ProgressLog({
           />
           <DraftMediaStrip items={drafts} onRemove={(index) => setDrafts((prev) => prev.filter((_, i) => i !== index))} />
           <MediaCaptureBar onAdd={(items) => setDrafts((prev) => [...prev, ...items])} disabled={busy} />
+          {tasks.length > 0 && (
+            <div className="form-group" style={{ marginTop: 'var(--space-2)', marginBottom: 0 }}>
+              <label className="form-label" htmlFor="progress-task">{t('workOrders.progressTask')}</label>
+              <select id="progress-task" className="form-input form-select" value={taskId} onChange={(e) => setTaskId(e.target.value)} disabled={busy}>
+                <option value="">{t('workOrders.progressNoTask')}</option>
+                {tasks.map((task) => (
+                  <option key={task.id} value={task.id}>{task.descripcion}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="progress-entry-submit">
             <p className="field-hint">{t('media.internalUntilPublished')}</p>
             <button type="button" className="btn btn-primary btn-sm" onClick={submit} disabled={!canSubmit}>
@@ -122,6 +143,9 @@ export default function ProgressLog({
                   {new Date(avance.creado_en).toLocaleString(language === 'es' ? 'es' : 'en')}
                 </div>
                 <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  {avance.labor_id && taskNames[avance.labor_id] && (
+                    <span className="badge progress-task-badge">{t('workOrders.progressTaskBadge').replace('{task}', taskNames[avance.labor_id])}</span>
+                  )}
                   {avance.visible_cliente && (
                     <span className="badge badge-finalizado">{t('workOrders.progressVisibleBadge')}</span>
                   )}

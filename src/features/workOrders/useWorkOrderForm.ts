@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import { useIntakePhotos } from './useIntakePhotos';
@@ -40,6 +40,13 @@ export function useWorkOrderForm() {
   const [furthestStep, setFurthestStep] = useState(1);
   // La foto del comprobante del depósito. Fuera de RHF, como las fotos de la inspección.
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  /**
+   * Lo que hace la pantalla al salir de un paso con "Siguiente", después de validarlo. Devuelve
+   * `false` para quedarse. Así se guardan el cliente y el vehículo nuevos en cuanto se
+   * completan: si después se cancela la orden, quedan registrados (pedido del 06/10/2026).
+   */
+  const onLeaveStep = useRef<((key: string, values: WorkOrderFormValues) => Promise<boolean>) | null>(null);
+  const [leaving, setLeaving] = useState(false);
 
   const customerMode = form.watch('customerMode');
   const vehicleMode = form.watch('vehicleMode');
@@ -147,10 +154,17 @@ export function useWorkOrderForm() {
     const current = INTAKE_STEPS[step - 1];
     if (!current || step >= INTAKE_STEPS.length) return;
     const valid = await form.trigger([...current.fields]);
-    if (valid) {
-      setStep(step + 1);
-      setFurthestStep((f) => Math.max(f, step + 1));
+    if (!valid) return;
+    if (onLeaveStep.current) {
+      setLeaving(true);
+      try {
+        if (!(await onLeaveStep.current(current.key, form.getValues()))) return;
+      } finally {
+        setLeaving(false);
+      }
     }
+    setStep(step + 1);
+    setFurthestStep((f) => Math.max(f, step + 1));
   }, [form, step]);
 
   const prevStep = useCallback(() => setStep((s) => Math.max(s - 1, 1)), []);
@@ -181,6 +195,9 @@ export function useWorkOrderForm() {
     furthestStep,
     receiptFile,
     setReceiptFile,
+    onLeaveStep,
+    /** Guardando lo del paso que se deja (el cliente o el vehículo nuevos). */
+    leaving,
     // actions
     nextStep,
     prevStep,

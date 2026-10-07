@@ -4968,7 +4968,7 @@ button.intake-step-button:hover:not(:disabled) {
 /* El editor de un repuesto: descripción, cantidad y precio unitario. */
 .part-editor-fields {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) minmax(70px, 100px) minmax(90px, 130px);
+  grid-template-columns: minmax(160px, 1fr) minmax(70px, 100px) minmax(90px, 130px) minmax(90px, 130px);
   gap: var(--space-2) var(--space-3);
   align-items: end;
 }
@@ -6109,5 +6109,121 @@ button.intake-step-button:hover:not(:disabled) {
 .my-commissions-included li {
   display: flex;
   justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* Los avances de una tarea, dentro de su tarjeta (06/10/2026). */
+.task-updates {
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--color-primary);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
+
+.task-updates-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.task-updates ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task-updates-date {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.progress-task-badge {
+  background: var(--color-bg-tertiary);
+  color: var(--color-primary-light);
+}
+
+/* Atajos de la orden (06/10/2026). */
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+/* "Autorización del cliente" arriba del Resumen (06/10/2026). */
+.authorization-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+}
+
+.authorization-panel-title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-tertiary);
+}
+
+.authorization-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.authorization-row > svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.authorization-row.is-draft > svg {
+  color: var(--color-warning);
+}
+
+.authorization-row.is-waiting > svg {
+  color: var(--color-info);
+}
+
+.authorization-row.is-approved > svg {
+  color: var(--color-success);
+}
+
+.authorization-row.is-rejected > svg,
+.authorization-rejected {
+  color: var(--color-danger);
+}
+
+.authorization-row-text {
+  display: flex;
+  flex: 1 1 220px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+}
+
+.authorization-row-text span {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.authorization-row-text .authorization-rejected {
+  color: var(--color-danger);
+}
+
+.authorization-row-actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
 }

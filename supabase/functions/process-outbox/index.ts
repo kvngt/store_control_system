@@ -7,7 +7,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
 import { isAuthorizedInternalCall, json } from '../_shared/internal.ts';
-import { ANNOUNCED_STATUSES, renderEmail } from '../_shared/email/templates.ts';
+import { ANNOUNCED_STATUSES, renderEmail, renderEmployeeEmail } from '../_shared/email/templates.ts';
 
 interface OutboxJob {
   id: string;
@@ -162,6 +162,9 @@ function displayName(name: string): string {
  * esperaba, se respeta el estado actual.
  */
 async function sendEmail(job: OutboxJob): Promise<JobResult> {
+  // El correo al técnico (06/10/2026) tiene su propio camino: nunca pasa por `datos_correo`,
+  // que es el del cliente.
+  if (job.plantilla === 'empleado') return sendEmployeeEmail(job);
   const apiKey = Deno.env.get('RESEND_API_KEY');
   const siteUrl = (Deno.env.get('PUBLIC_SITE_URL') || '').replace(/\/+$/, '');
   const fromAddress = Deno.env.get('EMAIL_FROM_ADDRESS') || 'notificaciones@restorifyauto.net';
@@ -283,6 +286,72 @@ async function sendEmail(job: OutboxJob): Promise<JobResult> {
   const detail = `Resend HTTP ${res.status}: ${body}`;
   // Límite de envío o falla de Resend: vale la pena reintentar. Otro 4xx (dirección
   // inválida, dominio sin verificar) no se arregla solo.
+  if (res.status === 429 || res.status >= 500) throw new Error(detail);
+  return { estado: 'error', detalle: detail };
+}
+
+/**
+ * Un correo a un técnico: orden o tarea asignada, o la respuesta del cliente a un presupuesto.
+ * Se manda a la dirección que se encoló (la de su perfil) con lo que guardó `notificar`.
+ */
+async function sendEmployeeEmail(job: OutboxJob): Promise<JobResult> {
+  const apiKey = Deno.env.get('RESEND_API_KEY');
+  const siteUrl = (Deno.env.get('PUBLIC_SITE_URL') || '').replace(/\/+$/, '');
+  const fromAddress = Deno.env.get('EMAIL_FROM_ADDRESS') || 'notificaciones@restorifyauto.net';
+  if (!apiKey) throw new Error('RESEND_API_KEY no configurada.');
+  if (!/^https?:\/\//.test(siteUrl)) throw new Error('PUBLIC_SITE_URL no configurada.');
+
+  const datos = job.datos as {
+    sede_id?: string | null;
+    tipo?: string;
+    titulo?: string;
+    url?: string;
+    lineas?: unknown[];
+  };
+  if (!datos.titulo) return { estado: 'omitido', detalle: 'El aviso no tiene título.' };
+
+  let taller = { nombre: 'Restorify', logoUrl: null as string | null, color: null as string | null };
+  if (datos.sede_id) {
+    const { data: sede } = await supabase.from('sedes').select('nombre, logo_url, color_tema').eq('id', datos.sede_id).maybeSingle();
+    if (sede) taller = { nombre: sede.nombre, logoUrl: sede.logo_url, color: sede.color_tema };
+  }
+
+  const email = renderEmployeeEmail({
+    appUrl: `${siteUrl}${datos.url?.startsWith('/') ? datos.url : '/'}`,
+    taller,
+    tipo: datos.tipo ?? '',
+    titulo: datos.titulo,
+    lineas: (datos.lineas ?? []).map((l) => String(l ?? '')),
+  });
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'Idempotency-Key': job.id,
+    },
+    body: JSON.stringify({
+      from: `${displayName(taller.nombre)} <${fromAddress}>`,
+      to: [job.destinatario],
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+      tags: [{ name: 'plantilla', value: 'empleado' }],
+    }),
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, EMAIL_SPACING_MS));
+
+  if (res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { id?: string };
+    return { estado: 'enviado', proveedorId: body.id };
+  }
+  const body = (await res.text().catch(() => '')).slice(0, 300);
+  if (res.status === 401 || /api key/i.test(body)) {
+    throw new Error(`La llave de Resend no es válida: revisa el secreto RESEND_API_KEY. Resend HTTP ${res.status}: ${body}`);
+  }
+  const detail = `Resend HTTP ${res.status}: ${body}`;
   if (res.status === 429 || res.status >= 500) throw new Error(detail);
   return { estado: 'error', detalle: detail };
 }
