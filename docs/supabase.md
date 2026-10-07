@@ -235,8 +235,10 @@ ON CONFLICT (id) DO NOTHING;
 ```
 
 Las políticas no hay que recrearlas: viven en `storage.objects` y apuntan al bucket por
-nombre. **Para vaciar un bucket, usar el panel** (Storage → el bucket → seleccionar todo →
-Delete), no la CLI.
+nombre. **Para vaciar un bucket, usar `scripts/admin/vaciar-storage.mjs`** (borra archivo por
+archivo por la API, deja los buckets, `sede_logos` y `avatares`; sin `--borrar` solo cuenta) o el
+panel (Storage → el bucket → seleccionar todo → Delete), nunca `supabase storage rm -r`. Para
+borrar los datos de operación conservando todas las cuentas, `scripts/admin/limpiar-operacion.sql`.
 
 - El tope de 50 MB está en el bucket **y** en la app (`MAX_UPLOAD_BYTES`); el plan Free no
   permite más.
