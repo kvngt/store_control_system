@@ -195,6 +195,8 @@ SELECT is(
 );
 
 -- El caso real: la orden está en espera de autorización y el cliente responde.
+UPDATE ordenes_trabajo SET estatus = 'espera_autorizacion'
+WHERE id = (SELECT id FROM t_orden);
 
 SELECT is(
   (SELECT responder_presupuesto_portal(

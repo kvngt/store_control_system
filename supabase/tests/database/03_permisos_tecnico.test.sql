@@ -14,7 +14,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(46);
+SELECT plan(47);
 
 -- ------------------------------------------------------------------------------------
 -- Datos de prueba: un admin, un mecánico asignado y uno que no lo está
