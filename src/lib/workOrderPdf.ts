@@ -296,11 +296,22 @@ async function buildWorkOrderPdf(
   doc.setTextColor(...brand.text);
   doc.text(sede?.nombre || 'RESTORIFY', headerX, y + 2);
 
-  if (sede?.direccion || sede?.telefono) {
+  // The same phones the customer sees on the link, each with its description, on a line of
+  // their own. A sede without the list keeps its single `telefono` next to the address.
+  const phones =
+    Array.isArray(sede?.telefonos) && sede.telefonos.length > 0
+      ? sede.telefonos.map((p) => (p.label?.trim() ? `${p.label.trim()}: ${p.numero}` : p.numero)).join('  ·  ')
+      : '';
+  const contactLines = [
+    [sede?.direccion, phones ? null : sede?.telefono].filter(Boolean).join('  ·  '),
+    phones,
+  ].filter(Boolean);
+
+  if (contactLines.length > 0) {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...MUTED);
-    doc.text([sede.direccion, sede.telefono].filter(Boolean).join('  ·  '), headerX, y + 7);
+    doc.text(contactLines, headerX, y + 7);
   }
 
   doc.setFontSize(9);
@@ -315,7 +326,7 @@ async function buildWorkOrderPdf(
   // The header block ends below whichever is taller: the text column or the
   // logo. HEADER_GAP is then real white space between the two, not the slack
   // left over from a font metric.
-  const textBottom = y + (sede?.direccion || sede?.telefono ? 9 : 4);
+  const textBottom = y + (contactLines.length > 0 ? 9 + (contactLines.length - 1) * 3.5 : 4);
   y = Math.max(textBottom, headerBottom) + HEADER_GAP;
 
   doc.setFontSize(14);

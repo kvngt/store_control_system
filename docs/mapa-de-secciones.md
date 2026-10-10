@@ -201,7 +201,7 @@ egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
 
 | | |
 |---|---|
-| Pantalla | `pages/Settings.tsx` (perfil, idioma, tema, push; sedes para administración) |
+| Pantalla | `pages/Settings.tsx` (perfil, idioma, tema, push; sedes para administración). Los teléfonos de la sede, en `features/settings/SedePhonesEditor.tsx` (reglas en `sedePhones.ts`) |
 | Colores | Paleta por defecto en `styles/index.css` (tema oscuro y claro, del logo: amarillo `#EBC334`, grises puros). El color propio de una sede la reemplaza en tiempo real con `lib/branding.ts`; el PDF usa `lib/brandColor.ts` y los correos su propio valor por defecto |
 | Servicios | `sedes.service.ts`, `users.service.ts` |
 | Base | `sedes`, `perfiles` (guardia `trg_perfil_privilegios`), buckets `sede_logos` y `avatares` |

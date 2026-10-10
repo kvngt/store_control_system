@@ -32,7 +32,7 @@ BEGIN
     NULL, NULL, 'Autorizado en la prueba.', NULL, NULL);
 END $h$;
 
-SELECT plan(28);
+SELECT plan(31);
 
 -- ------------------------------------------------------------------------------------
 -- Datos de prueba
@@ -206,6 +206,15 @@ SELECT results_eq(
 -- ------------------------------------------------------------------------------------
 -- 3. El portal: solo lo publicado, sin costos ni comisiones
 -- ------------------------------------------------------------------------------------
+-- 20261010000025: los teléfonos de la sede, con espacios de más, una llave que no es para el
+-- cliente, una fila sin número y una sin descripción.
+UPDATE sedes SET telefonos = '[
+  {"label": " English ", "numero": " 240-355-1266 ", "interno": "no sale"},
+  {"label": "Sin número", "numero": "  "},
+  {"numero": "+1 (301) 909-9937"}
+]'::jsonb
+WHERE id = '10000000-0000-0000-0000-000000000001';
+
 CREATE TEMP TABLE t_portal AS SELECT datos_portal((SELECT token FROM t_enlace)) AS d;
 
 SELECT is((SELECT d->>'estado_enlace' FROM t_portal), 'ok', 'Un enlace activo abre el reporte');
@@ -220,6 +229,21 @@ SELECT results_eq(
   $$ SELECT d->'cliente'->>'idioma', jsonb_typeof(d->'traducciones') FROM t_portal $$,
   $$ VALUES ('en'::text, 'object'::text) $$,
   'El portal recibe el idioma del cliente (inglés por defecto) y las traducciones'
+);
+SELECT is(
+  (SELECT d->'taller'->'telefonos' FROM t_portal),
+  '[{"label": "English", "numero": "240-355-1266"}, {"label": "", "numero": "+1 (301) 909-9937"}]'::jsonb,
+  'El portal recibe los teléfonos de la sede campo por campo: sin espacios, sin filas vacías y en orden'
+);
+SELECT is(
+  (SELECT datos_correo(id)->'taller'->'telefonos' FROM t_correos WHERE plantilla = 'estatus' LIMIT 1),
+  (SELECT d->'taller'->'telefonos' FROM t_portal),
+  'El pie del correo lleva los mismos teléfonos que el enlace'
+);
+SELECT throws_ok(
+  $$ UPDATE sedes SET telefonos = '{}'::jsonb WHERE id = '10000000-0000-0000-0000-000000000001' $$,
+  '23514', NULL,
+  'La lista de teléfonos de la sede tiene que ser un arreglo: otra cosa rompería el enlace del cliente'
 );
 SELECT ok(
   (SELECT d::text NOT LIKE '%costo_unitario%' AND d::text NOT LIKE '%comision%' AND d::text NOT LIKE '%Luis Mecánico%' AND d::text NOT LIKE '%1HGCM82633A%' FROM t_portal),

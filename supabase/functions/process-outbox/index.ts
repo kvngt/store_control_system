@@ -129,6 +129,8 @@ interface EmailData {
     nombre: string;
     direccion: string | null;
     telefono: string | null;
+    /** Desde 20261010000025; la base ya los manda limpios. */
+    telefonos?: { label: string; numero: string }[] | null;
     email: string | null;
     logo_url: string | null;
     color: string | null;
@@ -218,6 +220,7 @@ async function sendEmail(job: OutboxJob): Promise<JobResult> {
       nombre: ctx.taller.nombre,
       direccion: ctx.taller.direccion,
       telefono: ctx.taller.telefono,
+      telefonos: ctx.taller.telefonos,
       email: ctx.taller.email,
       logoUrl: ctx.taller.logo_url,
       color: ctx.taller.color,

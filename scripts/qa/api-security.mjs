@@ -387,6 +387,8 @@ const CASES = [
   admin({ id: 'SEC-138', desc: 'Ni un admin cambia el idioma del cliente por la RPC del portal', method: 'POST', path: () => rpc('preferencia_idioma_portal'), body: { p_token: '0'.repeat(64), p_idioma: 'es' }, expect: 'denied' }),
   admin({ id: 'SEC-139', desc: 'Ni un admin llama el diccionario interno de traducciones', method: 'POST', path: () => rpc('_diccionario_traducciones'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
   anon({ id: 'SEC-140', desc: 'Sin sesión no se piden los totales de comisiones', method: 'POST', path: () => rpc('resumen_mis_comisiones'), body: {}, expect: 'denied' }),
+  // 20261010000025: la limpieza de los teléfonos de la sede es interna de datos_portal/datos_correo.
+  admin({ id: 'SEC-141', desc: 'Ni un admin llama la limpieza interna de los teléfonos de la sede', method: 'POST', path: () => rpc('_telefonos_sede'), body: { p_telefonos: [] }, expect: 'denied' }),
 ];
 
 function evaluate(expect, r) {

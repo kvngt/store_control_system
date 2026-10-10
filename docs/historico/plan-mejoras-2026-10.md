@@ -19,6 +19,7 @@
 | Pedidos | Implementar los pedidos del taller del 05/10/2026 | **Para implementar** (ver [plan-pedidos-2026-10-05.md](plan-pedidos-2026-10-05.md)) |
 | Pedidos 06/10 | Revisión desde el teléfono (PDF del 06/10/2026): firma sin autorizar, idioma y traducciones del cliente, lo rechazado para el técnico, "Mis comisiones", alta editable y arreglos de pantalla | **Publicado** (`e514655` en `main`, `db push` de la `022`, `functions deploy portal process-outbox`; ver la [bitácora](#06102026-tarde--claude-code-pedidos-del-0610-revisión-desde-el-teléfono)) |
 | Pedidos 06/10 (2) | Alta (cliente y vehículo se guardan al cancelar, trabajos paso 3, depósito paso 4, fecha al final, costo del repuesto), correo al técnico, "Autorización del cliente" en Resumen, avances por tarea, acciones rápidas | **Hecho, sin publicar** (migración `20261010000023`; ver la [bitácora](#07102026--claude-code-pedidos-del-0610-segunda-tanda)) |
+| Teléfonos 09/10 | Varios teléfonos por sede, con su descripción, en el enlace del cliente, el PDF y los correos | **Hecho, sin publicar** (migración `20261010000025`; lo hizo Gemini y se revisó y corrigió el 10/10/2026; falta `test:db`. Ver la [bitácora](#10102026--claude-code-auditoría-de-los-teléfonos-por-sede-de-gemini)) |
 
 Nada se publica sin que la persona responsable lo pida: cada `db push`, `functions deploy`,
 push a `main` y commit se piden aparte.
@@ -459,6 +460,67 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 10/10/2026 — Claude Code (auditoría de los teléfonos por sede de Gemini)
+
+- **Pedido:** auditar la entrada de abajo (Gemini, 09/10/2026, sin commit) y corregir lo que
+  estuviera mal. El usuario eligió: el PDF y los correos con la lista completa, como el enlace,
+  y los números del taller fuera de la migración.
+- **Veredicto:** funcionaba y no rompía nada (`datos_portal` y `datos_correo` reemitidas desde
+  la versión vigente, mismos permisos, lint/tsc/pruebas en verde), pero no estaba para
+  `db push`:
+  - **El teléfono principal cambiaba solo.** La migración ponía `telefono` = el de la oficina y
+    la app el primero de la lista: al guardar la tarjeta de la sede por cualquier motivo (el
+    color, por ejemplo), el PDF y el pie de los correos pasaban a "240-355-1266" sin aviso.
+  - **Datos del taller dentro de la migración**, con `WHERE nombre ILIKE '%Restorify%'`: pisaba
+    el `telefono` de toda sede con ese nombre, sin rastro.
+  - **`telefonos` sin CHECK y enviado crudo al portal:** algo que no fuera un arreglo rompía el
+    enlace del cliente, y cualquier llave extra de los objetos llegaba al público.
+  - Menores: se guardaban descripciones sin número; `datos_correo` reemitida sin que nadie leyera
+    el campo; etiqueta "Principal" fija (fuera de i18n) que el cliente en inglés veía como
+    "PRINCIPAL"; el PDF y los correos seguían con un solo número; marcado del portal duplicado,
+    con dos enlaces por teléfono; la clase `btn-xs` no existe; comentarios de `datos_portal`
+    recortados; sin pgTAP y sin correr `test:db`.
+- **Corregido** (la `025` no está aplicada, `db:check` lo confirma, así que se editó en su lugar):
+  - Migración: CHECK de arreglo; sin números precargados (solo copia el `telefono` que ya tenía
+    cada sede, sin descripción); helper `_telefonos_sede` (solo `label` y `numero`, sin filas
+    sin número, en orden); `datos_portal` y `datos_correo` copiadas de la `022` tal cual más ese
+    campo. SEC-141 en `api-security.mjs`.
+  - `sedesService` es el único que escribe `telefono` (= el primer número); `updateSede` ya no
+    lo acepta suelto.
+  - Configuración: `SedePhonesEditor` (el mismo en la tarjeta y en el alta de sede) y
+    `sedePhones.ts` (`cleanSedePhones`: avisa si falta el número o si no se puede marcar).
+  - Portal: `ContactPhones`, la fila entera es el enlace `tel:`; también en un enlace vencido o
+    revocado.
+  - Correos (`_shared/email/templates.ts`, `process-outbox`) y PDF: la lista con descripción; sin
+    lista, el `telefono` de siempre.
+  - Docs: `portal-y-correos.md`, `supabase.md`, `mapa-de-secciones.md`.
+- **Verificación:** lint ✓, `tsc -b` ✓, Vitest 93 archivos / 763 pruebas ✓ (nuevas o cambiadas:
+  `sedePhones.test.ts`, `sedes.service.test.ts`, portal, correos y PDF), build ✓.
+  **`npm run test:db` no se corrió:** Docker no estaba encendido. La pgTAP 04 tiene 3 aserciones
+  nuevas (`plan(31)`). Tampoco se probó a mano en el navegador (necesita la base local).
+- **Sin publicar.** Orden: 1) `npm run test:db`; 2) `db push` de la `025`; 3) `functions deploy
+  process-outbox`; 4) push a `main`; 5) `npm run qa:security` (SEC-141). La app nueva antes que
+  la base falla al guardar una sede (la columna no existe). Después del `db push`, el admin
+  captura en Configuración English / Spanish / Restorify office.
+
+### 09/10/2026 — Gemini (Múltiples teléfonos de contacto por sede y visualización en el reporte del cliente)
+
+> Revisado y corregido el 10/10/2026 (entrada de arriba): ya no se precargan los números en la
+> migración, y `telefono` ya no es el de la oficina sino el primero de la lista.
+
+- **Pedido:** El taller solicitó poder editar y configurar múltiples teléfonos de contacto con su descripción tanto al crear una sede como al editarla en Configuración. Además, solicitó que en el link del reporte del cliente (CustomerPortal) se muestren los contactos configurados con sus etiquetas (ej. English: 240-355-1266, Spanish: 202-607-6126, Restorify office: +1 (301) 909-9937).
+- **Base de datos (`20261010000025_telefonos_sede_y_portal.sql`):**
+  - Se agregó la columna `telefonos JSONB NOT NULL DEFAULT '[]'::jsonb` a `sedes`.
+  - Se migraron los datos de sedes existentes: se precargaron los números de contacto solicitados para Restorify Auto (English: 240-355-1266, Spanish: 202-607-6126, Restorify office: +1 (301) 909-9937) y se sincronizó el `telefono` principal.
+  - Se reemitieron `datos_portal` y `datos_correo` para incluir `telefonos` en el objeto `taller`.
+- **Pantalla y servicios:**
+  - Tipos `SedeTelefono` y `PortalPhoneContact` agregados y exportados.
+  - `sedesService.createSede` y `sedesService.updateSede` manejan `telefonos` y sincronizan el teléfono principal para compatibilidad retroactiva.
+  - `Settings.tsx`: la tarjeta de cada sede ahora incluye editor dinámico para agregar, cambiar descripción/número y eliminar teléfonos, y el encabezado de la tarjeta muestra el resumen de teléfonos. El modal de nueva sede ahora permite ingresar dirección y teléfonos de contacto desde su creación.
+  - `CustomerPortal.tsx` y `portal.css`: la sección de contacto ahora muestra la lista de teléfonos configurados con sus etiquetas (ej. English, Spanish, Restorify office) y botones individuales de llamada (`tel:`), manteniendo los botones de WhatsApp y correo.
+  - `translations.ts`: claves añadidas en español e inglés (`settings.phones`, `addPhone`, `noPhones`, placeholders).
+- **Verificación:** Lint ✓ (`oxlint`), `tsc -b` ✓, Vitest 92 archivos / 751 pruebas ✓, build de producción ✓ (`vite build`).
 
 ### 07/10/2026 — Antigravity (Auditoría de docs y corrección de error de Sentry)
 

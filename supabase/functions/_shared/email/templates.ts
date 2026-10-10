@@ -35,6 +35,9 @@ export interface EmailContext {
     nombre: string;
     direccion?: string | null;
     telefono?: string | null;
+    /** Los teléfonos con su descripción, como en el enlace (20261010000025). Si hay, van en
+     *  lugar de `telefono`. */
+    telefonos?: { label: string; numero: string }[] | null;
     /** Si hay, el cliente puede responder el correo y le llega al taller. */
     email?: string | null;
     logoUrl?: string | null;
@@ -136,6 +139,12 @@ const VIA_TEXT: Record<EmailLanguage, Record<string, string>> = {
 function firstName(name: string | null): string | null {
   const first = (name || '').trim().split(/\s+/)[0];
   return first || null;
+}
+
+/** "English: 240-355-1266" por teléfono, como en el enlace; sin lista, el teléfono de siempre. */
+function shopPhones(taller: EmailContext['taller']): (string | null | undefined)[] {
+  if (!Array.isArray(taller.telefonos) || taller.telefonos.length === 0) return [taller.telefono];
+  return taller.telefonos.map((p) => (p.label?.trim() ? `${p.label.trim()}: ${p.numero}` : p.numero));
 }
 
 interface Copy {
@@ -434,7 +443,7 @@ export function renderEmail(template: string, ctx: EmailContext): RenderedEmail 
   const unsubscribe = `${portal}?correos=baja`;
   const name = firstName(ctx.cliente.nombre);
   const greeting = chrome.hello(name);
-  const contact = [ctx.taller.direccion, ctx.taller.telefono].filter((v) => v && String(v).trim()) as string[];
+  const contact = [ctx.taller.direccion, ...shopPhones(ctx.taller)].filter((v) => v && String(v).trim()) as string[];
 
   const html = `<!doctype html>
 <html lang="${lang}">

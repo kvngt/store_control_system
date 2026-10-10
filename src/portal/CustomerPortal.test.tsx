@@ -222,6 +222,43 @@ describe('CustomerPortal', () => {
     expect(screen.getByRole('link', { name: /Llamar/ })).toHaveAttribute('href', 'tel:5125550100');
   });
 
+  describe('teléfonos de la sede (09/10/2026)', () => {
+    const telefonos = [
+      { label: 'English', numero: '240-355-1266' },
+      { label: 'Spanish', numero: '202-607-6126' },
+      { label: 'Restorify office', numero: '+1 (301) 909-9937' },
+    ];
+
+    it('muestra cada teléfono con su descripción, y la fila entera llama a ese número', async () => {
+      mocks.fetchPortal.mockResolvedValue(report({ taller: { ...report().taller, telefonos } }));
+      render(<CustomerPortal token={TOKEN} />);
+
+      expect(await screen.findByText('Restorify office')).toBeInTheDocument();
+      const calls = screen.getAllByRole('link', { name: /Llamar/ });
+      expect(calls.map((a) => a.getAttribute('href'))).toEqual(['tel:2403551266', 'tel:2026076126', 'tel:+13019099937']);
+      expect(calls[0]).toHaveAccessibleName('Llamar: English, 240-355-1266');
+      // Con la lista, el botón suelto del teléfono de siempre sobra.
+      expect(screen.queryByRole('link', { name: 'Llamar' })).not.toBeInTheDocument();
+    });
+
+    it('también con un enlace vencido, para que sepa a quién llamar', async () => {
+      mocks.fetchPortal.mockResolvedValue({ estado_enlace: 'vencido', taller: { ...report().taller, telefonos } });
+      render(<CustomerPortal token={TOKEN} />);
+
+      expect(await screen.findByRole('heading', { name: 'Este enlace venció' })).toBeInTheDocument();
+      expect(screen.getAllByRole('link', { name: /Llamar/ })).toHaveLength(3);
+      expect(screen.getByText('Spanish')).toBeInTheDocument();
+    });
+
+    it('si lo que llega no es una lista, se queda el teléfono de siempre', async () => {
+      const taller = { ...report().taller, telefonos: {} as unknown as typeof telefonos };
+      mocks.fetchPortal.mockResolvedValue(report({ taller }));
+      render(<CustomerPortal token={TOKEN} />);
+
+      expect(await screen.findByRole('link', { name: /Llamar/ })).toHaveAttribute('href', 'tel:5125550100');
+    });
+  });
+
   it('con una ruta sin token válido no pide nada al servidor', () => {
     render(<CustomerPortal token={null} />);
     expect(screen.getByRole('heading', { name: 'Enlace no válido' })).toBeInTheDocument();

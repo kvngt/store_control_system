@@ -1,10 +1,16 @@
 import type { UserRole } from './enums';
 
+export interface SedeTelefono {
+  label: string;
+  numero: string;
+}
+
 export interface Sede {
   id: string;
   nombre: string;
   direccion: string;
   telefono: string;
+  telefonos?: SedeTelefono[];
   capacidad: number;
   /** Accent colour as #rrggbb. Null = use the default Restorify gold. */
   color_tema?: string | null;

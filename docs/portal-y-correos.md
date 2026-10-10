@@ -234,6 +234,12 @@ enlaces para revisarlos; una baja por GET daría de baja a todos sus usuarios.
 
 - `clientes.acepta_correos` (default true), `clientes.correos_baja_en`.
 - `sedes.email_contacto` (Reply-To), `sedes.whatsapp` (botón del portal).
+- `sedes.telefonos` (`20261010000025`): los teléfonos con su descripción ("English",
+  "Spanish", "Office"), en el orden que eligió el taller en Configuración. Salen en el enlace
+  (cada fila llama), en el encabezado del PDF y en el pie de los correos. `datos_portal` y
+  `datos_correo` los mandan campo por campo con `_telefonos_sede` (solo `label` y `numero`, sin
+  filas sin número); un CHECK exige que sea un arreglo. `sedes.telefono` queda como respaldo
+  heredado, igual al primer número: lo escribe solo `sedesService`.
 - CHECK de formato en `clientes.email` y `sedes.email_contacto` (`NOT VALID`: no
   bloquea datos viejos, sí lo nuevo y lo editado).
 

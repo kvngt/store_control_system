@@ -137,7 +137,7 @@ Las 23 tienen **RLS activado**. Columnas y relaciones: [radiografia.md §4](radi
 
 | Dominio | Tabla | Qué guarda | Quién lee |
 |---|---|---|---|
-| **Organización** | `sedes` | Talleres: nombre, marca, capacidad, % de comisión, correo y WhatsApp de contacto | Todo usuario con sesión |
+| **Organización** | `sedes` | Talleres: nombre, marca, capacidad, % de comisión, correo, WhatsApp y teléfonos de contacto (`telefonos`, con su descripción) | Todo usuario con sesión |
 | | `perfiles` | Una fila por usuario de `auth.users`: nombre, rol, sede | Uno mismo, su sede, admin |
 | | `perfiles_pago` | Esquema de pago de cada empleado: comisión (su % o el de la sede) o salario | **Admin**; cada quien el suyo |
 | **Clientes** | `clientes` | Datos de contacto y preferencia de correos | Admin; un técnico, los de sus órdenes. **Crear y editar, solo admin** |

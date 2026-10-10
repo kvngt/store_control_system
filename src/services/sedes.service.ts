@@ -1,7 +1,10 @@
 // Sedes (workshops): the tenant boundary every other domain is scoped to.
 import { supabase } from '../lib/supabase';
-import type { Sede } from '../types/database';
+import type { Sede, SedeTelefono } from '../types/database';
 import { assertDeleted } from './support';
+
+const primaryPhone = (telefonos: SedeTelefono[]) =>
+  telefonos.find((t) => t.numero?.trim())?.numero.trim() ?? '';
 
 /** Row counts that a sede deletion would take with it. */
 export interface SedeDeleteImpact {
@@ -20,8 +23,12 @@ export const sedesService = {
     return data as Sede[];
   },
 
-  createSede: async (input: Omit<Sede, 'id' | 'fecha_creacion'>) => {
-    const { data, error } = await supabase.from('sedes').insert(input).select().single();
+  // `telefono` is the legacy single number, kept equal to the first one in `telefonos` for
+  // whatever still reads only one. Only this service writes it, so callers pass the list.
+  createSede: async (input: Omit<Sede, 'id' | 'fecha_creacion' | 'telefono'>) => {
+    const telefonos = input.telefonos ?? [];
+    const payload = { ...input, telefonos, telefono: primaryPhone(telefonos) };
+    const { data, error } = await supabase.from('sedes').insert(payload).select().single();
     if (error) throw error;
     return data as Sede;
   },
@@ -33,7 +40,7 @@ export const sedesService = {
         Sede,
         | 'nombre'
         | 'direccion'
-        | 'telefono'
+        | 'telefonos'
         | 'capacidad'
         | 'color_tema'
         | 'logo_url'
@@ -43,7 +50,8 @@ export const sedesService = {
       >
     >
   ) => {
-    const { data, error } = await supabase.from('sedes').update(input).eq('id', id).select().single();
+    const payload = input.telefonos ? { ...input, telefono: primaryPhone(input.telefonos) } : input;
+    const { data, error } = await supabase.from('sedes').update(payload).eq('id', id).select().single();
     if (error) throw error;
     return data as Sede;
   },

@@ -2,10 +2,16 @@
 
 export type PortalLinkState = 'ok' | 'no_encontrado' | 'revocado' | 'vencido';
 
+export interface PortalPhoneContact {
+  label: string;
+  numero: string;
+}
+
 export interface PortalShop {
   nombre: string;
   direccion: string | null;
   telefono: string | null;
+  telefonos?: PortalPhoneContact[];
   email: string | null;
   whatsapp: string | null;
   logo_url: string | null;

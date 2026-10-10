@@ -353,6 +353,67 @@
   margin: 0;
 }
 
+/* Los teléfonos del taller: la fila entera es el enlace para llamar. */
+.portal-contact-phones {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.portal-contact-phone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+a.portal-contact-phone:hover {
+  border-color: var(--color-primary);
+}
+
+a.portal-contact-phone:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.portal-contact-phone-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.portal-contact-phone-label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.portal-contact-phone-number {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.portal-contact-phone-call {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-primary-light);
+}
+
 .portal-actions {
   display: flex;
   flex-wrap: wrap;

@@ -59,6 +59,30 @@ describe('renderEmail', () => {
     expect(email.html).toContain('Taller &quot;Bueno&quot; &amp; &lt;Cía&gt;');
   });
 
+  it('el pie lleva los teléfonos con su descripción, como el enlace; sin lista, el de siempre', () => {
+    const telefonos = [
+      { label: 'English', numero: '240-355-1266' },
+      { label: '', numero: '+1 (301) 909-9937' },
+    ];
+    const email = renderEmail('avance', { ...base, taller: { ...base.taller, telefonos } })!;
+    expect(email.text).toContain('Reinventa Norte · Oak 12 · English: 240-355-1266 · +1 (301) 909-9937');
+    expect(email.html).toContain('English: 240-355-1266');
+    expect(email.text).not.toContain('555-0100');
+
+    expect(renderEmail('avance', { ...base, taller: { ...base.taller, telefonos: [] } })!.text).toContain(
+      'Reinventa Norte · Oak 12 · 555-0100'
+    );
+  });
+
+  it('escapa la descripción de un teléfono', () => {
+    const email = renderEmail('avance', {
+      ...base,
+      taller: { ...base.taller, telefonos: [{ label: '<b>Office</b>', numero: '240-355-1266' }] },
+    })!;
+    expect(email.html).not.toContain('<b>Office</b>');
+    expect(email.html).toContain('&lt;b&gt;Office&lt;/b&gt;: 240-355-1266');
+  });
+
   it('solo usa un logo https y un color hexadecimal; lo demás cae al valor por defecto', () => {
     const email = renderEmail('avance', {
       ...base,

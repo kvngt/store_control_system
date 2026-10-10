@@ -14,7 +14,9 @@ import { Link } from 'react-router-dom';
 import PushSettingsCard from '../features/notifications/PushSettingsCard';
 import EmailOutboxCard from '../features/settings/EmailOutboxCard';
 import ProblemReportCard from '../features/settings/ProblemReportCard';
-import type { Sede, UserProfile } from '../types/database';
+import SedePhonesEditor from '../features/settings/SedePhonesEditor';
+import { EMPTY_PHONE, cleanSedePhones } from '../features/settings/sedePhones';
+import type { Sede, SedeTelefono, UserProfile } from '../types/database';
 import { AlertError } from '../components/AlertError';
 import {
   Building2,
@@ -158,7 +160,17 @@ export default function Settings() {
 
   // --- sede branding / CRUD (admin only) ---
   const [brandDrafts, setBrandDrafts] = useState<
-    Record<string, { nombre: string; direccion: string; color_tema: string; email_contacto: string; whatsapp: string }>
+    Record<
+      string,
+      {
+        nombre: string;
+        direccion: string;
+        color_tema: string;
+        email_contacto: string;
+        whatsapp: string;
+        telefonos: SedeTelefono[];
+      }
+    >
   >({});
   const [uploadingLogoId, setUploadingLogoId] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -166,6 +178,8 @@ export default function Settings() {
   const [creatingSede, setCreatingSede] = useState(false);
   const [showSedeModal, setShowSedeModal] = useState(false);
   const [newSedeName, setNewSedeName] = useState('');
+  const [newSedeAddress, setNewSedeAddress] = useState('');
+  const [newSedePhones, setNewSedePhones] = useState<SedeTelefono[]>([EMPTY_PHONE]);
 
   const seedBrandDrafts = (list: Sede[]) =>
     setBrandDrafts(
@@ -178,6 +192,14 @@ export default function Settings() {
             color_tema: s.color_tema || '#EBC334',
             email_contacto: s.email_contacto || '',
             whatsapp: s.whatsapp || '',
+            // Una sede de antes de la lista solo tiene `telefono`: pasa a ser la primera fila,
+            // sin descripción (ninguna sirve en los dos idiomas del cliente).
+            telefonos:
+              Array.isArray(s.telefonos) && s.telefonos.length > 0
+                ? s.telefonos.map((p) => ({ label: p.label || '', numero: p.numero || '' }))
+                : s.telefono?.trim()
+                  ? [{ label: '', numero: s.telefono.trim() }]
+                  : [],
           },
         ])
       )
@@ -191,6 +213,12 @@ export default function Settings() {
       showToast('error', t('settings.invalidContactEmail'));
       return;
     }
+    const phones = cleanSedePhones(draft.telefonos);
+    if (phones.error) {
+      showToast('error', t(phones.error));
+      return;
+    }
+
     setSavingSedeId(sedeId);
     try {
       await sedesService.updateSede(sedeId, {
@@ -199,6 +227,7 @@ export default function Settings() {
         color_tema: draft.color_tema,
         email_contacto: draft.email_contacto.trim() || null,
         whatsapp: draft.whatsapp.trim() || null,
+        telefonos: phones.phones,
       });
       await refreshSedes();
       loadData();
@@ -231,12 +260,17 @@ export default function Settings() {
 
   const handleCreateSede = async () => {
     if (!newSedeName.trim()) return;
+    const phones = cleanSedePhones(newSedePhones);
+    if (phones.error) {
+      showToast('error', t(phones.error));
+      return;
+    }
     setCreatingSede(true);
     try {
       await sedesService.createSede({
         nombre: newSedeName.trim(),
-        direccion: '',
-        telefono: '',
+        direccion: newSedeAddress.trim(),
+        telefonos: phones.phones,
         capacidad: 10,
         color_tema: null,
         logo_url: null,
@@ -246,6 +280,8 @@ export default function Settings() {
       showToast('success', t('settings.sedeCreated'));
       setShowSedeModal(false);
       setNewSedeName('');
+      setNewSedeAddress('');
+      setNewSedePhones([EMPTY_PHONE]);
     } catch (err) {
       showToast('error', t('settings.sedeError'), getErrorMessage(err, language));
     } finally {
@@ -481,7 +517,7 @@ export default function Settings() {
             <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
               <Building2 size={18} /> {t('settings.workshops')}
             </h3>
-            <button className="btn btn-secondary btn-sm" onClick={() => { setShowSedeModal(true); setNewSedeName(''); }} disabled={creatingSede}>
+            <button className="btn btn-secondary btn-sm" onClick={() => { setShowSedeModal(true); setNewSedeName(''); setNewSedeAddress(''); setNewSedePhones([EMPTY_PHONE]); }} disabled={creatingSede}>
               <Plus size={16} /> {t('settings.newWorkshop')}
             </button>
           </div>
@@ -541,15 +577,20 @@ export default function Settings() {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                        <Phone size={14} /> {sede.telefono || '—'}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', flexWrap: 'wrap' }}>
+                        <Phone size={14} style={{ marginTop: 2, flexShrink: 0 }} />
+                        <span>
+                          {sede.telefonos && sede.telefonos.length > 0
+                            ? sede.telefonos.map((p) => (p.label ? `${p.label}: ${p.numero}` : p.numero)).join(' · ')
+                            : (sede.telefono || '—')}
+                        </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
                         <Users size={14} /> {sedeUsers.length} {language === 'es' ? 'empleados' : 'employees'}
                       </div>
                     </div>
 
-                    {/* Branding: name, address and accent colour */}
+                    {/* Branding: name, address, contact info and accent colour */}
                     <div style={{ marginTop: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                       <input
                         className="form-input"
@@ -590,6 +631,11 @@ export default function Settings() {
                           onChange={(e) => setBrandDrafts((p) => ({ ...p, [sede.id]: { ...p[sede.id], whatsapp: e.target.value } }))}
                         />
                       </div>
+
+                      <SedePhonesEditor
+                        value={brandDrafts[sede.id]?.telefonos ?? []}
+                        onChange={(telefonos) => setBrandDrafts((p) => ({ ...p, [sede.id]: { ...p[sede.id], telefonos } }))}
+                      />
                       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                         <Palette size={14} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
                         <input
@@ -827,6 +873,16 @@ export default function Settings() {
                   autoFocus
                 />
               </div>
+              <div className="form-group">
+                <label className="form-label">{t('common.address')}</label>
+                <input
+                  className="form-input"
+                  placeholder={t('common.address')}
+                  value={newSedeAddress}
+                  onChange={(e) => setNewSedeAddress(e.target.value)}
+                />
+              </div>
+              <SedePhonesEditor value={newSedePhones} onChange={setNewSedePhones} />
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowSedeModal(false)}>{t('common.cancel')}</button>

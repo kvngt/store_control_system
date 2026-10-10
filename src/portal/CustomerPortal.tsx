@@ -26,7 +26,7 @@ import { applySedeBranding } from '../lib/branding';
 import { formatDuration } from '../lib/media/mime';
 import { telUrl, whatsAppUrl } from '../lib/phone';
 import { answerQuote, fetchPortal, setEmailPreference, setLanguagePreference } from './portal.api';
-import type { PortalMedia, PortalQuote, PortalReport, PortalResponse, PortalShop } from './portal.types';
+import type { PortalMedia, PortalPhoneContact, PortalQuote, PortalReport, PortalResponse, PortalShop } from './portal.types';
 import { initialPortalLanguage, portalStrings, savePortalLanguage, savedPortalLanguage, type PortalLanguage } from './strings';
 import { translateReport } from './translate';
 
@@ -170,6 +170,49 @@ function ShopHeader({ shop }: { shop: PortalShop }) {
   );
 }
 
+/** Solo la lista que arma la base; cualquier otra cosa cae al `telefono` de siempre. */
+function shopPhones(shop?: PortalShop): PortalPhoneContact[] {
+  return Array.isArray(shop?.telefonos) ? shop.telefonos : [];
+}
+
+/**
+ * Los teléfonos del taller con la descripción que les puso ("English", "Spanish", "Office").
+ * La fila entera es el enlace para llamar: un blanco grande y una sola parada de tabulación.
+ */
+function ContactPhones({ phones, s }: { phones: PortalPhoneContact[]; s: Strings }) {
+  return (
+    <ul className="portal-contact-phones">
+      {phones.map((p, i) => {
+        const href = telUrl(p.numero);
+        const body = (
+          <>
+            <span className="portal-contact-phone-info">
+              {p.label && <span className="portal-contact-phone-label">{p.label}</span>}
+              <span className="portal-contact-phone-number">{p.numero}</span>
+            </span>
+            {href && (
+              <span className="portal-contact-phone-call">
+                <Phone size={16} /> {s.call}
+              </span>
+            )}
+          </>
+        );
+        return (
+          <li key={i}>
+            {href ? (
+              <a className="portal-contact-phone" href={href} aria-label={`${s.call}: ${p.label ? `${p.label}, ` : ''}${p.numero}`}>
+                {body}
+              </a>
+            ) : (
+              <div className="portal-contact-phone">{body}</div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function Unavailable({
   state,
   shop,
@@ -186,6 +229,7 @@ function Unavailable({
         ? [s.expiredTitle, s.expiredBody]
         : [s.notFoundTitle, s.notFoundBody];
   const tel = telUrl(shop?.telefono);
+  const phones = shopPhones(shop);
 
   return (
     <div className="portal-body">
@@ -193,10 +237,14 @@ function Unavailable({
       <section className="portal-card portal-unavailable">
         <h1>{title}</h1>
         <p>{body}</p>
-        {tel && (
-          <a className="btn btn-primary" href={tel}>
-            <Phone size={16} /> {s.call} {shop?.telefono}
-          </a>
+        {phones.length > 0 ? (
+          <ContactPhones phones={phones} s={s} />
+        ) : (
+          tel && (
+            <a className="btn btn-primary" href={tel}>
+              <Phone size={16} /> {s.call} {shop?.telefono}
+            </a>
+          )
         )}
       </section>
     </div>
@@ -218,6 +266,7 @@ function Report({
 }) {
   const fmt = useFormatters(language);
   const { orden, vehiculo, taller } = report;
+  const phones = shopPhones(taller);
   const reception = report.multimedia.filter((m) => m.origen === 'recepcion');
   const progress = report.multimedia.filter((m) => m.origen === 'avance');
   // Los avances que el taller decidió mostrar, cada uno con sus archivos. Los archivos
@@ -413,8 +462,9 @@ function Report({
         </h2>
         <p className="portal-contact-name">{taller.nombre}</p>
         {taller.direccion && <p className="portal-muted">{taller.direccion}</p>}
+        {phones.length > 0 && <ContactPhones phones={phones} s={s} />}
         <div className="portal-actions">
-          {telUrl(taller.telefono) && (
+          {phones.length === 0 && telUrl(taller.telefono) && (
             <a className="btn btn-secondary" href={telUrl(taller.telefono)!}>
               <Phone size={16} /> {s.call}
             </a>

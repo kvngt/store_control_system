@@ -84,6 +84,24 @@ describe('generateWorkOrderPdf', () => {
     expect(colorAlPintar('Taller Amarillo')).toEqual(brandColors('#e8c64a').text);
   });
 
+  it('el encabezado lleva los teléfonos de la sede con su descripción, como el enlace', async () => {
+    const telefonos = [
+      { label: 'English', numero: '240-355-1266' },
+      { label: '', numero: '+1 (301) 909-9937' },
+    ];
+    await generateWorkOrderPdf(orden('en_proceso'), { ...SEDE, telefonos } as Sede);
+
+    const texto = textoPintado();
+    expect(texto).toContain('Calle 1 English: 240-355-1266  ·  +1 (301) 909-9937');
+    expect(texto.join(' | ')).not.toContain('+15550100');
+  });
+
+  it('una sede sin la lista sigue con su teléfono junto a la dirección', async () => {
+    await generateWorkOrderPdf(orden('en_proceso'), SEDE);
+
+    expect(textoPintado()).toContain('Calle 1  ·  +15550100');
+  });
+
   it('las rayas de sección llevan el color de la sede tal cual', async () => {
     await generateWorkOrderPdf(orden('en_proceso'), SEDE);
 

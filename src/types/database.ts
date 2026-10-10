@@ -18,7 +18,7 @@ export type {
   TransactionCategory,
 } from './domain/enums';
 
-export type { Sede, UserProfile } from './domain/auth.types';
+export type { Sede, SedeTelefono, UserProfile } from './domain/auth.types';
 export type { Customer, CustomerInput } from './domain/customer.types';
 export type { Vehicle, VehicleInput } from './domain/vehicle.types';
 export type {
