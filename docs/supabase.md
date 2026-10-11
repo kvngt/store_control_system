@@ -70,8 +70,8 @@ Para **por qué** está construido así: [radiografia.md](radiografia.md). Para
 │                   create-employee · update-employee · delete-employee                  │
 │                                                                                        │
 │  PostgreSQL 17                                                                         │
-│   ├─ public: 23 tablas, 111 funciones, triggers del dinero y los avisos                │
-│   ├─ pg_cron ── cada minuto / 09:00 / 15:00 UTC                                        │
+│   ├─ public: 27 tablas, 119 funciones, triggers del dinero y los avisos                │
+│   ├─ pg_cron ── cada minuto / 09:00 / 15:00 UTC / minuto 7 de cada hora                │
 │   ├─ pg_net ─── llama a las Edge Functions internas                                    │
 │   └─ Vault ──── URL del proyecto y secreto de las funciones internas                   │
 └────────────────────────────────────────────────────────────────────────────────────────┘
@@ -137,7 +137,7 @@ Las 23 tienen **RLS activado**. Columnas y relaciones: [radiografia.md §4](radi
 
 | Dominio | Tabla | Qué guarda | Quién lee |
 |---|---|---|---|
-| **Organización** | `sedes` | Talleres: nombre, marca, capacidad, % de comisión, correo, WhatsApp y teléfonos de contacto (`telefonos`, con su descripción) | Todo usuario con sesión |
+| **Organización** | `sedes` | Talleres: nombre, marca, capacidad, % de comisión, correo y teléfonos de contacto (`telefonos`, con tipo oficina/celular, descripción y WhatsApp; `telefono` y `whatsapp` como respaldos heredados) | Todo usuario con sesión |
 | | `perfiles` | Una fila por usuario de `auth.users`: nombre, rol, sede | Uno mismo, su sede, admin |
 | | `perfiles_pago` | Esquema de pago de cada empleado: comisión (su % o el de la sede) o salario | **Admin**; cada quien el suyo |
 | **Clientes** | `clientes` | Datos de contacto y preferencia de correos | Admin; un técnico, los de sus órdenes. **Crear y editar, solo admin** |
@@ -160,6 +160,10 @@ Las 23 tienen **RLS activado**. Columnas y relaciones: [radiografia.md §4](radi
 | **Avisos** | `notificaciones` | La campana de cada persona | Cada quien las suyas |
 | | `push_suscripciones` | Dispositivos con push activo | Cada quien las suyas |
 | | `cola_envios` | Cola de push y correos con su estado | **Solo admin** (los correos) |
+| **Parqueo** | `parqueo_config` | Configuración de cobro por parqueo por sede: si está activo, días de gracia y aviso al cliente (`20261010000028`) | **Solo admin** |
+| | `parqueo_perfiles` | Perfiles de tarifas de parqueo por sede (por defecto, seguros, etc.) | **Solo admin** |
+| | `parqueo_tramos` | Tramos escalonados de días y tarifas diarias por perfil | **Solo admin** |
+| | `orden_parqueo` | Días acumulados, cobrados, total calculado/ajustado, estado y motivos por orden | Admin; un técnico, las de sus órdenes |
 
 **Tipos enumerados:** `user_role` (admin, mecanico, pintor), `order_status` (recepcion,
 en_proceso, espera_autorizacion, finalizado, entregado), `work_type` (mecanica, pintura,
@@ -176,10 +180,10 @@ a mano: la anterior se quedó cinco funciones atrás sin que nadie lo notara.
 
 | Grupo | Cuántas | Cuáles | Quién |
 |---|---|---|---|
-| **RPC de la app** | 29 | `resumen_panel`, `saldo_orden`, `entregar_orden` (migración `20261008000000`), `comisiones_estimadas`, `resumen_empleado` (migración `20261009000000`), `balance_orden`, `margen_ordenes` (migración `20261010000000`), `importar_estado_cuenta` (migración 36), `deshacer_importacion_estado_cuenta`, `create_work_order`, `repuestos_de_orden`, `marcar_labor_completada`, `pay_commissions`, `sede_delete_impact`, `delete_sede_cascade`, `registrar_push`, `eliminar_push`, `probar_push`, `usuarios_con_push`, `crear_enlace_cliente`, `regenerar_enlace_cliente`, `revocar_enlace_cliente`, `notificar_cliente_avance`, `enviar_reporte_cliente`, `enviar_presupuesto`, `registrar_autorizacion`, `cancelar_presupuesto`, `ordenes_esperando_autorizacion`, `app_schema_version` | Usuarios con sesión (`authenticated`). Las de admin lo validan por dentro |
+| **RPC de la app** | 34 | `resumen_panel`, `saldo_orden`, `entregar_orden` (migración `20261008000000`), `comisiones_estimadas`, `resumen_empleado` (migración `20261009000000`), `balance_orden`, `margen_ordenes` (migración `20261010000000`), `importar_estado_cuenta` (migración 36), `deshacer_importacion_estado_cuenta`, `create_work_order`, `repuestos_de_orden`, `marcar_labor_completada`, `pay_commissions`, `sede_delete_impact`, `delete_sede_cascade`, `registrar_push`, `eliminar_push`, `probar_push`, `usuarios_con_push`, `crear_enlace_cliente`, `regenerar_enlace_cliente`, `revocar_enlace_cliente`, `notificar_cliente_avance`, `enviar_reporte_cliente`, `enviar_presupuesto`, `registrar_autorizacion`, `cancelar_presupuesto`, `ordenes_esperando_autorizacion`, `app_schema_version`, `parqueo_config_sede`, `guardar_config_parqueo`, `vista_previa_parqueo`, `parqueo_de_orden`, `ajustar_parqueo_orden` (`20261010000028`) | Usuarios con sesión (`authenticated`). Las de admin lo validan por dentro |
 | **Ayudantes de RLS** | 5 | `is_admin`, `current_user_role`, `current_user_sede_id`, `is_assigned_to_order`, `mis_ordenes_asignadas` (migración `20261007000000`: qué órdenes ve un técnico) | Las usan las políticas; sin sesión devuelven vacío |
-| **Internas** | 30 | Dinero (`_saldo_orden`, `_reparto_comisiones`, `_balance_orden`, `recalculate_order_totals`, `sync_order_commissions`, `sync_order_parts_expense`, `reverse_order_delivery_finance`); avisos (`notificar`, `admins_de_sede`, `datos_orden_aviso`); cola (`claim_outbox`, `finish_outbox`, `dispatch_outbox_if_due`, `invoke_edge_function`, `purge_old_notifications`, `archivos_huerfanos`); portal y correos (`datos_portal`, `datos_correo`, `encolar_correo_cliente`, `asegurar_enlace_orden`, `preferencia_correos_portal`, `responder_presupuesto_portal`, `marcar_estatus_enviado`, `es_correo_valido`); presupuestos (`_crear_presupuesto`, `_agregar_borradores`, `_lineas_pendientes`, `_resolver_presupuesto`, `recordar_presupuestos_sin_respuesta`); recordatorios (`recordar_ordenes_vencidas`) | Solo `service_role` (Edge Functions), triggers y pg_cron |
-| **De trigger** | 47 | `trg_*`, `handle_*`, `cleanup_order_finance` | Solo como trigger |
+| **Internas** | 32 | Dinero (`_saldo_orden`, `_reparto_comisiones`, `_balance_orden`, `recalculate_order_totals`, `sync_order_commissions`, `sync_order_parts_expense`, `reverse_order_delivery_finance`); parqueo (`_parqueo_calculo`, `recalcular_parqueo_pendiente`); avisos (`notificar`, `admins_de_sede`, `datos_orden_aviso`); cola (`claim_outbox`, `finish_outbox`, `dispatch_outbox_if_due`, `invoke_edge_function`, `purge_old_notifications`, `archivos_huerfanos`); portal y correos (`datos_portal`, `datos_correo`, `encolar_correo_cliente`, `asegurar_enlace_orden`, `preferencia_correos_portal`, `responder_presupuesto_portal`, `marcar_estatus_enviado`, `es_correo_valido`); presupuestos (`_crear_presupuesto`, `_agregar_borradores`, `_lineas_pendientes`, `_resolver_presupuesto`, `recordar_presupuestos_sin_respuesta`); recordatorios (`recordar_ordenes_vencidas`) | Solo `service_role` (Edge Functions), triggers y pg_cron |
+| **De trigger** | 48 | `trg_*`, `handle_*`, `cleanup_order_finance`, `trg_parqueo_orden` | Solo como trigger |
 
 Qué hace cada trigger, por tabla: [radiografia.md §5](radiografia.md#5-dónde-vive-la-lógica-de-negocio).
 
@@ -386,8 +390,9 @@ TABLE …`), no un clic en el panel.
 | `restorify-maintenance` | 09:00 | `purge_old_notifications()` y `cleanup-storage` (archivos huérfanos de más de 7 días) |
 | `restorify-quote-reminders` | 15:00 | `recordar_presupuestos_sin_respuesta()`: aviso a admins por presupuestos sin respuesta de más de 24 h |
 | `restorify-due-reminders` | 15:15 | `recordar_ordenes_vencidas()`: aviso por órdenes que pasaron su fecha de entrega; reemplaza el del día anterior en vez de apilar otro |
+| `restorify-parqueo` | minuto 7 de cada hora (`7 * * * *`) | `recalcular_parqueo_pendiente()`: actualiza días acumulados y totales en órdenes finalizadas con cobro pendiente (`20261010000028`) |
 
-Las cuatro están activas; la de cada minuto termina en `succeeded`. Historial:
+Las cinco están activas; la de cada minuto termina en `succeeded`. Historial:
 
 ```sql
 SELECT j.jobname, d.status, d.start_time, d.return_message

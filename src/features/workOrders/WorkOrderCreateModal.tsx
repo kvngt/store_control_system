@@ -668,6 +668,42 @@ export default function WorkOrderCreateModal({
         <label className="form-label" htmlFor="order-estimated-date">{t('workOrders.estimatedDelivery')}</label>
         <input id="order-estimated-date" className="form-input" type="date" {...register('estimatedDate')} />
       </div>
+
+      <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
+        <label className="form-checkbox" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            id="order-with-insurance"
+            {...register('withInsurance')}
+          />
+          <span style={{ fontWeight: 500 }}>{t('workOrders.withInsurance')}</span>
+        </label>
+      </div>
+
+      {watch('withInsurance') && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+          <div className="form-group">
+            <label className="form-label" htmlFor="order-insurer">{t('workOrders.insurer')}</label>
+            <input
+              id="order-insurer"
+              className="form-input"
+              type="text"
+              placeholder={t('workOrders.insurerPlaceholder')}
+              {...register('insurer')}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="order-claim-number">{t('workOrders.claimNumber')}</label>
+            <input
+              id="order-claim-number"
+              className="form-input"
+              type="text"
+              placeholder={t('workOrders.claimNumberPlaceholder')}
+              {...register('claimNumber')}
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 

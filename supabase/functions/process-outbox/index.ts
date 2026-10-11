@@ -130,7 +130,7 @@ interface EmailData {
     direccion: string | null;
     telefono: string | null;
     /** Desde 20261010000025; la base ya los manda limpios. */
-    telefonos?: { label: string; numero: string }[] | null;
+    telefonos?: { label: string; numero: string; tipo?: 'oficina' | 'celular'; whatsapp?: boolean }[] | null;
     email: string | null;
     logo_url: string | null;
     color: string | null;
@@ -145,6 +145,11 @@ interface EmailData {
     total_propuesto: number;
     total_aprobado: number | null;
     lineas: { descripcion: string; monto: number; estado: string }[];
+  } | null;
+  parqueo?: {
+    estado: string;
+    inicio: string | null;
+    tarifa_inicial: number;
   } | null;
 }
 
@@ -243,6 +248,7 @@ async function sendEmail(job: OutboxJob): Promise<JobResult> {
           lineas: ctx.presupuesto.lineas.map((l) => ({ ...l, descripcion: tr(l.descripcion) })),
         }
       : null,
+    parqueo: ctx.parqueo,
   });
   if (!email) return { estado: 'error', detalle: `Plantilla "${job.plantilla}" desconocida.` };
 

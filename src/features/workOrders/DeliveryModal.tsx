@@ -5,6 +5,7 @@ import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { AlertError } from '../../components/AlertError';
 import { commissionsService, workOrdersService } from '../../services/supabaseService';
+import { parkingService } from '../../services/parking.service';
 import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';
 import { money } from '../../lib/money';
@@ -39,10 +40,18 @@ export default function DeliveryModal({ order, onCancel, onDelivered }: Delivery
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const parkingQuery = useQuery({
+    queryKey: queryKeys.orderParking(order.id),
+    queryFn: () => parkingService.getOrderParking(order.id),
+    staleTime: 0,
+  });
+  const parking = parkingQuery.data;
+
   const balanceQuery = useQuery({
     queryKey: queryKeys.orderBalance(order.id),
     queryFn: () => workOrdersService.getBalance(order.id),
     // Lo cobrado cambia con cada movimiento en Finanzas: siempre la cuenta de este momento.
+    enabled: !parkingQuery.isPending,
     staleTime: 0,
   });
   const balance = balanceQuery.data;
@@ -137,7 +146,7 @@ export default function DeliveryModal({ order, onCancel, onDelivered }: Delivery
             </div>
           )}
 
-          {balanceQuery.isPending ? (
+          {parkingQuery.isPending || balanceQuery.isPending ? (
             <div className="loading-state"><div className="spinner" /></div>
           ) : balanceQuery.error || !balance ? (
             <AlertError message={t('delivery.balanceError')} />
@@ -148,6 +157,16 @@ export default function DeliveryModal({ order, onCancel, onDelivered }: Delivery
                   <dt>{t('delivery.total')}</dt>
                   <dd>{money(balance.total)}</dd>
                 </div>
+                {parking && parking.monto > 0 && (
+                  <div className="delivery-balance-row" style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
+                    <dt style={{ fontWeight: 'normal' }}>
+                      {t('parking.delivery.includesParking')
+                        .replace('{amount}', money(parking.monto))
+                        .replace('{days}', String(parking.dias_cobrados))}
+                    </dt>
+                    <dd></dd>
+                  </div>
+                )}
                 <div className="delivery-balance-row">
                   <dt>{t('delivery.paid')}</dt>
                   <dd>{money(balance.cobrado)}</dd>

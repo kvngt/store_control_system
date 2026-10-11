@@ -84,6 +84,7 @@ export interface WithdrawalBalance {
   cobrado: number;
   trabajos: number;
   revision: number;
+  parqueo?: number;
   cobro: number;
   saldo: number;
 }

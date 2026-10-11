@@ -52,6 +52,9 @@ export interface WorkOrder {
   lista_para_entregar_por?: string | null;
   creado_por: string;
   creado_en: string;
+  con_seguro: boolean;
+  aseguradora?: string | null;
+  numero_reclamo?: string | null;
   // Virtual fields from joins
   /**
    * El dinero de la orden. Vive en `orden_montos`, que solo un administrador
@@ -221,6 +224,9 @@ export interface WorkOrderInput {
   /** El precio, y el costo si administración lo sabe (sin él, la base usa el precio). */
   repuestos: (Omit<WorkOrderPart, 'id' | 'orden_id' | 'subtotal' | 'costo_unitario'> & { costo_unitario?: number | null })[];
   asignaciones: { usuario_id: string; tipo_tarea: 'mecanica' | 'pintura' }[];
+  con_seguro?: boolean;
+  aseguradora?: string | null;
+  numero_reclamo?: string | null;
 }
 
 /** Un valor que cambió en el historial: el de antes, el de después, o los dos. */

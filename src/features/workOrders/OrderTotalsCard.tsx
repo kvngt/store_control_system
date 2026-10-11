@@ -12,6 +12,7 @@ export type DiscountValue = { monto?: number; porcentaje?: number };
 interface OrderTotalsCardProps {
   order: Pick<WorkOrder, 'id' | 'total_labor' | 'estatus' | 'retirada_sin_reparar'>;
   amounts: OrderAmounts;
+  parkingAmount?: number;
   /** Administración aplica o quita el descuento. */
   canDiscount: boolean;
   onApplyDiscount: (value: DiscountValue, motivo: string | null) => Promise<void>;
@@ -35,7 +36,7 @@ const CENT = 0.01;
  * (como en los programas comerciales); el porcentaje lo convierte la base (`aplicar_descuento`),
  * que tampoco deja pasar de lo autorizado.
  */
-export default function OrderTotalsCard({ order, amounts, canDiscount, onApplyDiscount, onRegisterAdvance }: OrderTotalsCardProps) {
+export default function OrderTotalsCard({ order, amounts, parkingAmount, canDiscount, onApplyDiscount, onRegisterAdvance }: OrderTotalsCardProps) {
   const { t } = useLanguage();
   const descuento = Number(amounts.descuento ?? 0);
   const [editing, setEditing] = useState(false);
@@ -90,6 +91,12 @@ export default function OrderTotalsCard({ order, amounts, canDiscount, onApplyDi
             <div className="order-totals-label">{t('discount.label')}</div>
             <div className="order-totals-value">−{money(descuento)}</div>
             {amounts.descuento_motivo && <div className="field-hint">{amounts.descuento_motivo}</div>}
+          </div>
+        )}
+        {parkingAmount != null && parkingAmount > 0 && (
+          <div>
+            <div className="order-totals-label">{t('parking.orderCard.title')}</div>
+            <div className="order-totals-value">+{money(parkingAmount)}</div>
           </div>
         )}
         <div className="order-totals-total">

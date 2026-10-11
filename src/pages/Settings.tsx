@@ -14,8 +14,10 @@ import { Link } from 'react-router-dom';
 import PushSettingsCard from '../features/notifications/PushSettingsCard';
 import EmailOutboxCard from '../features/settings/EmailOutboxCard';
 import ProblemReportCard from '../features/settings/ProblemReportCard';
+import ParkingSettingsCard from '../features/parking/ParkingSettingsCard';
 import SedePhonesEditor from '../features/settings/SedePhonesEditor';
-import { EMPTY_PHONE, cleanSedePhones } from '../features/settings/sedePhones';
+import { EMPTY_PHONE, cleanSedePhones, normalizeSedePhone } from '../features/settings/sedePhones';
+import { sedePhoneLine } from '../lib/phone';
 import type { Sede, SedeTelefono, UserProfile } from '../types/database';
 import { AlertError } from '../components/AlertError';
 import {
@@ -38,7 +40,6 @@ import {
   Check,
   AlertTriangle,
   Mail,
-  MessageCircle,
 } from 'lucide-react';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -167,7 +168,6 @@ export default function Settings() {
         direccion: string;
         color_tema: string;
         email_contacto: string;
-        whatsapp: string;
         telefonos: SedeTelefono[];
       }
     >
@@ -191,14 +191,13 @@ export default function Settings() {
             direccion: s.direccion,
             color_tema: s.color_tema || '#EBC334',
             email_contacto: s.email_contacto || '',
-            whatsapp: s.whatsapp || '',
             // Una sede de antes de la lista solo tiene `telefono`: pasa a ser la primera fila,
             // sin descripción (ninguna sirve en los dos idiomas del cliente).
             telefonos:
               Array.isArray(s.telefonos) && s.telefonos.length > 0
-                ? s.telefonos.map((p) => ({ label: p.label || '', numero: p.numero || '' }))
+                ? s.telefonos.map(normalizeSedePhone)
                 : s.telefono?.trim()
-                  ? [{ label: '', numero: s.telefono.trim() }]
+                  ? [{ label: '', numero: s.telefono.trim(), tipo: 'oficina', whatsapp: false }]
                   : [],
           },
         ])
@@ -226,7 +225,6 @@ export default function Settings() {
         direccion: draft.direccion.trim(),
         color_tema: draft.color_tema,
         email_contacto: draft.email_contacto.trim() || null,
-        whatsapp: draft.whatsapp.trim() || null,
         telefonos: phones.phones,
       });
       await refreshSedes();
@@ -506,6 +504,9 @@ export default function Settings() {
         {/* Correos al cliente que fallaron (p. ej. con la llave de Resend mal puesta). */}
         {user?.rol === 'admin' && <EmailOutboxCard />}
 
+        {/* Cobro por parqueo (módulo configurable por sede, solo admin). */}
+        {user?.rol === 'admin' && <ParkingSettingsCard />}
+
         {/* Reportar un problema (Sentry). No se dibuja si Sentry no está configurado. */}
         <ProblemReportCard />
 
@@ -581,7 +582,14 @@ export default function Settings() {
                         <Phone size={14} style={{ marginTop: 2, flexShrink: 0 }} />
                         <span>
                           {sede.telefonos && sede.telefonos.length > 0
-                            ? sede.telefonos.map((p) => (p.label ? `${p.label}: ${p.numero}` : p.numero)).join(' · ')
+                            ? sede.telefonos
+                                .map((p) =>
+                                  sedePhoneLine(
+                                    p,
+                                    p.tipo === 'celular' ? t('settings.phoneTypeMobile') : t('settings.phoneTypeOffice')
+                                  )
+                                )
+                                .join(' · ')
                             : (sede.telefono || '—')}
                         </span>
                       </div>
@@ -617,18 +625,6 @@ export default function Settings() {
                           aria-label={t('settings.contactEmail')}
                           value={brandDrafts[sede.id]?.email_contacto ?? ''}
                           onChange={(e) => setBrandDrafts((p) => ({ ...p, [sede.id]: { ...p[sede.id], email_contacto: e.target.value } }))}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                        <MessageCircle size={14} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
-                        <input
-                          className="form-input"
-                          type="tel"
-                          inputMode="tel"
-                          placeholder={t('settings.whatsapp')}
-                          aria-label={t('settings.whatsapp')}
-                          value={brandDrafts[sede.id]?.whatsapp ?? ''}
-                          onChange={(e) => setBrandDrafts((p) => ({ ...p, [sede.id]: { ...p[sede.id], whatsapp: e.target.value } }))}
                         />
                       </div>
 

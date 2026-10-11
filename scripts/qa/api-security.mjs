@@ -389,6 +389,27 @@ const CASES = [
   anon({ id: 'SEC-140', desc: 'Sin sesión no se piden los totales de comisiones', method: 'POST', path: () => rpc('resumen_mis_comisiones'), body: {}, expect: 'denied' }),
   // 20261010000025: la limpieza de los teléfonos de la sede es interna de datos_portal/datos_correo.
   admin({ id: 'SEC-141', desc: 'Ni un admin llama la limpieza interna de los teléfonos de la sede', method: 'POST', path: () => rpc('_telefonos_sede'), body: { p_telefonos: [] }, expect: 'denied' }),
+
+  // 20261010000028: Módulo de cobro por parqueo
+  anon({ id: 'SEC-142', desc: 'Sin sesión no se pide la config de parqueo de una sede', method: 'POST', path: () => rpc('parqueo_config_sede'), body: { p_sede_id: ZERO_UUID }, expect: 'denied' }),
+  tech({ id: 'SEC-143', desc: 'Un técnico no ve la config de parqueo de la sede', method: 'POST', path: () => rpc('parqueo_config_sede'), body: { p_sede_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-144', desc: 'Sin sesión no se guarda la config de parqueo', method: 'POST', path: () => rpc('guardar_config_parqueo'), body: { p_sede_id: ZERO_UUID, p_config: {} }, expect: 'denied' }),
+  tech({ id: 'SEC-145', desc: 'Un técnico no guarda la config de parqueo', method: 'POST', path: () => rpc('guardar_config_parqueo'), body: { p_sede_id: ZERO_UUID, p_config: {} }, expect: 'denied' }),
+  anon({ id: 'SEC-146', desc: 'Sin sesión no se pide la vista previa de parqueo', method: 'POST', path: () => rpc('vista_previa_parqueo'), body: { p_perfil: {}, p_fecha_evento: '2026-10-10', p_hasta: '2026-10-10' }, expect: 'denied' }),
+  tech({ id: 'SEC-147', desc: 'Un técnico no pide la vista previa de parqueo', method: 'POST', path: () => rpc('vista_previa_parqueo'), body: { p_perfil: {}, p_fecha_evento: '2026-10-10', p_hasta: '2026-10-10' }, expect: 'denied' }),
+  anon({ id: 'SEC-148', desc: 'Sin sesión no se pide el parqueo de una orden', method: 'POST', path: () => rpc('parqueo_de_orden'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  tech({ id: 'SEC-149', desc: 'Un técnico no ve el parqueo de una orden', method: 'POST', path: () => rpc('parqueo_de_orden'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-150', desc: 'Sin sesión no se ajusta el parqueo de una orden', method: 'POST', path: () => rpc('ajustar_parqueo_orden'), body: { p_orden_id: ZERO_UUID, p_ajustes: {} }, expect: 'denied' }),
+  tech({ id: 'SEC-151', desc: 'Un técnico no ajusta el parqueo de una orden', method: 'POST', path: () => rpc('ajustar_parqueo_orden'), body: { p_orden_id: ZERO_UUID, p_ajustes: {} }, expect: 'denied' }),
+  admin({ id: 'SEC-152', desc: 'Ni un admin llama el cálculo puro de parqueo como RPC', method: 'POST', path: () => rpc('_parqueo_calculo'), body: { p_perfil: {}, p_fecha_evento: '2026-10-10', p_hasta: '2026-10-10' }, expect: 'denied' }),
+  admin({ id: 'SEC-153', desc: 'Ni un admin llama el cálculo interno de parqueo como RPC', method: 'POST', path: () => rpc('_parqueo_calcular'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  admin({ id: 'SEC-154', desc: 'Ni un admin llama el recalculo interno de parqueo como RPC', method: 'POST', path: () => rpc('_recalcular_parqueo'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  admin({ id: 'SEC-155', desc: 'Ni un admin llama el cron de parqueo pendiente como RPC', method: 'POST', path: () => rpc('recalcular_parqueo_pendiente'), body: {}, expect: 'denied' }),
+  admin({ id: 'SEC-156', desc: 'Ni un admin llama el trigger de parqueo como RPC', method: 'POST', path: () => rpc('trg_parqueo_orden'), body: {}, expect: 'denied' }),
+  tech({ id: 'SEC-157', desc: 'Un técnico no lee parqueo_config directamente', method: 'GET', path: () => '/rest/v1/parqueo_config?select=sede_id', expect: 'denied-or-empty' }),
+  tech({ id: 'SEC-158', desc: 'Un técnico no lee parqueo_perfiles directamente', method: 'GET', path: () => '/rest/v1/parqueo_perfiles?select=id', expect: 'denied-or-empty' }),
+  tech({ id: 'SEC-159', desc: 'Un técnico no lee orden_parqueo directamente', method: 'GET', path: () => '/rest/v1/orden_parqueo?select=id', expect: 'denied-or-empty' }),
+  anon({ id: 'SEC-160', desc: 'Sin sesión no se lee orden_parqueo directamente', method: 'GET', path: () => '/rest/v1/orden_parqueo?select=id', expect: 'denied' }),
 ];
 
 function evaluate(expect, r) {

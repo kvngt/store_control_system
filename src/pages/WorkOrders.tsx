@@ -434,6 +434,9 @@ export default function WorkOrders() {
             deposito_comprobante: conComprobante ? receiptPathRef.current : null,
             inspeccion_360_notas: values.inspectionNotes,
             fecha_estimada_entrega: values.estimatedDate || daysFromTodayLocal(5),
+            con_seguro: values.withInsurance ?? false,
+            aseguradora: values.withInsurance ? (values.insurer?.trim() || null) : null,
+            numero_reclamo: values.withInsurance ? (values.claimNumber?.trim() || null) : null,
             // `Math.max(0, ...)` igual que en los repuestos. La labor era la única
             // cifra de dinero que aceptaba un negativo, y sobre una orden entregada
             // un total que baja lo asienta Finanzas como reembolso al cliente.
@@ -598,6 +601,9 @@ export default function WorkOrders() {
               </div>
               <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                 <span className={`badge badge-${order.tipo_trabajo}`}>{typeLabels[order.tipo_trabajo]}</span>
+                {order.con_seguro && (
+                  <span className="badge badge-insurance">{t('workOrders.insuranceBadge')}</span>
+                )}
                 {order.retirada_sin_reparar ? (
                   <span className="badge badge-retirada">{t('withdrawal.status')}</span>
                 ) : (
@@ -676,7 +682,12 @@ export default function WorkOrders() {
                       {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
                     </div>
                   </td>
-                  <td><span className={`badge badge-${order.tipo_trabajo}`}>{typeLabels[order.tipo_trabajo]}</span></td>
+                  <td>
+                    <span className={`badge badge-${order.tipo_trabajo}`}>{typeLabels[order.tipo_trabajo]}</span>
+                    {order.con_seguro && (
+                      <span className="badge badge-insurance" style={{ marginLeft: 4 }}>{t('workOrders.insuranceBadge')}</span>
+                    )}
+                  </td>
                   <td>
                     {order.retirada_sin_reparar ? (
                       <span className="badge badge-retirada">{t('withdrawal.status')}</span>

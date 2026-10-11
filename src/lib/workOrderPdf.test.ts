@@ -86,13 +86,13 @@ describe('generateWorkOrderPdf', () => {
 
   it('el encabezado lleva los teléfonos de la sede con su descripción, como el enlace', async () => {
     const telefonos = [
-      { label: 'English', numero: '240-355-1266' },
-      { label: '', numero: '+1 (301) 909-9937' },
+      { label: 'Spanish', numero: '202-607-6126', tipo: 'celular' as const, whatsapp: true },
+      { label: 'Office', numero: '+1 (301) 909-9937', tipo: 'oficina' as const, whatsapp: false },
     ];
     await generateWorkOrderPdf(orden('en_proceso'), { ...SEDE, telefonos } as Sede);
 
     const texto = textoPintado();
-    expect(texto).toContain('Calle 1 English: 240-355-1266  ·  +1 (301) 909-9937');
+    expect(texto).toContain('Calle 1 Spanish: 202-607-6126 (WhatsApp)  ·  Office: +1 (301) 909-9937');
     expect(texto.join(' | ')).not.toContain('+15550100');
   });
 
@@ -178,5 +178,24 @@ describe('generateWorkOrderPdf: idioma y cuenta', () => {
     const estado = textoPintado().find((t) => t.startsWith('Estado:'));
     expect(estado).toContain('Retirado sin reparar');
     expect(estado).not.toContain('Avance');
+  });
+
+  it('el resumen incluye la fila de parqueo si viene parking con monto mayor a 0', async () => {
+    await generateWorkOrderPdf(
+      conLineas(),
+      SEDE,
+      {},
+      {
+        language: 'es',
+        balance: { cobrado: 100, saldo: 300 },
+        parking: {
+          dias_cobrados: 3,
+          monto: 75,
+        },
+      }
+    );
+    const texto = textoPintado();
+    expect(texto).toContain('Parqueo (3 días)');
+    expect(texto).toContain('$75.00');
   });
 });

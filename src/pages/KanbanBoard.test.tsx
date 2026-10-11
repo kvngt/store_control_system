@@ -47,6 +47,15 @@ vi.mock('../services/supabaseService', () => {
   return { workOrdersService: workOrders, supabaseService: workOrders };
 });
 
+// El diálogo de entrega pide el parqueo a su servicio. Sin esto la prueba llamaba al Supabase de
+// `.env.local` (producción) y fallaba según la red.
+vi.mock('../services/parking.service', () => ({
+  parkingService: {
+    getConfig: vi.fn().mockResolvedValue({ habilitado: false }),
+    getOrderParking: vi.fn().mockResolvedValue({ monto: 0, dias_cobrados: 0, estado: 'inactivo' }),
+  },
+}));
+
 const { default: KanbanBoard } = await import('./KanbanBoard');
 
 function order(overrides: Partial<WorkOrder> & { id: string }): WorkOrder {
@@ -320,4 +329,22 @@ describe('Archivar desde el tablero', () => {
     expect(await screen.findByText('No se pudo archivar la orden')).toBeInTheDocument();
     expect(await screen.findByText('ORD-2026-009')).toBeInTheDocument();
   });
+
+  it('muestra la insignia de seguro si la orden tiene con_seguro', async () => {
+    mocks.auth.current = authValue(ADMIN_USER);
+    const insuredOrder = order({
+      id: 'ord-ins',
+      numero_orden: 'ORD-2026-INS',
+      con_seguro: true,
+      aseguradora: 'State Farm',
+      numero_reclamo: 'REC-001',
+    });
+    mocks.getWorkOrders.mockResolvedValue([insuredOrder]);
+
+    renderWithProviders(<KanbanBoard />);
+    await screen.findByText('ORD-2026-INS');
+
+    expect(screen.getByText('Seguro')).toBeInTheDocument();
+  });
 });
+

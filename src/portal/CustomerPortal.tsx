@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Building2,
   Calendar,
   Car,
   Check,
@@ -17,6 +18,7 @@ import {
   Phone,
   Play,
   Receipt,
+  Smartphone,
   Video,
   Package,
   Wrench,
@@ -176,36 +178,62 @@ function shopPhones(shop?: PortalShop): PortalPhoneContact[] {
 }
 
 /**
- * Los teléfonos del taller con la descripción que les puso ("English", "Spanish", "Office").
- * La fila entera es el enlace para llamar: un blanco grande y una sola parada de tabulación.
+ * Los teléfonos del taller con su tipo (oficina o celular), descripción o tipo traducido,
+ * botón para llamar y, si atiende WhatsApp, botón de WhatsApp para ese número.
  */
-function ContactPhones({ phones, s }: { phones: PortalPhoneContact[]; s: Strings }) {
+function ContactPhones({
+  phones,
+  s,
+  whatsappMessage,
+}: {
+  phones: PortalPhoneContact[];
+  s: Strings;
+  whatsappMessage: string;
+}) {
   return (
     <ul className="portal-contact-phones">
       {phones.map((p, i) => {
-        const href = telUrl(p.numero);
-        const body = (
-          <>
-            <span className="portal-contact-phone-info">
-              {p.label && <span className="portal-contact-phone-label">{p.label}</span>}
-              <span className="portal-contact-phone-number">{p.numero}</span>
-            </span>
-            {href && (
-              <span className="portal-contact-phone-call">
-                <Phone size={16} /> {s.call}
-              </span>
-            )}
-          </>
-        );
+        const tipo = p.tipo === 'celular' ? 'celular' : 'oficina';
+        const hasWa = p.whatsapp === true;
+        const nombre = p.label?.trim() || (tipo === 'celular' ? s.phoneMobile : s.phoneOffice);
+        const telHref = telUrl(p.numero);
+        const waHref = hasWa ? whatsAppUrl(p.numero, whatsappMessage) : null;
+
         return (
-          <li key={i}>
-            {href ? (
-              <a className="portal-contact-phone" href={href} aria-label={`${s.call}: ${p.label ? `${p.label}, ` : ''}${p.numero}`}>
-                {body}
-              </a>
-            ) : (
-              <div className="portal-contact-phone">{body}</div>
-            )}
+          <li key={i} className="portal-contact-phone">
+            <span className="portal-contact-phone-info">
+              {tipo === 'celular' ? (
+                <Smartphone size={16} className="portal-contact-phone-icon" />
+              ) : (
+                <Building2 size={16} className="portal-contact-phone-icon" />
+              )}
+              <span className="portal-contact-phone-text">
+                <span className="portal-contact-phone-label">{nombre}</span>
+                <span className="portal-contact-phone-number">{p.numero}</span>
+              </span>
+            </span>
+            <span className="portal-contact-phone-actions">
+              {telHref && (
+                <a
+                  className="btn btn-secondary"
+                  href={telHref}
+                  aria-label={`${s.call}: ${nombre}, ${p.numero}`}
+                >
+                  <Phone size={14} /> {s.call}
+                </a>
+              )}
+              {waHref && (
+                <a
+                  className="btn btn-primary"
+                  href={waHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`${s.whatsapp}: ${nombre}, ${p.numero}`}
+                >
+                  <MessageCircle size={14} /> {s.whatsapp}
+                </a>
+              )}
+            </span>
           </li>
         );
       })}
@@ -238,7 +266,7 @@ function Unavailable({
         <h1>{title}</h1>
         <p>{body}</p>
         {phones.length > 0 ? (
-          <ContactPhones phones={phones} s={s} />
+          <ContactPhones phones={phones} s={s} whatsappMessage="" />
         ) : (
           tel && (
             <a className="btn btn-primary" href={tel}>
@@ -454,7 +482,7 @@ function Report({
         )}
       </section>
 
-      <AccountSection report={report} s={s} fmt={fmt} />
+      <AccountSection report={report} s={s} fmt={fmt} language={language} />
 
       <section className="portal-card">
         <h2 className="portal-section-title">
@@ -462,14 +490,20 @@ function Report({
         </h2>
         <p className="portal-contact-name">{taller.nombre}</p>
         {taller.direccion && <p className="portal-muted">{taller.direccion}</p>}
-        {phones.length > 0 && <ContactPhones phones={phones} s={s} />}
+        {phones.length > 0 && (
+          <ContactPhones
+            phones={phones}
+            s={s}
+            whatsappMessage={s.whatsappMessage.replace('{numero}', orden.numero)}
+          />
+        )}
         <div className="portal-actions">
           {phones.length === 0 && telUrl(taller.telefono) && (
             <a className="btn btn-secondary" href={telUrl(taller.telefono)!}>
               <Phone size={16} /> {s.call}
             </a>
           )}
-          {taller.whatsapp && (
+          {phones.length === 0 && taller.whatsapp && (
             <a
               className="btn btn-primary"
               href={whatsAppUrl(taller.whatsapp, s.whatsappMessage.replace('{numero}', orden.numero))}
@@ -530,15 +564,40 @@ function StatusSteps({ status, s }: { status: PortalReport['orden']['estatus']; 
 
 type Formatters = ReturnType<typeof useFormatters>;
 
-function AccountSection({ report, s, fmt }: { report: PortalReport; s: Strings; fmt: Formatters }) {
+function AccountSection({ report, s, fmt, language }: { report: PortalReport; s: Strings; fmt: Formatters; language: PortalLanguage }) {
   const { cuenta } = report;
   const hasLines = cuenta.mano_obra.length > 0 || cuenta.repuestos.length > 0;
+
+  let parkingNotice: string | null = null;
+  if (cuenta.parqueo) {
+    const p = cuenta.parqueo;
+    if (p.estado === 'por_empezar' && p.inicio) {
+      const dAnt = toDate(p.inicio);
+      dAnt.setDate(dAnt.getDate() - 1);
+      parkingNotice = s.parkingNoticeReady
+        .replace('{hasta}', fmt.date(dAnt.toISOString().slice(0, 10)))
+        .replace('{inicio}', fmt.date(p.inicio))
+        .replace('{tarifa}', fmt.money(p.tarifa_inicial));
+    } else if (p.estado === 'esperando') {
+      const policy = language === 'en' ? (p.politica_en || p.politica_es) : (p.politica_es || p.politica_en);
+      parkingNotice = policy || s.parkingNoticeWaiting
+        .replace('{dias}', String(p.dias_gracia))
+        .replace('{tarifa}', fmt.money(p.tarifa_inicial));
+    } else if (p.estado === 'acumulando' && p.inicio) {
+      parkingNotice = s.parkingNoticeAccruingInsurance.replace('{inicio}', fmt.date(p.inicio));
+    }
+  }
 
   return (
     <section className="portal-card">
       <h2 className="portal-section-title">
         <Receipt size={18} /> {s.accountTitle}
       </h2>
+      {parkingNotice && (
+        <div className="portal-parking-notice">
+          <p>{parkingNotice}</p>
+        </div>
+      )}
       {!hasLines && Number(cuenta.total) === 0 ? (
         <p className="portal-muted">{s.noCharges}</p>
       ) : (
@@ -598,6 +657,22 @@ function AccountSection({ report, s, fmt }: { report: PortalReport; s: Strings; 
                   <span>−{fmt.money(cuenta.descuento ?? 0)}</span>
                 </div>
               </>
+            )}
+            {cuenta.parqueo && Number(cuenta.parqueo.monto) > 0 && (
+              <div className="portal-line">
+                <span>
+                  {s.parking}
+                  <span className="portal-muted">
+                    {/* Con tope, días × tarifa no daría el monto: se dice que hay tope. */}
+                    {' '}· {cuenta.parqueo.tope_aplicado
+                      ? `${cuenta.parqueo.dias} ${cuenta.parqueo.dias === 1 ? s.day : s.days} · ${s.parkingCapApplied}`
+                      : cuenta.parqueo.detalle && cuenta.parqueo.detalle.length > 1
+                        ? cuenta.parqueo.detalle.map((d) => `${d.dias} ${d.dias === 1 ? s.day : s.days} × ${fmt.money(d.tarifa)}`).join(' + ')
+                        : `${cuenta.parqueo.dias} ${cuenta.parqueo.dias === 1 ? s.day : s.days} × ${fmt.money(cuenta.parqueo.tarifa_inicial)}`}
+                  </span>
+                </span>
+                <span>{fmt.money(cuenta.parqueo.monto)}</span>
+              </div>
             )}
             <div className="portal-line is-total">
               <span>{s.total}</span>

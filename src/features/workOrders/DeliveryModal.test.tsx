@@ -15,11 +15,16 @@ const mocks = vi.hoisted(() => ({
   deliver: vi.fn(),
   uploadReceipt: vi.fn(),
   removeDeliveryReceipt: vi.fn(),
+  getOrderParking: vi.fn(),
 }));
 
 vi.mock('../../services/supabaseService', () => ({
   workOrdersService: mocks,
   commissionsService: { getEstimate: mocks.getEstimate },
+}));
+
+vi.mock('../../services/parking.service', () => ({
+  parkingService: { getOrderParking: mocks.getOrderParking },
 }));
 
 const { default: DeliveryModal } = await import('./DeliveryModal');
@@ -48,6 +53,7 @@ beforeEach(() => {
   mocks.deliver.mockResolvedValue({ saldo: 0, tipo: null, movimiento_id: null });
   mocks.removeDeliveryReceipt.mockResolvedValue(undefined);
   mocks.getEstimate.mockResolvedValue({ bolsas: [], reparto: [], mi_total: 0, tareas: [], sin_asignar: [] });
+  mocks.getOrderParking.mockResolvedValue({ monto: 0, dias_cobrados: 0 });
 });
 
 describe('DeliveryModal', () => {
@@ -198,5 +204,19 @@ describe('DeliveryModal', () => {
 
     await screen.findByText('No hay nada pendiente de cobro.');
     expect(screen.queryByRole('note')).not.toBeInTheDocument();
+  });
+
+  it('muestra la línea de parqueo si la orden tiene cobro de parqueo acumulado', async () => {
+    mocks.getBalance.mockResolvedValue({ total: 575, cobrado: 100, saldo: 475 });
+    mocks.getOrderParking.mockResolvedValue({
+      orden_id: 'ord-1',
+      cobrar: true,
+      estado: 'acumulando',
+      monto: 75,
+      dias_cobrados: 3,
+    });
+    renderModal();
+
+    expect(await screen.findByText('Incluye parqueo: $75.00 (3 días)')).toBeInTheDocument();
   });
 });

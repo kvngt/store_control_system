@@ -224,30 +224,59 @@ describe('CustomerPortal', () => {
 
   describe('teléfonos de la sede (09/10/2026)', () => {
     const telefonos = [
-      { label: 'English', numero: '240-355-1266' },
-      { label: 'Spanish', numero: '202-607-6126' },
-      { label: 'Restorify office', numero: '+1 (301) 909-9937' },
+      { label: 'Spanish', numero: '202-607-6126', tipo: 'celular' as const, whatsapp: true },
+      { label: 'English', numero: '240-355-1266', tipo: 'celular' as const, whatsapp: true },
+      { label: 'Office', numero: '301-909-9937', tipo: 'oficina' as const, whatsapp: false },
     ];
 
-    it('muestra cada teléfono con su descripción, y la fila entera llama a ese número', async () => {
+    it('muestra cada teléfono con su descripción o tipo, 3 llamadas y 2 WhatsApps', async () => {
       mocks.fetchPortal.mockResolvedValue(report({ taller: { ...report().taller, telefonos } }));
       render(<CustomerPortal token={TOKEN} />);
 
-      expect(await screen.findByText('Restorify office')).toBeInTheDocument();
-      const calls = screen.getAllByRole('link', { name: /Llamar/ });
-      expect(calls.map((a) => a.getAttribute('href'))).toEqual(['tel:2403551266', 'tel:2026076126', 'tel:+13019099937']);
-      expect(calls[0]).toHaveAccessibleName('Llamar: English, 240-355-1266');
-      // Con la lista, el botón suelto del teléfono de siempre sobra.
-      expect(screen.queryByRole('link', { name: 'Llamar' })).not.toBeInTheDocument();
+      expect(await screen.findByText('Spanish', { selector: '.portal-contact-phone-label' })).toBeInTheDocument();
+      expect(screen.getByText('English', { selector: '.portal-contact-phone-label' })).toBeInTheDocument();
+      expect(screen.getByText('Office', { selector: '.portal-contact-phone-label' })).toBeInTheDocument();
+
+      const calls = screen.getAllByRole('link', { name: /^Llamar:/ });
+      expect(calls.map((a) => a.getAttribute('href'))).toEqual(['tel:2026076126', 'tel:2403551266', 'tel:3019099937']);
+
+      const waLinks = screen.getAllByRole('link', { name: /^WhatsApp:/ });
+      expect(waLinks).toHaveLength(2);
+      expect(waLinks[0].getAttribute('href')).toMatch(/^https:\/\/wa\.me\/12026076126\?text=/);
+      expect(waLinks[1].getAttribute('href')).toMatch(/^https:\/\/wa\.me\/12403551266\?text=/);
+      expect(waLinks[0].getAttribute('href')).toContain(encodeURIComponent(report().orden.numero));
+      expect(waLinks[1].getAttribute('href')).toContain(encodeURIComponent(report().orden.numero));
+
+      // Ningún enlace al WhatsApp suelto del fixture
+      const allLinks = screen.getAllByRole('link');
+      expect(allLinks.some((a) => a.getAttribute('href')?.includes('15125550199'))).toBe(false);
     });
 
-    it('también con un enlace vencido, para que sepa a quién llamar', async () => {
+    it('un teléfono sin descripción muestra "Celular" (su tipo traducido)', async () => {
+      mocks.fetchPortal.mockResolvedValue(
+        report({
+          taller: {
+            ...report().taller,
+            telefonos: [{ label: '', numero: '202-607-6126', tipo: 'celular' as const, whatsapp: true }],
+          },
+        })
+      );
+      render(<CustomerPortal token={TOKEN} />);
+
+      expect(await screen.findByText('Celular')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Llamar: Celular, 202-607-6126' })).toBeInTheDocument();
+    });
+
+    it('también con un enlace vencido muestra los mismos botones', async () => {
       mocks.fetchPortal.mockResolvedValue({ estado_enlace: 'vencido', taller: { ...report().taller, telefonos } });
       render(<CustomerPortal token={TOKEN} />);
 
       expect(await screen.findByRole('heading', { name: 'Este enlace venció' })).toBeInTheDocument();
-      expect(screen.getAllByRole('link', { name: /Llamar/ })).toHaveLength(3);
-      expect(screen.getByText('Spanish')).toBeInTheDocument();
+      expect(screen.getAllByRole('link', { name: /^Llamar:/ })).toHaveLength(3);
+      const waLinks = screen.getAllByRole('link', { name: /^WhatsApp:/ });
+      expect(waLinks).toHaveLength(2);
+      expect(waLinks[0].getAttribute('href')).toMatch(/^https:\/\/wa\.me\/12026076126\?text=/);
+      expect(waLinks[1].getAttribute('href')).toMatch(/^https:\/\/wa\.me\/12403551266\?text=/);
     });
 
     it('si lo que llega no es una lista, se queda el teléfono de siempre', async () => {
@@ -470,5 +499,82 @@ describe('CustomerPortal — la cuenta', () => {
 
     expect((await screen.findAllByText('Listo para recoger')).length).toBeGreaterThan(0);
     expect(screen.queryByText('En revisión final')).not.toBeInTheDocument();
+  });
+
+  it('muestra el aviso de parqueo por_empezar y la línea de parqueo en la cuenta', async () => {
+    mocks.fetchPortal.mockResolvedValue(
+      report({
+        orden: { ...report().orden, estatus: 'finalizado', lista_para_entregar: true },
+        cuenta: {
+          ...report().cuenta,
+          parqueo: {
+            estado: 'por_empezar',
+            inicio: '2026-10-15',
+            dias: 0,
+            monto: 0,
+            tarifa_inicial: 35,
+            detalle: [],
+            tope_aplicado: false,
+          },
+        },
+      })
+    );
+    render(<CustomerPortal token={TOKEN} />);
+
+    expect(await screen.findByText(/Su vehículo está listo/)).toBeInTheDocument();
+    expect(screen.getByText(/desde el 15 de octubre de 2026 se cobra parqueo de \$35\.00 por día/)).toBeInTheDocument();
+  });
+
+  it('muestra la línea de parqueo acumulado en el desglose de la cuenta', async () => {
+    mocks.fetchPortal.mockResolvedValue(
+      report({
+        orden: { ...report().orden, estatus: 'finalizado', lista_para_entregar: true },
+        cuenta: {
+          ...report().cuenta,
+          total: 470,
+          parqueo: {
+            estado: 'acumulando',
+            inicio: '2026-10-01',
+            dias: 2,
+            monto: 70,
+            tarifa_inicial: 35,
+            detalle: [{ desde_dia: 1, hasta_dia: 2, dias: 2, tarifa: 35, subtotal: 70 }],
+            tope_aplicado: false,
+          },
+        },
+      })
+    );
+    render(<CustomerPortal token={TOKEN} />);
+
+    expect(await screen.findByText('Parqueo')).toBeInTheDocument();
+    expect(screen.getByText('$70.00')).toBeInTheDocument();
+    expect(screen.getByText(/2 días × \$35\.00/)).toBeInTheDocument();
+  });
+
+  // Con tope, "10 días × $40" junto a un monto de $300 no cuadraba: se dice que hay tope.
+  it('con tope aplicado no muestra una multiplicación que no da el monto', async () => {
+    mocks.fetchPortal.mockResolvedValue(
+      report({
+        orden: { ...report().orden, estatus: 'finalizado', lista_para_entregar: true },
+        cuenta: {
+          ...report().cuenta,
+          total: 700,
+          parqueo: {
+            estado: 'acumulando',
+            inicio: '2026-10-01',
+            dias: 10,
+            monto: 300,
+            tarifa_inicial: 40,
+            detalle: [{ desde_dia: 1, hasta_dia: 10, dias: 10, tarifa: 40, subtotal: 400 }],
+            tope_aplicado: true,
+          },
+        },
+      })
+    );
+    render(<CustomerPortal token={TOKEN} />);
+
+    expect(await screen.findByText(/10 días · con tope/)).toBeInTheDocument();
+    expect(screen.getByText('Parqueo').closest('.portal-line')).toHaveTextContent('$300.00');
+    expect(screen.queryByText(/10 días × \$40\.00/)).not.toBeInTheDocument();
   });
 });

@@ -119,6 +119,15 @@ vi.mock('../services/supabaseService', () => {
 // El historial de la orden se pide al servicio de órdenes directo (no por la fachada).
 vi.mock('../services/workOrders.service', () => ({ workOrdersService: { getHistory: mocks.getHistory } }));
 
+// El detalle y el diálogo de entrega piden el parqueo a su servicio. Sin esto la prueba llamaba
+// al Supabase de `.env.local` (producción) y fallaba según la red.
+vi.mock('../services/parking.service', () => ({
+  parkingService: {
+    getConfig: vi.fn().mockResolvedValue({ habilitado: false }),
+    getOrderParking: vi.fn().mockResolvedValue({ monto: 0, dias_cobrados: 0, estado: 'inactivo' }),
+  },
+}));
+
 const { default: WorkOrders } = await import('./WorkOrders');
 
 const CUSTOMER: Customer = {
@@ -168,6 +177,7 @@ const ORDER: WorkOrder = {
   cliente: CUSTOMER,
   vehiculo: VEHICLE,
   asignaciones: [],
+  con_seguro: false,
 };
 
 const PAINTER: UserProfile = { ...MECHANIC_USER, id: 'user-pintor', rol: 'pintor', nombre_completo: 'Sara Vega' };

@@ -306,12 +306,90 @@ describe('workOrdersService: createWorkOrder', () => {
       deposito_metodo: 'cheque',
       deposito_numero_cheque: '1042',
       deposito_comprobante_ruta: 's1/comprobante-alta-1.jpg',
+      con_seguro: false,
+      aseguradora: null,
+      numero_reclamo: null,
     });
     expect(args.p_order).not.toHaveProperty('deposito_cheque');
     expect(args.p_order).not.toHaveProperty('deposito_comprobante');
     expect(args.p_labor).toEqual([
       { descripcion: 'Puerta', costo: 500, especialidad: 'pintura', asignado_a: 'u1', reparto_heredado: false },
     ]);
+  });
+
+  it('manda los datos de seguro a create_work_order cuando con_seguro es true', async () => {
+    await workOrdersService.createWorkOrder({
+      sede_id: 's1',
+      cliente_id: 'c1',
+      vehiculo_id: 'v1',
+      tipo_trabajo: 'mecanica',
+      millas_ingreso: 1000,
+      nivel_gasolina: '1/2',
+      deposito_inicial: 0,
+      inspeccion_360_notas: '',
+      fecha_estimada_entrega: '2026-10-09',
+      labor_items: [],
+      repuestos: [],
+      asignaciones: [],
+      creado_por: 'a1',
+      con_seguro: true,
+      aseguradora: 'State Farm',
+      numero_reclamo: 'CLM-555',
+    });
+
+    expect(mocks.rpcs).toHaveLength(1);
+    const { args } = mocks.rpcs[0];
+    expect(args.p_order).toMatchObject({
+      con_seguro: true,
+      aseguradora: 'State Farm',
+      numero_reclamo: 'CLM-555',
+    });
+  });
+});
+
+describe('workOrdersService: updateInsurance', () => {
+  beforeEach(() => {
+    mocks.writes = [];
+    mocks.filters = [];
+    mocks.deleted = [{ id: 'ord-1' }];
+  });
+
+  it('actualiza con_seguro, aseguradora y numero_reclamo en ordenes_trabajo', async () => {
+    await workOrdersService.updateInsurance('ord-1', {
+      con_seguro: true,
+      aseguradora: 'Geico',
+      numero_reclamo: 'REC-999',
+    });
+
+    expect(mocks.writes).toContainEqual({
+      table: 'ordenes_trabajo',
+      method: 'update',
+      payload: {
+        con_seguro: true,
+        aseguradora: 'Geico',
+        numero_reclamo: 'REC-999',
+      },
+    });
+    expect(mocks.filters).toContainEqual(['eq', 'id', 'ord-1']);
+    expect(mocks.filters).toContainEqual(['select', 'id']);
+  });
+
+  it('limpia aseguradora y reclamo si con_seguro es false', async () => {
+    await workOrdersService.updateInsurance('ord-1', {
+      con_seguro: false,
+      aseguradora: 'Geico',
+      numero_reclamo: 'REC-999',
+    });
+
+    expect(mocks.writes).toContainEqual({
+      table: 'ordenes_trabajo',
+      method: 'update',
+      payload: {
+        con_seguro: false,
+        aseguradora: null,
+        numero_reclamo: null,
+      },
+    });
   });
 });
 

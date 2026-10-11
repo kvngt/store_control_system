@@ -353,7 +353,7 @@
   margin: 0;
 }
 
-/* Los teléfonos del taller: la fila entera es el enlace para llamar. */
+/* Los teléfonos del taller: info a la izquierda, botones de acción a la derecha. */
 .portal-contact-phones {
   list-style: none;
   margin: var(--space-3) 0 0;
@@ -367,26 +367,29 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  min-height: 44px;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
   padding: var(--space-2) var(--space-3);
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-surface-border);
   border-radius: var(--radius-md);
   color: var(--color-text-primary);
-  text-decoration: none;
-}
-
-a.portal-contact-phone:hover {
-  border-color: var(--color-primary);
-}
-
-a.portal-contact-phone:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
 }
 
 .portal-contact-phone-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.portal-contact-phone-icon {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+
+.portal-contact-phone-text {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -404,14 +407,15 @@ a.portal-contact-phone:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-.portal-contact-phone-call {
-  flex-shrink: 0;
-  display: inline-flex;
+.portal-contact-phone-actions {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-primary-light);
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.portal-contact-phone-actions .btn {
+  min-height: 44px;
 }
 
 .portal-actions {
@@ -455,6 +459,20 @@ a.portal-contact-phone:focus-visible {
   font-weight: 700;
   letter-spacing: 0.08em;
   opacity: 0.6;
+}
+
+/* Aviso del parqueo arriba de la cuenta: cuándo empieza el cobro o desde cuándo corre. */
+.portal-parking-notice {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-bg-tertiary);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+.portal-parking-notice p {
+  margin: 0;
 }
 
 .portal-notice {

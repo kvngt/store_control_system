@@ -265,6 +265,9 @@ export const workOrdersService = {
       inspeccion_360_notas: input.inspeccion_360_notas,
       fecha_estimada_entrega: input.fecha_estimada_entrega,
       creado_por: input.creado_por,
+      con_seguro: input.con_seguro ?? false,
+      aseguradora: input.con_seguro ? (input.aseguradora?.trim() || null) : null,
+      numero_reclamo: input.con_seguro ? (input.numero_reclamo?.trim() || null) : null,
     };
 
     // Una transacción del lado de la base: la orden y su labor, repuestos y
@@ -470,6 +473,27 @@ export const workOrdersService = {
     const { data, error } = await supabase
       .from('ordenes_trabajo')
       .update({ archivada_en: archivada ? new Date().toISOString() : null })
+      .eq('id', orderId)
+      .select('id');
+    if (error) throw error;
+    assertAffected(data, 'la orden');
+  },
+
+  /**
+   * Actualiza los datos de seguro de la orden (Fase A, 20261010000027). Solo admin.
+   */
+  updateInsurance: async (
+    orderId: string,
+    insurance: { con_seguro: boolean; aseguradora?: string | null; numero_reclamo?: string | null }
+  ) => {
+    const payload = {
+      con_seguro: insurance.con_seguro,
+      aseguradora: insurance.con_seguro ? (insurance.aseguradora?.trim() || null) : null,
+      numero_reclamo: insurance.con_seguro ? (insurance.numero_reclamo?.trim() || null) : null,
+    };
+    const { data, error } = await supabase
+      .from('ordenes_trabajo')
+      .update(payload)
       .eq('id', orderId)
       .select('id');
     if (error) throw error;

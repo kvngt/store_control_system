@@ -37,7 +37,7 @@ export interface EmailContext {
     telefono?: string | null;
     /** Los teléfonos con su descripción, como en el enlace (20261010000025). Si hay, van en
      *  lugar de `telefono`. */
-    telefonos?: { label: string; numero: string }[] | null;
+    telefonos?: { label: string; numero: string; tipo?: 'oficina' | 'celular'; whatsapp?: boolean }[] | null;
     /** Si hay, el cliente puede responder el correo y le llega al taller. */
     email?: string | null;
     logoUrl?: string | null;
@@ -55,6 +55,12 @@ export interface EmailContext {
   timeZone?: string;
   /** Solo para `presupuesto` y `presupuesto_confirmacion`. */
   presupuesto?: QuoteEmailData | null;
+  /** Aviso de parqueo cuando la orden está lista para entregar. */
+  parqueo?: {
+    estado: string;
+    inicio?: string | null;
+    tarifa_inicial: number;
+  } | null;
 }
 
 export interface QuoteEmailData {
@@ -141,10 +147,19 @@ function firstName(name: string | null): string | null {
   return first || null;
 }
 
-/** "English: 240-355-1266" por teléfono, como en el enlace; sin lista, el teléfono de siempre. */
-function shopPhones(taller: EmailContext['taller']): (string | null | undefined)[] {
+/** "Spanish: 202-607-6126 (WhatsApp)" por teléfono, como en el enlace; sin lista, el teléfono de siempre. */
+function shopPhones(
+  taller: EmailContext['taller'],
+  chrome: (typeof CHROME)[EmailLanguage]
+): (string | null | undefined)[] {
   if (!Array.isArray(taller.telefonos) || taller.telefonos.length === 0) return [taller.telefono];
-  return taller.telefonos.map((p) => (p.label?.trim() ? `${p.label.trim()}: ${p.numero}` : p.numero));
+  return taller.telefonos.map((p) => {
+    const tipo = p.tipo === 'celular' ? chrome.mobile : chrome.office;
+    const nombre = p.label?.trim() || tipo;
+    const wa = p.whatsapp ? ' (WhatsApp)' : '';
+    const num = (p.numero ?? '').trim();
+    return `${nombre}: ${num}${wa}`;
+  });
 }
 
 interface Copy {
@@ -194,6 +209,9 @@ function copyEs(template: EmailTemplate, ctx: EmailContext): Copy | null {
           paragraphs: [
             `Terminamos el trabajo en su ${vehicle}. Ya puede pasar a recogerlo a ${shop}.`,
             'En el enlace puede revisar el trabajo realizado y el saldo pendiente.',
+            ...(ctx.parqueo && ctx.parqueo.estado === 'por_empezar' && ctx.parqueo.inicio
+              ? [`A partir del ${formatDate(ctx.parqueo.inicio, tz, 'es')} se cobrará parqueo de ${money(ctx.parqueo.tarifa_inicial)} por día.`]
+              : []),
           ],
         },
         entregado: {
@@ -312,6 +330,9 @@ function copyEn(template: EmailTemplate, ctx: EmailContext): Copy | null {
           paragraphs: [
             `We finished the work on your ${vehicle}. You can pick it up at ${shop}.`,
             'The link shows the work done and the balance due.',
+            ...(ctx.parqueo && ctx.parqueo.estado === 'por_empezar' && ctx.parqueo.inicio
+              ? [`Starting ${formatDate(ctx.parqueo.inicio, tz, 'en')}, a parking fee of ${money(ctx.parqueo.tarifa_inicial)} per day will apply.`]
+              : []),
           ],
         },
         entregado: {
@@ -401,6 +422,8 @@ const CHROME: Record<EmailLanguage, {
   personalLink: string;
   canReply: string;
   unsubscribe: string;
+  office: string;
+  mobile: string;
 }> = {
   es: {
     hello: (name) => (name ? `Hola ${name}:` : 'Hola:'),
@@ -408,6 +431,8 @@ const CHROME: Record<EmailLanguage, {
     personalLink: 'Este enlace es personal: no lo comparta.',
     canReply: 'Puede responder a este correo para comunicarse con el taller.',
     unsubscribe: 'No quiero recibir estos correos',
+    office: 'Oficina',
+    mobile: 'Celular',
   },
   en: {
     hello: (name) => (name ? `Hi ${name},` : 'Hi,'),
@@ -415,6 +440,8 @@ const CHROME: Record<EmailLanguage, {
     personalLink: 'This link is personal: please do not share it.',
     canReply: 'You can reply to this email to reach the shop.',
     unsubscribe: 'I do not want to receive these emails',
+    office: 'Office',
+    mobile: 'Mobile',
   },
 };
 
@@ -443,7 +470,7 @@ export function renderEmail(template: string, ctx: EmailContext): RenderedEmail 
   const unsubscribe = `${portal}?correos=baja`;
   const name = firstName(ctx.cliente.nombre);
   const greeting = chrome.hello(name);
-  const contact = [ctx.taller.direccion, ...shopPhones(ctx.taller)].filter((v) => v && String(v).trim()) as string[];
+  const contact = [ctx.taller.direccion, ...shopPhones(ctx.taller, chrome)].filter((v) => v && String(v).trim()) as string[];
 
   const html = `<!doctype html>
 <html lang="${lang}">

@@ -5,6 +5,8 @@ export type PortalLinkState = 'ok' | 'no_encontrado' | 'revocado' | 'vencido';
 export interface PortalPhoneContact {
   label: string;
   numero: string;
+  tipo?: 'oficina' | 'celular';
+  whatsapp?: boolean;
 }
 
 export interface PortalShop {
@@ -106,6 +108,31 @@ export interface PortalAccount {
   otros_pagos?: number;
   /** Con signo desde 20261010000018: negativo es saldo a favor del cliente. */
   saldo: number;
+  /** Parqueo si corresponde (20261010000028). Ausente o null si no se cobra parqueo. */
+  parqueo?: PortalParking | null;
+}
+
+export interface PortalParkingTierDetail {
+  desde_dia: number;
+  hasta_dia: number;
+  dias: number;
+  tarifa: number;
+  subtotal: number;
+}
+
+export interface PortalParking {
+  estado: string;
+  inicio: string | null;
+  dias: number;
+  monto: number;
+  detalle: PortalParkingTierDetail[];
+  tope_aplicado: boolean;
+  tarifa_inicial: number;
+  dias_gracia?: number;
+  evento_inicio?: string;
+  cobra_dia_evento?: boolean;
+  politica_es?: string | null;
+  politica_en?: string | null;
 }
 
 /** Una pieza que el taller pidió y no ha llegado: por qué la orden no avanza. */

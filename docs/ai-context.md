@@ -20,6 +20,13 @@ comisiones, el alta de la orden o la "espera de autorización".
 - **El dinero lo calcula la base.** Totales, depósitos, cobros al entregar, costo
   de repuestos, ajustes, reversiones y comisiones los asientan triggers
   idempotentes con signo. El frontend nunca calcula ni escribe un total.
+- **Cobro por parqueo (`20261010000028`, [parqueo.md](parqueo.md)):** el parqueo entra a
+  `total_general` por `orden_parqueo.monto`; lo calcula solo `_parqueo_calculo`; se congela al
+  entregar (`fin_congelado`); nunca en el navegador; las comisiones (mano de obra) y el
+  descuento (mano de obra + repuestos) no lo tocan. **Una orden entregada nunca se vuelve a
+  contar sola** (las entregadas antes del módulo, sin `fin_congelado`, se quedan sin parqueo), y
+  **`vigente_desde` no va hacia atrás**: si no, encender el cobro les cargaba días ya pasados a
+  órdenes viejas y asentaba un "cargo adicional" que nadie pagó (10/10/2026).
 - **Los montos están separados.** `orden_montos` (total, repuestos, depósito) y
   `orden_repuestos` son solo admin. `ordenes_trabajo.total_labor` y `orden_labor`
   los ve el técnico **asignado** (no toda la sede), porque su comisión sale de la mano de

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { isOptionalEmailValid, isValidEmail } from './email';
-import { canOpenSms, formatPhone, looksIncomplete, parsePhone, smsUrl, telUrl, toE164, toWhatsAppNumber, whatsAppUrl } from './phone';
+import { canOpenSms, formatPhone, looksIncomplete, parsePhone, sedePhoneLine, smsUrl, telUrl, toE164, toWhatsAppNumber, whatsAppUrl } from './phone';
 import { tokenFromPath } from '../portal/path';
 
 describe('phone', () => {
@@ -129,3 +129,36 @@ describe('tokenFromPath', () => {
     expect(tokenFromPath(`/work-orders/${token}`)).toBeNull();
   });
 });
+
+describe('sedePhoneLine', () => {
+  it('con descripción y con WhatsApp', () => {
+    expect(sedePhoneLine({ label: 'Spanish', numero: '202-607-6126', whatsapp: true }, 'Celular')).toBe(
+      'Spanish: 202-607-6126 (WhatsApp)'
+    );
+  });
+
+  it('con descripción y sin WhatsApp', () => {
+    expect(sedePhoneLine({ label: 'Office', numero: '301-909-9937', whatsapp: false }, 'Oficina')).toBe(
+      'Office: 301-909-9937'
+    );
+  });
+
+  it('sin descripción usa el fallbackLabel (tipo)', () => {
+    expect(sedePhoneLine({ label: '', numero: '240-355-1266', whatsapp: true }, 'Celular')).toBe(
+      'Celular: 240-355-1266 (WhatsApp)'
+    );
+    expect(sedePhoneLine({ label: null, numero: '301-909-9937', whatsapp: false }, 'Oficina')).toBe(
+      'Oficina: 301-909-9937'
+    );
+  });
+
+  it('sin descripción ni fallbackLabel muestra solo el número y sufijo', () => {
+    expect(sedePhoneLine({ label: '', numero: '240-355-1266', whatsapp: true }, '')).toBe(
+      '240-355-1266 (WhatsApp)'
+    );
+    expect(sedePhoneLine({ label: '', numero: '301-909-9937', whatsapp: false }, '')).toBe(
+      '301-909-9937'
+    );
+  });
+});
+

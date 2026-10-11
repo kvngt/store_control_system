@@ -194,3 +194,18 @@ export function looksIncomplete(iso: string, national: string): boolean {
   const digits = (national ?? '').replace(/\D/g, '');
   return countryByIso(iso)?.dial === '1' && digits.length > 0 && digits.length !== 10;
 }
+
+/**
+ * Un teléfono de la sede en una línea, para el PDF y Configuración: "Spanish: 202-607-6126
+ * (WhatsApp)". Sin descripción va `fallbackLabel` (el tipo, en el idioma de quien lo lee).
+ */
+export function sedePhoneLine(
+  p: { label?: string | null; numero: string; whatsapp?: boolean },
+  fallbackLabel: string
+): string {
+  const label = (p.label ?? '').trim() || fallbackLabel.trim();
+  const num = (p.numero ?? '').trim();
+  const wa = p.whatsapp ? ' (WhatsApp)' : '';
+  return label ? `${label}: ${num}${wa}` : `${num}${wa}`;
+}
+

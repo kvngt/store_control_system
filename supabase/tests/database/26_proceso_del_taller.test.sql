@@ -405,7 +405,7 @@ SET LOCAL request.jwt.claim.sub = 'a2600000-0000-0000-0000-000000000002';
 SELECT throws_ok($$ SELECT retirar_sin_reparar(pg_temp.ob(), 50, NULL, 'efectivo') $$, '42501', NULL,
   'Un técnico no cierra una orden');
 SET LOCAL request.jwt.claim.sub = 'a2600000-0000-0000-0000-000000000001';
-SELECT is(saldo_retiro(pg_temp.ob(), 50), '{"cobrado": 200.00, "trabajos": 0.00, "revision": 50.00, "cobro": 50.00, "saldo": -150.00}'::jsonb,
+SELECT is(saldo_retiro(pg_temp.ob(), 50), '{"cobrado": 200.00, "trabajos": 0.00, "revision": 50.00, "parqueo": 0.00, "cobro": 50.00, "saldo": -150.00}'::jsonb,
   'Antes de cerrar, la base dice cuánto se devuelve si se cobran $50 de diagnóstico');
 SELECT throws_ok($$ SELECT retirar_sin_reparar(pg_temp.ob(), 50) $$, '22023', NULL,
   'Sin decir cómo se devuelve, no se cierra');

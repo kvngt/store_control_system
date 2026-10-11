@@ -345,6 +345,9 @@ export default function KanbanBoard({ embedded = false, search = '', onOpen }: K
                         {order.retirada_sin_reparar && (
                           <span className="badge badge-retirada" style={{ fontSize: '10px' }}>{t('withdrawal.status')}</span>
                         )}
+                        {order.con_seguro && (
+                          <span className="badge badge-insurance" style={{ fontSize: '10px' }}>{t('workOrders.insuranceBadge')}</span>
+                        )}
                         <span className={`badge badge-${order.tipo_trabajo}`} style={{ fontSize: '10px' }}>
                           {order.tipo_trabajo === 'mecanica'
                             ? t('workOrders.mechanical')

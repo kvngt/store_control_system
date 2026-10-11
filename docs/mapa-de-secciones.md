@@ -197,6 +197,18 @@ egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
 | Código | `lib/workOrderPdf.ts` (qué se dibuja), `lib/reportMedia.ts` (qué fotos van), `lib/brandColor.ts` (color de la sede legible) |
 | Pruebas | `lib/workOrderPdf.test.ts` |
 
+## Cobro por parqueo
+
+| | |
+|---|---|
+| Módulo | `features/parking/ParkingSettingsCard.tsx` (configuración por sede), `features/parking/ParkingCard.tsx` (tarjeta en detalle de orden, pestaña Cobro) |
+| Servicio | `services/parking.service.ts` |
+| Tipos | `types/domain/parking.types.ts` |
+| Portal y PDF | `portal/CustomerPortal.tsx` (desglose y avisos), `lib/workOrderPdf.ts` (línea en resumen de totales) |
+| Base | Tablas `parqueo_config`, `parqueo_perfiles`, `parqueo_tramos`, `orden_parqueo`; cálculo puro `_parqueo_calculo`; RPCs `parqueo_config_sede`, `guardar_config_parqueo`, `vista_previa_parqueo`, `parqueo_de_orden`, `ajustar_parqueo_orden`; cron horario `recalcular_parqueo_pendiente` |
+| Pruebas | `services/parking.service.test.ts`, `features/parking/ParkingSettingsCard.test.tsx`, `features/parking/ParkingCard.test.tsx`; pgTAP `33_parqueo.test.sql`; `scripts/qa/api-security.mjs` (SEC-142..160) |
+| Documento | [parqueo.md](parqueo.md) |
+
 ## Configuración y sedes
 
 | | |

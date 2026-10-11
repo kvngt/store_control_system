@@ -40,6 +40,23 @@ describe('renderEmail', () => {
     expect(subject('entregado')).toMatch(/^Gracias por su visita/);
   });
 
+  it('el correo de finalizado incluye el aviso de parqueo si viene en por_empezar', () => {
+    const emailEs = renderEmail('estatus', {
+      ...base,
+      orden: { ...base.orden, estatus: 'finalizado' },
+      parqueo: { estado: 'por_empezar', inicio: '2026-10-15', tarifa_inicial: 40 },
+    })!;
+    expect(emailEs.text).toContain('A partir del 15 de octubre de 2026 se cobrará parqueo de $40.00 por día.');
+
+    const emailEn = renderEmail('estatus', {
+      ...base,
+      lang: 'en',
+      orden: { ...base.orden, estatus: 'finalizado' },
+      parqueo: { estado: 'por_empezar', inicio: '2026-10-15', tarifa_inicial: 40 },
+    })!;
+    expect(emailEn.text).toContain('Starting October 15, 2026, a parking fee of $40.00 per day will apply.');
+  });
+
   it('no redacta un aviso de estado para uno que no se anuncia ni una plantilla desconocida', () => {
     expect(renderEmail('estatus', { ...base, orden: { ...base.orden, estatus: 'recepcion' } })).toBeNull();
     // Pedir autorización tampoco se anuncia: el presupuesto todavía no existe y su
@@ -59,14 +76,15 @@ describe('renderEmail', () => {
     expect(email.html).toContain('Taller &quot;Bueno&quot; &amp; &lt;Cía&gt;');
   });
 
-  it('el pie lleva los teléfonos con su descripción, como el enlace; sin lista, el de siempre', () => {
+  it('el pie lleva los teléfonos con descripción y WhatsApp; sin lista, el de siempre', () => {
     const telefonos = [
-      { label: 'English', numero: '240-355-1266' },
-      { label: '', numero: '+1 (301) 909-9937' },
+      { label: 'Spanish', numero: '202-607-6126', tipo: 'celular' as const, whatsapp: true },
+      { label: '', numero: '+1 (301) 909-9937', tipo: 'oficina' as const, whatsapp: false },
     ];
     const email = renderEmail('avance', { ...base, taller: { ...base.taller, telefonos } })!;
-    expect(email.text).toContain('Reinventa Norte · Oak 12 · English: 240-355-1266 · +1 (301) 909-9937');
-    expect(email.html).toContain('English: 240-355-1266');
+    expect(email.text).toContain('Reinventa Norte · Oak 12 · Spanish: 202-607-6126 (WhatsApp) · Oficina: +1 (301) 909-9937');
+    expect(email.html).toContain('Spanish: 202-607-6126 (WhatsApp)');
+    expect(email.html).toContain('Oficina: +1 (301) 909-9937');
     expect(email.text).not.toContain('555-0100');
 
     expect(renderEmail('avance', { ...base, taller: { ...base.taller, telefonos: [] } })!.text).toContain(
@@ -202,6 +220,14 @@ describe('renderEmail en inglés', () => {
 
   it('con "es" sale en español', () => {
     expect(renderEmail('avance', { ...en, lang: 'es' })!.subject).toBe('Novedades de su 2019 Toyota Camry · ORD-2026-014');
+  });
+
+  it('un teléfono sin descripción sale como "Mobile: …" en inglés', () => {
+    const telefonos = [
+      { label: '', numero: '202-607-6126', tipo: 'celular' as const, whatsapp: true },
+    ];
+    const email = renderEmail('avance', { ...en, taller: { ...en.taller, telefonos } })!;
+    expect(email.text).toContain('Mobile: 202-607-6126 (WhatsApp)');
   });
 });
 

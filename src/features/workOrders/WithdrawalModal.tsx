@@ -267,6 +267,12 @@ export default function WithdrawalModal({ order, lines, onCancel, onDone }: With
                     <dd>{money(balance.revision)}</dd>
                   </div>
                 )}
+                {typeof balance.parqueo === 'number' && balance.parqueo > 0 && (
+                  <div className="delivery-balance-row">
+                    <dt>{t('parking.title')}</dt>
+                    <dd>{money(balance.parqueo)}</dd>
+                  </div>
+                )}
                 <div className={'delivery-balance-row is-result' + (refunds ? ' is-refund' : '')}>
                   <dt>{collects ? t('delivery.toCollect') : refunds ? t('delivery.toRefund') : t('delivery.nothingDue')}</dt>
                   {needsMethod && <dd>{money(Math.abs(saldo))}</dd>}

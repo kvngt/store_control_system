@@ -84,7 +84,7 @@ El cliente toca el botón del correo → restorifyauto.net/r/<token>
 | **Presupuesto por autorizar** (fase 5) | Si hay uno enviado: cada trabajo con su monto, casillas sin marcar, total de lo marcado, nombre, comentario, "Autorizar lo marcado" / "No autorizar nada". Ver [presupuestos.md](presupuestos.md) |
 | Avances | Solo fotos, videos y notas de voz de avances que un admin **publicó**, con fecha |
 | Recepción | Fecha, millaje, gasolina, observaciones, fotos de recepción visibles, firma |
-| Cuenta | Mano de obra y repuestos **autorizados** a **precio de venta**, total, depósito, pagado, saldo; lo **no autorizado** aparte y tachado; "Sus autorizaciones" (presupuesto, vía, fecha, conteos) |
+| Cuenta | Mano de obra y repuestos **autorizados** a **precio de venta**, total, depósito, pagado, saldo; lo **no autorizado** aparte y tachado; "Sus autorizaciones" (presupuesto, vía, fecha, conteos); cargo por parqueo si aplica (`20261010000028`: desglose por tramos y costo diario si está acumulando, aviso con fecha límite si está en período de gracia `por_empezar`, o indicación si fue exonerado) |
 | Contacto | Llamar al taller; WhatsApp y correo si la sede los tiene configurados |
 | Avisos por correo | Dejar de recibir / volver a recibir (solo si el cliente tiene correo) |
 
@@ -133,7 +133,7 @@ pondría el login del taller en el teléfono del cliente).
 | Plantilla | Cuándo | Espera | Clave de agrupación |
 |---|---|---|---|
 | `recepcion` | Primera firma de la orden | Inmediato si ya hay una foto de recepción; si no, 30 s (que suba la primera) | `recepcion:<orden>`; nunca se repite |
-| `estatus` | Pasa a en proceso, finalizado o entregado. **Espera de autorización no se anuncia**: el cliente se entera con el correo del presupuesto (`ANNOUNCED_STATUSES` en `_shared/email/templates.ts` y `trg_portal_on_order_change`) | 3 min; una ráfaga es un correo con la hora del primero | `estatus:<orden>` |
+| `estatus` | Pasa a en proceso, finalizado o entregado. **Espera de autorización no se anuncia**: el cliente se entera con el correo del presupuesto (`ANNOUNCED_STATUSES` en `_shared/email/templates.ts` y `trg_portal_on_order_change`). Desde `20261010000028`, al pasar a `finalizado`, si la sede tiene activo el cobro por parqueo y aviso al cliente (`avisar_cliente`), incluye una nota con los días de gracia y la fecha límite antes de que empiece el cobro por día | 3 min; una ráfaga es un correo con la hora del primero | `estatus:<orden>` |
 | `avance` | Un admin pulsa **Avisar novedades** | 1 min | `avance:<orden>` |
 | `presupuesto` | Un admin pulsa **Enviar presupuesto** (fase 5) | 1 min | `presupuesto:<presupuesto>`; se omite si ya se respondió o canceló |
 | `presupuesto_confirmacion` | Se responde un presupuesto desde el enlace o lo registra un admin | Inmediato | `presupuesto_confirmacion:<presupuesto>` |
@@ -233,13 +233,8 @@ enlaces para revisarlos; una baja por GET daría de baja a todos sus usuarios.
 ### Columnas nuevas
 
 - `clientes.acepta_correos` (default true), `clientes.correos_baja_en`.
-- `sedes.email_contacto` (Reply-To), `sedes.whatsapp` (botón del portal).
-- `sedes.telefonos` (`20261010000025`): los teléfonos con su descripción ("English",
-  "Spanish", "Office"), en el orden que eligió el taller en Configuración. Salen en el enlace
-  (cada fila llama), en el encabezado del PDF y en el pie de los correos. `datos_portal` y
-  `datos_correo` los mandan campo por campo con `_telefonos_sede` (solo `label` y `numero`, sin
-  filas sin número); un CHECK exige que sea un arreglo. `sedes.telefono` queda como respaldo
-  heredado, igual al primer número: lo escribe solo `sedesService`.
+- `sedes.email_contacto` (Reply-To). `sedes.whatsapp` queda como respaldo heredado (= primer teléfono con WhatsApp; lo escribe solo `sedesService`; se borra en una migración que contraiga, cuando nadie lo lea).
+- `sedes.telefonos` (`20261010000025`, `20261010000026`): los teléfonos con su tipo (`oficina` | `celular`), descripción ("English", "Spanish", "Office") y si atienden WhatsApp, en el orden que eligió el taller en Configuración. Salen en el enlace (con botón para llamar y botón individual de WhatsApp si atiende), en el encabezado del PDF y en el pie de los correos. `datos_portal` y `datos_correo` los mandan campo por campo con `_telefonos_sede` (solo `label`, `numero`, `tipo` y `whatsapp`, sin filas sin número); un CHECK exige que sea un arreglo. `sedes.telefono` queda como respaldo heredado, igual al primer número: lo escribe solo `sedesService`.
 - CHECK de formato en `clientes.email` y `sedes.email_contacto` (`NOT VALID`: no
   bloquea datos viejos, sí lo nuevo y lo editado).
 
@@ -308,7 +303,7 @@ Hostinger.
 
 - **Correo de contacto**: a dónde llegan las respuestas de los clientes. Sin él,
   los correos salen igual pero sin opción de responder.
-- **WhatsApp del taller**: sin él, el portal ofrece llamar y no WhatsApp.
+- **Teléfonos de contacto**: cada teléfono con su tipo (oficina o celular), descripción y si atiende WhatsApp (habilita botón de WhatsApp en el portal).
 
 ---
 

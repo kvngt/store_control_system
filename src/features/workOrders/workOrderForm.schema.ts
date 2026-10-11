@@ -73,6 +73,9 @@ const baseShape = z.object({
   selectedOperators: z.array(stringField),
   laborItems: z.array(laborRow),
   parts: z.array(partRow),
+  withInsurance: z.boolean(),
+  insurer: stringField,
+  claimNumber: stringField,
 });
 
 export type WorkOrderFormValues = z.infer<typeof baseShape>;
@@ -169,7 +172,7 @@ export const workOrderFormSchema = baseShape.check((ctx) => {
 export const INTAKE_STEPS = [
   { key: 'customer', fields: ['selectedCustomer', 'newCustomer'] },
   { key: 'vehicle', fields: ['selectedVehicle', 'newVehicle', 'fuelLevel', 'milesIn', 'inspectionNotes'] },
-  { key: 'work', fields: ['workType', 'estimatedDate', 'laborItems', 'parts', 'selectedOperators'] },
+  { key: 'work', fields: ['workType', 'estimatedDate', 'laborItems', 'parts', 'selectedOperators', 'withInsurance', 'insurer', 'claimNumber'] },
   { key: 'deposit', fields: ['deposit', 'paymentMethod', 'checkNumber'] },
 ] as const satisfies readonly { key: string; fields: readonly (keyof WorkOrderFormValues)[] }[];
 
@@ -210,5 +213,8 @@ export function emptyWorkOrderForm(): WorkOrderFormValues {
     selectedOperators: [],
     laborItems: [],
     parts: [],
+    withInsurance: false,
+    insurer: '',
+    claimNumber: '',
   };
 }

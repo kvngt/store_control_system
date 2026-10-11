@@ -10,6 +10,7 @@ import { useMediaUploads } from '../media/mediaUploads.context';
 // pulls it into this chunk, so a dynamic import here only defeats itself.
 import { reportsService } from '../../services/reports.service';
 import { customerPortalService } from '../../services/customerPortal.service';
+import { parkingService } from '../../services/parking.service';
 import { reportAssetPaths } from '../../lib/reportMedia';
 import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';
@@ -428,6 +429,21 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     } catch (err) {
       showToast('error', t('discount.error'), getErrorMessage(err, language));
       throw err;
+    }
+  };
+
+  const updateInsurance = async (insurance: { con_seguro: boolean; aseguradora?: string | null; numero_reclamo?: string | null }) => {
+    if (!order) return;
+    setBusy(true);
+    try {
+      await workOrdersService.updateInsurance(order.id, insurance);
+      await refresh();
+      showToast('success', t('workOrders.insuranceUpdated'));
+    } catch (err) {
+      showToast('error', t('common.error'), getErrorMessage(err, language));
+      throw err;
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -871,7 +887,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     setGeneratingPdf(true);
     try {
       // ~400 kB of jsPDF, fetched only when someone prints.
-      const [{ generateWorkOrderPdf }, urls, link, balance, translations] = await Promise.all([
+      const [{ generateWorkOrderPdf }, urls, link, balance, translations, parking] = await Promise.all([
         import('../../lib/workOrderPdf'),
         signPdfAssets(order),
         // Si la orden ya tiene enlace, el PDF lo lleva: la versión con videos.
@@ -882,12 +898,15 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
         pdfLanguage === 'en'
           ? workOrdersService.getOrderTranslations(order.id).catch(() => ({}) as Record<string, string>)
           : Promise.resolve({} as Record<string, string>),
+        // Parqueo acumulado si corresponde
+        parkingService.getOrderParking(order.id).catch(() => null),
       ]);
       await generateWorkOrderPdf(order, orderSede, urls, {
         portalUrl: link ? customerPortalService.portalUrl(link.token) : undefined,
         language: pdfLanguage,
         translations,
         balance: balance ? { cobrado: balance.cobrado, saldo: balance.saldo } : null,
+        parking: parking && Number(parking.monto) > 0 ? { monto: Number(parking.monto), dias: parking.dias_cobrados } : null,
       });
     } catch (err) {
       showToast('error', t('workOrders.pdfError'), getErrorMessage(err, language));
@@ -977,6 +996,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     cancelWithdrawal: () => setWithdrawing(false),
     finishWithdrawal,
     applyDiscount,
+    updateInsurance,
     publishingProgress,
     toggleProgressVisibility,
     confirmPublishProgress,

@@ -6,6 +6,11 @@ import { assertDeleted } from './support';
 const primaryPhone = (telefonos: SedeTelefono[]) =>
   telefonos.find((t) => t.numero?.trim())?.numero.trim() ?? '';
 
+const primaryWhatsApp = (telefonos: SedeTelefono[]): string | null => {
+  const match = telefonos.find((t) => t.whatsapp && t.numero?.trim());
+  return match ? match.numero.trim() : null;
+};
+
 /** Row counts that a sede deletion would take with it. */
 export interface SedeDeleteImpact {
   ordenes: number;
@@ -23,11 +28,17 @@ export const sedesService = {
     return data as Sede[];
   },
 
-  // `telefono` is the legacy single number, kept equal to the first one in `telefonos` for
-  // whatever still reads only one. Only this service writes it, so callers pass the list.
-  createSede: async (input: Omit<Sede, 'id' | 'fecha_creacion' | 'telefono'>) => {
+  // `telefono` and `whatsapp` are legacy single values, kept equal to the first
+  // matching number in `telefonos` for whatever still reads only one.
+  // Only this service writes them, so callers pass the list.
+  createSede: async (input: Omit<Sede, 'id' | 'fecha_creacion' | 'telefono' | 'whatsapp'>) => {
     const telefonos = input.telefonos ?? [];
-    const payload = { ...input, telefonos, telefono: primaryPhone(telefonos) };
+    const payload = {
+      ...input,
+      telefonos,
+      telefono: primaryPhone(telefonos),
+      whatsapp: primaryWhatsApp(telefonos),
+    };
     const { data, error } = await supabase.from('sedes').insert(payload).select().single();
     if (error) throw error;
     return data as Sede;
@@ -46,11 +57,16 @@ export const sedesService = {
         | 'logo_url'
         | 'comision_porcentaje'
         | 'email_contacto'
-        | 'whatsapp'
       >
     >
   ) => {
-    const payload = input.telefonos ? { ...input, telefono: primaryPhone(input.telefonos) } : input;
+    const payload = input.telefonos
+      ? {
+          ...input,
+          telefono: primaryPhone(input.telefonos),
+          whatsapp: primaryWhatsApp(input.telefonos),
+        }
+      : input;
     const { data, error } = await supabase.from('sedes').update(payload).eq('id', id).select().single();
     if (error) throw error;
     return data as Sede;

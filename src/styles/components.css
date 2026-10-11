@@ -5748,6 +5748,15 @@ button.intake-step-button:hover:not(:disabled) {
   color: var(--color-danger);
 }
 
+.badge-insurance {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+}
+
+:root[data-theme='light'] .badge-insurance {
+  color: #7c3aed;
+}
+
 /* Un control compacto dentro de una fila (comisión, pedido de pieza, idioma del PDF). En el
    teléfono conserva 16 px: con menos, iOS hace zoom al tocarlo. Un <select> compacto deja
    espacio a su flecha. */

@@ -55,6 +55,11 @@ import DeliveryModal from './DeliveryModal';
 import WithdrawalModal, { type WithdrawalLine } from './WithdrawalModal';
 import AdvancePaymentModal from './AdvancePaymentModal';
 import OrderTotalsCard from './OrderTotalsCard';
+import OrderInsuranceModal from './OrderInsuranceModal';
+import ParkingCard from '../parking/ParkingCard';
+import { parkingService } from '../../services/parking.service';
+import { queryKeys } from '../../lib/queryClient';
+import { useQuery } from '@tanstack/react-query';
 import PendingWorkNotice from './PendingWorkNotice';
 import { isApproved } from './lineState';
 import OrderBalanceCard from '../finance/OrderBalanceCard';
@@ -88,7 +93,7 @@ const TAB_SECTIONS: Record<string, readonly string[]> = {
   resumen: ['vehiculo', 'firma', 'tecnicos'],
   trabajos: ['mano_obra', 'repuestos', 'presupuesto', 'comision'],
   fotos: ['inspeccion', 'avances'],
-  cobro: ['totales', 'balance', 'enlace'],
+  cobro: ['totales', 'parqueo', 'balance', 'enlace'],
   historial: ['historial'],
   tareas: ['tareas', 'comision'],
   orden: ['vehiculo', 'inspeccion', 'repuestos', 'firma', 'tecnicos'],
@@ -121,6 +126,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   const [addingOperatorId, setAddingOperatorId] = useState('');
   // El idioma del PDF que se descarga: lo elige administración (05/10/2026).
   const [pdfLanguage, setPdfLanguage] = useState<'es' | 'en'>('es');
+  const [showInsuranceModal, setShowInsuranceModal] = useState(false);
 
   const isAdmin = user?.rol === 'admin';
   const tabIds: readonly string[] = isAdmin ? ADMIN_TABS : TECH_TABS;
@@ -129,13 +135,28 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   // historial no se pide al abrir cada orden, y lo escrito en otra pestaña no se pierde.
   const [visited, setVisited] = useState<string[]>([tabIds[0]]);
 
-  const orderId = detail.order?.id;
+  const order = detail.order;
+  const orderId = order?.id;
   // La tarea que se precarga al cotizar un hallazgo (F6).
   // "Reportar trabajo adicional" desde las acciones rápidas abre el diálogo de la lista de tareas.
   const [reportRequest, setReportRequest] = useState(0);
   const [prefill, setPrefill] = useState<{ text: string; nonce: number; technicianId?: string | null } | null>(null);
   // Qué secciones están abiertas: ninguna al entrar a una orden, salvo la que pide un enlace.
   const [openSections, setOpenSections] = useState<ReadonlySet<string>>(() => new Set());
+
+  const parkingConfigQuery = useQuery({
+    queryKey: queryKeys.parkingConfig(order?.sede_id ?? ''),
+    queryFn: () => parkingService.getConfig(order?.sede_id ?? ''),
+    enabled: isAdmin && !!order?.sede_id,
+  });
+  const isParkingEnabled = !!parkingConfigQuery.data?.habilitado;
+
+  const parkingQuery = useQuery({
+    queryKey: queryKeys.orderParking(order?.id ?? ''),
+    queryFn: () => parkingService.getOrderParking(order?.id ?? ''),
+    enabled: isAdmin && isParkingEnabled && !!order?.id,
+  });
+  const parkingAmount = parkingQuery.data?.monto ?? 0;
 
   useEffect(() => {
     const next = detail.requestedTab && tabIds.includes(detail.requestedTab) ? detail.requestedTab : tabIds[0];
@@ -147,7 +168,6 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, detail.requestedTab]);
 
-  const order = detail.order;
   if (!order) return null;
 
   const selectTab = (id: string) => {
@@ -246,6 +266,37 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
               <div style={{ fontWeight: 500 }}>{value}</div>
             </div>
           ))}
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: 'var(--space-2) 0',
+            marginTop: 'var(--space-2)',
+            borderTop: '1px solid var(--color-surface-border)',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginBottom: 2 }}>
+              {t('workOrders.insurance')}
+            </div>
+            <div style={{ fontWeight: 500 }}>
+              {order.con_seguro
+                ? `${t('common.yes')}${order.aseguradora || order.numero_reclamo ? ` (${[order.aseguradora, order.numero_reclamo ? `#${order.numero_reclamo}` : ''].filter(Boolean).join(' · ')})` : ''}`
+                : t('common.no')}
+            </div>
+          </div>
+          {detail.isAdmin && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => setShowInsuranceModal(true)}
+              id="edit-insurance-btn"
+            >
+              {t('common.edit')}
+            </button>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-4)', padding: 'var(--space-3)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
@@ -423,10 +474,22 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
       <OrderTotalsCard
         order={order}
         amounts={amounts}
+        parkingAmount={parkingAmount}
         canDiscount={detail.canEditLines}
         onApplyDiscount={detail.applyDiscount}
         onRegisterAdvance={detail.canRegisterAdvance ? detail.startAdvance : undefined}
       />
+    </CollapsibleSection>
+  );
+
+  const parkingSection = isAdmin && isParkingEnabled && (
+    <CollapsibleSection
+      {...sectionState('parqueo')}
+      title={t('parking.orderCard.title')}
+      icon={<Car size={18} />}
+      summary={parkingAmount > 0 ? money(parkingAmount) : undefined}
+    >
+      <ParkingCard order={order} />
     </CollapsibleSection>
   );
 
@@ -651,6 +714,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     inspeccion: inspectionSection,
     avances: progressSection,
     totales: totalsSection,
+    parqueo: parkingSection,
     balance: balanceSection,
     enlace: customerLinkSection,
     historial: historySection,
@@ -822,6 +886,9 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
               <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
             )}
             <span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span>
+            {order.con_seguro && (
+              <span className="badge badge-insurance">{t('workOrders.insuranceBadge')}</span>
+            )}
             {/* Finalizada: o falta que administración la revise, o ya está lista para el cliente. */}
             {order.estatus === 'finalizado' && !order.retirada_sin_reparar && (
               order.lista_para_entregar_en
@@ -1065,6 +1132,14 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           downloading={detail.generatingPdf}
           onDownload={() => void detail.generatePdf(pdfLanguage)}
           onClose={detail.closeShare}
+        />
+      )}
+
+      {showInsuranceModal && (
+        <OrderInsuranceModal
+          order={order}
+          onSave={detail.updateInsurance}
+          onClose={() => setShowInsuranceModal(false)}
         />
       )}
 

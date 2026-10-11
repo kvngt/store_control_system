@@ -209,7 +209,7 @@ SELECT results_eq(
 -- 20261010000025: los teléfonos de la sede, con espacios de más, una llave que no es para el
 -- cliente, una fila sin número y una sin descripción.
 UPDATE sedes SET telefonos = '[
-  {"label": " English ", "numero": " 240-355-1266 ", "interno": "no sale"},
+  {"label": " English ", "numero": " 240-355-1266 ", "tipo": "celular", "whatsapp": true, "interno": "no sale"},
   {"label": "Sin número", "numero": "  "},
   {"numero": "+1 (301) 909-9937"}
 ]'::jsonb
@@ -232,7 +232,7 @@ SELECT results_eq(
 );
 SELECT is(
   (SELECT d->'taller'->'telefonos' FROM t_portal),
-  '[{"label": "English", "numero": "240-355-1266"}, {"label": "", "numero": "+1 (301) 909-9937"}]'::jsonb,
+  '[{"label": "English", "numero": "240-355-1266", "tipo": "celular", "whatsapp": true}, {"label": "", "numero": "+1 (301) 909-9937", "tipo": "oficina", "whatsapp": false}]'::jsonb,
   'El portal recibe los teléfonos de la sede campo por campo: sin espacios, sin filas vacías y en orden'
 );
 SELECT is(

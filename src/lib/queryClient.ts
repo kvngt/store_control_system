@@ -55,6 +55,10 @@ export const queryKeys = {
   myTasks: (userId?: string) => ['my-tasks', userId] as const,
   /** "Mis comisiones" del técnico: sus comisiones, sus pagos y los totales de la base. */
   myCommissions: (userId?: string) => ['my-commissions', userId] as const,
+  /** Configuración del módulo de cobro por parqueo de la sede. */
+  parkingConfig: (sedeId?: string) => ['parking-config', sedeId] as const,
+  /** Parqueo calculado y ajustes de una orden de trabajo. */
+  orderParking: (orderId: string) => ['order-parking', orderId] as const,
 } as const;
 
 /**

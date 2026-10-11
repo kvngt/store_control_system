@@ -1,8 +1,12 @@
 import type { UserRole } from './enums';
 
+export type SedeTelefonoTipo = 'oficina' | 'celular';
+
 export interface SedeTelefono {
   label: string;
   numero: string;
+  tipo: SedeTelefonoTipo;
+  whatsapp: boolean;
 }
 
 export interface Sede {
@@ -17,7 +21,7 @@ export interface Sede {
   logo_url?: string | null;
   /** Reply-To de los correos al cliente: sus respuestas llegan aquí. */
   email_contacto?: string | null;
-  /** Número del botón de WhatsApp en el reporte del cliente. */
+  /** Respaldo heredado: el primer teléfono con WhatsApp; lo escribe solo sedesService. */
   whatsapp?: string | null;
   /**
    * Share of an order's profit paid out as commission, 0-100. Per sede rather

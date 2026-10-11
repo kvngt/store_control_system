@@ -3,7 +3,7 @@ import type { Sede, WorkOrder } from '../types/database';
 import { customerObservations, customerReportPhotos, progressTimeline, reportImagePath } from './reportMedia';
 import { money } from './money';
 import { brandColors } from './brandColor';
-import { formatPhone } from './phone';
+import { formatPhone, sedePhoneLine } from './phone';
 
 export type PdfLanguage = 'es' | 'en';
 
@@ -20,6 +20,8 @@ export interface WorkOrderPdfOptions {
   translations?: Record<string, string>;
   /** Lo recibido y lo que falta (o sobra), como lo cuenta la base (`saldo_orden`). */
   balance?: { cobrado: number; saldo: number } | null;
+  /** Parqueo si la orden tiene cobro acumulado (20261010000028). */
+  parking?: { monto: number; dias?: number; dias_cobrados?: number } | null;
 }
 
 const MARGIN = 15;
@@ -80,6 +82,11 @@ const STRINGS = {
     signature: 'Conformidad del Cliente',
     customerFallback: 'Cliente',
     signed: 'Firmado',
+    phoneOffice: 'Oficina',
+    phoneMobile: 'Celular',
+    parking: 'Parqueo',
+    day: 'día',
+    days: 'días',
   },
   en: {
     locale: 'en-US',
@@ -125,6 +132,11 @@ const STRINGS = {
     signature: 'Customer Acknowledgment',
     customerFallback: 'Customer',
     signed: 'Signed',
+    phoneOffice: 'Office',
+    phoneMobile: 'Mobile',
+    parking: 'Parking',
+    day: 'day',
+    days: 'days',
   },
 };
 
@@ -296,16 +308,22 @@ async function buildWorkOrderPdf(
   doc.setTextColor(...brand.text);
   doc.text(sede?.nombre || 'RESTORIFY', headerX, y + 2);
 
-  // The same phones the customer sees on the link, each with its description, on a line of
+  // The same phones the customer sees on the link, each with its description or type, on a line of
   // their own. A sede without the list keeps its single `telefono` next to the address.
-  const phones =
+  const phonesText =
     Array.isArray(sede?.telefonos) && sede.telefonos.length > 0
-      ? sede.telefonos.map((p) => (p.label?.trim() ? `${p.label.trim()}: ${p.numero}` : p.numero)).join('  ·  ')
+      ? sede.telefonos
+          .map((p) => sedePhoneLine(p, p.tipo === 'celular' ? S.phoneMobile : S.phoneOffice))
+          .join('  ·  ')
       : '';
+  const phonesWrapped: string[] = phonesText
+    ? (doc.splitTextToSize(phonesText, pageWidth - MARGIN - headerX) as string[])
+    : [];
+  const addressLine = [sede?.direccion, phonesText ? null : sede?.telefono].filter(Boolean).join('  ·  ');
   const contactLines = [
-    [sede?.direccion, phones ? null : sede?.telefono].filter(Boolean).join('  ·  '),
-    phones,
-  ].filter(Boolean);
+    ...(addressLine ? [addressLine] : []),
+    ...phonesWrapped,
+  ];
 
   if (contactLines.length > 0) {
     doc.setFontSize(8);
@@ -442,6 +460,15 @@ async function buildWorkOrderPdf(
   const balance = options.balance ? options.balance.saldo : delivered ? 0 : totalGeneral - deposito;
   const rows: [string, string][] = [
     ...(descuento > 0.009 ? ([[S.discount, `-${money(descuento)}`]] as [string, string][]) : []),
+    ...(options.parking && options.parking.monto > 0.009
+      ? (() => {
+          const d = options.parking.dias ?? options.parking.dias_cobrados ?? 0;
+          return [[
+            `${S.parking} (${d} ${d === 1 ? S.day : S.days})`,
+            money(options.parking.monto),
+          ]] as [string, string][];
+        })()
+      : []),
     [S.total, money(totalGeneral)],
     [S.deposit, money(deposito)],
     ...(options.balance && Math.abs(options.balance.cobrado - deposito) > 0.009
