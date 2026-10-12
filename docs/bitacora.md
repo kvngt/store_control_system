@@ -24,7 +24,7 @@
 | Pedidos 06/10 (2) | Alta (cliente y vehículo se guardan al cancelar, trabajos paso 3, depósito paso 4, fecha al final, costo del repuesto), correo al técnico, "Autorización del cliente" en Resumen, avances por tarea, acciones rápidas | **Publicado** (migración `20261010000023`, aplicada según `db:check`; ver la [bitácora](#07102026--claude-code-pedidos-del-0610-segunda-tanda)) |
 | Teléfonos 09/10 | Varios teléfonos por sede, con su descripción, en el enlace del cliente, el PDF y los correos | **Publicado** (`a7769d5` en `main`; la `20261010000025` está aplicada según `db:check` del 10/10/2026). Lo hizo Gemini y se revisó y corrigió el 10/10/2026 ([bitácora](#10102026--claude-code-auditoría-de-los-teléfonos-por-sede-de-gemini)) |
 | Teléfonos (2) 10/10 | Cada teléfono dice si es de oficina o celular y si atiende WhatsApp; sale el campo "WhatsApp del taller" | **Publicado** el 11/10/2026 (`3731cd8` en `main`; `db:check`: 82 migraciones aplicadas; `process-outbox` v18 desplegada el 11/10). Migración `20261010000026`; lo hizo Gemini y Claude Code lo revisó el 10/10/2026: código correcto, `test:db` ✓. Orden de publicación en la [bitácora](#10102026-noche--gemini-tipo-de-teléfono-y-whatsapp-por-teléfono)) |
-| Seguro y parqueo 10/10 | Fase A: la orden dice si se trabaja con seguro. Fases B–D: módulo de cobro por parqueo configurable por sede (perfiles con y sin seguro, tramos, gracia, topes, ajustes por orden), en la cuenta del cliente, el PDF y el correo de "listo" | **Publicado** el 11/10/2026 (`3731cd8` en `main`; `db:check`: 82 migraciones aplicadas; `process-outbox` v18 desplegada el 11/10). Migraciones `20261010000027` y `20261010000028`. Gemini lo implementó y Claude Code lo auditó y corrigió el 11/10/2026 (un cobro de parqueo sobre órdenes ya entregadas, "vigente desde" hacia atrás, pruebas que llamaban a producción). `test:db` 33/811 ✓, Vitest 97/802 ✓. Falta correr `qa:security` contra producción (no consta que se haya corrido). Detalle en la [bitácora](#11102026--claude-code-auditoría-y-arreglo-del-módulo-de-parqueo-de-gemini) |
+| Seguro y parqueo 10/10 | Fase A: la orden dice si se trabaja con seguro. Fases B–D: módulo de cobro por parqueo configurable por sede (perfiles con y sin seguro, tramos, gracia, topes, ajustes por orden), en la cuenta del cliente, el PDF y el correo de "listo" | **Publicado** el 11/10/2026 (`3731cd8` en `main`; `db:check`: 82 migraciones aplicadas; `process-outbox` v18 desplegada el 11/10). Migraciones `20261010000027` y `20261010000028`. Gemini lo implementó y Claude Code lo auditó y corrigió el 11/10/2026 (un cobro de parqueo sobre órdenes ya entregadas, "vigente desde" hacia atrás, pruebas que llamaban a producción). `test:db` 33/811 ✓, Vitest 97/802 ✓. `qa:security` contra producción (11/10/2026, lo corrió el usuario): 126 PASS, 1 FAIL, 28 SKIP; el FAIL era la prueba SEC-160, que esperaba un rechazo donde la regla es cero filas (corregida; ver la bitácora). Detalle en la [bitácora](#11102026--claude-code-auditoría-y-arreglo-del-módulo-de-parqueo-de-gemini) |
 
 Nada se publica sin que la persona responsable lo pida: cada `db push`, `functions deploy`,
 push a `main` y commit se piden aparte.
@@ -43,7 +43,35 @@ al día aparte.
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
 
-### 11/10/2026, noche (2) — Claude Code (arquitectura y planos al día; propuesta de recorte de ai-context)
+### 11/10/2026, noche (3) — Claude Code (`qa:security` contra producción)
+
+- **Lo corrió el usuario** contra producción: **126 PASS, 1 FAIL, 28 SKIP**.
+- **El FAIL (SEC-160) era la prueba, no la base.** Sin sesión, `orden_parqueo` responde `200 []`:
+  - `anon` conserva el permiso de tabla que da Supabase;
+  - la RLS (solo admin) le devuelve cero filas;
+  - no sale ningún dato.
+
+  La especificación del módulo pedía "0 filas" para técnico y anon, igual que SEC-01 a 03
+  (`clientes`, `ordenes_trabajo`, `orden_enlaces`), pero SEC-160 esperaba un rechazo HTTP. Se
+  cambió a `denied-or-empty`. Se agregó SEC-161 (un técnico no lee `parqueo_tramos`): la
+  especificación lo pedía y faltaba. Ahora son 156 casos.
+- **Los 28 SKIP** son los casos que escriben con la sesión del técnico: agregar mano de obra,
+  entregar, firmar, asignarse, marcar tareas… Se saltaron por dos razones:
+  - los `ORDEN`, `ORDEN_ENTREGADA` y `ORDEN_AJENA` de `.env.test.local` ya no existen (el script
+    lo avisa al empezar);
+  - el técnico de QA no tiene órdenes asignadas en producción, así que tampoco se encontraron
+    solas.
+
+  Para cubrirlos hace falta una orden de prueba asignada a ese técnico, otra entregada y otra
+  sin él. **Ojo:** si una regla tuviera un hueco, esos casos sí escriben (el script lo advierte),
+  y hoy no hay staging.
+- **Verificación:** `node --check` y `npm run lint` limpios. No se volvió a correr contra
+  producción.
+- **Sin commit.**
+- **Siguiente paso:** que el usuario vuelva a correr `npm run qa:security` (SEC-160 y SEC-161
+  deben dar PASS) y decida si prepara las órdenes de prueba para los SKIP.
+
+### 11/10/2026, noche (2) — Claude Code (arquitectura y planos al día; recorte de ai-context)
 
 - **Pedido:** los pasos 1 y 2 de la entrada de abajo, con Gemini (Antigravity CLI) para ahorrar
   tokens, y sacar del repositorio lo que ya no se necesite.
@@ -69,8 +97,9 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
     puede llevar un segundo `:`.
 
   Los 13 diagramas pasan `mermaid.parse` (mermaid 11.4.1).
-- **[ai-context.md](ai-context.md): propuesta, no aplicada.** El recorte de Gemini perdía unas 20
-  reglas que un agente necesita, como estas:
+- **[ai-context.md](ai-context.md): recortado**, con el visto bueno del usuario. Cada viñeta
+  queda como la regla, con un enlace al detalle. El recorte de Gemini perdía unas 20 reglas que
+  un agente necesita, como estas:
   - una tabla hija nueva lleva la política del técnico;
   - nada de salarios sin leer `pagos-a-empleados.md`;
   - nunca `to_jsonb(fila)` en `datos_portal`;
@@ -78,9 +107,13 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
   - un pendiente nuevo de la oficina va en `requiere_atencion`.
 
   También tenía errores: decía que el técnico ve toda su sede y torcía la regla de
-  `enable_signup`. La propuesta corregida (de 5.378 a unas 3.800 palabras) espera el visto bueno
-  de la persona responsable. Mientras no se aplique, ai-context dice todavía que el default de
-  `reparto_heredado` es `true`: es `false` desde la `008`.
+  `enable_signup`. Se restauraron esas reglas y se corrigieron los errores. Queda de 5.378 a unas
+  3.800 palabras. De paso se corrigieron dos datos viejos:
+  - el default de `reparto_heredado` es `false` desde la `008`;
+  - la firma ya no está entre las vías que cambian el estado de una línea.
+
+  En `AGENTS.md`, las migraciones nuevas van "después de la última" (hoy la `028`), no
+  "después de `20261010000000`".
 - **El detalle que sale de ai-context ya está en su documento:**
   - [comisiones.md](comisiones.md), [presupuestos.md](presupuestos.md),
     [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md),
@@ -98,11 +131,10 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
 - **Verificación:**
   - el revisor de enlaces da los 2 falsos positivos conocidos;
   - ningún `.md` tiene caracteres de control;
-  - con la propuesta puesta, todas las anclas de ai-context existen.
+  - todas las anclas a las que apunta ai-context existen.
 - **Sin commit.**
-- **Siguiente paso:**
-  1. Aplicar la propuesta de ai-context, si la aprueba la persona responsable.
-  2. Correr `npm run qa:security` contra producción.
+- **Siguiente paso:** correr `npm run qa:security` contra producción (hecho: ver la entrada de
+  arriba).
 
 ### 11/10/2026, noche — Claude Code (orden de la documentación, continuación)
 

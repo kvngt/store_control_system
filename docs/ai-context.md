@@ -10,6 +10,8 @@ El estado al día (qué está hecho, qué falta publicar, quién hizo qué) y la
 [plan-mejoras-2026-10.md](historico/plan-mejoras-2026-10.md); léelo antes de tocar tareas,
 comisiones, el alta de la orden o la "espera de autorización".
 
+Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el enlace.
+
 ---
 
 ## 1. Lo que tienes que saber antes de tocar nada
@@ -17,10 +19,10 @@ comisiones, el alta de la orden o la "espera de autorización".
 - **No hay backend propio.** El navegador habla directo con Supabase con la clave
   anónima. Cualquier usuario con sesión puede llamar a la API sin la interfaz.
   **La seguridad vive en RLS, triggers y RPCs** (`supabase/migrations/`). Ocultar
-  un botón en React nunca es una regla de permisos.
+  un botón en React nunca es una regla de permisos. [arquitectura.md §2](arquitectura.md#2-la-decisión-que-explica-todo-lo-demás).
 - **El dinero lo calcula la base.** Totales, depósitos, cobros al entregar, costo
   de repuestos, ajustes, reversiones y comisiones los asientan triggers
-  idempotentes con signo. El frontend nunca calcula ni escribe un total.
+  idempotentes con signo. El frontend nunca calcula ni escribe un total. [reglas-de-negocio.md §2](reglas-de-negocio.md#2-el-dinero-que-se-asienta-solo).
 - **Cobro por parqueo (`20261010000028`, [parqueo.md](parqueo.md)):** el parqueo entra a
   `total_general` por `orden_parqueo.monto`; lo calcula solo `_parqueo_calculo`; se congela al
   entregar (`fin_congelado`); nunca en el navegador; las comisiones (mano de obra) y el
@@ -28,90 +30,56 @@ comisiones, el alta de la orden o la "espera de autorización".
   contar sola** (las entregadas antes del módulo, sin `fin_congelado`, se quedan sin parqueo), y
   **`vigente_desde` no va hacia atrás**: si no, encender el cobro les cargaba días ya pasados a
   órdenes viejas y asentaba un "cargo adicional" que nadie pagó (10/10/2026).
-- **Los montos están separados.** `orden_montos` (total, repuestos, depósito) y
-  `orden_repuestos` son solo admin. `ordenes_trabajo.total_labor` y `orden_labor`
-  los ve el técnico **asignado** (no toda la sede), porque su comisión sale de la mano de
-  obra. Un
-  técnico lee repuestos por la RPC `repuestos_de_orden` (sin precios).
-- **Multi-sede.** Casi toda tabla tiene `sede_id`. Un admin ve todas las sedes. Helpers
-  SQL: `is_admin()`, `current_user_sede_id()`, `is_assigned_to_order(orden_id)`,
-  `mis_ordenes_asignadas()`.
-- **Un técnico ve solo las órdenes que tiene asignadas** (`20261007000000`), no toda su
-  sede: las políticas de SELECT de `ordenes_trabajo` y de sus hijas, y la de Storage de
-  `orden_media`, comparan con `mis_ordenes_asignadas()` (un arreglo, envuelto en
-  `(SELECT …)::uuid[]` para que se calcule una vez por consulta). `clientes` y `vehiculos`
-  los lee solo si cuelgan de una orden suya, y **crearlos o editarlos es de admin**. Una
-  tabla hija nueva de la orden lleva la misma política; una RPC `SECURITY DEFINER` que
-  devuelva datos de una orden, la misma condición por dentro (`repuestos_de_orden`). Para
-  un técnico, una orden ajena **no existe** (PGRST116, cero filas en un UPDATE), no da 42501.
-- **Un técnico modifica una orden solo si está asignado y no está entregada**, y
-  solo estado y avance (`trg_order_technician_guard`). **La firma de recepción es de
-  administración** (`20261006000000`): es el respaldo de cómo se recibió el vehículo, y el
-  técnico podía capturarla en cualquier estado. Si agregas una
-  acción de técnico que cambie otra columna de `ordenes_trabajo`, añádela a la
-  lista permitida de ese trigger en una migración nueva. **Tampoco elige cualquier estado**: solo
-  `en_proceso`, `espera_autorizacion` y `finalizado`; devolver una orden a recepción y
-  entregarla son de administración.
-- **Abrir una orden y asignar a alguien son solo de admin** (`ordenes_trabajo_insert` y
-  `orden_asignaciones_insert`, ambas `is_admin()`). Lo segundo es dinero, no una etiqueta:
-  `trg_assignment_commissions` llama a `sync_order_commissions`, que reparte entre los
-  asignados a mano (`origen = 'manual'`) la mano de obra **de las líneas heredadas** (ver
-  abajo; la de una tarea es de su técnico), así que auto-asignarse era concederse una comisión
-  y diluir la de quien sí trabajó la orden. `create_work_order` es `SECURITY INVOKER`, así que
-  la política la cubre sin tocarla. `trg_guard_order_insert` (que bajaba a recepción la orden
-  de un no-admin) se queda como red, pero su cuerpo ya no es alcanzable desde la API. Desde
-  `20261010000006` **editar una asignación también es solo de admin**: el técnico podía cambiar
-  el `tipo_tarea` de la suya y con eso mover su comisión (un UPDATE suyo da cero filas).
+- **Los montos están separados.** `orden_montos` (total, repuestos, depósito) y `orden_repuestos`
+  son solo admin. `ordenes_trabajo.total_labor` y `orden_labor` los ve el técnico **asignado**
+  (no toda la sede), porque su comisión sale de la mano de obra; los repuestos los lee por la
+  RPC `repuestos_de_orden` (sin precios). [reglas-de-negocio.md §3](reglas-de-negocio.md#3-qué-puede-hacer-cada-rol).
+- **Multi-sede.** Casi toda tabla tiene `sede_id`. Un admin ve todas las sedes. Helpers SQL:
+  `is_admin()`, `current_user_sede_id()`, `is_assigned_to_order(orden_id)`, `mis_ordenes_asignadas()`.
+- **Un técnico ve solo las órdenes que tiene asignadas** (`20261007000000`), no toda su sede:
+  las políticas de `ordenes_trabajo`, de sus hijas y de Storage (`orden_media`) comparan con
+  `(SELECT mis_ordenes_asignadas())::uuid[]` (así se calcula una vez por consulta). `clientes` y
+  `vehiculos` los lee solo si cuelgan de una orden suya, y crearlos o editarlos es de admin.
+  **Una tabla hija nueva de la orden lleva la misma política; una RPC `SECURITY DEFINER` que
+  devuelva datos de una orden, la misma condición por dentro** (`repuestos_de_orden`). Para un
+  técnico, una orden ajena **no existe** (PGRST116, cero filas en un UPDATE), no da 42501.
+  [arquitectura.md §6](arquitectura.md#6-seguridad-y-permisos).
+- **Un técnico modifica una orden solo si está asignado y no está entregada**, y solo estado
+  (`en_proceso`, `espera_autorizacion`, `finalizado`) y avance (`trg_order_technician_guard`).
+  La firma de recepción, devolver a recepción, reabrir una finalizada y entregar son de
+  administración. **Si agregas una acción de técnico que cambie otra columna de
+  `ordenes_trabajo`, añádela a la lista permitida de ese trigger en una migración nueva.**
+- **Abrir una orden y asignar a alguien (alta, edición y baja) son solo de admin**
+  (`ordenes_trabajo_insert`, `orden_asignaciones_*`). Asignar es dinero, no una etiqueta: reparte
+  la comisión de las líneas heredadas. [arquitectura.md §6](arquitectura.md#6-seguridad-y-permisos).
 - **La "espera de autorización" es una pausa, y el técnico la provoca reportando trabajo
-  adicional** (F6, `20261010000010`/`11`). La app ya no le ofrece el estado: llama
-  `reportar_hallazgo`, que crea el hallazgo (`orden_hallazgos`, solo lectura por la API), un
-  avance interno para sus fotos (el técnico no lo puede publicar) y pone la orden en espera
-  con el texto como `motivo_autorizacion`. Administración lo cotiza (`cotizar_hallazgo`) o lo
-  descarta (`descartar_hallazgo`, con el texto que verá el cliente si va al reporte). La orden
-  vuelve sola a `en_proceso` por `_salir_de_espera` — al responder el cliente, al descartar o
-  al cancelar el presupuesto — solo si no queda un hallazgo pendiente ni un presupuesto
-  enviado. Mientras no se publique la migración que contrae, el guardia del técnico sigue
-  aceptando el UPDATE directo con motivo (la app vieja). Al salir del estado el motivo se
-  limpia. Todo el detalle y lo que falta: [hallazgos.md](hallazgos.md).
-- **El técnico puede tachar una mano de obra hecha**, pero `orden_labor` sigue siendo
-  escritura solo de admin: se hace por la RPC `marcar_labor_completada`, que solo toca
-  `completado_en`/`completado_por` y solo sobre una línea `aprobado`. Si necesitas que un
-  técnico escriba algo más de una tabla de dinero, otra RPC estrecha, nunca una política
-  más laxa.
-- **La comisión es por especialidad y por empleado** (`20261009000000`). Cada línea de
-  `orden_labor` tiene `especialidad`; cada bolsa se reparte entre los asignados con esa
-  `tipo_tarea`, al porcentaje de cada quien (`perfiles_pago`, o el de la sede). La cuenta
-  vive solo en `_reparto_comisiones(orden)`: la usan `sync_order_commissions` y
-  `comisiones_estimadas`. **No la repitas en el navegador.** La llave de `comisiones` es
-  (orden, usuario, especialidad, `labor_id`) con `NULLS NOT DISTINCT`
-  (`comisiones_orden_usuario_especialidad_tarea_key`, desde `20261010000006`): una fila por
-  tarea y una por bolsa heredada, así que una persona puede tener varias filas en la misma
-  orden; no supongas una por persona y especialidad. El pago de cada quien va en `perfiles_pago`, nunca en
-  `perfiles` (los técnicos leen los perfiles de sus compañeros). **El pago a empleados
-  tiene decisiones abiertas con el taller** ([pagos-a-empleados.md](pagos-a-empleados.md)):
-  no agregues salarios, períodos ni recálculos sin leerlo.
-- **Y desde `20261010000006`, por tarea.** Cada línea de `orden_labor` tiene su técnico
-  (`asignado_a`, solo lo escribe admin) y su comisión es de él: costo × su porcentaje
-  (`comisiones.labor_id`). Una línea nueva sin técnico no le paga a nadie (`sin_asignar` en
-  `comisiones_estimadas`; la orden lo avisa en Resumen y el diálogo de entrega lo lee de esa
-  misma RPC, así que avisa también desde el Kanban). Las líneas de antes
-  (`reparto_heredado = true`, el default de la columna) siguen con el reparto por
-  especialidad, solo entre los asignados `origen = 'manual'`. **La app manda
-  `reparto_heredado: false` en cada línea que crea** —también en el alta, con su
-  `especialidad`— y al asignarle técnico a una heredada también (`setLaborTechnician`,
-  fijado en `workOrders.service.test.ts` y `WorkOrders.smoke.test.tsx`): queda fuera del
-  reparto para siempre. Quien recibe una tarea entra solo a la orden (`origen = 'tarea'`);
-  quitarlo de la orden con tareas se rechaza, pero administración lo saca del reparto (o mete
-  a quien entró por una tarea) cambiando el `origen` de su asignación, salvo que esa bolsa ya
-  se haya pagado (`trg_assignment_tasks_guard`). Lo pagado no se reasigna, no se borra, no
-  cambia de especialidad y una línea no entra a una bolsa ya pagada (`trg_labor_tecnico_guard`;
-  en pantalla, candado y Borrar deshabilitado). Una línea tampoco se muda de orden. El editor
-  de tareas es `TaskEditor` (no conoce la orden: F4 lo usa en el alta).
-- **Desde `20261010000014` cada comisión nace sugerida y administración la acepta**
-  (`aprobar_comision`). El técnico no ve el monto hasta entonces, y eso lo impone la base: lo
-  oculta `comisiones_estimadas`, la política de `comisiones` y el aviso (sale al aceptar). Una
+  adicional** (`reportar_hallazgo`): crea el hallazgo y un avance interno para sus fotos.
+  Administración lo cotiza o lo descarta, y la orden vuelve sola a `en_proceso` por
+  `_salir_de_espera` si no queda un hallazgo pendiente ni un presupuesto enviado. Desde
+  `20261010000024` el guardia del técnico no deja entrar en espera sin un hallazgo pendiente.
+  [hallazgos.md](hallazgos.md#1-qué-cambia-para-el-taller).
+- **El técnico puede tachar una mano de obra hecha**, pero `orden_labor` sigue siendo escritura
+  solo de admin: lo hace la RPC `marcar_labor_completada` (solo `completado_en`/`completado_por`,
+  solo sobre una línea `aprobado`). **Si un técnico necesita escribir algo más de una tabla de
+  dinero, otra RPC estrecha, nunca una política más laxa.**
+- **Comisiones.** La cuenta vive solo en `_reparto_comisiones(orden)` (la usan
+  `sync_order_commissions` y `comisiones_estimadas`): **no la repitas en el navegador.** Una
+  persona puede tener varias filas de `comisiones` en la misma orden (una por tarea y una por
+  bolsa heredada): no supongas una por persona. El pago de cada quien va en `perfiles_pago`,
+  nunca en `perfiles` (los técnicos leen los perfiles de sus compañeros). **El pago a empleados
+  tiene decisiones abiertas con el taller** ([pagos-a-empleados.md](pagos-a-empleados.md)): no
+  agregues salarios, períodos ni recálculos sin leerlo.
+- **La comisión es por tarea** (`20261010000006`): cada línea de `orden_labor` tiene su técnico
+  (`asignado_a`, solo lo escribe admin) y su comisión es de él (costo × su porcentaje); una línea
+  sin técnico no le paga a nadie (`sin_asignar`). Las de antes (`reparto_heredado = true`) se
+  reparten por especialidad entre los asignados `origen = 'manual'`. La app manda
+  `reparto_heredado: false` en cada línea que crea y al asignarle técnico a una heredada (desde
+  `20261010000008` también es el default). Lo pagado no se reasigna, no se borra ni cambia de
+  especialidad (`trg_labor_tecnico_guard`). [comisiones.md](comisiones.md#cómo-se-calcula).
+- **Cada comisión nace sugerida y administración la acepta** (`aprobar_comision`,
+  `20261010000014`). El técnico no ve el monto hasta entonces, y eso lo impone la base. Una
   aceptada sin pagar se borra si la orden deja de estar entregada o si su tarea cambia de
-  técnico: no la conserves "para respetar lo aceptado", se pagaría dos veces. Detalle en
+  técnico: no la conserves "para respetar lo aceptado", se pagaría dos veces.
   [comisiones.md](comisiones.md#administración-acepta-cada-comisión-20261010000014).
 - **Un trigger auxiliar nunca bloquea una escritura de la orden.** La traducción automática
   (`trg_encolar_traduccion`, `20261010000013`/`15`) encola en `cola_envios` dentro de un bloque
@@ -120,60 +88,43 @@ comisiones, el alta de la orden o la "espera de autorización".
   y repuestos (04–05/10/2026). En PL/pgSQL, `OLD.columna` se resuelve en toda la expresión
   aunque otra condición la descarte: separa las ramas por tabla. Y todo `ON CONFLICT` necesita
   un índice único que coincida.
-- **Un pago de comisiones asienta un egreso por orden** (`20261010000000`), dentro de
-  `pay_commissions` y verificando que sumen el pago. El margen de una orden sale de
-  `balance_orden` (comisiones devengadas; repuestos = el costo automático de las líneas,
-  lo demás vinculado aparte). Si agregas un movimiento automático de una orden, decide si
-  entra en esa cuenta.
-- **"Listo para entregar" lo confirma administración** (`20261010000021`). El técnico finaliza
-  (`finalizado`), pero eso **no** avisa al cliente: `trg_portal_on_order_change` ya no encola el
-  correo al pasar a `finalizado`. La marca `ordenes_trabajo.lista_para_entregar_en` solo la
-  escribe la RPC `marcar_lista_para_entregar` (la guarda `trg_guard_lista_para_entregar`, con
-  `restorify.lista`; se borra sola si la orden deja de estar finalizada o entregada), y ella
-  encola el correo "listo". `datos_correo` entrega al `process-outbox` el **estatus del
-  cliente** (`_estatus_cliente`: finalizado sin marca = en proceso), así que el
-  `process-outbox` no cambió; `datos_portal` manda `orden.lista_para_entregar` y el portal
-  muestra "En revisión final". Un técnico **no** reabre una finalizada (`trg_guard_order_technician`),
-  ni reportando un hallazgo (`reportar_hallazgo`); solo administración. Si agregas una forma
-  nueva de pausar o reabrir una orden, cúbrela igual.
+- **Un pago de comisiones asienta un egreso por orden** (`pay_commissions`, verificando que sumen
+  el pago). El margen de una orden sale de `balance_orden`. **Si agregas un movimiento
+  automático de una orden, decide si entra en esa cuenta.** [comisiones.md](comisiones.md#pagar-un-saldo).
+- **"Listo para entregar" lo confirma administración** (`marcar_lista_para_entregar`, marca
+  `lista_para_entregar_en`; `20261010000021`), y ahí sale el correo al cliente: que el técnico
+  finalice no lo avisa. Un técnico no reabre una finalizada, ni reportando un hallazgo. **Si
+  agregas una forma nueva de pausar o reabrir una orden, cúbrela igual.**
+  [reglas-de-negocio.md §1](reglas-de-negocio.md#1-ciclo-de-vida-de-una-orden).
 - **Pago "mixto"** (`perfiles_pago.esquema`, `20261010000020`): salario informativo + comisión.
   Todo filtro de comisiones es `esquema <> 'salario'`, nunca `= 'comision'`. Al soltar el CHECK
   del esquema, no uses `LIKE '%comision%'`: soltaba también el del porcentaje 0–100.
-- **Proceso del taller (05/10/2026, `20261010000016`–`18`, [analisis-del-proceso-2026-10.md](historico/analisis-del-proceso-2026-10.md)):**
-  - **Lo importado del banco es contabilidad aparte.** Un movimiento con `importacion_id` no
-    cuenta en `resumen_panel`, `_saldo_orden`, `_balance_orden`, el ajuste de una orden
-    entregada ni `datos_portal`. Si sumas `finanzas_movimientos` para algo de la app, filtra
-    `importacion_id IS NULL`. El costo automático de repuestos es solo el del sistema
-    (`registrado_por IS NULL`): una compra a mano vinculada a la orden no lo toca.
+- **Proceso del taller** (`20261010000016`–`18`, [analisis-del-proceso-2026-10.md](historico/analisis-del-proceso-2026-10.md)):
+  - **Lo importado del banco es contabilidad aparte.** Si sumas `finanzas_movimientos` para algo
+    de la app, filtra `importacion_id IS NULL`. El costo automático de repuestos es solo el del
+    sistema (`registrado_por IS NULL`). [reglas-de-negocio.md](reglas-de-negocio.md#importar-un-estado-de-cuenta).
   - **La fecha de un movimiento automático es `hoy_taller(sede)`**, nunca `CURRENT_DATE` (la
     base está en UTC: después de las 8 p. m. de Maryland ya es mañana).
   - **Métodos de pago:** efectivo, tarjeta, zelle, transferencia, cheque (`PAYMENT_METHODS` y el
-    CHECK de `finanzas_movimientos`). Comisiones del banco y de Clover: categoría
-    `comision_bancaria`.
+    CHECK de `finanzas_movimientos`). Comisiones del banco y de Clover: categoría `comision_bancaria`.
   - **Costo de un repuesto:** por defecto el precio; uno escrito por administración se queda
-    (`trg_part_cost_follows_price`). `updatePart` manda `costo_unitario` solo si se escribió:
-    mandarlo igual al precio borraba el costo real. La columna ya no tiene DEFAULT.
-  - **Descuento:** `orden_montos.descuento`, solo por `aplicar_descuento`, en $ o en % (el
-    guardia de montos rechaza escribirlo directo). `total_general = mano de obra + repuestos − descuento + parqueo`; las
-    comisiones no cambian (salen de la mano de obra) y el descuento no toca el parqueo.
-  - **Retirada sin reparar** es `estatus = 'entregado'` + `retirada_sin_reparar = true`, y solo
-    la enciende `retirar_sin_reparar` (vía `entregar_orden` con `restorify.retirada`). Recibe
-    `p_conservar` (las líneas autorizadas que sí se hicieron): esas se cobran y pagan su
-    comisión; el resto pasa a `rechazado`. No cuenta en `ordenes_finalizadas_mes`. En pantalla
-    es otro estado: mira la marca antes de pintar "Entregado".
-  - **Anticipos** (`registrar_anticipo`) suben `deposito_inicial` con su método (la config
-    `restorify.deposito` lleva `anticipo: true`): por eso la reversión de una entrega vuelve a
-    lo pagado por adelantado. No asientes un pago anticipado por otra vía.
-  - **Pendientes del vehículo** (`trabajos_pendientes_vehiculo`): las líneas rechazadas de sus
-    otras órdenes, para ofrecerlas de nuevo. Es solo lectura.
-  - **Solo se paga lo aceptado** (`pay_commissions` filtra `estado = 'aceptada'`); se acepta en
-    bloque con `aprobar_comisiones`. Una prueba que paga comisiones tiene que aceptarlas antes.
+    (`trg_part_cost_follows_price`). `updatePart` manda `costo_unitario` solo si se escribió.
+  - **Descuento:** `orden_montos.descuento`, solo por `aplicar_descuento`.
+    `total_general = mano de obra + repuestos − descuento + parqueo`; las comisiones no cambian.
+  - **Retirada sin reparar** es `estatus = 'entregado'` + `retirada_sin_reparar = true`, solo por
+    `retirar_sin_reparar`; cobra y comisiona solo `p_conservar`. **En pantalla es otro estado:
+    mira la marca antes de pintar "Entregado".** [reglas-de-negocio.md](reglas-de-negocio.md#retirada-sin-reparar).
+  - **Anticipos** (`registrar_anticipo`) suben `deposito_inicial` con su método. **No asientes un
+    pago anticipado por otra vía.**
+  - **Solo se paga lo aceptado** (`pay_commissions` filtra `estado = 'aceptada'`; en bloque,
+    `aprobar_comisiones`). **Una prueba que paga comisiones tiene que aceptarlas antes.**
   - **El avance lo recalcula la base** al marcar una tarea (`trg_labor_avance`, pesado por el
     precio); el técnico lo puede corregir a mano.
-  - **Repuesto pedido → llegó:** `orden_repuestos.estado_pedido`; la marca de la lista sale de
-    `ordenes_esperando_repuestos()`, y al llegar se avisa (`repuesto_recibido`).
-  - El PDF tiene sus textos en `es` y `en` dentro de `lib/workOrderPdf.ts` (como el portal); el
-    CSV para el contador sale de `lib/csv.ts`.
+  - **Repuesto pedido → llegó:** `orden_repuestos.estado_pedido`; la marca sale de
+    `ordenes_esperando_repuestos()` y al llegar se avisa (`repuesto_recibido`).
+  - **Pendientes del vehículo** (`trabajos_pendientes_vehiculo`): solo lectura.
+  - El PDF tiene sus textos en `es` y `en` dentro de `lib/workOrderPdf.ts`; el CSV para el
+    contador sale de `lib/csv.ts`.
 - **El alta es `create_work_order` y lee claves con nombre exacto.** El depósito va dentro de
   `p_order` como `deposito_metodo`, `deposito_numero_cheque` y `deposito_comprobante_ruta`
   (`20261010000007`); una clave con otro nombre **se ignora sin error**. Pasó: del 04/10/2026
@@ -182,88 +133,52 @@ comisiones, el alta de la orden o la "espera de autorización".
   cuatro pasos (`INTAKE_STEPS` en `workOrderForm.schema.ts`: cliente, vehículo, trabajos, depósito;
   el cliente y el vehículo nuevos se guardan al salir de su paso y al cancelar, `onLeaveStep`); un campo nuevo del formulario
   va en uno de ellos (lo exige `workOrderForm.schema.test.ts`).
-- **Entregar es `entregar_orden`, no un UPDATE de estatus.** La RPC bloquea la orden,
-  asienta el pago final **con su método** (o la devolución si el depósito supera el
-  total) y la marca entregada en una transacción (`20261008000000`). La pantalla abre
-  `DeliveryModal` y el saldo lo da `saldo_orden`. `handle_order_delivery_payment` se queda
-  como red para otra vía (asienta sin método), y `reverse_order_delivery_finance` revierte
-  en los dos sentidos: al sacar de Entregado, lo cobrado vuelve al depósito.
-- **La firma de recepción no autoriza lo cotizado** (desde `20261010000022`, pedido del taller
-  del 06/10/2026). Firmar es estar de acuerdo con cómo se recibió el vehículo (millas, gasolina,
-  fotos); lo cotizado se autoriza solo con un presupuesto o con "Registrar autorización".
-  `trg_quote_on_signature` ya no existe. Lo que la oficina tiene por autorizar sale en "Requiere
-  atención" (grupo `por_autorizar`). En las pruebas pgTAP que parten de una orden autorizada,
-  `pg_temp.autorizar_cotizado(orden)` hace lo que hacía la firma.
-- **Idioma del cliente** (`clientes.idioma`, `20261010000022`): inglés por defecto. Los correos
-  salen en ese idioma (`process-outbox` lo lee de `datos_correo`) y el cliente lo cambia desde su
-  enlace (`preferencia_idioma_portal`, por la edge function `portal`). `datos_portal` y
-  `datos_correo` traen además `traducciones` (`_diccionario_traducciones`): el portal traduce lo
-  escrito a mano con `translateReport` (`src/portal/translate.ts`). Antes solo el PDF lo hacía.
-- **El técnico se entera de lo que el cliente no autorizó** (`_resolver_presupuesto`, aviso
-  "Trabajo no autorizado") y lo ve en la orden: `TechOrderStatus` arriba de sus tareas y la tarea
-  rechazada como "No autorizada · no se realiza" (`techStatus.ts`). "Mis comisiones"
-  (`/mis-comisiones`) muestra lo suyo aceptado y sus pagos; los totales salen de
-  `resumen_mis_comisiones`.
-- **Correo al técnico** (`20261010000023`): `notificar` encola un correo (plantilla `empleado`)
-  al mecánico o pintor en `asignacion`, `tarea_asignada` y `presupuesto_respondido`, **sin
-  `orden_id`** en `cola_envios` para que nunca tome el camino del correo al cliente. Si agregas
-  otro aviso con correo, súmalo al `v_grupo` de esa función.
-- **Un avance puede ser de una tarea** (`orden_avances.labor_id`): `ProgressLog` deja elegirla y
-  la tarea muestra los suyos. Arriba del Resumen (admin) y de Tareas (técnico) van las acciones
-  rápidas (`QuickActions`) y, para el admin, `AuthorizationPanel` (cotizado sin enviar, en
-  espera, qué autorizó el cliente).
-- **Roles:** `admin`, `mecanico`, `pintor`. Mecánico y pintor tienen los mismos
-  permisos.
-- **Las seis fases del cliente están hechas** (restricciones de técnicos, multimedia,
-  notificaciones, portal del cliente y correos, presupuestos, reporte web). **El
-  reporte es el enlace del portal:** no subas PDFs a Storage (el bucket `reportes`
-  ya no acepta archivos); el PDF solo se descarga y muestra lo mismo que ve el
-  cliente (fotos publicadas, líneas aprobadas, sin notas internas ni nombres de
-  técnicos; filtros en `src/lib/reportMedia.ts`). Plan y estado en
-  [bitacora.md](bitacora.md#estado); historia y decisiones en
-  [evolucion.md](evolucion.md).
-- **Solo lo autorizado se cobra.** `orden_labor` y `orden_repuestos` tienen `estado`
-  (`borrador` | `pendiente` | `aprobado` | `rechazado`) y los totales suman solo
-  `aprobado`. Nunca cambies el estado con un UPDATE: pasa por `enviar_presupuesto`,
-  `registrar_autorizacion`, `cancelar_presupuesto` o la firma de recepción (bandera
-  `restorify.presupuesto`). Si agregas un cálculo de dinero sobre líneas, filtra por
-  `aprobado`.
-- **Un avance puede ser visible para el cliente.** `orden_avances.visible_cliente` lo
-  marca el técnico, y con él salen su texto y sus archivos (`trg_publicar_archivos_avance`
-  y la herencia en `trg_prepare_orden_media`). Ya no es cierto que todo lo del técnico sea
-  interno hasta que un admin lo publique. Lo que **sigue** siendo cierto: al cliente no le
-  llega el nombre de ningún técnico, y el archivo suelto lo publica solo un admin. Lo de la
-  recepción nace visible **salvo la nota de voz**, que nace interna (`20261010000003`).
-- **Las órdenes se actualizan solas en pantalla** (`20261010000002`): `useOrderSync` escucha
-  por Realtime las tablas de la orden y vuelve a leer la que cambió. El evento es una señal,
-  no los datos: nunca pintes su contenido. Una tabla hija nueva que otra persona necesite ver
-  al momento va en la publicación (migración) y en `ORDER_TABLES` de `workOrders.service.ts`;
-  **toda tabla publicada lleva RLS**, porque Realtime manda cada fila a quien su política deje
-  leerla (`15_tiempo_real.test.sql`).
-- **La lista de órdenes no trae el histórico.** `getWorkOrders` excluye las entregadas de
-  más de 90 días **y las archivadas a mano** (`archivada_en`); el archivo se pide con
-  `getArchivedWorkOrders`, paginado y buscando en el servidor. Los dos filtros son
-  complementarios — toda entregada está en una sola de las dos listas — y lo fija
-  `workOrders.archive.test.ts`. Solo lo entregado se archiva (CHECK) y sacar una orden de
-  "Entregado" la desarchiva (trigger). No le quites el filtro para "ver todo": es lo que evita
-  descargar miles de órdenes con sus relaciones embebidas.
-- **Órdenes y Kanban son una sola página** (F7): `pages/WorkOrders.tsx` con dos vistas
-  (`?vista=lista|tablero`, recordada en el navegador) y la misma búsqueda; `KanbanBoard` va
-  embebido y `/kanban` redirige. **Lo que espera a la oficina lo cuenta la base**: la tarjeta
-  "Requiere atención" del panel sale de `requiere_atencion` (`20261010000012`, solo admin).
-  Un pendiente nuevo para la oficina se agrega a esa RPC (y a `23_requiere_atencion`), no se
-  cuenta con la lista del navegador, que no trae el histórico. "Mis tareas" del técnico es
-  `getMyTasks` (sus líneas en órdenes sin entregar).
-- **El teléfono del cliente se guarda en formato internacional** (`+15551234567`) en
-  `clientes.telefono`, con `components/PhoneInput` (país + número). Los guardados antes, sin
-  "+", se leen como de EE. UU. y no se reescriben hasta que alguien los edita. Para mostrarlo,
-  `formatPhone`; para llamar o escribir, `telUrl` / `whatsAppUrl` de `lib/phone.ts`, que
-  respetan el "+" y no adivinan el país de un número que ya lo dice.
-- **El portal del cliente (`src/portal/`) es un paquete aparte.** No importes ahí
-  nada que arrastre `lib/supabase`, `services/`, contextos de la app ni
-  `i18n/translations.ts`: habla con la edge function `portal` por `fetch` y tiene
-  sus propios textos. Todo dato nuevo que deba ver el cliente se agrega a mano en
-  `datos_portal` (nunca `to_jsonb(fila)`).
+- **Entregar es `entregar_orden`, no un UPDATE de estatus.** Bloquea la orden, asienta el pago
+  final **con su método** (o la devolución) y la marca entregada en una transacción
+  (`DeliveryModal`, `saldo_orden`). `handle_order_delivery_payment` queda como red para otra vía
+  (asienta sin método) y `reverse_order_delivery_finance` revierte en los dos sentidos.
+  [reglas-de-negocio.md](reglas-de-negocio.md#entregar).
+- **La firma de recepción no autoriza lo cotizado** (`20261010000022`): firmar es estar de acuerdo
+  con cómo se recibió el vehículo. Lo cotizado se autoriza solo con un presupuesto o con
+  "Registrar autorización". En pgTAP, `pg_temp.autorizar_cotizado(orden)` hace lo que hacía la
+  firma. [presupuestos.md §2](presupuestos.md#2-las-dos-formas-de-autorizar).
+- **Solo lo autorizado se cobra.** Las líneas tienen `estado` (`borrador` | `pendiente` |
+  `aprobado` | `rechazado`) y los totales suman solo `aprobado`. **Nunca cambies el estado con un
+  UPDATE**: pasa por `enviar_presupuesto`, `registrar_autorizacion` o `cancelar_presupuesto`
+  (bandera `restorify.presupuesto`). **Si agregas un cálculo de dinero sobre líneas, filtra por
+  `aprobado`.** [presupuestos.md §1](presupuestos.md#1-el-estado-de-una-línea).
+- **Idioma del cliente** (`clientes.idioma`, inglés por defecto): los correos salen en ese idioma
+  y el cliente lo cambia desde su enlace. El portal traduce lo escrito a mano con
+  `translateReport`. [portal-y-correos.md](portal-y-correos.md#idioma-20261010000022).
+- **Lo que ve el cliente.** Un avance con `visible_cliente` (lo marca el técnico) sale con su
+  texto y sus archivos; el archivo suelto lo publica solo un admin; la nota de voz de la
+  recepción nace interna. **Al cliente nunca le llega el nombre de un técnico.** El reporte es el
+  enlace del portal: no subas PDFs a Storage; el PDF solo se descarga y muestra lo mismo que ve
+  el cliente (filtros en `src/lib/reportMedia.ts`). [portal-y-correos.md §10](portal-y-correos.md#10-el-reporte-web).
+- **El portal del cliente (`src/portal/`) es un paquete aparte.** No importes ahí nada que
+  arrastre `lib/supabase`, `services/`, contextos de la app ni `i18n/translations.ts`: habla con
+  la edge function `portal` por `fetch`. Todo dato nuevo para el cliente se agrega a mano en
+  `datos_portal` (**nunca `to_jsonb(fila)`**).
+- **Avisos y correos al personal.** El técnico se entera de lo no autorizado (`TechOrderStatus`)
+  y ve lo suyo aceptado en `/mis-comisiones` (`resumen_mis_comisiones`). `notificar` le encola un
+  correo (plantilla `empleado`) **sin `orden_id`** en `cola_envios`, para que nunca tome el camino
+  del correo al cliente; **si agregas otro aviso con correo, súmalo al `v_grupo` de `notificar`.**
+  [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md#parte-2--notificaciones).
+- **Las órdenes se actualizan solas en pantalla** (`useOrderSync`, Realtime). El evento es una
+  señal: nunca pintes su contenido. Una tabla hija nueva que otro deba ver al momento va en la
+  publicación (migración) y en `ORDER_TABLES`; **toda tabla publicada lleva RLS**.
+  [arquitectura.md](arquitectura.md#sincronización-en-tiempo-real-useordersync-20261010000002).
+- **La lista de órdenes no trae el histórico** (`getWorkOrders` excluye las entregadas de más de
+  90 días y las archivadas; el archivo es `getArchivedWorkOrders`, paginado). **No le quites el
+  filtro para "ver todo".** [reglas-de-negocio.md](reglas-de-negocio.md#archivado-de-órdenes).
+- **Órdenes y Kanban son una sola página** (`pages/WorkOrders.tsx`, `?vista=lista|tablero`).
+  **Lo que espera a la oficina lo cuenta la base** (`requiere_atencion`): un pendiente nuevo se
+  agrega a esa RPC y a `23_requiere_atencion`, no se cuenta con la lista del navegador. "Mis
+  tareas" del técnico es `getMyTasks`. [mapa-de-secciones.md](mapa-de-secciones.md#panel).
+- **El teléfono del cliente se guarda en formato internacional** (`+15551234567`) con
+  `PhoneInput`; para mostrarlo, `formatPhone`, y para llamar o escribir, `telUrl` / `whatsAppUrl`
+  (`lib/phone.ts`). [reglas-de-negocio.md](reglas-de-negocio.md#teléfono-del-cliente).
+- **Roles:** `admin`, `mecanico`, `pintor`. Mecánico y pintor tienen los mismos permisos.
 
 ## 2. Reglas de oro
 
@@ -276,19 +191,17 @@ comisiones, el alta de la orden o la "espera de autorización".
 1. **Todo cambio de esquema o permisos es una migración nueva** en
    `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca edites una migración
    ya aplicada ni cambies tablas desde el panel. **El nombre va después de la última
-   migración, no de la fecha de hoy:** hay migraciones aplicadas fechadas hasta
-   `20261010000000`, y una con fecha anterior a la última aplicada no entra con `db push`
-   ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#4-base-de-datos), B-1).
+   migración, no de la fecha de hoy:** hay migraciones aplicadas con fecha futura (hoy la
+   última es `20261010000028`), y una con fecha anterior a la última aplicada no entra con
+   `db push` ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#4-base-de-datos), B-1).
 2. **Una función nueva en `public` es una RPC pública.** Postgres da `EXECUTE` a
    `PUBLIC` y Supabase a `anon` y `authenticated` al crearla. Revócala siempre:
    `REVOKE ALL ON FUNCTION ... FROM PUBLIC, anon, authenticated;` y concede solo lo
    necesario. Las `SECURITY DEFINER` llevan `SET search_path = public` y verifican
    rol/sede por dentro. Una función que solo llaman triggers no necesita ningún
-   `GRANT` (el trigger corre como su dueño). Olvidarlo dejó
-   `reverse_order_delivery_finance` abierta a cualquiera
-   ([auditoria-2026-09.md](historico/auditoria-2026-09.md), AUD-01); `npm run qa:security` lo
-   detecta. Si agregas una función interna, agrega su caso a
-   `scripts/qa/api-security.mjs`.
+   `GRANT` (el trigger corre como su dueño). `npm run qa:security` detecta el olvido
+   ([auditoria-2026-09.md](historico/auditoria-2026-09.md), AUD-01); si agregas una
+   función interna, agrega su caso a `scripts/qa/api-security.mjs`.
 3. **Prueba con pgTAP** (`supabase/tests/database/`) todo lo que toque dinero o
    permisos. Un cuerpo plpgsql roto se aplica sin error y falla en producción.
 4. **Si una migración elimina o renombra columnas**, la base y el `dist` se
@@ -308,43 +221,33 @@ comisiones, el alta de la orden o la "espera de autorización".
    color literal. **El color de marca son tres tokens, no uno:** un relleno con texto
    encima (botón, avatar, ficha elegida) va con `--gradient-primary` y `--color-text-inverse`;
    un borde o indicador, con `--color-primary`; un texto de acento, con
-   `--color-primary-light`. En el tema claro no son el mismo color: el amarillo del logo
-   (`#EBC334`) rellena bien pero como borde sobre blanco no se ve, así que la línea es un
-   dorado más oscuro. El color de una sede los recalcula `brandPalette`
-   (`lib/branding.ts`), que garantiza el contraste para cualquier color
-   (`branding.test.ts`).
+   `--color-primary-light`. El color de una sede los recalcula `brandPalette`
+   (`lib/branding.ts`), que garantiza el contraste (`branding.test.ts`).
 7. **Todo texto visible pasa por i18n** (`src/i18n/translations.ts`, español e
-   inglés, `useLanguage().t(key)`). `Translations` es una firma de índice, así que
-   TypeScript no compara los dos árboles y `getTranslation` devuelve **la clave** cuando
-   falta: la pantalla mostraría `workOrders.archivedSearch`. `src/i18n/translations.test.ts`
-   es la red — mismas claves, mismos marcadores `{dato}`, ningún texto vacío — con una lista
-   corta de omisiones a propósito. Los errores se guardan crudos y se traducen al
-   pintar con `lib/errors.ts`; nunca muestres el mensaje del backend. Excepción: un
-   `RAISE ... USING ERRCODE = '42501'` con una oración en español para el taller
-   ("La orden ya fue entregada…") se muestra tal cual en español; escribe esos
-   mensajes pensando en quien los va a leer.
+   inglés, `useLanguage().t(key)`). Si falta una clave, la pantalla muestra la clave;
+   la red es `src/i18n/translations.test.ts` (mismas claves, mismos marcadores `{dato}`,
+   ningún texto vacío). Los errores se guardan crudos y se traducen al pintar con
+   `lib/errors.ts`; nunca muestres el mensaje del backend. Excepción: un
+   `RAISE ... USING ERRCODE = '42501'` con una oración en español para el taller se
+   muestra tal cual; escríbela pensando en quien la va a leer.
 7b. **El dinero se escribe con `lib/money.ts`** (`money`, `moneySigned`), nunca con
-   `toFixed(2)` ni `toLocaleString()`. El segundo no es otro estilo, está mal:
-   `toLocaleString()` sin opciones se come los centavos ($1,650.50 → "$1,650.5") y cambia
-   según el idioma del teléfono. El portal y los correos ya tenían su propio
-   `Intl.NumberFormat`; son paquetes aparte y siguen con el suyo.
+   `toFixed(2)` ni `toLocaleString()` (sin opciones se come los centavos y cambia según el
+   teléfono). El portal y los correos tienen su propio formateador.
 8. **Fechas locales** con `lib/dates.ts` (`todayLocal`, `daysFromTodayLocal`, `isSameMonth`). Nunca
    `toISOString().split('T')[0]` ni `new Date('AAAA-MM-DD')` para comparar meses.
 8b. **Lo que va junto se escribe junto.** Dos o más escrituras que no pueden quedar a
-   medias (un lote y sus movimientos, una orden y sus líneas) van en una RPC o un trigger,
-   no en varias llamadas desde el navegador (`importar_estado_cuenta`,
-   `deshacer_importacion_estado_cuenta`, `create_work_order`).
-   Una operación de dinero que se puede disparar dos veces bloquea sus filas
-   (`FOR UPDATE`, ver `pay_commissions`).
+   medias van en una RPC o un trigger, no en varias llamadas desde el navegador
+   (`importar_estado_cuenta`, `create_work_order`). Una operación de dinero que se puede
+   disparar dos veces bloquea sus filas (`FOR UPDATE`, ver `pay_commissions`).
 8c. **La caché de datos es de una persona.** `AuthContext` la vacía al cambiar de usuario;
    no guardes datos de la sesión en otro lado (localStorage, IndexedDB) sin borrarlos al
    cerrar sesión.
 8d. **`supabase/config.toml` es la configuración local, no la real.** No uses
    `supabase config push` sin revisar el diff: `[auth.email] enable_signup = false` apaga el
    inicio de sesión con correo. La configuración real de Auth está en el panel.
-9. **Una orden puede ser de otra sede que la elegida.** Un admin abre órdenes desde
-   avisos y enlaces. Lo que depende de la sede (logo, nombre, porcentaje, personal)
-   sale de `order.sede_id` (`orderSede` en `useWorkOrderDetail`), no de `currentSede`.
+9. **Una orden puede ser de otra sede que la elegida** (un admin abre órdenes desde avisos y
+   enlaces). Lo que depende de la sede (logo, nombre, porcentaje, personal) sale de
+   `order.sede_id` (`orderSede` en `useWorkOrderDetail`), no de `currentSede`.
 10. **Una consulta que falla no es "no hay datos".** Distingue el error de red de la
    fila inexistente (`PGRST116`) antes de vaciar estado, cerrar sesión o borrar algo.
 11. **Commits solo cuando se piden.**
@@ -363,7 +266,8 @@ comisiones, el alta de la orden o la "espera de autorización".
 | Notificaciones | Triggers `trg_*_notify` → `notificar()` → `notificaciones` + `cola_envios`; edge function `process-outbox`; frontend en `src/features/notifications/`, `src/lib/push.ts`, `public/sw.js` |
 | Presupuestos | `quotes.service.ts`, `features/workOrders/QuoteCard.tsx`, `LineStateBadge.tsx`, `lineState.ts`; sección `QuoteSection` del portal. Detalle en [presupuestos.md](presupuestos.md) |
 | Portal y correos | `trg_order_portal` → `encolar_correo_cliente()`; `process-outbox` (`sendEmail`) + `_shared/email/templates.ts`; edge function `portal` → `datos_portal()`; `src/portal/`; tarjeta `CustomerLinkCard.tsx`. Detalle en [portal-y-correos.md](portal-y-correos.md) |
-| Edge functions | `supabase/functions/` (Deno). Internas verifican `x-restorify-secret` con `_shared/internal.ts`. Si agregas una, súmala a la lista de SEC-17 en `scripts/qa/api-security.mjs` y despliégala: una función que la app usa y no está desplegada responde 404. Llámalas con `invokeAdminFunction` (`users.service.ts`): `functions.invoke` pierde el motivo de un 4xx y la pantalla mostraba "non-2xx status code" |
+| Cobro por parqueo | `src/features/parking/`, `parking.service.ts`; RPC en [parqueo.md](parqueo.md) |
+| Edge functions | `supabase/functions/` (Deno). Internas verifican `x-restorify-secret` con `_shared/internal.ts`. Si agregas una, súmala a la lista de SEC-17 en `scripts/qa/api-security.mjs` y despliégala (si no, responde 404). Llámalas con `invokeAdminFunction` (`users.service.ts`): `functions.invoke` pierde el motivo de un 4xx |
 | Administración de datos del proyecto real | `scripts/admin/`: `limpiar-datos.sql` (termina en `ROLLBACK`) y `crear-primer-admin.sql`. Solo los corre quien administra, con su aprobación explícita |
 | Qué hay en el proyecto de Supabase real (buckets, secretos por nombre, cron, Realtime, versiones de funciones, panel) | [supabase.md](supabase.md) |
 | Contextos | `src/context/` (Auth, Language, Theme, Toast, UnsavedChanges) |
@@ -371,56 +275,36 @@ comisiones, el alta de la orden o la "espera de autorización".
 | Largo mínimo de contraseña | `src/lib/password.ts` (8), igual en `create-employee`, `update-employee` y el panel de Auth |
 | Traspaso, cuentas, operación y emergencias | [traspaso.md](traspaso.md); antes de publicar a clientes reales, [salida-a-produccion.md](historico/salida-a-produccion.md) |
 | Formato del dinero | `src/lib/money.ts` (`money`, `moneySigned`); el portal y los correos tienen el suyo |
-| Teléfonos y país | `src/lib/phone.ts` (`PHONE_COUNTRIES`, `parsePhone`, `toE164`, `formatPhone`) y `src/components/PhoneInput.tsx` |
-| Color de la sede en el PDF | `src/lib/brandColor.ts`: el color tal cual para rayas y uno oscurecido para texto, que un amarillo claro no se lee sobre blanco |
+| Teléfonos y país | `src/lib/phone.ts` (`PHONE_COUNTRIES`, `parsePhone`, `toE164`, `formatPhone`, `telUrl`, `whatsAppUrl`) y `src/components/PhoneInput.tsx` |
+| Color de la sede en el PDF | `src/lib/brandColor.ts`: el color tal cual para rayas y uno oscurecido para texto |
 | Tipos de dominio | `src/types/domain/` |
 
 ## 4. Patrones de interfaz
 
-- **Modales** controlados (`modal-overlay` + `modal`); los pesados con
-  `LazyModal`. No uses `prompt` ni `alert`. `confirm` solo para confirmaciones
-  destructivas, como hace el resto del código.
+- **Modales** controlados (`modal-overlay` + `modal`); los pesados con `LazyModal`. No uses
+  `prompt` ni `alert`. `confirm` solo para confirmaciones destructivas.
 - **Una capa de pantalla completa que no sea `modal-overlay` va en `<BodyPortal>`**
   (`src/components/BodyPortal.tsx`), como el grabador de video y el visor de la galería. Un
-  `position: fixed` solo se mide contra la pantalla si ningún ancestro tiene `transform`, y
-  `.card` se levanta con uno al pasar el ratón. En el teléfono ese `:hover` se queda pegado
-  después de tocar, así que el grabador quedaba encerrado en la tarjeta de Avances, bajo la
-  barra inferior, con "Detener" y "Usar video" fuera de la pantalla. Por lo mismo, el
-  levantón de `.card` vive dentro de `@media (hover: hover)`; `src/styles/cardHover.test.ts`
-  lo fija. Pasó dos veces (diálogos en escritorio el 19/09, grabador en el teléfono el 28/09).
-- **Un error dentro de un diálogo se muestra dentro del diálogo** o con toast: el
-  modal (z-index 400) tapa el recuadro de error de la página. Un `return` mudo
-  parece un botón roto.
-- **Feedback** de toda operación asíncrona con `showToast`; botones deshabilitados
-  mientras corre.
+  `position: fixed` deja de medirse contra la pantalla si un ancestro tiene `transform`; por eso
+  el levantón de `.card` vive dentro de `@media (hover: hover)` (lo fija `src/styles/cardHover.test.ts`).
+- **Un error dentro de un diálogo se muestra dentro del diálogo** o con toast: el modal
+  (z-index 400) tapa el recuadro de error de la página. Un `return` mudo parece un botón roto.
+- **Feedback** de toda operación asíncrona con `showToast`; botones deshabilitados mientras corre.
 - **Móvil primero.** Tablas con `cards-on-mobile` y `data-label`; inputs de 16 px;
   `useIsMobile()` para renderizar una sola versión; respeta `env(safe-area-inset-*)`.
 - **Una pantalla larga en escritorio va en pestañas** (`src/components/Tabs.tsx`, con
-  `role="tablist"` y flechas), como el detalle de la orden (03/10/2026). El contenido de una
-  pestaña se monta la primera vez que se abre y después se esconde con `hidden`, para no
-  perder lo escrito ni pedir datos de pestañas que nadie abrió. En el teléfono la misma
-  pantalla apila sus secciones, en el orden de las pestañas.
-- **El botón verde es `.btn-success`** (tokens `--color-success-fill` y `--color-on-success`,
-  contraste fijado en `successButton.test.ts`): para agregar y confirmar trabajo hecho. No
-  uses `--color-success` como relleno con texto blanco: no llega al contraste mínimo.
-- **Las tarjetas del detalle de la orden se pliegan con `<CollapsibleSection>`**
-  (`src/components/CollapsibleSection.tsx`), en escritorio y en el teléfono, **cerradas al
-  entrar** (pedido del taller, 04/10/2026): se ven los títulos con un dato corto y se abre lo
-  que se necesita. Qué sección va en qué pestaña está en `TAB_SECTIONS`
-  (`WorkOrderDetail.tsx`), con "Desplegar todo" por pestaña; un enlace con `&tab=` abre la
-  sección que fue a ver (`LINKED_SECTION`), y "Cotizar" abre Mano de obra. Los avisos
-  (hallazgos, tareas sin técnico) van arriba y no se pliegan. La sección envuelve la tarjeta
-  entera: le quita marco y `.card-title` y pone el suyo. El contenido se esconde con
-  `hidden`, no se desmonta, para no perder lo que se estaba escribiendo o firmando; si la
-  tarjeta devuelve `null`, la sección desaparece por CSS. Una tarjeta nueva del detalle va en
-  `TAB_SECTIONS` con su id.
-- **Un `<select>` controlado que se cancela con `confirm`** se remonta con una `key`
-  (`statusEpoch`).
-- **Un `DELETE` o un `UPDATE` rechazado por RLS devuelve éxito sin filas**: usa
-  `.select('id')` y `assertDeleted` / `assertAffected` (`src/services/support.ts`). Sin eso
-  la pantalla dibuja el cambio sobre una fila que la base no tocó; en `uploadSignature`
-  llegaba a decir "firmada" con la orden sin firma y el total en cero. Excepción: marcar un
-  aviso como leído, donde cero filas significa "ya estaba leído".
+  `role="tablist"` y flechas). El contenido de una pestaña se monta la primera vez que se abre y
+  después se esconde con `hidden`. En el teléfono la pantalla apila sus secciones.
+- **El botón verde es `.btn-success`** (tokens `--color-success-fill` y `--color-on-success`):
+  para agregar y confirmar trabajo hecho. No uses `--color-success` como relleno con texto blanco.
+- **Las tarjetas del detalle de la orden se pliegan con `<CollapsibleSection>`**, cerradas al
+  entrar; el contenido se esconde con `hidden`, no se desmonta. **Una tarjeta nueva del detalle
+  va en `TAB_SECTIONS` (`WorkOrderDetail.tsx`) con su id**; un enlace con `&tab=` abre la
+  sección que fue a ver (`LINKED_SECTION`).
+- **Un `<select>` controlado que se cancela con `confirm`** se remonta con una `key` (`statusEpoch`).
+- **Un `DELETE` o un `UPDATE` rechazado por RLS devuelve éxito sin filas**: usa `.select('id')`
+  y `assertDeleted` / `assertAffected` (`src/services/support.ts`). Excepción: marcar un aviso
+  como leído, donde cero filas significa "ya estaba leído".
 
 ## 5. Verificar un cambio
 
@@ -441,26 +325,16 @@ agregues pruebas que entreguen órdenes o paguen comisiones mientras no exista s
 
 - Errores del frontend en Sentry, siempre a través de `src/lib/monitoring.ts`
   (`reportError`, `identifyUser`, `openProblemReport`); ningún otro archivo importa
-  `@sentry/react`. Llegan los errores del `ErrorBoundary` y las consultas que fallan por algo
-  inesperado (`QueryCache`; lo esperado lo filtra `isExpectedFailure`), con quién tenía la
-  sesión; Configuración tiene "Reportar un problema". Sin `VITE_SENTRY_DSN` todo es un no-op, y
-  **al 3/10/2026 no está en Hostinger** ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md), O-2).
-- **Historial de la orden** (`historial_orden`, `20261010000004`): quién cambió qué, desde
-  dónde y el antes → después. Lo escribe un solo trigger genérico (`trg_historial`) con una
-  lista de columnas por tabla; solo un admin lo lee y nadie lo escribe por la API. Si agregas
-  una columna que alguien decide (no un total recalculado), súmala a esa lista y al
-  `UPDATE OF` del trigger en una migración nueva. Se ve en la tarjeta `OrderHistory`.
-- Producción: dominio `restorifyauto.net` (antes `reinventa.shop`, dado de baja). Hostinger
-  compila y publica en cada push, con las variables `VITE_*` de su panel (no las de
-  `.env.local`); `public/.htaccess` reescribe a `index.html` (salvo `assets/`, que da 404 si
-  falta) y manda `www` al dominio sin `www`. El diseño es que publique la rama `produccion`,
-  pero **hoy publica `main`** (verificado el 30/09: el sitio cambió con tres pushes a `main`;
-  `produccion` no se movió). Mientras no se cambie en el panel, **un push a `main` es un
-  despliegue**, sale antes de que termine el CI, y nunca va sin que la persona responsable
-  lo pida ni antes del `db push` que necesite. Supabase en plan **Pro** desde el 30/09
-  (respaldos diarios; los buckets siguen con 50 MB por archivo). Pasos en
-  [deployment.md](deployment.md).
+  `@sentry/react`. Sin `VITE_SENTRY_DSN` todo es un no-op (al 3/10/2026 no estaba en Hostinger,
+  [evaluacion-2026-10.md](historico/evaluacion-2026-10.md), O-2).
+- **Historial de la orden** (`historial_orden`, `trg_historial`, `20261010000004`): quién cambió
+  qué y el antes → después; solo un admin lo lee y nadie lo escribe por la API. **Si agregas una
+  columna que alguien decide (no un total recalculado), súmala a la lista del trigger y a su
+  `UPDATE OF` en una migración nueva.**
+- Producción: dominio `restorifyauto.net`. Hostinger compila y publica en cada push, con las
+  variables `VITE_*` de su panel. **Hoy publica `main`** (el diseño era `produccion`): un push a
+  `main` es un despliegue, sale antes de que termine el CI, y nunca va sin que la persona
+  responsable lo pida ni antes del `db push` que necesite. Pasos en [deployment.md](deployment.md).
 - **Una publicación deja pestañas con archivos viejos.** `lib/staleChunk.ts` reconoce la
   descarga fallida de una página diferida y recarga una vez (con un candado de 10 s contra el
-  ciclo); el `ErrorBoundary` hace lo mismo. No lo quites: sin él, quien tenía la app abierta
-  veía "Algo salió mal" al entrar a una sección después de cada publicación.
+  ciclo); el `ErrorBoundary` hace lo mismo. No lo quites.

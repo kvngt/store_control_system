@@ -23,7 +23,7 @@ Contadas el **11/10/2026** (las demás guías remiten aquí en vez de repetir ci
 | **Triggers en `ordenes_trabajo`** | 24 | La tabla con más lógica asociada |
 | **Tareas programadas** | 5 | `pg_cron`: `restorify-outbox`, `-maintenance`, `-due-reminders`, `-quote-reminders`, `-parqueo` |
 | **Pruebas de base de datos** | 33 archivos | 811 aserciones (`supabase/tests/database/`, pgTAP) |
-| **Casos de `qa:security`** | 155 | `scripts/qa/api-security.mjs`, contra la API |
+| **Casos de `qa:security`** | 156 | `scripts/qa/api-security.mjs`, contra la API |
 | **Edge Functions** | 6 | En `supabase/functions/` (Deno 2) |
 | **Pruebas e2e** | 8 | En `e2e/` (Playwright) |
 
