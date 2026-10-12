@@ -3,7 +3,7 @@ import { useLanguage } from '../../context/language.context';
 import { useAuth } from '../../context/auth.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import { detachThisDevice } from '../../features/notifications/pushDevice';
-import { LayoutDashboard, Users, Car, ClipboardList, DollarSign, CreditCard, Settings, LogOut, ChevronLeft, ChevronRight, Wrench, Building2, Hexagon, UserCog, Wallet } from 'lucide-react';
+import { LayoutDashboard, Users, Car, ClipboardList, DollarSign, CreditCard, Settings, LogOut, ChevronLeft, ChevronRight, Wrench, Building2, Hexagon, UserCog, Wallet, LifeBuoy } from 'lucide-react';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -63,7 +63,11 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
 
   // Everyone gets Settings now — it holds their own profile, language and
   // theme. The sede/staff management inside it stays admin-only.
-  const settingsLinks = [{ to: '/settings', icon: Settings, label: t('nav.settings') }];
+  const settingsLinks = [
+    { to: '/settings', icon: Settings, label: t('nav.settings') },
+    // El manual, para todos: cada rol ve sus secciones.
+    { to: '/ayuda', icon: LifeBuoy, label: t('nav.help') },
+  ];
 
   return (
     <>

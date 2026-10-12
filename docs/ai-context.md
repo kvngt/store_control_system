@@ -275,6 +275,7 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
 | Largo mínimo de contraseña | `src/lib/password.ts` (8), igual en `create-employee`, `update-employee` y el panel de Auth |
 | Traspaso, cuentas, operación y emergencias | [traspaso.md](traspaso.md); antes de publicar a clientes reales, [salida-a-produccion.md](historico/salida-a-produccion.md) |
 | Formato del dinero | `src/lib/money.ts` (`money`, `moneySigned`); el portal y los correos tienen el suyo |
+| Manual de usuario (Ayuda, `/ayuda`) | El texto es [manual-usuario.md](manual-usuario.md) y [manual-usuario.en.md](manual-usuario.en.md); la app lo importa tal cual. **Si cambias una pantalla, pon al día los dos idiomas** (misma estructura: lo fija `features/help/helpDoc.test.ts`). Detalle en [mapa-de-secciones.md](mapa-de-secciones.md#ayuda-manual-de-usuario) |
 | Teléfonos y país | `src/lib/phone.ts` (`PHONE_COUNTRIES`, `parsePhone`, `toE164`, `formatPhone`, `telUrl`, `whatsAppUrl`) y `src/components/PhoneInput.tsx` |
 | Color de la sede en el PDF | `src/lib/brandColor.ts`: el color tal cual para rayas y uno oscurecido para texto |
 | Tipos de dominio | `src/types/domain/` |

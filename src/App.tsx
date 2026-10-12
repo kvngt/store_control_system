@@ -28,6 +28,7 @@ const Payroll = lazy(() => import('./pages/Payroll'));
 const Employees = lazy(() => import('./pages/Employees'));
 const Settings = lazy(() => import('./pages/Settings'));
 const MyCommissions = lazy(() => import('./pages/MyCommissions'));
+const Help = lazy(() => import('./pages/Help'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { isAuthenticated, user } = useAuth();
@@ -136,6 +137,9 @@ function AppRoutes() {
         {/* Las comisiones de quien entra (pedido del taller, 06/10/2026). La base le muestra
             solo lo suyo aceptado o pagado. */}
         <Route path="/mis-comisiones" element={<MyCommissions />} />
+        {/* El manual de usuario, en el idioma elegido y con las secciones del rol (12/10/2026). */}
+        <Route path="/ayuda" element={<Help />} />
+        <Route path="/help" element={<Navigate to="/ayuda" replace />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

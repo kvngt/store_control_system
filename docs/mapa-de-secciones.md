@@ -218,6 +218,16 @@ egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
 | Servicios | `sedes.service.ts`, `users.service.ts` |
 | Base | `sedes`, `perfiles` (guardia `trg_perfil_privilegios`), buckets `sede_logos` y `avatares` |
 
+## Ayuda (manual de usuario)
+
+| | |
+|---|---|
+| Pantalla | `pages/Help.tsx` (ruta `/ayuda`; `/help` redirige), en el menú bajo «Sistema». Pinta el manual con `features/help/ManualContent.tsx` (elementos de React, sin HTML crudo) y lo prepara con `features/help/helpDoc.ts`: quita la nota del editor y el índice, deja las secciones del rol y arma el índice y la búsqueda |
+| Texto | [manual-usuario.md](manual-usuario.md) y [manual-usuario.en.md](manual-usuario.en.md): la app los importa como texto (`?raw`), así que se editan ahí. Una marca `<!-- rol: admin -->` o `<!-- rol: tecnico -->` debajo de un título esconde esa sección al otro rol. Si cambias una pantalla, pon al día los dos idiomas |
+| Capturas | `public/ayuda/es/` y `public/ayuda/en/` (WebP, datos inventados de una copia local, nunca de producción) |
+| Pruebas | `features/help/helpDoc.test.ts`: filtro por rol, búsqueda, que cada imagen exista y que los dos manuales tengan la misma estructura (títulos, marcas e imágenes en el mismo orden) |
+| Base | Ninguna: esconder una sección del manual no es un permiso |
+
 ## Acceso y sesión
 
 | | |

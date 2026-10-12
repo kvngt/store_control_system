@@ -43,6 +43,32 @@ al día aparte.
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
 
+### 12/10/2026, tarde — Claude Code (Ayuda: el manual dentro de la app)
+
+- **Pedido:** que el manual viva en la plataforma, en una sección Ayuda, en español e inglés y con
+  lo de cada rol. Ya no se hace en Word ni en Google Docs.
+- **Hecho, sin commit:**
+  - **Página:** `pages/Help.tsx` (`/ayuda`; `/help` redirige), en el menú bajo «Sistema».
+  - **Lógica:** `features/help/helpDoc.ts` arma el manual por rol, el índice y la búsqueda.
+    `ManualContent.tsx` lo pinta con `marked` (dependencia nueva) como elementos de React, sin
+    HTML crudo.
+  - **Textos:** los de la página en `translations.ts` (`nav.help`, `help.*`).
+  - **Manual:** `docs/manual-usuario.md` lleva 25 marcas `<!-- rol: ... -->` y las capturas en
+    lugar de los marcadores. `docs/manual-usuario.en.md` es nuevo: lo tradujo Gemini contra un
+    mapa de textos en inglés y lo revisó Claude Code. Se corrigieron los títulos de los avisos y
+    los asuntos de correo, y en español «Comisión aprobada» y «Trabajo no autorizado».
+  - **Capturas:** 44 por idioma, en `public/ayuda/es|en/` (WebP, 1,6 MB cada una), tomadas de
+    una copia local con datos inventados.
+- **Verificación:**
+  - lint, `tsc` y `build` limpios;
+  - `npm test`: 98 archivos, 815 pruebas, después de los últimos ajustes;
+  - revisión visual como admin (computadora), mecánico (teléfono), en inglés, con búsqueda y
+    con enlace a una sección.
+- **Falta:** **commit y publicar**, solo si lo pide la persona responsable (un push a `main` sale
+  en vivo). No necesita migración ni funciones.
+- **Herramientas** (en el scratchpad de la sesión, no en el repositorio): datos inventados, fotos
+  de ejemplo, capturas en los dos idiomas y conversión a WebP.
+
 ### 12/10/2026 — Claude Code (manual de usuario al día y análisis de la interfaz)
 
 - **Pedido:**

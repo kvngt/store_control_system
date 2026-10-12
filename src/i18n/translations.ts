@@ -24,6 +24,7 @@ const translations: Record<Language, Translations> = {
       finance: 'Finanzas',
       payroll: 'Comisiones',
       myCommissions: 'Mis comisiones',
+      help: 'Ayuda',
       myCommissionsShort: 'Comisiones',
       employees: 'Empleados',
       settings: 'Configuración',
@@ -623,6 +624,16 @@ const translations: Record<Language, Translations> = {
       myTasks: 'Mis tareas',
       reportFinding: 'Reportar trabajo adicional',
       vehicle: 'Datos del vehículo',
+    },
+    // Ayuda: el manual de usuario dentro de la app (12/10/2026)
+    help: {
+      title: 'Ayuda',
+      subtitleAdmin: 'El manual de Restorify, con las secciones de administración.',
+      subtitleTech: 'El manual de Restorify, con lo que necesitas como técnico.',
+      search: 'Buscar en el manual…',
+      clearSearch: 'Borrar la búsqueda',
+      contents: 'Contenido',
+      noResults: 'Ninguna sección del manual tiene esas palabras.',
     },
     // "Mis comisiones" del técnico (06/10/2026)
     myCommissions: {
@@ -1545,6 +1556,7 @@ const translations: Record<Language, Translations> = {
       finance: 'Finance',
       payroll: 'Commissions',
       myCommissions: 'My commissions',
+      help: 'Help',
       myCommissionsShort: 'Commissions',
       employees: 'Employees',
       settings: 'Settings',
@@ -2130,6 +2142,15 @@ const translations: Record<Language, Translations> = {
       myTasks: 'My jobs',
       reportFinding: 'Report additional work',
       vehicle: 'Vehicle details',
+    },
+    help: {
+      title: 'Help',
+      subtitleAdmin: 'The Restorify manual, with the office sections.',
+      subtitleTech: 'The Restorify manual, with what you need as a technician.',
+      search: 'Search the manual…',
+      clearSearch: 'Clear search',
+      contents: 'Contents',
+      noResults: 'No section of the manual has those words.',
     },
     myCommissions: {
       title: 'My commissions',
