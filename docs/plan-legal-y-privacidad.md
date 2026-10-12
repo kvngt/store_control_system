@@ -138,7 +138,7 @@ Es la base de la política de privacidad: la política no puede decir menos que 
 | VIN, placa, marca, modelo, color, millas, gasolina | Vehículo del cliente | Identificar el auto y su estado al llegar | Igual | Supabase. El VIN se consulta en **NHTSA vPIC** (gobierno de EE. UU.) para decodificarlo |
 | Fotos y videos de la inspección 360 y de los avances | Vehículo; **pueden salir la placa, el interior, objetos y documentos personales y personas de paso**. **Los videos graban sonido** | Probar el estado del auto al recibirlo; mostrar el trabajo al cliente | Taller; el cliente ve solo lo publicado | Supabase Storage (bucket privado, enlaces firmados) |
 | Notas de voz | **Personal** del taller | Notas internas de la recepción | Taller (internas por defecto) | Supabase Storage |
-| Firma de recepción y su fecha | Cliente (o quien deja el auto) | Aceptar las condiciones y autorizar lo cotizado | Taller y el cliente | Supabase Storage |
+| Firma de recepción y su fecha | Cliente (o quien deja el auto) | Aceptar las condiciones y el estado en que se recibe el vehículo (no autoriza lo cotizado desde `20261010000022`) | Taller y el cliente | Supabase Storage |
 | Comprobantes de pago (foto del cheque o de la transferencia) y número de cheque | Cliente | Probar el pago | Solo administración | Supabase Storage (bucket `comprobantes`, solo admin) |
 | Respuesta al presupuesto: fecha, IP, navegador, nombre | Cliente | Prueba de la autorización | Administración | Supabase (`presupuestos`) |
 | Visitas al portal y correos enviados (estado, motivo de error) | Cliente | Saber si recibió los avisos | Administración | Supabase; los correos salen por **Resend** |

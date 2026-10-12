@@ -3,12 +3,12 @@
 Restorify es un sistema en producción que maneja dinero, datos de clientes y permisos
 por rol. Antes de cambiar algo, lee **[docs/ai-context.md](docs/ai-context.md)**: son
 las reglas que no se pueden romper y dónde está cada cosa. Si vas a tomar el proyecto
-completo, empieza por **[docs/traspaso.md](docs/traspaso.md)**. Para ver cómo está construido todo en diagramas (los "planos"), **[docs/radiografia.md](docs/radiografia.md)**; para ubicar una sección
+completo, empieza por **[docs/traspaso.md](docs/traspaso.md)**. Para ver cómo está construido todo en diagramas (los "planos"), **[docs/planos.md](docs/planos.md)** (el resumen con cifras es [docs/radiografia.md](docs/radiografia.md) y el detalle, [docs/arquitectura.md](docs/arquitectura.md)); para ubicar una sección
 (archivos, tablas, pruebas), **[docs/mapa-de-secciones.md](docs/mapa-de-secciones.md)**.
 
 **Si retomas trabajo en curso** (varios modelos se turnan): la tabla de estado y la
 **bitácora de traspaso** están en
-**[docs/historico/plan-mejoras-2026-10.md](docs/historico/plan-mejoras-2026-10.md#bitácora-de-traspaso-entre-agentes)**.
+**[docs/bitacora.md](docs/bitacora.md#bitácora-de-traspaso-entre-agentes)**.
 Léela antes de empezar y agrega tu entrada al terminar cada bloque de trabajo.
 
 ## Lo mínimo
@@ -45,4 +45,4 @@ npx supabase start && npm run test:db     # si tocaste SQL (necesita Docker)
 npm run qa:security                       # después de aplicar migraciones de permisos
 ```
 
-Qué probar a mano según lo que cambiaste: [docs/historico/plan-de-pruebas.md](docs/historico/plan-de-pruebas.md) §8.
+Qué probar a mano según lo que cambiaste: [docs/plan-de-pruebas.md](docs/plan-de-pruebas.md) §8.

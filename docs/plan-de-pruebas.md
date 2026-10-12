@@ -4,11 +4,11 @@ Lo que hay que probar para confiar en una versión, escrito para que lo ejecute 
 persona o un agente de IA** sin conocer el proyecto. Cada caso tiene un identificador,
 una prioridad, quién puede ejecutarlo, los pasos y el resultado esperado.
 
-- Qué cubren las pruebas automatizadas y cómo correrlas: [pruebas.md](../pruebas.md).
+- Qué cubren las pruebas automatizadas y cómo correrlas: [pruebas.md](pruebas.md).
 - Qué hace el sistema y por qué (para decidir si algo es un error):
-  [reglas-de-negocio.md](../reglas-de-negocio.md).
+  [reglas-de-negocio.md](reglas-de-negocio.md).
 - Hallazgos de la última auditoría y qué caso comprueba cada uno:
-  [auditoria-2026-09.md](auditoria-2026-09.md).
+  [auditoria-2026-09.md](historico/auditoria-2026-09.md).
 
 ---
 
@@ -106,13 +106,13 @@ npm run dev                            # http://localhost:5173
 ```
 
 Si `db:check` dice que faltan migraciones, **no ejecutes el plan**: la app mostrará errores
-que no son de la app (ver [deployment.md](../deployment.md)).
+que no son de la app (ver [deployment.md](deployment.md)).
 
 ### 2.2 Cuentas
 
 Créalas en **Empleados** (menú lateral). Las que había se borraron el 29/09/2026 con la
 limpieza del proyecto real; créalas de nuevo, idealmente en un proyecto de staging
-([mantenimiento.md P0-1](../mantenimiento.md#5-plan-priorizado)), y **no** en el proyecto
+([mantenimiento.md P0-1](mantenimiento.md#5-plan-priorizado)), y **no** en el proyecto
 que usa el taller mientras dure su prueba:
 
 | Clave en el plan | Rol | Sede | Variables en `.env.test.local` |
@@ -181,10 +181,10 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | ID | P | Ejecuta | Comando | Esperado |
 |---|---|---|---|---|
 | AUT-01 | P0 | IA | `npm run lint` y `npx tsc -b` | Sin errores ni avisos |
-| AUT-02 | P0 | IA | `npm test` | Todas en verde (504 al 1/10/2026) |
+| AUT-02 | P0 | IA | `npm test` | Todas en verde (802 al 11/10/2026) |
 | AUT-03 | P0 | IA | `npm run build` | Termina sin errores |
 | AUT-04 | P0 | IA | `npm run db:check` | "Base de datos al día" |
-| AUT-05 | P0 | IA | `npx supabase start` y `npm run test:db` (requiere Docker) | 8 archivos pgTAP en verde. Sin Docker: **BLOQUEADO** |
+| AUT-05 | P0 | IA | `npx supabase start` y `npm run test:db` (requiere Docker) | Todos los archivos pgTAP en verde (33 al 11/10/2026). Sin Docker: **BLOQUEADO** |
 | AUT-06 | P0 | IA | `npm run qa:security` | 0 FAIL. Los SKIP dicen qué falta (una cuenta o una orden) |
 | AUT-07 | P1 | IA | `npm run qa:security` (con cuenta de técnico) | SEC-55 PASS. Ya no crea nada: desde que abrir una orden es solo de admin, el caso comprueba el rechazo |
 | AUT-08 | P1 | IA | `npm run test:e2e` | Todas en verde o saltadas por falta de credenciales |
@@ -252,7 +252,7 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | ORD-20 | P1 | IA | Orden con un presupuesto **esperando** al cliente → el diálogo muestra el error "La orden tiene un presupuesto esperando respuesta…", la orden no se entrega y en Finanzas no quedó ningún "Pago final". |
 | ORD-10 | P1 | IA | **A** reabre una orden finalizada → se borra la fecha de finalización. |
 | ORD-11 | P1 | IA | **Órdenes → Tablero**: en computadora, arrastrar entre columnas; en teléfono, "Mover a" (cancelar el diálogo de entrega deja el selector como estaba). **M** solo ve sus tarjetas, y en ellas no hay "Entregado". |
-| ORD-12 | P0 | IA | **A** crea una orden con mano de obra $1,000 **sin firmar** → la línea dice **Sin autorizar** y el total es $0. Firmar → **sin recargar**, la insignia desaparece, el total pasa a $1,000 y la tarjeta Presupuesto muestra "con la firma de recepción". *(AUD-06)* |
+| ORD-12 | P0 | IA | **A** crea una orden con mano de obra $1,000 **sin firmar** → la línea dice **Sin autorizar** y el total es $0. Firmar → la línea **sigue** Sin autorizar y el total en $0 (desde `20261010000022` la firma no autoriza). **Registrar autorización** → **sin recargar**, la insignia desaparece y el total pasa a $1,000. *(AUD-06)* |
 | ORD-13 | P2 | IA | Crear una orden sin fecha estimada de entrega → la fecha es hoy + 5 días en la hora local, también si se crea después de las 7 p. m. *(AUD-13)* |
 | ORD-15 | P1 | IA | Teléfono, **A**, Kanban: en una orden **Entregada**, **Mover a → Archivar** → confirma → la tarjeta sale del tablero y la orden aparece en **Órdenes → Archivadas** con la insignia "Archivada". Abrirla → **Devolver al tablero** → vuelve. En computadora, el botón **Archivar** de la tarjeta hace lo mismo. |
 | ORD-16 | P1 | IA | Una orden que no está entregada no ofrece **Archivar**. **M** no ve la opción en ninguna. Por la API, archivar una no entregada responde 23514 y un técnico no archiva (SEC-38). Sacar de Entregado una orden archivada la devuelve sola al tablero. |
@@ -416,7 +416,7 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 
 ### 4.13 Portal del cliente y correos (POR)
 
-Reglas: [portal-y-correos.md](../portal-y-correos.md).
+Reglas: [portal-y-correos.md](portal-y-correos.md).
 
 | ID | P | Ejecuta | Pasos → Esperado |
 |---|---|---|---|
@@ -440,12 +440,12 @@ Reglas: [portal-y-correos.md](../portal-y-correos.md).
 
 ### 4.14 Presupuestos (PRE)
 
-Reglas: [presupuestos.md](../presupuestos.md). Orden de **A** con cliente D-02 y **M** asignado.
+Reglas: [presupuestos.md](presupuestos.md). Orden de **A** con cliente D-02 y **M** asignado.
 
 | ID | P | Ejecuta | Pasos → Esperado |
 |---|---|---|---|
 | PRE-01 | P0 | IA | Alta con mano de obra $1,000, sin firmar → **Sin autorizar**, total $0. |
-| PRE-02 | P0 | IA | Firmar → autorizada, total $1,000; la tarjeta **Presupuesto** muestra "Presupuesto 1 · con la firma de recepción". |
+| PRE-02 | P0 | IA | Firmar → la línea **sigue** sin autorizar y el total en $0: la firma no autoriza lo cotizado (`20261010000022`). |
 | PRE-03 | P0 | IA | Agregar "Pintura $500" → **Sin autorizar**; el total no cambia; la tabla muestra "Sin autorizar $500" aparte. |
 | PRE-04 | P0 | IA | **Enviar presupuesto al cliente** → la línea pasa a **Esperando al cliente** sin lápiz ni papelera; la orden muestra **Esperando autorización** en la lista y el tablero (también para **M**). |
 | PRE-05 | P1 | IA | Correo `presupuesto` enviado; su botón abre el portal con **Presupuesto por autorizar** arriba. |
@@ -480,7 +480,7 @@ asignado. Probar en un teléfono real (las fotos del reporte suben por la cola).
 
 ### 4.15 Reporte (REP)
 
-Reglas: [portal-y-correos.md](../portal-y-correos.md#10-el-reporte-web). Orden con cliente
+Reglas: [portal-y-correos.md](portal-y-correos.md#10-el-reporte-web). Orden con cliente
 D-02, fotos de recepción, un avance con una foto publicada, otra interna y una nota.
 
 | ID | P | Ejecuta | Pasos → Esperado |
@@ -695,4 +695,4 @@ Estado en base:  (salida de scripts/qa/estado-orden.sql, si aplica)
 ```
 
 Para subidas: el motivo que muestra la bandeja al expandirla. Para push: los pasos de
-diagnóstico en [multimedia-y-notificaciones.md](../multimedia-y-notificaciones.md#diagnóstico-1).
+diagnóstico en [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md#diagnóstico-1).

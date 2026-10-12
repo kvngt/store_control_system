@@ -135,7 +135,7 @@ Cuenta: el administrador. Dispositivo: computadora.
 > Con el servidor de correo que trae Supabase de fábrica se envían muy pocos por hora y
 > solo a correos del equipo del proyecto en Supabase. Si te llega a ti pero no al mecánico
 > (sesión B), no es un fallo de la app: falta configurar un SMTP propio
-> ([salida-a-produccion.md](salida-a-produccion.md), PRD-05). Anótalo como ⏭️ con ese motivo.
+> ([salida-a-produccion.md](historico/salida-a-produccion.md), PRD-05). Anótalo como ⏭️ con ese motivo.
 
 ---
 
@@ -148,7 +148,7 @@ Cuenta: administrador. Dispositivo: computadora. Menú: **Configuración** (sede
 
 | # | Pri | Pasos | Debe pasar |
 |---|---|---|---|
-| B-01 | 🟡 | Edita la sede: dirección, teléfono, **correo de contacto** (uno tuyo), **WhatsApp**, capacidad **5**, porcentaje de comisión **35** | Se guarda. Al recargar sigue igual |
+| B-01 | 🟡 | Edita la sede: dirección, teléfono, **correo de contacto** (uno tuyo), **teléfonos** (uno de oficina y un celular con WhatsApp), capacidad **5**, porcentaje de comisión **35** | Se guarda. Al recargar sigue igual |
 | B-02 | ⚪ | Sube un **logo** y cambia el **color de acento** | El logo y el color se ven en la app sin recargar |
 
 ### Personal (menú Empleados)
@@ -203,7 +203,8 @@ Cuenta: administrador. Dispositivo: **teléfono Android** (para las fotos) o com
 | D-04 | 🟡 | Mira la bandeja de subidas | "N de 6 archivos subidos" hasta terminar; puedes seguir usando la app |
 | D-05 | 🔴 | En el detalle: Frenos y Pastillas dicen **Sin autorizar** | El total autorizado todavía no los incluye |
 | D-06 | 🔴 | Ve a **Finanzas** | Un ingreso **"Depósito inicial" $300** |
-| D-07 | 🔴 | Vuelve a la orden. **Firma del cliente**: firma con el dedo o el mouse → guardar | Las líneas dejan de decir *Sin autorizar*; total **$1,200** |
+| D-07 | 🔴 | Vuelve a la orden. **Firma del cliente**: firma con el dedo o el mouse → guardar | Se guarda. Las líneas **siguen** *Sin autorizar*: la firma es la conformidad con cómo se recibió el vehículo, no autoriza lo cotizado |
+| D-07b | 🔴 | En la tarjeta **Presupuesto**: **Registrar autorización** (el cliente autorizó en persona) de Frenos y Pastillas | Las líneas dejan de decir *Sin autorizar*; total **$1,200** |
 | D-08 | 🟡 | Aparece la tarjeta **Enlace del cliente** con un enlace | Se puede **Copiar** y **Abrir** |
 | D-09 | 🟡 | Al minuto, revisa el correo de "cliente" | Llega "Recibimos su vehículo" con el nombre del taller y un botón al enlace (sale en cuanto la orden tiene una foto de recepción; sin fotos, a los 30 segundos) |
 | D-10 | 🟡 | Firma **otra vez** | La firma nueva se guarda; nada cambia en lo autorizado |
@@ -370,7 +371,7 @@ Cuenta: mecánico en Android y, si hay, en iPhone. Admin en la computadora.
 | L-01 | 🔴 | En el **mismo navegador**: entra como admin, abre Panel, Órdenes y Finanzas. Cierra sesión. Entra como mecánico | En **ningún momento**, ni por un instante mientras carga, se ve un monto del admin |
 | L-02 | 🔴 | Con la sesión del mecánico abierta, en Chrome DevTools → Network pon **Offline** 30 segundos y vuelve a **Online** | La app no lo saca al login; lo que tenía escrito sigue ahí |
 | L-03 | 🟡 | A mitad de crear una orden, intenta salir de la pantalla | Avisa que hay cambios sin guardar |
-| L-04 | 🟡 | Todo el recorrido de una orden en **inglés** | No aparecen textos en español mezclados (salvo los correos, que van en español) |
+| L-04 | 🟡 | Todo el recorrido de una orden en **inglés** | No aparecen textos en español mezclados (los correos también, si el cliente está en inglés) |
 | L-05 | ⚪ | **Tema claro** y **oscuro** | Todo se lee bien en los dos |
 | L-06 | 🟡 | En el teléfono, abre cada menú | Nada se sale de la pantalla ni obliga a desplazarse de lado; las tablas se ven como tarjetas |
 

@@ -2,7 +2,7 @@
 
 Qué hace Restorify y por qué, en lenguaje de negocio. Es la referencia para
 decidir si algo que pasó es un error o el comportamiento esperado, y para
-escribir las pruebas ([plan-de-pruebas.md](historico/plan-de-pruebas.md)).
+escribir las pruebas ([plan-de-pruebas.md](plan-de-pruebas.md)).
 
 Casi todas estas reglas las impone **la base de datos** (RLS y triggers), no la
 interfaz: se cumplen aunque alguien use la API directamente. Donde una regla vive
@@ -40,7 +40,7 @@ Recepción ──► En proceso ◄──► Espera de autorización ──► F
 | **En proceso** | Se está trabajando | — |
 | **Espera de autorización** | Pausa: hay trabajo adicional que el cliente tiene que autorizar. El técnico la provoca **reportando un hallazgo** (`reportar_hallazgo`); no la elige en el selector | Aviso a administración. Sale sola a En proceso al responder el cliente, al descartar el hallazgo o al cancelar el presupuesto ([hallazgos.md](hallazgos.md)) |
 | **Finalizado** | El técnico terminó el trabajo. **Todavía no es "listo para el cliente"**: administración lo revisa y lo marca "Listo para entregar" | Avance al 100 %, fecha de finalización, **aviso a admins: "Trabajo terminado"** (hay que revisarlo). **No se le avisa al cliente.** Su enlace dice "En revisión final" |
-| ↳ **Listo para entregar** | Marca sobre Finalizado que pone **solo administración** (`marcar_lista_para_entregar`) | **Ahora sí** sale el correo "Su vehículo está listo" y el enlace dice "Listo para recoger". Queda quién y cuándo (historial). Se borra sola si la orden se reabre |
+| ↳ **Listo para entregar** | Marca sobre Finalizado que pone **solo administración** (`marcar_lista_para_entregar`, protegida por `trg_guard_lista_para_entregar` con `restorify.lista`; se borra sola si la orden deja de estar finalizada o entregada) | **Ahora sí** sale el correo "Su vehículo está listo" y el enlace dice "Listo para recoger". Queda quién y cuándo (historial). `datos_correo` entrega al `process-outbox` el estatus del cliente (`_estatus_cliente`: finalizado sin marca = en proceso), y `datos_portal` manda `orden.lista_para_entregar` ("En revisión final" si aún no tiene la marca) |
 | **Entregado** | El cliente se llevó el vehículo y pagó | Avance 100 %, **cobro del saldo, costo de repuestos, comisiones** (sección 2 y 4) |
 | **Retirada sin reparar** | El cliente se llevó el vehículo **sin que se hiciera (todo) el trabajo**: no autorizó, cambió de idea, o solo se hizo una parte | Ver [Retirada sin reparar](#retirada-sin-reparar) |
 
@@ -79,8 +79,14 @@ cerrada se borra su fecha de finalización y el avance se conserva.
 
 - **La abre solo un admin** (desde el 04/10/2026, `20261004000000`: `ordenes_trabajo_insert`
   es `is_admin()`). Antes un técnico podía registrar la recepción; ya no.
-- Se hace en cuatro pasos: cliente, vehículo y recepción, depósito (con su método y
-  comprobante) y trabajos (cada tarea con su técnico).
+- Se hace mediante la RPC `create_work_order`, que lee claves con nombre exacto: el depósito
+  va dentro de `p_order` como `deposito_metodo`, `deposito_numero_cheque` y
+  `deposito_comprobante_ruta` (`20261010000007`); una clave con otro nombre **se ignora sin error**
+  (del 04/10/2026 hasta el arreglo, el alta mandaba `deposito_cheque`/`deposito_comprobante` y el
+  número de cheque y comprobante se perdían; fijado en `workOrders.service.test.ts`). El alta va en
+  cuatro pasos (`INTAKE_STEPS` en `workOrderForm.schema.ts`: cliente, vehículo, trabajos, depósito;
+  el cliente y el vehículo nuevos se guardan al salir de su paso y al cancelar, `onLeaveStep`); todo
+  campo nuevo del formulario va en uno de ellos (lo exige `workOrderForm.schema.test.ts`).
 - Lo que un admin cotiza al crear la orden nace **sin autorizar** y se autoriza
   solo mediante un presupuesto o registrando la autorización manualmente (sección 8).
 - El número `ORD-AAAA-###` se genera de forma atómica: dos órdenes simultáneas
@@ -100,6 +106,16 @@ mano de obra, repuestos ni asignaciones, ni subir archivos, ni cambiar su estado
 agregar o borrar avances.
 Un admin sí puede corregirla; cada corrección de dinero se asienta como un ajuste
 (sección 2), no reescribiendo lo anterior.
+
+### Archivado de órdenes
+
+La lista de órdenes no trae el histórico: `getWorkOrders` excluye las entregadas de más de
+90 días **y las archivadas a mano** (`archivada_en`); el archivo se pide con `getArchivedWorkOrders`,
+paginado y buscando en el servidor. Los dos filtros son complementarios —toda entregada está en una
+sola de las dos listas— y lo fija `workOrders.archive.test.ts`. Solo lo entregado se archiva
+(restricción CHECK) y sacar una orden de "Entregado" la desarchiva automáticamente (trigger
+`trg_order_unarchive_on_reopen`). No le quites el filtro para "ver todo": es lo que evita
+descargar miles de órdenes con sus relaciones embebidas.
 
 ### Borrar una orden
 
@@ -144,7 +160,7 @@ Nadie registra a mano el dinero de una orden. Estos movimientos los crea la base
   su total, y la reversión usa el depósito como el monto al que volver.
 - **Los totales los calcula el sistema, con lo autorizado.** Mano de obra = suma de
   sus líneas **aprobadas**; repuestos = cantidad × precio de los **aprobados**;
-  total = mano de obra + repuestos − **descuento**. El costo de repuestos al entregar
+  `total_general = mano de obra + repuestos − descuento + parqueo`. El costo de repuestos al entregar
   también cuenta solo lo aprobado. Nadie puede escribir un total a mano, ni siquiera un
   admin por la API.
 - **El costo de un repuesto** (lo que pagó el taller) es por defecto su precio, y
@@ -154,14 +170,16 @@ Nadie registra a mano el dinero de una orden. Estos movimientos los crea la base
 - **El costo automático es solo el que asienta el sistema.** Una compra de repuestos
   registrada a mano y vinculada a la orden se ve en el balance de la orden, pero no achica
   ni se revierte con el costo automático.
-- **Descuento** (`aplicar_descuento`, solo admin): lo **absorbe el taller**. Baja el total
-  que paga el cliente; no toca la mano de obra, así que **las comisiones no cambian**. En
+- **Descuento** (`orden_montos.descuento`, solo por `aplicar_descuento`, solo admin): lo **absorbe el taller**.
+  Baja el total que paga el cliente (el guardia de montos rechaza escribirlo directo); no toca la mano de obra,
+  así que **las comisiones no cambian**, y el descuento **no toca el parqueo**. En
   dólares o en **porcentaje** de lo autorizado (la base hace la cuenta). Nunca más que lo
   autorizado. Se registra en el historial con su motivo.
 - **Anticipos** (`registrar_anticipo`, solo admin, orden sin entregar): un pago del cliente
   antes de llevarse el vehículo, con su método y comprobante. Se asienta como "Anticipo" y
-  suma a lo pagado por adelantado (`deposito_inicial`): la entrega cobra solo lo que falte, y
-  sacar la orden de Entregado vuelve a ese monto.
+  suma a lo pagado por adelantado (`deposito_inicial`, la config `restorify.deposito` lleva `anticipo: true`):
+  por eso la entrega cobra solo lo que falte, y sacar la orden de Entregado vuelve a lo pagado por adelantado.
+  No asientes un pago anticipado por otra vía.
 - **Negativos no.** Mano de obra, precios y depósito no aceptan valores negativos, ni
   un repuesto cantidad cero (formulario y base).
 
@@ -228,9 +246,10 @@ anteriores y mandárselos al contador, y **no se mezcla** con lo que registra la
 - Lo importado vive en su propia vista de Finanzas ("Estados de cuenta"), con su resumen por
   estado de cuenta (`resumen_importaciones`) y su exportación.
 - **No cuenta** en los ingresos y egresos del panel ni de Finanzas (`resumen_panel`), ni en
-  lo cobrado de una orden (saldo, balance, ajuste al entregar, enlace del cliente).
-- "Posible duplicado" compara solo contra otros estados de cuenta importados (el mismo
-  movimiento importado dos veces), no contra los cobros que asentó la app.
+  lo cobrado de una orden (saldo, balance, ajuste al entregar, enlace del cliente). Un movimiento con
+  `importacion_id` se ignora para esos efectos: si sumas `finanzas_movimientos` para algo operativo
+  de la app, filtra siempre `importacion_id IS NULL`. El costo automático de repuestos al entregar
+  es solo el generado por el sistema (`registrado_por IS NULL`); compras manuales vinculadas no lo tocan.
 - Todo o nada: el lote y sus movimientos se guardan juntos. Si algo falla, no queda un lote a
   medias y el mismo archivo se puede volver a importar.
 - Las comisiones de Clover y del banco ("bankcard fee", "bankcard discount fee", "clover
@@ -266,7 +285,7 @@ mismos permisos ("técnico"); cambia el tipo de tarea.
 | Configuración: sedes | ✅ | ❌ |
 | Empleados: alta, edición y baja del personal, y cómo se le paga a cada quien | ✅ | ❌ |
 | Cambiar el rol o la sede de una persona | ✅ (de cualquiera) | ❌ (ni el propio) |
-| Editar correo y WhatsApp de contacto de la sede | ✅ | ❌ |
+| Editar correo y teléfonos de contacto de la sede | ✅ | ❌ |
 
 ### En una orden
 
@@ -335,8 +354,17 @@ un admin: se borran y se crean de nuevo.
 Las filas de tareas, asignar técnico, marcar hecha y el reparto heredado las impone la
 base desde la comisión por tarea (migración `20261010000006`): asignar es una política solo
 admin y `trg_labor_tecnico_guard` exige que el técnico sea mecánico o pintor de la sede de la
-orden; `marcar_labor_completada` rechaza la tarea de otro técnico; quitar de la orden a alguien
-con tareas lo rechaza `trg_assignment_tasks_guard` (salvo al borrar la orden o al empleado).
+orden; `marcar_labor_completada` solo toca `completado_en` y `completado_por` sobre una línea
+`aprobado` y rechaza la tarea de otro técnico (para escribir algo de dinero, siempre una RPC estrecha,
+nunca relajar RLS); quitar de la orden a alguien con tareas lo rechaza `trg_assignment_tasks_guard`
+(salvo al borrar la orden o al empleado).
+
+### Teléfono del cliente
+
+El teléfono del cliente se guarda en formato internacional (`+15551234567`) en `clientes.telefono`,
+con `components/PhoneInput` (país + número). Los guardados antes, sin "+", se leen como de EE. UU.
+y no se reescriben hasta que alguien los edita. Para mostrarlo, `formatPhone`; para llamar o
+escribir, `telUrl` / `whatsAppUrl` de `lib/phone.ts`.
 
 > **Por qué el técnico ve la mano de obra y nada más:** su comisión es un
 > porcentaje de la mano de obra. Ver ese número y la cuenta de su comisión le
@@ -425,6 +453,13 @@ línea de antes de F3   = reparto por especialidad: bolsa ÷ asignados a mano co
 - En una orden entregada, solo un admin borra archivos: ni la fila ni el archivo en
   Storage.
 
+### Avances y tareas
+
+- **Un avance puede ser de una tarea** (`orden_avances.labor_id`): `ProgressLog` deja elegirla
+  y la tarea muestra sus avances asociados.
+- Arriba del Resumen (admin) y de Tareas (técnico) van las acciones rápidas (`QuickActions`) y,
+  para el admin, `AuthorizationPanel` (cotizado sin enviar, en espera, qué autorizó el cliente).
+
 ---
 
 ## 6. Notificaciones
@@ -442,7 +477,7 @@ línea de antes de F3   = reparto por especialidad: bolsa ÷ asignados a mano co
 | Un **técnico** agrega un avance | Admins de la sede | "Nuevo avance · ORD-…" con su nota |
 | Una orden pasa a **Finalizado** | Admins de la sede | "Trabajo terminado · ORD-…": revísala y márcala lista para entregar |
 | Se genera tu comisión (al entregar) | El técnico | "Comisión generada · ORD-… $175.00": **uno** por orden y persona, con la suma de sus tareas y su parte de las bolsas |
-| Se responde un presupuesto (cliente, admin o firma de recepción) | Técnicos asignados | "Trabajos autorizados · ORD-…" / "Presupuesto rechazado · ORD-…" con "Autorizado: … No realizar: …" |
+| Se responde un presupuesto (cliente o admin) | Técnicos asignados | "Trabajos autorizados · ORD-…" / "Presupuesto rechazado · ORD-…" con "Autorizado: … No realizar: …" |
 | El **cliente** responde un presupuesto desde su enlace | Admins de la sede | "El cliente respondió el presupuesto · ORD-… Autorizó 2 de 3 ($450.00)" y su comentario |
 | Un presupuesto lleva **más de 24 horas** sin respuesta | Admins de la sede | "Presupuesto sin respuesta · ORD-…" (una vez al día, 15:00 UTC) |
 
@@ -504,7 +539,7 @@ el depósito y, aparte, lo cobrado después (`otros_pagos`, o lo devuelto si es 
 | Aviso | Cuándo | Espera |
 |---|---|---|
 | **Recepción** | La primera vez que se firma la recepción | Inmediato si la orden ya tiene una foto de recepción; si no, 30 segundos |
-| **Cambio de estado** | Pasa a en proceso, finalizado ("listo para recoger") o entregado. Espera de autorización no se anuncia: el cliente se entera con el presupuesto | 3 minutos (una ráfaga de cambios es un solo correo, con la hora del primero) |
+| **Cambio de estado** | Pasa a en proceso o entregado, o administración la marca **lista para entregar** ("listo para recoger"; finalizar no avisa al cliente). Espera de autorización no se anuncia: el cliente se entera con el presupuesto | 3 minutos (una ráfaga de cambios es un solo correo, con la hora del primero) |
 | **Novedades** | Un admin pulsa "Avisar novedades" (después de publicar fotos o videos) | 1 minuto |
 | **Presupuesto** | Un admin pulsa "Enviar presupuesto" | 1 minuto (agrupa si se envía de nuevo) |
 | **Constancia de respuesta** | Se responde un presupuesto desde el enlace o lo registra un admin | Inmediato |
@@ -629,13 +664,15 @@ resolverlas con el cliente.
 6. **Un enlace reenviado lo abre cualquiera.** Quien tenga el enlace ve la cuenta y
    las fotos de esa orden. El taller puede cambiarlo y el anterior deja de abrir.
    Es el estándar para este flujo.
-7. **Los correos salen solo en español.** El portal tiene inglés; los correos no.
+7. ~~**Los correos salen solo en español.**~~ Resuelto el 06/10/2026 (`20261010000022`): salen
+   en el idioma del cliente, inglés por defecto.
 8. **Límite diario de Resend (plan gratuito): 100 correos.** Con el volumen actual
    (~30 al día) sobra; si se supera, los envíos se reintentan y los que no alcancen
    quedan en error en el historial de la orden.
-9. **La firma de recepción autoriza lo cotizado sin mostrarlo en la tableta.** La
-   pantalla de firma no lista las líneas: se confía en que el admin las repasó con el
-   cliente. *Propuesta:* mostrar el resumen de trabajos junto a la firma.
+9. ~~**La firma de recepción autoriza lo cotizado sin mostrarlo en la tableta.**~~ Resuelto
+   el 06/10/2026 (`20261010000022`): la firma ya no autoriza lo cotizado; es la conformidad con
+   cómo se recibió el vehículo. Lo cotizado se autoriza con un presupuesto o con "Registrar
+   autorización".
 10. **La autorización desde el enlace es nombre escrito + IP + navegador**, no una
     firma. Es el estándar para este flujo; si el taller necesita más, se puede pedir
     firma también ahí. La IP guardada es la primera de la cabecera `X-Forwarded-For`,

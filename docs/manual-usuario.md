@@ -420,8 +420,9 @@ administración asigna**, porque asignar es dinero (decide quién ve la orden y 
 Si escribiste una tarea y no tocaste **Agregar**, **Crear** no sigue: te avisa para que la
 agregues o la canceles, así no se pierde.
 
-Lo que cotizas aquí queda **sin autorizar** hasta que el cliente **firme la
-recepción**: con su firma queda autorizado y empieza a contar en el total.
+Lo que cotizas aquí queda **sin autorizar** hasta que el cliente lo autorice: con un
+**presupuesto** que responde desde su enlace, o con **Registrar autorización** si te lo dijo en
+persona o por teléfono. La firma de la recepción no lo autoriza.
 
 <!-- IMAGEN: formulario de nueva orden con la nota "Se cobran cuando el cliente firma la recepción o autoriza el presupuesto" -->
 
@@ -666,7 +667,7 @@ compartirlo antes, usa **Crear enlace**.
 |---|---|
 | "Recibimos su vehículo" | Al firmar la recepción, si la orden ya tiene una foto de recepción; si no, 30 segundos después |
 | "Estamos trabajando en su vehículo" | ~3 minutos después de pasar a En Proceso |
-| "Su vehículo está listo" | ~3 minutos después de pasar a Finalizado |
+| "Su vehículo está listo" | ~3 minutos después de que administración la marca **lista para entregar** (finalizar no lo envía) |
 | "Gracias por su visita" | ~3 minutos después de entregar |
 
 Si mueves la orden varias veces seguidas, el cliente recibe **un solo** correo con
@@ -1198,7 +1199,9 @@ Dos datos que usan los correos y el enlace del cliente:
 
 - **Correo de contacto**: a dónde llegan las respuestas de los clientes a los
   correos automáticos. Conviene un buzón que alguien revise.
-- **WhatsApp del taller**: el número del botón de WhatsApp en el enlace del cliente.
+- **Teléfonos de contacto**: cada uno con su descripción, si es de oficina o celular y si atiende
+  WhatsApp. El cliente los ve en su enlace, con botón para llamar y, si atiende WhatsApp, para
+  escribirle.
   Si lo dejas vacío, el cliente solo ve el botón para llamar.
 
 El logo y el color de la sede también se usan en el enlace y en los correos.
@@ -1319,8 +1322,8 @@ se registra de nuevo.
 
 **Al finalizar una orden**, el avance pasa a 100 % y se avisa a administración.
 
-**Al firmar la recepción**, lo que estaba cotizado queda **autorizado** y empieza a
-contar en el total.
+**La firma de la recepción no autoriza lo cotizado**: es la conformidad con cómo se recibió el
+vehículo. Lo cotizado se autoriza con un presupuesto o con **Registrar autorización**.
 
 **Al agregar un trabajo** después de la firma, queda sin autorizar: no se cobra
 hasta que el cliente lo autorice.

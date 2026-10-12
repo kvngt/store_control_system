@@ -56,8 +56,8 @@ los mismos permisos.
 
 ```
 recepción ──► en proceso ──► espera de autorización ──► en proceso ──► finalizado ──► entregado
-   (firma del cliente           (el técnico explica qué        (el cliente     (entregar_orden: cobra
-    aprueba lo cotizado)         hay que cotizar)               autoriza)        el saldo con su método)
+   (firma: cómo se              (el técnico explica qué        (el cliente     (entregar_orden: cobra
+    recibió el vehículo)         hay que cotizar)               autoriza)        el saldo con su método)
 ```
 
 - **Solo lo autorizado se cobra.** Cada línea de mano de obra o repuesto es `borrador`,
@@ -89,9 +89,9 @@ src/
   types/          tipos de dominio
 
 supabase/
-  migrations/     54 migraciones: el esquema completo, RLS, triggers y funciones
+  migrations/     el esquema completo, RLS, triggers y funciones, en orden
   functions/      6 edge functions (Deno)
-  tests/database/ 13 archivos pgTAP (330 aserciones)
+  tests/database/ pruebas pgTAP de la base (dinero y permisos)
 
 public/           service worker (solo push), manifiesto e íconos de la PWA, .htaccess
 e2e/              pruebas Playwright
@@ -100,7 +100,7 @@ docs/             documentación (empieza por docs/README.md)
 ```
 
 Unas 25 000 líneas de TypeScript (33 600 con pruebas) y 5 600 de CSS. Mapa detallado en
-[docs/radiografia.md §3](docs/radiografia.md#3-mapa-del-repositorio); qué archivos, tablas y
+[docs/radiografia.md §3](docs/arquitectura.md#3-mapa-del-repositorio); qué archivos, tablas y
 pruebas tiene cada sección, en [docs/mapa-de-secciones.md](docs/mapa-de-secciones.md).
 
 ---
@@ -119,8 +119,8 @@ pruebas tiene cada sección, en [docs/mapa-de-secciones.md](docs/mapa-de-seccion
 | Avisos | `notificaciones`, `push_suscripciones`, `cola_envios` |
 
 Además: 114 funciones, 55 triggers y 125 políticas. Diagrama y detalles en
-[docs/radiografia.md §4](docs/radiografia.md#4-modelo-de-datos). Evaluación de su estado en
-[docs/evaluacion-2026-10.md §4](docs/evaluacion-2026-10.md#4-base-de-datos).
+[docs/radiografia.md §4](docs/arquitectura.md#4-modelo-de-datos). Evaluación de su estado en
+[docs/evaluacion-2026-10.md §4](docs/historico/evaluacion-2026-10.md#4-base-de-datos).
 
 ---
 
@@ -152,7 +152,7 @@ npm run dev                  # http://localhost:5173
 |---|---|
 | `npm run build` | `tsc -b && vite build` → `dist/` |
 | `npm run lint` | oxlint |
-| `npm test` | Pruebas unitarias y de componentes (Vitest, 504) |
+| `npm test` | Pruebas unitarias y de componentes (Vitest) |
 | `npm run test:db` | Pruebas de base de datos (pgTAP; requiere Docker y `npx supabase start`) |
 | `npm run test:e2e` | Pruebas end-to-end (Playwright, contra `localhost`; cuentas en `.env.test.local`) |
 | `npm run db:check` | Qué migraciones faltan en el proyecto enlazado |
@@ -168,12 +168,12 @@ de GitHub corre eso y las pruebas pgTAP en cada push a `main`.
 
 > **Hoy, un push a `main` es un despliegue.** Hostinger está configurado para compilar `main`
 > (el diseño era la rama `produccion`). El sitio cambia uno o dos minutos después del push,
-> **sin esperar al CI**. Ver [docs/evaluacion-2026-10.md](docs/evaluacion-2026-10.md#5-operación-y-despliegue).
+> **sin esperar al CI**. Ver [docs/historico/evaluacion-2026-10.md](docs/historico/evaluacion-2026-10.md#5-operación-y-despliegue).
 
 - **Migraciones:** `npx supabase db push --linked`, siempre **antes** de publicar el frontend
   que las necesita.
 - **Nombres de migraciones:** van después de la última (`20261010000000`), no con la fecha de
-  hoy ([por qué](docs/evaluacion-2026-10.md#4-base-de-datos)).
+  hoy ([por qué](docs/historico/evaluacion-2026-10.md#4-base-de-datos)).
 - **Edge functions:** `npx supabase functions deploy <nombre>`.
 - **Lo que no está en el código:** hay configuración fuera del repositorio (secretos, Vault,
   Auth, Storage, variables de Hostinger).
@@ -213,7 +213,7 @@ Toda la documentación vigente está en **[docs/](docs/README.md)**:
 | **Cambiar una sección** y no saber por dónde entrar | [docs/mapa-de-secciones.md](docs/mapa-de-secciones.md) |
 | **Desplegar** o cambiar la base sin cortar el servicio | [docs/deployment.md](docs/deployment.md) y [docs/mantenimiento.md](docs/mantenimiento.md) |
 | Saber qué hay en **Supabase** | [docs/supabase.md](docs/supabase.md) |
-| **Probar** la plataforma | [docs/historico/plan-de-pruebas.md](docs/historico/plan-de-pruebas.md), [docs/pruebas.md](docs/pruebas.md) y [docs/historico/manual-de-pruebas.md](docs/historico/manual-de-pruebas.md) |
+| **Probar** la plataforma | [docs/plan-de-pruebas.md](docs/plan-de-pruebas.md), [docs/pruebas.md](docs/pruebas.md) y [docs/manual-de-pruebas.md](docs/manual-de-pruebas.md) |
 | **Usar** la aplicación o capacitar al taller | [docs/manual-usuario.md](docs/manual-usuario.md) |
 | Entender **cómo evolucionó** y por qué | [docs/evolucion.md](docs/evolucion.md) |
 | Modificar el código con un **agente de IA** | [docs/ai-context.md](docs/ai-context.md) |

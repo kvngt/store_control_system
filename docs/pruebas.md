@@ -23,11 +23,11 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 700 pruebas, 84 archivos (5/10/2026, noche) | ~30 s | Nada |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención" y los hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 679 aserciones, 26 archivos | ~1 min | Docker |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 802 pruebas, 97 archivos (11/10/2026) | ~30 s | Nada |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención", teléfonos de la sede, trabajo con seguro, cobro por parqueo y los hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 811 aserciones, 33 archivos (11/10/2026) | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, 77 casos (76 pasan, 1 se salta) | 2–5 min | Credenciales de prueba (**al 1/10/2026 no existen**: se borraron el 29/09) |
 | **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 100 casos con las cuentas de prueba, todos de solo lectura (los que escriben, escriben el valor que ya hay). Los 66 anteriores, 66 PASS · 0 SKIP; los de las migraciones `20261006000000` a `20261010000006` pasan solo con ellas aplicadas (SEC-91 a SEC-105, verificados contra el Supabase local el 4/10/2026) | ~15 s | Nada; con cuentas de prueba cubre más |
-| **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](historico/plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
+| **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
 
 Por qué hacen falta todas: **Vitest simula la base**, así que no puede detectar una
 política RLS equivocada o un trigger roto — eso lo detecta pgTAP. pgTAP prueba la base
@@ -167,8 +167,8 @@ PostgREST en cada petición.
 
 **`supabase/tests/database/05_presupuestos.test.sql`** (32)
 
-- Lo cotizado nace en borrador y no suma; la firma de recepción lo aprueba y deja un
-  presupuesto "firma de recepción" como evidencia.
+- Lo cotizado nace en borrador y no suma. Desde `20261010000022` la firma de recepción ya no
+  lo aprueba: lo autoriza un presupuesto o "Registrar autorización".
 - Una línea nueva nace en borrador aunque se pida "aprobado"; ni un admin la aprueba
   con un UPDATE; un técnico no envía presupuestos ni los lee.
 - Enviar: líneas pendientes, presupuesto 2 por $880, correo programado; una línea
@@ -427,8 +427,9 @@ Las decisiones del taller del 05/10/2026 ([analisis-del-proceso-2026-10.md](hist
   los de otra sede (como los reintentaría `reintentar_correos_fallidos`).
 - Filtra por sede, o todas sin sede; los grupos vacíos llegan en cero con la misma forma.
 
-> **Estado (5 de octubre de 2026, noche):** 679 aserciones en verde en los 26 archivos, desde una
-> base vacía (la 26 sumó el retiro con algunos trabajos hechos, el anticipo, el descuento en
+> **Estado (11 de octubre de 2026):** 811 aserciones en verde en los 33 archivos, desde una
+> base vacía (de la 31 a la 33: teléfonos con tipo y WhatsApp, trabajo con seguro y cobro por
+> parqueo; la 26 sumó el retiro con algunos trabajos hechos, el anticipo, el descuento en
 > porcentaje y los pendientes del vehículo).
 >
 > **Estado (5 de octubre de 2026, tarde):** 662 aserciones en verde en los 26 archivos, desde una
@@ -496,7 +497,7 @@ necesitan sesión **se saltan solas** si faltan credenciales:
 | `customer-crud.spec.ts` | 1 | Ejemplo de prueba que crea y borra datos (prefijo `PWTEST`) |
 
 Los identificadores de esta tabla (AUTH-, RBAC-, WORK-, FIN-, CFG-…) son los del código
-de las pruebas e2e; no son los casos de [plan-de-pruebas.md](historico/plan-de-pruebas.md), aunque
+de las pruebas e2e; no son los casos de [plan-de-pruebas.md](plan-de-pruebas.md), aunque
 algunos prefijos coincidan.
 
 > **Cuidado: corren contra el proyecto de `.env.local`**, que hoy es producción.
@@ -522,8 +523,8 @@ Se necesita para:
 
 | Tarea | Comando | Por qué no se puede sin Docker |
 |---|---|---|
-| **Correr las pruebas de base de datos** (las 459 aserciones pgTAP) | `npm run test:db` | Necesitan un Postgres real donde crear datos y deshacerlos |
-| **Probar que las migraciones aplican desde cero** | `npx supabase db reset` | Recrea la base local aplicando las 54 migraciones en orden: detecta una migración que solo funciona sobre la base actual |
+| **Correr las pruebas de base de datos** (las aserciones pgTAP) | `npm run test:db` | Necesitan un Postgres real donde crear datos y deshacerlos |
+| **Probar que las migraciones aplican desde cero** | `npx supabase db reset` | Recrea la base local aplicando todas las migraciones en orden: detecta una migración que solo funciona sobre la base actual |
 | **Probar una migración antes de producción** | `npx supabase start` y luego la app contra la base local | Hoy cada migración se aplica directo al proyecto enlazado |
 | Probar edge functions localmente | `npx supabase functions serve` | Corren en el contenedor de Supabase |
 
@@ -538,7 +539,7 @@ proyecto enlazado.
 
 ```bash
 npx supabase start       # la primera vez descarga las imágenes (varios minutos)
-npm run test:db          # 13 archivos pgTAP
+npm run test:db          # las pruebas pgTAP
 npx supabase db reset    # opcional: recrear la base local desde cero
 npx supabase stop        # al terminar
 ```
@@ -587,7 +588,7 @@ había pensado en llamarlas desde fuera ([auditoria-2026-09.md](historico/audito
 > `.env.test.local` trae ids del proyecto real, que en local no existen, y los casos que los
 > usan dan un FAIL falso (204 sin filas).
 
-Lista de casos: [plan-de-pruebas.md §5](historico/plan-de-pruebas.md#5-seguridad-contra-la-api-sec).
+Lista de casos: [plan-de-pruebas.md §5](plan-de-pruebas.md#5-seguridad-contra-la-api-sec).
 
 ---
 
@@ -595,22 +596,22 @@ Lista de casos: [plan-de-pruebas.md §5](historico/plan-de-pruebas.md#5-segurida
 
 El plan manual (por módulo y por rol), las pruebas de seguridad contra la API, la matriz
 de dispositivos, las regresiones y la lista antes de publicar están en
-**[plan-de-pruebas.md](historico/plan-de-pruebas.md)**, con un identificador por caso, prioridad y
+**[plan-de-pruebas.md](plan-de-pruebas.md)**, con un identificador por caso, prioridad y
 si lo puede ejecutar un agente de IA o necesita una persona.
 
 Si buscas una sección de la versión anterior de este documento:
 
-| Antes (pruebas.md) | Ahora (historico/plan-de-pruebas.md) |
+| Antes (pruebas.md) | Ahora (plan-de-pruebas.md) |
 |---|---|
-| 3. Preparación | [2. Preparación](historico/plan-de-pruebas.md#2-preparación) |
+| 3. Preparación | [2. Preparación](plan-de-pruebas.md#2-preparación) |
 | 4.1 Acceso · 4.2 Sedes · 4.3 Clientes | ACC · SED · CLI |
 | 4.4 Órdenes · 4.5 Dinero · 4.6 Comisiones | ORD · DIN · COM |
 | 4.7 Multimedia · 4.8 Notificaciones | MED · NOT |
 | 4.9 Finanzas · 4.10 Configuración | FIN · CFG |
 | 4.11 Móvil · 4.12 PWA | MOV · PWA |
 | 4.13 Portal · 4.14 Presupuestos · 4.15 Reporte | POR · PRE · REP |
-| 5. Seguridad contra la API (peticiones 1–31) | [5. SEC](historico/plan-de-pruebas.md#5-seguridad-contra-la-api-sec), casi todo automatizado en `npm run qa:security` |
-| 6. Matriz de dispositivos | [6. DEV](historico/plan-de-pruebas.md#6-matriz-de-dispositivos-dev) |
-| 7. Regresiones | [7. Regresiones](historico/plan-de-pruebas.md#7-regresiones) |
-| 8. Antes de cada publicación | [8. Antes de cada publicación](historico/plan-de-pruebas.md#8-antes-de-cada-publicación) |
-| 9. Cómo reportar un error | [9. Reporte de resultados](historico/plan-de-pruebas.md#9-reporte-de-resultados) |
+| 5. Seguridad contra la API (peticiones 1–31) | [5. SEC](plan-de-pruebas.md#5-seguridad-contra-la-api-sec), casi todo automatizado en `npm run qa:security` |
+| 6. Matriz de dispositivos | [6. DEV](plan-de-pruebas.md#6-matriz-de-dispositivos-dev) |
+| 7. Regresiones | [7. Regresiones](plan-de-pruebas.md#7-regresiones) |
+| 8. Antes de cada publicación | [8. Antes de cada publicación](plan-de-pruebas.md#8-antes-de-cada-publicación) |
+| 9. Cómo reportar un error | [9. Reporte de resultados](plan-de-pruebas.md#9-reporte-de-resultados) |

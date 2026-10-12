@@ -5,7 +5,7 @@ mano de obra o repuesto tiene un estado, y solo lo autorizado entra en los total
 el cobro, el costo de repuestos y las comisiones.
 
 Reglas en lenguaje de negocio: [reglas-de-negocio.md](reglas-de-negocio.md#8-presupuestos-y-autorización).
-Cómo probarlo: [plan-de-pruebas.md](historico/plan-de-pruebas.md#414-presupuestos-pre). Portal y correos en los que
+Cómo probarlo: [plan-de-pruebas.md](plan-de-pruebas.md#414-presupuestos-pre). Portal y correos en los que
 se apoya: [portal-y-correos.md](portal-y-correos.md).
 
 ---
@@ -63,7 +63,8 @@ queda **sin autorizar** hasta que el cliente responde el presupuesto o el admin 
 autorización; mientras tanto la orden sale en "Requiere atención" → *Trabajos cotizados sin
 autorizar*. Hasta esa migración la primera firma aprobaba los borradores
 (`trg_quote_on_signature`, ya eliminado); las órdenes firmadas antes conservan lo que se
-aprobó así, con su presupuesto `firma_recepcion` como evidencia.
+aprobó así, con su presupuesto `firma_recepcion` como evidencia. En las pruebas pgTAP que
+parten de una orden autorizada, `pg_temp.autorizar_cotizado(orden)` hace lo que hacía la firma.
 
 ---
 
@@ -135,6 +136,8 @@ adicional" y el costo del repuesto, como cualquier corrección de una orden entr
 | Evidencia (IP, navegador, nota) | ✅ (tabla `presupuestos`) | ❌ | Su historial: número, vía, fecha, nombre, conteos |
 | Avisos | "El cliente respondió", "Sin respuesta" | "Trabajos autorizados / Presupuesto rechazado" | Correo del presupuesto y constancia |
 
+- **El técnico se entera de lo que el cliente no autorizó:** recibe el aviso "Trabajo no autorizado" (por `_resolver_presupuesto`) y lo ve en la orden con `TechOrderStatus` arriba de sus tareas y la tarea rechazada marcada como "No autorizada · no se realiza" (`techStatus.ts`).
+
 ---
 
 ## 6. Piezas
@@ -172,7 +175,7 @@ adicional" y el costo del repuesto, como cualquier corrección de una orden entr
 | `responder_presupuesto_portal(token, id, aprobadas, lineas, nombre, comentario, ip, ua)` | `service_role` | Respuesta del cliente; `{ok:false, motivo}` en vez de fallar |
 | `_crear_presupuesto`, `_agregar_borradores`, `_lineas_pendientes`, `_resolver_presupuesto` | Internas | Revocadas para todos los roles |
 | `recordar_presupuestos_sin_respuesta()` | pg_cron | Aviso diario a admins |
-| `trg_quote_on_signature` | Trigger | La **primera** firma de la orden aprueba los borradores |
+| `trg_quote_on_signature` | Trigger | **Eliminado en `20261010000022`**: la firma ya no autoriza lo cotizado |
 
 La bandera de transacción `restorify.presupuesto = on` es la llave: el guard de las
 líneas solo deja cambiar `estado`, `presupuesto_id` y `decidido_en` con ella
@@ -245,6 +248,6 @@ Edge Functions → `portal` → Logs, busca `responder_presupuesto_portal`.
 
 ## 9. Pendiente
 
-- **Correos en inglés** (el portal ya tiene inglés).
+- ~~**Correos en inglés**~~ Hecho en `20261010000022`: en el idioma del cliente, inglés por defecto.
 - **Firma dentro del portal** para la autorización (hoy es nombre escrito + IP +
   navegador, el estándar para este flujo).

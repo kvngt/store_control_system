@@ -1,6 +1,6 @@
 # Radiografía Técnica de Restorify
 
-**Fecha de actualización:** 6 de octubre de 2026
+**Fecha de actualización:** 11 de octubre de 2026 (cifras); el resto, 6 de octubre de 2026
 **Audiencia:** Desarrolladores y agentes de IA que toman el proyecto.
 
 Restorify es un sistema B2B multi-sede para talleres mecánicos y de pintura. Administra la operación completa: vehículos, recepción con fotos/videos, presupuestos línea por línea, trabajos, finanzas y cálculo de comisiones.
@@ -11,15 +11,21 @@ La característica fundamental del sistema es que **no tiene backend propio**. E
 
 ## 1. Cifras Actuales del Proyecto
 
+Contadas el **11/10/2026** (las demás guías remiten aquí en vez de repetir cifras que envejecen).
+
 | Métrica | Valor | Detalle |
 | :--- | :--- | :--- |
-| **Archivos fuente (TypeScript)** | 187 | `src/` excluyendo pruebas |
-| **Pruebas (Vitest)** | 90 archivos | 737 tests unitarios y de componentes |
-| **Migraciones de base de datos** | 76 | En `supabase/migrations/` |
-| **Tablas de base de datos** | ~26 | El esquema principal está en `public` |
-| **Pruebas de base de datos** | 29 | `supabase/tests/database/` (pgTAP) |
+| **Archivos fuente (TypeScript)** | 196 | `src/` excluyendo pruebas |
+| **Pruebas (Vitest)** | 97 archivos | 802 pruebas unitarias y de componentes |
+| **Migraciones de base de datos** | 82 | En `supabase/migrations/`, hasta `20261010000028`; todas aplicadas en producción (`npm run db:check`) |
+| **Tablas de base de datos** | 30 | En `public` |
+| **Funciones SQL** | 161 | En `public` (RPC, internas y de trigger); `npm run db:donde -- <nombre>` da la versión vigente de cada una |
+| **Triggers en `ordenes_trabajo`** | 24 | La tabla con más lógica asociada |
+| **Tareas programadas** | 5 | `pg_cron`: `restorify-outbox`, `-maintenance`, `-due-reminders`, `-quote-reminders`, `-parqueo` |
+| **Pruebas de base de datos** | 33 archivos | 811 aserciones (`supabase/tests/database/`, pgTAP) |
+| **Casos de `qa:security`** | 155 | `scripts/qa/api-security.mjs`, contra la API |
 | **Edge Functions** | 6 | En `supabase/functions/` (Deno 2) |
-| **Pruebas e2e** | 9 | En `e2e/` (Playwright) |
+| **Pruebas e2e** | 8 | En `e2e/` (Playwright) |
 
 ---
 

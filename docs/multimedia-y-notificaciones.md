@@ -205,6 +205,8 @@ inmediata y el cron. Si la función muere a mitad de un envío, la fila vuelve a
 a los 5 minutos; al quinto intento interrumpido queda en **error** con "El envío se
 interrumpió 5 veces", en vez de reintentarse para siempre.
 
+**Correo al técnico (`20261010000023`):** `notificar()` encola un correo (plantilla `empleado`) al mecánico o pintor en `asignacion`, `tarea_asignada` y `presupuesto_respondido`, **sin `orden_id`** en `cola_envios` para que nunca tome el camino del correo al cliente. Si agregas otro aviso con correo a empleados, súmalo al `v_grupo` de esa función.
+
 **Dispositivo, no cuenta.** Un permiso de push es de un navegador en un aparato.
 `registrar_push` mueve el endpoint a quien inició sesión; al cerrar sesión se
 elimina la asociación (la suscripción del navegador se conserva para no volver a

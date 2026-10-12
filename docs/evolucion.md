@@ -309,7 +309,7 @@ triggers y el frontend en las rutas de dinero, permisos y datos del cliente.
 - **Borrar una orden es una sola operación** y no se puede con comisiones pagadas.
 - **La app no saca al usuario al login por mala señal**, la firma actualiza la pantalla,
   y una orden de otra sede usa los datos de su sede.
-- **Plan de pruebas ejecutable** ([plan-de-pruebas.md](historico/plan-de-pruebas.md)): cada caso con
+- **Plan de pruebas ejecutable** ([plan-de-pruebas.md](plan-de-pruebas.md)): cada caso con
   identificador, prioridad y si lo puede hacer un agente de IA. **`npm run qa:security`**
   prueba la API desplegada, la capa que faltaba: pgTAP prueba la base por dentro, pero
   nadie probaba qué funciones quedaban expuestas afuera.
@@ -391,7 +391,7 @@ mejoras y la reunión con el taller.
 | Toda línea cotizada se cobraba | Solo lo autorizado | Fase 5 |
 | Todo en un solo paquete JS | La app del taller y el portal del cliente por separado | Fase 4: el cliente abre desde datos móviles |
 | Supuesto de despliegue en Vercel/Netlify | Hostinger (Apache) + Supabase | Desde la etapa 0 |
-| Cualquier firma nueva autorizaba lo cotizado | Solo la primera firma de la orden | Etapa 7: re-firmar cobraba trabajos que el cliente no vio |
+| Cualquier firma nueva autorizaba lo cotizado | Solo la primera firma de la orden | Etapa 7: re-firmar cobraba trabajos que el cliente no vio. Desde `20261010000022` ninguna firma autoriza |
 | Permisos de las funciones revisados a ojo en cada migración | `qa:security` contra la API desplegada | Etapa 7: el permiso por defecto no se ve en la migración |
 | Plan manual en checkboxes dentro de `pruebas.md` | `plan-de-pruebas.md` con ID, prioridad y ejecutor (persona o IA) | Etapa 7: que otra persona o un agente lo ejecute sin preguntar |
 | KPIs y totales sumados en el navegador | `resumen_panel` en la base | Etapa 8: la API corta en 1.000 filas |
@@ -465,6 +465,7 @@ mejoras y la reunión con el taller.
 | 52 | `20261008000000_entrega_con_metodo_de_pago` | **Reunión** `saldo_orden`, `entregar_orden`, método de pago, devolución |
 | 53 | `20261009000000_comisiones_por_especialidad` | **Reunión** Comisiones por especialidad y por empleado; `perfiles_pago` |
 | 54 | `20261010000000_egresos_de_comision_por_orden` | **Reunión** Un egreso por orden al pagar comisiones; `balance_orden`, `margen_ordenes` |
+| 55–82 | `20261010000001` … `20261010000028` | **Después de la reunión del 03/10/2026**: historial, comisión por tarea, hallazgos, "requiere atención", traducciones, aceptar comisiones, decisiones del proceso del taller, pago mixto, listo para entregar, idioma del cliente, correo al técnico, teléfonos por sede, trabajo con seguro y cobro por parqueo. Cada entrada de [bitacora.md](bitacora.md) nombra las suyas |
 
 Las migraciones son la mejor documentación de cada decisión: cada una empieza con un
 comentario que explica el problema. Léelas en orden si quieres el detalle.
@@ -489,6 +490,7 @@ comentario que explica el problema. Léelas en orden si quieres el detalle.
 | Pruebas en el teléfono | 432 (60 archivos) | 09 → 223 aserciones en 9 archivos | `qa:security` 66 casos; 76 e2e |
 | Reunión con el taller | **480** (67 archivos) | 10–13 → **330 aserciones** en 13 archivos | `qa:security` 85 casos |
 | Antes de la prueba en vivo | **504** (71 archivos) | 330 aserciones, en CI | `qa:security` 85 casos (62 saltados sin cuentas de prueba) |
+| 11/10/2026 (82 migraciones) | **802** (97 archivos) | **811 aserciones** en 33 archivos, en CI | `qa:security` 155 casos |
 
 Las pruebas pgTAP se ejecutaron por primera vez con Docker el 15 de septiembre de 2026:
 **158 aserciones en verde** y las 35 migraciones aplicadas desde cero. Solo hubo que
@@ -507,8 +509,9 @@ temporales que luego se borraron.
   Pro ya está) ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#7-plan-priorizado)).
 - **Mantenibilidad**: esquema actual en un solo archivo, partir `useWorkOrderDetail`,
   retirar la fachada `supabaseService` (mismo plan).
-- **Pendientes de datos**: nombre, logo, correo de contacto y WhatsApp de la sede.
+- **Pendientes de datos**: nombre, logo, correo de contacto y teléfonos de la sede.
 - **Pendientes de decisión** (ver [reglas-de-negocio.md](reglas-de-negocio.md#10-riesgos-conocidos-y-decisiones-abiertas)):
-  borrar movimientos automáticos de Finanzas, correos en inglés, si el correo de
-  "Entregado" sale al instante, traducir en el portal lo que escribe el taller
+  borrar movimientos automáticos de Finanzas y si el correo de "Entregado" sale al instante.
+  Los correos en inglés y traducir en el portal lo que escribe el taller se hicieron el 06/10/2026
+  (`20261010000022`)
   ([plan-de-mejora.md](historico/plan-de-mejora.md#funciones-propuestas-pendientes-de-autorización-del-taller)).

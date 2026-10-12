@@ -24,7 +24,7 @@ cómo publicar sin romper nada. Complementa la [auditoría de septiembre](audito
 > nuevo, las viejas borradas) y **PRD-05** (SMTP de Auth con Resend). Las secciones 4 y 5
 > se escribieron para la subida manual: donde dicen subir `dist/`, hoy es
 > `git push origin main:produccion`, y la copia de `public_html/` para volver atrás es el
-> commit anterior ([deployment.md §8](deployment.md#8-volver-atrás)).
+> commit anterior ([deployment.md §8](../deployment.md#8-volver-atrás)).
 
 ---
 
@@ -81,7 +81,7 @@ Nadie más que quien administra las cuentas puede hacer esto. Marca cada uno.
 | **PRD-02** | **Crítica** | **Plan Pro** | Free no hace respaldos diarios y pausa el proyecto tras una semana sin uso. Un error humano o un borrado en cascada no tendría vuelta atrás | Organization → Billing → Pro. Después, Database → Backups muestra los respaldos diarios |
 | **PRD-03** | Alta | **Rotar la llave de Resend** | La llave de envío se compartió en una conversación con una IA. La de acceso total que se usó para verificar el dominio puede seguir viva | Resend → API Keys: crear una de solo envío para `reinventa.shop`, `npx supabase secrets set RESEND_API_KEY=<nueva>`, borrar las anteriores. Comprobar con un correo de prueba (plan de pruebas POR-07) |
 | **PRD-04** | Alta | **Cuentas y datos de prueba** | Hay 5 cuentas (2 nunca iniciaron sesión, varias con dominio `restorify.com`), las credenciales de una admin están en `.env.test.local` y las pruebas e2e escriben datos `PWTEST` en este mismo proyecto | Empleados: dejar solo personal real, cambiar la contraseña de toda cuenta cuyas credenciales estén en un archivo. No correr `test:e2e` contra producción (`qa:security` ya no escribe nada) |
-| **PRD-05** | **Alta** | **SMTP de Auth con Resend** | El correo propio de Supabase permite unos 2 por hora y, según la política de Supabase para ese servidor de fábrica, solo entrega a correos del equipo de la organización: el "¿Olvidaste tu contraseña?" de un técnico puede no llegarle nunca. Comprobar con un correo que no sea del equipo (manual-de-pruebas A-08, B-13) | [deployment.md §4.2](deployment.md#42-auth) |
+| **PRD-05** | **Alta** | **SMTP de Auth con Resend** | El correo propio de Supabase permite unos 2 por hora y, según la política de Supabase para ese servidor de fábrica, solo entrega a correos del equipo de la organización: el "¿Olvidaste tu contraseña?" de un técnico puede no llegarle nunca. Comprobar con un correo que no sea del equipo (manual-de-pruebas A-08, B-13) | [deployment.md §4.2](../deployment.md#42-auth) |
 | **PRD-06** | Media | **Sentry** | `VITE_SENTRY_DSN` está vacía: un error en el teléfono de un técnico no llega a nadie | Crear el proyecto en Sentry (org `restorify`, proyecto `restorify-frontend`, ya configurados en `vite.config.ts`), poner el DSN en `VITE_SENTRY_DSN` en las variables del sitio en Hostinger y volver a desplegar |
 | **PRD-07** | Media | **Contraseñas de 8 caracteres en Auth** | La app y las funciones ya exigen 8; Auth en el panel sigue en 6 y aceptaría una de 6 desde la recuperación de contraseña | Authentication → Sign In / Providers → Email → Minimum password length: 8 |
 | **PRD-08** | Baja | **Vaciar los buckets de prueba** | `vehiculos_fotos` (78 MB), `firmas` y `reportes` guardan datos de antes de las fases | [supabase.md §14](../supabase.md#14-pendientes-y-limpieza) |
@@ -294,7 +294,7 @@ Probado contra Supabase local con cero cuentas: la app muestra el login, cualqui
 dice "Correo o contraseña incorrectos" y "¿Olvidaste tu contraseña?" responde lo mismo sin
 enviar nada. Nadie puede crear el primer administrador desde la app (a propósito: el registro
 está apagado y `create-employee` exige un admin). Se crea con
-[scripts/admin/crear-primer-admin.sql](../scripts/admin/crear-primer-admin.sql), que también
+[scripts/admin/crear-primer-admin.sql](../../scripts/admin/crear-primer-admin.sql), que también
 crea una sede si no hay ninguna; con esa cuenta todas las pantallas cargan vacías sin errores
 y se puede dar de alta al resto.
 
@@ -312,7 +312,7 @@ migración.
 - [ ] `git pull`, `npm ci`, y todo en verde: `npm run lint && npx tsc -b && npm test && npm run build`.
 - [ ] Con Docker: `npx supabase start && npm run test:db` (330 en verde al 29/09/2026).
 - [ ] Guardar una copia del `public_html/` actual de Hostinger (para volver atrás).
-- [ ] Respaldo manual: Database → Backups (Pro) o los tres `db dump` de [deployment.md §5](deployment.md#5-publicar-una-versión) (roles, esquema y datos; el de datos contiene datos personales: no subirlo a git ni compartirlo). `db dump` sin `--data-only` guarda solo el esquema.
+- [ ] Respaldo manual: Database → Backups (Pro) o los tres `db dump` de [deployment.md §5](../deployment.md#5-publicar-una-versión) (roles, esquema y datos; el de datos contiene datos personales: no subirlo a git ni compartirlo). `db dump` sin `--data-only` guarda solo el esquema.
 
 **Publicar:**
 
@@ -332,7 +332,7 @@ npm run build                                      # 3. PENDIENTE: el frontend �
 - [ ] Sin el aviso de "esquema desactualizado".
 - [ ] `npm run qa:security` → **0 FAIL** (SEC-18 en PASS si ya se hizo PRD-01).
 - [ ] Panel: los ingresos del mes coinciden con `SELECT SUM(monto) FROM finanzas_movimientos WHERE tipo = 'ingreso' AND fecha >= date_trunc('month', CURRENT_DATE)` (por sede).
-- [ ] Nivel "humo" de [plan-de-pruebas.md](plan-de-pruebas.md): login de admin y de técnico, crear una orden, firmar, entregar, correo de recepción, portal.
+- [ ] Nivel "humo" de [plan-de-pruebas.md](../plan-de-pruebas.md): login de admin y de técnico, crear una orden, firmar, entregar, correo de recepción, portal.
 - [ ] En la tablet del taller: entrar como admin, cerrar sesión, entrar como técnico → no aparece ningún monto (ACC-07).
 
 ---

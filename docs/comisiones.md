@@ -66,8 +66,10 @@ comisión de cada quien     = su parte × (su porcentaje / 100)
   mete a quien entró por una tarea. Si la bolsa de esa especialidad ya se pagó, no se cambia
   quién la reparte.
 - **Darle técnico a una línea heredada la saca del reparto para siempre**: la app manda
-  `reparto_heredado = false` junto con el técnico, así que si después se le quita el técnico
-  queda **Sin técnico** (nadie cobra) en vez de volver en silencio a la bolsa. *Decisión
+  `reparto_heredado = false` junto con el técnico (`setLaborTechnician`, fijado en
+  `workOrders.service.test.ts` y `WorkOrders.smoke.test.tsx`), así que si después se le quita el técnico
+  queda **Sin técnico** (nadie cobra) en vez de volver en silencio a la bolsa. El editor de tareas
+  es `TaskEditor` (no conoce la orden: F4 lo usa en el alta). *Decisión
   pendiente de confirmar con el taller* ([pagos-a-empleados.md](pagos-a-empleados.md#5-preguntas-enviadas-al-taller)).
 
 El ejemplo de la reunión: pintura **$1,000**, mecánica **$200**, al 35 %.
@@ -96,22 +98,20 @@ La cuenta vive en una sola función, `_reparto_comisiones(orden)`: una fila por 
 (`labor_id`) y una por persona y bolsa heredada (`labor_id` nulo). La usan el devengo al
 entregar (`sync_order_commissions`) y la estimación que muestra la orden
 (`comisiones_estimadas`). La llave de `comisiones` es (orden, usuario, especialidad,
-`labor_id`), con `NULLS NOT DISTINCT`: **una persona puede tener varias filas en una orden**, y
+`labor_id`), con `NULLS NOT DISTINCT` (`comisiones_orden_usuario_especialidad_tarea_key`, desde `20261010000006`): **una persona puede tener varias filas en una orden**, y
 la pantalla **Comisiones** dice qué trabajo paga cada una.
 
-## Los repuestos ahora son de traspaso
+## El costo de los repuestos
 
-La columna **"Costo unitario"** se quitó de la interfaz — tanto del formulario de
-nueva orden como de la tabla de la orden. Solo se captura el **precio**.
+El **costo unitario** es opcional: se puede escribir en el alta y en la tabla de repuestos.
+Si no se escribe, la base usa el precio (`trg_part_cost_passthrough`, que llama a
+`trg_part_cost_follows_price`); uno escrito por administración se queda. `updatePart` manda
+`costo_unitario` solo si se escribió: mandarlo igual al precio borraba el costo real. La
+columna ya no tiene DEFAULT. De modo que:
 
-En el taller un repuesto se factura a lo que costó, así que las dos columnas
-siempre llevaban el mismo número y la primera casi nunca se llenaba. La base de
-datos ahora copia el precio al campo de costo automáticamente
-(`trg_part_cost_passthrough`), de modo que:
-
-- Finanzas sigue registrando el egreso de repuestos al entregar la orden.
-- La base de la comisión sigue restando el costo de los repuestos.
-- Nadie tiene que escribir la misma cifra dos veces.
+- Finanzas registra el egreso de repuestos al entregar la orden, con ese costo.
+- La comisión no lo usa: sale de la mano de obra.
+- Nadie tiene que escribir la misma cifra dos veces cuando el repuesto se cobra a lo que costó.
 
 **Nota sobre el histórico:** las órdenes existentes conservan su
 `costo_unitario` tal como estaba (casi siempre 0). Reescribirlas haría que
@@ -187,8 +187,9 @@ de 0–100 se rechazan, y lo ya pagado no se cambia (`aprobar_comision`, que blo
   volver a entregarla, se acepta de nuevo) o si la tarea pasa a otro técnico (si no, se pagaría
   la misma tarea dos veces).
 - **Esquema mixto** (`20261010000020`): salario informativo + comisión normal. Solo `salario`
-  queda fuera del reparto (`esquema <> 'salario'` en `sync_order_commissions` y
-  `comisiones_estimadas`).
+  queda fuera del reparto: todo filtro de comisiones es `esquema <> 'salario'`, nunca `= 'comision'`
+  (en `sync_order_commissions` y `comisiones_estimadas`). Al soltar el CHECK del esquema, no uses
+  `LIKE '%comision%'`: soltaba también el del porcentaje 0–100.
 - **Solo se paga lo aceptado** (desde `20261010000018`, decisión del taller del 05/10/2026):
   `pay_commissions` rechaza pagar lo que sigue sugerido ("Esas comisiones todavía no están
   aceptadas…"). Antes pagaba también lo sugerido, y aceptar orden por orden no cambiaba nada del

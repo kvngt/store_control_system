@@ -108,8 +108,8 @@ migraciones (11 500 líneas de SQL).
 | **Avisos y envíos** | `notificaciones`, `push_suscripciones`, `cola_envios` |
 
 El diagrama de relaciones y los detalles que no son obvios están en
-[radiografia.md §4](radiografia.md#4-modelo-de-datos); los triggers por tabla, en
-[§5](radiografia.md#5-dónde-vive-la-lógica-de-negocio).
+[radiografia.md §4](../arquitectura.md#4-modelo-de-datos); los triggers por tabla, en
+[§5](../arquitectura.md#5-dónde-vive-la-lógica-de-negocio).
 
 ### Revisión
 
@@ -184,7 +184,7 @@ Actualiza el plan de [mantenimiento.md §5](../mantenimiento.md#5-plan-priorizad
 | P0-2 | Plan Pro (respaldos) | **Hecho** (30/09) |
 | P0-3 | Sentry en producción | **Pendiente:** falta `VITE_SENTRY_DSN` en Hostinger |
 | — | Limpiar las suscripciones push del dominio viejo ([§6](#6-secuelas-del-cambio-de-dominio)) | Pendiente |
-| B-1 | Regla de nombres para migraciones nuevas | Documentada en [ai-context.md](../ai-context.md) y [radiografia.md §9](radiografia.md#9-migraciones-el-flujo-de-trabajo) |
+| B-1 | Regla de nombres para migraciones nuevas | Documentada en [ai-context.md](../ai-context.md) y [radiografia.md §9](../arquitectura.md#9-migraciones-el-flujo-de-trabajo) |
 
 ### Bajo riesgo, alto valor
 

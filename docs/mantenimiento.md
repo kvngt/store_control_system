@@ -58,13 +58,13 @@ Comprobado contra el proyecto real, con consultas de solo lectura al catálogo:
 
 El diseño de fondo también está bien. Todo el dinero lo calcula la base, con triggers
 idempotentes y con signo. Los montos viven en tablas que un técnico no puede leer. Cada regla
-de permisos está en RLS o en un trigger, no en la pantalla. Y 330 aserciones pgTAP aplican las
-54 migraciones desde cero en cada cambio (CI).
+de permisos está en RLS o en un trigger, no en la pantalla. Y las pruebas pgTAP aplican todas
+las migraciones desde cero en cada cambio (CI).
 
 ### Riesgos para el mantenimiento
 
-**R-B1. La versión vigente de una función está repartida en migraciones.** Hay 114 funciones
-definidas a lo largo de 54 migraciones (11 500 líneas). Cuando una cambia, la migración nueva
+**R-B1. La versión vigente de una función está repartida en migraciones.** Hay 161 funciones
+definidas a lo largo de 82 migraciones (al 11/10/2026). Cuando una cambia, la migración nueva
 la reescribe entera. `handle_order_delivery_payment` va por su quinta versión;
 `sync_order_commissions`, `pay_commissions`, `create_work_order`, `recalculate_order_totals` y
 `trg_guard_order_technician`, por la cuarta. El riesgo concreto: quien la cambie parte de una
@@ -169,7 +169,7 @@ Dos inconsistencias menores:
 3. En local: `npx supabase db reset && npm run test:db`. CI lo repite en cada cambio.
 4. `npm run db:check`: qué se va a aplicar.
 5. **Publicar en este orden:** `db push` → funciones que cambiaron →
-   `git push origin main:produccion` (Hostinger compila y publica) → `npm run qa:security`
+   push a `main` (hoy Hostinger publica `main`) → `npm run qa:security`
    → prueba de humo ([deployment.md](deployment.md)). El push a `produccion` nunca va antes
    del `db push`: publica solo.
 6. Fuera del horario del taller si la migración toca políticas o dinero.

@@ -5,7 +5,7 @@ edge functions y frontend. Este documento dice **qué se encontró, qué tan gra
 cómo se corrigió y con qué prueba se comprueba**. Lo que no se corrigió está al final,
 con la razón.
 
-Para ejecutar las pruebas: [plan-de-pruebas.md](plan-de-pruebas.md). Para las pruebas
+Para ejecutar las pruebas: [plan-de-pruebas.md](../plan-de-pruebas.md). Para las pruebas
 automatizadas: [pruebas.md](../pruebas.md).
 
 > Después de esta auditoría se hizo una **revisión previa a producción** con hallazgos

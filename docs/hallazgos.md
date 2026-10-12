@@ -2,7 +2,7 @@
 
 > Fase 6 del [plan de mejoras](historico/plan-mejoras-2026-10.md#f6--hallazgos-y-nueva-espera-de-autorización).
 > Migraciones `20261010000010` y `20261010000011`. Estado y siguiente paso: la fila F6 de la
-> [tabla de estado](historico/plan-mejoras-2026-10.md#estado) y la [bitácora](historico/plan-mejoras-2026-10.md#bitácora-de-traspaso-entre-agentes).
+> [tabla de estado](bitacora.md#estado) y la [bitácora](bitacora.md#bitácora-de-traspaso-entre-agentes).
 
 ## 1. Qué cambia para el taller
 #despilegue
@@ -42,7 +42,7 @@ Tabla `orden_hallazgos` (solo lectura por la API; se escribe solo por RPC):
 | `reportar_hallazgo(orden, descripcion) → {hallazgo_id, avance_id}` | Técnico asignado | Bloquea la orden; rechaza entregada o texto vacío (42501 con frase para el taller); crea el avance interno y el hallazgo; pone la orden en `espera_autorizacion` con el texto como `motivo_autorizacion` (si ya esperaba, no toca el motivo); avisa a los admins **una vez** (`hallazgo_reportado`). Con la bandera `restorify.hallazgo` callan `trg_notify_progress` y `trg_notify_auth_request`. |
 | `cotizar_hallazgo(id) → {descripcion…}` | Admin | `pendiente` → `cotizado`. La orden sigue en pausa. |
 | `descartar_hallazgo(id, en_reporte, texto)` | Admin | Desde `pendiente`, o `cotizado` aún sin presupuesto. Guarda el texto y llama `_salir_de_espera`. |
-| `_salir_de_espera(orden)` | Interna (sin GRANT) | Vuelve a `en_proceso` solo si la orden espera, no hay hallazgo `pendiente` y no hay presupuesto `enviado`. La llaman `descartar_hallazgo`, `cancelar_presupuesto` y `_resolver_presupuesto` (también si el cliente rechazó todo). |
+| `_salir_de_espera(orden)` | Interna (sin GRANT) | Vuelve a `en_proceso` solo si la orden espera, no hay hallazgo `pendiente` y no hay presupuesto `enviado`. Al salir del estado el motivo (`motivo_autorizacion`) se limpia. La llaman `descartar_hallazgo`, `cancelar_presupuesto` y `_resolver_presupuesto` (también si el cliente rechazó todo). Desde `20261010000024` el guardia del técnico solo deja entrar en espera con un hallazgo `pendiente` y no deja salir mientras haya uno o un presupuesto `enviado`. |
 | `enviar_presupuesto` | Admin | Vincula los cotizados sin presupuesto. Un cotizado **no** cuenta como borrador (antes creaba presupuestos vacíos): hace falta la tarea. Pausa la orden solo si estaba `en_proceso`. |
 | `trg_avance_hallazgo_interno` | Trigger | Un no-admin no publica (`visible_cliente`) el avance de un hallazgo. |
 | `trg_portal_on_order_change` | Trigger | De espera a `en_proceso` no vuelve a mandar el correo "en proceso" si el cliente ya lo recibió. |
@@ -76,19 +76,20 @@ que ya tiene la pantalla. Así la app publicada no se rompe si llega antes que e
 - Vitest: `WorkOrders.smoke.test.tsx` (describe "trabajo adicional reportado (F6)"),
   `KanbanBoard.test.tsx`, `CustomerPortal.test.tsx`, `reportMedia.test.ts`.
 - `qa:security`: SEC-106 a SEC-112 (ninguno escribe).
-- A mano: HAL-01 a HAL-07 en [plan-de-pruebas.md](historico/plan-de-pruebas.md).
+- A mano: HAL-01 a HAL-07 en [plan-de-pruebas.md](plan-de-pruebas.md).
 
 ## 6. Lo que falta (en orden)
 
 1. ~~`db push`~~ hecho: `009` y `010`, y después la `011` (04/10/2026, por el usuario). La
    base de producción está al día con el código.
 2. `npm run qa:security` con `TOKEN_ADMIN`/`TOKEN_TECH`.
-3. **Migración que contrae**, con la app nueva ya publicada: reescribir entero
+3. ~~**Migración que contrae**~~ hecha en `20261010000024_guardia_espera_hallazgos.sql` (publicada; ver
+   [bitacora.md](bitacora.md#estado)). Era: reescribir entero
    `trg_guard_order_technician` (versión vigente: `npm run db:donde -- trg_guard_order_technician`)
    para que un técnico (a) ponga `espera_autorizacion` solo si existe un hallazgo `pendiente`
    de esa orden, y (b) no la saque de espera mientras haya hallazgo pendiente o presupuesto
    enviado. Ajustar la `03` (líneas del bloque "Pedir autorización") y la `05` (línea ~181).
-   Después, `motivo_autorizacion` deja de escribirse y se retira en otra migración.
+   Falta: que `motivo_autorizacion` deje de escribirse y se retire en otra migración.
 4. Casos HAL en un teléfono real.
 5. Ideas no hechas: hallazgos en `trg_historial`; mostrar las fotos del hallazgo dentro de la
    tarjeta del admin (hoy dice "n archivo(s) en Fotos").

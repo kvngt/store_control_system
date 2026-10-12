@@ -6,7 +6,7 @@ sistema le **manda correos** cuando hay algo nuevo. Los correos no traen los dat
 traen el enlace.
 
 Reglas en lenguaje de negocio: [reglas-de-negocio.md](reglas-de-negocio.md#7-portal-del-cliente-y-correos).
-Cómo probarlo: [plan-de-pruebas.md](historico/plan-de-pruebas.md#413-portal-del-cliente-y-correos-por).
+Cómo probarlo: [plan-de-pruebas.md](plan-de-pruebas.md#413-portal-del-cliente-y-correos-por).
 
 ---
 
@@ -133,7 +133,7 @@ pondría el login del taller en el teléfono del cliente).
 | Plantilla | Cuándo | Espera | Clave de agrupación |
 |---|---|---|---|
 | `recepcion` | Primera firma de la orden | Inmediato si ya hay una foto de recepción; si no, 30 s (que suba la primera) | `recepcion:<orden>`; nunca se repite |
-| `estatus` | Pasa a en proceso, finalizado o entregado. **Espera de autorización no se anuncia**: el cliente se entera con el correo del presupuesto (`ANNOUNCED_STATUSES` en `_shared/email/templates.ts` y `trg_portal_on_order_change`). Desde `20261010000028`, al pasar a `finalizado`, si la sede tiene activo el cobro por parqueo y aviso al cliente (`avisar_cliente`), incluye una nota con los días de gracia y la fecha límite antes de que empiece el cobro por día | 3 min; una ráfaga es un correo con la hora del primero | `estatus:<orden>` |
+| `estatus` | Pasa a en proceso o entregado, o administración la marca lista para entregar (`marcar_lista_para_entregar`; finalizar no avisa). **Espera de autorización no se anuncia**: el cliente se entera con el correo del presupuesto (`ANNOUNCED_STATUSES` en `_shared/email/templates.ts` y `trg_portal_on_order_change`). Desde `20261010000028`, al pasar a `finalizado`, si la sede tiene activo el cobro por parqueo y aviso al cliente (`avisar_cliente`), incluye una nota con los días de gracia y la fecha límite antes de que empiece el cobro por día | 3 min; una ráfaga es un correo con la hora del primero | `estatus:<orden>` |
 | `avance` | Un admin pulsa **Avisar novedades** | 1 min | `avance:<orden>` |
 | `presupuesto` | Un admin pulsa **Enviar presupuesto** (fase 5) | 1 min | `presupuesto:<presupuesto>`; se omite si ya se respondió o canceló |
 | `presupuesto_confirmacion` | Se responde un presupuesto desde el enlace o lo registra un admin | Inmediato | `presupuesto_confirmacion:<presupuesto>` |
@@ -264,8 +264,8 @@ Así la baja, la corrección del correo o el regreso de estado se respetan.
 automatizado. Los buzones de Hostinger sirven para **recibir** las respuestas
 (Reply-To).
 
-**Español en los correos.** La mayoría de los clientes del taller hablan español. El
-portal tiene inglés; los correos, por ahora, no (ver sección 10).
+**Idioma de los correos.** Desde `20261010000022` salen en el idioma del cliente
+(`clientes.idioma`, inglés por defecto), que él mismo cambia desde su enlace (ver sección 4).
 
 ---
 
@@ -293,7 +293,7 @@ La llave de Resend **nunca** va en un archivo del repositorio ni en
 npx supabase db push --linked
 npx supabase functions deploy portal --no-verify-jwt
 npx supabase functions deploy process-outbox --no-verify-jwt
-git push origin main:produccion   # Hostinger compila y publica
+git push origin main              # hoy Hostinger publica main (ver deployment.md §5)
 ```
 
 `public/.htaccess` ya reescribe `/r/...` a `index.html`; no hace falta nada en
@@ -417,8 +417,8 @@ que el portal**:
   cuando ya no hagan falta.
 - ~~**Correos en inglés**~~ **hecho**: agregar `clientes.idioma` y un segundo juego de textos en
   `templates.ts`.
-- **Datos de contacto de las sedes**: el correo y el WhatsApp quedaron pendientes de
-  cargar en Configuración.
+- **Datos de contacto de las sedes**: el correo y los teléfonos (con su tipo y si atienden
+  WhatsApp) se cargan en Configuración.
 
 ### Cuándo sale el aviso de recepción
 

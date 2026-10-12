@@ -5,8 +5,9 @@ dónde está el detalle. Para todo lo demás, [radiografia.md](radiografia.md) y
 [reglas-de-negocio.md](reglas-de-negocio.md). Para ubicar los archivos, tablas y pruebas
 de una sección, [mapa-de-secciones.md](mapa-de-secciones.md); antes de cambiar la base de
 un proyecto con datos reales, [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación).
-Lo que viene (cambios pedidos por el taller el 03/10/2026, por fases y con decisiones ya
-tomadas): [plan-mejoras-2026-10.md](historico/plan-mejoras-2026-10.md). Léelo antes de tocar tareas,
+El estado al día (qué está hecho, qué falta publicar, quién hizo qué) y la bitácora de traspaso:
+[bitacora.md](bitacora.md). El plan de la reunión del 03/10/2026, con las decisiones del taller:
+[plan-mejoras-2026-10.md](historico/plan-mejoras-2026-10.md); léelo antes de tocar tareas,
 comisiones, el alta de la orden o la "espera de autorización".
 
 ---
@@ -153,8 +154,8 @@ comisiones, el alta de la orden o la "espera de autorización".
     (`trg_part_cost_follows_price`). `updatePart` manda `costo_unitario` solo si se escribió:
     mandarlo igual al precio borraba el costo real. La columna ya no tiene DEFAULT.
   - **Descuento:** `orden_montos.descuento`, solo por `aplicar_descuento`, en $ o en % (el
-    guardia de montos rechaza escribirlo directo). `total_general = mano de obra + repuestos − descuento`; las
-    comisiones no cambian (salen de la mano de obra).
+    guardia de montos rechaza escribirlo directo). `total_general = mano de obra + repuestos − descuento + parqueo`; las
+    comisiones no cambian (salen de la mano de obra) y el descuento no toca el parqueo.
   - **Retirada sin reparar** es `estatus = 'entregado'` + `retirada_sin_reparar = true`, y solo
     la enciende `retirar_sin_reparar` (vía `entregar_orden` con `restorify.retirada`). Recibe
     `p_conservar` (las líneas autorizadas que sí se hicieron): esas se cobran y pagan su
@@ -219,7 +220,7 @@ comisiones, el alta de la orden o la "espera de autorización".
   ya no acepta archivos); el PDF solo se descarga y muestra lo mismo que ve el
   cliente (fotos publicadas, líneas aprobadas, sin notas internas ni nombres de
   técnicos; filtros en `src/lib/reportMedia.ts`). Plan y estado en
-  [README.md](README.md#estado-del-proyecto-septiembre-2026); historia y decisiones en
+  [bitacora.md](bitacora.md#estado); historia y decisiones en
   [evolucion.md](evolucion.md).
 - **Solo lo autorizado se cobra.** `orden_labor` y `orden_repuestos` tienen `estado`
   (`borrador` | `pendiente` | `aprobado` | `rechazado`) y los totales suman solo
@@ -430,7 +431,7 @@ npm run qa:security   # después de aplicar una migración que toque permisos
 ```
 
 Qué cubren las pruebas automatizadas: [pruebas.md](pruebas.md). Qué probar según lo
-que cambiaste, con casos que un agente puede ejecutar: [plan-de-pruebas.md](historico/plan-de-pruebas.md)
+que cambiaste, con casos que un agente puede ejecutar: [plan-de-pruebas.md](plan-de-pruebas.md)
 (§1.4 tiene las instrucciones para agentes; §8, qué módulos probar según el cambio).
 Para comprobar el estado de una orden en la base: `scripts/qa/estado-orden.sql` (solo
 lectura). Las pruebas e2e y `qa:security` corren contra el proyecto de `.env.local`: no

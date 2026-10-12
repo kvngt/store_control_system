@@ -283,8 +283,9 @@ npx supabase db push --linked
 
 # 5. Edge functions que hayan cambiado (sección 4.7)
 
-# 6. Frontend: Hostinger compila y publica lo que llega a `produccion`
-git push origin main:produccion
+# 6. Frontend: hoy Hostinger publica `main` (ver la nota de abajo), así que este push es el despliegue
+git push origin main
+# Con el panel en `produccion` (el diseño), sería: git push origin main:produccion
 ```
 
 **Cómo publica Hostinger.** El sitio `restorifyauto.net` está conectado al repositorio de
@@ -332,7 +333,7 @@ horario de trabajo.
 npx supabase db push --linked                    # la migración
 npx supabase functions deploy delete-employee    # mensaje al borrar empleados con pagos
 npx supabase functions deploy update-employee    # editar empleados (faltaba desplegar: AUD-26)
-npm run build                                    # y subir dist/ (hoy: git push origin main:produccion)
+npm run build                                    # y subir dist/ (hoy: push a main, que Hostinger publica)
 npm run qa:security                              # SEC-05 a SEC-08 pasan a PASS
 ```
 
@@ -343,7 +344,7 @@ Si la versión incluye migraciones nuevas, **los pasos 4 y 6 van seguidos**.
 ## 6. Verificación después de publicar
 
 Diez minutos. Es el nivel **humo** del plan de pruebas; si algo falla,
-[plan-de-pruebas.md](historico/plan-de-pruebas.md) tiene el detalle de cada caso.
+[plan-de-pruebas.md](plan-de-pruebas.md) tiene el detalle de cada caso.
 
 - [ ] `npm run qa:security` → 0 FAIL (SEC-17 confirma que las 6 edge functions están desplegadas).
 - [ ] `npx supabase functions list` → `portal`, `process-outbox`, `cleanup-storage`, `create-employee`, `update-employee`, `delete-employee`.
@@ -399,8 +400,8 @@ Diez minutos. Es el nivel **humo** del plan de pruebas; si algo falla,
 
 ## 8. Volver atrás
 
-- **Frontend:** `git revert` del commit que falló, en `main`, y
-  `git push origin main:produccion`: Hostinger publica la versión corregida. Solo es seguro
+- **Frontend:** `git revert` del commit que falló, en `main`, y push a `main` (o
+  `git push origin main:produccion` si el panel ya publica `produccion`): Hostinger publica la versión corregida. Solo es seguro
   si la base no recibió migraciones que esa versión necesite. No reescribas `produccion` con
   un push forzado.
 - **Base de datos:** las migraciones no tienen "down". Volver atrás es escribir una
@@ -416,7 +417,7 @@ Diez minutos. Es el nivel **humo** del plan de pruebas; si algo falla,
 ## 9. Integración continua
 
 `.github/workflows/ci.yml` corre en cada push y pull request a `main`: lint, tipos, pruebas
-y build en un trabajo, y en otro levanta Postgres con la CLI de Supabase, aplica las 36
+y build en un trabajo, y en otro levanta Postgres con la CLI de Supabase, aplica todas las
 migraciones desde cero y corre pgTAP. No despliega ni usa secretos. Referencia del flujo
 (el archivo del repositorio es la fuente de verdad):
 

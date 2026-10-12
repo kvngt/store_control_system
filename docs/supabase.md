@@ -42,7 +42,7 @@ Para **por qué** está construido así: [radiografia.md](radiografia.md). Para
 | **Plan** | **Pro** desde el 30 de septiembre de 2026: respaldos diarios (Database → Backups). Los buckets siguen con 50 MB por archivo, que es lo que la app permite ([deployment.md §4.1](deployment.md#41-plan-y-límites-de-gasto)) |
 | **Postgres** | 17.6 |
 | **Tamaño de la base** | ~19 MB (29 de septiembre de 2026, recién limpiada) |
-| **Migraciones aplicadas** | 54 (la última, `20261010000000_egresos_de_comision_por_orden`, aplicada el 29 de septiembre de 2026) |
+| **Migraciones aplicadas** | 82 al 11/10/2026 (la última, `20261010000028_modulo_parqueo`). `npm run db:check` dice si producción va al día |
 | **Max rows de la API** | 1.000 (valor por defecto; Project Settings → API). **No bajarlo**: `fetchAll` asume páginas de 1.000 |
 | **Enlace con este repositorio** | `supabase/.temp/project-ref` (lo crea `npx supabase link`) |
 | **Entornos** | Solo este. No hay staging: es la primera recomendación de [mantenimiento.md](mantenimiento.md#5-plan-priorizado) |
@@ -133,7 +133,7 @@ Supabase local, para las pruebas.
 
 ### 4.2 Tablas de `public`
 
-Las 23 tienen **RLS activado**. Columnas y relaciones: [radiografia.md §4](radiografia.md#4-modelo-de-datos).
+Las 23 tienen **RLS activado**. Columnas y relaciones: [radiografia.md §4](arquitectura.md#4-modelo-de-datos).
 
 | Dominio | Tabla | Qué guarda | Quién lee |
 |---|---|---|---|
@@ -185,7 +185,7 @@ a mano: la anterior se quedó cinco funciones atrás sin que nadie lo notara.
 | **Internas** | 32 | Dinero (`_saldo_orden`, `_reparto_comisiones`, `_balance_orden`, `recalculate_order_totals`, `sync_order_commissions`, `sync_order_parts_expense`, `reverse_order_delivery_finance`); parqueo (`_parqueo_calculo`, `recalcular_parqueo_pendiente`); avisos (`notificar`, `admins_de_sede`, `datos_orden_aviso`); cola (`claim_outbox`, `finish_outbox`, `dispatch_outbox_if_due`, `invoke_edge_function`, `purge_old_notifications`, `archivos_huerfanos`); portal y correos (`datos_portal`, `datos_correo`, `encolar_correo_cliente`, `asegurar_enlace_orden`, `preferencia_correos_portal`, `responder_presupuesto_portal`, `marcar_estatus_enviado`, `es_correo_valido`); presupuestos (`_crear_presupuesto`, `_agregar_borradores`, `_lineas_pendientes`, `_resolver_presupuesto`, `recordar_presupuestos_sin_respuesta`); recordatorios (`recordar_ordenes_vencidas`) | Solo `service_role` (Edge Functions), triggers y pg_cron |
 | **De trigger** | 48 | `trg_*`, `handle_*`, `cleanup_order_finance`, `trg_parqueo_orden` | Solo como trigger |
 
-Qué hace cada trigger, por tabla: [radiografia.md §5](radiografia.md#5-dónde-vive-la-lógica-de-negocio).
+Qué hace cada trigger, por tabla: [radiografia.md §5](arquitectura.md#5-dónde-vive-la-lógica-de-negocio).
 
 > **Regla:** una función nueva nace ejecutable por `anon` y `authenticated`. Revócala en
 > la misma migración y comprueba con `npm run qa:security` después de aplicarla
@@ -445,8 +445,8 @@ nombres del menú; busca el más parecido.
 
 ## 12. El Supabase local (Docker)
 
-`npx supabase start` levanta en Docker una copia vacía del proyecto con las 54
-migraciones. Sirve para las pruebas pgTAP y para probar una migración antes de aplicarla.
+`npx supabase start` levanta en Docker una copia vacía del proyecto con todas
+las migraciones. Sirve para las pruebas pgTAP y para probar una migración antes de aplicarla.
 **No toca el proyecto real.** Cómo instalar Docker: [pruebas.md §2.4](pruebas.md#24-para-qué-hace-falta-docker).
 
 | Servicio local | Dirección |
@@ -459,7 +459,7 @@ migraciones. Sirve para las pruebas pgTAP y para probar una migración antes de 
 ```bash
 npx supabase start     # levantar (la primera vez descarga varios GB)
 npx supabase status    # direcciones y llaves locales
-npm run test:db        # 13 archivos pgTAP, 330 aserciones
+npm run test:db        # las pruebas pgTAP
 npx supabase db reset  # recrear la base local desde cero
 npx supabase stop      # apagar
 ```
@@ -497,8 +497,8 @@ ORDER BY 2 DESC, 3 DESC, 1;
 
 | Qué | Por qué importa | Cómo |
 |---|---|---|
-| **Pasar a Pro** | Free no tiene respaldos diarios, pausa proyectos inactivos y limita Storage a 1 GB | Organization → Billing. Mientras tanto, respaldo manual antes de cada `db push` ([mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación)) |
+| ~~**Pasar a Pro**~~ Hecho el 30/09/2026 | Free no tenía respaldos diarios, pausaba proyectos inactivos y limitaba Storage a 1 GB | Organization → Billing. Mientras tanto, respaldo manual antes de cada `db push` ([mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación)) |
 | **Staging** | Hoy las pruebas e2e y `qa:security` corren contra el único proyecto, y sus cuentas de prueba se borraron el 29/09/2026 | Un segundo proyecto con las mismas migraciones, secretos propios y cuentas de prueba |
 | **Sentry** | Hoy nadie se entera de un error en el teléfono de un técnico | Crear el proyecto en Sentry, poner `VITE_SENTRY_DSN` en las variables del sitio en Hostinger y volver a desplegar |
-| **SMTP de Auth con Resend** | El correo de Supabase permite ~2 por hora | [deployment.md §4.2](deployment.md#42-auth) |
+| ~~**SMTP de Auth con Resend**~~ Hecho el 30/09/2026 (§9) | El correo de Supabase permitía ~2 por hora | [deployment.md §4.2](deployment.md#42-auth) |
 | **`[inbucket]` en `config.toml`** | La CLI avisa que la sección es obsoleta; solo afecta al local | Renombrarla cuando se actualice la configuración local |
