@@ -43,6 +43,75 @@ al día aparte.
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
 
+### 12/10/2026 — Claude Code (manual de usuario al día y análisis de la interfaz)
+
+- **Pedido:**
+  - que el [manual de usuario](manual-usuario.md) refleje la app de hoy, antes de pasarlo a
+    Google Docs con capturas;
+  - analizar si la interfaz está saturada o mal organizada;
+  - usar Gemini (Antigravity CLI) para ahorrar tokens.
+- **Cómo:** Gemini 3.1 Pro trabajó sobre copias aisladas, sin terminal ni red. Claude Sonnet
+  5.5 se quedó sin cuota en Antigravity a la mitad del primer intento.
+  - **El primer intento se descartó.** El inventario citaba 166 textos de pantalla que no
+    existen, como "Ingresar" en vez de "Entrar", e inventaba pestañas. El análisis citaba
+    archivos que no existen.
+  - **Lo que funcionó** fue darle los hechos ya sacados del código: un script
+    (`mapa-etiquetas.mjs`, en el scratchpad de la sesión) lista, por archivo de `src/`, cada
+    texto que muestra con su línea y su valor en español (1.881 usos en 84 archivos), más las
+    rutas y los textos del portal. Gemini solo podía citar textos de ese mapa.
+  - **Cada borrador se revisó** con un verificador de etiquetas (cada texto citado debe
+    existir en la app) y con una segunda pasada de Gemini que solo buscaba errores contra el
+    código. Claude Code confirmó cada error antes de corregirlo.
+- **[manual-usuario.md](manual-usuario.md)** quedó al día:
+  - una sección nueva, 14 "Cobro por parqueo";
+  - el alta en cuatro pasos;
+  - las pestañas del administrador y del técnico;
+  - lo nuevo: trabajo adicional, "listo para entregar", entrega con método, retirada sin
+    reparar, anticipos, descuento, seguro, historial, comisiones que se aceptan, Mis
+    comisiones, idioma del cliente y teléfonos de la sede;
+  - "Qué puede hacer cada rol", "Cosas que el sistema hace solo" y "Problemas comunes".
+
+  Tiene 46 marcadores de imagen (antes 40). Se corrigieron 18 errores del borrador:
+  - el orden de los pasos del alta: Gemini lo tomó del archivo de traducciones y no de
+    `INTAKE_STEPS`; es Cliente → Vehículo y recepción → Trabajos → Depósito;
+  - el buscador global con un vehículo;
+  - el indicador de ocupación y las alertas del panel;
+  - los títulos del panel del técnico;
+  - los filtros de la lista;
+  - el técnico sí ve el precio de su mano de obra y puede publicar sus propios avances;
+  - lo que puede mover en el tablero;
+  - el borrado de avisos a los 60 y 180 días;
+  - el aviso de comisión, que sale al aceptarla y no al entregar;
+  - la "comisión estimada", que muestra "Pendiente" hasta que se acepta;
+  - textos con marcadores crudos (`{monto}`, `{date}`).
+- **[analisis-de-interfaz.md](analisis-de-interfaz.md)**, documento nuevo, también en el
+  [índice](README.md):
+  - los 11 puntos de la comparativa del 11/10 siguen vigentes;
+  - 26 hallazgos nuevos y las 10 mejoras con mejor relación beneficio/esfuerzo.
+
+  Se corrigieron cuatro cosas del borrador:
+  - el orden de los pasos;
+  - una suposición sin dato: "el depósito casi siempre es cero";
+  - una propuesta que cambiaba una regla de negocio: mostrarle al técnico su comisión antes de
+    aceptarla;
+  - la ubicación de la tarjeta de parqueo.
+
+  Se hizo leyendo el código. Lo marcado "(verificar con captura)" se confirma al tomar las
+  capturas.
+- **Verificación:**
+  - los textos citados existen en la app; los únicos que no aparecen son preguntas de clientes
+    en "Problemas comunes" y un asunto de correo con dato;
+  - no hay nombres de código en el manual;
+  - las anclas del índice funcionan y no hay caracteres de control;
+  - el revisor de enlaces da los 2 falsos positivos conocidos.
+- **Sin commit.**
+- **Siguiente paso:**
+  1. Abrir una sesión nueva para que carguen las herramientas del conector de Google Docs (está
+     conectado a la cuenta, pero no cargó en esta sesión) y probar si acepta imágenes.
+  2. Tomar las 46 capturas con Playwright sobre una copia local con datos inventados, nunca de
+     producción.
+  3. Armar el manual en Google Docs.
+
 ### 11/10/2026, noche (3) — Claude Code (`qa:security` contra producción)
 
 - **Lo corrió el usuario** contra producción: **126 PASS, 1 FAIL, 28 SKIP**.

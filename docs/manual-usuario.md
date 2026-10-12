@@ -24,11 +24,12 @@ Sistema de administración para talleres mecánicos y de pintura.
 11. [Notificaciones](#11-notificaciones)
 12. [Finanzas](#12-finanzas)
 13. [Comisiones](#13-comisiones)
-14. [Configuración](#14-configuración)
-15. [Instalar la app en el teléfono](#15-instalar-la-app-en-el-teléfono)
-16. [Qué puede hacer cada rol](#16-qué-puede-hacer-cada-rol)
-17. [Cosas que el sistema hace solo](#17-cosas-que-el-sistema-hace-solo)
-18. [Problemas comunes](#18-problemas-comunes)
+14. [Cobro por parqueo](#14-cobro-por-parqueo)
+15. [Configuración](#15-configuración)
+16. [Instalar la app en el teléfono](#16-instalar-la-app-en-el-teléfono)
+17. [Qué puede hacer cada rol](#17-qué-puede-hacer-cada-rol)
+18. [Cosas que el sistema hace solo](#18-cosas-que-el-sistema-hace-solo)
+19. [Problemas comunes](#19-problemas-comunes)
 
 ---
 
@@ -40,7 +41,7 @@ videos del trabajo, el dinero que entra y sale por cada orden y las comisiones
 del personal.
 
 Funciona en el navegador, sin instalar nada, aunque en el teléfono conviene
-agregarlo a la pantalla de inicio (sección 15). Está pensado para usarse igual
+agregarlo a la pantalla de inicio (sección 16). Está pensado para usarse igual
 desde una computadora en la oficina que desde el teléfono en el piso del taller.
 
 Un mismo negocio puede tener **varias sedes** (talleres). Cada sede maneja sus
@@ -86,6 +87,12 @@ técnico. Una tarea **sin técnico** no le paga comisión a nadie.
 **Presupuesto.** Los trabajos que se le presentan al cliente para que los autorice.
 **Lo que el cliente no autoriza no se hace ni se cobra.**
 
+**Trabajo adicional.** Hallazgo imprevisto que el técnico encuentra en el piso del taller y reporta desde la orden, lo que pausa el trabajo mientras administración decide si cotizarlo al cliente o descartarlo.
+
+**Listo para entregar.** Marca que pone administración sobre una orden finalizada para confirmar que el trabajo fue revisado en el taller; en ese momento el cliente recibe el correo avisándole que su vehículo está listo.
+
+**Cobro por parqueo.** Cobro por el almacenamiento o estadía del vehículo en el taller, según si el trabajo tiene seguro o es particular.
+
 ---
 
 ## 3. Entrar al sistema
@@ -93,21 +100,21 @@ técnico. Una tarea **sin técnico** no le paga comisión a nadie.
 Abre la dirección del sistema en el navegador (`restorifyauto.net`). Verás la
 pantalla de acceso.
 
-1. Escribe tu **correo electrónico**.
-2. Escribe tu **contraseña**.
+1. Escribe tu **Correo Electrónico**.
+2. Escribe tu **Contraseña**.
 3. Presiona **Entrar**.
 
 <!-- IMAGEN: pantalla de acceso completa -->
 
 **No existe registro público.** Las cuentas las crea un administrador desde
-Configuración. Si no tienes cuenta, pídesela a quien administre el sistema.
+Configuración o Empleados. Si no tienes cuenta, pídesela a quien administre el sistema.
 
 En la misma pantalla puedes cambiar el idioma entre **Español** e **English**.
 La elección se recuerda para la próxima vez.
 
 Si el correo o la contraseña no son correctos, aparece un aviso rojo sobre el
-formulario y no se entra. Si el aviso dice **"Esta cuenta no tiene acceso al
-taller"**, la cuenta existe pero nadie la dio de alta en el sistema: pídele a un
+formulario y no se entra. Si el aviso indica que la cuenta no tiene acceso al
+taller, la cuenta existe pero nadie la dio de alta en el sistema: pídele a un
 administrador que te dé de alta desde **Empleados**.
 
 ### Si olvidaste tu contraseña
@@ -116,18 +123,18 @@ administrador que te dé de alta desde **Empleados**.
 2. Escribe tu correo y presiona **Enviar enlace**.
 3. Revisa tu bandeja de entrada —y la carpeta de correo no deseado— y abre el
    enlace que recibiste.
-4. El enlace te lleva a una pantalla para escribir tu **contraseña nueva** dos
-   veces. Al guardarla, **Entrar al sistema** te lleva al panel.
+4. El enlace te lleva a una pantalla para escribir tu **Contraseña nueva** y
+   confirmarla. Al guardarla con **Guardar contraseña**, **Entrar al sistema** te lleva al panel.
 
 Cada enlace sirve **una sola vez** y vence al poco tiempo (una hora, con la configuración normal). Si lo abres de nuevo o tarde,
-la pantalla dice "Este enlace ya no sirve": vuelve al inicio y pide otro.
+la pantalla te avisa que el enlace venció: vuelve al inicio y pide otro con **Volver a iniciar sesión**.
 
 <!-- IMAGEN: pantalla de "Recuperar contraseña" con el campo de correo -->
 
 Por seguridad el mensaje de confirmación es el mismo exista o no una cuenta con
 ese correo, para que nadie pueda averiguar qué correos están registrados. Si no
 recibes nada, pídele a un administrador que te asigne una contraseña nueva desde
-Configuración.
+Configuración o Empleados.
 
 ### Cerrar sesión en un teléfono compartido
 
@@ -146,32 +153,36 @@ montos.
 
 ### Barra lateral (izquierda)
 
-El menú principal, en tres grupos: **Taller** (Panel principal, Clientes, Vehículos y
-Órdenes de Trabajo), **Finanzas** (Finanzas, Comisiones y Empleados, solo administradores)
-y **Sistema** (Configuración). Abajo está el botón de cerrar sesión. El tablero Kanban ya no
-tiene entrada propia: está dentro de Órdenes de Trabajo (sección 10).
+El menú principal, en tres grupos:
+- **Taller**: **Panel Principal**, **Clientes**, **Vehículos**, **Órdenes de Trabajo** y, para los técnicos, **Mis comisiones**. (Clientes y Vehículos solo los ve administración).
+- **Finanzas** (solo administradores): **Finanzas**, **Comisiones** y **Empleados**.
+- **Sistema**: **Configuración**.
+
+Abajo está el botón **Cerrar Sesión**. El tablero Kanban ya no tiene entrada propia en el menú: está dentro de **Órdenes de Trabajo** (sección 10).
 
 Se puede plegar con la flecha para ganar espacio en pantalla.
 
 ### Encabezado (arriba)
 
-- **Buscador global.** Escribe al menos 2 caracteres y busca a la vez entre
-  clientes, vehículos y órdenes. Los resultados aparecen agrupados por tipo; al
-  tocar uno te lleva directo al registro.
+- **Buscador global.** Campo **Buscar...**: escribe al menos 2 caracteres y busca a la vez entre
+  clientes, vehículos y órdenes. Los resultados aparecen agrupados por tipo. Un cliente abre su ficha y una orden
+  abre su detalle; un vehículo te lleva a la lista de **Vehículos**.
 - **Selector de sede** (solo administradores). Cambia el taller activo. Todo lo
   que veas a partir de ese momento será de la sede seleccionada.
 - **Idioma.** Botones ES / EN.
 - **Campana de notificaciones.** Tus avisos: órdenes que te asignaron, avances de
   los técnicos, órdenes listas para entregar, comisiones generadas. Ver sección 11.
-- **Avatar.** Tu foto o tus iniciales. Lleva a Configuración.
+- **Avatar.** Tu foto o tus iniciales. Lleva a **Configuración**.
 
 ### En el teléfono
 
 - La barra lateral se convierte en un menú que se abre con el botón ☰ de arriba a
-  la izquierda. Ahí están el selector de sede y **Cerrar sesión**.
+  la izquierda. Ahí están el selector de sede y **Cerrar Sesión**.
 - El buscador se abre con la **lupa** del encabezado y ocupa toda la pantalla.
-- Aparece una **barra inferior** con los accesos más usados: Panel, Órdenes,
-  Tablero y, para administración, Clientes y Vehículos.
+- Aparece una **barra inferior** con los accesos más usados:
+  - Para todos: **Panel** y **Órdenes**.
+  - Para técnicos: **Comisiones** (abre directamente sus comisiones aceptadas y pagadas).
+  - Para administración: **Clientes** y **Vehículos**.
 - Las tablas se transforman en tarjetas, más fáciles de tocar con el dedo.
 - Los formularios grandes (como Nueva Orden) se abren a pantalla completa.
 
@@ -192,34 +203,36 @@ Es la pantalla de inicio. Resume cómo va el taller.
   número de cada cosa y las órdenes a las que lleva:
   - **Trabajo adicional por revisar**: lo que reportó un técnico y nadie ha cotizado ni
     descartado. Abre la orden en Resumen.
-  - **Presupuestos sin respuesta del cliente.** Abre la orden en Trabajos.
-  - **Tareas sin técnico**: nadie cobra su comisión hasta que se les asigne uno. Abre la
+  - **Trabajos cotizados sin autorizar: envía el presupuesto o registra la autorización**: trabajos agregados que aún no se envían al cliente ni se autorizan. Abre la orden en Trabajos.
+  - **Presupuestos sin respuesta del cliente**: presupuestos enviados esperando que el cliente responda. Abre la orden en Trabajos.
+  - **Tareas sin técnico: nadie cobra su comisión**: nadie cobra la comisión de esas tareas hasta que se les asigne un técnico. Abre la
     orden en Trabajos.
+  - **Terminadas por revisar y marcar listas para entregar**: órdenes donde el personal terminó el trabajo, esperando que administración las revise y las marque listas para entregar al cliente.
   - **Órdenes con la entrega vencida** (las finalizadas no cuentan).
-  - **Correos al cliente con error** en las últimas 72 horas: **Revisar** lleva a
-    Configuración, donde se reintentan.
+  - **Correos al cliente con error (últimas 72 h)**: el botón **Revisar** lleva a
+    Configuración, donde se pueden reintentar.
 
-  Si no hay nada, dice «Todo al día». Se actualiza solo cuando alguien cambia una orden.
-- **Órdenes activas** y cuántas se terminaron este mes.
-- **Ingresos del mes.**
-- **Tasa de ocupación**: cuántos espacios del taller están ocupados respecto a la
-  capacidad configurada. Si supera el 80 % el indicador se pone rojo.
-- **Clientes nuevos del mes.**
-- **Gráfico de ingresos contra egresos** de los últimos meses.
-- **Alertas**: órdenes esperando repuestos o con poco avance.
-- **Órdenes recientes**, con su total.
+  Si no hay nada pendiente, dice «Todo al día: nada espera una decisión de la oficina.» Se actualiza solo cuando alguien cambia una orden.
+- **Órdenes Activas** y cuántas están **Finalizadas este mes**.
+- **Ingresos del Mes**.
+- **Tasa de Ocupación**: cuántos espacios del taller están ocupados respecto a la
+  capacidad configurada.
+- **Clientes Nuevos** del mes.
+- **Ingresos vs Egresos**: gráfico comparativo de los últimos meses.
+- **Alertas**: órdenes detenidas en espera de autorización y órdenes en proceso con poco avance (menos del 30 %).
+- **Órdenes Recientes**, con botón **Ver orden** y su total.
 
 ### Lo que ve un técnico
 
 La misma pantalla, sin nada de dinero: no aparecen ingresos, totales, clientes
-nuevos ni el gráfico financiero. Las **alertas** y las **órdenes recientes**
-muestran únicamente **sus propias órdenes**.
+nuevos ni el gráfico financiero. El indicador de órdenes dice **Mis Órdenes Activas**,
+y las **Alertas** y las **Órdenes Recientes** muestran únicamente **sus propias órdenes**.
 
 Arriba de todo está **Mis tareas**: los trabajos que tiene asignados en todas sus órdenes
 sin entregar y que todavía no marca como hechos. Primero los que ya se pueden hacer (la
-orden que vence antes, primero); al final, los que esperan la autorización del cliente. Al
+orden que vence antes, primero); al final, los marcados con **Esperando autorización**. Al
 tocar uno se abre su orden en la pestaña **Tareas**, donde se marca **Realizado** y se
-agregan avances. Las tareas hechas no se listan, solo se cuentan.
+agregan avances. Las tareas hechas no se listan una por una, solo se cuentan («N hecha(s) en órdenes sin entregar»).
 
 <!-- IMAGEN: panel principal de un mecánico, para contrastar con el anterior -->
 
@@ -237,20 +250,21 @@ cuántos vehículos tienen y cuántas órdenes han generado.
 ### Registrar un cliente
 
 1. Presiona **Nuevo Cliente**.
-2. Llena nombre y teléfono (obligatorios), y correo, dirección y notas si los tienes.
-3. **Crear**.
+2. Llena **Nombre** y **Teléfono** (obligatorios), y **Correo Electrónico**, **Dirección** y **Notas CRM** si los tienes.
+3. Elige el **Idioma de los correos** (Español o English, en inglés por defecto). El cliente también puede cambiarlo al elegir idioma en su enlace.
+4. **Crear**.
 
 **El teléfono lleva su país.** A la izquierda del número está el país, con
 **Estados Unidos (+1)** elegido de entrada y **México (+52)** justo después; el resto
 son los países más comunes de la clientela. Elige el del número del cliente y escribe
 el número sin el prefijo. Es el número que usa el sistema para **llamar** y para
 **WhatsApp**, así que un país equivocado marca a otro lado. Si a un número de EE. UU.
-le falta o le sobra un dígito, el campo te avisa al salir de él.
+le falta o le sobra un dígito, el campo te avisa con «Un número de Estados Unidos tiene 10 dígitos.» al salir de él.
 
 > Los clientes que ya estaban registrados conservan su número como estaba y se leen
 > como de EE. UU. Si uno es de otro país, ábrelo, elige el país correcto y guarda.
 
-> Captura el **correo** siempre que el cliente lo tenga: ahí le llegan solos el
+> Captura el **Correo Electrónico** siempre que el cliente lo tenga: ahí le llegan solos el
 > aviso de ingreso y los cambios de estado de su vehículo, con el enlace a su
 > reporte (sección 8, *Enlace del cliente*). Si lo escribes mal, el formulario te
 > avisa antes de guardar.
@@ -261,17 +275,17 @@ Desmárcala si el cliente no quiere correos. El cliente también puede darse de 
 
 ### Ver el perfil de un cliente
 
-El botón del ojo abre su ficha completa: sus datos, todos sus vehículos y el
-historial de órdenes con el estado de cada una (el total solo lo ve un
+El botón **Ver** abre su ficha completa (**Perfil del Cliente**): sus datos, todos sus **Vehículos Registrados** y el
+**Historial de Servicios** con el estado de cada orden (el total solo lo ve un
 administrador).
 
 <!-- IMAGEN: perfil de un cliente con vehículos e historial -->
 
 ### Editar y eliminar
 
-El lápiz edita los datos. **El botón de eliminar solo aparece para
+El botón **Editar** modifica los datos. **El botón Eliminar solo aparece para
 administradores**: borrar un cliente arrastra consigo todos sus vehículos. Si el
-cliente tiene órdenes de trabajo, el sistema impide borrarlo.
+cliente tiene órdenes de trabajo registradas, el sistema impide borrarlo para conservar el historial.
 
 ---
 
@@ -289,15 +303,15 @@ color y dueño.
 El formulario está pensado para llenarse casi solo a partir del VIN.
 
 1. Presiona **Nuevo Vehículo**.
-2. **Dueño**: elige un cliente de la lista, o créalo ahí mismo.
-3. **VIN**: escribe los 17 caracteres. El sistema consulta la base de datos oficial
+2. **Propietario**: elige un cliente de la lista, o créalo ahí mismo con **Agregar cliente nuevo**.
+3. **VIN**: escribe los 17 caracteres y presiona **Decodificar**. El sistema consulta la base de datos oficial
    de vehículos y rellena marca, modelo y año. Debajo aparecen datos adicionales
    (motor, carrocería, planta de ensamblaje). Un VIN nunca lleva las letras I, O
-   ni Q; si las escribes, el sistema avisa.
-4. Revisa **marca, modelo y año**. Lo que escribas a mano tiene prioridad.
+   ni Q; si las escribes, el sistema avisa con «El VIN no puede contener las letras I, O ni Q.».
+4. Revisa **Marca**, **Modelo** y **Año**. Lo que escribas a mano tiene prioridad.
 5. **Color**: elige de la lista o escríbelo. El color no viene en el VIN.
-6. **Placa**: elige el estado que la emitió y escribe el número. El sistema avisa
-   si el formato no cuadra con ese estado, sin impedirte guardarla.
+6. **Placa**: elige el **Estado de la placa** que la emitió y escribe el número de **Placa**. El sistema avisa
+   si el formato no coincide con ese estado, sin impedirte guardarla.
 7. **Crear**.
 
 <!-- IMAGEN: formulario de vehículo con el VIN ya decodificado -->
@@ -313,8 +327,8 @@ en las búsquedas y se imprimiría en la orden como si fuera una placa real.
 
 ### Editar y eliminar
 
-El lápiz edita. **Eliminar es solo para administradores**, porque borra el
-historial de servicio de ese vehículo.
+El botón **Editar** modifica los datos del auto. **Eliminar es solo para administradores**, porque borra el
+historial de servicio de ese vehículo. Si tiene órdenes de trabajo asociadas, el sistema no permite eliminarlo.
 
 ---
 
@@ -322,497 +336,355 @@ historial de servicio de ese vehículo.
 
 El módulo más grande. Aquí vive el trabajo del taller.
 
-### Cómo se ve la lista
+### Cómo se ve la lista y el tablero
 
-**Si eres administrador**, ves una sola lista con todas las órdenes de la sede y
-su total.
+Arriba a la derecha está el selector **Vista**, que permite cambiar entre:
+- **Lista**: la tabla de órdenes tradicional.
+- **Tablero**: la vista Kanban con tarjetas ordenadas por columna de estado (sección 10).
 
-**Si eres técnico**, ves **Mis Órdenes de Trabajo**: solo las que tienes
-asignadas. Las de tus compañeros no aparecen, ni en la lista, ni en el tablero, ni en
-el buscador. Si te toca trabajar una que no ves, pide a un administrador que te asigne.
-Si abres un aviso o un enlace de una orden que ya no es tuya, la app te lo dice.
+El sistema recuerda automáticamente la última vista que utilizaste en ese dispositivo.
+
+**Si eres administrador**, ves todas las órdenes de la sede activa y su total.
+**Si eres técnico**, ves **Mis Órdenes de Trabajo**: únicamente las que tienes asignadas. Las de tus compañeros no aparecen ni en la lista, ni en el tablero, ni en el buscador. Si abres un enlace o aviso de una orden que no te corresponde, el sistema te avisa: «Esa orden no está entre las tuyas. Si te toca trabajarla, pide a administración que te asigne.».
 
 <!-- IMAGEN: vista de órdenes de un mecánico, con "Mis Órdenes de Trabajo" -->
 
-Arriba hay un **buscador** (por número de orden o nombre de cliente) y **filtros
-por estado**.
+Arriba hay un buscador con el campo **Buscar...** (filtra por número de orden o nombre de cliente tanto en lista como en tablero) En la vista de lista, además, hay filtros por estado: **Todos**, **Recepción**, **En Proceso**, **Espera Autorización**, **Finalizado**, **Entregado** y **Archivadas** (en el tablero no hacen falta: las columnas ya son los estados).
+
+Cada orden puede mostrar distintivos o insignias según su condición:
+- **Seguro**: si el trabajo se procesa a través de una aseguradora.
+- **Esperando repuestos**: si tiene piezas pedidas que aún no han llegado al taller.
+- **Esperando autorización**: si tiene un presupuesto enviado al cliente pendiente de respuesta.
+- **Por revisar**: si el técnico finalizó el trabajo y administración debe revisarlo antes de liberarlo.
+- **Listo para entregar**: cuando administración confirmó que el trabajo está listo para que el cliente lo recoja.
+- **Retirada sin reparar**: si el vehículo se retiró sin completar el trabajo.
+- **Archivada**: si la orden entregada fue enviada al archivo histórico.
 
 ### Los estados de una orden
 
 | Estado | Qué significa |
 |---|---|
 | **Recepción** | El vehículo acaba de ingresar. Aún no se trabaja en él. |
-| **En Proceso** | Se está trabajando. |
-| **Espera Autorización** | El técnico reportó trabajo adicional y la orden espera a que el cliente lo autorice. Cuando el cliente responde (o administración descarta el hallazgo), la orden vuelve sola a En Proceso. |
-| **Finalizado** | El técnico terminó el trabajo. El avance pasa a 100 % y **se avisa a administración** para que lo revise. **Al cliente todavía no**: ve "En revisión final". El técnico **no puede regresarla** a En Proceso; solo administración la reabre. |
-| **Entregado** | El cliente se llevó el vehículo. **Solo un administrador** la marca. Registra el cobro en Finanzas y genera las comisiones (sección 17). |
-| **Retirada sin reparar** | El cliente se llevó el vehículo **sin que se hiciera el trabajo**. **Solo un administrador**, con el botón **Retirada sin reparar** de la orden (ver abajo). |
+| **En Proceso** | Se está trabajando activamente en el vehículo. |
+| **Espera Autorización** | La orden queda en pausa porque el técnico reportó trabajo adicional o administración envió un presupuesto que espera respuesta del cliente. Vuelve sola a En Proceso al responder el cliente o al descartar el hallazgo. El técnico no puede levantar la pausa por su cuenta. |
+| **Finalizado** | El técnico terminó el trabajo. El avance pasa automáticamente al 100 % y se avisa a administración con «Trabajo terminado». **Al cliente todavía no le llega el aviso de listo**: su enlace muestra «En revisión final» y en la orden aparece la insignia **Por revisar**. El técnico no puede reabrirla a En Proceso; solo administración la reabre. |
+| ↳ **Listo para entregar** | Marca sobre Finalizado que pone **solo administración** con el botón **Marcar listo para entregar**. En ese momento sale el correo al cliente «Su vehículo está listo» y su enlace muestra «Listo para recoger». |
+| **Entregado** | El cliente se llevó el vehículo. **Solo un administrador** la marca, mediante el diálogo de entrega. Registra el cobro en Finanzas, asienta el costo de repuestos, congela el cobro de parqueo si aplica y genera las comisiones (sección 18). |
+| **Retirada sin reparar** | El cliente se llevó el vehículo **sin que se hiciera todo el trabajo**. **Solo un administrador**, con el botón **Retirada sin reparar** (ver abajo). |
 
-**Esperando repuestos** no es un estado: en los repuestos de la orden, cada pieza se marca
-**Pedido** y después **Llegó**. Mientras falte una, la orden lleva la marca "Esperando
-repuestos" en la lista y el tablero, y el cliente ve en su enlace qué pieza se espera. Al
-marcarla **Llegó**, los técnicos de la orden reciben un aviso.
+**Esperando repuestos** no es un estado general de la orden: en la tabla de repuestos, cada pieza se marca como **Sin pedir**, **Pedido** y después **Llegó**. Mientras falte una pieza por llegar, la orden muestra la insignia **Esperando repuestos** en la lista y en el tablero, y el cliente ve en su reporte qué pieza se está esperando. Al marcarla **Llegó**, los técnicos asignados reciben un aviso.
 
-**El avance se mueve solo** con las tareas: cada tarea que se marca hecha suma según su
-precio (una de $400 pesa más que una de $50). El técnico lo puede corregir a mano si no
-refleja el avance real; la próxima tarea que marque lo vuelve a calcular.
+**El avance se mueve solo** con las tareas: cada tarea que se marca como hecha suma al avance según su precio de mano de obra (una de $400 pesa más que una de $50). El técnico o administrador lo puede ajustar a mano si no refleja el avance real; al marcar la siguiente tarea como hecha, se vuelve a calcular automáticamente.
 
 ### Crear una orden
 
-Presiona **Nueva Orden**. El alta va en **cuatro pasos**, con los nombres arriba:
-**Cliente**, **Vehículo y recepción**, **Depósito** y **Trabajos**. **Siguiente** revisa
-el paso antes de pasar al otro y marca en el campo lo que falta; **Anterior** (o el nombre de
-un paso ya visto) vuelve sin perder lo escrito. Enter en un campo también pasa al siguiente
-paso: la orden solo se crea con el botón **Crear** del último.
+Presiona **Nueva Orden** (botón visible solo para administradores). El alta se realiza en **cuatro pasos**, indicados arriba como **Paso 1 de 4**, etc.:
+1. **Cliente**
+2. **Vehículo y recepción**
+3. **Trabajos**
+4. **Depósito**
 
-**Paso 1 — Cliente.** Elige de la lista, o «+ Nuevo cliente» para capturarlo ahí mismo
-(nombre y teléfono son obligatorios).
+Los botones **Anterior** y **Siguiente** permiten navegar entre los pasos sin perder la información. Si falta algún dato obligatorio, el sistema te lleva a ese paso y resalta el campo faltante. Si capturas un cliente o vehículo nuevo y decides presionar **Cancelar**, el sistema los guarda en sus respectivos módulos para que no tengas que escribirlos de nuevo la próxima vez. La orden se crea únicamente con el botón **Crear** en el último paso.
 
-**Paso 2 — Vehículo y recepción.** El vehículo (o «+ Nuevo vehículo», con el mismo
-formulario de VIN que la pantalla de Vehículos), y el estado en que llega:
-- **Nivel de gasolina**: E (vacío), 1/4, 1/2, 3/4 o F (lleno).
-- **Millas de ingreso**: la lectura del odómetro. Solo números enteros positivos.
+**Paso 1 — Cliente.** Elige un cliente existente en **-- Seleccionar cliente --**, o pulsa **Nuevo Cliente** para registrarlo ahí mismo (Nombre y Teléfono son obligatorios).
 
-**Inspección 360°.** Seis zonas fijas para fotografiar el estado del auto al
-entrar: **Frontal, Trasera, Izquierda, Derecha, Interior y Tablero**. Toca cada
-recuadro para tomar la foto o elegirla de la galería.
+**Paso 2 — Vehículo y recepción.** Elige el vehículo en **-- Seleccionar vehículo --**, o presiona **Nuevo Vehículo** para registrarlo con el decodificador de VIN. Luego registra las condiciones de ingreso:
+- **Nivel de Gasolina**: E (vacío), 1/4, 1/2, 3/4 o F (lleno).
+- **Millas de Ingreso**: odómetro actual (solo números enteros positivos).
+- **Inspección 360°**: seis zonas fijas para fotografiar el estado del auto al entrar: Frontal, Trasera, Izquierda, Derecha, Interior y Tablero. Toca cada recuadro para tomar la foto o seleccionarla.
+- Botones multimedia debajo de las zonas: **Foto**, **Video**, **Nota de voz** y **Galería**. Permiten registrar detalles de abolladuras previas, documentos o recorridos en video. Las fotos se comprimen en el teléfono antes de subir y el video se optimiza (el botón muestra «Procesando…»).
+- **Notas de la inspección 360°**: texto libre para observaciones generales del estado del auto.
 
-Debajo de las zonas están los mismos botones que en la orden ya creada: **Foto**,
-**Video**, **Nota de voz** y **Galería**. Sirven para sumar fotos de daños previos o
-documentos, un video recorriendo el auto o una nota de voz sobre cómo llegó. Cada
-cosa aparece como miniatura (una foto o un video se abren al tocarlos) y la ✕ la
-quita. Todo se sube junto con las fotos al crear la orden.
-
-Las fotos se reducen en el teléfono antes de subirse y un video de la galería se
-convierte a un tamaño liviano; mientras tanto el botón **Siguiente** dice
-«Procesando…» y espera. Así suben rápido aunque la señal sea mala, y se les quita
-la ubicación GPS que guarda la cámara.
-
-> Esto es la evidencia del taller si el cliente reclama después un daño que ya
-> venía. Tómalo siempre, aunque el auto se vea bien. Las fotos y los videos de la
-> recepción son lo único que queda **visible para el cliente** desde el
-> principio. Las **notas de voz quedan internas**: el cliente no las oye hasta que
-> un administrador las publique desde la orden. Un administrador también puede
-> ocultar cualquier archivo.
+> Esta inspección es la prueba del taller si un cliente reclama después un daño previo. Las fotos y videos de la recepción son lo único que queda **Visible al cliente** desde el inicio. Las notas de voz de la recepción quedan como **Interno** hasta que un administrador decida publicarlas.
 
 <!-- IMAGEN: cuadrícula de las seis zonas de inspección, algunas ya con foto -->
 
-**Notas de la inspección.** Texto libre sobre el estado del vehículo.
+**Paso 3 — Trabajos.**
+- **Tipo de Trabajo**: **Mecánica**, **Pintura** o **Combinado**.
+- **Fecha Estimada de Entrega**.
+- **Trabajo con seguro**: marca la casilla si el servicio lo cubre una aseguradora, e ingresa la **Aseguradora** y el **Número de reclamo**.
+- **Agregar trabajo**: tipo (Mecánica o Pintura), descripción, precio y **Técnico** asignado. Si el tipo no coincide con el oficio registrado de la persona (por ejemplo, pintura a un mecánico), el sistema muestra la advertencia «¿Asignar una tarea de pintura a un mecánico?» con las opciones **Asignar igual**, **Elegir otro** o **Cancelar**. Puedes dejar la tarea en **Sin asignar**.
+- **Agregar repuesto**: descripción, cantidad, precio unitario y costo opcional.
+- Si escribes una tarea o repuesto y no presionas **Agregar**, el botón **Crear** te avisa para que lo agregues o lo descartes antes de continuar.
 
-**Paso 3 — Depósito.** El anticipo que deja el cliente (0 si no deja nada). Con monto, elige
-**cómo pagó** (efectivo, transferencia o cheque); con cheque, su **número**; y si quieres, la
-**foto del comprobante**. Queda en Finanzas con el movimiento «Depósito inicial».
+Lo que cotizas en este paso nace **Sin autorizar**: se cobra únicamente cuando el cliente lo autoriza a través de un presupuesto o cuando administración registra la autorización manual. La firma de recepción no autoriza los trabajos cotizados.
 
-**Paso 4 — Trabajos.**
-- **Tipo de trabajo** de la orden (Mecánica, Pintura o Combinado) y **fecha estimada de
-  entrega**.
-- **Agregar trabajo** (botón verde): tipo, descripción, precio y **técnico** de cada tarea,
-  igual que dentro de la orden. La comisión de cada tarea es de su técnico; una tarea **sin
-  técnico** no le paga a nadie hasta que se le asigne. Si el tipo no es del oficio del técnico
-  (pintura a un mecánico), pregunta antes. Cada tarea agregada aparece en la lista con su
-  tipo, precio y técnico, y la papelera la quita.
-- **Repuestos**: descripción, cantidad y precio. Se cobran a lo que costaron: el taller gana
-  en la mano de obra.
+<!-- IMAGEN: formulario de nueva orden con la nota "Se cobran cuando el cliente autoriza el presupuesto (desde su enlace o registrándolo aquí). La firma de recepción no los autoriza." -->
 
-Los técnicos de la orden salen de las tareas: quien recibe una, entra a la orden. **Solo
-administración asigna**, porque asignar es dinero (decide quién ve la orden y quién cobra).
+**Paso 4 — Depósito.** El anticipo que deja el cliente (deja 0 si no deja nada). Si el cliente paga un depósito:
+- Elige **Cómo pagó el cliente** (Efectivo, Tarjeta, Zelle, Transferencia, Cheque).
+- Si pagó con cheque, anota el **Número de cheque** o sube una **Foto del comprobante (opcional)**.
+- Queda registrado automáticamente como ingreso en Finanzas bajo el concepto «Depósito inicial».
 
-Si escribiste una tarea y no tocaste **Agregar**, **Crear** no sigue: te avisa para que la
-agregues o la canceles, así no se pierde.
-
-Lo que cotizas aquí queda **sin autorizar** hasta que el cliente lo autorice: con un
-**presupuesto** que responde desde su enlace, o con **Registrar autorización** si te lo dijo en
-persona o por teléfono. La firma de la recepción no lo autoriza.
-
-<!-- IMAGEN: formulario de nueva orden con la nota "Se cobran cuando el cliente firma la recepción o autoriza el presupuesto" -->
-
-Al guardar, el sistema genera el número de orden y abre su detalle. **No hace
-falta esperar a que suban las fotos**: siguen subiendo en segundo plano y puedes
-seguir usando la app (sección 9).
+Al presionar **Crear**, el sistema genera el número de orden (por ejemplo, `ORD-2026-001`) y abre su detalle. Las fotos y archivos multimedia continúan subiendo en segundo plano sin interrumpir tu navegación.
 
 ### Solo administración abre órdenes
 
-Un mecánico o pintor no ve el botón **Nueva Orden**: abrir una orden es recibir
-un vehículo y comprometer al taller, y asignar a alguien es decidir quién cobra
-comisión por ella. Las dos cosas las hace un administrador.
+Mecánicos y pintores no ven el botón **Nueva Orden**. Abrir una orden compromete al taller y asignar tareas decide quién cobra comisiones; ambas facultades corresponden exclusivamente a administración.
 
 ### El detalle de una orden
 
 Es la pantalla donde se sigue el trabajo día a día.
 
-<!-- IMAGEN: detalle de una orden completo, vista de administrador -->
+<!-- IMAGEN: detalle de una orden completo, vista de administrador con pestañas y acciones rápidas -->
 
-**Pestañas (en computadora).** Arriba quedan fijos el encabezado de la orden, su estado y
-su avance; debajo, las pestañas. Así no hay que recorrer toda la orden para llegar a una
-sección.
+#### Encabezado de la orden
 
-| Quién | Pestañas |
+Arriba quedan siempre visibles:
+- Número de orden, nombre del cliente y datos del vehículo.
+- Insignias de estado: **Seguro**, **Esperando repuestos**, **Esperando autorización**, **Por revisar** o **Listo para entregar**, **Retirada sin reparar**, **Archivada**.
+- Botones de acción (para administradores):
+  - **Marcar listo para entregar**: botón verde cuando el técnico terminó y el trabajo fue revisado.
+  - **Descargar PDF** con el selector **Idioma del PDF** (**ES** / **EN**).
+  - **Enviar reporte**: abre la ventana para compartir el enlace del cliente por correo o WhatsApp.
+  - **Archivar** / **Devolver al tablero**.
+  - **Retirada sin reparar**: para cerrar la orden si el cliente se lleva el auto sin reparar.
+- Selector de estado y barra de **Avance** (0 a 100 %).
+
+#### Acciones rápidas
+
+Debajo del encabezado aparecen botones destacados con las acciones más frecuentes según tu rol:
+- **Para administradores**:
+  - **Entregar y cobrar** (aparece destacado cuando la orden está marcada como lista para entregar).
+  - **Agregar trabajo** (destacado si la orden aún no tiene mano de obra).
+  - **Tomar firma** (destacado en recepción si la orden tiene trabajos y aún no está firmada).
+  - **Registrar avance**.
+  - **Registrar anticipo**.
+  - **Cobro y totales**.
+- **Para técnicos**:
+  - **Mis tareas** (destacado, lleva directo a sus tareas asignadas).
+  - **Registrar avance**.
+  - **Reportar trabajo adicional** (activo mientras la orden no esté finalizada).
+  - **Datos del vehículo**.
+
+#### Pestañas (en computadora)
+
+| Rol | Pestañas disponibles |
 |---|---|
-| Administrador | **Resumen** (vehículo, firma, técnicos) · **Trabajos** (mano de obra, repuestos, presupuesto, comisión) · **Fotos y avances** · **Cobro y cliente** (totales, saldo, enlace y correos) · **Historial** |
-| Mecánico o pintor | **Tareas** (su trabajo y su comisión estimada) · **Orden** (vehículo, inspección, repuestos, firma, técnicos) · **Avances** |
+| **Administrador** | **Resumen** · **Trabajos** · **Fotos y avances** · **Cobro y cliente** · **Historial** |
+| **Mecánico o pintor** | **Tareas** · **Orden** · **Avances** |
 
-Junto al nombre de una pestaña aparece cuántas líneas o archivos tiene. Un **punto
-amarillo** en **Trabajos** avisa que hay mano de obra o repuestos **sin autorizar**: no se
-cobran ni generan comisión hasta que el cliente los autorice.
+Junto a cada pestaña aparece un contador de líneas o archivos. Un indicador amarillo en **Trabajos** avisa que hay mano de obra o repuestos **Sin autorizar**.
 
-**Secciones plegables.** Dentro de cada pestaña, cada parte de la orden (vehículo, firma,
-técnicos, mano de obra, repuestos…) aparece **cerrada**: se ve su título y un dato corto a la
-derecha (la placa, cuántas líneas, el total). La **flecha** la abre o la cierra, y **Desplegar
-todo** abre todas las de la pestaña. Lo que abriste sigue abierto al cambiar de pestaña y
-volver. Los avisos (trabajo adicional reportado, tareas sin técnico) no se pliegan: van
-arriba. Si llegas desde un aviso o desde el panel (por ejemplo "Tareas sin técnico" o una
-tarea de **Mis tareas**), la sección que fuiste a ver ya está abierta.
+#### Secciones plegables
 
-En el teléfono son las mismas secciones, todas en una columna y en el mismo orden que las
-pestañas, con un solo **Desplegar todo** arriba.
+Dentro de cada pestaña, las tarjetas vienen agrupadas como secciones plegables que arrancan **cerradas**: muestran su título y un resumen a la derecha (placa del auto, cantidad de líneas, total en dinero o un visto bueno). La flecha abre o cierra la sección, y los botones **Desplegar todo** y **Contraer todo** abren o cierran todas las secciones de esa vista. Si abres una orden desde una notificación o enlace directo, la sección correspondiente se abre automáticamente.
 
-**Historial** *(solo administradores)*. Quién cambió qué en la orden y cuándo: estados,
-avance, firma, mano de obra, repuestos, técnicos, depósito, presupuestos, archivos y
-avances, cada cambio con su antes y después. Sirve para responder cuando el cliente o el
-taller preguntan "¿quién movió esto?". Nadie lo puede editar.
+En el teléfono no hay pestañas superiores: todas las secciones aparecen apiladas en una sola columna en el mismo orden, con un botón **Desplegar todo** / **Contraer todo** al inicio.
 
-**Encabezado.** Número de orden, cliente, vehículo y, para administradores, los
-botones **Descargar PDF** y **Enviar reporte**.
+Distribuídas por pestaña, las secciones son:
 
-**Estado.** Un selector con los cinco estados.
-- Al elegir **Entregado** se abre el **diálogo de entrega**, porque registra dinero:
-  muestra el total autorizado, lo ya cobrado y **lo que falta cobrar** (o lo que hay que
-  **devolver** si el depósito fue mayor). Elige **cómo pagó el cliente** — efectivo,
-  cheque o transferencia —, el número del cheque si aplica y, si quieres, la **foto del
-  comprobante**. El botón dice exactamente qué va a pasar: *Entregar y cobrar $400.00*,
-  *Entregar y devolver $300.00* o *Entregar*. Si cancelas, el selector vuelve al estado
-  real. El cobro queda en Finanzas con su método, y la foto se abre desde ahí.
-- Al sacar una orden de **Entregado** también pide confirmación: se revierten el
-  cobro y el costo de repuestos, y se borran las comisiones no pagadas.
-- Los técnicos no ven la opción Entregado.
+- **En la vista de Administrador**:
+  - **Resumen**: **Información del Vehículo**, **Firma del Cliente**, **Técnico Asignado**. (Arriba muestra las alertas de trabajo adicional reportado, tareas sin técnico y trabajos pendientes de visitas anteriores).
+  - **Trabajos**: **Mano de obra**, **Descripción de Repuestos**, **Presupuesto**, **Reparto de la comisión**.
+  - **Fotos y avances**: **Inspección 360°**, **Avance del Trabajo**.
+  - **Cobro y cliente**: **Totales**, **Parqueo** (si está habilitado en la sede), **Balance de la orden** (si está entregada), **Enlace del cliente**.
+  - **Historial**: bitácora inalterable de todos los cambios de la orden.
+- **En la vista de Técnico**:
+  - **Tareas**: lista de **Tareas** asignadas y tarjeta **Tu comisión estimada**.
+  - **Orden**: **Información del Vehículo**, **Inspección 360°**, **Descripción de Repuestos** (sin montos de dinero), **Firma del Cliente**, **Técnico Asignado**.
+  - **Avances**: bitácora de **Avance del Trabajo**.
 
-**Avance.** Una barra de 0 a 100 %. Se puede mover mientras la orden no esté
-**Finalizada** ni **Entregada**.
+#### Trabajo adicional reportado por el técnico
 
-**Datos del vehículo y del ingreso.** Millas, gasolina, fechas, notas y las fotos
-de la inspección 360°.
+Cuando un mecánico o pintor encuentra daños o piezas gastadas que no estaban en la orden original:
+1. En sus acciones rápidas o en su lista de tareas presiona **Reportar trabajo adicional**.
+2. Escribe en **Qué encontraste** y toma fotos, video o una nota de voz de evidencia.
+3. El texto y los archivos son internos para el taller; el cliente no los ve.
+4. Presiona **Reportar y pausar la orden**.
+5. La orden pasa automáticamente a **Espera Autorización** y se genera una notificación para administración.
 
-**Mano de obra** (para el técnico, **Tareas**). Las líneas del trabajo cotizado. Cada una
-es una **tarea**, con su tipo y su técnico: **la comisión de cada tarea es de su técnico**,
-a su porcentaje. Un técnico las ve sin poder cambiarlas, con el tipo y el nombre de quien
-la tiene, y solo puede marcar como hechas las suyas y las que no tienen técnico.
+<!-- IMAGEN: diálogo de trabajo adicional reportado por un mecánico ("Reportar trabajo adicional"), teléfono -->
 
-*Agregar un trabajo (administradores).* El botón verde **Agregar trabajo** abre una fila
-con **Tipo**, **Descripción**, **Precio** y **Técnico**:
+En el panel principal (en **Requiere atención**) y arriba de las pestañas Resumen y Trabajos de la orden, administración ve la tarjeta **El taller reportó trabajo adicional**:
+- **Cotizar al cliente**: precarga una nueva tarea en Mano de obra con la descripción y el técnico que lo reportó. Administración le fija el precio y luego envía el presupuesto al cliente.
+- **Descartar…**: abre una ventana para descartarlo internamente o marcar **Mostrarlo en el reporte del cliente** ingresando un **Texto para el cliente**. En ese caso aparece en su enlace como "Observación del taller" de carácter informativo, sin costo.
+- Al cotizar o descartar el reporte, la orden sale de la pausa.
 
-1. **Tipo** viene con el de la orden (en una orden **Combinado**, mecánica la primera vez
-   y después el último que usaste).
-2. **Técnico** viene con el de la primera tarea que ya tenga uno; la lista son los
-   mecánicos y pintores **de la sede de la orden**. Puedes dejarlo en *Sin asignar*.
-3. **Agregar** (o Enter) la guarda y deja la fila abierta para la siguiente, con el
-   cursor en Descripción. Un aviso confirma cada trabajo; si la orden ya está firmada,
-   recuerda que falta la autorización del cliente.
+<!-- IMAGEN: tarjeta "El taller reportó trabajo adicional" con los botones Cotizar al cliente y Descartar, vista de administrador en computadora -->
 
-Si el tipo no es del oficio de la persona — pintura a un mecánico, o mecánica a un
-pintor —, antes de guardar sale **"¿Asignar una tarea de pintura a un mecánico?"** con
-tres salidas: **Asignar igual** (a veces es justo lo que quieres; la comisión será suya),
-**Elegir otro** (vuelve al selector de técnico) o **Cancelar**. La misma pregunta sale si
-cambias el **Tipo** de una tarea que ya tiene técnico ("¿Pasar a pintura una tarea de un
-mecánico?", con **Cambiar igual**).
+#### Mano de obra y Tareas
 
-*En cada fila (administradores)* hay dos selectores, **Tipo** y **Técnico**, que se pueden
-cambiar en cualquier momento — también con la línea esperando al cliente o rechazada — sin
-tocar lo cotizado. Al darle una tarea a alguien, entra solo a la orden para verla y le
-llega **Nueva tarea**; a quien se la quitan le llega **Tarea reasignada**. En el teléfono
-los dos selectores van debajo de la descripción, a lo ancho.
+- **Para administradores (Mano de obra)**:
+  - Botón verde **Agregar trabajo**: abre una fila con **Tipo** (Mecánica o Pintura), **Descripción**, **Precio** y **Técnico**.
+  - Si el tipo no coincide con el oficio registrado de la persona, sale la advertencia de oficio.
+  - En cada tarea existente hay dos selectores (**Tipo** y **Técnico**) que se pueden modificar en cualquier momento sin alterar lo cotizado. Al asignar una tarea a un técnico, este entra a la orden y recibe la notificación «Nueva tarea»; al retirársela recibe «Tarea reasignada».
+  - Si una tarea no tiene técnico, muestra la insignia **Sin técnico**: nadie cobrará esa comisión hasta que se le asigne uno. La orden lo alerta arriba de Resumen con «N tarea(s) sin técnico: nadie cobrará su comisión hasta que se la asignes.» y el botón **Ver trabajos**.
+  - Con la comisión pagada, los selectores de la tarea muestran un candado y el botón **Eliminar** se bloquea; para modificarlos, primero debe deshacerse el pago en Comisiones.
+- **Para técnicos (Tareas)**:
+  - Ve sus tareas con su descripción, su tipo y el precio de la mano de obra (de ahí sale su comisión). Los repuestos los ve sin precio.
+  - Toca **Realizado** al terminar una tarea; si la marcó por error, presiona **Reabrir tarea**.
+  - Con **Agregar avance** puede subir fotos, videos o notas de voz vinculados a esa tarea específica.
+- **Insignias de cada línea**:
+  - *(Sin insignia)*: **Autorizado** por el cliente. Se realiza y se cobra.
+  - **Sin autorizar**: agregada recientemente; el cliente no la ha visto. No se cobra ni se realiza.
+  - **Esperando al cliente**: incluida en un presupuesto enviado; no se puede editar mientras espera respuesta.
+  - **No realizar** (tachada): rechazada por el cliente. No se realiza ni se cobra.
 
-*Una tarea sin técnico* lleva la insignia amarilla **Sin técnico**: **nadie cobrará su
-comisión hasta que se la asignes**. La orden lo avisa arriba del **Resumen** ("1 tarea(s)
-sin técnico…", con **Ver trabajos**), con un punto en la pestaña **Trabajos** y otra vez en
-el diálogo de entrega (también si entregas desde el Kanban). Entregar se deja igual: si
-la entregas así, esa comisión no se genera para nadie.
+#### Repuestos
 
-*Trabajos de antes de octubre de 2026* (sin técnico): su selector dice **Reparto por
-especialidad**. Se siguen repartiendo como antes entre los técnicos asignados a mano con
-esa especialidad. Si les asignas un técnico, pasan a ser una tarea suya **para siempre**:
-si después le quitas el técnico, quedan *Sin técnico*, no vuelven al reparto.
+- **Administrador**: tabla con Descripción, Cantidad, Precio de venta, **Costo** (lo que pagó el taller; si se deja vacío asume el precio) y selector de pedido: **Sin pedir**, **Pedido**, **Llegó**. Al marcar **Llegó**, se notifica a los técnicos de la orden.
+- **Técnico**: tarjeta **Descripción de Repuestos**, donde solo ve las piezas y cantidades requeridas para su labor, sin ningún precio ni costo.
 
-*Lo ya pagado no se mueve.* Si la comisión de un trabajo ya se pagó, sus selectores salen
-con un **candado** y **Eliminar** está apagado: para cambiarlo, primero deshaz ese pago en
-**Comisiones**. Lo mismo con un trabajo de antes cuyo reparto ya se pagó, y un trabajo de
-antes no se puede pasar a una especialidad cuyo reparto ya se pagó (la opción sale con
-*reparto ya pagado*).
+#### Trabajo con seguro
 
-Cada línea puede llevar una insignia:
+Si la reparación la cubre una compañía de seguros:
+- En la sección **Información del Vehículo**, presiona **Editar** junto a Seguro para abrir el diálogo **Editar seguro**.
+- Marca la casilla **Trabajo con seguro**, ingresa la **Aseguradora** (por ejemplo State Farm o Geico) y el **Número de reclamo**.
+- La orden muestra la insignia **Seguro** y, si el cobro de parqueo está activo en la sede, aplica automáticamente las reglas del perfil con seguro.
 
-| Insignia | Qué significa | ¿Se cobra? | ¿Se hace? |
-|---|---|---|---|
-| *(sin insignia)* | Autorizada por el cliente | Sí | Sí |
-| **Sin autorizar** | Se agregó y el cliente todavía no la ve | No | Todavía no |
-| **Esperando al cliente** | Está en un presupuesto enviado; no se puede editar | No | Todavía no |
-| **No realizar** (tachada) | El cliente no la autorizó | No | **No** |
+<!-- IMAGEN: diálogo "Editar seguro" con la aseguradora y el número de reclamo, vista de administrador en computadora -->
 
-El total de la tabla suma **solo lo autorizado**; lo que falta autorizar aparece
-debajo, aparte.
+#### Tu comisión estimada (técnicos)
 
-**Repuestos.**
-- *Administrador*: la tabla completa con cantidades y precios.
-- *Técnico*: **Descripción de repuestos**, solo qué piezas y cuántas, sin precios.
+Los técnicos asignados ven en su pestaña Tareas la tarjeta **Tu comisión estimada**. Muestra cada tarea propia autorizada con su precio. El porcentaje y el monto dicen **Pendiente** hasta que administración acepta la comisión, después de entregar la orden; la tarjeta lo explica: «Tu comisión se confirma cuando administración la acepta, después de entregar la orden.» Ya aceptada, aparece el cálculo (*precio de la tarea × su porcentaje*) con su monto. Si el empleado está configurado a salario, la tarjeta le indica que la orden no le genera comisión.
 
-**Totales y depósito.** Solo para administradores.
+<!-- IMAGEN: detalle de la misma orden vista por un mecánico: sin totales, con repuestos sin precio y la tarjeta "Tu comisión estimada" -->
 
-**Tu comisión estimada** *(técnicos asignados)*. Cuánto te tocaría si la orden se
-entregara hoy, con la cuenta a la vista: cada **tarea tuya** autorizada (*precio × tu
-porcentaje*) y, si la orden tiene trabajos de antes y estás en su reparto, tu parte (*mano
-de obra de la especialidad × tu porcentaje ÷ compañeros*). Solo ves lo tuyo. Se confirma
-al entregar y cambia si cambia la mano de obra, su técnico o el equipo. Si estás a salario,
-la tarjeta lo dice: la orden no te genera comisión.
+#### Técnicos asignados
 
-<!-- IMAGEN: detalle de la misma orden vista por un mecánico: sin totales, con
-     repuestos sin precio y la tarjeta "Tu comisión estimada" -->
+Solo administración puede asignar personal de la sede de la orden.
+- Quien entra por una tarea lleva la etiqueta **Por tarea** y cobra únicamente sus tareas.
+- Quien está en trabajos heredados de antes de octubre de 2026 lleva **En el reparto** y participa en la bolsa por especialidad.
+- No se puede eliminar de la orden a un técnico que tenga tareas asignadas; primero deben reasignarse sus tareas a otra persona.
 
-**Técnicos asignados.** Quién trabaja la orden. **Solo administración asigna:** si no
-estás asignado verás el aviso de solo lectura y la nota de que un administrador tiene que
-ponerte en la orden. No hay forma de unirte por tu cuenta, ni de quitarte. Un administrador
-solo puede asignar personal **de la sede de la orden** (la lista sale de esa sede aunque
-arriba tengas elegida otra).
+#### Avance del trabajo
 
-- Quien entró a la orden **por una tarea** lleva la etiqueta **Por tarea**: cobra solo sus
-  tareas.
-- Si la orden tiene trabajos de antes de octubre de 2026, quien se asignó a mano lleva
-  **En el reparto**: además de sus tareas, reparte la comisión de esos trabajos de su
-  especialidad. Con **Sacar del reparto** / **Sumar al reparto** el administrador decide
-  quién entra, sin quitar a nadie de la orden; agregar a mano a alguien que está *Por
-  tarea* también lo suma. Si el reparto de esa especialidad ya se pagó, no se cambia.
-- **No se puede quitar de la orden a quien tiene tareas en ella**: primero se le asignan
-  esas tareas a otra persona (el sistema lo dice con su nombre y cuántas tiene).
-
-**Fotos, videos y notas de voz.** La galería de la orden (sección 9).
-
-**Avance del trabajo.** La bitácora: cada técnico documenta lo que hizo con una
-nota y, si quiere, fotos, videos o una nota de voz. Un avance puede ser **solo
-una nota de voz**, sin texto. Queda con fecha y autor. Puedes borrar tus propios
-avances, pero no los de un compañero.
+Bitácora donde el personal documenta los trabajos realizados con texto, fotos, videos o notas de voz. Se puede asociar el avance a una tarea específica. Un técnico puede borrar sus propios avances mientras la orden no esté entregada. Un administrador puede borrarlos todos y gestionar si se muestran o no al cliente.
 
 <!-- IMAGEN: sección de avances con una entrada con fotos y una nota de voz -->
 
-**Firma del cliente** *(la toma un administrador)*. El cliente firma con el dedo sobre el recuadro. Queda
-guardada con fecha y aparece en el reporte del cliente y en el PDF. **La firma dice que el
-cliente está de acuerdo con cómo entregó el vehículo** (millas, gasolina y fotos); **no
-autoriza el presupuesto**. Los trabajos cotizados siguen *Sin autorizar* hasta que le envíes
-el presupuesto y lo responda, o registres su autorización si la da en el mostrador. Mientras
-tanto la orden aparece en el panel, en *Requiere atención*. Se puede limpiar y volver a
-firmar (si salió mal); las firmas anteriores quedan como historial. Los técnicos ven si la
-orden ya está firmada, pero no toman ni cambian la firma: es un paso de la recepción, en el
-mostrador.
+#### Firma del cliente
 
-**Enlace del cliente** *(solo administradores)*. Ver la sección siguiente.
+La captura administración en el mostrador durante la recepción. El cliente firma con el dedo sobre la pantalla para manifestar su conformidad con el estado en que entregó el vehículo (millas, nivel de gasolina y fotos de inspección 360°).
+> **Importante:** Esta firma **no autoriza el presupuesto ni los trabajos cotizados**. Solo avala la recepción física del auto.
 
-**Enviar reporte** *(solo administradores)*. El reporte de la orden **es el enlace
-del cliente**: siempre muestra lo último (estado, fotos y videos publicados, cuenta).
-Al pulsarlo se abre una ventana con:
+#### Presupuestos: lo que el cliente autoriza
 
-- **Enviar por correo**: el sistema le manda al cliente un correo con el botón para
-  abrir su reporte. Queda en el historial de la tarjeta *Enlace del cliente*. No se
-  puede usar si el cliente no tiene correo o pidió no recibir correos.
-- **Enviar por WhatsApp**: abre WhatsApp con el teléfono del cliente y el mensaje con
-  el enlace listos.
-- **Copiar enlace** y **Abrir**: para mandarlo por otro medio o revisarlo antes.
-- **Descargar PDF**.
-
-El enlace deja de funcionar 90 días después de entregar la orden.
-
-<!-- IMAGEN: ventana "Enviar reporte" con los botones de correo y WhatsApp -->
-
-**Descargar PDF** *(solo administradores)*. Un PDF para imprimir o archivar, con lo
-mismo que ve el cliente: datos de la orden, fotos **publicadas**, trabajos
-**autorizados**, totales, firma y el enlace del reporte. No lleva las notas de los
-avances ni los nombres de los técnicos. El PDF no se sube a ningún lado: se guarda
-en tu equipo.
-
-> Los técnicos no envían reportes al cliente: lo que sale del taller hacia el
-> cliente lo decide administración.
-
-### Enlace del cliente y avisos por correo
-
-Cada orden tiene un **enlace personal** para el cliente, por ejemplo
-`restorifyauto.net/r/3f9a…`. Al abrirlo, el cliente ve **sin crear una cuenta**:
-
-- En qué va su vehículo (recibido, en proceso, listo, entregado), el avance y la
-  fecha estimada.
-- La recepción: millaje, gasolina, observaciones, las fotos de ingreso y su firma.
-- Las fotos, videos y notas de voz de los avances que **tú publicaste**.
-- Su cuenta: mano de obra, repuestos, total, depósito, pagado y saldo.
-- Botones para llamar al taller y, si la sede lo tiene, escribir por WhatsApp.
-
-**Nunca** ve los nombres de los técnicos, las comisiones, lo que escribieron en
-los avances ni los archivos internos.
-
-<!-- IMAGEN: el reporte del cliente abierto en un teléfono -->
-
-**Cuándo se crea.** Solo, cuando el cliente **firma la recepción**. Si necesitas
-compartirlo antes, usa **Crear enlace**.
-
-**La tarjeta Enlace del cliente** (en el detalle de la orden):
-
-<!-- IMAGEN: tarjeta "Enlace del cliente" con el enlace, los botones y el historial de correos -->
-
-- **Copiar** y **Abrir** el enlace.
-- **Enviar por WhatsApp**: abre WhatsApp al teléfono del cliente con el mensaje y
-  el enlace listos. Úsalo con clientes que no tienen correo.
-- **Cambiar enlace**: si el enlace llegó a quien no debía. El anterior deja de
-  abrir.
-- **Desactivar**: nadie puede abrirlo hasta que crees uno nuevo.
-- Cuántas veces lo abrió el cliente y cuándo fue la última.
-- Hasta cuándo está disponible: **90 días después de entregar**.
-
-**Correos automáticos.** Si el cliente tiene correo, el sistema le escribe solo:
-
-| Correo | Cuándo llega |
-|---|---|
-| "Recibimos su vehículo" | Al firmar la recepción, si la orden ya tiene una foto de recepción; si no, 30 segundos después |
-| "Estamos trabajando en su vehículo" | ~3 minutos después de pasar a En Proceso |
-| "Su vehículo está listo" | ~3 minutos después de que administración la marca **lista para entregar** (finalizar no lo envía) |
-| "Gracias por su visita" | ~3 minutos después de entregar |
-
-Si mueves la orden varias veces seguidas, el cliente recibe **un solo** correo con
-el último estado, y nunca dos veces el mismo estado. Los correos salen con el
-nombre del taller; si el cliente responde, la respuesta llega al correo de contacto
-de la sede (sección 14).
-
-**Avisar novedades.** Después de publicar fotos o videos de un avance (botón
-**Mostrar en el reporte del cliente**), pulsa **Avisar novedades** en la tarjeta:
-al minuto le llega un correo al cliente con el enlace.
-
-**Historial.** Debajo, la tarjeta lista cada correo con su estado: **Programado**,
-**Enviado**, **No enviado** (con el motivo, por ejemplo "ya recibió el aviso de
-este estado") o **Error**.
-
-### Presupuestos: lo que el cliente autoriza
-
-Cuando agregas trabajos después de la recepción (el mecánico encontró algo más, el
-cliente pidió otro servicio), quedan **sin autorizar**. La tarjeta **Presupuesto**
-del detalle de la orden te ofrece dos caminos:
+Cuando se cotizan trabajos o repuestos, quedan **Sin autorizar**. En la sección **Presupuesto**, administración tiene dos alternativas:
 
 <!-- IMAGEN: tarjeta "Presupuesto" con "Trabajos sin autorizar" y los botones Enviar presupuesto / Registrar autorización -->
 
-**A. Enviar presupuesto al cliente.** Le llega un correo con los trabajos y el total
-y un botón a su enlace. Ahí marca **línea por línea** lo que autoriza, escribe su
-nombre y confirma. Mientras tanto:
-
-- Las líneas dicen **Esperando al cliente** y no se pueden editar (él está viendo esos
-  montos). Si necesitas corregir algo, **Cancelar presupuesto**, corrige y vuelve a
-  enviar.
-- La orden muestra **Esperando autorización** en la lista y en el tablero.
-- Si agregas otro trabajo, **Agregar al presupuesto y reenviar**: el cliente recibe un
-  solo correo con todo. Si ya tenía la página abierta, se le pide revisarla de nuevo.
-- Si el cliente no tiene correo, el sistema te lo dice: mándale el enlace con
-  **Enviar por WhatsApp** (tarjeta *Enlace del cliente*).
-- Si pasan 24 horas sin respuesta, los administradores reciben un aviso.
+**A. Enviar presupuesto al cliente.** Presiona **Enviar presupuesto al cliente**. Al cliente le llega un correo con el enlace a su portal, donde revisa cada trabajo, marca individualmente lo que autoriza, escribe su nombre y confirma.
+- Mientras espera respuesta, las líneas muestran **Esperando al cliente** y la orden pasa a **Espera Autorización**.
+- Si necesitas corregir algo, pulsa **Cancelar presupuesto**.
+- Si agregas trabajos adicionales mientras espera, presiona **Agregar al presupuesto y reenviar**.
+- Si el cliente no tiene correo, puedes compartirle el enlace por WhatsApp desde la tarjeta Enlace del cliente.
 
 <!-- IMAGEN: el portal del cliente con la sección "Presupuesto por autorizar", casillas por línea y el campo "Su nombre" -->
 
-**B. Registrar autorización.** El cliente te respondió **por teléfono, en persona o
-por WhatsApp**. Pulsa **Registrar autorización**: aparecen los trabajos, todos
-marcados; **desmarca lo que no autorizó**, elige cómo te respondió y quién autorizó,
-agrega una nota si hace falta y **Registrar**. Al cliente le llega un correo con lo
-que quedó registrado, para que pueda corregirte si algo no coincide.
+**B. Registrar autorización.** Si el cliente respondió por teléfono, en persona o por WhatsApp:
+1. Pulsa **Registrar autorización**.
+2. Aparece el diálogo **Trabajos autorizados por el cliente** con todas las líneas marcadas por defecto.
+3. Desmarca las que el cliente no haya aceptado.
+4. En **¿Cómo autorizó?**, elige: **Por teléfono**, **En persona** o **Por WhatsApp**.
+5. Escribe en **Quién autorizó** y agrega una **Nota (opcional)**.
+6. Pulsa **Registrar**. Al cliente le llega una constancia por correo.
 
 <!-- IMAGEN: diálogo "Trabajos autorizados por el cliente" -->
 
-**Cuando el cliente responde** (por cualquiera de los dos caminos):
+Lo autorizado suma inmediatamente al total de la orden y genera avisos a los técnicos sobre qué trabajos deben realizar; lo no autorizado queda marcado como **No realizar** y no se cobra ni se realiza. No se puede entregar una orden que tenga un presupuesto pendiente de respuesta.
 
-- Lo marcado queda autorizado y **suma al total**; lo demás queda **No realizar**.
-- Los técnicos asignados reciben el aviso "Trabajos autorizados · ORD-…" con qué hacer
-  y qué no.
-- Si respondió desde su enlace, tú recibes "El cliente respondió el presupuesto" con
-  su comentario.
-- La tarjeta **Presupuesto** guarda cada respuesta: cómo respondió, quién, cuándo y
-  cuánto autorizó.
+#### Listo para entregar
 
-**Si el cliente cambia de opinión** sobre algo que rechazó, edita esa línea (aunque
-sea el mismo precio): vuelve a **Sin autorizar** y puedes presentarla de nuevo.
+Cuando el técnico marca el estado en **Finalizado**, el trabajo físico concluyó pero el cliente aún no es notificado. En el detalle de la orden aparece la insignia **Por revisar**.
 
-> **No se puede entregar** una orden con un presupuesto esperando respuesta. Registra
-> la autorización o cancela el presupuesto primero.
+Administración debe inspeccionar el vehículo y verificar las cuentas. Una vez conforme, pulsa el botón verde **Marcar listo para entregar** en el encabezado. En ese instante:
+1. La orden cambia su insignia a **Listo para entregar**.
+2. Se envía automáticamente el correo al cliente avisándole que su vehículo está listo.
+3. En el reporte web del cliente, el estado pasa de «En revisión final» a «Listo para recoger».
+4. Si la sede cobra parqueo para particulares, a partir de este evento comienzan a correr los días de gracia.
 
-### Costo de un repuesto
+#### Entrega de la orden
 
-Solo administración. Cada repuesto tiene **Precio** (lo que paga el cliente) y **Costo** (lo
-que pagó el taller). El costo es opcional: vacío, se toma el precio. Escríbelo cuando lo sepas
-y el margen de la orden y el egreso de repuestos en Finanzas dirán la ganancia real de las
-piezas. Corregirlo en una orden ya entregada registra solo el ajuste.
+Al seleccionar el estado **Entregado** o pulsar **Entregar y cobrar** en las acciones rápidas, se abre el diálogo de entrega:
 
-### Descuento
+<!-- IMAGEN: diálogo de entrega de la orden ("Entregar") con el método de pago y el saldo por cobrar, vista de administrador en computadora -->
 
-Solo administración, en la pestaña **Cobro y cliente** → **Totales** → **Aplicar descuento**:
-en dólares o en porcentaje, y un motivo (por ejemplo, "cliente frecuente"). **Lo absorbe el taller**: baja lo que
-paga el cliente, **no** la comisión de los técnicos. No puede ser mayor que lo autorizado. Para
-quitarlo, **Cambiar descuento** → **Quitar descuento**. Queda en el historial de la orden, y el
-cliente ve el subtotal y el descuento en su enlace y en el PDF.
+- Muestra el **Total autorizado** (incluyendo cobro por parqueo si aplica), lo **Ya cobrado** y:
+  - **Falta cobrar**: si queda saldo pendiente. El botón indica **Entregar y cobrar (monto)**.
+  - **Hay que devolver al cliente**: si el depósito o anticipos superaron el total. El botón indica **Entregar y devolver (monto)**.
+  - **No hay nada pendiente de cobro.**: botón **Entregar**.
+- Selecciona en **Cómo pagó el cliente** o **Cómo se le devuelve**: Efectivo, Tarjeta, Zelle, Transferencia o Cheque.
+- Si es con cheque, registra el **Número de cheque** o la **Foto del comprobante (opcional)**.
+- Al confirmar:
+  - Se registra el movimiento de cobro o devolución en Finanzas.
+  - Se registra el egreso por el costo de los repuestos.
+  - El cobro por parqueo queda congelado con fecha de entrega.
+  - Las comisiones se generan como «Por revisar» para los técnicos correspondientes.
+  - Al cliente le llega el correo «Gracias por su visita».
 
-### Retirada sin reparar
+#### Retirada sin reparar
 
-Cuando el cliente se lleva el vehículo sin que se haga todo el trabajo (no autorizó, cambió de
-idea, o solo se hizo una parte). Botón **Retirada sin reparar** arriba en la orden, y elige qué
-pasó:
+Si un cliente decide llevarse su vehículo sin que se realice el trabajo cotizado, pulsa el botón **Retirada sin reparar** en el encabezado:
 
-- **Se canceló todo**: no se cobra nada y se le devuelve lo que dejó.
-- **Solo se cobra la revisión**: escribe cuánto cuesta la revisión del vehículo.
-- **Se hicieron algunos trabajos**: marca los trabajos y repuestos que sí se hicieron (las
-  tareas ya marcadas como hechas vienen marcadas) y, si quieres, la revisión.
+<!-- IMAGEN: diálogo "Retirada sin reparar" con las tres salidas posibles y el ajuste de saldo, vista de administrador en computadora -->
 
-El sistema muestra lo que el cliente ya dejó y **cuánto hay que devolverle** (o cobrarle). Elige
-cómo y confirma. Lo que no se cobra queda como "no realizado" y aparece como pendiente la
-próxima vez que venga ese vehículo. Los trabajos cobrados pagan la comisión de su técnico; la
-revisión, no. La orden no cuenta como terminada en el panel. Si se cerró por error, cámbiala de
-estado como cualquier entregada: el dinero se revierte.
+Elige en **¿Qué pasó con el trabajo?**:
+1. **Se canceló todo**: no se cobra nada y se devuelve lo que el cliente haya dejado de depósito.
+2. **Solo se cobra la revisión**: ingresa el monto en **Se cobra ($)** por diagnóstico o revisión del vehículo.
+3. **Se hicieron algunos trabajos**: marca en **Trabajos que sí se hicieron** las tareas y repuestos efectivamente completados (y opcionalmente el cobro de revisión).
 
-### Anticipos
+El sistema calcula la diferencia entre lo ya cobrado y lo que corresponde cobrar, solicitando el método de pago o devolución. Lo que no se cobró queda registrado como "no realizado" y aparecerá como sugerencia en futuras visitas de ese auto. Los trabajos cobrados generan la comisión de su técnico (la revisión no genera comisión). La orden no cuenta como finalizada en el panel.
 
-Si el cliente paga una parte antes de llevarse el vehículo (por ejemplo, la pieza), en
-**Cobro y cliente** → **Totales** → **Registrar anticipo**: el monto, cómo pagó y, si quieres,
-la foto del comprobante. Se suma a **Depósito y anticipos**, y al entregar se cobra solo lo
-que falte.
+#### Anticipos
 
-### Pendiente de visitas anteriores
+Si el cliente realiza abonos parciales mientras el auto está en reparación (por ejemplo, para comprar repuestos), pulsa **Registrar anticipo** en las acciones rápidas o en la tarjeta **Totales** de la pestaña Cobro y cliente:
+- Ingresa el **Monto ($)**.
+- Elige **Cómo pagó el cliente** y adjunta el número de cheque o comprobante si aplica.
+- Presiona **Registrar anticipo**.
+- Se registra de inmediato en Finanzas y se suma a **Depósito y anticipos** en la orden, reduciendo el saldo que faltará cobrar en la entrega final.
 
-Lo que el cliente no autorizó, o no se hizo, en otras visitas de ese vehículo aparece arriba
-del **Resumen** de la orden y en el paso de trabajos al crear una orden nueva: es el momento de
-ofrecerlo otra vez. Solo lo ve administración.
+<!-- IMAGEN: diálogo "Anticipo" con el monto y método de pago, vista de administrador en teléfono -->
 
-### Descargar el PDF en inglés
+#### Descuento
 
-Junto a **Descargar PDF** hay un selector **ES / EN**. En inglés salen todas las etiquetas, y
-los textos del taller (trabajos, notas) salen traducidos si la traducción automática ya los
-tradujo; los que no, como se escribieron.
+Solo administradores, en la pestaña **Cobro y cliente** → **Totales** → **Aplicar descuento**:
+- Selecciona el **Tipo de descuento**: **En dólares** o **En porcentaje**.
+- Ingresa el monto o porcentaje y un **Motivo** (por ejemplo, "cliente frecuente").
+- Presiona **Aplicar**.
+- **El descuento lo absorbe el taller**: reduce el total que paga el cliente, pero no reduce la comisión de mano de obra de los técnicos ni altera el cobro por parqueo.
+- Para eliminarlo, pulsa **Cambiar descuento** → **Quitar descuento**.
 
-### Orden entregada
+#### Historial de la orden
 
-Queda cerrada para los técnicos: no pueden cambiar su estado, mano de obra,
-repuestos, asignaciones ni subir archivos. Un administrador sí puede corregirla;
-cada corrección de dinero se registra como un ajuste en Finanzas.
+En la pestaña **Historial** (solo administradores), se registra una bitácora automática de auditoría que nadie puede editar ni borrar. Detalla qué usuario realizó cada cambio, la fecha y hora exacta, y los valores antes y después: cambios de estado, modificaciones en el avance, firmas, líneas agregadas o eliminadas, reasignaciones de técnicos, descuentos, presupuestos enviados y respondidos, y registros de entrega o retirada.
 
-### Archivar una orden
+<!-- IMAGEN: pestaña Historial mostrando los cambios registrados en la orden con su autor y fecha, vista de administrador en computadora -->
 
-Una orden entregada se queda en la lista y en la columna **Entregado** del tablero
-hasta 90 días. Para sacarla antes, un administrador la **archiva**:
+#### Enlace del cliente y avisos por correo
 
-- **En el teléfono**, en su tarjeta del tablero: **Mover a → Archivar**.
-- **En la computadora**, con el botón **Archivar** de su tarjeta, o desde el
-  detalle de la orden.
+Cada orden cuenta con un enlace web único (`restorifyauto.net/r/...`) que se genera automáticamente cuando el cliente firma la recepción:
+- El cliente lo abre en su teléfono sin necesidad de contraseñas ni registro.
+- Visualiza el estado, avance, recepción, fotos y videos publicados, presupuesto por autorizar y el desglose de su cuenta.
+- Permite llamar directamente al taller o escribir por WhatsApp si la sede tiene teléfonos configurados.
+- En la tarjeta **Enlace del cliente**, administración puede: **Copiar**, **Abrir**, **Enviar por WhatsApp**, **Cambiar enlace** (invalida el anterior) o **Desactivar**.
+- El enlace permanece activo mientras la orden está en curso y hasta 90 días después de entregada.
+- **Correos automáticos**:
+  - «Recibimos su vehículo»: al firmar la recepción.
+  - «Estamos trabajando en su vehículo»: al pasar a En Proceso.
+  - «Su vehículo está listo»: cuando administración presiona **Marcar listo para entregar**.
+  - «Gracias por su visita»: tras entregar el vehículo.
+  - Los correos se envían en el idioma configurado para el cliente (español o inglés).
+  - Al publicar fotos o videos en un avance, presiona **Avisar novedades** en la tarjeta para enviar un correo informativo al cliente.
 
-La orden pasa a la pestaña **Archivadas**. Sigue entregada: no cambia su cobro, sus
-comisiones ni el enlace del cliente. Para traerla de vuelta, ábrela desde
-Archivadas y presiona **Devolver al tablero**. Si alguien la saca de "Entregado",
-vuelve sola al tablero.
+#### Enviar reporte y Descargar PDF
 
-Solo se archiva lo entregado, y solo lo hace un administrador.
+- **Enviar reporte**: abre una ventana para compartir el enlace del cliente directamente por correo electrónico o por WhatsApp.
+- **Descargar PDF**: genera un documento para imprimir o archivar con los datos de la orden, fotos publicadas, trabajos autorizados, totales y firma. A la par del botón, el selector **Idioma del PDF** permite elegir si se genera en español (**ES**) o en inglés (**EN**).
+
+#### Archivar una orden
+
+Una orden entregada permanece en la lista principal durante 90 días. Para retirarla antes de la vista diaria, un administrador puede archivarla:
+- En computadora: botón **Archivar** en la tarjeta del tablero o en el encabezado del detalle.
+- En teléfono: en la tarjeta del tablero, menú **Mover a → Archivar**.
+- La orden se traslada al filtro **Archivadas**. Sigue entregada sin alterar su contabilidad. Para recuperarla, ábrela desde Archivadas y presiona **Devolver al tablero**.
 
 ### Eliminar una orden
 
-Solo un administrador. Borra también sus fotos y videos, sus comisiones y los
-movimientos financieros que la orden generó automáticamente. Los movimientos
-importados del banco se conservan.
+Solo un administrador puede eliminar una orden. Esto borra sus archivos multimedia, avances, comisiones y los movimientos automáticos que generó en Finanzas. Los movimientos importados del banco se conservan intactos.
 
-**Si ya se pagaron comisiones de esa orden, no se puede borrar**: el cheque quedaría
-sin el detalle de qué pagó. Ve a **Comisiones → Pagos realizados**, deshaz ese pago
-y luego borra la orden.
+**Si la orden ya tiene comisiones pagadas, el sistema impide eliminarla** para no romper la conciliación de los pagos. Primero debes dirigirte a **Comisiones → Pagos realizados**, presionar **Deshacer pago** sobre el pago correspondiente, y luego proceder a eliminar la orden.
 
 ---
 
@@ -844,8 +716,7 @@ niegas, la app te explica cómo activarlo en los ajustes.
 Mientras hay archivos subiendo aparece una bandeja flotante: «3 de 5 archivos
 subidos». Tócala para ver cada archivo y su progreso.
 
-<!-- IMAGEN: bandeja de subidas expandida con un archivo subiendo, uno listo y
-     uno con error -->
+<!-- IMAGEN: bandeja de subidas expandida con un archivo subiendo, uno listo y uno con error (técnico, teléfono) -->
 
 - **Puedes seguir usando la app** mientras suben.
 - **Si se va la señal**, la bandeja dice «Sin conexión» y las subidas siguen solas
@@ -859,13 +730,16 @@ subidos». Tócala para ver cada archivo y su progreso.
 
 Cada archivo muestra una etiqueta:
 
-- **Visible al cliente** — las fotos de la recepción nacen así.
-- **Interno** — todo lo que se sube en un avance nace así.
+- **Visible al cliente** — las fotos y videos de la recepción nacen así.
+- **Interno** — todo lo que se sube en un avance nace así. Una nota de voz grabada en la recepción también nace interna (es el personal del taller hablando): un administrador decide si la hace visible.
 
-Solo un **administrador** cambia la visibilidad, con el botón **Mostrar en el
-reporte del cliente** / **Ocultar del reporte del cliente**. Así el técnico
-puede documentar todo con libertad y administración decide qué ve el cliente en
-su enlace (sección 8, *Enlace del cliente*).
+Un archivo suelto solo lo publica un **administrador**, con el botón **Mostrar en el
+reporte del cliente** / **Ocultar del reporte del cliente**. Un avance es distinto:
+quien lo escribió (técnico o administrador) puede tocar **Mostrar al cliente**, y con
+él salen su texto y sus archivos; **Dejar de mostrar** lo vuelve interno. El avance que
+se crea al reportar trabajo adicional queda interno: ese lo decide administración.
+Así el técnico puede documentar todo con libertad, y lo que ve el cliente en su
+enlace (sección 8, *Enlace del cliente*) es lo que alguien decidió publicar.
 
 ### Ver y borrar
 
@@ -882,12 +756,14 @@ La misma información que la lista de órdenes, vista como un tablero con una
 columna por estado. Está dentro de **Órdenes de Trabajo**: arriba a la derecha, el
 selector **Lista | Tablero** cambia de vista. La app recuerda la última que usaste, así que
 quien trabaja con el tablero lo encuentra al volver. El buscador de órdenes filtra también
-las tarjetas, y el **número de la orden** en cada tarjeta la abre.
+las tarjetas, y el número de la orden en cada tarjeta la abre.
 
-<!-- IMAGEN: tablero Kanban con tarjetas repartidas en las columnas -->
+<!-- IMAGEN: tablero Kanban con tarjetas repartidas en las columnas (administrador, computadora) -->
 
 Arriba se muestra la **ocupación del taller**: cuántas órdenes activas hay contra
 la capacidad de la sede.
+
+Las tarjetas muestran el número de orden, el cliente, el vehículo, las personas asignadas y el tipo (**Mecánica**, **Pintura** o **Combinado**), además de insignias informativas como **Seguro**, **Esperando repuestos**, **Esperando autorización**, **Por revisar** o **Listo para entregar**. En órdenes entregadas, el botón **Archivar** permite enviarlas a la lista de archivadas.
 
 Hay dos formas de cambiar una orden de estado:
 
@@ -895,13 +771,16 @@ Hay dos formas de cambiar una orden de estado:
 - **En teléfono**, cada tarjeta tiene abajo un selector **Mover a**. Las columnas
   se recorren deslizando de lado, una por pantalla.
 
-<!-- IMAGEN: tarjeta del Kanban en teléfono, mostrando el selector "Mover a" -->
+<!-- IMAGEN: tarjeta del Kanban en teléfono mostrando el selector "Mover a" (técnico, teléfono) -->
 
 Un administrador puede mover cualquier orden. Un técnico solo las que tiene
-asignadas, y nunca a **Entregado**. En las tarjetas que no puedes mover, el
-selector no aparece.
+asignadas, y nunca una **Finalizado** ni una **Entregado**: en esas tarjetas el
+selector no aparece. Tampoco tiene las opciones **Recepción**, **Espera Autorización**
+ni **Entregado**. Una orden en pausa sí muestra el selector, pero el sistema no la deja
+salir de la pausa mientras haya trabajo adicional sin decidir o un presupuesto
+esperando respuesta.
 
-Mover una orden a Entregado abre el mismo diálogo de entrega que en el detalle.
+Mover una orden a **Entregado** abre el mismo diálogo de entrega que en el detalle de la orden.
 
 ---
 
@@ -912,7 +791,7 @@ Mover una orden a Entregado abre el mismo diálogo de entrega que en el detalle.
 El número rojo sobre la campana son tus avisos sin leer. Llegan **al instante**
 mientras la app está abierta, con un mensaje breve en pantalla.
 
-<!-- IMAGEN: campana abierta con tres avisos, uno sin leer -->
+<!-- IMAGEN: campana de notificaciones abierta con avisos leídos y sin leer (técnico, teléfono) -->
 
 - Toca un aviso para abrir su orden; queda marcado como leído.
 - **Marcar todo leído** limpia el contador.
@@ -920,7 +799,7 @@ mientras la app está abierta, con un mensaje breve en pantalla.
 - **Borrar todas** vacía la campana, incluidos los avisos viejos que no alcanzan a
   verse en la lista. Pide confirmación y no se puede deshacer.
 - Nunca recibes aviso de algo que hiciste tú.
-- Los avisos se borran solos a los 60 días.
+- Los avisos leídos se borran solos a los 60 días; los no leídos, a los 180.
 
 ### Qué avisos llegan
 
@@ -931,10 +810,13 @@ mientras la app está abierta, con un mensaje breve en pantalla.
 | **Tarea reasignada** | El técnico al que le quitan una tarea |
 | **Tarea hecha** | Administradores, cuando un técnico marca una tarea como hecha |
 | **Ya no estás asignado** | El técnico al que quitan |
-| **Recepción registrada · Falta cotizar** | Administradores, cuando un técnico crea una orden. **Ya no se emite:** abrir una orden es de administración desde 20261004000000. Los avisos de este tipo que ya existían se siguen leyendo |
+| **Recepción registrada · Falta cotizar** | Administradores. Ya no se emite porque solo administración crea órdenes; los avisos anteriores se siguen leyendo |
 | **Nuevo avance** | Administradores, cuando un técnico agrega un avance |
-| **Trabajo terminado** | Administradores, cuando un técnico finaliza una orden: hay que revisarla y marcarla "Listo para entregar" |
-| **Comisión generada** | Cada técnico, cuando se entrega su orden: **uno** por orden, con la suma de lo suyo |
+| **Trabajo terminado** | Administradores, cuando un técnico finaliza una orden: hay que revisarla y marcarla lista para entregar |
+| **El cliente respondió el presupuesto** | Administradores, cuando el cliente responde desde su enlace |
+| **Presupuesto sin respuesta** | Administradores, una vez al día si un presupuesto lleva más de 24 horas sin respuesta |
+| **Trabajos autorizados** / **Presupuesto rechazado** | Técnicos asignados, cuando se responde el presupuesto con lo que se autorizó o rechazó |
+| **Comisión generada** | Cada técnico, cuando administración acepta su comisión, con el monto aceptado |
 | **Pasó la fecha de entrega** | Administradores y técnicos asignados, una vez al día por cada orden atrasada. **Reemplaza al del día anterior**: hay uno solo por orden, con los días de retraso al día |
 
 ### Notificaciones en el teléfono (push)
@@ -946,18 +828,17 @@ como los de cualquier otra aplicación.
 2. Presiona **Activar en este dispositivo** y acepta el permiso.
 3. Presiona **Enviar prueba**: debe llegar en unos segundos.
 
-<!-- IMAGEN: tarjeta "Notificaciones en este dispositivo" activada -->
+<!-- IMAGEN: tarjeta Notificaciones en este dispositivo activada (administrador, computadora) -->
 
 - Se activa **por dispositivo**: si usas teléfono y computadora, actívalo en los dos.
 - En **iPhone** primero hay que instalar la app en la pantalla de inicio
-  (sección 15); la tarjeta explica los pasos.
+  (sección 16); la tarjeta explica los pasos.
 - Si negaste el permiso, la tarjeta te dice cómo activarlo en los ajustes del
   navegador.
 - Al **cerrar sesión**, ese dispositivo deja de recibir tus avisos.
 - Si la tarjeta dice **«Las notificaciones push no están configuradas en este
   servidor»**, no es un problema de tu teléfono: la versión publicada de la app se
-  armó sin la llave de notificaciones. Avísale a quien administra el sistema; se
-  arregla publicando de nuevo la app (ver [deployment.md](deployment.md)).
+  armó sin la llave de notificaciones. Avísale a quien administra el sistema.
 
 ---
 
@@ -965,7 +846,7 @@ como los de cualquier otra aplicación.
 
 **Solo administradores.** Registra todo el dinero que entra y sale de la sede.
 
-<!-- IMAGEN: pantalla de finanzas con las tarjetas de totales y la tabla -->
+<!-- IMAGEN: pantalla de Finanzas con las tarjetas de totales y la tabla de transacciones (administrador, computadora) -->
 
 Tiene dos vistas:
 
@@ -983,7 +864,7 @@ del banco y de Clover van en la categoría **Comisiones de banco y tarjeta**: re
 una vez al mes, con el monto del estado de cuenta.
 
 Muchos movimientos **los crea el sistema solo** (depósitos, cobros al entregar,
-costo de repuestos, pagos de comisiones; sección 17). No los registres a mano o
+costo de repuestos, pagos de comisiones; sección 18). No los registres a mano o
 quedarán duplicados. Un pago de comisiones aparece como **un egreso por cada orden** que
 cubre ("Comisión Mario Mecánico - ORD-2026-014"), todos con el mismo número de cheque.
 
@@ -1003,7 +884,7 @@ para esa orden.
 
 1. **Nueva Transacción**.
 2. **Tipo**: ingreso o egreso.
-3. **Categoría**: Pago de Cliente, Compra de Repuestos, Planilla o Gasto Operativo.
+3. **Categoría**: Pago de Cliente, Compra de Repuestos, Comisiones, Gasto Operativo o Comisiones de banco y tarjeta.
 4. **Monto** y **fecha**. La fecha es la del taller: un movimiento del día 1
    cuenta en ese mes.
 5. **Orden vinculada** (opcional): asocia el movimiento a una orden. En la tabla,
@@ -1011,8 +892,7 @@ para esa orden.
 6. **Descripción**.
 7. **Crear**.
 
-<!-- IMAGEN: modal de nueva transacción con el selector "Orden vinculada"
-     desplegado -->
+<!-- IMAGEN: modal de nueva transacción con el selector "Orden vinculada" desplegado (administrador, computadora) -->
 
 ### Eliminar un movimiento
 
@@ -1049,8 +929,7 @@ teclearlos uno por uno.
 > cuántas faltan. La barra **Asignar a las no clasificadas** aplica una categoría
 > a todas de golpe.
 
-<!-- IMAGEN: tabla de revisión de la importación, con categorías sugeridas y
-     alguna fila marcada como posible duplicado -->
+<!-- IMAGEN: tabla de revisión de la importación de estado de cuenta, con categorías sugeridas y fila marcada como posible duplicado (administrador, computadora) -->
 
 ### Si importas el mismo estado de cuenta dos veces
 
@@ -1066,7 +945,7 @@ egresos del mes**. El sistema te protege en tres niveles:
 3. **«Seleccionar todas» no las incluye.** Si de verdad es un movimiento distinto,
    márcalo a mano.
 
-<!-- IMAGEN: aviso rojo de "este mismo archivo ya se importó" con la fecha -->
+<!-- IMAGEN: aviso rojo de archivo de estado de cuenta ya importado con su fecha (administrador, computadora) -->
 
 ### Revertir una importación
 
@@ -1074,17 +953,16 @@ En la lista de **Importaciones**, el botón **Revertir importación** elimina de
 golpe todos los movimientos que entraron con ella. Es la salida cuando algo se
 importó de más o mal categorizado: revertir y volver a importar.
 
-<!-- IMAGEN: lista de importaciones con el botón de revertir -->
+<!-- IMAGEN: lista de importaciones con el botón Revertir importación (administrador, computadora) -->
 
 ---
 
 ## 13. Comisiones
 
-**Solo administradores.** El personal técnico cobra por comisión sobre la mano
-de obra de las órdenes que entrega. El detalle técnico está en
-[comisiones.md](comisiones.md).
+El personal técnico cobra por comisión sobre la mano de obra de las órdenes que entrega.
+Administración gestiona la revisión, aprobación y pagos desde **Comisiones**, mientras que los técnicos consultan sus ganancias en **Mis comisiones** y en el detalle de cada orden.
 
-<!-- IMAGEN: pantalla de Comisiones en la pestaña Saldos pendientes -->
+<!-- IMAGEN: pantalla de Comisiones en la pestaña Saldos pendientes con el botón Aceptar todas (administrador, computadora) -->
 
 ### Cómo se calcula
 
@@ -1095,145 +973,200 @@ no tiene uno):
 comisión de una tarea = precio de la tarea × porcentaje de su técnico
 ```
 
-Ejemplo (el de la reunión con el taller, al 35 %): la pintora tiene la pintura de $1,000 y
-cobra **$350**; el mecánico tiene la mecánica de $200 y cobra **$70**. Si después se agrega
-una mano de obra extra de pintura de $500 y se le asigna a la pintora, cobra **$175** más,
-aunque haya otro pintor en la orden.
+Ejemplo (al 35 %): la pintura de $1,000 le paga a la pintora **$350**; la mecánica de $200 le paga al mecánico **$70**. Si después se agrega una mano de obra extra de pintura de $500 y se le asigna a la pintora, cobra **$175** más.
 
 - **Una tarea sin técnico no la cobra nadie.** La orden lo avisa en el Resumen y al
-  entregar. Asígnale técnico antes de entregar.
-- Quien está **a salario** no cobra comisión; lo de sus tareas se queda en el taller.
-- **Trabajos de antes de octubre de 2026.** Los que no tienen técnico siguen con el reparto
-  por especialidad: cada especialidad es una bolsa que se reparte entre quienes están **en
-  el reparto** con esa tarea (*bolsa ÷ compañeros × su porcentaje*). Si una bolsa no tiene a
-  nadie, nadie la cobra, y la tarjeta **Reparto de la comisión** de la orden lo avisa.
+  entregar. Administración debe asignarle técnico antes de entregar para que genere comisión.
+- Quien está a salario no genera comisión; lo de sus tareas se queda en el taller. Quien tiene un esquema mixto cobra su salario (informativo) y además la comisión de sus tareas.
+- **Trabajos de antes de octubre de 2026.** Los que no tienen técnico asignado siguen con el reparto por especialidad: cada especialidad es una bolsa que se reparte entre los técnicos asignados a mano a esa especialidad (*bolsa ÷ compañeros × su porcentaje*).
+- **El descuento del taller no reduce las comisiones:** el descuento lo absorbe el taller y la comisión se calcula sobre la mano de obra autorizada.
+- **El cobro por parqueo no genera comisiones:** es un rubro de estancia vehicular del taller.
 
-La comisión **se genera al entregar** la orden y se recalcula sola si cambia la mano de
-obra (su precio, su autorización, su técnico o su tipo), el equipo asignado o un
-porcentaje. **Lo ya pagado nunca se recalcula**, y por eso un trabajo con la comisión pagada
-queda bloqueado (sección 8). En **Historial de comisiones** cada fila dice qué trabajo paga:
-una persona puede tener varias por orden, una por tarea.
+La comisión **se genera al entregar** la orden y nace con estado **Por aceptar** (sugerida). Si cambia la mano de obra, el equipo o un porcentaje antes de aceptarla, se recalcula sola. **Lo ya pagado nunca se recalcula**, y por eso un trabajo con la comisión pagada queda bloqueado (sección 8).
 
-### Las tres pestañas
+### Para administración: Comisiones y Pagos
+
+*(Menú lateral: **Comisiones**.)*
+
+Tiene tres pestañas:
 
 - **Saldos pendientes** — cuánto se le debe a cada técnico y de qué órdenes.
-- **Historial de comisiones** — cada comisión, pendiente o pagada.
-- **Pagos realizados** — los pagos registrados, con su comprobante.
+- **Historial de comisiones** — cada comisión detallada, con estado **Por aceptar**, **Aceptada** o **Pagada**.
+- **Pagos realizados** — los pagos registrados, con su fecha, método y comprobante.
 
-### Revisar y aceptar
+#### Revisar y aceptar
 
-Al entregar una orden, cada comisión nace **por revisar**. **Solo se paga lo aceptado.**
+Al entregar una orden, cada comisión nace **Por aceptar**. **Solo se paga lo aceptado.**
 
-- En **Saldos pendientes**, cada técnico muestra cuántas tiene por revisar. **Aceptar todas**
-  las acepta tal cual, de un golpe.
-- Para cambiar una antes de aceptarla, abre la fila del técnico y usa el lápiz de esa comisión:
-  cambia el **porcentaje** (el monto se recalcula) o el **monto** en dólares.
-- El técnico ve su comisión y recibe un aviso cuando se acepta.
+- En **Saldos pendientes**, la fila de cada técnico indica cuántas tiene por revisar. El botón **Aceptar todas (N)** las aprueba en bloque con los montos sugeridos.
+- Para cambiar una antes de aceptarla, despliega la fila del técnico y presiona el lápiz de esa comisión: puedes ajustar el **Porcentaje** o directamente el **Monto** en dólares, y presionar **Aceptar**.
+- Cuando administración acepta una comisión, pasa a **Aceptada** y el técnico la ve reflejada en su pantalla de comisiones.
 
-### Pagar un saldo
+#### Pagar un saldo
 
-1. En **Saldos pendientes**, presiona **Pagar lo aceptado** en la fila del técnico (apagado si
-   no hay nada aceptado).
-2. El diálogo muestra lo aceptado y de cuántas órdenes viene; lo que sigue por revisar no entra.
-   Elige la fecha y el método (Cheque, Efectivo, Zelle, Transferencia).
-3. Con **cheque**, escribe el número o adjunta la foto (al menos uno de los dos:
-   es lo que permite conciliarlo con el banco).
-4. **Registrar pago**.
+1. En **Saldos pendientes**, presiona **Pagar lo aceptado** en la fila del técnico (el botón permanece apagado si no hay nada aceptado).
+2. Se abre el diálogo **Pagar saldo**: muestra el empleado, el monto calculado por el sistema, cuántas órdenes abarca y avisa si quedan comisiones sin revisar (que no entran en este pago).
+3. Selecciona la **Fecha de Pago** y el **Método** (**Cheque**, **Efectivo**, **Zelle** o **Transferencia**).
+4. Si pagas con **Cheque**, escribe el **Número de cheque** o adjunta la **Foto del cheque** (al menos uno de los dos es necesario para conciliar con el banco).
+5. Presiona **Registrar pago**.
 
-El monto lo calcula el sistema. El pago se registra solo como egreso en Finanzas.
+El pago descuenta el saldo del técnico y se registra automáticamente como un egreso de categoría **Comisiones** en Finanzas.
 
-### Deshacer un pago
+#### Deshacer un pago
 
-En **Pagos realizados**, **Deshacer pago** devuelve esas comisiones a pendientes y
-elimina su egreso de Finanzas (solo el de ese pago).
+En la pestaña **Pagos realizados**, cada pago tiene el botón **Deshacer pago**. Al usarlo, las comisiones de ese pago vuelven a quedar pendientes y se elimina su movimiento de egreso en Finanzas.
 
-### Cambiar el porcentaje
+#### Cambiar el porcentaje de comisión
 
-El **de la sede**, en la tarjeta de arriba a la derecha o en Configuración → Sedes: de 0
-a 100, por defecto 35 %. El **de una persona**, en **Empleados**. Cambiar cualquiera
-recalcula solo lo pendiente.
+El porcentaje general de la sede se configura en la tarjeta superior o en Configuración → Sedes (por defecto 35 %). El porcentaje individual de cada persona se define en **Empleados**. Cambiar cualquiera recalcula únicamente las comisiones que todavía no se han pagado.
+
+### Para el técnico: Mis comisiones
+
+*(Menú lateral: **Mis comisiones**; en el teléfono, botón **Comisiones** de la barra inferior.)*
+
+Los técnicos pueden consultar sus ingresos sin ver las finanzas del taller:
+
+<!-- IMAGEN: pantalla Mis comisiones mostrando los saldos por cobrar y el historial de pagos (técnico, teléfono) -->
+
+- Tarjetas de resumen arriba: **Por cobrar** (lo que administración ya aceptó y está listo para pagarse), **Pagado este mes** y **Pagado en total**.
+- **Aceptadas, por cobrar**: lista de las comisiones aprobadas por la oficina que aún no se han liquidado, con el **Nº Orden**, la tarea o trabajo, el porcentaje (**%**) y el **Monto**.
+- **Historial de pagos**: lista de los pagos recibidos, con su fecha, método, número de cheque y monto.
+
+> **¿Por qué no aparece una orden que recién entregaste?** Cuando la orden se entrega, la comisión nace como sugerida ("por revisar"). Aparece en **Mis comisiones** en cuanto administración la revisa y la acepta.
 
 ### Empleados
 
-*(Menú lateral, solo administradores.)* Quién trabaja en el taller, cómo se le paga y qué
-ha hecho.
+*(Menú lateral, solo administradores.)*
 
-- **Pago de cada empleado**: la lista de mecánicos y pintores con su esquema —
-  *Comisión · 35 % (el de la sede)*, *Comisión · 40 %* o *Salario · $900.00 quincenal*.
-- **Ver** abre a la persona: comisiones pendientes y pagadas, órdenes activas y
-  entregadas, sus órdenes y avances recientes, y su **pago**:
-  - **Comisión**: su propio porcentaje, o vacío para usar el de la sede.
-  - **Salario**: monto y periodo. Es informativo (no se registra en Finanzas) y a salario
-    no se genera comisión. Si tiene comisiones pendientes, la app te avisa con el monto
-    antes de guardar: al pasarlo a salario dejan de contar, así que págalas antes si se
-    las debes.
-- Debajo está la administración del **personal** (alta, edición y baja), que antes
-  estaba en Configuración.
+Permite gestionar quién trabaja en el taller, cómo se le paga y qué actividad ha tenido:
 
-<!-- IMAGEN: Empleados, con la lista de pago y el detalle de un mecánico -->
+- **Pago de cada empleado**: lista de mecánicos y pintores con su esquema de pago — *Comisión · 35 % (el de la sede)*, *Comisión · 40 %*, *Salario · $900.00 quincenal* o *Mixto*.
+- Presiona **Ver** para abrir la ficha de la persona: muestra sus comisiones pendientes y pagadas, órdenes activas y entregadas, avances recientes y su configuración de **Pago**:
+  - **Comisión**: porcentaje propio, o déjalo vacío para usar el de la sede.
+  - **Salario**: monto y periodo. Es informativo (no se registra en Finanzas). Si el empleado pasa a salario y tiene comisiones pendientes, el sistema te avisa del monto: al pasar a salario las comisiones pendientes dejan de contar, por lo que conviene pagarlas antes.
+- Debajo se encuentra la administración del personal: crear empleados con **Nuevo Usuario**, editar sus datos o darlos de baja.
+
+<!-- IMAGEN: pantalla Empleados con la lista de pagos y el detalle de un empleado (administrador, computadora) -->
 
 ---
 
-## 14. Configuración
+## 14. Cobro por parqueo
+
+**Solo administradores.** Permite cobrar por el estacionamiento o estancia prolongada de vehículos en el taller, distinguiendo según si el trabajo es particular o con aseguradora.
+
+<!-- IMAGEN: tarjeta de Parqueo en una orden de trabajo, mostrando el monto acumulado y los ajustes administrativos (administrador, computadora) -->
+
+### Cómo se configura por sede
+
+En **Configuración → Sedes / Talleres**, dentro de cada sede, la sección **Cobro por parqueo** permite activar y definir las reglas del taller:
+
+- **Cobrar parqueo en esta sede**: activa o desactiva el módulo en esa sede.
+- **Vigente desde**: fecha a partir de la cual empieza a aplicar el cobro (por defecto la fecha de hoy; el sistema no permite fechas pasadas para no generar cobros retroactivos sorpresa).
+- **Incluir órdenes que ya estaban en el taller**: si se activa, aplica también a los vehículos ingresados antes de la fecha de vigencia.
+- **Avisar al cliente cuándo empieza el cobro**: advierte en el portal del cliente con anticipación cuándo comenzará a cobrarse el parqueo.
+- **Política para el cliente (español)** y **Política para el cliente (inglés)**: texto explicativo que el cliente verá en su enlace personal con las condiciones y motivos del cobro.
+
+#### Los dos perfiles de cobro
+
+Cada sede configura dos perfiles independientes:
+
+1. **Con seguro**:
+   - Aplica a órdenes marcadas con seguro.
+   - Por defecto: empieza a contar desde la **Llegada del vehículo**, cobra el día de la llegada y tiene 0 días de gracia.
+2. **Sin seguro (Particular)**:
+   - Aplica a órdenes particulares.
+   - Por defecto: empieza a contar cuando administración marca la orden como lista para entregar, no cobra el día del evento y otorga 2 días de gracia.
+
+En cada perfil se puede personalizar:
+- **Empieza a contar**: **Llegada del vehículo** o **Marcada lista para entregar**.
+- **Días de gracia**: días gratuitos antes de empezar a cobrar.
+- **Contar solo días hábiles**: si la gracia se cuenta de lunes a viernes o en días calendario.
+- **Cobrar el día del evento**: si el día que detona el conteo cuenta como día 1.
+- **Tope de días** y **Tope de monto ($)**: límites máximos que el cobro no superará.
+- **Tramos de tarifa**: escalas de cobro diario (**Desde el día N**, tarifa **por día**). Puedes agregar más tramos con **Agregar tramo**.
+
+Abajo, la herramienta **Vista previa en vivo** permite probar cualquier fecha de evento y fecha final para verificar el cálculo exacto antes de guardar.
+
+### El parqueo en una orden de trabajo
+
+Dentro de la orden, en la pestaña **Cobro y cliente** (sección **Parqueo**):
+
+- Muestra el **Perfil** (**Con seguro** o **Sin seguro (Particular)**) y su **Estado**:
+  - **Inactivo**: el módulo o perfil no están habilitados.
+  - **Esperando que la orden se marque lista para entregar**: falta marcar la orden lista para comenzar la cuenta.
+  - **Empieza el (fecha)**: el evento ocurrió y está corriendo el periodo de gracia.
+  - **Sin cobro (orden previa al inicio del módulo)**: orden que ingresó antes de la fecha vigente sin marcar inclusión de previas.
+  - **Sin cobro en esta orden**: parqueo desactivado específicamente para esta orden.
+  - **Acumulando desde el (fecha)**: cobrando activamente según los días en el taller.
+  - **Cerrado al entregar**: monto definitivo congelado al momento de la entrega.
+- Detalla los **Días cobrados**, el **Monto acumulado**, si hay **Tope aplicado** y el **Desglose por tramos**.
+
+#### Ajustes administrativos
+
+Un administrador puede presionar **Ajustes administrativos** para modificar el cobro de esa orden:
+- **Cobrar parqueo en esta orden**: marcar o desmarcar para exonerar la orden por completo.
+- **Tarifa manual ($/día)**: fijar un precio diario fijo en lugar de los tramos de la sede.
+- **Fecha de inicio manual**: establecer a mano desde qué día empieza a contar.
+- **Días exonerados**: descontar días específicos (por ejemplo, por demoras del taller).
+- **Nota interna**: motivo del ajuste.
+- Guarda los cambios con **Guardar ajustes**.
+
+### Reglas clave del parqueo
+
+- **Se acumula solo:** el sistema actualiza el monto cada hora mientras el vehículo permanece en el taller.
+- **Se congela al entregar:** al presionar **Entregar**, el parqueo se cierra definitivamente con la fecha del día y se suma al saldo por cobrar (**Incluye parqueo: (monto) (N días)**). Una orden entregada nunca vuelve a acumular parqueo sola.
+- **No genera comisiones:** el dinero del parqueo pertenece al taller y no forma parte de la mano de obra.
+- **El descuento no lo afecta:** si aplicas un descuento a la orden, este reduce solo la mano de obra y repuestos autorizados, nunca el cobro por parqueo.
+- **En el enlace del cliente:** el cliente ve la política de parqueo, el aviso de cobro y el total desglosado en su cuenta en su idioma preferido.
+
+---
+
+## 15. Configuración
 
 Accesible para todos desde el avatar del encabezado, con contenido distinto
 según el rol.
 
 ### Para todos
 
-- **Perfil**: foto, nombre, correo y teléfono.
-- **Idioma** (Español / English) y **tema** (oscuro / claro).
+- **Mi Perfil**: foto (**Cambiar foto de perfil**), nombre y correo.
+- **Idioma** (**Español** / **English**) y **Apariencia** (**Oscuro** / **Claro**).
 - **Notificaciones en este dispositivo**: activar, probar y desactivar push
   (sección 11).
-- **Reportar un problema**: Botón para notificar a soporte si encuentras un error o falla en el sistema. Adjunta automáticamente un diagnóstico de los últimos 30 segundos de la pantalla (ocultando datos privados y fotos).
+- **Reportar un problema**: botón para notificar a soporte si encuentras un error o falla en el sistema. Puedes agregar captura de pantalla y se adjunta automáticamente un diagnóstico de los últimos 30 segundos (ocultando datos privados y fotos).
 
-<!-- IMAGEN: sección de perfil, idioma, tema y notificaciones -->
+<!-- IMAGEN: pantalla de Configuración con perfil, idioma, apariencia y notificaciones (técnico, computadora) -->
 
-### Solo administradores: sedes y personal
+### Solo administradores: sedes, personal y correos
 
-**Sedes.** Crear talleres nuevos y editar los existentes: nombre, dirección,
-teléfono, **logotipo**, **color de acento**, **capacidad** (espacios de trabajo,
-para la tasa de ocupación) y **porcentaje de comisión**.
+**Sedes.** Crear talleres nuevos con **Nueva Sede** y editar los existentes: nombre, dirección, **Cambiar logo de la sede**, **Color del tema**, **Capacidad del taller** (espacios de trabajo, para la ocupación del taller) y **Porcentaje de comisión**.
 
-Dos datos que usan los correos y el enlace del cliente:
+Datos de contacto y reglas de la sede:
 
-- **Correo de contacto**: a dónde llegan las respuestas de los clientes a los
-  correos automáticos. Conviene un buzón que alguien revise.
-- **Teléfonos de contacto**: cada uno con su descripción, si es de oficina o celular y si atiende
-  WhatsApp. El cliente los ve en su enlace, con botón para llamar y, si atiende WhatsApp, para
-  escribirle.
-  Si lo dejas vacío, el cliente solo ve el botón para llamar.
+- **Correo de contacto (respuestas de clientes)**: a dónde llegan las respuestas de los clientes a los correos automáticos.
+- **Teléfonos de contacto**: lista administrable con **Agregar teléfono**. Cada teléfono define su **Tipo** (**Celular** u **Oficina**), descripción, número y si **Atiende WhatsApp**. El cliente los ve en su enlace (con botones para llamar y escribir), en los correos y en el PDF.
+- **Cobro por parqueo**: configuración de reglas y tarifas de estacionamiento para esa sede (sección 14).
 
-El logo y el color de la sede también se usan en el enlace y en los correos.
+Un administrador también puede usar **Unirme a esta sede** para formar parte de su personal. Al eliminar una sede con **Eliminar todo**, el sistema muestra antes todo lo que se va a borrar y reubica a los empleados en otra sede.
 
-Un administrador también puede **unirse a una sede** para formar parte de su
-personal. Al borrar una sede, el sistema muestra antes todo lo que se va a borrar.
+**Personal.** El alta, la edición y la baja del personal, y el pago de cada quien, se gestionan en **Empleados** (sección 13); Configuración incluye el botón **Ir a Empleados**. Junto a cada persona, un ícono de campana indica en cuántos dispositivos tiene push activo.
 
-**Personal.** Se mudó a **Empleados** (sección 13), junto al pago de cada quien.
-Configuración deja un enlace. Junto a cada persona, un ícono de campana indica en
-cuántos dispositivos tiene push activo: si alguien dice que no le llegan los avisos,
-empieza por ahí.
+**Correos al cliente.** Muestra el estado de los correos automáticos enviados por el sistema. Si hay correos que fallaron en las últimas 72 horas (por ejemplo, por fallas de conexión o servicio), aparece el botón **Reintentar todos** para volver a ponerlos en cola.
 
-**Correos al cliente.** Muestra el estado de los correos automáticos. Si hay correos que no se pudieron enviar (por fallas de red del servidor o de Resend), aparece el botón **Reintentar** para volver a mandarlos.
+Para crear una cuenta de usuario desde la lista de usuarios:
 
-Con **Nuevo Empleado** se da de alta a alguien:
+1. Presiona **Nuevo Usuario**.
+2. Completa **Nombre**, **Correo Electrónico** y **Contraseña Temporal** (mínimo 8 caracteres).
+3. Selecciona el **Rol** (**Administrador**, **Mecánico** o **Pintor**).
+4. Elige la sede en **Sedes / Talleres**.
+5. Presiona **Crear**.
 
-1. **Nombre** y **correo** (será su usuario).
-2. **Contraseña temporal**, mínimo 8 caracteres.
-3. **Rol**: Administrador, Mecánico o Pintor.
-4. **Sede** a la que pertenece.
-5. **Crear**.
+<!-- IMAGEN: diálogo de Nuevo Usuario con los campos de nombre, correo, rol y sede (administrador, computadora) -->
 
-<!-- IMAGEN: modal de nuevo empleado con todos los campos -->
-
-Para dar de baja a alguien, usa el botón de quitar de su fila. **Si tiene órdenes
-asignadas el sistema no lo permite**: primero hay que reasignar ese trabajo. **Si ya
-se le pagaron comisiones, tampoco**: sus pagos son el historial de lo que se le
-entregó.
+Para dar de baja a alguien, usa **Quitar empleado** en su fila. **Si tiene órdenes asignadas el sistema no lo permite**: primero hay que reasignar ese trabajo. **Si ya se le pagaron comisiones, tampoco**: sus pagos son el historial contable de lo que se le entregó.
 
 ---
 
-## 15. Instalar la app en el teléfono
+## 16. Instalar la app en el teléfono
 
 Restorify se puede agregar a la pantalla de inicio. Abre a pantalla completa,
 con su ícono, y en iPhone es **obligatorio** para recibir notificaciones.
@@ -1251,108 +1184,134 @@ con su ícono, y en iPhone es **obligatorio** para recibir notificaciones.
 4. Abre Restorify **desde el ícono nuevo**, inicia sesión y activa las
    notificaciones en Configuración.
 
-<!-- IMAGEN: menú Compartir de Safari con "Agregar a inicio" señalado -->
+<!-- IMAGEN: menú Compartir de Safari con Agregar a inicio señalado (iPhone) -->
 
 La app instalada siempre carga la versión más reciente del sistema; no hay que
 actualizarla.
 
 ---
 
-## 16. Qué puede hacer cada rol
+## 17. Qué puede hacer cada rol
 
 | | Administrador | Técnico (mecánico / pintor) |
 |---|:---:|:---:|
-| Panel principal | Todo, incluido dinero y ocupación | Sin dinero ni ocupación, solo sus órdenes |
+| Panel principal | Todo, incluido dinero, ocupación y **Requiere atención** | Sin dinero ni ocupación; sus tareas y órdenes |
 | Clientes y vehículos: ver | ✅ | Solo los de sus órdenes, dentro de la orden |
 | Clientes y vehículos: crear, editar, **eliminar** | ✅ | ❌ |
-| Órdenes: ver | ✅ todas las de la sede | Solo las suyas |
-| Ver mano de obra | ✅ | ✅ |
-| Ver precios de repuestos, totales y depósito | ✅ | ❌ (ve las piezas sin precio) |
+| Órdenes: ver (lista y tablero) | ✅ todas las de la sede | Solo las suyas |
+| Abrir una orden de trabajo (alta en 4 pasos) | ✅ | ❌ |
+| Ver mano de obra (montos) | ✅ | ✅ |
+| Ver repuestos con precio, totales y depósito | ✅ | ❌ (ve las piezas sin precio) |
+| Costo de repuestos | ✅ | ❌ |
+| Repuestos: marcar pedido / llegó | ✅ | ❌ (ve si se pidió o si llegó) |
 | Agregar o editar mano de obra y repuestos | ✅ | ❌ |
 | Asignar el técnico y el tipo de cada tarea | ✅ | ❌ (ve quién tiene cada una) |
+| Reportar trabajo adicional | — | ✅ desde la orden |
+| Revisar, cotizar o descartar trabajo adicional | ✅ | ❌ |
 | Marcar una tarea como hecha | ✅ todas | ✅ las suyas y las que no tienen técnico |
-| Ver su comisión estimada | — | ✅ en sus órdenes |
-| Cambiar estado y avance | ✅ | ✅ en sus órdenes: solo En Proceso, Espera Autorización y Finalizado |
-| Marcar **Entregado** | ✅ | ❌ |
+| Ver su comisión en la orden | — | ✅ en sus órdenes (el monto, cuando administración la acepta) |
+| Consultar **Mis comisiones** | — | ✅ solo lo suyo aceptado y pagado |
+| Cambiar estado de la orden | ✅ | ✅ en sus órdenes (solo En Proceso y Finalizado) |
+| Marcar **Listo para entregar** | ✅ | ❌ |
+| Marcar **Entregado** o **Retirada sin reparar** | ✅ | ❌ |
+| Aplicar descuento del taller o registrar anticipos | ✅ | ❌ |
+| Cobro por parqueo: configurar en sede y ajustar en orden | ✅ | ❌ |
 | Tomar la firma del cliente en la recepción | ✅ | ❌ (la ve) |
 | Subir fotos, videos y notas de voz | ✅ | ✅ en sus órdenes no entregadas |
-| Publicar archivos al cliente | ✅ | ❌ |
-| Abrir una orden de trabajo | ✅ | ❌ |
-| Asignar técnicos (incluido a sí mismo) | ✅ | ❌ |
-| Enviar reporte al cliente y descargar PDF | ✅ | ❌ |
+| Publicar archivos al cliente | ✅ | Solo sus avances, con sus fotos; un archivo suelto, no |
+| Enviar reporte al cliente y descargar PDF (español o inglés) | ✅ | ❌ |
 | Enlace del cliente: ver, compartir, cambiar, avisar novedades | ✅ | ❌ |
-| Ver si cada trabajo está autorizado, esperando o rechazado | ✅ | ✅ |
-| Enviar presupuestos, registrar autorizaciones, cancelar | ✅ | ❌ |
-| Órdenes: **eliminar** | ✅ | ❌ |
-| Kanban: mover tarjetas | Todas | Solo las suyas, excepto a Entregado |
-| Finanzas, Comisiones y Empleados | ✅ | ❌ |
-| Configuración: perfil, idioma, tema, notificaciones | ✅ | ✅ |
-| Configuración: sedes y personal | ✅ | ❌ |
-| Cambiar de sede | ✅ | ❌ |
-| Notificaciones | Recepciones, avances, órdenes finalizadas, tareas hechas | Asignaciones, tareas, comisiones |
+| Ver estado de autorización de cada trabajo | ✅ | ✅ |
+| Enviar presupuestos y registrar autorizaciones | ✅ | ❌ |
+| Órdenes: **archivar** y **eliminar** | ✅ | ❌ |
+| Tablero: mover tarjetas | Todas | Solo las suyas (excepto a Entregado o pausadas) |
+| Finanzas y Comisiones del taller | ✅ | ❌ |
+| Empleados: ver pagos, crear y editar personal | ✅ | ❌ |
+| Configuración: perfil, idioma, apariencia, push | ✅ | ✅ |
+| Configuración: sedes, teléfonos y correos al cliente | ✅ | ❌ |
+| Cambiar de sede activa | ✅ | ❌ |
+| Notificaciones | Recepciones, avances, finalizadas, tareas hechas, presupuestos | Asignaciones, tareas, comisiones |
 
 Todas estas reglas las aplica la base de datos, así que se cumplen aunque alguien
 intente saltarse la interfaz.
 
 ---
 
-## 17. Cosas que el sistema hace solo
+## 18. Cosas que el sistema hace solo
 
 Conviene conocerlas para no sorprenderse ni registrar el mismo dinero dos veces.
 
-**Al crear una orden con depósito**, el depósito se registra como ingreso.
+**Al crear una orden con depósito**, el depósito se registra como ingreso en Finanzas.
+
+**Al registrar un anticipo**, se asienta como ingreso en Finanzas y se descuenta del saldo que faltará cobrar al entregar.
+
+**Al finalizar una orden**, el avance pasa al 100 %, se registra la fecha de finalización y se avisa a administración («Trabajo terminado»). **No se le avisa al cliente:** su enlace indica «En revisión final».
+
+**Al marcar Listo para entregar**, administración confirma la revisión; **en ese momento se despacha el correo al cliente** («Su vehículo está listo») y el enlace pasa a «Listo para recoger».
 
 **Al marcar una orden como Entregado:**
-- Se registra como **ingreso** el saldo pendiente (total menos lo ya cobrado).
-- Se registra como **egreso** lo que costaron los repuestos.
-- Se generan las **comisiones**: la de cada tarea para su técnico (y el reparto de los
-  trabajos de antes), y cada uno recibe **un** aviso con su total. Una tarea sin técnico
-  no genera comisión.
+- Se registra como **ingreso** el saldo pendiente (o como egreso si corresponde devolver dinero por un depósito mayor), con su método de pago y comprobante.
+- Se registra como **egreso** el costo de los repuestos.
+- El cobro por parqueo acumulado se congela con la fecha del día y se suma al saldo liquidado.
+- Se generan las **comisiones sugeridas** (**Por aceptar**): la de cada tarea para su técnico (y el reparto de trabajos anteriores). El técnico recibe el aviso cuando administración la acepta, no al entregar. Una tarea sin técnico no genera comisión.
 
-**Al editar una orden ya entregada**, se registra únicamente la diferencia — como
-cargo adicional o como reembolso — y las comisiones pendientes se recalculan.
+**Al retirar sin reparar**, según la opción elegida (cancelar todo, solo revisión o algunos trabajos), se liquida la diferencia con lo pagado, se cancelan presupuestos abiertos y lo no cobrado queda guardado como pendiente del vehículo para futuras visitas.
 
-**Al sacar una orden de Entregado**, se revierten el cobro y el costo de
-repuestos, y se borran las comisiones no pagadas. Si se vuelve a entregar, todo
-se registra de nuevo.
+**Al editar una orden ya entregada**, se registra únicamente la diferencia —como cargo adicional o como reembolso— y las comisiones pendientes se recalculan.
+
+**Al sacar una orden de Entregado**, se revierten el cobro y el costo de repuestos, se descongelan los estados y se borran las comisiones no pagadas. Si se vuelve a entregar, todo se registra de nuevo.
+
+**El avance de la orden se calcula solo:** surge de las tareas marcadas como hechas sobre las autorizadas, ponderadas por el precio de cada una (un trabajo de $400 influye más en la barra que uno de $50).
+
+**El cobro por parqueo acumula solo:** el sistema actualiza el monto cada hora mientras el vehículo permanece en el taller con el cobro activo. No genera comisión para los técnicos y el descuento del taller no lo reduce.
+
+**Al aplicar un descuento**, el taller lo absorbe por completo: descuenta lo que paga el cliente pero no baja la mano de obra autorizada, de modo que las comisiones de los técnicos no disminuyen. Tampoco afecta el parqueo.
 
 **Al agregar o quitar mano de obra o repuestos**, los totales se recalculan solos.
 
-**Al pagar comisiones**, se registra el egreso. Al deshacer el pago, se borra.
+**Al pagar comisiones**, se registra el egreso en Finanzas. Al deshacer el pago, se elimina.
 
-**Al finalizar una orden**, el avance pasa a 100 % y se avisa a administración.
+**La firma de la recepción no autoriza lo cotizado:** es la constancia de conformidad de cómo se recibió el vehículo. Lo cotizado se autoriza únicamente con un presupuesto enviado o mediante **Registrar autorización**.
 
-**La firma de la recepción no autoriza lo cotizado**: es la conformidad con cómo se recibió el
-vehículo. Lo cotizado se autoriza con un presupuesto o con **Registrar autorización**.
+**Al agregar un trabajo** después de la firma, queda sin autorizar: no se cobra ni se realiza hasta que el cliente lo autorice.
 
-**Al agregar un trabajo** después de la firma, queda sin autorizar: no se cobra
-hasta que el cliente lo autorice.
+**Al responder un presupuesto**, lo autorizado suma al total (y si la orden ya se entregó, se registra el ajuste en Finanzas); los técnicos reciben el aviso de qué hacer y qué no, y al cliente le llega la constancia.
 
-**Al responder un presupuesto**, lo autorizado suma al total (y si la orden ya se
-entregó, se registra el ajuste en Finanzas); los técnicos reciben qué hacer y qué no,
-y al cliente le llega la constancia.
+**Al firmar la recepción**, además, se crea el enlace del cliente y, si tiene correo, le llega el aviso de ingreso.
 
-**Al firmar la recepción**, además, se crea el enlace del cliente y, si tiene correo, le
-llega el aviso de ingreso.
-
-**Al cambiar el estado de una orden**, si el cliente tiene correo, le llega el aviso
-unos minutos después (uno solo aunque la muevas varias veces).
+**Al cambiar el estado de una orden**, si el cliente tiene correo, le llega el aviso unos minutos después (se agrupan cambios en una ventana de 3 minutos).
 
 **Al entregar una orden**, el enlace del cliente queda disponible 90 días más.
 
-**Al eliminar una orden**, se eliminan sus archivos, comisiones y movimientos
-automáticos. Los importados del banco se conservan.
+**Al eliminar una orden**, se eliminan sus archivos, comisiones y movimientos automáticos. Los importados del banco se conservan.
 
-**Limpieza periódica.** Los avisos leídos se borran a los 60 días y todos a los
-180. Los archivos que quedaron a medio subir o de órdenes borradas se eliminan
-del almacenamiento.
+**Limpieza periódica.** Los avisos leídos se borran a los 60 días y todos a los 180. Los envíos de correo y push terminados a los 90 días. Los archivos que quedaron a medio subir o de órdenes borradas se eliminan del almacenamiento.
 
-**El número de orden** se genera de forma que dos órdenes creadas al mismo tiempo
-nunca reciban el mismo número.
+**El número de orden** se genera de forma que dos órdenes creadas al mismo tiempo nunca reciban el mismo número.
 
 ---
 
-## 18. Problemas comunes
+## 19. Problemas comunes
+
+**«El cliente no recibió el correo de que su vehículo está listo.»**
+La orden debe estar en estado **Finalizado** Y un administrador debe presionar el botón **Marcar listo para entregar**. Cuando el técnico pasa la orden a Finalizado, el sistema únicamente envía un aviso a la oficina («Trabajo terminado») para que la revise; el correo automático al cliente no sale y su portal no cambia a «Listo para recoger» hasta que administración coloca la marca de listo para entregar.
+
+**«Soy técnico: ¿por qué no veo el monto de mi comisión en Mis comisiones?»**
+La orden ya debe estar entregada, y además un administrador debe haber aceptado la comisión en **Comisiones**. Al entregar la orden, las comisiones nacen con estado **Por aceptar** (sugeridas); mientras administración no las revise y acepte, no aparecen en tu lista de **Aceptadas, por cobrar**. Mientras la orden no se entregue, puedes consultar **Tu comisión estimada** en la orden.
+
+**«¿Por qué el cobro por parqueo marca $0 en una orden?»**
+Puede ocurrir por varios motivos:
+1. El módulo general o el perfil de esa orden (**Con seguro** o **Sin seguro (Particular)**) está deshabilitado en Configuración.
+2. En una orden particular, todavía no ha sido marcada como lista para entregar (que es el evento que detona el cobro).
+3. La orden aún está dentro de los días de gracia configurados.
+4. La orden ingresó antes de la fecha vigente del taller y no se marcó la opción de incluir órdenes previas.
+5. En la tarjeta de **Parqueo** de la orden, la casilla **Cobrar parqueo en esta orden** fue desmarcada en los ajustes administrativos.
+
+**«El taller aplicó un descuento al cliente pero mi comisión no bajó, ¿está bien?»**
+Sí, es totalmente correcto. Todo descuento comercial lo absorbe el taller por completo. Tu comisión se calcula sobre el precio de la mano de obra autorizada de tus tareas, sin verse reducida por el descuento.
+
+**«Un correo al cliente aparece con error y no se envía solo.»**
+Los correos con fallas no se reintentan indefinidamente de forma automática. Un administrador puede revisar la tarjeta **Requiere atención** en el Panel Principal o ir a Configuración → **Correos al cliente** y presionar **Reintentar todos** (o usar **Reintentar** en el historial de la tarjeta **Enlace del cliente** en la orden).
 
 **«El total no incluye un trabajo que agregué.»**
 Mira la insignia de la línea: si dice **Sin autorizar** o **Esperando al cliente**,
@@ -1382,9 +1341,9 @@ Si la línea no tiene insignia, está autorizada. **Sin autorizar** y **Esperand
 cliente**: todavía no. **No realizar**: no.
 
 **«El cliente dice que autorizó y no aparece.»**
-Revisa la tarjeta **Presupuesto** y el historial de correos de la tarjeta *Enlace del
-cliente*. Si el correo salió pero no respondió, pregúntale por teléfono y usa
-**Registrar autorización**.
+Revisa la tarjeta **Presupuesto** y el historial de correos de la tarjeta **Enlace del
+cliente**. Si el correo salió pero no respondió, pregúntale por teléfono y usa
+**Registrar autorización…**.
 
 **«El cliente no recibió el correo.»**
 Abre la orden y mira el historial de la tarjeta **Enlace del cliente**:
@@ -1392,7 +1351,7 @@ Abre la orden y mira el historial de la tarjeta **Enlace del cliente**:
 - *No enviado*: el motivo lo dice (sin correo, se dio de baja, ya había recibido ese
   estado).
 - *Enviado*: pídele que revise el correo no deseado o las pestañas de Promociones.
-- *Error*: avisa a quien administra el sistema.
+- *Error*: avisa a quien administra el sistema o usa **Reintentar**.
 Mientras tanto, mándale el enlace con **Enviar por WhatsApp**.
 
 **«El cliente dice que el enlace no abre.»**
@@ -1406,29 +1365,30 @@ en el reporte del cliente** en cada uno.
 
 **«No me llegó el correo para recuperar la contraseña.»**
 Revisa el correo no deseado. Si aun así no llega, pídele a un administrador que
-te asigne una contraseña nueva desde Configuración.
+te asigne una contraseña nueva desde Configuración o Empleados.
 
 **«Entré pero no veo Finanzas ni Comisiones.»**
-Son solo para administradores.
+Son solo para administradores. Los técnicos ven únicamente sus propias ganancias en **Mis comisiones**.
 
 **«Soy técnico y no veo los precios ni el total de la orden.»**
-Es a propósito: los precios los maneja administración. Ves la mano de obra, las
-piezas sin precio y tu comisión estimada.
+Es a propósito: el dinero de la orden lo maneja administración. Ves el precio de la
+mano de obra de tus tareas (de ahí sale tu comisión) y las piezas sin precio; el total
+de la orden y los pagos, no. Tu comisión la ves en **Mis comisiones** cuando
+administración la acepta.
 
 **«No puedo agregar mano de obra ni repuestos.»**
-Los agrega un administrador. Si hace falta cotizar algo nuevo, avísale o déjalo
-en un avance (con nota de voz si es más rápido).
+Los agrega un administrador. Si encontraste algo adicional durante la reparación, usa **Reportar trabajo adicional** en la orden para que administración lo revise y cotice. También puedes dejarlo documentado en un avance (con foto, video o nota de voz).
 
 **«No encuentro una orden que sé que existe.»**
 Revisa que el filtro de estado esté en «Todos» y —si eres administrador— que
 estés en la sede correcta.
 
 **«Me pidieron ayudar en una orden y no puedo editarla.»**
-Pídele a un administrador que te asigne a ella. Asignar reparte la comisión de la
+Pídele a un administrador que te asigne a ella o te asigne una de sus tareas. Asignar reparte la comisión de la
 mano de obra, así que es una decisión de administración y nadie se pone a sí mismo.
 
 **«No puedo mover la barra de avance.»**
-La orden está Finalizada o Entregada, o no estás asignado a ella.
+La orden está Finalizada o Entregada, o no estás asignado a ella. El avance se calcula automáticamente a partir de las tareas realizadas.
 
 **«Un video no sube / la bandeja dice que falló.»**
 Expande la bandeja y lee el motivo. Si es la señal, presiona **Reintentar** con

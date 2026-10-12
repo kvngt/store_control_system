@@ -21,6 +21,7 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 | Saber **qué tan sano está el proyecto hoy**: estructura, base de datos, operación y qué hacer primero | [evaluacion-2026-10.md](historico/evaluacion-2026-10.md) |
 | Ver **el plan de la reunión del 03/10/2026** (fases F0–F7, decisiones del taller; su estado está en la bitácora) | [plan-mejoras-2026-10.md](historico/plan-mejoras-2026-10.md) |
 | Comparar con **los programas comerciales** y ver qué satura en la interfaz (11/10/2026) | [comparativa-comercial-y-ux-2026-10.md](historico/comparativa-comercial-y-ux-2026-10.md) |
+| Decidir **qué mejorar en la interfaz**: pantallas saturadas o mal organizadas, con las 10 mejoras que más rinden (12/10/2026) | [analisis-de-interfaz.md](analisis-de-interfaz.md) |
 | Saber si el **proceso del taller** (orden → trabajo → cobro → comisiones → ganancia) tiene fallas de lógica y qué agrega valor o solo complejidad (05/10/2026) | [analisis-del-proceso-2026-10.md](historico/analisis-del-proceso-2026-10.md) |
 | Implementar los **pedidos del taller** (05/10/2026) listos para programar | [plan-pedidos-2026-10-05.md](historico/plan-pedidos-2026-10-05.md) |
 | Preparar la **privacidad, el texto de la firma y la protección legal** (plan del 04/10/2026, pendiente de las decisiones del taller y de un abogado) | [plan-legal-y-privacidad.md](plan-legal-y-privacidad.md) |
@@ -170,13 +171,22 @@ lo que se resolvió de ahí está marcado al principio del documento. Al final e
 **funciones propuestas que esperan la autorización del taller** (hoy: traducir en el portal lo
 que escribe el taller).
 
+**[analisis-de-interfaz.md](analisis-de-interfaz.md)** — Qué satura o está mal ubicado en cada
+pantalla (12/10/2026), leído del código: el estado de los 11 puntos de la comparativa, 26
+hallazgos nuevos (alta de la orden, clientes, vehículos, tablero, avisos, finanzas, comisiones,
+empleados, configuración, inicio de sesión y diálogos de la orden) y las 10 mejoras con mejor
+relación beneficio/esfuerzo. Lo marcado "(verificar con captura)" se confirma con las capturas
+del manual.
+
 **[deployment.md](deployment.md)** — Cómo se pone en producción: Supabase
 (migraciones, secretos, Vault, edge functions, límites de Storage), Hostinger,
 correo con Resend, variables de entorno, el orden en que tiene que hacerse todo y
 qué revisar después.
 
 **[manual-usuario.md](manual-usuario.md)** — La aplicación pantalla por pantalla,
-escrita para el personal del taller. Base en texto para el manual con capturas.
+escrita para el personal del taller, al día con la app del 12/10/2026 (incluye parqueo, seguro,
+trabajo adicional, "listo para entregar" y comisiones por aceptar). Base en texto para el
+manual con capturas: 46 marcadores dicen qué captura va en cada lugar.
 
 **[parqueo.md](parqueo.md)** — El cobro por parqueo: perfiles con seguro y sin seguro, tramos,
 gracia, topes, ajustes por orden, sus siete estados, cómo se cuenta, dónde entra al dinero, cuándo
