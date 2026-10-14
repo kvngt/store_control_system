@@ -413,6 +413,16 @@ const CASES = [
   // devuelve cero filas. Basta con que no vea nada; un REVOKE futuro daría "denegado" y también pasa.
   anon({ id: 'SEC-160', desc: 'Sin sesión no se lee orden_parqueo directamente', method: 'GET', path: () => '/rest/v1/orden_parqueo?select=id', expect: 'denied-or-empty' }),
   tech({ id: 'SEC-161', desc: 'Un técnico no lee parqueo_tramos directamente', method: 'GET', path: () => '/rest/v1/parqueo_tramos?select=id', expect: 'denied-or-empty' }),
+  anon({ id: 'SEC-162', desc: 'Sin sesión no se programa el próximo servicio', method: 'POST', path: () => rpc('programar_proximo_servicio'), body: { p_orden_id: ZERO_UUID, p_fecha: '2026-11-01', p_millas: 50000, p_nota: 'Aceite' }, expect: 'denied' }),
+  anon({ id: 'SEC-163', desc: 'Sin sesión no se quita el próximo servicio', method: 'POST', path: () => rpc('quitar_proximo_servicio'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-164', desc: 'Sin sesión no se descarta la sugerencia de próximo servicio', method: 'POST', path: () => rpc('descartar_sugerencia_proximo_servicio'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-165', desc: 'Sin sesión no se sugiere el próximo servicio', method: 'POST', path: () => rpc('sugerir_proximo_servicio'), body: { p_orden_id: ZERO_UUID, p_fecha: '2026-11-01', p_millas: 50000, p_nota: 'Aceite' }, expect: 'denied' }),
+  tech({ id: 'SEC-166', desc: 'Un técnico no programa el próximo servicio', method: 'POST', path: () => rpc('programar_proximo_servicio'), body: { p_orden_id: ZERO_UUID, p_fecha: '2026-11-01', p_millas: 50000, p_nota: 'Aceite' }, expect: 'denied' }),
+  tech({ id: 'SEC-167', desc: 'Un técnico no quita el próximo servicio', method: 'POST', path: () => rpc('quitar_proximo_servicio'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  tech({ id: 'SEC-168', desc: 'Un técnico no descarta la sugerencia de próximo servicio', method: 'POST', path: () => rpc('descartar_sugerencia_proximo_servicio'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  admin({ id: 'SEC-169', desc: 'Ni un admin llama datos_servicio por RPC (solo service_role)', method: 'POST', path: () => rpc('datos_servicio'), body: { p_token: ZERO_TOKEN }, expect: 'denied' }),
+  tech({ id: 'SEC-170', desc: 'Un técnico no lee orden_proximo_servicio de una orden ajena', needs: ['ORDEN_AJENA'], method: 'GET', path: (c) => `/rest/v1/orden_proximo_servicio?select=orden_id&orden_id=eq.${c.ORDEN_AJENA}`, expect: 'empty' }),
+  anon({ id: 'SEC-171', desc: 'Portal con servicio inexistente responde 404 con no_existe', method: 'GET', path: () => `/functions/v1/portal?servicio=${ZERO_TOKEN}`, expect: { status: 404 } }),
 ];
 
 function evaluate(expect, r) {

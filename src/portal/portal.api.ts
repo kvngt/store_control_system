@@ -1,4 +1,4 @@
-import type { PortalResponse } from './portal.types';
+import type { PortalResponse, ServiceResponse } from './portal.types';
 
 // fetch directo a la edge function: sin el cliente de Supabase, que el portal no
 // necesita y pesa más que todo el resto del paquete.
@@ -14,6 +14,18 @@ export class PortalRequestError extends Error {
     super(`portal HTTP ${status}`);
     this.status = status;
   }
+}
+
+/** El próximo servicio (página del sticker). 404 es respuesta normal (servicio inexistente o quitado). */
+export async function fetchService(token: string, signal?: AbortSignal): Promise<ServiceResponse> {
+  const res = await fetch(`${portalEndpoint()}?servicio=${encodeURIComponent(token)}`, {
+    signal,
+    referrerPolicy: 'no-referrer',
+  });
+  if (res.ok || res.status === 404) {
+    return (await res.json()) as ServiceResponse;
+  }
+  throw new PortalRequestError(res.status);
 }
 
 /** El reporte. 404 y 410 son respuestas normales (enlace inexistente, vencido o revocado). */

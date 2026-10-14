@@ -536,6 +536,8 @@ que no encuentra lo marca SKIP.
 | Historial de la orden | SEC-91 a SEC-95 | Sin sesión ni un técnico leen `historial_orden`; nadie lo escribe ni lo corrige por la API; ni un admin llama `trg_historial` (`20261010000004`) |
 | Reintentar correos | SEC-96 a SEC-98 | Sin sesión ni un técnico reintentan un correo ni los fallidos (`20261010000005`) |
 | Tareas con técnico | SEC-99 a SEC-105 | Un técnico no cambia el técnico de una tarea ni edita su asignación (los dos casos escriben el valor que la fila ya tiene y filtran por él: una regresión da FAIL sin mover ninguna comisión; SEC-100 se salta si el técnico de QA no tiene asignaciones), ni crea una tarea a su nombre; ni un admin llama los triggers del técnico de una tarea ni el recálculo por línea (`20261010000006`) |
+| Parqueo | SEC-148 a SEC-161 | Sin sesión ni un técnico ven ni ajustan el parqueo de una orden; ni un admin llama funciones o triggers internos de parqueo como RPC; técnico y anon no leen tablas de parqueo directamente (`20261010000028`) |
+| Próximo servicio y sticker | SEC-162 a SEC-171 | Sin sesión ni un técnico programan, quitan o descartan próximo servicio; sin sesión no se sugiere; técnico no lee próximo servicio de orden ajena; ni un admin llama `datos_servicio` por RPC; portal responde 404 con `no_existe` ante servicio inexistente (`20261010000029`) |
 
 **Cualquier FAIL es P0.**
 

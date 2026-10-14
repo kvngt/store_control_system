@@ -87,3 +87,7 @@ export type {
   CustomerEmailTemplate,
   OutboxState,
 } from './domain/customerPortal.types';
+export type {
+  OrderNextService,
+  NextServiceInput,
+} from './domain/nextService.types';

@@ -65,7 +65,12 @@ function formatValue(entry: OrderHistoryEntry, field: string, value: unknown, ct
     case 'tipo_trabajo':
       return SPECIALTY_KEY[String(value)] ? t(SPECIALTY_KEY[String(value)]) : String(value);
     case 'fecha_estimada_entrega':
+    case 'fecha':
+    case 'sugerido_fecha':
       return formatDay(String(value), ctx.language);
+    case 'millas':
+    case 'sugerido_millas':
+      return `${Number(value).toLocaleString('en-US')} mi`;
     case 'respondido_via':
       return t(`quotes.responseVia.${value}`);
     // Pedido → llegó (20261010000017). Vacío ya salió arriba como "—".

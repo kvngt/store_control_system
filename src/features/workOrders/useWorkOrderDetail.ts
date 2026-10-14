@@ -213,6 +213,11 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // administración lo mande. El bucket `reportes` también es solo admin.
   const canSendReport = isAdmin;
 
+  // Próximo servicio (20261010000029): admin programa en cualquier estado;
+  // técnico asignado sugiere mientras la orden no esté entregada.
+  const canProgramNextService = isAdmin;
+  const canSuggestNextService = !isAdmin && isAssignedToMe && !isDelivered;
+
   // Lo que el técnico ve de dinero, y la razón por la que lo ve: su parte de la mano de
   // obra. Desde 20261009000000 la cuenta es por especialidad y con el porcentaje de cada
   // quien, así que ya no se hace aquí: la base la devuelve (`comisiones_estimadas`, la misma
@@ -1044,6 +1049,8 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     share,
     shareReport,
     closeShare,
+    canProgramNextService,
+    canSuggestNextService,
   };
 }
 

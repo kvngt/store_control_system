@@ -167,7 +167,7 @@ describe('workOrdersService: cambios de las órdenes en tiempo real', () => {
     workOrdersService.subscribeToChanges(vi.fn(), vi.fn());
     expect(mocks.bindings.map((b) => b.table).sort()).toEqual([
       'orden_asignaciones', 'orden_avances', 'orden_hallazgos', 'orden_labor', 'orden_media',
-      'orden_repuestos', 'ordenes_trabajo', 'presupuestos',
+      'orden_proximo_servicio', 'orden_repuestos', 'ordenes_trabajo', 'presupuestos',
     ]);
   });
 

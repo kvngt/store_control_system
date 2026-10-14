@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, CalendarX, CheckCircle2, ChevronRight, ClipboardCheck, FileQuestion, FileSignature, Mail, UserX } from 'lucide-react';
+import { AlertTriangle, CalendarX, CheckCircle2, ChevronRight, ClipboardCheck, FileQuestion, FileSignature, Mail, Tag, UserX } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { dashboardService } from '../../services/dashboard.service';
@@ -63,6 +63,7 @@ export default function AttentionCard({ sedeId }: { sedeId?: string }) {
     { key: 'presupuestos', icon: FileQuestion, label: t('attention.quotes'), group: data.presupuestos, tab: 'trabajos' },
     { key: 'sin_tecnico', icon: UserX, label: t('attention.unassigned'), group: data.sin_tecnico, tab: 'trabajos' },
     { key: 'por_revisar', icon: ClipboardCheck, label: t('attention.toReview'), group: data.por_revisar ?? { total: 0, ordenes: [] } },
+    { key: 'sugerencias_servicio', icon: Tag, label: t('attention.serviceSuggestions'), group: data.sugerencias_servicio ?? { total: 0, ordenes: [] }, tab: 'cobro' },
     { key: 'vencidas', icon: CalendarX, label: t('attention.overdue'), group: data.vencidas },
   ].filter((row) => row.group.total > 0);
   const emails = data.correos.total;

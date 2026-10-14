@@ -22,6 +22,7 @@ solo en la interfaz, se dice.
 8. [Presupuestos y autorización](#8-presupuestos-y-autorización)
 9. [Retención y limpieza](#9-retención-y-limpieza)
 10. [Riesgos conocidos y decisiones abiertas](#10-riesgos-conocidos-y-decisiones-abiertas)
+11. [Próximo servicio y sticker](#11-próximo-servicio-y-sticker)
 
 ---
 
@@ -326,6 +327,8 @@ mismos permisos ("técnico"); cambia el tipo de tarea.
 | Ver el **estado de cada línea** (sin autorizar, esperando, autorizada, no realizar) | ✅ | ✅ | ❌ |
 | **Enviar presupuesto**, **registrar autorización**, cancelar presupuesto | ✅ | ❌ | ❌ |
 | Cambiar el estado de una línea con un UPDATE directo | ❌ | ❌ | ❌ |
+| **Programar o quitar próximo servicio** e imprimir sticker | ✅ | ❌ | ❌ |
+| **Sugerir próximo servicio** | ✅ | ✅ (orden no entregada) | ❌ |
 | Mover su tarjeta en el Kanban | ✅ todas | ✅ (excepto a o desde Entregado) | ❌ |
 
 **Toda esta tabla la impone la base de datos** (migración `20260922000000`), con
@@ -688,3 +691,40 @@ resolverlas con el cliente.
     preguntas al taller en [pagos-a-empleados.md](pagos-a-empleados.md).
 15. **El correo de "Entregado" espera 3 minutos** como cualquier cambio de estado, para
     agrupar ráfagas. *Decisión pendiente:* si la entrega debe avisar al instante.
+
+---
+
+## 11. Próximo servicio y sticker (`20261010000029`)
+
+Módulo para programar el siguiente mantenimiento recomendado para el vehículo (cambio de aceite, frenos, filtros, etc.) e imprimir un sticker para el parabrisas con un código QR que abre la página de seguimiento.
+
+### Quién programa y quién sugiere
+
+- **Solo administración programa o quita el próximo servicio** (`programar_proximo_servicio`, `quitar_proximo_servicio`). Un técnico no tiene permisos en la base de datos para programar, modificar o quitar servicios programados.
+- **Un técnico asignado puede sugerir** el próximo servicio (`sugerir_proximo_servicio`), aportando fecha estimada, kilometraje proyectado y una nota explicativa. Esto genera una notificación en la campana (`proximo_servicio_sugerido`) y aparece en el panel principal de administración (**Requiere atención** → **Sugerencias de próximo servicio**).
+- **Administración decide**: puede aceptar la sugerencia (lo que precarga los datos en el modal de programación e impresión) o descartarla (`descartar_sugerencia_proximo_servicio`). Programar un servicio descarta automáticamente la sugerencia si estaba pendiente.
+
+### El código QR no vence
+
+- A diferencia del enlace de la orden (`orden_enlaces.token`), que expira 90 días después de la entrega del vehículo, el código QR del sticker (`orden_proximo_servicio.codigo_qr`) **es permanente y no tiene fecha de caducidad**.
+- El sticker impreso permanece pegado en el parabrisas del cliente durante meses. El cliente debe poder escanearlo en cualquier momento para comprobar el estado de su vehículo y contactar al taller.
+- Si administración quita el servicio programado, el token se invalida y la página responde HTTP 404 (`{ estado: 'no_existe' }`) mostrando un aviso amigable con los datos del taller.
+
+### Privacidad estricta en la página pública (`/s/<token>`)
+
+- La página pública que abre el QR está diseñada para no revelar datos personales ni identificadores confidenciales ante extraños que puedan escanear el sticker del parabrisas.
+- **Nunca expone el nombre del cliente, su teléfono personal, su correo, la placa del auto ni el VIN**.
+- Únicamente expone:
+  - Información del taller (nombre, logo, color, teléfonos de contacto).
+  - Información descriptiva básica del vehículo (año, marca, modelo y color).
+  - Próximo servicio (fecha recomendada, kilometraje, nota explicativa).
+  - Semáforo interactivo de estado de mantenimiento (`al_dia`, `pronto`, `vencido`, `solo_millas`).
+  - Botón directo para **Agendar por WhatsApp** con mensaje predefinido con los datos del vehículo y el servicio.
+  - Botones para **Llamar al taller**.
+
+### Impresión de sticker térmico
+
+- Formato estándar de etiqueta de 62 mm de ancho × 50 mm de alto, compatible con impresoras térmicas (e.g. Brother QL o similares).
+- Código QR vectorizado (dibujado mediante rectángulos SVG/PDF con zona de silencio de 2 módulos), sin pixelación.
+- Tipografía mínima de 6 pt para garantizar legibilidad térmica.
+

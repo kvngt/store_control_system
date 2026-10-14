@@ -59,6 +59,8 @@ export const queryKeys = {
   parkingConfig: (sedeId?: string) => ['parking-config', sedeId] as const,
   /** Parqueo calculado y ajustes de una orden de trabajo. */
   orderParking: (orderId: string) => ['order-parking', orderId] as const,
+  /** Próximo servicio programado y sugerencias de una orden de trabajo. */
+  nextService: (orderId: string) => ['next-service', orderId] as const,
 } as const;
 
 /**

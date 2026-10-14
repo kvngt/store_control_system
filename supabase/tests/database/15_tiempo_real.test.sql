@@ -25,7 +25,8 @@ SELECT set_eq(
   ARRAY[
     'notificaciones',
     'ordenes_trabajo', 'orden_asignaciones', 'orden_labor', 'orden_repuestos',
-    'orden_avances', 'orden_media', 'presupuestos', 'orden_hallazgos'
+    'orden_avances', 'orden_media', 'presupuestos', 'orden_hallazgos',
+    'orden_proximo_servicio'
   ],
   'Realtime publica los avisos y las tablas de la orden, y nada más'
 );

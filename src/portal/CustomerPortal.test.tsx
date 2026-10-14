@@ -577,4 +577,35 @@ describe('CustomerPortal — la cuenta', () => {
     expect(screen.getByText('Parqueo').closest('.portal-line')).toHaveTextContent('$300.00');
     expect(screen.queryByText(/10 días × \$40\.00/)).not.toBeInTheDocument();
   });
+
+  it('muestra la tarjeta de próximo servicio cuando está programado', async () => {
+    mocks.fetchPortal.mockResolvedValue(
+      report({
+        proximo_servicio: {
+          fecha: '2026-11-15',
+          millas: 50000,
+          nota: 'Cambio de aceite y filtro sintético',
+        },
+      })
+    );
+    render(<CustomerPortal token={TOKEN} />);
+
+    expect(await screen.findByText('Próximo servicio recomendado')).toBeInTheDocument();
+    expect(screen.getByText('15 de noviembre de 2026')).toBeInTheDocument();
+    expect(screen.getByText('50,000 mi')).toBeInTheDocument();
+    expect(screen.getByText('Cambio de aceite y filtro sintético')).toBeInTheDocument();
+  });
+
+  it('no muestra la tarjeta de próximo servicio cuando no hay o viene null', async () => {
+    mocks.fetchPortal.mockResolvedValue(
+      report({
+        proximo_servicio: null,
+      })
+    );
+    render(<CustomerPortal token={TOKEN} />);
+
+    await screen.findByRole('heading', { name: /2019 Toyota Camry/ });
+    expect(screen.queryByText('Próximo servicio recomendado')).not.toBeInTheDocument();
+  });
 });
+

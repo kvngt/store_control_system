@@ -24,6 +24,7 @@ import {
   Plus,
   Receipt,
   Scale,
+  Tag,
   User,
   Wallet,
   Wrench,
@@ -36,9 +37,14 @@ import CollapsibleSection from '../../components/CollapsibleSection';
 import Tabs, { TabPanel, type TabItem } from '../../components/Tabs';
 import { useAuth } from '../../context/auth.context';
 import { useLanguage } from '../../context/language.context';
+import { useToast } from '../../context/toast.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import { useIsMobile } from '../../lib/useMediaQuery';
-import type { OrderStatus } from '../../types/database';
+import type { NextServiceInput, OrderStatus } from '../../types/database';
+import { nextServiceService } from '../../services/nextService.service';
+import { openStickerWindow } from './nextService';
+import NextServiceCard from './NextServiceCard';
+import ServiceStickerModal from './ServiceStickerModal';
 import LaborTable from './LaborTable';
 import PartsTable from './PartsTable';
 import PartsSummaryCard from './PartsSummaryCard';
@@ -59,7 +65,7 @@ import OrderInsuranceModal from './OrderInsuranceModal';
 import ParkingCard from '../parking/ParkingCard';
 import { parkingService } from '../../services/parking.service';
 import { queryKeys } from '../../lib/queryClient';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import PendingWorkNotice from './PendingWorkNotice';
 import { isApproved } from './lineState';
 import OrderBalanceCard from '../finance/OrderBalanceCard';
@@ -93,10 +99,10 @@ const TAB_SECTIONS: Record<string, readonly string[]> = {
   resumen: ['vehiculo', 'firma', 'tecnicos'],
   trabajos: ['mano_obra', 'repuestos', 'presupuesto', 'comision'],
   fotos: ['inspeccion', 'avances'],
-  cobro: ['totales', 'parqueo', 'balance', 'enlace'],
+  cobro: ['totales', 'parqueo', 'proximo_servicio', 'balance', 'enlace'],
   historial: ['historial'],
   tareas: ['tareas', 'comision'],
-  orden: ['vehiculo', 'inspeccion', 'repuestos', 'firma', 'tecnicos'],
+  orden: ['vehiculo', 'inspeccion', 'repuestos', 'firma', 'tecnicos', 'proximo_servicio'],
   avances: ['avances'],
 };
 
@@ -121,12 +127,18 @@ const LINKED_SECTION: Record<string, string> = { trabajos: 'mano_obra', tareas: 
 export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOrderDetailProps) {
   const { t } = useLanguage();
   const { confirmNavigation } = useUnsavedChanges();
-  const { user } = useAuth();
+  const { user, currentSede, allSedes } = useAuth();
+  const { showToast } = useToast();
+  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [addingOperatorId, setAddingOperatorId] = useState('');
   // El idioma del PDF que se descarga: lo elige administración (05/10/2026).
   const [pdfLanguage, setPdfLanguage] = useState<'es' | 'en'>('es');
   const [showInsuranceModal, setShowInsuranceModal] = useState(false);
+  const [stickerModal, setStickerModal] = useState<{
+    open: boolean;
+    initialData?: { fecha?: string | null; millas?: number | null; nota?: string | null } | null;
+  }>({ open: false });
 
   const isAdmin = user?.rol === 'admin';
   const tabIds: readonly string[] = isAdmin ? ADMIN_TABS : TECH_TABS;
@@ -239,6 +251,69 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   // sin preguntar. Pasa por los mismos guardias que la navegación del menú.
   const handleBack = () => {
     if (confirmNavigation()) onBack();
+  };
+
+  const orderSede = (order && allSedes?.find((s) => s.id === order.sede_id)) || currentSede;
+
+  const handleSaveNextService = async (data: NextServiceInput, _lang: 'es' | 'en') => {
+    if (!order) return;
+    await nextServiceService.program(order.id, data);
+    await queryClient.invalidateQueries({ queryKey: queryKeys.nextService(order.id) });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.workOrderDetail(order.id) });
+    showToast('success', t('nextService.programmedSuccess'));
+  };
+
+  const handleSaveAndPrintNextService = async (data: NextServiceInput, lang: 'es' | 'en') => {
+    if (!order) return;
+    // La ventana se abre aquí, todavía dentro del clic: después del primer `await` el iPhone la
+    // bloquea. El PDF llega a ella cuando termina de guardar.
+    const printWindow = openStickerWindow();
+    let row;
+    try {
+      row = await nextServiceService.program(order.id, data);
+    } catch (err) {
+      printWindow?.close();
+      throw err;
+    }
+    await queryClient.invalidateQueries({ queryKey: queryKeys.nextService(order.id) });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.workOrderDetail(order.id) });
+    showToast('success', t('nextService.programmedSuccess'));
+    if (!row.token) {
+      printWindow?.close();
+      return;
+    }
+    const { printServiceSticker } = await import('../../lib/serviceStickerPdf');
+    await printServiceSticker(
+      {
+        taller: {
+          nombre: orderSede?.nombre || '',
+          telefono: orderSede?.telefono || null,
+        },
+        vehiculo: {
+          anio: order.vehiculo?.anio || 0,
+          marca: order.vehiculo?.marca || '',
+          modelo: order.vehiculo?.modelo || '',
+          placa: order.vehiculo?.placa || '',
+        },
+        servicio: {
+          fecha: row.fecha,
+          millas: row.millas,
+          nota: row.nota,
+          token: row.token,
+        },
+        numero_orden: order.numero_orden,
+      },
+      lang,
+      printWindow
+    );
+  };
+
+  const handleSuggestNextService = async (data: NextServiceInput) => {
+    if (!order) return;
+    await nextServiceService.suggest(order.id, data);
+    await queryClient.invalidateQueries({ queryKey: queryKeys.nextService(order.id) });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.workOrderDetail(order.id) });
+    showToast('success', t('nextService.suggestedSuccess'));
   };
 
   // ----- las secciones ---------------------------------------------------------
@@ -500,6 +575,22 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     </CollapsibleSection>
   );
 
+  const nextServiceSection = (
+    <CollapsibleSection
+      {...sectionState('proximo_servicio')}
+      title={t('nextService.sectionTitle')}
+      icon={<Tag size={18} />}
+    >
+      <NextServiceCard
+        order={order}
+        isAdmin={detail.isAdmin}
+        canSuggest={detail.canSuggestNextService}
+        sede={orderSede}
+        onOpenModal={(data) => setStickerModal({ open: true, initialData: data })}
+      />
+    </CollapsibleSection>
+  );
+
   const techniciansSection = (
     <CollapsibleSection {...sectionState('tecnicos')} title={t('workOrders.assignedTechnician')} icon={<User size={18} />} summary={assignments.length || undefined}>
       <div className="card" style={{ marginTop: 'var(--space-4)' }}>
@@ -715,6 +806,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     avances: progressSection,
     totales: totalsSection,
     parqueo: parkingSection,
+    proximo_servicio: nextServiceSection,
     balance: balanceSection,
     enlace: customerLinkSection,
     historial: historySection,
@@ -772,6 +864,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           ? [{ key: 'sign', icon: PenLine, label: 'quickActions.sign', onClick: () => goTo('resumen', 'firma'), primary: order.estatus === 'recepcion' && hasLabor }]
           : []),
         { key: 'progress', icon: MessageSquarePlus, label: 'quickActions.progress', onClick: () => goTo('fotos', 'avances') },
+        { key: 'serviceSticker', icon: Tag, label: 'quickActions.serviceSticker', onClick: () => setStickerModal({ open: true, initialData: null }) },
         ...(detail.canRegisterAdvance
           ? [{ key: 'advance', icon: Banknote, label: 'quickActions.advance', onClick: detail.startAdvance }]
           : []),
@@ -784,6 +877,9 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         { key: 'progress', icon: MessageSquarePlus, label: 'quickActions.progress', onClick: () => goTo('avances', 'avances') },
         ...(order.estatus !== 'finalizado'
           ? [{ key: 'finding', icon: AlertTriangle, label: 'quickActions.reportFinding', onClick: () => setReportRequest((n) => n + 1) }]
+          : []),
+        ...(detail.canSuggestNextService
+          ? [{ key: 'suggestService', icon: Tag, label: 'quickActions.suggestService', onClick: () => setStickerModal({ open: true, initialData: null }) }]
           : []),
         { key: 'vehicle', icon: Car, label: 'quickActions.vehicle', onClick: () => goTo('orden', 'vehiculo') },
       ]
@@ -1140,6 +1236,18 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           order={order}
           onSave={detail.updateInsurance}
           onClose={() => setShowInsuranceModal(false)}
+        />
+      )}
+
+      {stickerModal.open && (
+        <ServiceStickerModal
+          mode={isAdmin ? 'admin' : 'tecnico'}
+          order={order}
+          initialData={stickerModal.initialData}
+          onSave={isAdmin ? handleSaveNextService : undefined}
+          onSaveAndPrint={isAdmin ? handleSaveAndPrintNextService : undefined}
+          onSuggest={!isAdmin ? handleSuggestNextService : undefined}
+          onClose={() => setStickerModal({ open: false })}
         />
       )}
 

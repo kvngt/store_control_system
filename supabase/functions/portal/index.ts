@@ -5,6 +5,7 @@
 // que lo que devuelve lo arma `datos_portal` campo por campo en la base.
 //
 //   GET  ?token=<token>                                   → el reporte
+//   GET  ?servicio=<token>                                → próximo servicio del sticker
 //   POST { token, accion: 'preferencia_correos', acepta }  → alta o baja de correos
 //   POST { token, accion: 'preferencia_idioma', idioma }   → idioma de los correos (es | en)
 //   POST { token, accion: 'responder_presupuesto', presupuesto_id, aprobadas, lineas,
@@ -119,7 +120,21 @@ async function withSignedUrls(data: PortalData): Promise<PortalData> {
 }
 
 async function handleGet(req: Request): Promise<Response> {
-  const token = new URL(req.url).searchParams.get('token') ?? '';
+  const url = new URL(req.url);
+  const servicio = url.searchParams.get('servicio');
+  if (servicio !== null) {
+    if (!TOKEN_RE.test(servicio)) return respond({ estado: 'no_existe' }, 404);
+    const { data, error } = await supabase.rpc('datos_servicio', { p_token: servicio });
+    if (error) {
+      console.error('datos_servicio', error.message);
+      return respond({ error: 'No se pudo cargar el servicio.' }, 500);
+    }
+    const res = data as { estado: string };
+    if (res?.estado === 'no_existe') return respond(res, 404);
+    return respond(res, 200);
+  }
+
+  const token = url.searchParams.get('token') ?? '';
   if (!TOKEN_RE.test(token)) return respond({ estado_enlace: 'no_encontrado' }, 404);
 
   const { data, error } = await supabase.rpc('datos_portal', { p_token: token });

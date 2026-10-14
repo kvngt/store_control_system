@@ -85,6 +85,7 @@ El cliente toca el botón del correo → restorifyauto.net/r/<token>
 | Avances | Solo fotos, videos y notas de voz de avances que un admin **publicó**, con fecha |
 | Recepción | Fecha, millaje, gasolina, observaciones, fotos de recepción visibles, firma |
 | Cuenta | Mano de obra y repuestos **autorizados** a **precio de venta**, total, depósito, pagado, saldo; lo **no autorizado** aparte y tachado; "Sus autorizaciones" (presupuesto, vía, fecha, conteos); cargo por parqueo si aplica (`20261010000028`: desglose por tramos y costo diario si está acumulando, aviso con fecha límite si está en período de gracia `por_empezar`, o indicación si fue exonerado) |
+| Próximo servicio | Si está programado (fecha, millas o nota), muestra la tarjeta destacada con fecha, millaje y nota (`proximo_servicio` en `datos_portal`, `20261010000029`) |
 | Contacto | Llamar al taller; WhatsApp y correo si la sede los tiene configurados |
 | Avisos por correo | Dejar de recibir / volver a recibir (solo si el cliente tiene correo) |
 
@@ -116,7 +117,7 @@ español. Lo que todavía no tiene traducción sale como se escribió.
 
 ### Carga separada
 
-`main.tsx` decide por la ruta: `/r/…` importa `portal/start.tsx`; todo lo demás,
+`main.tsx` decide por la ruta: `/r/…` o `/s/…` importa `portal/start.tsx`; todo lo demás,
 `appStart.tsx`. El portal **no descarga** la app del taller, el cliente de Supabase
 (habla con la función por `fetch`), Sentry (grabaría la sesión de una persona
 ajena), ni registra el service worker de push. Pesa unos 80 KB comprimidos
@@ -125,6 +126,32 @@ ajena), ni registra el service worker de push. Pesa unos 80 KB comprimidos
 Además `portal/start.tsx` pone `referrer=no-referrer` (el token no sale como
 Referer al tocar WhatsApp), `robots=noindex` y quita el manifest (instalar desde ahí
 pondría el login del taller en el teléfono del cliente).
+
+### Página del sticker de próximo servicio (`/s/<token>`) (`20261010000029`)
+
+Al escanear el QR del sticker impreso para el parabrisas (o abrir su enlace corto
+`restorifyauto.net/s/<token>`), se abre una página pública optimizada para teléfonos que
+muestra el próximo servicio programado:
+- **Token no expira**: a diferencia del reporte de orden (`/r/...`) que vence 90 días tras la
+  entrega, el token del sticker es un código de 64 caracteres hex que permanece válido para que
+  el cliente pueda consultar su mantenimiento meses después.
+- **Privacidad estricta**: solo expone los datos del taller (nombre, logo, color, teléfonos) y
+  del vehículo (año, marca, modelo y color). **Nunca expone el nombre del cliente, la placa ni
+  el VIN**.
+- **Semáforo interactivo** (`computeServiceStatus`):
+  - `al_dia` (verde): más de 14 días restantes.
+  - `pronto` (amarillo): 14 días o menos restantes o para hoy.
+  - `vencido` (rojo): la fecha ya pasó.
+  - `solo_millas` (azul): cuando no se definió fecha pero sí kilometraje recomendado.
+- **Acciones directas**:
+  - Botón **Agendar por WhatsApp**: abre chat con el taller con mensaje prellenado que
+    identifica el vehículo y el servicio sugerido.
+  - Botones **Llamar al taller**: listado de teléfonos de contacto de la sede.
+  - Selector de idioma (Español / English).
+- **Backend**: GET a la función `portal?servicio=<token>`, que ejecuta la RPC interna
+  `datos_servicio(token)`. Si el servicio no existe o fue revocado/quitado, responde HTTP 404
+  con `{ estado: 'no_existe' }` y la interfaz muestra una pantalla amigable para contactar al taller.
+
 
 ---
 
@@ -204,16 +231,20 @@ enlaces para revisarlos; una baja por GET daría de baja a todos sus usuarios.
 | Pieza | Dónde |
 |---|---|
 | Tabla del enlace, funciones, trigger | `supabase/migrations/20260923000000_customer_portal_and_emails.sql` |
-| Función pública del portal | `supabase/functions/portal/index.ts` (`verify_jwt = false`) |
+| Próximo servicio y sticker (`20261010000029`) | `supabase/migrations/20261010000029_proximo_servicio.sql` |
+| Función pública del portal (`?token=` y `?servicio=`) | `supabase/functions/portal/index.ts` (`verify_jwt = false`) |
 | Envío de correos | `supabase/functions/process-outbox/index.ts` (`sendEmail`) |
 | Plantillas | `supabase/functions/_shared/email/templates.ts` (TS puro; se prueba con Vitest) |
 | Página del cliente | `src/portal/` (`CustomerPortal.tsx`, `strings.ts`, `portal.api.ts`, `portal.css`) |
+| Página pública del sticker | `src/portal/ServicePage.tsx`, `src/portal/serviceStatus.ts` |
+| Generador de sticker térmico (PDF 62×50 mm) | `src/lib/serviceStickerPdf.ts` |
+| Modal y tarjeta de próximo servicio | `src/features/workOrders/ServiceStickerModal.tsx`, `src/features/workOrders/NextServiceCard.tsx` |
 | Arranque separado | `src/main.tsx`, `src/appStart.tsx`, `src/portal/start.tsx` |
 | Tarjeta del admin | `src/features/workOrders/CustomerLinkCard.tsx` |
 | Enviar reporte (fase 6) | `src/features/workOrders/ShareReportModal.tsx`, `src/services/reports.service.ts` (mensaje de WhatsApp) |
 | PDF de descarga | `src/lib/workOrderPdf.ts`, filtros en `src/lib/reportMedia.ts` |
-| Servicio | `src/services/customerPortal.service.ts` |
-| Pruebas | `src/lib/emailTemplates.test.ts`, `src/portal/CustomerPortal.test.tsx`, `src/features/workOrders/CustomerLinkCard.test.tsx`, `supabase/tests/database/04_portal_y_correos.test.sql` |
+| Servicios | `src/services/customerPortal.service.ts`, `src/services/nextService.service.ts` |
+| Pruebas | `src/lib/emailTemplates.test.ts`, `src/portal/CustomerPortal.test.tsx`, `src/portal/ServicePage.test.tsx`, `src/portal/serviceStatus.test.ts`, `src/lib/serviceStickerPdf.test.ts`, `src/features/workOrders/nextService.test.ts`, `supabase/tests/database/04_portal_y_correos.test.sql`, `supabase/tests/database/34_proximo_servicio.test.sql` |
 
 ### Funciones SQL
 
@@ -225,10 +256,16 @@ enlaces para revisarlos; una baja por GET daría de baja a todos sus usuarios.
 | `enviar_reporte_cliente(orden)` | Admin (RPC) | "Enviar por correo" del reporte; asegura el enlace, devuelve `{correo: encolado \| sin_correo, token}` |
 | `encolar_correo_cliente(...)` | Interna | Valida correo y baja, asegura el enlace, encola o agrupa |
 | `trg_portal_on_order_change` | Trigger | Firma → enlace + recepción; estatus → aviso y vencimiento. Nunca rompe la operación (EXCEPTION → WARNING) |
-| `datos_portal(token)` | `service_role` (función `portal`) | El JSON del cliente; cuenta el acceso |
+| `datos_portal(token)` | `service_role` (función `portal`) | El JSON del cliente (incluye `proximo_servicio`); cuenta el acceso |
+| `datos_servicio(token)` | `service_role` (función `portal`) | El JSON público del sticker `/s/` (taller, vehículo sin datos personales, servicio); no expone cliente ni placa |
+| `programar_proximo_servicio(orden, fecha, millas, nota)` | Admin (RPC) | Programa el próximo servicio, genera `codigo_qr` de 64 hex y descarta sugerencia si había |
+| `quitar_proximo_servicio(orden)` | Admin (RPC) | Quita el servicio programado de la orden |
+| `sugerir_proximo_servicio(orden, fecha, millas, nota)` | Técnico asignado (RPC) | Sugiere fecha/millas/nota y notifica a administración |
+| `descartar_sugerencia_proximo_servicio(orden)` | Admin (RPC) | Descarta la sugerencia del técnico |
 | `preferencia_correos_portal(token, acepta)` | `service_role` | Alta o baja; la baja cancela lo pendiente |
 | `datos_correo(id)` | `service_role` (`process-outbox`) | Contexto actual para redactar |
 | `marcar_estatus_enviado(id, estatus)` | `service_role` | Recuerda qué estado se anunció |
+
 
 ### Columnas nuevas
 

@@ -42,6 +42,10 @@ export interface AttentionSummary {
    * mientras la base no tenga la migración.
    */
   por_autorizar?: AttentionGroup;
+  /**
+   * Órdenes con sugerencia de próximo servicio hecha por el técnico (20261010000029).
+   */
+  sugerencias_servicio?: AttentionGroup;
   correos: { total: number };
 }
 

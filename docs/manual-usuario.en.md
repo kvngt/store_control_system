@@ -688,6 +688,27 @@ Each order has a unique web link (`restorifyauto.net/r/...`) generated automatic
 - **Send report**: opens a window to share the customer link directly by email or WhatsApp.
 - **Download PDF**: generates a printable or archivable document with order details, published photos, authorized work, totals and signature. Next to the button, the **PDF language** selector allows choosing whether to generate in Spanish (**ES**) or English (**EN**).
 
+#### Next service sticker
+<!-- rol: admin -->
+
+Upon finishing or delivering a job (for instance, an oil change or periodic maintenance), administration can schedule the recommended next service and print a windshield sticker for the vehicle:
+- In quick actions or on the **Next service** card, tap **Service sticker** or **Schedule next service**.
+- Enter the **Recommended date** (or use the quick buttons: 3 months, 6 months, 1 year), the **Recommended mileage** (+3,000, +5,000, +10,000 over intake mileage), and a **Service note** (for example: "Synthetic 5W-30 Oil + Filter").
+- When tapping **Save & print**, the system generates a PDF formatted for standard thermal label printers (62 × 50 mm) featuring the shop logo, vehicle details, date, mileage, note, and a vectorized QR code.
+- The QR code opens the public sticker page (`restorifyauto.net/s/...`). When scanned, the customer sees the maintenance status with an interactive traffic-light indicator and direct buttons to message via WhatsApp or call the shop. For privacy, this public page **never displays the customer's name or vehicle license plate**.
+- If a technician submitted a service suggestion, the card displays **Technician suggestion** with buttons to **Accept suggestion** (preloads the data for printing) or **Dismiss suggestion**.
+- To remove a scheduled service, tap **Remove next service**.
+
+#### Suggesting the next service
+<!-- rol: tecnico -->
+
+If while performing the work you notice that the vehicle will need future maintenance (for example, next oil change, brake pads, or timing belt):
+- In the quick actions on the order detail or in the **Jobs** tab, tap the **Suggest service** button.
+- Select the estimated date, projected mileage, and an explanatory note for administration.
+- When tapping **Send suggestion**, administration is notified on their main dashboard (**Requires attention** → **Next service suggestions**) and via the notification bell with the alert «Next service suggested».
+- Administration will review the suggestion and can schedule it and print the corresponding thermal sticker.
+
+
 #### Archiving an order
 <!-- rol: admin -->
 
@@ -835,6 +856,7 @@ while the app is open, with a brief on-screen message.
 | **Quote without a response** | Administrators, once a day if a quote has gone more than 24 hours without a response |
 | **Quote answered** / **Work not authorized** | Assigned technicians, when the customer answers the quote, with what was authorized or not |
 | **Commission approved** | Each technician, when administration accepts their commission, with the accepted amount |
+| **Next service suggested** | Administrators, when a technician suggests the date or mileage for the next service |
 | **Past the delivery date** | Administrators and assigned technicians, once a day for each overdue order. **It replaces the previous day's notice**: there is only one per order, with the days overdue up to date |
 
 ### Notifications on your phone (push)

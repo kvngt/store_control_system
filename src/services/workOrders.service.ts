@@ -41,7 +41,8 @@ import { quotesService } from './quotes.service';
  */
 const ORDER_TABLES = [
   'ordenes_trabajo', 'orden_asignaciones', 'orden_labor', 'orden_repuestos',
-  'orden_avances', 'orden_media', 'presupuestos', 'orden_hallazgos'
+  'orden_avances', 'orden_media', 'presupuestos', 'orden_hallazgos',
+  'orden_proximo_servicio'
 ] as const;
 
 /**

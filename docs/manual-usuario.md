@@ -688,6 +688,27 @@ Cada orden cuenta con un enlace web único (`restorifyauto.net/r/...`) que se ge
 - **Enviar reporte**: abre una ventana para compartir el enlace del cliente directamente por correo electrónico o por WhatsApp.
 - **Descargar PDF**: genera un documento para imprimir o archivar con los datos de la orden, fotos publicadas, trabajos autorizados, totales y firma. A la par del botón, el selector **Idioma del PDF** permite elegir si se genera en español (**ES**) o en inglés (**EN**).
 
+#### Sticker de próximo servicio
+<!-- rol: admin -->
+
+Al finalizar o entregar un trabajo (por ejemplo, cambio de aceite o mantenimiento preventivo), administración puede programar el próximo servicio recomendado e imprimir un sticker para el parabrisas del vehículo:
+- En las acciones rápidas o en la tarjeta **Próximo servicio**, pulsa **Sticker de servicio** o **Programar próximo servicio**.
+- Indica la **Fecha recomendada** (o usa los botones rápidos: 3 meses, 6 meses, 1 año), las **Millas recomendadas** (+3,000, +5,000, +10,000 sobre las millas de ingreso) y una **Nota del servicio** (por ejemplo: "Aceite 5W-30 sintético + filtro").
+- Al presionar **Guardar e imprimir**, el sistema genera un PDF en formato estándar para impresoras térmicas de etiquetas (62 × 50 mm) con el logo del taller, los datos del vehículo, fecha, kilometraje, nota y un código QR vectorizado.
+- El código QR lleva a la página pública del sticker (`restorifyauto.net/s/...`). Al escanearlo, el cliente ve el estado de su mantenimiento con un semáforo interactivo y botones directos para agendar por WhatsApp o llamar al taller. Por privacidad, esta página pública **nunca muestra el nombre del cliente ni la placa del vehículo**.
+- Si un técnico dejó una sugerencia de servicio, la tarjeta muestra **Sugerencia del técnico** con un botón para **Aceptar sugerencia** (precarga los datos para imprimir) o **Descartar sugerencia**.
+- Para eliminar un servicio programado, pulsa **Quitar próximo servicio**.
+
+#### Sugerir el próximo servicio
+<!-- rol: tecnico -->
+
+Si al realizar el trabajo notas que el vehículo necesitará mantenimiento futuro (por ejemplo, próximo cambio de aceite, pastillas de freno o bandas):
+- En las acciones rápidas del detalle de la orden o en la pestaña **Tareas**, pulsa el botón **Sugerir servicio**.
+- Selecciona la fecha estimada, las millas proyectadas y una nota explicativa para administración.
+- Al pulsar **Enviar sugerencia**, se notifica a administración en su panel principal (**Requiere atención** → **Sugerencias de próximo servicio**) y en la campana con el aviso «Próximo servicio sugerido».
+- Administración revisará la sugerencia y podrá programarla e imprimir el sticker térmico correspondiente.
+
+
 #### Archivar una orden
 <!-- rol: admin -->
 
@@ -836,6 +857,7 @@ mientras la app está abierta, con un mensaje breve en pantalla.
 | **Presupuesto sin respuesta** | Administradores, una vez al día si un presupuesto lleva más de 24 horas sin respuesta |
 | **Trabajos autorizados** / **Trabajo no autorizado** | Técnicos asignados, cuando se responde el presupuesto con lo que se autorizó o rechazó |
 | **Comisión aprobada** | Cada técnico, cuando administración acepta su comisión, con el monto aceptado |
+| **Próximo servicio sugerido** | Administradores, cuando un técnico sugiere la fecha o millas del siguiente servicio |
 | **Pasó la fecha de entrega** | Administradores y técnicos asignados, una vez al día por cada orden atrasada. **Reemplaza al del día anterior**: hay uno solo por orden, con los días de retraso al día |
 
 ### Notificaciones en el teléfono (push)

@@ -187,6 +187,12 @@ export interface PortalReport {
    * el PDF lo usaba y el enlace mostraba todo en español. Ausente en la base anterior.
    */
   traducciones?: Record<string, string>;
+  /** Próximo servicio recomendado (20261010000029). */
+  proximo_servicio?: {
+    fecha: string | null;
+    millas: number | null;
+    nota: string | null;
+  } | null;
   urls_vencen_en: string;
 }
 
@@ -197,3 +203,44 @@ export interface PortalUnavailable {
 }
 
 export type PortalResponse = PortalReport | PortalUnavailable;
+
+// ---- Página pública de próximo servicio (/s/<código>, datos_servicio) ----
+/** Datos del taller expuestos públicamente en /s/<código>. */
+export interface ServiceWorkshopInfo {
+  nombre: string;
+  logo_url: string | null;
+  color: string | null;
+  telefonos: PortalPhoneContact[];
+}
+
+/** Datos del vehículo expuestos públicamente en /s/<código> (sin placa ni VIN). */
+export interface ServiceVehicleInfo {
+  anio: number;
+  marca: string;
+  modelo: string;
+  color: string;
+}
+
+/** Detalle del próximo servicio programado. */
+export interface ServiceDetail {
+  fecha: string | null;
+  millas: number | null;
+  nota: string | null;
+}
+
+/** Respuesta exitosa de datos_servicio (/s/<código>). */
+export interface ServicePortalData {
+  estado: 'ok';
+  taller: ServiceWorkshopInfo;
+  vehiculo: ServiceVehicleInfo;
+  servicio: ServiceDetail;
+  idioma: string;
+}
+
+/** Respuesta cuando el código no existe o el servicio fue quitado. */
+export interface ServicePortalNotFound {
+  estado: 'no_existe';
+}
+
+/** Respuesta completa de datos_servicio. */
+export type ServiceResponse = ServicePortalData | ServicePortalNotFound;

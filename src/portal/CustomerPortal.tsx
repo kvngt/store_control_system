@@ -21,6 +21,7 @@ import {
   Smartphone,
   Video,
   Package,
+  Tag,
   Wrench,
   X,
 } from 'lucide-react';
@@ -481,6 +482,44 @@ function Report({
           </div>
         )}
       </section>
+
+      {/* Próximo servicio recomendado (20261010000029) */}
+      {report.proximo_servicio && (report.proximo_servicio.fecha || report.proximo_servicio.millas !== null) && (
+        <section className="portal-card" data-testid="next-service-card">
+          <h2 className="portal-section-title">
+            <Tag size={18} /> {s.nextServiceCard.title}
+          </h2>
+          <div className="portal-service-grid" style={{ margin: 'var(--space-3) 0 0' }}>
+            {report.proximo_servicio.fecha && (
+              <div className="portal-service-item">
+                <div className="portal-service-item-label">
+                  <Calendar size={14} />
+                  <span>{s.nextServiceCard.date}</span>
+                </div>
+                <div className="portal-service-item-value">{fmt.date(report.proximo_servicio.fecha)}</div>
+              </div>
+            )}
+            {report.proximo_servicio.millas !== null && report.proximo_servicio.millas !== undefined && (
+              <div className="portal-service-item">
+                <div className="portal-service-item-label">
+                  <Gauge size={14} />
+                  <span>{s.nextServiceCard.miles}</span>
+                </div>
+                <div className="portal-service-item-value">{fmt.number(report.proximo_servicio.millas)} mi</div>
+              </div>
+            )}
+            {report.proximo_servicio.nota && (
+              <div className="portal-service-item" style={{ gridColumn: '1 / -1' }}>
+                <div className="portal-service-item-label">
+                  <Wrench size={14} />
+                  <span>{s.nextServiceCard.note}</span>
+                </div>
+                <div className="portal-service-item-value">{report.proximo_servicio.nota}</div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       <AccountSection report={report} s={s} fmt={fmt} language={language} />
 

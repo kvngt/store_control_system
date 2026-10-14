@@ -104,6 +104,25 @@ describe('AttentionCard', () => {
     expect(screen.getByTestId('where')).toHaveTextContent('/settings');
   });
 
+  it('muestra sugerencias de servicio y lleva a cobro', async () => {
+    mocks.getAttention.mockResolvedValue({
+      hallazgos: EMPTY,
+      presupuestos: EMPTY,
+      sin_tecnico: EMPTY,
+      vencidas: EMPTY,
+      por_revisar: EMPTY,
+      correos: { total: 0 },
+      sugerencias_servicio: { total: 1, ordenes: [{ id: 'o5', numero_orden: 'OT-5' }] },
+    });
+    const user = userEvent.setup();
+    renderCard();
+
+    const card = await screen.findByRole('region', { name: 'Requiere atención' });
+    expect(within(card).getByText(/Sugerencias de próximo servicio por revisar/)).toBeInTheDocument();
+    await user.click(within(card).getByRole('button', { name: 'OT-5' }));
+    expect(screen.getByTestId('where')).toHaveTextContent('/work-orders?open=o5&tab=cobro');
+  });
+
   it('sin nada pendiente lo dice', async () => {
     mocks.getAttention.mockResolvedValue({
       hallazgos: EMPTY,

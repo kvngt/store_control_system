@@ -1,7 +1,8 @@
 import { StrictMode } from 'react';
 import type { Root } from 'react-dom/client';
 import CustomerPortal from './CustomerPortal';
-import { tokenFromPath } from './path';
+import ServicePage from './ServicePage';
+import { isServicePath, serviceTokenFromPath, tokenFromPath } from './path';
 import './portal.css';
 
 function setMeta(name: string, content: string) {
@@ -14,7 +15,7 @@ function setMeta(name: string, content: string) {
   meta.content = content;
 }
 
-/** El reporte del cliente. La app del taller arranca aparte (ver main.tsx). */
+/** El portal del cliente o la página de próximo servicio. La app del taller arranca aparte (ver main.tsx). */
 export function start(root: Root) {
   // El token está en la URL: que no salga como Referer al tocar WhatsApp o el logo,
   // y que ningún buscador indexe la página.
@@ -26,9 +27,16 @@ export function start(root: Root) {
   document.querySelector('link[rel="manifest"]')?.remove();
   document.documentElement.setAttribute('data-theme', 'light');
 
+  const pathname = window.location.pathname;
+  const isService = isServicePath(pathname);
+
   root.render(
     <StrictMode>
-      <CustomerPortal token={tokenFromPath(window.location.pathname)} />
+      {isService ? (
+        <ServicePage token={serviceTokenFromPath(pathname)} />
+      ) : (
+        <CustomerPortal token={tokenFromPath(pathname)} />
+      )}
     </StrictMode>
   );
 }

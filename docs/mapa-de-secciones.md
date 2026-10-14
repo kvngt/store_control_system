@@ -209,6 +209,19 @@ egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
 | Pruebas | `services/parking.service.test.ts`, `features/parking/ParkingSettingsCard.test.tsx`, `features/parking/ParkingCard.test.tsx`; pgTAP `33_parqueo.test.sql`; `scripts/qa/api-security.mjs` (SEC-142..160) |
 | Documento | [parqueo.md](parqueo.md) |
 
+## Próximo servicio y sticker
+
+| | |
+|---|---|
+| Módulo | `features/workOrders/ServiceStickerModal.tsx` (diálogo para programar, prellenar e imprimir sticker), `features/workOrders/NextServiceCard.tsx` (tarjeta en detalle de la orden), `features/dashboard/AttentionCard.tsx` (aviso en Requiere atención del panel) |
+| Lógica pura | `features/workOrders/nextService.ts` (cálculo de fechas y kilometrajes sugeridos a 3/6/12 meses y +3k/+5k/+10k mi) |
+| Servicio y tipos | `services/nextService.service.ts`, `types/domain/nextService.types.ts` |
+| Generador de sticker | `lib/serviceStickerPdf.ts` (PDF 62 × 50 mm para impresora térmica de etiquetas con QR vectorizado) |
+| Portal y página pública | `portal/ServicePage.tsx` (página pública `/s/<token>` con semáforo y agendamiento por WhatsApp, sin PII), `portal/serviceStatus.ts`, tarjeta en `portal/CustomerPortal.tsx` |
+| Base | Tabla `orden_proximo_servicio`; RPCs `programar_proximo_servicio`, `quitar_proximo_servicio`, `sugerir_proximo_servicio`, `descartar_sugerencia_proximo_servicio`, `datos_servicio`; migración `20261010000029_proximo_servicio.sql` |
+| Pruebas | `services/nextService.service.test.ts`, `features/workOrders/nextService.test.ts`, `features/workOrders/NextService.smoke.test.tsx`, `lib/serviceStickerPdf.test.ts`, `portal/serviceStatus.test.ts`, `portal/ServicePage.test.tsx`, `portal/CustomerPortal.test.tsx`; pgTAP `34_proximo_servicio.test.sql`; API Security SEC-162..171 en `scripts/qa/api-security.mjs` |
+
+
 ## Configuración y sedes
 
 | | |
