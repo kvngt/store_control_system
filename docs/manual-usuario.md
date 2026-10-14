@@ -207,6 +207,7 @@ Es la pantalla de inicio. Resume cómo va el taller.
   - **Tareas sin técnico: nadie cobra su comisión**: nadie cobra la comisión de esas tareas hasta que se les asigne un técnico. Abre la
     orden en Trabajos.
   - **Terminadas por revisar y marcar listas para entregar**: órdenes donde el personal terminó el trabajo, esperando que administración las revise y las marque listas para entregar al cliente.
+  - **Sugerencias de próximo servicio por revisar**: lo que un técnico propuso para el siguiente servicio del vehículo. Abre la orden en Cobro y cliente.
   - **Órdenes con la entrega vencida** (las finalizadas no cuentan).
   - **Correos al cliente con error (últimas 72 h)**: el botón **Revisar** lleva a
     Configuración, donde se pueden reintentar.
@@ -481,11 +482,11 @@ Distribuídas por pestaña, las secciones son:
   - **Resumen**: **Información del Vehículo**, **Firma del Cliente**, **Técnico Asignado**. (Arriba muestra las alertas de trabajo adicional reportado, tareas sin técnico y trabajos pendientes de visitas anteriores).
   - **Trabajos**: **Mano de obra**, **Descripción de Repuestos**, **Presupuesto**, **Reparto de la comisión**.
   - **Fotos y avances**: **Inspección 360°**, **Avance del Trabajo**.
-  - **Cobro y cliente**: **Totales**, **Parqueo** (si está habilitado en la sede), **Balance de la orden** (si está entregada), **Enlace del cliente**.
+  - **Cobro y cliente**: **Totales**, **Parqueo** (si está habilitado en la sede), **Próximo servicio**, **Balance de la orden** (si está entregada), **Enlace del cliente**.
   - **Historial**: bitácora inalterable de todos los cambios de la orden.
 - **En la vista de Técnico**:
   - **Tareas**: lista de **Tareas** asignadas y tarjeta **Tu comisión estimada**.
-  - **Orden**: **Información del Vehículo**, **Inspección 360°**, **Descripción de Repuestos** (sin montos de dinero), **Firma del Cliente**, **Técnico Asignado**.
+  - **Orden**: **Información del Vehículo**, **Inspección 360°**, **Descripción de Repuestos** (sin montos de dinero), **Firma del Cliente**, **Técnico Asignado**, **Próximo servicio** (solo para sugerir).
   - **Avances**: bitácora de **Avance del Trabajo**.
 
 #### Trabajo adicional reportado por el técnico
@@ -691,23 +692,64 @@ Cada orden cuenta con un enlace web único (`restorifyauto.net/r/...`) que se ge
 #### Sticker de próximo servicio
 <!-- rol: admin -->
 
-Al finalizar o entregar un trabajo (por ejemplo, cambio de aceite o mantenimiento preventivo), administración puede programar el próximo servicio recomendado e imprimir un sticker para el parabrisas del vehículo:
-- En las acciones rápidas o en la tarjeta **Próximo servicio**, pulsa **Sticker de servicio** o **Programar próximo servicio**.
-- Indica la **Fecha recomendada** (o usa los botones rápidos: 3 meses, 6 meses, 1 año), las **Millas recomendadas** (+3,000, +5,000, +10,000 sobre las millas de ingreso) y una **Nota del servicio** (por ejemplo: "Aceite 5W-30 sintético + filtro").
-- Al presionar **Guardar e imprimir**, el sistema genera un PDF en formato estándar para impresoras térmicas de etiquetas (62 × 50 mm) con el logo del taller, los datos del vehículo, fecha, kilometraje, nota y un código QR vectorizado.
-- El código QR lleva a la página pública del sticker (`restorifyauto.net/s/...`). Al escanearlo, el cliente ve el estado de su mantenimiento con un semáforo interactivo y botones directos para agendar por WhatsApp o llamar al taller. Por privacidad, esta página pública **nunca muestra el nombre del cliente ni la placa del vehículo**.
-- Si un técnico dejó una sugerencia de servicio, la tarjeta muestra **Sugerencia del técnico** con un botón para **Aceptar sugerencia** (precarga los datos para imprimir) o **Descartar sugerencia**.
-- Para eliminar un servicio programado, pulsa **Quitar próximo servicio**.
+Al terminar un trabajo (un cambio de aceite, un mantenimiento), administración puede dejar anotado cuándo le toca volver al vehículo e imprimir un sticker para el parabrisas. Se hace desde la orden, en cualquier estado: también en una orden ya entregada o archivada, por ejemplo para reimprimir un sticker perdido (en una orden entregada, desde la tarjeta **Próximo servicio**, porque las acciones rápidas ya no aparecen).
+
+![La tarjeta Próximo servicio, sin servicio programado.](../public/ayuda/es/45.webp)
+
+**Programar el próximo servicio**
+1. Abre la orden y pulsa **Sticker de servicio** en las acciones rápidas, o ve a la pestaña **Cobro y cliente** → tarjeta **Próximo servicio** → **Programar próximo servicio**.
+2. Toca uno de los **Presets rápidos** o llena los campos a mano:
+
+   | Preset | Millas | Fecha |
+   |---|---|---|
+   | Aceite sintético | +5,000 sobre las de ingreso | en 6 meses |
+   | Aceite convencional | +3,000 | en 3 meses |
+   | Revisión general | +5,000 | en 6 meses |
+   | Garantía de pintura | sin millas | en 30 días |
+
+3. Ajusta lo que haga falta: **Fecha recomendada**, **Millas recomendadas** y **Nota o servicio** (hasta 120 caracteres). Hace falta al menos la fecha o las millas. La fecha no puede ser anterior a hoy y las millas no pueden ser menores que las de ingreso.
+4. Elige el **Idioma del sticker** (**Español** o **Inglés**). Viene marcado el idioma del cliente.
+5. Pulsa **Guardar** (solo lo anota) o **Guardar e imprimir**.
+
+![El diálogo del sticker, con un preset elegido.](../public/ayuda/es/46.webp)
+
+**Qué lleva el sticker.** Mide 62 × 50 mm, en blanco y negro: el nombre y el teléfono del taller, «PRÓXIMO SERVICIO» con la fecha y las millas, la nota, un código QR, y abajo el año, marca y modelo del vehículo, la placa y el número de orden.
+
+![El sticker de 62 × 50 mm.](../public/ayuda/es/51.webp)
+
+**Imprimir.** Se abre una pestaña nueva con el PDF del sticker; desde ahí se imprime. Si el navegador bloquea la pestaña, el PDF se descarga. Con una Brother QL-810W y el rollo continuo de 62 mm (DK-4205), la configuración recomendada es:
+- **Windows**: papel de **62 mm** continuo con largo de **50 mm** (o un tamaño personalizado de 62 × 50), escala **100 %** o *tamaño real*, sin «ajustar a la página».
+- **iPhone o iPad**: abre el PDF, toca **Compartir** → **Imprimir** y elige la impresora. Si no ofrece 62 × 50, prueba con la app **Brother iPrint&Label**.
+
+**Qué ve el cliente al escanear el QR.** Una página sencilla (`restorifyauto.net/s/…`) con el taller, el vehículo y el próximo servicio con un semáforo: **Al día** (faltan más de 14 días), **Próximo a vencer** (14 días o menos) o **Vencido**. Si solo hay millas, dice «A las N millas», sin semáforo. Debajo, los botones **Agendar por WhatsApp** y **Llamar al taller**, con los teléfonos de la sede. El cliente puede cambiar la página entre español e inglés, y eso no cambia nada guardado. Por privacidad, esta página **nunca muestra el nombre del cliente, la placa ni el VIN**: el sticker queda a la vista en el parabrisas y cualquiera puede escanearlo.
+
+![La página que ve el cliente al escanear el QR, en un teléfono.](../public/ayuda/es/50.webp)
+
+El mismo próximo servicio aparece como la tarjeta **Próximo servicio recomendado** en el enlace del reporte que recibe el cliente.
+
+**La tarjeta Próximo servicio.** Con un servicio programado muestra la fecha, las millas, la nota y la dirección de la página pública, con los botones:
+- **Editar / imprimir sticker**: abre el mismo diálogo con los datos cargados.
+- **Imprimir sticker**: lo vuelve a imprimir tal como está.
+- **Quitar servicio**: borra el servicio **y su código**, y pide confirmación porque el QR de los stickers ya impresos deja de funcionar. Mientras solo se edite o se reimprima, el código se conserva y los stickers ya pegados siguen sirviendo.
+
+![La tarjeta Próximo servicio con un servicio programado.](../public/ayuda/es/47.webp)
+
+**Cuando un técnico sugiere un servicio.** La tarjeta muestra **Sugerencia del técnico** con su fecha, millas y nota, y dos botones: **Usar sugerencia** (abre el diálogo con esos datos para que los revises, los ajustes e imprimas) o **Descartar**. En el panel principal aparece en **Requiere atención** como **Sugerencias de próximo servicio por revisar**, y en la campana como «Próximo servicio sugerido».
+
+![La sugerencia del técnico en la tarjeta Próximo servicio.](../public/ayuda/es/48.webp)
 
 #### Sugerir el próximo servicio
 <!-- rol: tecnico -->
 
-Si al realizar el trabajo notas que el vehículo necesitará mantenimiento futuro (por ejemplo, próximo cambio de aceite, pastillas de freno o bandas):
-- En las acciones rápidas del detalle de la orden o en la pestaña **Tareas**, pulsa el botón **Sugerir servicio**.
-- Selecciona la fecha estimada, las millas proyectadas y una nota explicativa para administración.
-- Al pulsar **Enviar sugerencia**, se notifica a administración en su panel principal (**Requiere atención** → **Sugerencias de próximo servicio**) y en la campana con el aviso «Próximo servicio sugerido».
-- Administración revisará la sugerencia y podrá programarla e imprimir el sticker térmico correspondiente.
+Si mientras trabajas ves que el vehículo va a necesitar un servicio más adelante (el siguiente cambio de aceite, frenos, bandas), puedes dejárselo sugerido a administración. Tú no programas ni imprimes nada: administración decide.
 
+1. En la orden, pulsa **Sugerir próximo servicio** en las acciones rápidas, o ve a la pestaña **Orden** → tarjeta **Próximo servicio**.
+2. Toca un **Preset rápido** o escribe la **Fecha recomendada**, las **Millas recomendadas** y una **Nota o servicio** (hasta 120 caracteres). Hace falta al menos la fecha o las millas.
+3. Pulsa **Enviar sugerencia**. Sale el aviso «Sugerencia enviada a administración.»
+
+Solo puedes sugerir en una orden que tengas asignada y que todavía no esté entregada. Si vuelves a sugerir, reemplazas tu sugerencia anterior. Cuando administración la usa o la descarta, desaparece.
+
+![«Sugerir próximo servicio», desde el teléfono de un técnico.](../public/ayuda/es/49.webp)
 
 #### Archivar una orden
 <!-- rol: admin -->

@@ -201,10 +201,10 @@ export default function Finance() {
   };
 
   const handleDeleteTransaction = async (txn: FinancialTransaction) => {
-    if (!confirm(`${t('common.deleteConfirm') || '¿Eliminar transacción de'} $${txn.monto}?`)) return;
+    if (!confirm(t('finance.deleteTransactionConfirm').replace('{monto}', money(txn.monto)))) return;
     try {
       await financeService.deleteTransaction(txn.id);
-      showToast('success', t('finance.transactionDeleted') || 'Transacción eliminada');
+      showToast('success', t('finance.transactionDeleted'));
       loadData();
     } catch (err) {
       showToast('error', getErrorMessage(err, language));

@@ -207,6 +207,7 @@ This is the home screen. It summarizes shop activity.
   - **Jobs without a technician: nobody earns their commission**: nobody earns commission on these jobs until a technician is assigned. Opens the
     order in Work.
   - **Finished jobs to review and mark ready for pickup**: orders where technicians finished the work, waiting for the office to inspect them and mark them ready for pickup.
+  - **Next service suggestions to review**: what a technician proposed for the vehicle's next service. Opens the order in Billing & customer.
   - **Orders past their delivery date** (completed orders do not count).
   - **Customer emails that failed (last 72 h)**: the **Review** button leads to
     Settings, where they can be retried.
@@ -481,11 +482,11 @@ Distributed across tabs, the sections are:
   - **Summary**: **Vehicle Information**, **Customer Signature**, **Assigned Technician**. (Above it displays alerts for reported additional work, unassigned jobs and pending work from prior visits).
   - **Work**: **Labor**, **Parts Description**, **Quote**, **Commission split**.
   - **Photos & progress**: **360° Inspection**, **Work Progress**.
-  - **Billing & customer**: **Totals**, **Parking** (if enabled at the workshop), **Order balance** (if delivered), **Customer link**.
+  - **Billing & customer**: **Totals**, **Parking** (if enabled at the workshop), **Next service**, **Order balance** (if delivered), **Customer link**.
   - **History**: immutable audit log of all order changes.
 - **In the Technician view**:
   - **Tasks**: list of assigned **Tasks** and the **Your estimated commission** card.
-  - **Order**: **Vehicle Information**, **360° Inspection**, **Parts Description** (without dollar amounts), **Customer Signature**, **Assigned Technician**.
+  - **Order**: **Vehicle Information**, **360° Inspection**, **Parts Description** (without dollar amounts), **Customer Signature**, **Assigned Technician**, **Next service** (suggest only).
   - **Progress**: log of **Work Progress**.
 
 #### Additional work reported by the technician
@@ -691,23 +692,64 @@ Each order has a unique web link (`restorifyauto.net/r/...`) generated automatic
 #### Next service sticker
 <!-- rol: admin -->
 
-Upon finishing or delivering a job (for instance, an oil change or periodic maintenance), administration can schedule the recommended next service and print a windshield sticker for the vehicle:
-- In quick actions or on the **Next service** card, tap **Service sticker** or **Schedule next service**.
-- Enter the **Recommended date** (or use the quick buttons: 3 months, 6 months, 1 year), the **Recommended mileage** (+3,000, +5,000, +10,000 over intake mileage), and a **Service note** (for example: "Synthetic 5W-30 Oil + Filter").
-- When tapping **Save & print**, the system generates a PDF formatted for standard thermal label printers (62 × 50 mm) featuring the shop logo, vehicle details, date, mileage, note, and a vectorized QR code.
-- The QR code opens the public sticker page (`restorifyauto.net/s/...`). When scanned, the customer sees the maintenance status with an interactive traffic-light indicator and direct buttons to message via WhatsApp or call the shop. For privacy, this public page **never displays the customer's name or vehicle license plate**.
-- If a technician submitted a service suggestion, the card displays **Technician suggestion** with buttons to **Accept suggestion** (preloads the data for printing) or **Dismiss suggestion**.
-- To remove a scheduled service, tap **Remove next service**.
+When a job is done (an oil change, a maintenance visit), administration can note when the vehicle should come back and print a sticker for the windshield. It is done from the order, in any status, including a delivered or archived order, for example to reprint a lost sticker (on a delivered order, from the **Next service** card, because the quick actions no longer appear).
+
+![The Next service card, with no service scheduled.](../public/ayuda/en/45.webp)
+
+**Scheduling the next service**
+1. Open the order and tap **Service sticker** in the quick actions, or go to the **Billing & customer** tab → **Next service** card → **Schedule next service**.
+2. Tap one of the **Quick presets** or fill in the fields by hand:
+
+   | Preset | Miles | Date |
+   |---|---|---|
+   | Synthetic oil | +5,000 over the intake miles | in 6 months |
+   | Conventional oil | +3,000 | in 3 months |
+   | General inspection | +5,000 | in 6 months |
+   | Paint warranty | no miles | in 30 days |
+
+3. Adjust what you need: **Recommended date**, **Recommended miles** and **Note or service** (up to 120 characters). At least the date or the miles are required. The date cannot be before today and the miles cannot be lower than the intake miles.
+4. Choose the **Sticker language** (**Spanish** or **English**). The customer's language is selected by default.
+5. Tap **Save** (only records it) or **Save & print**.
+
+![The sticker dialog, with a preset selected.](../public/ayuda/en/46.webp)
+
+**What the sticker shows.** It is 62 × 50 mm, black and white: the workshop's name and phone, «NEXT SERVICE» with the date and the miles, the note, a QR code, and at the bottom the vehicle's year, make and model, the plate and the order number.
+
+![The 62 × 50 mm sticker.](../public/ayuda/en/51.webp)
+
+**Printing.** A new tab opens with the sticker PDF; print from there. If the browser blocks the tab, the PDF is downloaded instead. With a Brother QL-810W and the 62 mm continuous roll (DK-4205), the recommended setup is:
+- **Windows**: **62 mm** continuous paper with a **50 mm** length (or a custom 62 × 50 size), scale **100 %** or *actual size*, with «fit to page» off.
+- **iPhone or iPad**: open the PDF, tap **Share** → **Print** and pick the printer. If it does not offer 62 × 50, try the **Brother iPrint&Label** app.
+
+**What the customer sees when scanning the QR.** A simple page (`restorifyauto.net/s/…`) with the workshop, the vehicle and the next service with a traffic light: **Up to date** (more than 14 days left), **Due soon** (14 days or fewer) or **Overdue**. If there are only miles, it says «At N miles», with no traffic light. Below are the **Schedule via WhatsApp** and **Call the workshop** buttons, using the branch's phones. The customer can switch the page between Spanish and English, and that does not change anything stored. For privacy, this page **never shows the customer's name, the plate or the VIN**: the sticker sits in plain view on the windshield and anyone can scan it.
+
+![The page the customer sees when scanning the QR, on a phone.](../public/ayuda/en/50.webp)
+
+The same next service also appears as the **Recommended next service** card in the report link the customer receives.
+
+**The Next service card.** With a scheduled service it shows the date, the miles, the note and the public page address, with these buttons:
+- **Edit / print sticker**: opens the same dialog with the data loaded.
+- **Print sticker**: prints it again as it is.
+- **Remove service**: deletes the service **and its code**, and asks for confirmation because the QR on stickers already printed stops working. As long as you only edit or reprint, the code is kept and stickers already on windshields keep working.
+
+![The Next service card with a scheduled service.](../public/ayuda/en/47.webp)
+
+**When a technician suggests a service.** The card shows **Technician's suggestion** with its date, miles and note, and two buttons: **Use suggestion** (opens the dialog with that data so you can review it, adjust it and print) or **Discard**. On the main dashboard it appears under **Needs attention** as **Next service suggestions to review**, and in the bell as «Next service suggested».
+
+![The technician's suggestion on the Next service card.](../public/ayuda/en/48.webp)
 
 #### Suggesting the next service
 <!-- rol: tecnico -->
 
-If while performing the work you notice that the vehicle will need future maintenance (for example, next oil change, brake pads, or timing belt):
-- In the quick actions on the order detail or in the **Jobs** tab, tap the **Suggest service** button.
-- Select the estimated date, projected mileage, and an explanatory note for administration.
-- When tapping **Send suggestion**, administration is notified on their main dashboard (**Requires attention** → **Next service suggestions**) and via the notification bell with the alert «Next service suggested».
-- Administration will review the suggestion and can schedule it and print the corresponding thermal sticker.
+If while working you see that the vehicle will need a service later on (the next oil change, brakes, belts), you can leave it as a suggestion for administration. You do not schedule or print anything: administration decides.
 
+1. On the order, tap **Suggest next service** in the quick actions, or go to the **Order** tab → **Next service** card.
+2. Tap a **Quick preset** or enter the **Recommended date**, the **Recommended miles** and a **Note or service** (up to 120 characters). At least the date or the miles are required.
+3. Tap **Send suggestion**. You will see «Suggestion sent to administration.»
+
+You can only suggest on an order that is assigned to you and not yet delivered. If you suggest again, you replace your earlier suggestion. Once administration uses or discards it, it disappears.
+
+![«Suggest next service», from a technician's phone.](../public/ayuda/en/49.webp)
 
 #### Archiving an order
 <!-- rol: admin -->

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { translations } from '../../i18n/translations';
 import {
   addMonths,
   addDays,
@@ -166,6 +167,29 @@ describe('nextService pure logic', () => {
       const url = serviceStickerUrl(token);
       expect(url).toBe(`https://restorifyauto.net/s/${token}`);
       vi.unstubAllEnvs();
+    });
+  });
+
+  // `t()` devuelve la clave cuando no encuentra el texto, y la prueba de paridad ES/EN no lo ve
+  // si la clave falta en los dos idiomas: la pantalla mostraba "nextService.presets.synthetic".
+  describe('claves de traducción de la función', () => {
+    const existe = (lang: 'es' | 'en', clave: string) =>
+      typeof clave.split('.').reduce<unknown>((o, p) => (o as Record<string, unknown> | undefined)?.[p], translations[lang]) === 'string';
+
+    it('cada preset y cada error de validación tienen texto en español e inglés', () => {
+      const errores = [
+        validateNextService({ fecha: null, millas: null, nota: null }, '2027-04-14', null).general,
+        validateNextService({ fecha: '2027-04-13', millas: 1, nota: null }, '2027-04-14', null).fecha,
+        validateNextService({ fecha: null, millas: -1, nota: null }, '2027-04-14', null).millas,
+        validateNextService({ fecha: null, millas: 10, nota: null }, '2027-04-14', 20).millas,
+        validateNextService({ fecha: '2027-05-01', millas: null, nota: 'a'.repeat(121) }, '2027-04-14', null).nota,
+      ];
+      const claves = [...errores, ...presetsFor(1, '2027-04-14').map((p) => p.labelKey)];
+      expect(claves.every((k) => typeof k === 'string')).toBe(true);
+      for (const k of claves as string[]) {
+        expect(existe('es', k), `es: ${k}`).toBe(true);
+        expect(existe('en', k), `en: ${k}`).toBe(true);
+      }
     });
   });
 });

@@ -1,3 +1,4 @@
+import { formatDay } from '../../lib/dates';
 import { money } from '../../lib/money';
 import type { HistoryChange, OrderHistoryEntry } from '../../types/database';
 import { ZONES } from './useIntakePhotos';
@@ -32,13 +33,6 @@ const SKIP_ON_CREATE = new Set([
 
 function isEmpty(value: unknown) {
   return value === null || value === undefined || value === '';
-}
-
-/** "2026-10-10" como fecha local, sin el corrimiento de zona horaria de `new Date('AAAA-MM-DD')`. */
-function formatDay(value: string, language: string) {
-  const [y, m, d] = value.slice(0, 10).split('-').map(Number);
-  if (!y || !m || !d) return value;
-  return new Date(y, m - 1, d).toLocaleDateString(language, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function quote(value: unknown) {

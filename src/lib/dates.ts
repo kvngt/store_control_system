@@ -56,6 +56,13 @@ export function isSameMonth(value: string, ref: Date): boolean {
  * de dos formularios de dinero, y también el que se compara contra el estado de
  * cuenta al conciliar.
  */
+/** "2026-10-10" como fecha local ("10 oct 2026"), sin el corrimiento de `new Date('AAAA-MM-DD')`. */
+export function formatDay(value: string, language: string): string {
+  const [y, m, d] = value.slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return value;
+  return new Date(y, m - 1, d).toLocaleDateString(language, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 export function todayLocal(): string {
   return daysFromTodayLocal(0);
 }

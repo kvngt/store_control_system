@@ -349,7 +349,7 @@ function ServiceContent({ data, todayStr, language, formatDate }: ServiceContent
                   textDecoration: 'none',
                 }}
               >
-                <Phone size={16} />
+                <Phone size={16} style={{ flexShrink: 0 }} />
                 <span>
                   {phone.label
                     ? `${strings.service.call} (${phone.label}: ${formatPhone(phone.numero)})`

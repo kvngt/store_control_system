@@ -35,6 +35,7 @@ const translations: Record<Language, Translations> = {
     },
     // Common
     common: {
+      error: 'Error',
       search: 'Buscar...',
       add: 'Agregar',
       edit: 'Editar',
@@ -1093,6 +1094,8 @@ const translations: Record<Language, Translations> = {
     // Finance
     finance: {
       title: 'Control Financiero',
+      deleteTransactionConfirm: '¿Eliminar la transacción de {monto}?',
+      transactionDeleted: 'Transacción eliminada',
       transactions: 'Transacciones',
       newTransaction: 'Nueva Transacción',
       income: 'Ingresos',
@@ -1558,10 +1561,10 @@ const translations: Record<Language, Translations> = {
       suggestTitle: 'Sugerir próximo servicio',
       presetsTitle: 'Presets rápidos',
       presets: {
-        oilSynthetic: 'Aceite sintético (+5,000 mi / 6 m)',
-        oilConventional: 'Aceite convencional (+3,000 mi / 3 m)',
-        inspection: 'Revisión general (+5,000 mi / 6 m)',
-        paintWarranty: 'Garantía de pintura (+30 días)',
+        synthetic: 'Aceite sintético (+5,000 mi / 6 m)',
+        conventional: 'Aceite convencional (+3,000 mi / 3 m)',
+        general: 'Revisión general (+5,000 mi / 6 m)',
+        paint_warranty: 'Garantía de pintura (+30 días)',
       },
       dateLabel: 'Fecha recomendada',
       milesLabel: 'Millas recomendadas',
@@ -1593,9 +1596,10 @@ const translations: Record<Language, Translations> = {
       removeError: 'No se pudo quitar el próximo servicio.',
       discardError: 'No se pudo descartar la sugerencia.',
       errors: {
-        required: 'Indica una fecha o las millas del próximo servicio.',
+        requireDateOrMiles: 'Indica una fecha o las millas del próximo servicio.',
         datePast: 'La fecha no puede ser anterior a hoy.',
-        milesLess: 'Las millas no pueden ser menores que las de ingreso.',
+        milesNegative: 'Las millas no pueden ser negativas.',
+        milesLessThanIntake: 'Las millas no pueden ser menores que las de ingreso.',
         noteTooLong: 'La nota no puede superar los 120 caracteres.',
       },
     },
@@ -1623,6 +1627,7 @@ const translations: Record<Language, Translations> = {
       sectionSystem: 'System',
     },
     common: {
+      error: 'Error',
       search: 'Search...',
       add: 'Add',
       edit: 'Edit',
@@ -2656,6 +2661,8 @@ const translations: Record<Language, Translations> = {
     },
     finance: {
       title: 'Financial Control',
+      deleteTransactionConfirm: 'Delete the transaction of {monto}?',
+      transactionDeleted: 'Transaction deleted',
       transactions: 'Transactions',
       newTransaction: 'New Transaction',
       income: 'Income',
@@ -3115,10 +3122,10 @@ const translations: Record<Language, Translations> = {
       suggestTitle: 'Suggest next service',
       presetsTitle: 'Quick presets',
       presets: {
-        oilSynthetic: 'Synthetic oil (+5,000 mi / 6 mo)',
-        oilConventional: 'Conventional oil (+3,000 mi / 3 mo)',
-        inspection: 'General inspection (+5,000 mi / 6 mo)',
-        paintWarranty: 'Paint warranty (+30 days)',
+        synthetic: 'Synthetic oil (+5,000 mi / 6 mo)',
+        conventional: 'Conventional oil (+3,000 mi / 3 mo)',
+        general: 'General inspection (+5,000 mi / 6 mo)',
+        paint_warranty: 'Paint warranty (+30 days)',
       },
       dateLabel: 'Recommended date',
       milesLabel: 'Recommended miles',
@@ -3150,9 +3157,10 @@ const translations: Record<Language, Translations> = {
       removeError: 'Error removing next service.',
       discardError: 'Error discarding suggestion.',
       errors: {
-        required: 'Provide a date or miles for the next service.',
+        requireDateOrMiles: 'Provide a date or miles for the next service.',
         datePast: 'Date cannot be in the past.',
-        milesLess: 'Miles cannot be less than intake miles.',
+        milesNegative: 'Miles cannot be negative.',
+        milesLessThanIntake: 'Miles cannot be less than intake miles.',
         noteTooLong: 'Note cannot exceed 120 characters.',
       },
     },

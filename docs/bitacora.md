@@ -45,6 +45,51 @@ al día aparte.
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
 
+### 14/10/2026, tarde — Claude Code (Ayuda del sticker y claves de traducción que faltaban)
+
+- **Pedido:** comprobar si la Ayuda explica la función nueva y, si no, escribirla.
+- **Encontrado al revisar la Ayuda:** la sección que dejó Gemini en el manual no coincidía con la
+  pantalla (botones y atajos inventados, "logo del taller" en el sticker, "Aceptar sugerencia").
+  Al contrastarla con los textos reales aparecieron **7 claves de traducción que el código usa y
+  no existen** (`nextService.presets.synthetic|conventional|general|paint_warranty` y
+  `nextService.errors.requireDateOrMiles|milesNegative|milesLessThanIntake`): los atajos del
+  diálogo y sus errores de validación se habrían visto como la clave escrita. La prueba de
+  paridad ES/EN no lo ve (compara un idioma con el otro, no con el código).
+- **Corregido:** las claves de `translations.ts` ahora son las del código. Prueba nueva en
+  `nextService.test.ts`: cada preset y cada error de validación tienen texto en los dos idiomas.
+  Una revisión de todo `src/` con `t('…')` literal encontró solo 3 faltantes más, que no son de
+  esta función: `common.error` (`useWorkOrderDetail.ts`), `common.deleteConfirm` y
+  `finance.transactionDeleted` (`Finance.tsx`, donde el `|| 'texto'` nunca se usa porque `t()`
+  devuelve la clave). Quedan sin arreglar.
+- **Manual (ES y EN):** se reescribieron «Sticker de próximo servicio» y «Sugerir el próximo
+  servicio» desde los textos reales (atajos, campos, botones de la tarjeta, qué lleva el sticker,
+  qué ve el cliente con el QR, impresión en Windows y iPhone), y se agregó **Próximo servicio** a la
+  lista de tarjetas de Cobro y cliente (admin) y de Orden (técnico) y la fila de **Requiere
+  atención**. La configuración de impresora es la **recomendada**, no probada: falta la prueba con
+  la QL-810W.
+- **Capturas** (7 por idioma, `public/ayuda/es|en/45` a `51`, 0,3 MB por idioma): la tarjeta sin
+  servicio y con servicio, el diálogo con un preset, la sugerencia del técnico, el diálogo del
+  técnico en el teléfono, la página pública `/s/` y el sticker. Se tomaron de la copia aislada,
+  con la app y la función `portal` corriendo contra el Supabase local y los datos inventados de la
+  Ayuda; nada sale al proyecto real. El sticker de la imagen es el PDF real de `serviceStickerPdf`
+  dibujado con pdf.js. El técnico de la captura es el de una orden con cliente en español (en la de
+  inglés, una con cliente en inglés), porque la nota del preset sale en el idioma del cliente.
+- **Arreglado al tomar las capturas:**
+  - las **3 claves** que faltaban (`common.error`, `finance.deleteTransactionConfirm`,
+    `finance.transactionDeleted`). En `Finance.tsx` la confirmación de borrar una transacción
+    armaba la frase a pedazos con `|| 'texto'` que nunca se usaba; ahora es una clave con `{monto}`
+    y usa `money()`;
+  - la tarjeta y el diálogo del sticker mostraban las fechas como `2026-12-14`; ahora salen como
+    "14 dic 2026" (`formatDay`, que pasó de `historyFormat.ts` a `lib/dates.ts`);
+  - en la página `/s/`, el ícono del teléfono se encogía hasta desaparecer en los botones de
+    "Llamar" con texto largo (`flexShrink: 0`).
+- **Verificación:** lint ✓, `tsc` ✓, Vitest 104 archivos / 870 pruebas ✓ (incluye la paridad del
+  manual ES/EN y las figuras), build ✓. La Ayuda se revisó con las figuras nuevas cargando.
+- **Entorno de pruebas:** el Supabase local de la copia ya tiene los datos inventados; la copia de
+  seguridad de lo que tenía antes está en el scratchpad (`respaldo-base-local-2026-10-14.sql`).
+- **Aviso:** el commit `3b38be0` ya estaba en `origin/main` con las claves mal; estos cambios van
+  en un commit aparte y hay que publicarlos (es solo frontend).
+
 ### 14/10/2026 — Claude Code (auditoría del sticker de próximo servicio de Gemini)
 
 - **Pedido:** que Gemini (Antigravity CLI, Gemini 3.8 Flash High; el 3.1 Pro ya no está) implemente

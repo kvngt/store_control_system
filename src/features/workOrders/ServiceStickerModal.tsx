@@ -3,7 +3,7 @@ import { Calendar, Printer, Send, Tag, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { AlertError } from '../../components/AlertError';
 import { getErrorMessage } from '../../lib/errors';
-import { todayLocal } from '../../lib/dates';
+import { formatDay, todayLocal } from '../../lib/dates';
 import type { NextServiceInput, WorkOrder } from '../../types/database';
 import { presetsFor, validateNextService, type ServicePreset } from './nextService';
 
@@ -171,7 +171,7 @@ export default function ServiceStickerModal({
                         <div style={{ fontWeight: 600 }}>{t(preset.labelKey)}</div>
                         <div style={{ fontSize: '0.75rem', opacity: 0.85 }}>
                           {preset.millas !== null ? `${preset.millas.toLocaleString()} mi · ` : ''}
-                          {preset.fecha}
+                          {formatDay(preset.fecha, language)}
                         </div>
                       </div>
                     </button>

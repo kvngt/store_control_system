@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Calendar, Check, ExternalLink, Gauge, Lightbulb, PenLine, Printer, Tag, Trash2, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
+import { formatDay } from '../../lib/dates';
 import { getErrorMessage } from '../../lib/errors';
 import { queryKeys } from '../../lib/queryClient';
 import { nextServiceService } from '../../services/nextService.service';
@@ -166,7 +167,7 @@ export default function NextServiceCard({
           <div style={{ fontSize: '0.875rem', display: 'flex', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
             {serviceData.sugerido_fecha && (
               <div>
-                <strong>{t('nextService.dateLabel')}:</strong> {serviceData.sugerido_fecha}
+                <strong>{t('nextService.dateLabel')}:</strong> {formatDay(serviceData.sugerido_fecha, language)}
               </div>
             )}
             {serviceData.sugerido_millas !== null && serviceData.sugerido_millas !== undefined && (
@@ -199,7 +200,7 @@ export default function NextServiceCard({
                   <Calendar size={14} />
                   <span>{t('nextService.dateLabel')}</span>
                 </div>
-                <div style={{ fontSize: '1.125rem', fontWeight: 600 }}>{serviceData.fecha}</div>
+                <div style={{ fontSize: '1.125rem', fontWeight: 600 }}>{formatDay(serviceData.fecha, language)}</div>
               </div>
             )}
 
