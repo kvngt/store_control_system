@@ -307,12 +307,12 @@ El formulario está pensado para llenarse casi solo a partir del VIN.
 
 1. Presiona **Nuevo Vehículo**.
 2. **Propietario**: elige un cliente de la lista, o créalo ahí mismo con **Agregar cliente nuevo**.
-3. **VIN**: escribe los 17 caracteres y presiona **Decodificar**. El sistema consulta la base de datos oficial
+3. **VIN**: es opcional. Puedes escribir los 17 caracteres y presionar **Decodificar**, o presionar el botón de escaneo con la cámara para leer el código de barras del marco de la puerta o del parabrisas (también permite subir una foto si no hay cámara). El sistema consulta la base de datos oficial
    de vehículos y rellena marca, modelo y año. Debajo aparecen datos adicionales
    (motor, carrocería, planta de ensamblaje). Un VIN nunca lleva las letras I, O
-   ni Q; si las escribes, el sistema avisa con «El VIN no puede contener las letras I, O ni Q.».
+   ni Q; si las escribes, el sistema avisa con «El VIN no puede contener las letras I, O ni Q.». Si la unidad no tiene VIN visible o aún no lo tienes, puedes dejar el campo vacío.
 4. Revisa **Marca**, **Modelo** y **Año**. Lo que escribas a mano tiene prioridad.
-5. **Color**: elige de la lista o escríbelo. El color no viene en el VIN.
+5. **Color**: elige de la lista o escríbelo. El color no viene en el VIN. En el reporte del cliente y en el PDF, el color se traduce automáticamente según el idioma elegido (por ejemplo, «Gris» se muestra como «Gray» en inglés).
 6. **Placa**: elige el **Estado de la placa** que la emitió y escribe el número de **Placa**. El sistema avisa
    si el formato no coincide con ese estado, sin impedirte guardarla.
 7. **Crear**.
@@ -392,11 +392,12 @@ Los botones **Anterior** y **Siguiente** permiten navegar entre los pasos sin pe
 
 **Paso 1 — Cliente.** Elige un cliente existente en **-- Seleccionar cliente --**, o pulsa **Nuevo Cliente** para registrarlo ahí mismo (Nombre y Teléfono son obligatorios).
 
-**Paso 2 — Vehículo y recepción.** Elige el vehículo en **-- Seleccionar vehículo --**, o presiona **Nuevo Vehículo** para registrarlo con el decodificador de VIN. Luego registra las condiciones de ingreso:
+**Paso 2 — Vehículo y recepción.** Elige el vehículo en **-- Seleccionar vehículo --**, o presiona **Nuevo Vehículo** para registrarlo con el decodificador o escáner de VIN (el VIN es opcional). Luego registra las condiciones de ingreso:
 - **Nivel de Gasolina**: E (vacío), 1/4, 1/2, 3/4 o F (lleno).
 - **Millas de Ingreso**: odómetro actual (solo números enteros positivos).
 - **Inspección 360°**: seis zonas fijas para fotografiar el estado del auto al entrar: Frontal, Trasera, Izquierda, Derecha, Interior y Tablero. Toca cada recuadro para tomar la foto o seleccionarla.
 - Botones multimedia debajo de las zonas: **Foto**, **Video**, **Nota de voz** y **Galería**. Permiten registrar detalles de abolladuras previas, documentos o recorridos en video. Las fotos se comprimen en el teléfono antes de subir y el video se optimiza (el botón muestra «Procesando…»).
+- **Marcar daños en el dibujo**: botón para registrar los daños previos del vehículo en el diagrama interactivo de cinco vistas (viene plegado por defecto para ahorrar espacio y muestra la cantidad de marcas; al tocarlo se despliega el editor completo).
 - **Notas de la inspección 360°**: texto libre para observaciones generales del estado del auto.
 
 > Esta inspección es la prueba del taller si un cliente reclama después un daño previo. Las fotos y videos de la recepción son lo único que queda **Visible al cliente** desde el inicio. Las notas de voz de la recepción quedan como **Interno** hasta que un administrador decida publicarlas.
@@ -409,9 +410,10 @@ Los botones **Anterior** y **Siguiente** permiten navegar entre los pasos sin pe
 - **Trabajo con seguro**: marca la casilla si el servicio lo cubre una aseguradora, e ingresa la **Aseguradora** y el **Número de reclamo**.
 - **Agregar trabajo**: tipo (Mecánica o Pintura), descripción, precio y **Técnico** asignado. Si el tipo no coincide con el oficio registrado de la persona (por ejemplo, pintura a un mecánico), el sistema muestra la advertencia «¿Asignar una tarea de pintura a un mecánico?» con las opciones **Asignar igual**, **Elegir otro** o **Cancelar**. Puedes dejar la tarea en **Sin asignar**.
 - **Agregar repuesto**: descripción, cantidad, precio unitario y costo opcional.
+- **El cliente aceptó estos trabajos y precios**: si el cliente ya acordó en persona los trabajos y el presupuesto al entregar el vehículo, marca esta casilla. Los trabajos pasarán directamente como autorizados a nombre del cliente, sin requerir enviar un presupuesto posterior ni registrar autorización manual.
 - Si escribes una tarea o repuesto y no presionas **Agregar**, el botón **Crear** te avisa para que lo agregues o lo descartes antes de continuar.
 
-Lo que cotizas en este paso nace **Sin autorizar**: se cobra únicamente cuando el cliente lo autoriza a través de un presupuesto o cuando administración registra la autorización manual. La firma de recepción no autoriza los trabajos cotizados.
+Lo que cotizas en este paso nace **Sin autorizar** salvo que hayas marcado la casilla de autorización en persona: se cobra únicamente cuando el cliente lo autoriza a través de un presupuesto o cuando administración registra la autorización manual. La firma de recepción no autoriza los trabajos cotizados.
 
 ![Paso 3 del alta, «Trabajos», con el aviso de que se cobran cuando el cliente los autoriza.](../public/ayuda/es/14.webp)
 
@@ -421,6 +423,27 @@ Lo que cotizas en este paso nace **Sin autorizar**: se cobra únicamente cuando 
 - Queda registrado automáticamente como ingreso en Finanzas bajo el concepto «Depósito inicial».
 
 Al presionar **Crear**, el sistema genera el número de orden (por ejemplo, `ORD-2026-001`) y abre su detalle. Las fotos y archivos multimedia continúan subiendo en segundo plano sin interrumpir tu navegación.
+
+### Recibir un carro rápido
+<!-- rol: admin -->
+
+Para ingresar un vehículo en menos de 60 segundos en el mostrador:
+1. **Cliente**: escribe solo el nombre y el teléfono (o selecciónalo si ya existe).
+2. **Vehículo**: escanea el VIN con el botón **Escanear**, o escribe solo la marca y el modelo (el VIN y la placa se pueden agregar después).
+3. **Trabajos**: agrega un trabajo con el precio acordado, y marca la casilla **El cliente aceptó estos trabajos y precios** si ya dio su visto bueno.
+4. **Depósito**: ingresa el anticipo si dejó alguno, o déjalo en 0.
+5. **Crear**: pulsa **Crear** y la orden queda abierta en el acto.
+
+### Marcar los daños en el dibujo
+<!-- rol: admin -->
+
+Al dar de alta la orden (en el paso 2, después de las zonas de foto, mediante el botón **Marcar daños en el dibujo** que muestra la cantidad de marcas y se despliega al tocarlo) y dentro de la sección **Inspección 360°** de la orden, se encuentra el diagrama del vehículo con cinco vistas: lado izquierdo, lado derecho, frente, atrás y arriba.
+
+- **Para marcar un daño:** elige primero el tipo con las fichas superiores (**Golpe o abolladura**, **Rayón**, **Pintura**, **Roto o falta** u **Otro**) y toca el dibujo en el punto exacto donde se encuentra.
+- **Para quitar una marca:** toca la marca directamente en el dibujo, presiona **Deshacer** para quitar la última que pusiste, o presiona el botón **Quitar** en la lista accesible debajo de las vistas.
+- **En la orden:** pulsa **Guardar daños** para registrar los cambios.
+- **Después de la firma:** una vez que el cliente firma la recepción, los daños quedan bloqueados con candado y ya no se pueden modificar, constituyendo el respaldo legal del estado en que llegó el vehículo.
+- Los daños marcados salen siempre impresos en el PDF de la orden y en el enlace web que consulta el cliente.
 
 ### Solo administración abre órdenes
 
@@ -456,7 +479,9 @@ Debajo del encabezado aparecen botones destacados con las acciones más frecuent
   - **Registrar anticipo**.
   - **Cobro y totales**.
 - **Para técnicos**:
-  - **Mis tareas** (destacado, lleva directo a sus tareas asignadas).
+  - **Empezar trabajo** (aparece destacado como botón principal en recepción cuando tiene al menos una tarea autorizada asignada; cambia la orden a en proceso).
+  - **Terminé: avisar a la oficina** (aparece destacado como botón principal en proceso cuando todas las tareas autorizadas de la orden están terminadas; cambia la orden a finalizado y avisa a administración).
+  - **Mis tareas** (destacado cuando no toca empezar ni terminar; lleva directo a sus tareas asignadas).
   - **Registrar avance**.
   - **Reportar trabajo adicional** (activo mientras la orden no esté finalizada).
   - **Datos del vehículo**.
@@ -486,7 +511,7 @@ Distribuídas por pestaña, las secciones son:
   - **Historial**: bitácora inalterable de todos los cambios de la orden.
 - **En la vista de Técnico**:
   - **Tareas**: lista de **Tareas** asignadas y tarjeta **Tu comisión estimada**.
-  - **Orden**: **Información del Vehículo**, **Inspección 360°**, **Descripción de Repuestos** (sin montos de dinero), **Firma del Cliente**, **Técnico Asignado**, **Próximo servicio** (solo para sugerir).
+  - **Orden**: **Información del Vehículo**, **Inspección 360°** (con el dibujo de daños en modo de solo lectura), **Descripción de Repuestos** (sin montos de dinero), **Firma del Cliente**, **Técnico Asignado**, **Próximo servicio** (solo para sugerir).
   - **Avances**: bitácora de **Avance del Trabajo**.
 
 #### Trabajo adicional reportado por el técnico
@@ -516,8 +541,10 @@ En el panel principal (en **Requiere atención**) y arriba de las pestañas Resu
   - Si una tarea no tiene técnico, muestra la insignia **Sin técnico**: nadie cobrará esa comisión hasta que se le asigne uno. La orden lo alerta arriba de Resumen con «N tarea(s) sin técnico: nadie cobrará su comisión hasta que se la asignes.» y el botón **Ver trabajos**.
   - Con la comisión pagada, los selectores de la tarea muestran un candado y el botón **Eliminar** se bloquea; para modificarlos, primero debe deshacerse el pago en Comisiones.
 - **Para técnicos (Tareas)**:
+  - Botón principal de estado: las acciones **Empezar trabajo** (en recepción con tarea autorizada) y **Terminé: avisar a la oficina** (en proceso cuando todo está hecho) se ubican arriba en las **acciones rápidas** de la orden, asegurando un solo botón principal por estado. En la lista de tareas, al estar en proceso con todo listo se muestra la ayuda explicativa, y si sus tareas están terminadas pero faltan tareas de otro compañero, ve el aviso «Tu parte está lista. Falta: ...».
   - Ve sus tareas con su descripción, su tipo y el precio de la mano de obra (de ahí sale su comisión). Los repuestos los ve sin precio.
   - Toca **Realizado** al terminar una tarea; si la marcó por error, presiona **Reabrir tarea**.
+  - Con **Foto** puede tomar o subir directamente una fotografía con la cámara para adjuntarla como avance a esa tarea.
   - Con **Agregar avance** puede subir fotos, videos o notas de voz vinculados a esa tarea específica.
 - **Insignias de cada línea**:
   - *(Sin insignia)*: **Autorizado** por el cliente. Se realiza y se cobra.
@@ -598,11 +625,12 @@ Lo autorizado suma inmediatamente al total de la orden y genera avisos a los té
 
 Cuando el técnico marca el estado en **Finalizado**, el trabajo físico concluyó pero el cliente aún no es notificado. En el detalle de la orden aparece la insignia **Por revisar**.
 
-Administración debe inspeccionar el vehículo y verificar las cuentas. Una vez conforme, pulsa el botón verde **Marcar listo para entregar** en el encabezado. En ese instante:
+Administración debe inspeccionar el vehículo y verificar las cuentas. Para marcarlo listo, pulsa el botón principal **Marcar listo para entregar** en las acciones rápidas (también disponible en el encabezado). En ese instante:
 1. La orden cambia su insignia a **Listo para entregar**.
-2. Se envía automáticamente el correo al cliente avisándole que su vehículo está listo.
-3. En el reporte web del cliente, el estado pasa de «En revisión final» a «Listo para recoger».
-4. Si la sede cobra parqueo para particulares, a partir de este evento comienzan a correr los días de gracia.
+2. Si el cliente tiene un correo electrónico válido, se le envía automáticamente el correo avisándole que su vehículo está listo.
+3. Si el cliente **no tiene correo electrónico registrado**, se abre de inmediato una ventana con el aviso preparado para enviárselo por **WhatsApp** o **SMS**, redactado en el idioma del cliente (español o inglés).
+4. En el reporte web del cliente, el estado pasa de «En revisión final» a «Listo para recoger».
+5. Si la sede cobra parqueo para particulares, a partir de este evento comienzan a correr los días de gracia.
 
 #### Entrega de la orden
 <!-- rol: admin -->

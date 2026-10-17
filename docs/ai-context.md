@@ -166,6 +166,18 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
   va en el parabrisas y lo lee cualquiera. El código no vence; `quitar_proximo_servicio` lo borra.
   La ventana de impresión se abre antes de cualquier `await` (`openStickerWindow`), o el iPhone
   la bloquea.
+- **Autorizar en el mostrador** (`20261010000030`): `create_work_order` lee
+  `p_order.autorizado_en_recepcion` y, si viene en `true`, autoriza lo cotizado en la misma
+  transacción con `registrar_autorizacion` (`admin_presencial`, a nombre del cliente). La casilla
+  del alta viene **desmarcada**: solo lo autorizado se cobra.
+- **Daños marcados en el dibujo** (`20261010000031`, `ordenes_trabajo.marcas_danos`):
+  - un arreglo de `{vista, x, y, tipo}` que valida un `CHECK`;
+  - **después de la firma no se cambia** (`trg_marcas_danos_firmadas`, 42501): es la prueba de
+    cómo llegó el carro;
+  - el técnico no lo toca (lista blanca del guardia);
+  - `datos_portal` lo arma marca por marca;
+  - la geometría de las vistas vive en `src/lib/vehicleDiagram.ts` y la usan la app, el portal y
+    el PDF.
 - **Avisos y correos al personal.** El técnico se entera de lo no autorizado (`TechOrderStatus`)
   y ve lo suyo aceptado en `/mis-comisiones` (`resumen_mis_comisiones`). `notificar` le encola un
   correo (plantilla `empleado`) **sin `orden_id`** en `cola_envios`, para que nunca tome el camino
@@ -199,7 +211,7 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
    `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca edites una migración
    ya aplicada ni cambies tablas desde el panel. **El nombre va después de la última
    migración, no de la fecha de hoy:** hay migraciones aplicadas con fecha futura (hoy la
-   última es `20261010000029`), y una con fecha anterior a la última aplicada no entra con
+   última es `20261010000031`), y una con fecha anterior a la última aplicada no entra con
    `db push` ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#4-base-de-datos), B-1).
 2. **Una función nueva en `public` es una RPC pública.** Postgres da `EXECUTE` a
    `PUBLIC` y Supabase a `anon` y `authenticated` al crearla. Revócala siempre:

@@ -14,7 +14,9 @@ import { parkingService } from '../../services/parking.service';
 import { reportAssetPaths } from '../../lib/reportMedia';
 import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';
+import { isValidEmail } from '../../lib/email';
 import type { LaborItem, OrderAssignment, OrderMedia, OrderProgressUpdate, OrderStatus, PartOrderState, PreparedMedia, Specialty, UserProfile, WorkOrder } from '../../types/database';
+import type { DamageMark } from '../../lib/vehicleDiagram';
 import { isApproved } from './lineState';
 import type { TaskDraft, Technician } from './tasks';
 
@@ -73,6 +75,9 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   const [advancing, setAdvancing] = useState(false);
   // El avance que está por publicarse. El diálogo muestra su texto como lo verá el cliente.
   const [publishingProgress, setPublishingProgress] = useState<OrderProgressUpdate | null>(null);
+  // Modal para avisar al cliente por WhatsApp/SMS cuando se marca lista y no tiene correo.
+  const [readyNotifyOpen, setReadyNotifyOpen] = useState(false);
+  const closeReadyNotify = useCallback(() => setReadyNotifyOpen(false), []);
 
   const isAdmin = user?.rol === 'admin';
 
@@ -407,7 +412,11 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     try {
       await workOrdersService.markReadyForPickup(order.id);
       await refresh();
-      showToast('success', t('workOrders.markReadyDone'));
+      const hasEmail = isValidEmail(order.cliente?.email);
+      showToast('success', hasEmail ? t('workOrders.markReadyDone') : t('workOrders.markReadyDoneNoEmail'));
+      if (!hasEmail) {
+        setReadyNotifyOpen(true);
+      }
     } catch (err) {
       showToast('error', t('workOrders.markReadyError'), getErrorMessage(err, language));
     } finally {
@@ -857,6 +866,23 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
 
   // ----- signature -----------------------------------------------------------
 
+  const [savingDamageMarks, setSavingDamageMarks] = useState(false);
+
+  const updateDamageMarks = async (marks: DamageMark[]) => {
+    if (!order || !isAdmin || order.firma_ruta) return;
+    setSavingDamageMarks(true);
+    try {
+      await workOrdersService.updateDamageMarks(order.id, marks);
+      await refresh();
+      showToast('success', t('damage.saved'));
+    } catch (err) {
+      showToast('error', t('damage.saveError'), getErrorMessage(err, language));
+      throw err;
+    } finally {
+      setSavingDamageMarks(false);
+    }
+  };
+
   const saveSignature = async (dataUrl: string) => {
     if (!order) return;
     setSavingSignature(true);
@@ -1044,6 +1070,8 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     pendingUploads: mediaUploads.items.filter((item) => item.ordenId === order?.id && item.estado !== 'listo'),
     isAdmin,
     userId: user?.id,
+    updateDamageMarks,
+    savingDamageMarks,
     saveSignature,
     generatePdf,
     share,
@@ -1051,6 +1079,8 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     closeShare,
     canProgramNextService,
     canSuggestNextService,
+    readyNotifyOpen,
+    closeReadyNotify,
   };
 }
 

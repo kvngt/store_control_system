@@ -4,6 +4,8 @@ import { customerObservations, customerReportPhotos, progressTimeline, reportIma
 import { money } from './money';
 import { brandColors } from './brandColor';
 import { formatPhone, sedePhoneLine } from './phone';
+import { translateVehicleColor } from './vehicleColor';
+import { DAMAGE_VIEWS, DAMAGE_TYPES, sanitizeDamageMarks, type DamageView } from './vehicleDiagram';
 
 export type PdfLanguage = 'es' | 'en';
 
@@ -87,6 +89,15 @@ const STRINGS = {
     parking: 'Parqueo',
     day: 'día',
     days: 'días',
+    damageDiagram: 'Daños del Vehículo (Recepción)',
+    damageViews: {
+      izquierda: 'Lado izquierdo',
+      derecha: 'Lado derecho',
+      frontal: 'Frente',
+      trasera: 'Atrás',
+      superior: 'Arriba',
+    } as Record<string, string>,
+    damageLegend: 'G: Golpe  ·  R: Rayón  ·  P: Pintura  ·  X: Roto  ·  O: Otro',
   },
   en: {
     locale: 'en-US',
@@ -137,6 +148,15 @@ const STRINGS = {
     parking: 'Parking',
     day: 'day',
     days: 'days',
+    damageDiagram: 'Vehicle Damage (Intake)',
+    damageViews: {
+      izquierda: 'Left side',
+      derecha: 'Right side',
+      frontal: 'Front',
+      trasera: 'Rear',
+      superior: 'Top',
+    } as Record<string, string>,
+    damageLegend: 'G: Dent  ·  R: Scratch  ·  P: Paint  ·  X: Broken  ·  O: Other',
   },
 };
 
@@ -386,10 +406,12 @@ async function buildWorkOrderPdf(
   label(S.customer, order.cliente?.nombre || '', MARGIN, half - 5);
   label(S.phone, formatPhone(order.cliente?.telefono), MARGIN + half, half - 5);
   y += 11;
-  label(S.vehicle, `${order.vehiculo?.anio || ''} ${order.vehiculo?.marca || ''} ${order.vehiculo?.modelo || ''}`.trim(), MARGIN, half - 5);
+  const vehicleColor = order.vehiculo?.color ? translateVehicleColor(order.vehiculo.color, lang) : '';
+  const vehicleDesc = `${order.vehiculo?.anio || ''} ${order.vehiculo?.marca || ''} ${order.vehiculo?.modelo || ''}${vehicleColor ? ` (${vehicleColor})` : ''}`.trim();
+  label(S.vehicle, vehicleDesc, MARGIN, half - 5);
   label(S.plate, order.vehiculo?.placa || '', MARGIN + half, half - 5);
   y += 11;
-  label(S.vin, order.vehiculo?.vin || '', MARGIN, half - 5);
+  label(S.vin, order.vehiculo?.vin || '—', MARGIN, half - 5);
   label(S.milesIn, String(order.millas_ingreso ?? ''), MARGIN + half, half - 5);
   y += 11;
   label(S.dateIn, order.fecha_ingreso ? new Date(order.fecha_ingreso).toLocaleDateString(S.locale) : '', MARGIN, half - 5);
@@ -501,6 +523,91 @@ async function buildWorkOrderPdf(
     doc.text(notes, MARGIN, y);
     y += LINE * notes.length;
   }
+
+  // ===== Diagrama de daños (Recepción) =====
+  // Sale siempre, aunque no haya marcas, como en la hoja de papel del taller.
+  const marks = sanitizeDamageMarks(order.marcas_danos);
+  ensureSpace(95);
+  sectionTitle(S.damageDiagram);
+
+  const drawDamageView = (
+    viewId: DamageView,
+    vx: number,
+    vy: number,
+    vw: number,
+    vh: number,
+    scale: number
+  ) => {
+    const viewDef = DAMAGE_VIEWS.find((v) => v.id === viewId);
+    if (!viewDef) return;
+
+    // View title
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...MUTED);
+    const viewName = S.damageViews[viewId] ?? viewId;
+    doc.text(viewName, vx, vy);
+
+    const shapesY = vy + 2;
+
+    // Outline shapes
+    doc.setDrawColor(120, 120, 130);
+    doc.setLineWidth(0.25);
+    for (const shape of viewDef.shapes) {
+      if (shape.kind === 'circle') {
+        doc.circle(vx + shape.cx * scale, shapesY + shape.cy * scale, shape.r * scale, 'S');
+      } else if (shape.kind === 'poly' && shape.points.length > 0) {
+        const startX = vx + shape.points[0][0] * scale;
+        const startY = shapesY + shape.points[0][1] * scale;
+        const deltas: [number, number][] = [];
+        for (let i = 1; i < shape.points.length; i++) {
+          deltas.push([
+            (shape.points[i][0] - shape.points[i - 1][0]) * scale,
+            (shape.points[i][1] - shape.points[i - 1][1]) * scale,
+          ]);
+        }
+        doc.lines(deltas, startX, startY, [1, 1], 'S', shape.closed);
+      }
+    }
+
+    // Damage marks
+    const viewMarks = marks.filter((m) => m.vista === viewId);
+    for (const mark of viewMarks) {
+      const mx = vx + mark.x * vw;
+      const my = shapesY + mark.y * vh;
+      const typeDef = DAMAGE_TYPES.find((t) => t.id === mark.tipo);
+      const letter = typeDef?.letter ?? 'O';
+
+      doc.setDrawColor(220, 38, 38);
+      doc.setFillColor(254, 242, 242);
+      doc.circle(mx, my, 2.2, 'FD');
+
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(220, 38, 38);
+      doc.text(letter, mx, my + 1.0, { align: 'center' });
+    }
+  };
+
+  // Row 1: izquierda (85x34) and derecha (85x34)
+  const row1Y = y;
+  drawDamageView('izquierda', MARGIN, row1Y, 85, 34, 0.425);
+  drawDamageView('derecha', MARGIN + 95, row1Y, 85, 34, 0.425);
+  y += 40;
+
+  // Row 2: frontal (38x30.4), trasera (38x30.4), superior (92x41.4)
+  const row2Y = y;
+  drawDamageView('frontal', MARGIN, row2Y, 38, 30.4, 0.38);
+  drawDamageView('trasera', MARGIN + 44, row2Y, 38, 30.4, 0.38);
+  drawDamageView('superior', MARGIN + 88, row2Y, 92, 41.4, 0.46);
+  y += 46;
+
+  // Legend
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...MUTED);
+  doc.text(S.damageLegend, MARGIN, y);
+  y += LINE;
 
   // ===== Observaciones del taller (F6) =====
   // Lo que administración decidió contarle al cliente de un hallazgo que no se hará ahora.

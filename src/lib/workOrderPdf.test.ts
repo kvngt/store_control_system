@@ -198,4 +198,46 @@ describe('generateWorkOrderPdf: idioma y cuenta', () => {
     expect(texto).toContain('Parqueo (3 días)');
     expect(texto).toContain('$75.00');
   });
+
+  it('dibuja las cinco vistas de daños y las letras de las marcas en el PDF', async () => {
+    const ordenConMarcas = {
+      ...orden('en_proceso'),
+      marcas_danos: [
+        { vista: 'frontal', x: 0.5, y: 0.5, tipo: 'golpe' },
+        { vista: 'trasera', x: 0.4, y: 0.3, tipo: 'rayon' },
+        { vista: 'izquierda', x: 0.2, y: 0.6, tipo: 'roto' },
+      ],
+    } as unknown as WorkOrder;
+
+    await generateWorkOrderPdf(ordenConMarcas, SEDE);
+
+    const texto = textoPintado();
+    // Vistas y título
+    expect(texto).toContain('Daños del Vehículo (Recepción)');
+    expect(texto).toContain('Lado izquierdo');
+    expect(texto).toContain('Lado derecho');
+    expect(texto).toContain('Frente');
+    expect(texto).toContain('Atrás');
+    expect(texto).toContain('Arriba');
+
+    // Letras de las marcas pintadas
+    expect(texto).toContain('G');
+    expect(texto).toContain('R');
+    expect(texto).toContain('X');
+
+    // Se llamó a doc.lines y doc.circle para dibujar las formas y marcas
+    const metodos = llamadas.lista.map(([m]) => m);
+    expect(metodos).toContain('lines');
+    expect(metodos).toContain('circle');
+
+    // D4: El círculo de cada marca mide al menos 2.2 mm de radio y la letra 7 pt
+    const circleCalls = llamadas.lista.filter(([m]) => m === 'circle');
+    const markCircles = circleCalls.filter(([, args]) => (args as number[])[2] >= 2.2);
+    expect(markCircles.length).toBeGreaterThanOrEqual(3);
+
+    const fontSizes = llamadas.lista
+      .filter(([m]) => m === 'setFontSize')
+      .map(([, args]) => (args as unknown[])[0]);
+    expect(fontSizes).toContain(7);
+  });
 });

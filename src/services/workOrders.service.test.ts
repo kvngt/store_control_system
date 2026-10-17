@@ -345,6 +345,31 @@ describe('workOrdersService: createWorkOrder', () => {
       numero_reclamo: 'CLM-555',
     });
   });
+
+  it('manda autorizado_en_recepcion a create_work_order con esa llave exacta', async () => {
+    await workOrdersService.createWorkOrder({
+      sede_id: 's1',
+      cliente_id: 'c1',
+      vehiculo_id: 'v1',
+      tipo_trabajo: 'mecanica',
+      millas_ingreso: 1000,
+      nivel_gasolina: '1/2',
+      deposito_inicial: 0,
+      inspeccion_360_notas: '',
+      fecha_estimada_entrega: '2026-10-09',
+      labor_items: [{ descripcion: 'Frenos', costo: 150, especialidad: 'mecanica', asignado_a: null, reparto_heredado: false }],
+      repuestos: [],
+      asignaciones: [],
+      creado_por: 'a1',
+      autorizado_en_recepcion: true,
+    });
+
+    expect(mocks.rpcs).toHaveLength(1);
+    const { args } = mocks.rpcs[0];
+    expect(args.p_order).toMatchObject({
+      autorizado_en_recepcion: true,
+    });
+  });
 });
 
 describe('workOrdersService: updateInsurance', () => {
@@ -467,6 +492,42 @@ describe('workOrdersService: costo y pedido de un repuesto', () => {
         fn: 'registrar_anticipo',
         args: { p_orden_id: 'o1', p_monto: 200, p_metodo: 'zelle', p_numero_cheque: null, p_comprobante_ruta: null },
       },
+    ]);
+  });
+
+  it('createWorkOrder incluye marcas_danos en p_order', async () => {
+    const marks = [{ vista: 'frontal' as const, x: 0.5, y: 0.5, tipo: 'golpe' as const }];
+    await workOrdersService.createWorkOrder({
+      sede_id: 's1',
+      cliente_id: 'c1',
+      vehiculo_id: 'v1',
+      tipo_trabajo: 'mecanica',
+      millas_ingreso: 1000,
+      nivel_gasolina: '1/2',
+      deposito_inicial: 0,
+      deposito_metodo: null,
+      deposito_cheque: null,
+      deposito_comprobante: null,
+      inspeccion_360_notas: '',
+      marcas_danos: marks,
+      fecha_estimada_entrega: '2026-10-20',
+      creado_por: 'u1',
+      labor_items: [],
+      repuestos: [],
+      asignaciones: [],
+    });
+
+    expect(mocks.rpcs).toHaveLength(1);
+    expect(mocks.rpcs[0].fn).toBe('create_work_order');
+    const pOrder = mocks.rpcs[0].args.p_order as { marcas_danos: unknown };
+    expect(pOrder.marcas_danos).toEqual(marks);
+  });
+
+  it('updateDamageMarks actualiza ordenes_trabajo con las marcas', async () => {
+    const marks = [{ vista: 'izquierda' as const, x: 0.2, y: 0.3, tipo: 'rayon' as const }];
+    await workOrdersService.updateDamageMarks('o1', marks);
+    expect(mocks.writes).toEqual([
+      { table: 'ordenes_trabajo', method: 'update', payload: { marcas_danos: marks } },
     ]);
   });
 });

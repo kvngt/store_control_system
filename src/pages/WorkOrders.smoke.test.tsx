@@ -1232,7 +1232,7 @@ describe('WorkOrders — finalizar y listo para entregar', () => {
     await openDetail(user);
 
     expect(screen.getAllByText('Por revisar').length).toBeGreaterThan(0);
-    await user.click(screen.getByRole('button', { name: /Marcar listo para entregar/ }));
+    await user.click(screen.getAllByRole('button', { name: /Marcar listo para entregar/ })[0]);
     expect(mocks.markReadyForPickup).toHaveBeenCalledWith(ORDER.id);
   });
 

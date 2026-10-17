@@ -1,14 +1,18 @@
-import { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Circle, MessageSquarePlus, Clock, X, Plus, Eye, EyeOff, XCircle } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { AlertTriangle, Camera, CheckCircle2, Circle, MessageSquarePlus, Clock, X, Plus, Eye, EyeOff, XCircle } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { useToast } from '../../context/toast.context';
+import { isMediaError } from '../../lib/media/errors';
 import type { LaborItem, OrderProgressUpdate, PreparedMedia } from '../../types/database';
 import { isApproved } from './lineState';
 import LaborTable from './LaborTable';
 import DraftMediaStrip from '../media/DraftMediaStrip';
 import MediaCaptureBar from '../media/MediaCaptureBar';
+import { prepareMediaFile } from '../media/prepareMedia';
 import type { WorkOrderDetailApi } from './useWorkOrderDetail';
 import ReportFindingModal from './ReportFindingModal';
 import { findingOutcome } from './techStatus';
+import { techNextStep } from './techNextStep';
 
 interface TechnicianTaskListProps {
   items: LaborItem[];
@@ -20,7 +24,9 @@ interface TechnicianTaskListProps {
 
 export default function TechnicianTaskList({ items, currentUserId, detail, reportRequest = 0 }: TechnicianTaskListProps) {
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const [addingProgressTo, setAddingProgressTo] = useState<LaborItem | null>(null);
+  const [initialDrafts, setInitialDrafts] = useState<PreparedMedia[]>([]);
   const [reporting, setReporting] = useState(false);
   useEffect(() => {
     if (reportRequest > 0) setReporting(true);
@@ -36,8 +42,50 @@ export default function TechnicianTaskList({ items, currentUserId, detail, repor
   }
   const otherTasks = items.filter((item) => item.asignado_a !== currentUserId);
 
+  const handleQuickPhoto = async (task: LaborItem, file: File) => {
+    try {
+      const prepared = await prepareMediaFile(file);
+      setInitialDrafts([prepared]);
+      setAddingProgressTo(task);
+    } catch (err) {
+      const detailMsg = isMediaError(err) ? t('media.errors.' + err.code) : t('media.errors.unsupported-file');
+      showToast('error', t('media.addError'), detailMsg);
+    }
+  };
+
+  const handleAddProgress = (task: LaborItem) => {
+    setInitialDrafts([]);
+    setAddingProgressTo(task);
+  };
+
+  // D1: Siguiente paso calculado con la función pura compartida con acciones rápidas
+  const nextStep = techNextStep(detail.order, items, currentUserId);
+  const otherPending = items.filter((item) => item.asignado_a !== currentUserId && isApproved(item) && !item.completado_en);
+
   return (
     <div className="technician-tasks" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      {/* D1: En estado finish queda la ayuda; el botón principal vive en QuickActions */}
+      {nextStep === 'finish' && (
+        <p className="field-hint" style={{ textAlign: 'center', margin: 0 }}>
+          {t('tasks.finishOrderHint')}
+        </p>
+      )}
+
+      {/* D1: Aviso de tareas pendientes de otros compañeros */}
+      {nextStep === 'partDone' && (
+        <div
+          className="card"
+          style={{
+            padding: 'var(--space-3) var(--space-4)',
+            background: 'var(--color-bg-secondary)',
+            borderLeft: '4px solid var(--color-warning)',
+          }}
+        >
+          <p style={{ fontSize: 'var(--font-size-sm)', margin: 0, color: 'var(--color-text-secondary)' }}>
+            {t('tasks.myPartDone').replace('{lista}', otherPending.map((p) => p.descripcion).join(', '))}
+          </p>
+        </div>
+      )}
       {myTasks.length === 0 ? (
         <div className="card" style={{ padding: 'var(--space-6)', textAlign: 'center', color: 'var(--color-text-tertiary)' }}>
           <p>{t('tasks.noTasksAssigned')}</p>
@@ -97,25 +145,13 @@ export default function TechnicianTaskList({ items, currentUserId, detail, repor
               )}
 
               {approved && (
-                <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
-                  <button
-                    type="button"
-                    className={`btn ${completed ? 'btn-secondary' : 'btn-success'}`}
-                    onClick={() => detail.toggleLaborComplete(task)}
-                    disabled={detail.busy}
-                  >
-                    {completed ? <Circle size={16} /> : <CheckCircle2 size={16} />}
-                    {completed ? t('tasks.reopen') : t('tasks.markDone')}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() => setAddingProgressTo(task)}
-                    disabled={detail.busy}
-                  >
-                    <MessageSquarePlus size={16} /> {t('tasks.addProgress')}
-                  </button>
-                </div>
+                <TaskActions
+                  task={task}
+                  completed={completed}
+                  detail={detail}
+                  onAddProgress={handleAddProgress}
+                  onQuickPhoto={handleQuickPhoto}
+                />
               )}
             </div>
           );
@@ -184,11 +220,18 @@ export default function TechnicianTaskList({ items, currentUserId, detail, repor
       {addingProgressTo && (
         <TaskProgressModal
           task={addingProgressTo}
+          initialDrafts={initialDrafts}
           saving={detail.busy}
-          onCancel={() => setAddingProgressTo(null)}
+          onCancel={() => {
+            setAddingProgressTo(null);
+            setInitialDrafts([]);
+          }}
           onConfirm={async (note, media, isVisible) => {
             const ok = await detail.addProgressUpdate(note, media, isVisible, addingProgressTo.id);
-            if (ok) setAddingProgressTo(null);
+            if (ok) {
+              setAddingProgressTo(null);
+              setInitialDrafts([]);
+            }
           }}
         />
       )}
@@ -196,20 +239,86 @@ export default function TechnicianTaskList({ items, currentUserId, detail, repor
   );
 }
 
+function TaskActions({
+  task,
+  completed,
+  detail,
+  onAddProgress,
+  onQuickPhoto,
+}: {
+  task: LaborItem;
+  completed: boolean;
+  detail: WorkOrderDetailApi;
+  onAddProgress: (task: LaborItem) => void;
+  onQuickPhoto: (task: LaborItem, file: File) => void;
+}) {
+  const { t } = useLanguage();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) {
+      onQuickPhoto(task, file);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+      <button
+        type="button"
+        className={`btn ${completed ? 'btn-secondary' : 'btn-success'}`}
+        onClick={() => detail.toggleLaborComplete(task)}
+        disabled={detail.busy}
+      >
+        {completed ? <Circle size={16} /> : <CheckCircle2 size={16} />}
+        {completed ? t('tasks.reopen') : t('tasks.markDone')}
+      </button>
+      <button
+        type="button"
+        className="btn btn-primary"
+        onClick={() => onAddProgress(task)}
+        disabled={detail.busy}
+      >
+        <MessageSquarePlus size={16} /> {t('tasks.addProgress')}
+      </button>
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={detail.busy}
+      >
+        <Camera size={16} /> {t('tasks.quickPhoto')}
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        disabled={detail.busy}
+        onChange={handleFileChange}
+      />
+    </div>
+  );
+}
+
 function TaskProgressModal({
   task,
+  initialDrafts = [],
   saving,
   onCancel,
   onConfirm,
 }: {
   task: LaborItem;
+  initialDrafts?: PreparedMedia[];
   saving: boolean;
   onCancel: () => void;
   onConfirm: (note: string, media: PreparedMedia[], isVisible: boolean) => Promise<void>;
 }) {
   const { t } = useLanguage();
   const [note, setNote] = useState('');
-  const [drafts, setDrafts] = useState<PreparedMedia[]>([]);
+  const [drafts, setDrafts] = useState<PreparedMedia[]>(initialDrafts);
   const [isVisible, setIsVisible] = useState(false);
 
   const canSubmit = !saving && (note.trim().length > 0 || drafts.length > 0);

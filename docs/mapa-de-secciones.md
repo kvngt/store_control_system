@@ -37,14 +37,14 @@ la base sin comprometer la operación: [mantenimiento.md §4](mantenimiento.md#4
 | | |
 |---|---|
 | Pantalla | `pages/WorkOrders.tsx` (lista y archivo; para un técnico, solo "Mis órdenes"). Desde F7, dos vistas con la misma búsqueda (`features/workOrders/orderSearch.ts`): **Lista** y **Tablero** (`KanbanBoard` con `embedded`). La vista va en la URL y se recuerda en el navegador (`restorify_orders_view`) |
-| Detalle | `features/workOrders/WorkOrderDetail.tsx` (dibuja) y `useWorkOrderDetail.ts` (estado, permisos derivados como `canEdit`, `canSign`, `canDeliver`, y todas las acciones). En escritorio, pestañas (`components/Tabs.tsx`) bajo un encabezado fijo: admin Resumen/Trabajos/Fotos y avances/Cobro y cliente/Historial; técnico Tareas/Orden/Avances. Cada pestaña se monta al abrirla y después solo se esconde. Cada tarjeta es una sección plegable (`components/CollapsibleSection.tsx`), **cerrada al entrar**, en escritorio y en el teléfono (ahí apiladas, en el orden de las pestañas). Qué sección va en cada pestaña: `TAB_SECTIONS`; la que abre un enlace: `LINKED_SECTION`. Enlace directo a una pestaña: `/work-orders?open=<id>&tab=<id de la pestaña>` |
-| Historial de la orden | Tabla `historial_orden` (trigger `trg_historial`, `20261010000004`); `workOrdersService.getHistory`; `features/workOrders/OrderHistory.tsx` y `historyFormat.ts` (convierte cada fila en una frase); pruebas `17_historial_orden.test.sql` y `historyFormat.test.ts` |
-| Alta | `features/workOrders/WorkOrderCreateModal.tsx`, `useWorkOrderForm.ts`, `workOrderForm.schema.ts`. Cuatro pasos (F4): Cliente, Vehículo y recepción, Depósito, Trabajos. Qué campo va en qué paso: `INTAKE_STEPS` (un error al crear abre su paso, `firstStepWithErrors`). Las tareas con `TaskEditor`; el depósito con `PaymentFields`. Lo envía `submitOrder` en `pages/WorkOrders.tsx` |
-| Tarjetas del detalle | `LaborTable` (con `TaskEditor`, `TechnicianSelect`, `TradeMismatchDialog` y las reglas de `tasks.ts`), `PartsTable`, `PartsSummaryCard`, `SignatureCard`, `ProgressLog`, `QuoteCard`, `CustomerLinkCard`, `CommissionEstimateCard`, `DeliveryModal`, `ShareReportModal`, `ArchivedOrders`; del técnico, `TechnicianTaskList` (Mis tareas, F5) y `ReportFindingModal`; de administración, `FindingsCard` (con `DiscardFindingModal`; reglas en `findings.ts`) |
+| Detalle | `features/workOrders/WorkOrderDetail.tsx` (dibuja) y `useWorkOrderDetail.ts` (estado, permisos derivados como `canEdit`, `canSign`, `canDeliver`, y todas las acciones). En escritorio, pestañas (`components/Tabs.tsx`) bajo un encabezado fijo: admin Resumen/Trabajos/Fotos y avances/Cobro y cliente/Historial; técnico Tareas/Orden/Avances. Cada pestaña se monta al abrirla y después solo se esconde. Cada tarjeta es una sección plegable (`components/CollapsibleSection.tsx`), **cerrada al entrar**, en escritorio y en el teléfono (ahí apiladas, en el orden de las pestañas). Qué sección va en cada pestaña: `TAB_SECTIONS`; la que abre un enlace: `LINKED_SECTION`. Enlace directo a una pestaña: `/work-orders?open=<id>&tab=<id de la pestaña>`. Inspección 360° incluye el diagrama de daños (`DamageDiagramEditor`, `VehicleDiagram`, `lib/vehicleDiagram.ts`) |
+| Historial de la orden | Tabla `historial_orden` (trigger `trg_historial`, `20261010000004`, `20261010000031` para `marcas_danos`); `workOrdersService.getHistory`; `features/workOrders/OrderHistory.tsx` y `historyFormat.ts` (convierte cada fila en una frase); pruebas `17_historial_orden.test.sql` y `historyFormat.test.ts` |
+| Alta | `features/workOrders/WorkOrderCreateModal.tsx`, `useWorkOrderForm.ts`, `workOrderForm.schema.ts`. Cuatro pasos (F4): Cliente, Vehículo y recepción (con `DamageDiagramEditor`), Trabajos (con casilla de autorización en recepción `autorizado_en_recepcion`, migración `20261010000030_autorizar_en_recepcion.sql`), Depósito. Qué campo va en qué paso: `INTAKE_STEPS` (un error al crear abre su paso, `firstStepWithErrors`). Las tareas con `TaskEditor`; el depósito con `PaymentFields`. Lo envía `submitOrder` en `pages/WorkOrders.tsx` |
+| Tarjetas del detalle | `LaborTable` (con `TaskEditor`, `TechnicianSelect`, `TradeMismatchDialog` y las reglas de `tasks.ts`), `PartsTable`, `PartsSummaryCard`, `SignatureCard`, `ProgressLog`, `QuoteCard`, `CustomerLinkCard`, `CommissionEstimateCard`, `DeliveryModal`, `ShareReportModal`, `ReadyNotifyModal` (aviso SMS/WhatsApp sin correo al marcar listo), `DamageDiagramEditor`, `ArchivedOrders`; del técnico, `TechnicianTaskList` (Mis tareas, F5; acción rápida principal con `techNextStep.ts`) y `ReportFindingModal`; de administración, `FindingsCard` (con `DiscardFindingModal`; reglas en `findings.ts`) |
 | Servicio | `services/workOrders.service.ts` |
-| Tablas | `ordenes_trabajo` (20 triggers), `orden_montos`, `orden_labor`, `orden_repuestos`, `orden_asignaciones`, `orden_avances`, `orden_hallazgos` (F6) |
+| Tablas | `ordenes_trabajo` (con `marcas_danos` y `trg_marcas_danos_firmadas`, 20 triggers), `orden_montos`, `orden_labor`, `orden_repuestos`, `orden_asignaciones`, `orden_avances`, `orden_hallazgos` (F6) |
 | RPC | `create_work_order`, `repuestos_de_orden`, `marcar_labor_completada`, `mis_ordenes_asignadas`; hallazgos: `reportar_hallazgo`, `cotizar_hallazgo`, `descartar_hallazgo` (y `_salir_de_espera`, interna) |
-| Pruebas | `pages/WorkOrders.smoke.test.tsx`, `features/workOrders/*.test.tsx`; pgTAP `01`, `03`, `07`, `09`, `10`, `21`, `22` (hallazgos) |
+| Pruebas | `pages/WorkOrders.smoke.test.tsx`, `features/workOrders/*.test.tsx`, `techNextStep.test.ts`, `VehicleDiagram.test.tsx`, `vehicleDiagram.test.ts`, `ReadyNotifyModal.test.tsx`; pgTAP `01`, `03`, `07`, `09`, `10`, `21`, `22` (hallazgos), `35_autorizar_en_recepcion.test.sql`, `36_marcas_de_danos.test.sql` |
 | Documento | [reglas-de-negocio.md §1 y §3](reglas-de-negocio.md) |
 
 - **Qué puede tocar un técnico** de una orden: trigger `trg_guard_order_technician` (columnas
@@ -149,11 +149,11 @@ egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
 | | |
 |---|---|
 | Pantallas | `pages/Customers.tsx`, `pages/Vehicles.tsx` (solo administración) |
-| Frontend | `features/vehicles/VehicleFields.tsx`, `vehicleForm.ts`; `components/CustomerPicker.tsx`, `components/PhoneInput.tsx` |
+| Frontend | `features/vehicles/VehicleFields.tsx`, `VinScannerModal.tsx`, `vehicleForm.ts`; `components/CustomerPicker.tsx`, `components/PhoneInput.tsx` |
 | Servicios | `customers.service.ts`, `vehicles.service.ts`, `search.service.ts` (buscador del encabezado) |
-| Lógica sin React | `lib/vin.ts` (decodifica con NHTSA), `lib/phone.ts` |
+| Lógica sin React | `lib/vin.ts` (decodifica con NHTSA), `lib/vinScan.ts` (limpieza y validación de código de barras del VIN), `lib/barcodeDetector.ts` (BarcodeDetector nativo o ponyfill dinámico zxing-wasm), `lib/vehicleColor.ts` (traducción bidireccional es/en de colores), `lib/phone.ts` |
 | Base | `clientes`, `vehiculos` (sede derivada por `trg_vehiculo_sede`) |
-| Pruebas | `Vehicles.*.test.tsx`, `customers.service.test.ts`, `search.service.test.ts`, `PhoneInput.test.tsx`; pgTAP `10` |
+| Pruebas | `Vehicles.*.test.tsx`, `VinScannerModal.test.tsx`, `vinScan.test.ts`, `barcodeDetector.test.ts`, `vehicleColor.test.ts`, `customers.service.test.ts`, `search.service.test.ts`, `PhoneInput.test.tsx`; pgTAP `10` |
 
 ## Multimedia (fotos, videos, notas de voz)
 
@@ -182,7 +182,7 @@ egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
 
 | | |
 |---|---|
-| Portal | `portal/` (paquete aparte: no importa nada de la app) |
+| Portal | `portal/` (`CustomerPortal.tsx`, `ServicePage.tsx`; paquete aparte: no importa nada de la app, usa `lib/vehicleColor.ts` para traducir color al idioma del cliente) |
 | Tarjeta del admin | `features/workOrders/CustomerLinkCard.tsx`, `ShareReportModal.tsx` |
 | Servicio | `customerPortal.service.ts`, `reports.service.ts` |
 | Base | `orden_enlaces`, `cola_envios`; `datos_portal` (**todo dato nuevo que ve el cliente se agrega a mano aquí**), `encolar_correo_cliente`, `trg_portal_on_order_change` |
@@ -194,8 +194,8 @@ egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
 
 | | |
 |---|---|
-| Código | `lib/workOrderPdf.ts` (qué se dibuja), `lib/reportMedia.ts` (qué fotos van), `lib/brandColor.ts` (color de la sede legible) |
-| Pruebas | `lib/workOrderPdf.test.ts` |
+| Código | `lib/workOrderPdf.ts` (qué se dibuja; traduce color con `lib/vehicleColor.ts` según idioma del PDF), `lib/reportMedia.ts` (qué fotos van), `lib/brandColor.ts` (color de la sede legible) |
+| Pruebas | `lib/workOrderPdf.test.ts`, `lib/vehicleColor.test.ts` |
 
 ## Cobro por parqueo
 

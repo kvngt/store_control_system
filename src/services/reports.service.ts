@@ -7,6 +7,7 @@
 // (`customerPortalService.sendReportEmail`) o por WhatsApp desde este mensaje.
 import type { Customer, WorkOrder } from '../types/database';
 import { whatsAppUrl } from '../lib/phone';
+import { getTranslation } from '../i18n/translations';
 
 // Movido a lib/phone para que el portal del cliente lo use sin el cliente de
 // Supabase. Se reexporta aquí porque es parte de lo que este servicio ofrece.
@@ -15,15 +16,22 @@ export { toWhatsAppNumber } from '../lib/phone';
 export const reportsService = {
   /** El mensaje que acompaña al enlace por WhatsApp. */
   buildMessage: (order: WorkOrder, url: string, sedeName?: string) => {
+    const lang = order.cliente?.idioma === 'es' ? 'es' : 'en';
     const vehicle = [order.vehiculo?.anio, order.vehiculo?.marca, order.vehiculo?.modelo]
       .filter(Boolean)
       .join(' ');
+    const vehicleStr = vehicle ? ` (${vehicle})` : '';
     const firstName = order.cliente?.nombre?.trim().split(/\s+/)[0];
-    const greeting = firstName ? `Hola ${firstName},` : 'Hola,';
+    const greeting = firstName
+      ? getTranslation(lang, 'customerLink.reportGreeting').replace('{nombre}', firstName)
+      : getTranslation(lang, 'customerLink.reportGreetingNoName');
+    const body = getTranslation(lang, 'customerLink.reportBody')
+      .replace('{numero}', order.numero_orden)
+      .replace('{vehiculo}', vehicleStr);
     return [
       greeting,
       '',
-      `Aquí puede ver el reporte de su orden ${order.numero_orden}${vehicle ? ` (${vehicle})` : ''}: el estado, las fotos y videos del trabajo y su cuenta.`,
+      body,
       '',
       url,
       '',

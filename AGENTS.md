@@ -33,9 +33,28 @@ Léela antes de empezar y agrega tu entrada al terminar cada bloque de trabajo.
   documentación decía `produccion`, ver [docs/historico/evaluacion-2026-10.md](docs/historico/evaluacion-2026-10.md#5-operación-y-despliegue)):
   un push a `main` sale en vivo en uno o dos minutos, sin esperar al CI.
 - **Migraciones nuevas: nómbralas después de la última** que haya en `supabase/migrations/`
-  (hoy `20261010000029`), no con la fecha de hoy. Hay migraciones aplicadas con fecha futura y
+  (hoy `20261010000031`), no con la fecha de hoy. Hay migraciones aplicadas con fecha futura y
   una más vieja que la última no se aplica con `db push`.
 - **Commits solo cuando se piden.**
+
+## Principios de UX y adopción en el taller
+
+En la semana de prueba el taller volvió a su hoja de papel. Una causa probable es que registrar
+un carro costaba más que llenar la hoja ([docs/plan-adopcion-2026-10.md](docs/plan-adopcion-2026-10.md)).
+Antes de cambiar una pantalla:
+
+- **Recibir un carro toma menos de 60 segundos** con un cliente que solo trae nombre y
+  teléfono. Todo campo obligatorio nuevo del alta tiene que justificarse contra eso.
+- **Antes de agregar una tarjeta, sección o botón, di qué elemento existente se oculta, se
+  fusiona o se automatiza.** Una acción nueva vive dentro de una sección existente
+  (`TAB_SECTIONS`) o como acción rápida, nunca como una tarjeta por tabla.
+- **Cada estado de la orden tiene un solo botón principal** (`QuickActions`, `primary`).
+- **El técnico resuelve lo suyo en 1 o 2 toques** en un teléfono de 390 px, con botones de
+  44 px o más.
+- **El cliente puede no tener correo:** ningún paso depende del correo. WhatsApp y SMS son los
+  canales, y lo que se le manda va en su idioma (`clientes.idioma`).
+- Antes de dar por buena una pantalla, `/ux-taller`; antes de un cambio de base,
+  `/nueva-migracion` (`.claude/commands/`).
 
 ## Verificar un cambio
 

@@ -192,4 +192,28 @@ describe('describeHistoryEntry', () => {
     const item = describeHistoryEntry(entry({ cambios: { retirada_sin_reparar: { antes: false, despues: true } } }), ctx);
     expect(item.details).toEqual(['Retirada sin reparar']);
   });
+
+  it('el cambio en marcas de daño se muestra como cantidad de marcas', () => {
+    const item = describeHistoryEntry(
+      entry({
+        cambios: {
+          marcas_danos: {
+            antes: [
+              { vista: 'frontal', x: 0.5, y: 0.5, tipo: 'golpe' },
+              { vista: 'trasera', x: 0.4, y: 0.4, tipo: 'rayon' },
+              { vista: 'superior', x: 0.2, y: 0.3, tipo: 'pintura' },
+            ],
+            despues: [
+              { vista: 'frontal', x: 0.5, y: 0.5, tipo: 'golpe' },
+              { vista: 'trasera', x: 0.4, y: 0.4, tipo: 'rayon' },
+              { vista: 'superior', x: 0.2, y: 0.3, tipo: 'pintura' },
+              { vista: 'izquierda', x: 0.1, y: 0.2, tipo: 'roto' },
+            ],
+          },
+        },
+      }),
+      ctx
+    );
+    expect(item.details).toEqual(['Daños marcados: 3 marcas → 4 marcas']);
+  });
 });

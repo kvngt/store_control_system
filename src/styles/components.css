@@ -2299,6 +2299,14 @@ body.drawer-open {
     min-height: 38px;
   }
 
+  .quick-actions .btn {
+    min-height: 44px;
+  }
+
+  .media-capture-bar .btn {
+    min-height: 44px;
+  }
+
   /* 16px, no `--font-size-base` (14px).
      Safari en iOS hace zoom automático al enfocar cualquier campo por debajo de
      16px, y no lo deshace al salir: la pantalla queda ampliada y corrida. En una
@@ -3598,6 +3606,40 @@ body.drawer-open {
 .recorder-spacer {
   width: 44px;
   flex-shrink: 0;
+}
+/* Visor del escáner de VIN: negro como el del grabador (es una cámara), con el recuadro guía. */
+.vin-scanner-view {
+  position: relative;
+  width: 100%;
+  height: 280px;
+  background: #000;
+  color: #fff;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-3);
+}
+.vin-scanner-view video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.vin-scanner-loading {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.vin-scanner-guide {
+  position: absolute;
+  width: 80%;
+  height: 35%;
+  border: 2px dashed var(--color-primary);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
 }
 
 .recorder-stage {
@@ -6316,3 +6358,256 @@ button.intake-step-button:hover:not(:disabled) {
   .help-content { padding: var(--space-4); }
   .help-figure img { max-height: 520px; }
 }
+
+/* ===================================================
+   DIAGRAMA DEL VEHÍCULO Y MARCAS DE DAÑOS (B2)
+   =================================================== */
+.vehicle-diagram {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.vehicle-diagram-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+  width: 100%;
+}
+
+/* En pantallas de menos de 640 px: laterales y arriba a todo lo ancho; frente y atrás lado a lado */
+.vehicle-diagram-card--izquierda,
+.vehicle-diagram-card--derecha,
+.vehicle-diagram-card--superior {
+  grid-column: span 2;
+}
+
+.vehicle-diagram-card--frontal,
+.vehicle-diagram-card--trasera {
+  grid-column: span 1;
+}
+
+/* En pantallas de 640 px o más: laterales lado a lado; arriba a todo lo ancho */
+@media (min-width: 640px) {
+  .vehicle-diagram-card--izquierda,
+  .vehicle-diagram-card--derecha {
+    grid-column: span 1;
+  }
+}
+
+.vehicle-diagram-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  gap: var(--space-2);
+}
+
+.vehicle-diagram-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vehicle-diagram-view-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.vehicle-diagram-svg {
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  margin: 0 auto;
+  display: block;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  touch-action: manipulation;
+  user-select: none;
+}
+
+/* Laterales y arriba: alto máximo ~150 px */
+.vehicle-diagram-card--izquierda .vehicle-diagram-svg,
+.vehicle-diagram-card--derecha .vehicle-diagram-svg,
+.vehicle-diagram-card--superior .vehicle-diagram-svg {
+  max-height: 150px;
+}
+
+/* Frente y atrás: alto máximo ~130 px */
+.vehicle-diagram-card--frontal .vehicle-diagram-svg,
+.vehicle-diagram-card--trasera .vehicle-diagram-svg {
+  max-height: 130px;
+}
+
+.vehicle-diagram-svg--editable {
+  cursor: crosshair;
+}
+
+.vehicle-diagram-shape {
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.vehicle-diagram-mark {
+  cursor: pointer;
+  outline: none;
+}
+
+.vehicle-diagram-mark-hit {
+  fill: transparent;
+}
+
+.vehicle-diagram-badge {
+  fill: var(--color-danger);
+  stroke: var(--color-bg-primary);
+  stroke-width: 1;
+}
+
+.vehicle-diagram-badge-text {
+  fill: var(--color-text-primary);
+  font-size: 8px;
+  font-weight: 700;
+  font-family: var(--font-family);
+  pointer-events: none;
+}
+
+.vehicle-diagram-list-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.vehicle-diagram-empty {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  margin: 0;
+  font-style: italic;
+}
+
+.vehicle-diagram-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.vehicle-diagram-list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.vehicle-diagram-remove-btn {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===================================================
+   EDITOR DE DAÑOS (B3)
+   =================================================== */
+.damage-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.damage-editor-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.damage-editor-title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.damage-editor-hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.damage-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.damage-editor-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.damage-type-chip {
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.damage-badge-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--color-danger);
+  color: var(--color-text-primary);
+  font-weight: 700;
+  font-size: var(--font-size-xs);
+  line-height: 1;
+}
+
+.damage-undo-btn,
+.damage-save-btn {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.damage-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--color-surface-border);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.damage-legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+

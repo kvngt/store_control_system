@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Camera, Images, Mic, Video } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
-import { compressImage } from '../../lib/media/image';
 import { isMediaError, MediaProcessingError } from '../../lib/media/errors';
 import type { PreparedMedia } from '../../types/database';
+import { prepareMediaFile } from './prepareMedia';
 import AudioRecorderModal from './AudioRecorderModal';
 import VideoRecorderModal from './VideoRecorderModal';
 
@@ -59,16 +59,13 @@ export default function MediaCaptureBar({ onAdd, disabled, allow = {}, onBusyCha
       try {
         if (file.type.startsWith('image/')) {
           setProcessing(t('media.processing') + label);
-          prepared.push(await compressImage(file));
+          prepared.push(await prepareMediaFile(file));
         } else if (file.type.startsWith('video/')) {
           setProcessing(t('media.converting').replace('{pct}', '0') + label);
-          // Solo aquí se descarga la librería de conversión.
-          const { prepareGalleryVideo } = await import('../../lib/media/galleryVideo');
           prepared.push(
-            await prepareGalleryVideo(file, {
-              onProgress: (p) =>
-                setProcessing(t('media.converting').replace('{pct}', String(Math.round(p * 100))) + label),
-            })
+            await prepareMediaFile(file, (p) =>
+              setProcessing(t('media.converting').replace('{pct}', String(Math.round(p * 100))) + label)
+            )
           );
         } else {
           throw new MediaProcessingError('unsupported-file');

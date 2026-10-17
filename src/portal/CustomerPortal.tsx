@@ -28,10 +28,12 @@ import {
 import { applySedeBranding } from '../lib/branding';
 import { formatDuration } from '../lib/media/mime';
 import { telUrl, whatsAppUrl } from '../lib/phone';
+import { translateVehicleColor } from '../lib/vehicleColor';
 import { answerQuote, fetchPortal, setEmailPreference, setLanguagePreference } from './portal.api';
 import type { PortalMedia, PortalPhoneContact, PortalQuote, PortalReport, PortalResponse, PortalShop } from './portal.types';
 import { initialPortalLanguage, portalStrings, savePortalLanguage, savedPortalLanguage, type PortalLanguage } from './strings';
 import { translateReport } from './translate';
+import { VehicleDiagram } from '../components/VehicleDiagram';
 
 type Strings = (typeof portalStrings)['es'];
 
@@ -341,7 +343,7 @@ function Report({
           <Car size={22} /> {vehicleTitle || s.vehicle}
         </h1>
         <p className="portal-vehicle-meta">
-          {[vehiculo.color, vehiculo.placa ? `${s.plate} ${vehiculo.placa}` : s.noPlate, vehiculo.vin_final ? `${s.vinEnding} ${vehiculo.vin_final}` : null]
+          {[translateVehicleColor(vehiculo.color, language), vehiculo.placa ? `${s.plate} ${vehiculo.placa}` : s.noPlate, vehiculo.vin_final ? `${s.vinEnding} ${vehiculo.vin_final}` : null]
             .filter(Boolean)
             .join(' · ')}
         </p>
@@ -467,6 +469,21 @@ function Report({
           <div className="portal-notes">
             <div className="portal-label">{s.receptionNotes}</div>
             <p>{orden.notas_recepcion}</p>
+          </div>
+        )}
+        {(orden.marcas_danos?.length ?? 0) > 0 && (
+          <div className="portal-damage" style={{ marginTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+            <div className="portal-label" style={{ marginBottom: 'var(--space-2)' }}>{s.damage.title}</div>
+            <VehicleDiagram
+              marks={orden.marcas_danos!}
+              labels={{
+                views: s.damage.views,
+                types: s.damage.types,
+                remove: s.damage.remove,
+                empty: s.damage.empty,
+              }}
+              editable={false}
+            />
           </div>
         )}
         {reception.length > 0 ? <PortalMediaGrid media={reception} s={s} fmt={fmt} /> : <p className="portal-muted">{s.noReceptionMedia}</p>}

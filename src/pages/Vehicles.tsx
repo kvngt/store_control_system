@@ -307,7 +307,7 @@ export default function Vehicles() {
                 <tr key={v.id}>
                   <td data-label={t('vehicles.brand')} style={{ fontWeight: 600 }}>{v.marca} {v.modelo}</td>
                   <td data-label={t('vehicles.year')}>{v.anio}</td>
-                  <td data-label={t('vehicles.vin')} style={{ fontFamily: 'monospace', fontSize: 'var(--font-size-xs)' }}>{v.vin}</td>
+                  <td data-label={t('vehicles.vin')} style={{ fontFamily: 'monospace', fontSize: 'var(--font-size-xs)' }}>{v.vin || '—'}</td>
                   <td data-label={t('vehicles.plate')}>
                     {v.placa ? (
                       <span className="badge badge-en_proceso">

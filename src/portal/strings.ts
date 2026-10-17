@@ -178,6 +178,25 @@ const es = {
     miles: 'Millas',
     note: 'Servicio',
   },
+  damage: {
+    title: 'Daños registrados en la recepción',
+    empty: 'Sin daños marcados',
+    remove: 'Quitar',
+    views: {
+      izquierda: 'Lado izquierdo',
+      derecha: 'Lado derecho',
+      frontal: 'Frente',
+      trasera: 'Atrás',
+      superior: 'Arriba',
+    },
+    types: {
+      golpe: 'Golpe o abolladura',
+      rayon: 'Rayón',
+      pintura: 'Pintura',
+      roto: 'Roto o falta',
+      otro: 'Otro',
+    },
+  },
 };
 
 type PortalStrings = typeof es;
@@ -354,6 +373,25 @@ const en: PortalStrings = {
     date: 'Date',
     miles: 'Miles',
     note: 'Service',
+  },
+  damage: {
+    title: 'Damage noted at check-in',
+    empty: 'No damage marked',
+    remove: 'Remove',
+    views: {
+      izquierda: 'Left side',
+      derecha: 'Right side',
+      frontal: 'Front',
+      trasera: 'Rear',
+      superior: 'Top',
+    },
+    types: {
+      golpe: 'Dent',
+      rayon: 'Scratch',
+      pintura: 'Paint',
+      roto: 'Broken or missing',
+      otro: 'Other',
+    },
   },
 };
 

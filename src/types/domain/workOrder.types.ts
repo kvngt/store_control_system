@@ -5,6 +5,7 @@ import type { UserProfile } from './auth.types';
 import type { Vehicle } from './vehicle.types';
 import type { LineState } from './quote.types';
 import type { PaymentMethod } from './finance.types';
+import type { DamageMark } from '../../lib/vehicleDiagram';
 
 export interface WorkOrder {
   id: string;
@@ -55,6 +56,7 @@ export interface WorkOrder {
   con_seguro: boolean;
   aseguradora?: string | null;
   numero_reclamo?: string | null;
+  marcas_danos?: DamageMark[];
   // Virtual fields from joins
   /**
    * El dinero de la orden. Vive en `orden_montos`, que solo un administrador
@@ -227,6 +229,8 @@ export interface WorkOrderInput {
   con_seguro?: boolean;
   aseguradora?: string | null;
   numero_reclamo?: string | null;
+  autorizado_en_recepcion?: boolean;
+  marcas_danos?: DamageMark[];
 }
 
 /** Un valor que cambió en el historial: el de antes, el de después, o los dos. */

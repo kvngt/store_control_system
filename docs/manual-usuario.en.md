@@ -307,12 +307,9 @@ The form is designed to fill in almost entirely on its own from the VIN.
 
 1. Tap **New Vehicle**.
 2. **Owner**: select a customer from the list, or create one right there with **Add new customer**.
-3. **VIN**: enter the 17 characters and tap **Decode**. The system looks up the official
-   vehicle database and fills in make, model and year. Below, additional details appear
-   (engine, body style, assembly plant). A VIN never includes the letters I, O
-   or Q; if you type them, the system warns: «A VIN never contains the letters I, O or Q.».
+3. **VIN**: it is optional. You can enter the 17 characters and tap **Decode**, or tap the scan button to read the barcode from the door frame or windshield using the camera (you can also upload a photo if there is no camera access). The system looks up the official vehicle database and fills in make, model and year. Below, additional details appear (engine, body style, assembly plant). A VIN never includes the letters I, O or Q; if you type them, the system warns: «A VIN never contains the letters I, O or Q.». If the vehicle has no visible VIN or you do not have it yet, you can leave the field empty.
 4. Review **Brand**, **Model** and **Year**. Whatever you enter manually takes priority.
-5. **Color**: choose from the list or type it. Color is not part of the VIN.
+5. **Color**: choose from the list or type it. Color is not part of the VIN. On the customer report and PDF, the color translates automatically according to the chosen language (for example, «Gris» is shown as «Gray» in English).
 6. **Plate**: choose the **Plate state** that issued it and enter the **Plate** number. The system warns
    if the format does not match that state's typical pattern, without preventing you from saving.
 7. **Create**.
@@ -392,11 +389,12 @@ The **Previous** and **Next** buttons let you navigate between steps without los
 
 **Step 1 — Customer.** Select an existing customer under **-- Select customer --**, or tap **New Customer** to register one right there (Name and Phone are required).
 
-**Step 2 — Vehicle and check-in.** Select the vehicle under **-- Select vehicle --**, or tap **New Vehicle** to register it with the VIN decoder. Then record intake conditions:
+**Step 2 — Vehicle and check-in.** Select the vehicle under **-- Select vehicle --**, or tap **New Vehicle** to register it with the VIN decoder or the **Scan** button (camera or photo; the VIN is optional). Then record intake conditions:
 - **Fuel Level**: E (empty), 1/4, 1/2, 3/4 or F (full).
 - **Miles In**: current odometer reading (positive integers only).
 - **360° Inspection**: six standard zones to photograph vehicle condition upon arrival: Front, Rear, Left, Right, Interior and Dashboard. Tap each box to take or select a photo.
 - Media buttons below the zones: **Photo**, **Video**, **Voice note** and **Gallery**. These let you capture details of preexisting dents, paperwork or video walkarounds. Photos are compressed on the phone before uploading and video is optimized (the button shows «Processing…»).
+- **Mark damage on the drawing**: button to record pre-existing vehicle damage on the interactive five-view diagram (comes collapsed by default to save screen space and displays the mark count; tapping it unfolds the full editor).
 - **360° inspection notes**: open text for general observations about vehicle condition.
 
 > This inspection is shop evidence if a customer later claims preexisting damage. Check-in photos and videos are the only media set to **Visible to customer** from the start. Intake voice notes remain **Internal** until an administrator chooses to publish them.
@@ -409,9 +407,10 @@ The **Previous** and **Next** buttons let you navigate between steps without los
 - **Insurance work**: check the box if the repair is covered by insurance, and enter the **Insurance company** and **Claim number**.
 - **Add job**: type (Mechanical or Painting), description, price and assigned **Technician**. If the type does not match the person's registered trade (for example, painting assigned to a mechanic), the system displays the warning «Assign a painting job to a mechanic?» with options **Assign anyway**, **Choose another** or **Cancel**. You can leave the job as **Unassigned**.
 - **Add part**: description, quantity, unit price and optional cost.
+- **The customer accepted this work and these prices**: if the customer already agreed in person to the work and quote upon vehicle drop-off, check this box. The work will be marked as authorized directly under the customer's name, without requiring a separate quote sent later or a manual authorization entry.
 - If you type a job or part and do not tap **Add**, the **Create** button prompts you to add it or discard it before continuing.
 
-Items quoted in this step start as **Not authorized**: they are charged only when the customer authorizes them through a quote or when the office records manual authorization. The check-in signature does not authorize quoted work.
+Items quoted in this step start as **Not authorized** unless you checked the in-person acceptance box: they are charged only when the customer authorizes them through a quote or when the office records manual authorization. The check-in signature does not authorize quoted work.
 
 ![Step 3 of creation, "Jobs", with the note that work is charged once the customer authorizes it.](../public/ayuda/en/14.webp)
 
@@ -421,6 +420,27 @@ Items quoted in this step start as **Not authorized**: they are charged only whe
 - It is automatically recorded as income in Finance under initial deposit.
 
 When you tap **Create**, the system generates the order number (for example, `ORD-2026-001`) and opens its details. Photos and multimedia files continue uploading in the background without interrupting your workflow.
+
+### Fast check-in
+<!-- rol: admin -->
+
+To check in a vehicle in under 60 seconds at the counter:
+1. **Customer**: enter just their name and phone number (or select them if already registered).
+2. **Vehicle**: scan the VIN with the **Scan** button (or upload a barcode photo), or just enter make and model (VIN and plate are optional and can be added later).
+3. **Jobs**: add a job with the agreed price, and check the box **The customer accepted this work and these prices** if they already gave approval.
+4. **Deposit**: enter the advance payment if any, or leave it at 0.
+5. **Create**: tap **Create** and the order is opened immediately.
+
+### Marking damage on the diagram
+<!-- rol: admin -->
+
+During order check-in (in step 2, after the photo zones, via the **Mark damage on the drawing** button which displays the mark count and unfolds when tapped) and inside the order's **360° Inspection** section, you will find the vehicle diagram with five views: left side, right side, front, rear, and top.
+
+- **To mark damage:** first select the damage type using the chips at the top (**Dent**, **Scratch**, **Paint**, **Broken or missing**, or **Other**) and tap the drawing at the exact location of the damage.
+- **To remove a mark:** tap the mark directly on the drawing, tap **Undo** to remove the last mark added, or tap the **Remove** button in the accessible list below the views.
+- **On the order:** tap **Save damage** to persist any changes.
+- **After signature:** once the customer signs for reception, damage marks are locked and cannot be changed, serving as proof of the condition in which the vehicle arrived.
+- Marked damages are always printed in the work order PDF and shown in the customer's portal link.
 
 ### Only the office creates orders
 
@@ -456,7 +476,9 @@ Below the header are highlighted buttons with the most frequent actions based on
   - **Record advance payment**.
   - **Payments and totals**.
 - **For technicians**:
-  - **My jobs** (highlighted, takes them straight to assigned tasks).
+  - **Start work** (highlighted as the primary button during reception when at least one authorized task is assigned; moves the order to in progress).
+  - **Done: let the office know** (highlighted as the primary button during in-progress when all authorized tasks on the order are completed; moves the order to finalized and alerts the office).
+  - **My jobs** (highlighted when neither starting nor finishing is due; takes them straight to assigned tasks).
   - **Add progress**.
   - **Report additional work** (active while the order is not completed).
   - **Vehicle details**.
@@ -486,7 +508,7 @@ Distributed across tabs, the sections are:
   - **History**: immutable audit log of all order changes.
 - **In the Technician view**:
   - **Tasks**: list of assigned **Tasks** and the **Your estimated commission** card.
-  - **Order**: **Vehicle Information**, **360° Inspection**, **Parts Description** (without dollar amounts), **Customer Signature**, **Assigned Technician**, **Next service** (suggest only).
+  - **Order**: **Vehicle Information**, **360° Inspection** (with the vehicle damage diagram in read-only mode), **Parts Description** (without dollar amounts), **Customer Signature**, **Assigned Technician**, **Next service** (suggest only).
   - **Progress**: log of **Work Progress**.
 
 #### Additional work reported by the technician
@@ -516,8 +538,10 @@ On the dashboard (under **Needs attention**) and above the Summary and Work tabs
   - If a job has no technician, it displays the badge **No technician**: nobody will earn that commission until one is assigned. The order warns above Summary with «N job(s) without a technician: nobody will earn their commission until you assign one.» and the **View jobs** button.
   - Once commission is paid, task selectors display a lock and the **Delete** button is disabled; to modify them, the payment must first be undone in Commissions.
 - **For technicians (Tasks)**:
+  - Main status button: the **Start work** (in reception with authorized work) and **Done: let the office know** (in progress when all work is completed) actions are placed at the top in the order's **quick actions**, ensuring a single primary button per status. In the task list, when all is done an informational help hint is shown, and if their own tasks are completed but another colleague's tasks are still pending, they see the notice «Your part is done. Still pending: ...».
   - They view their tasks with description, type and labor price (from which their commission is derived). Parts are shown without prices.
   - They tap **Done** upon completing a task; if marked by mistake, they tap **Reopen job**.
+  - Using **Photo**, they can directly take or upload a camera snapshot to attach as an update to that task.
   - Using **Add update**, they can upload photos, videos or voice notes linked to that specific job.
 - **Badges on each line**:
   - *(No badge)*: **Authorized** by the customer. Performed and charged.
@@ -598,11 +622,12 @@ Authorized work immediately adds to the order total and alerts technicians about
 
 When the technician sets the status to **Completed**, physical work is done but the customer is not notified yet. On the order details, the badge **To review** appears.
 
-The office must inspect the vehicle and verify accounts. Once satisfied, tap the green **Mark ready for pickup** button in the header. At that instant:
+The office must inspect the vehicle and verify accounts. To mark it ready, tap the primary **Mark ready for pickup** button in quick actions (also available in the header). At that instant:
 1. The order badge updates to **Ready for pickup**.
-2. An automatic email is sent to the customer letting them know their vehicle is ready.
-3. On the customer's web report, the status changes from «Final inspection» to «Ready for pickup».
-4. If the workshop charges parking for private customers, grace days begin counting from this event.
+2. If the customer has a valid email address on file, an automatic email is sent letting them know their vehicle is ready.
+3. If the customer **does not have a registered email address**, a dialog opens immediately with the prepared message ready to send via **WhatsApp** or **SMS**, written in the customer's language (Spanish or English).
+4. On the customer's web report, the status changes from «Final inspection» to «Ready for pickup».
+5. If the workshop charges parking for private customers, grace days begin counting from this event.
 
 #### Delivering the order
 <!-- rol: admin -->

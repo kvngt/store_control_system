@@ -22,6 +22,7 @@ import type {
 import { mediaPath } from '../lib/media/mime';
 import { assertAffected, assertDeleted, fetchAll } from './support';
 import { daysFromTodayLocal } from '../lib/dates';
+import { type DamageMark, sanitizeDamageMarks } from '../lib/vehicleDiagram';
 
 /** Desde cuándo una orden entregada deja el tablero y pasa al archivo. */
 const ARCHIVE_DAYS = 90;
@@ -215,6 +216,7 @@ export const workOrdersService = {
 
     return {
       ...data,
+      marcas_danos: sanitizeDamageMarks(data.marcas_danos),
       avances: (avances || []) as OrderProgressUpdate[],
       repuestos_resumen: (resumen || []) as PartSummary[],
       media,
@@ -269,6 +271,8 @@ export const workOrdersService = {
       con_seguro: input.con_seguro ?? false,
       aseguradora: input.con_seguro ? (input.aseguradora?.trim() || null) : null,
       numero_reclamo: input.con_seguro ? (input.numero_reclamo?.trim() || null) : null,
+      autorizado_en_recepcion: input.autorizado_en_recepcion ?? false,
+      marcas_danos: input.marcas_danos ?? [],
     };
 
     // Una transacción del lado de la base: la orden y su labor, repuestos y
@@ -343,6 +347,20 @@ export const workOrdersService = {
     const { data, error } = await supabase
       .from('ordenes_trabajo')
       .update(updates)
+      .eq('id', orderId)
+      .select('id');
+    if (error) throw error;
+    assertAffected(data, 'la orden');
+  },
+
+  /**
+   * Guarda los daños marcados en el dibujo del vehículo. Solo admin y antes de que el cliente firme
+   * la recepción (la base impone el candado con trg_marcas_danos_firmadas).
+   */
+  updateDamageMarks: async (orderId: string, marks: DamageMark[]) => {
+    const { data, error } = await supabase
+      .from('ordenes_trabajo')
+      .update({ marcas_danos: marks })
       .eq('id', orderId)
       .select('id');
     if (error) throw error;

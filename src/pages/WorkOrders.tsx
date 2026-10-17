@@ -433,10 +433,12 @@ export default function WorkOrders() {
             deposito_cheque: deposito > 0 && values.paymentMethod === 'cheque' ? values.checkNumber.trim() || null : null,
             deposito_comprobante: conComprobante ? receiptPathRef.current : null,
             inspeccion_360_notas: values.inspectionNotes,
+            marcas_danos: values.damageMarks ?? [],
             fecha_estimada_entrega: values.estimatedDate || daysFromTodayLocal(5),
             con_seguro: values.withInsurance ?? false,
             aseguradora: values.withInsurance ? (values.insurer?.trim() || null) : null,
             numero_reclamo: values.withInsurance ? (values.claimNumber?.trim() || null) : null,
+            autorizado_en_recepcion: (values.laborItems.length > 0 || values.parts.length > 0) ? (values.authorizedAtIntake ?? false) : false,
             // `Math.max(0, ...)` igual que en los repuestos. La labor era la única
             // cifra de dinero que aceptaba un negativo, y sobre una orden entregada
             // un total que baja lo asienta Finanzas como reembolso al cliente.

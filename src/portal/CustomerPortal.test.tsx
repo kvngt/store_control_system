@@ -607,5 +607,24 @@ describe('CustomerPortal — la cuenta', () => {
     await screen.findByRole('heading', { name: /2019 Toyota Camry/ });
     expect(screen.queryByText('Próximo servicio recomendado')).not.toBeInTheDocument();
   });
+
+  it('muestra el dibujo del vehículo con los daños en la recepción si hay marcas', async () => {
+    mocks.fetchPortal.mockResolvedValue(
+      report({
+        orden: {
+          ...report().orden,
+          marcas_danos: [
+            { vista: 'frontal', x: 0.5, y: 0.5, tipo: 'golpe' },
+            { vista: 'derecha', x: 0.3, y: 0.4, tipo: 'rayon' },
+          ],
+        },
+      })
+    );
+    render(<CustomerPortal token={TOKEN} />);
+
+    expect(await screen.findByText('Daños registrados en la recepción')).toBeInTheDocument();
+    expect(screen.getByText(/Frente: Golpe o abolladura/)).toBeInTheDocument();
+    expect(screen.getByText(/Lado derecho: Rayón/)).toBeInTheDocument();
+  });
 });
 

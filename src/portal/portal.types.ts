@@ -1,4 +1,5 @@
 // Lo que responde la edge function `portal` (armado por `datos_portal` en la base).
+import type { DamageMark } from '../lib/vehicleDiagram';
 
 export type PortalLinkState = 'ok' | 'no_encontrado' | 'revocado' | 'vencido';
 
@@ -56,6 +57,7 @@ export interface PortalOrder {
   millas_ingreso: number;
   nivel_gasolina: string;
   notas_recepcion: string | null;
+  marcas_danos?: DamageMark[];
   firma_url: string | null;
   firma_fecha: string | null;
 }

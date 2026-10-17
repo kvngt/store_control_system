@@ -54,27 +54,33 @@ describe('work order intake schema', () => {
     expect(found.selectedCustomer).toBeUndefined();
   });
 
-  it('requires make, model and VIN when the vehicle is being created inline', () => {
+  it('requires make and model when the vehicle is being created inline, but VIN is optional', () => {
     const found = issues(form({ vehicleMode: 'new', selectedVehicle: '' }));
     expect(found['newVehicle.marca']).toBe('workOrders.validation.vehicleBrand');
     expect(found['newVehicle.modelo']).toBe('workOrders.validation.vehicleModel');
-    expect(found['newVehicle.vin']).toBe('workOrders.validation.vehicleVin');
+    expect(found['newVehicle.vin']).toBeUndefined();
     expect(found.selectedVehicle).toBeUndefined();
   });
 
   it('rejects a VIN that is the wrong length rather than accepting a typo', () => {
     const base = { vehicleMode: 'new' as const, selectedVehicle: '' };
-    const short = form({
+    const empty = form({
       ...base,
-      newVehicle: { ...emptyWorkOrderForm().newVehicle, marca: 'Toyota', modelo: 'Corolla', vin: '1HGCM8263' },
+      newVehicle: { ...emptyWorkOrderForm().newVehicle, marca: 'Toyota', modelo: 'Corolla', vin: '' },
     });
-    expect(issues(short)['newVehicle.vin']).toBe('workOrders.validation.vinLength');
+    expect(issues(empty)['newVehicle.vin']).toBeUndefined();
 
-    const exact = form({
+    const short16 = form({
+      ...base,
+      newVehicle: { ...emptyWorkOrderForm().newVehicle, marca: 'Toyota', modelo: 'Corolla', vin: '1234567890123456' },
+    });
+    expect(issues(short16)['newVehicle.vin']).toBe('workOrders.validation.vinLength');
+
+    const exact17 = form({
       ...base,
       newVehicle: { ...emptyWorkOrderForm().newVehicle, marca: 'Toyota', modelo: 'Corolla', vin: '1HGCM82633A004352' },
     });
-    expect(issues(exact)['newVehicle.vin']).toBeUndefined();
+    expect(issues(exact17)['newVehicle.vin']).toBeUndefined();
   });
 
   it('refuses a negative odometer reading and a negative deposit', () => {
@@ -144,5 +150,18 @@ describe('pasos del alta', () => {
     expect(firstStepWithErrors({ paymentMethod: {} })).toBe(4);
     expect(firstStepWithErrors({ paymentMethod: {}, parts: [] })).toBe(3);
     expect(firstStepWithErrors({ milesIn: {}, newCustomer: { nombre: {} } })).toBe(1);
+  });
+
+  it('accepts valid damage marks and rejects malformed ones', () => {
+    const valid = form({
+      damageMarks: [{ vista: 'frontal', x: 0.5, y: 0.5, tipo: 'golpe' }],
+    });
+    expect(issues(valid)).toEqual({});
+
+    const invalid = form({
+      // @ts-expect-error - testing schema rejection of invalid view
+      damageMarks: [{ vista: 'techo', x: 0.5, y: 0.5, tipo: 'golpe' }],
+    });
+    expect(issues(invalid)).toHaveProperty('damageMarks.0.vista');
   });
 });

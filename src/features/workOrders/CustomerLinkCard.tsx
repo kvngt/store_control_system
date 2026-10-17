@@ -9,6 +9,7 @@ import { canOpenSms, smsUrl, whatsAppUrl } from '../../lib/phone';
 import { queryKeys } from '../../lib/queryClient';
 import { relativeTime } from '../notifications/renderNotification';
 import { customerPortalService } from '../../services/customerPortal.service';
+import { getTranslation } from '../../i18n/translations';
 import type { CustomerEmail, WorkOrder } from '../../types/database';
 
 interface CustomerLinkCardProps {
@@ -100,8 +101,9 @@ export default function CustomerLinkCard({ order, statusLabels }: CustomerLinkCa
       else showToast('error', t('customerLink.notifyNoEmail'));
     }, 'customerLink.notifyError');
 
+  const clientLang = customer?.idioma === 'es' ? 'es' : 'en';
   const whatsAppMessage = url
-    ? t('customerLink.whatsappMessage')
+    ? getTranslation(clientLang, 'customerLink.whatsappMessage')
         .replace('{nombre}', customer?.nombre?.split(' ')[0] || '')
         .replace('{numero}', order.numero_orden)
         .replace('{url}', url)

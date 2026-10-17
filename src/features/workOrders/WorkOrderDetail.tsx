@@ -31,7 +31,6 @@ import {
   X,
   Banknote,
   PackageCheck,
-  ListChecks,
 } from 'lucide-react';
 import CollapsibleSection from '../../components/CollapsibleSection';
 import Tabs, { TabPanel, type TabItem } from '../../components/Tabs';
@@ -53,11 +52,13 @@ import TechnicianTaskList from './TechnicianTaskList';
 import TechOrderStatus from './TechOrderStatus';
 import AuthorizationPanel from './AuthorizationPanel';
 import QuickActions, { type QuickAction } from './QuickActions';
+import { buildTechActions } from './techNextStep';
 import ProgressLog from './ProgressLog';
 import ShareReportModal from './ShareReportModal';
 import FindingsCard from './FindingsCard';
 import { findingsToReview } from './findings';
 import DeliveryModal from './DeliveryModal';
+import DamageDiagramEditor from './DamageDiagramEditor';
 import WithdrawalModal, { type WithdrawalLine } from './WithdrawalModal';
 import AdvancePaymentModal from './AdvancePaymentModal';
 import OrderTotalsCard from './OrderTotalsCard';
@@ -73,6 +74,7 @@ import PublishProgressModal from './PublishProgressModal';
 import CustomerLinkCard from './CustomerLinkCard';
 import QuoteCard from './QuoteCard';
 import OrderHistory from './OrderHistory';
+import ReadyNotifyModal from './ReadyNotifyModal';
 import { isUnassignedTask, suggestedTechnicianId } from './tasks';
 import SignatureCard from './SignatureCard';
 import MediaCaptureBar from '../media/MediaCaptureBar';
@@ -331,7 +333,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           {[
             [t('vehicles.brand'), `${vehicle?.marca} ${vehicle?.modelo}`],
             [t('vehicles.year'), vehicle?.anio],
-            [t('vehicles.vin'), vehicle?.vin],
+            [t('vehicles.vin'), vehicle?.vin || '—'],
             [t('vehicles.plate'), vehicle?.placa],
             [t('vehicles.color'), vehicle?.color],
             [t('workOrders.milesIn'), order.millas_ingreso.toLocaleString()],
@@ -405,6 +407,16 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-4)', lineHeight: 1.6 }}>
           {order.inspeccion_360_notas}
         </p>
+
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <DamageDiagramEditor
+            marks={order.marcas_danos || []}
+            editable={detail.isAdmin && !order.firma_ruta}
+            isLocked={Boolean(order.firma_ruta)}
+            isSaving={detail.savingDamageMarks}
+            onSave={detail.updateDamageMarks}
+          />
+        </div>
 
         {/* La recepción es lo que el cliente firma: nace visible para él, salvo la nota de
             voz, que es el taller hablando y la publica un admin (20261010000003). Aquí
@@ -854,12 +866,16 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
 
   // Los atajos de cada rol (pedido del taller, 06/10/2026). Lo que toca ahora va resaltado.
   const hasLabor = laborList.length > 0;
+  const isFinalizadoPendingReview = order.estatus === 'finalizado' && !order.lista_para_entregar_en && !order.retirada_sin_reparar;
   const adminActions: QuickAction[] = isAdmin && !detail.isDelivered
     ? [
+        ...(isFinalizadoPendingReview
+          ? [{ key: 'markReady', icon: CheckCircle2, label: 'workOrders.markReady', onClick: () => void detail.markReadyForPickup(), primary: true }]
+          : []),
         ...(detail.isReadyForPickup && detail.canDeliver
           ? [{ key: 'deliver', icon: PackageCheck, label: 'quickActions.deliver', onClick: detail.startDelivery, primary: true }]
           : []),
-        { key: 'work', icon: Plus, label: 'quickActions.addWork', onClick: () => goTo('trabajos', 'mano_obra'), primary: !hasLabor },
+        { key: 'work', icon: Plus, label: 'quickActions.addWork', onClick: () => goTo('trabajos', 'mano_obra'), primary: !hasLabor && !isFinalizadoPendingReview },
         ...(!order.firma_ruta && detail.canSign
           ? [{ key: 'sign', icon: PenLine, label: 'quickActions.sign', onClick: () => goTo('resumen', 'firma'), primary: order.estatus === 'recepcion' && hasLabor }]
           : []),
@@ -871,18 +887,19 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         { key: 'payments', icon: Receipt, label: 'quickActions.payments', onClick: () => goTo('cobro', 'totales') },
       ]
     : [];
-  const techActions: QuickAction[] = !isAdmin && detail.canEdit
-    ? [
-        { key: 'tasks', icon: ListChecks, label: 'quickActions.myTasks', onClick: () => goTo('tareas', 'tareas'), primary: true },
-        { key: 'progress', icon: MessageSquarePlus, label: 'quickActions.progress', onClick: () => goTo('avances', 'avances') },
-        ...(order.estatus !== 'finalizado'
-          ? [{ key: 'finding', icon: AlertTriangle, label: 'quickActions.reportFinding', onClick: () => setReportRequest((n) => n + 1) }]
-          : []),
-        ...(detail.canSuggestNextService
-          ? [{ key: 'suggestService', icon: Tag, label: 'quickActions.suggestService', onClick: () => setStickerModal({ open: true, initialData: null }) }]
-          : []),
-        { key: 'vehicle', icon: Car, label: 'quickActions.vehicle', onClick: () => goTo('orden', 'vehiculo') },
-      ]
+  const techActions: QuickAction[] = !isAdmin && detail.canEdit && detail.userId
+    ? buildTechActions({
+        order,
+        laborList,
+        userId: detail.userId,
+        canEdit: detail.canEdit,
+        busy: detail.busy,
+        canSuggestNextService: detail.canSuggestNextService,
+        changeStatus: detail.changeStatus,
+        goTo,
+        onReportFinding: () => setReportRequest((n) => n + 1),
+        onSuggestService: () => setStickerModal({ open: true, initialData: null }),
+      })
     : [];
 
   // Los avisos van arriba de las secciones y no se pliegan: son lo que hay que atender.
@@ -1228,6 +1245,13 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           downloading={detail.generatingPdf}
           onDownload={() => void detail.generatePdf(pdfLanguage)}
           onClose={detail.closeShare}
+        />
+      )}
+
+      {detail.readyNotifyOpen && (
+        <ReadyNotifyModal
+          order={order}
+          onClose={detail.closeReadyNotify}
         />
       )}
 

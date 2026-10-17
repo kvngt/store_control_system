@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { applySedeBranding } from '../lib/branding';
 import { formatPhone, telUrl, whatsAppUrl } from '../lib/phone';
+import { translateVehicleColor } from '../lib/vehicleColor';
 import { fetchService } from './portal.api';
 import { computeServiceStatus } from './serviceStatus';
 import {
@@ -231,7 +232,7 @@ function ServiceContent({ data, todayStr, language, formatDate }: ServiceContent
           <Car size={18} style={{ color: 'var(--color-text-secondary)', flexShrink: 0 }} />
           <span>
             {vehicleName}
-            {vehiculo.color ? ` (${vehiculo.color})` : ''}
+            {vehiculo.color ? ` (${translateVehicleColor(vehiculo.color, language)})` : ''}
           </span>
         </div>
 

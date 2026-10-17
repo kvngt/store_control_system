@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Camera, Check, CheckCircle2, ChevronLeft, ChevronRight, Pencil, Trash2, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
@@ -17,6 +17,7 @@ import PaymentFields from './PaymentFields';
 import TaskEditor from './TaskEditor';
 import PartEditor from './PartEditor';
 import PendingWorkNotice from './PendingWorkNotice';
+import DamageDiagramEditor from './DamageDiagramEditor';
 
 /**
  * Refuses the keys that put a minus sign into a `type="number"` box.
@@ -78,6 +79,8 @@ export default function WorkOrderCreateModal({
   const { errors } = formState;
   const photos = form.photos;
   const newVehicle = form.newVehicle;
+  const damageMarks = watch('damageMarks') ?? [];
+  const [damageDiagramOpen, setDamageDiagramOpen] = useState(false);
   const { step, furthestStep, nextStep, prevStep, goToStep } = form;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -115,6 +118,13 @@ export default function WorkOrderCreateModal({
     setJustAdded({ kind, index });
     setTimeout(() => setJustAdded((cur) => (cur?.kind === kind && cur.index === index ? null : cur)), 2500);
   };
+
+  const hasLines = form.labor.fields.length > 0 || form.parts.fields.length > 0;
+  useEffect(() => {
+    if (!hasLines) {
+      setValue('authorizedAtIntake', false);
+    }
+  }, [hasLines, setValue]);
 
   const FieldError = ({ messageKey }: { messageKey?: string }) =>
     messageKey ? (
@@ -386,6 +396,37 @@ export default function WorkOrderCreateModal({
             t('workOrders.tapToCapture')
           )}
         </p>
+      </div>
+
+      <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
+        {damageDiagramOpen ? (
+          <DamageDiagramEditor
+            marks={damageMarks}
+            onChange={(marks) => setValue('damageMarks', marks, { shouldDirty: true })}
+            editable={!saving}
+          />
+        ) : (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{
+              width: '100%',
+              minHeight: 44,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 'var(--space-2)',
+            }}
+            onClick={() => setDamageDiagramOpen(true)}
+          >
+            <span>{t('damage.open')}</span>
+            {damageMarks.length > 0 && (
+              <span className="badge badge-subtle" style={{ fontSize: 'var(--font-size-xs)' }}>
+                {t('damage.count').replace('{n}', String(damageMarks.length))}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       <div className="form-group" style={{ marginTop: 'var(--space-3)' }}>
@@ -660,6 +701,25 @@ export default function WorkOrderCreateModal({
             <p className="task-editor-error" role="alert">{t('intake.editPending')}</p>
           )}
         </>
+      )}
+
+      {hasLines && (
+        <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
+          <label className="form-checkbox" style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              id="order-authorized-at-intake"
+              style={{ marginTop: '3px' }}
+              {...register('authorizedAtIntake')}
+            />
+            <div>
+              <span style={{ fontWeight: 500, display: 'block' }}>{t('intake.authorizedAtIntake')}</span>
+              <span className="field-hint" style={{ marginTop: 'var(--space-1)', display: 'block' }}>
+                {t('intake.authorizedAtIntakeHint')}
+              </span>
+            </div>
+          </label>
+        </div>
       )}
 
       {/* Al final: con los trabajos y repuestos a la vista ya se sabe cuándo puede estar listo

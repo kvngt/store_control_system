@@ -25,8 +25,9 @@
 | Teléfonos 09/10 | Varios teléfonos por sede, con su descripción, en el enlace del cliente, el PDF y los correos | **Publicado** (`a7769d5` en `main`; la `20261010000025` está aplicada según `db:check` del 10/10/2026). Lo hizo Gemini y se revisó y corrigió el 10/10/2026 ([bitácora](#10102026--claude-code-auditoría-de-los-teléfonos-por-sede-de-gemini)) |
 | Teléfonos (2) 10/10 | Cada teléfono dice si es de oficina o celular y si atiende WhatsApp; sale el campo "WhatsApp del taller" | **Publicado** el 11/10/2026 (`3731cd8` en `main`; `db:check`: 82 migraciones aplicadas; `process-outbox` v18 desplegada el 11/10). Migración `20261010000026`; lo hizo Gemini y Claude Code lo revisó el 10/10/2026: código correcto, `test:db` ✓. Orden de publicación en la [bitácora](#10102026-noche--gemini-tipo-de-teléfono-y-whatsapp-por-teléfono)) |
 | Seguro y parqueo 10/10 | Fase A: la orden dice si se trabaja con seguro. Fases B–D: módulo de cobro por parqueo configurable por sede (perfiles con y sin seguro, tramos, gracia, topes, ajustes por orden), en la cuenta del cliente, el PDF y el correo de "listo" | **Publicado** el 11/10/2026 (`3731cd8` en `main`; `db:check`: 82 migraciones aplicadas; `process-outbox` v18 desplegada el 11/10). Migraciones `20261010000027` y `20261010000028`. Gemini lo implementó y Claude Code lo auditó y corrigió el 11/10/2026 (un cobro de parqueo sobre órdenes ya entregadas, "vigente desde" hacia atrás, pruebas que llamaban a producción). `test:db` 33/811 ✓, Vitest 97/802 ✓. `qa:security` contra producción (11/10/2026, lo corrió el usuario): 126 PASS, 1 FAIL, 28 SKIP; el FAIL era la prueba SEC-160, que esperaba un rechazo donde la regla es cero filas (corregida; ver la bitácora). Detalle en la [bitácora](#11102026--claude-code-auditoría-y-arreglo-del-módulo-de-parqueo-de-gemini) |
-| Ayuda 12/10 | El manual de usuario dentro de la app (`/ayuda`), en español e inglés y por rol, con capturas | **Hecho, sin publicar** (sin migración ni funciones). Ver la entrada del 12/10/2026, tarde |
-| Sticker 14/10 | Sticker térmico de próximo servicio (62 × 50 mm, Brother QL-810W) con QR a una página pública propia (`/s/<código>`); el técnico sugiere y administración programa | **Hecho, sin publicar** (sin commit). Migración `20261010000029` y edge function `portal`. Gemini lo implementó y Claude Code lo auditó y corrigió el 14/10/2026: lint ✓, `tsc` ✓, Vitest 104/869 ✓, build ✓, `test:db` 34/845 ✓ (en la copia aislada). Falta: probar la impresora (§6 del plan), revisión visual y publicar en el orden de la [bitácora](#14102026--claude-code-auditoría-del-sticker-de-próximo-servicio-de-gemini) |
+| Ayuda 12/10 | El manual de usuario dentro de la app (`/ayuda`), en español e inglés y por rol, con capturas | **Publicado** (`b6d8792` en `main`; sin migración ni funciones). Ver la entrada del 12/10/2026, tarde |
+| Sticker 14/10 | Sticker térmico de próximo servicio (62 × 50 mm, Brother QL-810W) con QR a una página pública propia (`/s/<código>`); el técnico sugiere y administración programa | **Publicado** el 14/10/2026 por el usuario (`3b38be0` y `3c3d53f` en `main`). Comprobado el 14/10: `db:check` con 83 migraciones aplicadas, incluida la `20261010000029`; la función `portal` de producción ya responde a `?servicio=` (`404 {"estado":"no_existe"}` con un código inexistente). Gemini lo implementó y Claude Code lo auditó y corrigió: `test:db` 34/845 ✓, Vitest 104/870 ✓. Falta: probar la impresora (§6 del plan) y correr `qa:security` (SEC-162 a SEC-171) |
+| Adopción 14–16/10 | Plan a partir del diagnóstico de Gemini, más lo que pidió la persona responsable. **A:** autorizar en el mostrador (migración `030`), VIN opcional y escáner, aviso de «listo» sin correo, mensajes en el idioma del cliente, color traducido. **B:** dibujo del vehículo con daños marcados (migración `031`). **C:** «Empezar» y «Terminé» para el técnico. **D:** ajustes visuales | **Hecho, sin publicar** (sin commit). Gemini lo programó y Claude Code lo verificó y corrigió el 16/10/2026: `test:db` 36/876 ✓, Vitest 115/936 ✓, lint, `tsc` y build ✓, más capturas reales. Falta publicar en el orden de la [bitácora](#16102026--claude-code-verificación-de-las-partes-a-a-d-de-adopción) y correr `qa:security`. [plan](plan-adopcion-2026-10.md) · [tareas](tareas-para-gemini-adopcion.md) |
 
 Nada se publica sin que la persona responsable lo pida: cada `db push`, `functions deploy`,
 push a `main` y commit se piden aparte.
@@ -44,6 +45,202 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 16/10/2026 — Claude Code (verificación de las partes A a D de adopción)
+
+- **Pedido:**
+  - una plataforma más rápida y fluida para cuando el taller retome el uso la semana del
+    19/10;
+  - que Gemini programe y Claude verifique;
+  - usar las skills instaladas.
+- **Diagnóstico con datos reales** (anexo A del plan, corrido en producción el 16/10 con
+  `db query --linked`, solo lectura):
+  - 7 órdenes entre el 09 y el 13/10, y ninguna desde el 14/10;
+  - 5 de 7 siguen en Recepción, y 5 de 7 tienen trabajo sin autorizar;
+  - la mitad de los clientes no tiene correo;
+  - solo 2 de 5 técnicos usaron la app.
+- **Skills usadas:**
+  - `/nueva-migracion` sobre las migraciones `030` y `031`;
+  - `/ux-taller` sobre la vista del técnico (de ahí salió la parte C);
+  - `/auditoria-adopcion` sobre el alta;
+  - `design:design-critique` sobre capturas reales (de ahí salió la parte D).
+- **Corregido sobre lo de Gemini:**
+  - **pgTAP 35 y 36:**
+    - un tipo inexistente (`line_item_status`);
+    - altas sin `nivel_gasolina` ni `fecha_estimada_entrega`;
+    - una firma fuera de la carpeta de la orden;
+    - un token de 128 caracteres y un enlace duplicado.
+  - **Escáner:**
+    - las lecturas se encimaban (`setInterval` con `await`) y podían entregar el VIN dos veces;
+    - colores escritos a mano en estilos en línea;
+    - botones de 40 px;
+    - si fallaba la descarga del lector, quedaba roto hasta recargar.
+  - **Tipos:**
+    - unos 20 errores: importaciones de tipos sin `type`, propiedades mal conectadas al editor del
+      dibujo, una importación por defecto inexistente;
+    - una función declarada dentro de un componente, que pasó a `src/features/media/prepareMedia.ts`.
+  - **Pruebas mal armadas:**
+    - textos que no coincidían con la pantalla;
+    - falta del proveedor de idioma;
+    - simulaciones incompletas;
+    - un `clipboard` sin simular.
+  - Las funciones SQL reescritas se compararon línea por línea contra su versión anterior:
+    cambian solo lo pedido.
+- **Verificación en el repositorio:**
+  - `npm install` (agrega `barcode-detector` 3.2.2 y `zxing-wasm` 3.1.3, fijas);
+  - lint ✓, `tsc` ✓, Vitest 115 archivos y 936 pruebas ✓, build ✓;
+  - `test:db` 36 archivos y 876 pruebas ✓, en la copia, con la misma SQL;
+  - capturas reales a 390 px y en escritorio del alta, el dibujo, el técnico, el escáner, el
+    portal y el PDF;
+  - el lector de códigos (`zxing_reader.wasm`, 1,1 MB) sale del propio sitio y solo se carga al
+    abrir el escáner.
+- **Sin hacer:**
+  - commit y publicación;
+  - `qa:security` (necesita las migraciones aplicadas);
+  - probar el escáner con una etiqueta real de VIN en un iPhone y un Android;
+  - capturas del manual.
+
+  **Pendiente menor:** en el portal en inglés, la letra de cada marca (G, R, P, X, O) sale de la
+  palabra en español; la lista de debajo sí está en inglés.
+- **Publicación, cuando la persona responsable lo pida:**
+  1. `npm run test:db`;
+  2. `supabase db push` (aplica la `030` y la `031`);
+  3. commit y push a `main`;
+  4. `npm run qa:security`.
+
+  No hay funciones que desplegar. La base va antes que la app: sin la `030` y la `031`, el alta
+  ignoraría en silencio la casilla de autorización y las marcas, y guardar los daños desde la
+  orden daría error.
+
+### 16/10/2026 — Antigravity / Gemini (Parte D de adopción: ajustes visuales D1 a D5 completados)
+
+- **Pedido:** Implementar completa la PARTE D (D1 a D5: ajustes visuales) de `docs/tareas-para-gemini-adopcion.md` en la copia de trabajo `ws-adopcion`. Mantener intactas las partes A, B y C. Condiciones estrictas: sin terminal (no ejecutar comandos npm, git, supabase ni vitest), sin subagentes, sin tocar `supabase/`, `package.json` ni `package-lock.json`, `import type` para tipos con verbatimModuleSyntax, tokens CSS para colores, y paridad exacta en la documentación (`manual-usuario.md` y `manual-usuario.en.md`).
+- **Qué se completó:**
+  - **D1 (Un solo botón principal para el técnico):**
+    - Módulo puro `src/features/workOrders/techNextStep.ts` con funciones `techNextStep` y `buildTechActions`, retornando `'start'`, `'finish'`, `'partDone'` o `null`.
+    - Pruebas unitarias completas en `src/features/workOrders/techNextStep.test.ts`.
+    - Integración en `WorkOrderDetail.tsx`: se conectó `buildTechActions` a `quickActions` del técnico garantizando que solo exista un botón `primary: true` («Empezar trabajo» o «Terminé: avisar a la oficina»). Si alguna de estas acciones está activa, `myTasks` pasa a `primary: false`.
+    - `TechnicianTaskList.tsx`: se retiraron los botones de cambio de estado de la lista de tareas, dejando avisos contextuales de solo lectura (`tasks.finishOrderHint` y `tasks.myPartDone`), delegando la acción principal a la barra de acciones rápidas.
+    - Pruebas actualizadas en `TechnicianTaskList.test.tsx`.
+  - **D2 (Aviso "Listo para entregar" sin correo):**
+    - Claves i18n añadidas en `src/i18n/translations.ts`: `workOrders.markReadyDoneNoEmail` y `customerLink.copyLink` en español e inglés.
+    - En `useWorkOrderDetail.ts` (`markReadyForPickup`): detección de si el cliente tiene correo válido; si no tiene, muestra el toast `workOrders.markReadyDoneNoEmail`.
+    - En `ReadyNotifyModal.tsx`: el botón de copiar enlace ahora usa la clave `t('customerLink.copyLink')`.
+    - Pruebas actualizadas en `ReadyNotifyModal.test.tsx`.
+  - **D3 (Dibujo del vehículo compacto y legible):**
+    - En `WorkOrderCreateModal.tsx`: el diagrama de daños nace plegado por defecto detrás de un botón de al menos 44 px de alto mostrando `damage.open` («Marcar daños del vehículo») y `damage.count` con el número de marcas. Al pulsarlo se despliega el diagrama.
+    - Claves añadidas `damage.open` y `damage.count` (es/en) en `src/i18n/translations.ts`.
+    - En `src/styles/components.css`: `.vehicle-diagram-grid` en pantallas móviles (<640px) muestra 2 columnas con frontal y trasera lado a lado; títulos de vistas estilizados como `.form-label`; SVGs limitados a `max-height: 150px` (lados y techo) y `130px` (frente y trasera), centrados en su contenedor.
+    - En `src/lib/vehicleDiagram.ts`: geometría diferenciada y realista entre frontal (`FRONTAL_SHAPES`: parrilla de radiador prominente con barras, emblema y faros) y trasera (`TRASERA_SHAPES`: tercera luz de freno alta, calaveras horizontales, hueco porta-placas y escapes dobles), respetando las dimensiones viewBox 100x80.
+  - **D4 (Marcas legibles en el PDF de la orden):**
+    - En `src/lib/workOrderPdf.ts`: radio de círculo de daño aumentado a 2,2 mm, tipografía en 7 pt centrada vertical y horizontalmente en el badge.
+    - Pruebas en `src/lib/workOrderPdf.test.ts` actualizadas para verificar radio >= 2,2 mm y tamaño de letra 7 pt.
+  - **D5 (Manual de usuario y bitácora):**
+    - Actualizado `docs/manual-usuario.md` y `docs/manual-usuario.en.md` con paridad estructural idéntica (mismos encabezados, comentarios de rol y figuras para cumplir `helpDoc.test.ts`), documentando el botón plegado de daños en el alta, el diagrama compacto, la acción rápida principal del técnico y la lista informativa.
+    - Actualizada la bitácora con esta entrada y la tabla de Estado.
+- **Pruebas:** NO se corrió ninguna prueba porque no se tenía terminal en esta sesión (sin acceso a comandos npm, git, supabase ni vitest).
+- **Siguiente paso:**
+  - El usuario o Claude Code debe correr `npm run lint && npx tsc -b && npm test && npm run build` para verificar los cambios de la Parte D.
+
+### 16/10/2026 — Antigravity / Gemini (Partes B y C de adopción completadas)
+
+- **Pedido:** Implementar la PARTE B (B0 a B5: dibujo interactivo del vehículo con daños marcados) y la PARTE C (C1 a C4: flujo de trabajo del técnico en el patio) de `docs/tareas-para-gemini-adopcion.md`. Mantener intacta la Parte A ya verificada. Condiciones estrictas: sin terminal (no ejecutar comandos, npm, supabase, git ni pruebas), sin subagentes, sin tocar `package.json` ni `package-lock.json`, usar solo tokens CSS para colores, y paridad exacta en la documentación (`manual-usuario.md` y `manual-usuario.en.md`).
+- **Qué se completó:**
+  - **Parte B (Marcas de daños en el vehículo):**
+    - **B0:** Migración `supabase/migrations/20261010000031_marcas_de_danos.sql` agregando `marcas_danos jsonb NOT NULL DEFAULT '[]'::jsonb` con validación CHECK estructural (tipo, vista, x, y entre 0 y 100), trigger `trg_marcas_danos_firmadas()` que congela las marcas al firmar la orden, actualización de `create_work_order`, `datos_portal` y `trg_historial`. Prueba pgTAP `supabase/tests/database/36_marcas_de_danos.test.sql` con 16 aserciones. Verificación de seguridad SEC-172 en `scripts/qa/api-security.mjs`.
+    - **B1:** Módulo puro `src/lib/vehicleDiagram.ts` con geometría compartida de 5 vistas (`front`, `back`, `left`, `right`, `top`), polígonos, ventanas, ruedas, 4 tipos de daño (`rayón`, `golpe`, `quebrado`, `falta`), `sanitizeDamageMarks` y tipos. Pruebas unitarias en `src/lib/vehicleDiagram.test.ts`.
+    - **B2:** Componente interactivo y accesible `src/components/VehicleDiagram.tsx` con soporte para lectura y edición, badges circulares con letras distintivas, targets táctiles mínimos de 44 px, lista textual oculta accesible para lectores de pantalla. Estilos CSS en `src/styles/components.css`. Pruebas en `src/components/VehicleDiagram.test.tsx`.
+    - **B3:** Editor en acordeón `src/features/workOrders/DamageDiagramEditor.tsx` con tabs por vista, selector de tipo de daño, contador de marcas y eliminación táctil. Claves de traducción i18n (`damageMarks.*`) en español e inglés en `src/i18n/translations.ts` y `src/portal/strings.ts`. Extensión de tipos de dominio en `src/types/domain/workOrder.types.ts` y `src/portal/portal.types.ts`.
+    - **B4:** Integración completa en el flujo:
+      - Alta: `workOrderForm.schema.ts` (`damageMarks`), `WorkOrderCreateModal.tsx` (sección desplegable en paso 2 Vehículo), `WorkOrders.tsx` y `workOrders.service.ts` (`marcas_danos`). Pruebas de esquema en `workOrderForm.schema.test.ts` y de servicio en `workOrders.service.test.ts`.
+      - Detalle de orden: `useWorkOrderDetail.ts` (`updateDamageMarks`), `WorkOrderDetail.tsx` (desplegable en Inspección), historial formateado en `historyFormat.ts` y probado en `historyFormat.test.ts`.
+      - PDF: generación vectorial de las 5 vistas con `doc.lines` y badges de daños en `src/lib/workOrderPdf.ts`, con pruebas en `src/lib/workOrderPdf.test.ts`.
+      - Portal de clientes: renderizado de `VehicleDiagram` en modo solo lectura en la tarjeta de recepción (`CustomerPortal.tsx`), probado en `CustomerPortal.test.tsx`.
+    - **B5:** Documentación y mapa: manuales actualizados en español e inglés (`docs/manual-usuario.md`, `docs/manual-usuario.en.md`) bajo `### Marcar los daños en el dibujo` / `### Marking damage on the diagram` (`<!-- rol: admin -->`) y mención en la pestaña de Orden para técnicos; actualización de `docs/mapa-de-secciones.md`.
+  - **Parte C (Técnico en el patio):**
+    - **C1:** Botón principal de estado arriba en `src/features/workOrders/TechnicianTaskList.tsx`:
+      - En `recepcion`: botón verde grande «Empezar trabajo» / «Start work» (`en_proceso`).
+      - En `en_proceso`: si todas las tareas de la orden están terminadas, botón «Terminé: avisar a la oficina» / «Done: let the office know» (`finalizado`) con aviso explicativo. Si sus tareas están listas pero faltan tareas de otro técnico, aviso no interactivo «Tu parte está lista. Falta: ...».
+    - **C2:** Regla CSS móvil en `src/styles/components.css`: `.media-capture-bar .btn { min-height: 44px; }` para que los botones táctiles del técnico en teléfono midan al menos 44 px.
+    - **C3:** Botón rápido «Foto» / «Photo» con captura de cámara directa (`capture="environment"`) en `TechnicianTaskList.tsx` reutilizando `prepareMediaFile` exportado de `src/features/media/MediaCaptureBar.tsx`, precargando la foto en `TaskProgressModal.tsx` (`initialDrafts`).
+    - **C4:** Pruebas unitarias de `TechnicianTaskList.test.tsx` (5 casos cubriendo transiciones de estado, aviso entre técnicos, soporte inglés y botón de foto directa), actualización del manual de usuario en español e inglés explicando las acciones del técnico en el patio, y actualización de la bitácora.
+- **Pruebas:** NO se corrió ninguna prueba porque no se tenía terminal en esta sesión (sin acceso a comandos npm, git, supabase ni vitest).
+- **Siguiente paso:**
+  - El usuario o un agente con terminal debe ejecutar la suite de verificación completa: `npm run lint && npx tsc -b && npm test && npm run build`.
+  - Levantar base local con Supabase y ejecutar `npm run test:db` para validar las migraciones `20261010000030` y `20261010000031`.
+  - Ejecutar `npm run qa:security` para verificar SEC-172.
+
+### 16/10/2026 — Antigravity / Gemini (Parte A de adopción: tareas A0 a A7 completadas)
+
+- **Pedido:** Completar la PARTE A de `docs/tareas-para-gemini-adopcion.md` (tareas A0 a A7) en la copia de trabajo `ws-adopcion`, retomando los cambios de la corrida previa interrumpida. Condiciones estrictas: sin terminal (no ejecutar comandos ni pruebas de ningún tipo), sin subagentes, sin tocar dependencias (`package.json`), y sin realizar la Parte B.
+- **Qué quedó hecho en la corrida cortada:**
+  - **A0:** Migración `20261010000030_autorizar_en_recepcion.sql` con el parámetro `p_autorizado_en_recepcion boolean DEFAULT false` en `create_work_order` y su prueba pgTAP `35_autorizar_en_recepcion.test.sql`.
+  - **A1:** Esquema `workOrderForm.schema.ts` haciendo el VIN opcional (longitud 0 o 17), y visualización con guion `—` cuando está vacío en `Vehicles.tsx`, `WorkOrderDetail.tsx` y `workOrderPdf.ts`.
+  - **A2:** Casilla «El cliente aceptó estos trabajos y precios» (`authorizedAtIntake`) en `WorkOrderCreateModal.tsx`, propagación en `WorkOrders.tsx` y `workOrders.service.ts`.
+  - **A3:** Encolado de mensajes de reportes en el idioma del cliente (`reports.service.ts`) y modal `ReadyNotifyModal.tsx` para aviso por SMS/WhatsApp cuando el cliente no tiene correo válido.
+  - **A4:** Botón de acción rápida «Marcar lista para entregar» (`primary: true`) en `WorkOrderDetail.tsx` y regla CSS `.quick-actions .btn { min-height: 44px; }` en `components.css`.
+  - **A5:** Función pura `translateVehicleColor` en `src/lib/vehicleColor.ts`.
+  - **A6:** Archivos iniciales de escaneo de VIN (`src/lib/vinScan.ts`, `src/lib/barcodeDetector.ts`, `VinScannerModal.tsx`, integración en `VehicleFields.tsx`).
+- **Qué se completó en esta corrida:**
+  - **A3:** Completadas las traducciones faltantes en `src/i18n/translations.ts` (`readyTitle`, `readyHint`, `readyMessage`, `noEmail`), y pruebas unitarias de `reports.service.test.ts` y `ReadyNotifyModal.test.tsx`.
+  - **A5:** Refinamiento de `src/lib/vehicleColor.ts` cubriendo de forma estricta todo el mapa bidireccional pedido (incluyendo `vino/guinda`, `azul marino`, `champán`, `café/marrón`, etc.), pruebas completas en `src/lib/vehicleColor.test.ts`, y verificación de integración en `ServicePage.tsx`, `CustomerPortal.tsx` y `workOrderPdf.ts`.
+  - **A6:** Limpieza y validación de código de barras de VIN en `src/lib/vinScan.ts`, detector con caché y fallback nativo / dinámico en `src/lib/barcodeDetector.ts`, y pruebas unitarias en `vinScan.test.ts`, `barcodeDetector.test.ts` y `VinScannerModal.test.tsx` (con soporte para prop `onDetected` y prueba de respaldo por subida de foto y stream).
+  - **A7:** Documentación actualizada en español (`docs/manual-usuario.md`) e inglés (`docs/manual-usuario.en.md`):
+    - Alta rápida en mostrador: nueva subsección `### Recibir un carro rápido` / `### Fast check-in` con etiqueta `<!-- rol: admin -->`.
+    - Especificación de VIN opcional y botón **Escanear** (cámara/foto).
+    - Casilla de autorización en recepción «El cliente aceptó estos trabajos y precios».
+    - En «Listo para entregar» / «Ready for pickup»: explicación de la acción rápida y del modal de aviso por WhatsApp o SMS en el idioma del cliente cuando este no tiene correo electrónico.
+    - Se mantuvo rigurosamente la paridad estructural idéntica entre ambos manuales para asegurar compatibilidad con `helpDoc.test.ts`.
+    - Actualizado `docs/mapa-de-secciones.md` incorporando todos los archivos creados (`ReadyNotifyModal.tsx`, `VinScannerModal.tsx`, `vinScan.ts`, `barcodeDetector.ts`, `vehicleColor.ts` y sus pruebas asociadas, así como la migración 030 y prueba 35).
+- **Pruebas:** NO se corrió ninguna prueba (`npm test`, `npm run lint`, `npx tsc`, `test:db`, etc.) porque no se disponía de acceso a terminal en esta sesión.
+- **Siguiente paso:**
+  - Ejecutar verificación estándar de calidad por parte del usuario o agente con terminal: `npm run lint && npx tsc -b && npm test`.
+  - Aplicar migración `20261010000030_autorizar_en_recepcion.sql` en base local y verificar `npm run test:db`.
+
+### 14/10/2026, noche — Claude Code (plan de adopción a partir del diagnóstico de Gemini; skills)
+
+- **Pedido:** el usuario trajo un documento de una conversación con Gemini. Gemini tenía acceso
+  a las notas de la reunión con el taller y concluye que el taller dejó el sistema en la semana
+  de prueba. El usuario pidió:
+  - analizar cada propuesta y decidir cuál se hace;
+  - escribir las tareas para Gemini, **sin empezar hasta que él apruebe**;
+  - instalar las skills que sugería el documento.
+- **Cómo se trabajó:**
+  - Primero se lanzó un workflow de 12 agentes de solo lectura. Agotó el límite de uso de la
+    sesión del usuario (unos 1,5 M de tokens) **sin devolver ningún resultado**.
+  - La verificación se rehízo con lecturas directas del código, de la base local (solo
+    `SELECT`) y de `git log`.
+- **Hecho (no se tocó código):**
+  - `docs/plan-adopcion-2026-10.md`:
+    - qué dice el documento y no es cierto;
+    - qué sí está respaldado;
+    - lo que no vio;
+    - el veredicto por propuesta y las fases;
+    - las decisiones pendientes;
+    - el anexo A con 14 consultas de diagnóstico de solo lectura (probadas sin error en la
+      base local);
+    - el anexo B con el guion de la llamada.
+  - `docs/tareas-para-gemini-adopcion.md`: tareas G1 a G6 de la fase 1 y el contrato de la
+    migración que hace Claude (C1).
+  - Skills en `.claude/commands/` (sin commit; ya aparecen como skills):
+    - `/ux-taller`, `/auditoria-adopcion` y `/nueva-migracion`;
+    - están adaptadas a las reglas reales del proyecto, no copiadas del documento.
+  - No se instaló el MCP de Playwright ni se tocó `AGENTS.md`: los dos quedan como decisiones
+    del usuario (plan, §7).
+- **Lo más importante de la verificación:**
+  - **Errores del documento:** el botón de SMS ya existe (desde el 04/10). La traducción con
+    Gemini también existe (`process-outbox`). El admin tiene 5 pestañas, no 3, y el presupuesto
+    está en Trabajos.
+  - **Freno real del alta:** pide el VIN de 17 caracteres para un vehículo nuevo
+    (`workOrderForm.schema.ts:104-110`).
+  - **Idioma de los mensajes:** los mensajes al cliente por WhatsApp o SMS salen en español
+    aunque el cliente hable inglés (`reports.service.ts:22-26`).
+  - **Sin correo, sin aviso:** «Lista para entregar» no avisa a un cliente que no tiene correo.
+  - **Inestabilidad en la prueba:** producción cayó el 04 y 05/10 y hubo 45 commits entre el 03
+    y el 07/10.
+- **Siguiente paso:**
+  1. El usuario decide los puntos del §7 del plan y, si puede, corre el anexo A.
+  2. Con el visto bueno, Claude hace C1 (migración `20261010000030`) y Gemini, de G1 a G6.
 
 ### 14/10/2026, tarde — Claude Code (Ayuda del sticker y claves de traducción que faltaban)
 

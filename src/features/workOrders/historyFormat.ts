@@ -70,6 +70,10 @@ function formatValue(entry: OrderHistoryEntry, field: string, value: unknown, ct
     // Pedido → llegó (20261010000017). Vacío ya salió arriba como "—".
     case 'estado_pedido':
       return value === 'recibido' ? t('parts.received') : t('parts.ordered');
+    case 'marcas_danos': {
+      const count = Array.isArray(value) ? value.length : 0;
+      return t('history.damageCount').replace('{n}', String(count));
+    }
     case 'descripcion':
     case 'inspeccion_360_notas':
     case 'motivo_autorizacion':

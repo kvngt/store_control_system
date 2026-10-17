@@ -423,6 +423,7 @@ const CASES = [
   admin({ id: 'SEC-169', desc: 'Ni un admin llama datos_servicio por RPC (solo service_role)', method: 'POST', path: () => rpc('datos_servicio'), body: { p_token: ZERO_TOKEN }, expect: 'denied' }),
   tech({ id: 'SEC-170', desc: 'Un técnico no lee orden_proximo_servicio de una orden ajena', needs: ['ORDEN_AJENA'], method: 'GET', path: (c) => `/rest/v1/orden_proximo_servicio?select=orden_id&orden_id=eq.${c.ORDEN_AJENA}`, expect: 'empty' }),
   anon({ id: 'SEC-171', desc: 'Portal con servicio inexistente responde 404 con no_existe', method: 'GET', path: () => `/functions/v1/portal?servicio=${ZERO_TOKEN}`, expect: { status: 404 } }),
+  tech({ id: 'SEC-172', desc: 'Un técnico no cambia las marcas de daño de una orden', needs: ['ORDEN'], method: 'PATCH', path: (c) => `/rest/v1/ordenes_trabajo?id=eq.${c.ORDEN}`, body: { marcas_danos: [{ vista: 'frontal', x: 0.5, y: 0.5, tipo: 'golpe' }] }, headers: { Prefer: 'return=representation' }, expect: 'denied-or-empty' }),
 ];
 
 function evaluate(expect, r) {

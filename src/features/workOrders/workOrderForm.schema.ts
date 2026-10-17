@@ -36,6 +36,13 @@ const partRow = z.object({
   costo_unitario: z.optional(stringField),
 });
 
+const damageMarkRow = z.object({
+  vista: z.enum(['izquierda', 'derecha', 'frontal', 'trasera', 'superior']),
+  x: z.number(),
+  y: z.number(),
+  tipo: z.enum(['golpe', 'rayon', 'pintura', 'roto', 'otro']),
+});
+
 /**
  * Fields are strings because they come from `<input>`s — including the numeric
  * ones. Parsing to numbers happens on the way to the service, where the
@@ -76,6 +83,8 @@ const baseShape = z.object({
   withInsurance: z.boolean(),
   insurer: stringField,
   claimNumber: stringField,
+  authorizedAtIntake: z.boolean(),
+  damageMarks: z.array(damageMarkRow),
 });
 
 export type WorkOrderFormValues = z.infer<typeof baseShape>;
@@ -102,9 +111,7 @@ export const workOrderFormSchema = baseShape.check((ctx) => {
     if (!form.newVehicle.marca.trim()) reject(['newVehicle', 'marca'], 'workOrders.validation.vehicleBrand');
     if (!form.newVehicle.modelo.trim()) reject(['newVehicle', 'modelo'], 'workOrders.validation.vehicleModel');
     const vin = form.newVehicle.vin.trim();
-    if (!vin) {
-      reject(['newVehicle', 'vin'], 'workOrders.validation.vehicleVin');
-    } else if (vin.length !== 17) {
+    if (vin && vin.length !== 17) {
       // A VIN is fixed-length; a shorter one is a typo, not a short VIN.
       reject(['newVehicle', 'vin'], 'workOrders.validation.vinLength');
     }
@@ -171,8 +178,8 @@ export const workOrderFormSchema = baseShape.check((ctx) => {
  */
 export const INTAKE_STEPS = [
   { key: 'customer', fields: ['selectedCustomer', 'newCustomer'] },
-  { key: 'vehicle', fields: ['selectedVehicle', 'newVehicle', 'fuelLevel', 'milesIn', 'inspectionNotes'] },
-  { key: 'work', fields: ['workType', 'estimatedDate', 'laborItems', 'parts', 'selectedOperators', 'withInsurance', 'insurer', 'claimNumber'] },
+  { key: 'vehicle', fields: ['selectedVehicle', 'newVehicle', 'fuelLevel', 'milesIn', 'inspectionNotes', 'damageMarks'] },
+  { key: 'work', fields: ['workType', 'estimatedDate', 'laborItems', 'parts', 'selectedOperators', 'withInsurance', 'insurer', 'claimNumber', 'authorizedAtIntake'] },
   { key: 'deposit', fields: ['deposit', 'paymentMethod', 'checkNumber'] },
 ] as const satisfies readonly { key: string; fields: readonly (keyof WorkOrderFormValues)[] }[];
 
@@ -210,11 +217,13 @@ export function emptyWorkOrderForm(): WorkOrderFormValues {
     checkNumber: '',
     estimatedDate: '',
     inspectionNotes: '',
+    damageMarks: [],
     selectedOperators: [],
     laborItems: [],
     parts: [],
     withInsurance: false,
     insurer: '',
     claimNumber: '',
+    authorizedAtIntake: false,
   };
 }

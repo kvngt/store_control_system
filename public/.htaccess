@@ -19,6 +19,9 @@ RewriteRule . /index.html [L]
 # PWA: tipo correcto para el manifiesto.
 AddType application/manifest+json .webmanifest
 
+# WebAssembly: tipo MIME para zxing-wasm
+AddType application/wasm .wasm
+
 # Cabeceras de seguridad para todo el sitio. Solo directivas que Apache y LiteSpeed
 # (Hostinger) aceptan dentro de mod_headers: una directiva desconocida en .htaccess
 # tumba el sitio con un error 500. Después de publicar, comprobar con

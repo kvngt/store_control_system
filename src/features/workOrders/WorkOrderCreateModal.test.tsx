@@ -155,4 +155,40 @@ describe('WorkOrderCreateModal - Assistant (Wizard)', () => {
     expect(await screen.findByText(/Selecciona un cliente/)).toBeInTheDocument();
     expect(currentStep()).toMatch(/Cliente/);
   });
+
+  it('la casilla de autorizar en recepcion no sale sin lineas y si sale con una', async () => {
+    const user = userEvent.setup();
+    renderModal();
+
+    // Paso 1: Cliente
+    await waitFor(() => expect(currentStep()).toMatch(/Cliente/));
+    const customerSelect = screen.getByRole('combobox');
+    await user.selectOptions(customerSelect, CUSTOMER.id);
+    await user.click(screen.getByRole('button', { name: /Siguiente/ }));
+
+    // Paso 2: Vehículo
+    await waitFor(() => expect(currentStep()).toMatch(/Vehículo/));
+    const vehicleSelect = screen.getAllByRole('combobox')[0];
+    await user.selectOptions(vehicleSelect, VEHICLE.id);
+    await user.click(screen.getByRole('button', { name: /Siguiente/ }));
+
+    // Paso 3: Trabajos
+    await waitFor(() => expect(currentStep()).toMatch(/Trabajos/));
+
+    // Sin líneas: no debe existir el checkbox
+    expect(document.getElementById('order-authorized-at-intake')).toBeNull();
+
+    // Agregamos un trabajo
+    await user.click(document.getElementById('create-order-open') as HTMLElement);
+    const laborDesc = document.getElementById('create-order-description') as HTMLInputElement;
+    await user.type(laborDesc, 'Alineacion');
+    const laborCost = document.getElementById('create-order-price') as HTMLInputElement;
+    await user.type(laborCost, '100');
+    await user.click(document.getElementById('create-order-submit') as HTMLElement);
+
+    // Con una línea: sí aparece y viene desmarcada
+    const checkbox = document.getElementById('order-authorized-at-intake') as HTMLInputElement;
+    expect(checkbox).not.toBeNull();
+    expect(checkbox.checked).toBe(false);
+  });
 });

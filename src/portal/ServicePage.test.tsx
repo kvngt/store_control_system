@@ -173,4 +173,17 @@ describe('ServicePage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/ya no está disponible|no longer available/i)).toBeInTheDocument();
   });
+
+  it('traduce el color del vehículo al inglés si el idioma es en', async () => {
+    localStorage.setItem('restorify_portal_lang', 'en');
+    mocks.fetchService.mockResolvedValue(
+      sampleService({
+        vehiculo: { marca: 'Honda', modelo: 'Civic', anio: 2020, color: 'Gris' },
+        idioma: 'en',
+      })
+    );
+
+    render(<ServicePage token={TOKEN} />);
+    expect(await screen.findByText(/Gray/)).toBeInTheDocument();
+  });
 });

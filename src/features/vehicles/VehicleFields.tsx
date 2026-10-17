@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, ScanLine, Wand2 } from 'lucide-react';
+import { Loader2, ScanBarcode, ScanLine, Wand2 } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import Combobox from '../../components/Combobox';
+import VinScannerModal from './VinScannerModal';
 import {
   US_STATES,
   VEHICLE_BRANDS,
@@ -64,6 +65,7 @@ export default function VehicleFields({
   const [decoded, setDecoded] = useState<DecodedVin | null>(null);
   const [modelOptions, setModelOptions] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   // VINs already looked up, so re-renders and edits of unrelated fields don't
   // fire the same request again — and so an edit of a saved vehicle doesn't
@@ -214,6 +216,17 @@ export default function VehicleFields({
               setVinMessage(null);
             }}
           />
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setScannerOpen(true)}
+            disabled={disabled}
+            style={{ flexShrink: 0 }}
+            title={t('vehicles.scanVin')}
+            aria-label={t('vehicles.scanVin')}
+          >
+            <ScanBarcode size={16} />
+          </button>
           <button
             type="button"
             className="btn btn-secondary"
@@ -394,6 +407,18 @@ export default function VehicleFields({
       </div>
 
       {footer}
+
+      {scannerOpen && (
+        <VinScannerModal
+          onDetected={(scannedVin) => {
+            const clean = normalizeVin(scannedVin);
+            set({ vin: clean });
+            setVinMessage(null);
+            runDecode(clean);
+          }}
+          onClose={() => setScannerOpen(false)}
+        />
+      )}
     </>
   );
 }

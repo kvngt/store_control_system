@@ -57,7 +57,7 @@ export function validateVehicleFields(
     marca: !value.marca.trim(),
     modelo: !value.modelo.trim(),
     anio: requireYear && !value.anio,
-    vin: checkVin(value.vin).level === 'error',
+    vin: Boolean(value.vin.trim()) && checkVin(value.vin).level === 'error',
     placa: requirePlate && !value.sin_placa && (!value.placa.trim() || plateCheck.level === 'error'),
   };
 }
