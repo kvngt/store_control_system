@@ -6,7 +6,7 @@
 // this module reads balances and records payments.
 import { supabase } from '../lib/supabase';
 import type { Commission, CommissionBalance, CommissionEstimate, CommissionPayment, MyCommissionsSummary } from '../types/database';
-import { fetchAll } from './support';
+import { assertDeleted, fetchAll } from './support';
 
 const COMMISSION_SELECT = `
   *,
@@ -186,7 +186,8 @@ export const commissionsService = {
 
   /** Undoes a settlement; its accruals go back to pending. */
   deletePayment: async (paymentId: string) => {
-    const { error } = await supabase.from('comision_pagos').delete().eq('id', paymentId);
+    const { data, error } = await supabase.from('comision_pagos').delete().eq('id', paymentId).select('id');
     if (error) throw error;
+    assertDeleted(data, 'el pago');
   },
 };

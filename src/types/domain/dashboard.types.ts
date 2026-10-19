@@ -13,7 +13,7 @@ export interface DashboardStats {
   clientes_nuevos_mes: number;
   tasa_ocupacion: number;
   ordenes_por_estatus: Record<OrderStatus, number>;
-  ingresos_por_mes: { mes: string; ingresos: number; egresos: number }[];
+  ingresos_por_mes: { mes_inicio: string; ingresos: number; egresos: number }[];
 }
 
 /** Una orden a la que lleva un aviso de "Requiere atención". */

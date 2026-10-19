@@ -26,6 +26,12 @@ export interface FinancialTransaction {
   /** Foto del cheque o de la transferencia, en el bucket privado `comprobantes`. */
   comprobante_ruta?: string | null;
   registrado_por?: string;
+  /**
+   * Quién lo asentó (20261010000038): 'manual' lo escribió una persona desde Finanzas; 'sistema' lo
+   * asentó la base (un cobro, el costo de un repuesto, el egreso de un pago de comisiones). Lo del
+   * sistema no se edita ni se borra desde aquí: se corrige en su origen.
+   */
+  origen?: 'manual' | 'sistema';
   creado_en: string;
 }
 

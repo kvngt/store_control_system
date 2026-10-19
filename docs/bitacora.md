@@ -49,6 +49,39 @@ al día aparte.
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
 
+### 19/10/2026 — Claude Code (arreglos de la segunda ronda y análisis del sticker)
+
+- **Pedido:** arreglar lo de la segunda ronda (con el borrado de cobros del sistema como lo propuse) y analizar a fondo el proceso del
+  sticker. Todo en el árbol de trabajo, **sin commit y sin publicar**; el detalle está en los §9 y §10 de [qa-2026-10-18.md](qa-2026-10-18.md).
+- **Base:** migración `20261010000038_arreglos_segunda_ronda.sql` (columna `origen` en `finanzas_movimientos` con su trigger y políticas,
+  centavos de la bolsa de comisiones, fecha del taller por omisión, índices, permisos de tabla, y el sticker: `programar` bloquea la orden,
+  guarda el idioma y no pisa el código) y la prueba `42_arreglos_segunda_ronda.test.sql`.
+- **Código:** Finanzas muestra un candado en lo del sistema; PDF con `pdfSafe` (un carácter que Helvetica no dibuja dejaba ilegible la línea
+  entera, en el sticker y en el PDF de la orden); sticker con nombre, vehículo y nota ajustados; guardar e imprimir ya no dice que falló
+  si lo que falló fue el PDF; panel, vehículos, meses por idioma, `fetchAll` en duplicados, `openInNewTab`, funciones de empleados
+  y `process-outbox` (tope de tiempo y reintento de Gemini).
+- **Retirado:** el hallazgo 3 de la segunda ronda era un falso positivo (la RPC ya filtraba por asignación).
+- **Verificación local con números:** `db reset` con 38 migraciones y `test:db` 42 archivos / 1.046 pruebas; Vitest 137 archivos / 1.052 pruebas, `oxlint`, `tsc -b` y
+  `build` limpios, `npm audit` en 0.
+- **Publicar (lo hace la persona responsable):** `test:db` → `db push` de la `038` → `functions deploy` de `process-outbox`, `create-employee`,
+  `update-employee` y `delete-employee` → push a `main` enseguida. Nada de esto está publicado.
+- **Sin tocar a propósito:** VIN y placa únicos (puede fallar con datos que ya existen), y la cola de subida que sigue en el navegador al cerrar sesión.
+
+### 19/10/2026 — Claude Code (QA, segunda ronda)
+
+- **Qué hice:** más pruebas, todas en local y con la `037` aplicada; el detalle está en el §8 de [qa-2026-10-18.md](qa-2026-10-18.md).
+  Herramientas nuevas: `supabase db advisors`, `supabase db lint`, `npm audit`, auditoría del catálogo de la base y tres revisiones de
+  Gemini (funciones de borde, pantallas y librerías que faltaban, migraciones antiguas de dinero y permisos). Cada sospecha se reprodujo
+  antes de contarla: 22 errores confirmados y 5 sospechas de Gemini descartadas.
+- **Lo más importante:** un admin puede borrar desde Finanzas el cobro que el sistema asentó (depósito o pago al entregar) y la orden queda
+  con el depósito anotado pero sin cobro asentado; al entregar se cobraría de nuevo. Le siguen: no se puede dar de baja a quien resolvió
+  o reportó un hallazgo (error crudo de llave foránea) y el panel cuenta sus alertas solo sobre las 5 órdenes más recientes. (Había un
+  tercero, el de `ordenes_esperando_autorizacion()`, que resultó falso positivo y se retiró.)
+- **Qué aguantó:** edge functions con todos los roles, rendimiento con 2.000 órdenes (todo bajo 50 ms), más de 1.000 filas, tiempo real,
+  RLS en todas las tablas y `SECURITY DEFINER` con `search_path`.
+- **Sin cambios de código en este bloque.** Siguiente paso: que la persona responsable elija qué arreglar; lo del borrado de cobros del sistema
+  necesita una decisión con el taller (propuesta: columna de origen del movimiento).
+
 ### 18/10/2026 — Claude Code (QA completo de la versión `f2e1148`)
 
 - **Qué hice:** plan y resultados en [qa-2026-10-18.md](qa-2026-10-18.md). Pruebas dinámicas contra Supabase

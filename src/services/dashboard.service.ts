@@ -28,12 +28,6 @@ export function shopTimeZone(): string {
   }
 }
 
-/** `2026-09-01` → "sept", sin pasar por UTC (que en EE. UU. lo movería a agosto). */
-export function monthLabel(isoDate: string): string {
-  const [year, month] = isoDate.split('-').map(Number);
-  return new Date(year, month - 1, 1).toLocaleDateString('es', { month: 'short' });
-}
-
 export const dashboardService = {
   /**
    * Los totales los suma la base (`resumen_panel`). Antes se descargaban todas las
@@ -62,7 +56,8 @@ export const dashboardService = {
       tasa_ocupacion: Math.min(100, Math.round((Number(r.ordenes_activas) / safeCapacity) * 100)),
       ordenes_por_estatus: r.ordenes_por_estatus,
       ingresos_por_mes: (r.ingresos_por_mes ?? []).map((m) => ({
-        mes: monthLabel(m.mes_inicio),
+        // El mes se escribe al pintar (lib/dates.ts, monthLabel), en el idioma de la pantalla.
+        mes_inicio: m.mes_inicio,
         ingresos: Number(m.ingresos),
         egresos: Number(m.egresos),
       })),

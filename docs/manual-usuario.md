@@ -803,7 +803,7 @@ El mismo próximo servicio aparece como la tarjeta **Próximo servicio recomenda
 Si mientras trabajas ves que el vehículo va a necesitar un servicio más adelante (el siguiente cambio de aceite, frenos, bandas), puedes dejárselo sugerido a administración. Tú no programas ni imprimes nada: administración decide.
 
 1. En la orden, pulsa **Sugerir próximo servicio** en las acciones rápidas, o ve a la pestaña **Orden** → tarjeta **Próximo servicio**.
-2. Toca un **Preset rápido** o escribe la **Fecha recomendada**, las **Millas recomendadas** y una **Nota o servicio** (hasta 120 caracteres). Hace falta al menos la fecha o las millas.
+2. Toca un **Preset rápido** o escribe la **Fecha recomendada**, las **Millas recomendadas** y una **Nota o servicio** (hasta 120 caracteres; en la etiqueta caben unos 64 a letra normal, y si es más larga la letra se achica y lo que sobra se corta con «…», mientras que el cliente la ve completa en su página). Hace falta al menos la fecha o las millas.
 3. Pulsa **Enviar sugerencia**. Sale el aviso «Sugerencia enviada a administración.»
 
 Solo puedes sugerir en una orden que tengas asignada y que todavía no esté entregada. Si vuelves a sugerir, reemplazas tu sugerencia anterior. Cuando administración la usa o la descarta, desaparece.
@@ -1058,10 +1058,11 @@ para esa orden.
 
 ### Eliminar un movimiento
 
-Cada fila tiene un botón de papelera. Úsalo **solo para movimientos manuales**
-capturados por error.
+Cada movimiento que capturaste a mano tiene un botón de papelera: úsalo **solo para los
+capturados por error**. Los que asienta el sistema llevan un **candado** en lugar de la papelera
+y no se pueden borrar desde aquí.
 
-> **No borres movimientos automáticos** («Depósito inicial», «Pago final», «Costo
+> **Los movimientos automáticos no se borran** («Depósito inicial», «Pago final», «Costo
 > de repuestos», «Pago de comisiones», ajustes y reversiones). El sistema los usa
 > para calcular los siguientes: si borras un «Pago final» y luego se corrige la
 > orden, las cuentas quedan descuadradas. Para corregir el dinero de una orden,

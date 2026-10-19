@@ -16,7 +16,7 @@ interface NextServiceCardProps {
   isAdmin: boolean;
   canSuggest: boolean;
   sede?: Sede | null;
-  onOpenModal: (initialData?: { fecha?: string | null; millas?: number | null; nota?: string | null } | null) => void;
+  onOpenModal: (initialData?: { fecha?: string | null; millas?: number | null; nota?: string | null; idioma?: 'es' | 'en' | null } | null) => void;
 }
 
 export default function NextServiceCard({
@@ -88,7 +88,8 @@ export default function NextServiceCard({
     // Dentro del clic, antes del import: si no, el iPhone bloquea la ventana.
     const printWindow = openStickerWindow();
     setPrinting(true);
-    const lang = order.cliente?.idioma === 'en' ? 'en' : 'es';
+    // El idioma que eligió administración al programar; sin él, el del cliente.
+    const lang = (serviceData.idioma ?? (order.cliente?.idioma === 'en' ? 'en' : 'es')) === 'en' ? 'en' : 'es';
     try {
       const { nota: noteForPdf, fallo } = await noteForSticker(serviceData.nota, lang);
       if (fallo) {
@@ -256,6 +257,7 @@ export default function NextServiceCard({
                     fecha: serviceData.fecha,
                     millas: serviceData.millas,
                     nota: serviceData.nota,
+                    idioma: serviceData.idioma,
                   })
                 }
                 disabled={busy}

@@ -14,12 +14,17 @@ interface ServiceStickerModalProps {
     fecha?: string | null;
     millas?: number | null;
     nota?: string | null;
+    /** El idioma que se eligió al programar (20261010000038). */
+    idioma?: 'es' | 'en' | null;
   } | null;
   onSave?: (data: NextServiceInput, language: 'es' | 'en') => Promise<void>;
   onSaveAndPrint?: (data: NextServiceInput, language: 'es' | 'en') => Promise<void>;
   onSuggest?: (data: NextServiceInput) => Promise<void>;
   onClose: () => void;
 }
+
+/** Hasta cuántos caracteres de la nota caben en la etiqueta sin achicar la letra. */
+const STICKER_NOTE_COMFORT = 64;
 
 export default function ServiceStickerModal({
   mode,
@@ -34,7 +39,7 @@ export default function ServiceStickerModal({
 
   const today = todayLocal();
 
-  const defaultLanguage: 'es' | 'en' = order.cliente?.idioma === 'en' ? 'en' : 'es';
+  const defaultLanguage: 'es' | 'en' = (initialData?.idioma ?? order.cliente?.idioma) === 'en' ? 'en' : 'es';
   const [stickerLanguage, setStickerLanguage] = useState<'es' | 'en'>(defaultLanguage);
 
   const hasIntakeMiles = typeof order.millas_ingreso === 'number' && !Number.isNaN(order.millas_ingreso);
@@ -144,7 +149,8 @@ export default function ServiceStickerModal({
   const isTechnician = mode === 'tecnico';
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    // Mientras guarda o traduce no se cierra: el trabajo seguiría en el aire sin que se viera cómo terminó.
+    <div className="modal-overlay" onClick={saving ? undefined : onClose}>
       <div
         className="modal"
         style={{ maxWidth: '520px' }}
@@ -158,7 +164,7 @@ export default function ServiceStickerModal({
             <Tag size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
             {isTechnician ? t('nextService.suggestTitle') : t('nextService.modalTitle')}
           </h2>
-          <button type="button" className="modal-close" onClick={onClose} aria-label={t('common.close')}>
+          <button type="button" className="modal-close" onClick={onClose} disabled={saving} aria-label={t('common.close')}>
             <X size={20} />
           </button>
         </div>
@@ -267,7 +273,7 @@ export default function ServiceStickerModal({
                 <label className="form-label" htmlFor="sticker-nota">
                   {t('nextService.noteLabel')}
                 </label>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{nota.length}/120</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>{nota.length}/120</span>
               </div>
               <input
                 type="text"
@@ -280,6 +286,10 @@ export default function ServiceStickerModal({
                 disabled={saving}
               />
               {fieldErrors.nota && <span className="field-error">{fieldErrors.nota}</span>}
+              {/* En la etiqueta de 62 mm caben unos 64 caracteres a 6 pt; lo demás se achica o se corta con «…». */}
+              {!isTechnician && nota.length > STICKER_NOTE_COMFORT && (
+                <span className="field-hint">{t('nextService.noteLongHint')}</span>
+              )}
             </div>
 
             {/* Selector de idioma del sticker (solo modo administración) */}

@@ -120,3 +120,8 @@ export function formatDurationMinutes(minutes: number): string {
   return `${h}h ${m < 10 ? '0' : ''}${m}m`;
 }
 
+/** '2026-09-01' → "sept" / "Sep", sin pasar por UTC (que en EE. UU. lo movería a agosto) y en el idioma de la pantalla. */
+export function monthLabel(isoDate: string, language: string): string {
+  const [year, month] = isoDate.split('-').map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString(language === 'en' ? 'en-US' : 'es-US', { month: 'short' });
+}

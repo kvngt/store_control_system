@@ -200,6 +200,7 @@ Para cambiar uno: `SELECT vault.update_secret(id, 'nuevo valor') FROM vault.secr
 npx supabase functions deploy create-employee
 npx supabase functions deploy update-employee
 npx supabase functions deploy delete-employee
+npx supabase functions deploy traducir-texto      # la nota del sticker en inglés; sin ella, imprimir responde 404
 
 # Internas: las llama la base, sin JWT; se protegen con el secreto compartido
 npx supabase functions deploy process-outbox --no-verify-jwt
@@ -347,7 +348,7 @@ Diez minutos. Es el nivel **humo** del plan de pruebas; si algo falla,
 [plan-de-pruebas.md](plan-de-pruebas.md) tiene el detalle de cada caso.
 
 - [ ] `npm run qa:security` → 0 FAIL (SEC-17 confirma que las 6 edge functions están desplegadas).
-- [ ] `npx supabase functions list` → `portal`, `process-outbox`, `cleanup-storage`, `create-employee`, `update-employee`, `delete-employee`.
+- [ ] `npx supabase functions list` → `portal`, `process-outbox`, `cleanup-storage`, `create-employee`, `update-employee`, `delete-employee`, `traducir-texto`.
 
 - [ ] La app abre sin el banner de "esquema desactualizado".
 - [ ] Iniciar sesión como admin y como técnico.

@@ -27,6 +27,7 @@ const PER_ORDER = [
   queryKeys.commissionEstimate,
   queryKeys.orderFinancialBalance,
   queryKeys.orderHistory,
+  queryKeys.nextService,
 ] as const;
 
 /** Las listas donde aparece cualquier orden. Por prefijo: se guardan por sede, búsqueda y página. */

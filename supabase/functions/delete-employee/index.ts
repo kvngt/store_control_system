@@ -2,7 +2,7 @@
 // Mirrors create-employee: runs with the service-role key because deleting an
 // `auth.users` row requires Supabase's admin API, and only an authenticated
 // admin (verified below against their own `perfiles.rol`) may call it.
-import { corsHeaders, jsonResponse, resolveAdminCaller } from '../_shared/caller.ts';
+import { corsHeaders, jsonResponse, readJsonBody, resolveAdminCaller, UUID_RE } from '../_shared/caller.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -15,10 +15,14 @@ Deno.serve(async (req) => {
     if (auth instanceof Response) return auth;
     const { userId: callerId, adminClient } = auth;
 
-    const body = await req.json();
+    const body = await readJsonBody(req);
+    if (body instanceof Response) return body;
     const userId = String(body.usuario_id || '').trim();
     if (!userId) {
       return jsonResponse({ error: 'Falta el usuario a eliminar.' }, 400);
+    }
+    if (!UUID_RE.test(userId)) {
+      return jsonResponse({ error: 'El usuario no es válido.' }, 400);
     }
 
     // An admin deleting themselves would lock the shop out of its own settings.
@@ -52,6 +56,27 @@ Deno.serve(async (req) => {
     if ((paymentsCount ?? 0) > 0) {
       return jsonResponse(
         { error: 'Este empleado tiene pagos de comisiones registrados. Eliminarlo borraría ese historial, así que no se puede eliminar.' },
+        409
+      );
+    }
+
+    // Los trabajos adicionales (hallazgos) que reportó o resolvió, y las comisiones que tiene, son
+    // historia de la orden: borrar a la persona los rompería (la llave foránea no lo deja, y las
+    // comisiones se irían en cascada). Antes salía el error crudo de Postgres (QA 19/10/2026).
+    const [reportados, resueltos, comisiones] = await Promise.all([
+      adminClient.from('orden_hallazgos').select('id', { count: 'exact', head: true }).eq('reportado_por', userId),
+      adminClient.from('orden_hallazgos').select('id', { count: 'exact', head: true }).eq('resuelto_por', userId),
+      adminClient.from('comisiones').select('id', { count: 'exact', head: true }).eq('usuario_id', userId),
+    ]);
+    if ((reportados.count ?? 0) > 0 || (resueltos.count ?? 0) > 0) {
+      return jsonResponse(
+        { error: 'Esta persona reportó o resolvió trabajos adicionales de órdenes. Eliminarla borraría ese historial, así que no se puede eliminar.' },
+        409
+      );
+    }
+    if ((comisiones.count ?? 0) > 0) {
+      return jsonResponse(
+        { error: 'Esta persona tiene comisiones registradas. Eliminarla las borraría, así que no se puede eliminar.' },
         409
       );
     }

@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardService, workOrdersService } from '../services/supabaseService';
 import { DEFAULT_CAPACITY } from '../services/dashboard.service';
+import { monthLabel } from '../lib/dates';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
@@ -36,6 +37,9 @@ const EMPTY_STATS: DashboardStats = {
   ingresos_por_mes: [],
 };
 
+/** Cuántas filas muestra cada grupo de alertas; el resto está en la lista de órdenes. */
+const MAX_ALERT_ROWS = 6;
+
 export default function Dashboard() {
   const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
@@ -63,13 +67,15 @@ export default function Dashboard() {
   // alert panel never nags about a colleague's job. Admins still see the whole
   // sede. Filtering here rather than in the query keeps the cached order list
   // identical to the one Órdenes and Kanban read.
-  const recentOrders: WorkOrder[] = useMemo(() => {
+  const visibleOrders: WorkOrder[] = useMemo(() => {
     const orders = ordersQuery.data ?? emptyList<WorkOrder>();
-    const visible = isAdmin
+    return isAdmin
       ? orders
       : orders.filter((o) => (o.asignaciones || []).some((a) => a.usuario_id === userId));
-    return visible.slice(0, 5);
   }, [ordersQuery.data, isAdmin, userId]);
+  // Solo la lista de recientes se recorta a cinco: las alertas se calculan sobre todas las órdenes
+  // visibles, o una orden atascada que no es de las cinco últimas nunca se avisaba (QA 19/10/2026).
+  const recentOrders = useMemo(() => visibleOrders.slice(0, 5), [visibleOrders]);
 
   // Keying on the scalars above rather than the `user`/`currentSede` objects
   // keeps an unrelated auth-context update from re-running both queries, and
@@ -86,8 +92,8 @@ export default function Dashboard() {
     entregado: t('workOrders.delivered'),
   };
 
-  const waitingOrders = recentOrders.filter((o) => o.estatus === 'espera_autorizacion');
-  const laggingOrders = recentOrders.filter((o) => o.estatus === 'en_proceso' && o.porcentaje_avance < 30);
+  const waitingOrders = visibleOrders.filter((o) => o.estatus === 'espera_autorizacion').slice(0, MAX_ALERT_ROWS);
+  const laggingOrders = visibleOrders.filter((o) => o.estatus === 'en_proceso' && o.porcentaje_avance < 30).slice(0, MAX_ALERT_ROWS);
 
   if (loading) {
     return <div className="loading-state"><div className="spinner" /></div>;
@@ -236,7 +242,7 @@ export default function Dashboard() {
                     title={money(month.egresos)}
                   ></div>
                 </div>
-                <span className="chart-bar-label">{month.mes}</span>
+                <span className="chart-bar-label">{monthLabel(month.mes_inicio, language)}</span>
               </div>
             ))}
           </div>

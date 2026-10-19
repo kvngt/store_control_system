@@ -9,6 +9,8 @@ export interface OrderNextService {
   millas: number | null;
   nota: string | null;
   token: string | null;
+  /** El idioma que eligió administración para el sticker y la página del QR (20261010000038). */
+  idioma?: 'es' | 'en' | null;
   programado_por: string | null;
   programado_en: string | null;
   sugerido_fecha: string | null;

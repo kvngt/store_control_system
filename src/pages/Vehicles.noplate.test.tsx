@@ -193,3 +193,20 @@ describe('Vehicle without a plate', () => {
     expect(await screen.findByLabelText(/Sin placa/i)).toBeChecked();
   });
 });
+
+// QA 19/10/2026: el error de guardar se pintaba en la página, detrás del diálogo: el botón dejaba de
+// girar y no pasaba nada a la vista.
+describe('Vehicle form: error al guardar', () => {
+  it('se muestra dentro del diálogo', async () => {
+    const { user, modal, field } = await openNewVehicleForm();
+    mocks.createVehicle.mockRejectedValue(new Error('la base no respondió'));
+
+    await user.click(within(modal).getByLabelText(/Sin placa/i));
+    await fillVehicleBasics(user, field, AUCTION_VEHICLE.vin);
+    await user.click(field('vehicle-save'));
+
+    await waitFor(() => expect(mocks.createVehicle).toHaveBeenCalled());
+    expect(await within(modal).findByRole('alert')).toBeInTheDocument();
+    expect(modal.querySelector('.alert-error')).not.toBeNull();
+  });
+});

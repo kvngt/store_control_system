@@ -109,3 +109,21 @@ export async function resolveAdminCaller(
  * funciones.
  */
 export const VALID_ROLES = ['admin', 'mecanico', 'pintor'];
+
+export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/** Largos máximos de lo que se guarda de una persona: una pantalla con 10.000 letras en un nombre no sirve a nadie. */
+export const MAX_NOMBRE = 120;
+export const MAX_TELEFONO = 40;
+
+/** El cuerpo JSON, o una respuesta 400 ya formada si viene roto o no es un objeto (antes salía un 500 con el texto del parser). */
+export async function readJsonBody(req: Request): Promise<Record<string, unknown> | Response> {
+  try {
+    const body = await req.json();
+    if (body && typeof body === 'object' && !Array.isArray(body)) return body as Record<string, unknown>;
+  } catch {
+    // cae abajo
+  }
+  return errorResponse('La solicitud no trae datos válidos.', 'bad_request', 400);
+}

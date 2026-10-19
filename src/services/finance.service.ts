@@ -11,7 +11,7 @@ import type {
   TransactionCategory,
   TransactionType,
 } from '../types/database';
-import { fetchAll } from './support';
+import { assertDeleted, fetchAll } from './support';
 
 /** Un movimiento del estado de cuenta listo para importar. */
 export interface StatementRowInput {
@@ -69,8 +69,11 @@ export const financeService = {
   },
 
   deleteTransaction: async (id: string) => {
-    const { error } = await supabase.from('finanzas_movimientos').delete().eq('id', id);
+    // Un movimiento del sistema (un cobro, el costo de un repuesto) no se borra desde aquí: la base
+    // lo rechaza (20261010000038) y el DELETE vuelve con cero filas, no con un error.
+    const { data, error } = await supabase.from('finanzas_movimientos').delete().eq('id', id).select('id');
     if (error) throw error;
+    assertDeleted(data, 'el movimiento');
   },
 
   // ===== Bank statement import =====
@@ -179,14 +182,20 @@ export const financeService = {
       return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
     };
 
-    const { data, error } = await supabase
-      .from('finanzas_movimientos')
-      .select('tipo, monto, fecha, descripcion')
-      .eq('sede_id', sedeId)
-      .not('importacion_id', 'is', null)
-      .gte('fecha', shiftDay(dates[0], -2))
-      .lte('fecha', shiftDay(dates[dates.length - 1], 2));
-    if (error) throw error;
+    // Con fetchAll: más de 1.000 movimientos importados en el rango dejaban sin revisar los que pasaban
+    // de la fila 1.000, y se importaban dos veces (QA 19/10/2026).
+    const data = await fetchAll<{ id: string; tipo: TransactionType; monto: number; fecha: string; descripcion: string }>((from, to) =>
+      supabase
+        .from('finanzas_movimientos')
+        .select('id, tipo, monto, fecha, descripcion')
+        .eq('sede_id', sedeId)
+        .not('importacion_id', 'is', null)
+        .gte('fecha', shiftDay(dates[0], -2))
+        .lte('fecha', shiftDay(dates[dates.length - 1], 2))
+        .order('fecha')
+        .order('id')
+        .range(from, to)
+    );
 
     const existing = (data || []) as {
       tipo: TransactionType;

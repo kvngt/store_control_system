@@ -116,6 +116,46 @@ describe('NextService smoke test', () => {
     expect(screen.queryByRole('button', { name: /Enviar sugerencia/i })).not.toBeInTheDocument();
   });
 
+  it('mientras guarda no se cierra con la X ni con el fondo (el trabajo seguiría en el aire)', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    let terminar: () => void = () => undefined;
+    const onSave = vi.fn(() => new Promise<void>((resolve) => { terminar = resolve; }));
+    const { container } = renderWithProviders(
+      <ServiceStickerModal mode="admin" order={mockOrder} initialData={{ fecha: '2099-01-01', millas: null, nota: 'Aceite' }} onSave={onSave} onClose={onClose} />
+    );
+
+    await user.click(screen.getByRole('button', { name: /^Guardar$/i }));
+    expect(onSave).toHaveBeenCalled();
+
+    expect(screen.getByRole('button', { name: /Cerrar/i })).toBeDisabled();
+    await user.click(container.querySelector('.modal-overlay') as HTMLElement);
+    expect(onClose).not.toHaveBeenCalled();
+
+    terminar();
+  });
+
+  it('una nota larga avisa que en el sticker se achica o se corta; una corta no', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ServiceStickerModal mode="admin" order={mockOrder} onSave={vi.fn()} onClose={vi.fn()} />);
+
+    const campo = screen.getByLabelText(/Nota o servicio/i);
+    await user.type(campo, 'Aceite sintético');
+    expect(screen.queryByText(/solo cabe una parte/i)).not.toBeInTheDocument();
+
+    await user.clear(campo);
+    await user.type(campo, 'x'.repeat(80));
+    expect(screen.getByText(/solo cabe una parte/i)).toBeInTheDocument();
+  });
+
+  it('abre con el idioma que eligió administración, no con el del cliente', () => {
+    renderWithProviders(
+      <ServiceStickerModal mode="admin" order={mockOrder} initialData={{ fecha: '2099-01-01', millas: null, nota: null, idioma: 'en' }} onSave={vi.fn()} onClose={vi.fn()} />
+    );
+
+    expect(screen.getByRole('combobox', { name: /idioma/i })).toHaveValue('en');
+  });
+
   it('Usar sugerencia en NextServiceCard llena el formulario de ServiceStickerModal', async () => {
     const user = userEvent.setup();
     const onOpenModalMock = vi.fn();

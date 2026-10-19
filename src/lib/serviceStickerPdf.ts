@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { serviceStickerUrl } from '../features/workOrders/nextService';
 import { formatPhone } from './phone';
+import { withSafeText } from './pdfText';
 
 export interface ServiceStickerData {
   taller: {
@@ -39,6 +40,26 @@ function formatStickerDate(dateStr: string, idioma: 'es' | 'en'): string {
   return `${d} ${MESES_ES[m - 1]} ${y}`;
 }
 
+/** Cuánto mide un texto con la fuente puesta; 0 si el documento no sabe medir (los dobles de prueba). */
+function anchoDe(doc: jsPDF, texto: string): number {
+  const w = (doc as unknown as { getTextWidth?: (t: string) => number }).getTextWidth?.(texto);
+  return typeof w === 'number' && Number.isFinite(w) ? w : 0;
+}
+
+/** El texto recortado con «…» para que quepa en `ancho` mm (con la fuente ya puesta). */
+function ajustar(doc: jsPDF, texto: string, ancho: number): string {
+  if (anchoDe(doc, texto) <= ancho) return texto;
+  let s = texto;
+  while (s.length > 1 && anchoDe(doc, `${s}…`) > ancho) s = s.slice(0, -1);
+  return `${s.trimEnd()}…`;
+}
+
+/** Renglones por debajo de `y` que caben antes de la línea del pie (36,5 mm) con ese cuerpo de letra. */
+function renglonesQueCaben(y: number, cuerpo: number): number {
+  const interlineado = cuerpo * 0.3528 * 1.15;
+  return Math.max(1, Math.floor((35.5 - y) / interlineado) + 1);
+}
+
 /**
  * Construye el documento PDF de 62 x 50 mm apaisado (Brother QL-810W)
  * con QR vectorial (20 x 20 mm, quiet zone 2 módulos).
@@ -47,28 +68,39 @@ export async function buildServiceStickerPdf(
   data: ServiceStickerData,
   idioma: 'es' | 'en' = 'es'
 ): Promise<jsPDF> {
-  const doc = new jsPDF({
-    unit: 'mm',
-    format: [62, 50],
-    orientation: 'landscape',
-  });
+  // Todo texto pasa por `pdfSafe`: un carácter que Helvetica no dibuja deja la línea ilegible.
+  const doc = withSafeText(
+    new jsPDF({
+      unit: 'mm',
+      format: [62, 50],
+      orientation: 'landscape',
+    })
+  );
 
   // Configuración base de color y tipografía (solo negro sobre blanco)
   doc.setTextColor(0, 0, 0);
   doc.setDrawColor(0, 0, 0);
 
   // --- 1. Encabezado (y: 3 a 9 mm) ---
+  // El teléfono a la derecha se mide primero: un nombre largo se recorta con «…» antes de pisarlo
+  // (con 26 letras y un teléfono con código de país se encimaban; QA 19/10/2026).
+  let anchoTelefono = 0;
+  const telefono = data.taller.telefono ? formatPhone(data.taller.telefono) : '';
+  if (telefono) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    anchoTelefono = anchoDe(doc, telefono);
+  }
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
-  // Nombre del taller truncado a margen izquierdo
-  const tallerNombre = (data.taller.nombre || '').slice(0, 26);
+  const tallerNombre = ajustar(doc, (data.taller.nombre || '').trim(), 56 - (telefono ? anchoTelefono + 2 : 0));
   doc.text(tallerNombre, 3, 6);
 
   // Teléfono del taller a la derecha
-  if (data.taller.telefono) {
+  if (telefono) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
-    doc.text(formatPhone(data.taller.telefono), 59, 6, { align: 'right' });
+    doc.text(telefono, 59, 6, { align: 'right' });
   }
 
   // Línea divisoria superior
@@ -98,12 +130,25 @@ export async function buildServiceStickerPdf(
     curY += 5;
   }
 
-  // Nota (máximo 2 renglones a 6 pt)
+  // Nota: 6 pt, y si no cabe 5,5 y 5 pt; lo que aun así no cabe se corta con «…» (antes se perdía el
+  // resto sin decirlo: la base deja 120 caracteres y cabían unos 64).
   if (data.servicio.nota) {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6);
-    const noteLines = doc.splitTextToSize(data.servicio.nota.trim(), 34).slice(0, 2);
-    doc.text(noteLines, 3, curY);
+    const nota = data.servicio.nota.trim();
+    let cuerpo = 6;
+    let renglones: string[] = [nota];
+    for (const intento of [6, 5.5, 5]) {
+      cuerpo = intento;
+      doc.setFontSize(cuerpo);
+      renglones = doc.splitTextToSize(nota, 34) as string[];
+      if (renglones.length <= renglonesQueCaben(curY, cuerpo)) break;
+    }
+    const maximo = renglonesQueCaben(curY, cuerpo);
+    if (renglones.length > maximo) {
+      renglones = renglones.slice(0, maximo);
+      renglones[maximo - 1] = ajustar(doc, `${renglones[maximo - 1].trimEnd()}…`, 34);
+    }
+    doc.text(renglones, 3, curY);
   }
 
   // --- 3. Columna derecha: QR vectorial (20 x 20 mm en x: 39 a 59 mm, y: 11 a 31 mm) ---
@@ -147,7 +192,8 @@ export async function buildServiceStickerPdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7);
   const vehicleText = [data.vehiculo.anio || '', data.vehiculo.marca, data.vehiculo.modelo].join(' ').trim();
-  doc.text(vehicleText.slice(0, 30), 3, 41);
+  const anchoPlaca = data.vehiculo.placa ? anchoDe(doc, data.vehiculo.placa) : 0;
+  doc.text(ajustar(doc, vehicleText, 56 - (anchoPlaca ? anchoPlaca + 2 : 0)), 3, 41);
 
   if (data.vehiculo.placa) {
     doc.text(data.vehiculo.placa, 59, 41, { align: 'right' });

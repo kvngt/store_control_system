@@ -2,7 +2,17 @@
 // Runs with the service-role key because creating an `auth.users` row requires
 // Supabase's admin API, which is never safe to call from the browser. Only an
 // authenticated admin (checked below via their own `perfiles.rol`) may call this.
-import { corsHeaders, jsonResponse, resolveAdminCaller, VALID_ROLES } from '../_shared/caller.ts';
+import {
+  corsHeaders,
+  EMAIL_RE,
+  jsonResponse,
+  MAX_NOMBRE,
+  MAX_TELEFONO,
+  readJsonBody,
+  resolveAdminCaller,
+  UUID_RE,
+  VALID_ROLES,
+} from '../_shared/caller.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -15,8 +25,10 @@ Deno.serve(async (req) => {
     if (auth instanceof Response) return auth;
     const { adminClient } = auth;
 
-    const body = await req.json();
-    const email = String(body.email || '').trim();
+    const body = await readJsonBody(req);
+    if (body instanceof Response) return body;
+    // Auth guarda los correos en minúsculas; el perfil igual, o el correo del perfil y el del acceso difieren.
+    const email = String(body.email || '').trim().toLowerCase();
     const password = String(body.password || '');
     const nombre_completo = String(body.nombre_completo || '').trim();
     const rol = String(body.rol || '');
@@ -32,6 +44,20 @@ Deno.serve(async (req) => {
     }
     if (!VALID_ROLES.includes(rol)) {
       return jsonResponse({ error: 'Rol inválido.' }, 400);
+    }
+    // Todo se comprueba antes de crear el acceso en Auth: lo que falle después deja un usuario a medias.
+    if (!EMAIL_RE.test(email)) {
+      return jsonResponse({ error: 'El correo no tiene un formato válido.' }, 400);
+    }
+    if (!UUID_RE.test(sede_id)) {
+      return jsonResponse({ error: 'La sede no es válida.' }, 400);
+    }
+    if (nombre_completo.length > MAX_NOMBRE || (telefono && telefono.length > MAX_TELEFONO)) {
+      return jsonResponse({ error: 'El nombre o el teléfono son demasiado largos.' }, 400);
+    }
+    const { data: sede } = await adminClient.from('sedes').select('id').eq('id', sede_id).maybeSingle();
+    if (!sede) {
+      return jsonResponse({ error: 'Esa sede ya no existe.' }, 400);
     }
 
     const { data: created, error: createError } = await adminClient.auth.admin.createUser({

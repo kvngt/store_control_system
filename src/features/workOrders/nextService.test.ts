@@ -88,6 +88,13 @@ describe('nextService pure logic', () => {
   describe('validateNextService', () => {
     const hoy = '2027-04-14';
 
+    // QA 19/10/2026: un número más grande que un INTEGER llegaba a la base y volvía un error técnico.
+    it('rechaza millas que no son de un odómetro, sin llegar a la base', () => {
+      const errors = validateNextService({ fecha: null, millas: 9_999_999_999, nota: null }, hoy, null);
+      expect(errors.millas).toBe('nextService.errors.milesTooHigh');
+      expect(Object.keys(validateNextService({ fecha: null, millas: 1_000_000, nota: null }, hoy, null))).toHaveLength(0);
+    });
+
     it('pasa con fecha y millas válidas', () => {
       const errors = validateNextService(
         { fecha: '2027-10-14', millas: 65000, nota: 'Aceite 5W-30' },

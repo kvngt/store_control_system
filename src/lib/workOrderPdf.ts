@@ -6,6 +6,7 @@ import { brandColors } from './brandColor';
 import { formatPhone, sedePhoneLine } from './phone';
 import { translateVehicleColor } from './vehicleColor';
 import { DAMAGE_VIEWS, DAMAGE_TYPES, sanitizeDamageMarks, type DamageView } from './vehicleDiagram';
+import { withSafeText } from './pdfText';
 
 export type PdfLanguage = 'es' | 'en';
 
@@ -260,7 +261,8 @@ async function buildWorkOrderPdf(
   // Las rayas lo llevan tal cual; el texto, oscurecido si hace falta para leerse en blanco.
   const brand = brandColors(sede?.color_tema);
 
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  // Todo texto pasa por `pdfSafe`: un carácter que Helvetica no dibuja deja toda la línea ilegible.
+  const doc = withSafeText(new jsPDF({ unit: 'mm', format: 'a4' }));
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const contentWidth = pageWidth - MARGIN * 2;
@@ -425,10 +427,12 @@ async function buildWorkOrderPdf(
     sectionTitle(S.labor);
     doc.setFontSize(9);
     laborItems.forEach((item) => {
-      ensureSpace(LINE);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(20, 20, 30);
       const lines = doc.splitTextToSize(tr(item.descripcion), contentWidth - 30);
+      // Se reserva el alto de todas las líneas: con una sola, una descripción larga cerca del final
+      // de la hoja se salía de la página (QA 19/10/2026).
+      ensureSpace(LINE * lines.length);
       doc.text(lines, MARGIN, y);
       doc.text(money(Number(item.costo)), pageWidth - MARGIN, y, { align: 'right' });
       y += LINE * lines.length;
@@ -455,10 +459,10 @@ async function buildWorkOrderPdf(
     sectionTitle(S.parts);
     doc.setFontSize(9);
     parts.forEach((part) => {
-      ensureSpace(LINE);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(20, 20, 30);
       const lines = doc.splitTextToSize(`${tr(part.descripcion)}  (x${part.cantidad})`, contentWidth - 30);
+      ensureSpace(LINE * lines.length);
       doc.text(lines, MARGIN, y);
       doc.text(money(Number(part.subtotal)), pageWidth - MARGIN, y, { align: 'right' });
       y += LINE * lines.length;

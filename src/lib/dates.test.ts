@@ -16,7 +16,7 @@ declare const process: { env: Record<string, string | undefined> };
 process.env.TZ = 'America/Chicago';
 
 import { describe, it, expect } from 'vitest';
-import { daysFromTodayLocal, isSameMonth, todayLocal } from './dates';
+import { daysFromTodayLocal, isSameMonth, monthLabel, todayLocal } from './dates';
 
 describe('isSameMonth', () => {
   // La premisa. Si esto falla, el proceso no tomó la zona y el resto de las
@@ -54,6 +54,18 @@ describe('isSameMonth', () => {
   it('no revienta con una cadena vacía o inválida', () => {
     expect(isSameMonth('', new Date())).toBe(false);
     expect(isSameMonth('no es una fecha', new Date())).toBe(false);
+  });
+});
+
+// QA 19/10/2026: la gráfica del panel escribía los meses siempre en español.
+describe('monthLabel', () => {
+  it('usa el mes de la fecha, sin correrlo por UTC', () => {
+    expect(monthLabel('2026-09-01', 'es')).toBe(new Date(2026, 8, 1).toLocaleDateString('es-US', { month: 'short' }));
+  });
+
+  it('escribe el mes en el idioma de la pantalla', () => {
+    expect(monthLabel('2026-04-01', 'en')).toBe('Apr');
+    expect(monthLabel('2026-04-01', 'es')).toMatch(/abr/i);
   });
 });
 

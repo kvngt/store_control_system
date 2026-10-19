@@ -82,8 +82,21 @@ describe('nextServiceService', () => {
       p_fecha: '2027-04-14',
       p_millas: 66000,
       p_nota: 'Aceite 5W-30',
+      p_idioma: null,
     });
     expect(res).toEqual(mockResult);
+  });
+
+  // 20261010000038: el idioma que elige administración se guarda y lo usa la página del QR.
+  it('program manda el idioma elegido con el nombre exacto p_idioma', async () => {
+    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: { token: 'c'.repeat(64) }, error: null } as any);
+
+    await nextServiceService.program('ord-123', { fecha: '2027-04-14', millas: null, nota: null }, 'en');
+
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'programar_proximo_servicio',
+      expect.objectContaining({ p_idioma: 'en' })
+    );
   });
 
   it('remove llama quitar_proximo_servicio con p_orden_id', async () => {

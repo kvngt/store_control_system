@@ -36,6 +36,7 @@ import CollapsibleSection from '../../components/CollapsibleSection';
 import Tabs, { TabPanel, type TabItem } from '../../components/Tabs';
 import { useAuth } from '../../context/auth.context';
 import { useLanguage } from '../../context/language.context';
+import { getErrorMessage } from '../../lib/errors';
 import { useToast } from '../../context/toast.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import { useIsMobile } from '../../lib/useMediaQuery';
@@ -130,7 +131,7 @@ const LINKED_SECTION: Record<string, string> = { trabajos: 'mano_obra', tareas: 
  * stays a layout and not a second god component.
  */
 export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOrderDetailProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { confirmNavigation } = useUnsavedChanges();
   const { user, currentSede, allSedes } = useAuth();
   const { showToast } = useToast();
@@ -268,9 +269,9 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
 
   const orderSede = (order && allSedes?.find((s) => s.id === order.sede_id)) || currentSede;
 
-  const handleSaveNextService = async (data: NextServiceInput, _lang: 'es' | 'en') => {
+  const handleSaveNextService = async (data: NextServiceInput, lang: 'es' | 'en') => {
     if (!order) return;
-    await nextServiceService.program(order.id, data);
+    await nextServiceService.program(order.id, data, lang);
     await queryClient.invalidateQueries({ queryKey: queryKeys.nextService(order.id) });
     await queryClient.invalidateQueries({ queryKey: queryKeys.workOrderDetail(order.id) });
     showToast('success', t('nextService.programmedSuccess'));
@@ -283,7 +284,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     const printWindow = openStickerWindow();
     let row;
     try {
-      row = await nextServiceService.program(order.id, data);
+      row = await nextServiceService.program(order.id, data, lang);
     } catch (err) {
       printWindow?.close();
       throw err;
@@ -295,34 +296,42 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
       printWindow?.close();
       return;
     }
-    const { nota: noteForPdf, fallo } = await noteForSticker(row.nota, lang);
-    if (fallo) {
-      showToast('error', t('nextService.noteNotTranslated'));
+    // Lo que falle de aquí en adelante (el import del PDF, el PDF mismo) ya no es un error de guardar:
+    // el servicio quedó guardado. Se cierra la ventana en blanco y se avisa con un aviso aparte; si
+    // se dejara subir, el diálogo diría que no se guardó y la persona lo guardaría otra vez.
+    try {
+      const { nota: noteForPdf, fallo } = await noteForSticker(row.nota, lang);
+      if (fallo) {
+        showToast('error', t('nextService.noteNotTranslated'));
+      }
+      const { printServiceSticker } = await import('../../lib/serviceStickerPdf');
+      await printServiceSticker(
+        {
+          taller: {
+            nombre: orderSede?.nombre || '',
+            telefono: orderSede?.telefono || null,
+          },
+          vehiculo: {
+            anio: order.vehiculo?.anio || 0,
+            marca: order.vehiculo?.marca || '',
+            modelo: order.vehiculo?.modelo || '',
+            placa: order.vehiculo?.placa || '',
+          },
+          servicio: {
+            fecha: row.fecha,
+            millas: row.millas,
+            nota: noteForPdf,
+            token: row.token,
+          },
+          numero_orden: order.numero_orden,
+        },
+        lang,
+        printWindow
+      );
+    } catch (err) {
+      printWindow?.close();
+      showToast('error', t('nextService.printAfterSaveError'), getErrorMessage(err, language));
     }
-    const { printServiceSticker } = await import('../../lib/serviceStickerPdf');
-    await printServiceSticker(
-      {
-        taller: {
-          nombre: orderSede?.nombre || '',
-          telefono: orderSede?.telefono || null,
-        },
-        vehiculo: {
-          anio: order.vehiculo?.anio || 0,
-          marca: order.vehiculo?.marca || '',
-          modelo: order.vehiculo?.modelo || '',
-          placa: order.vehiculo?.placa || '',
-        },
-        servicio: {
-          fecha: row.fecha,
-          millas: row.millas,
-          nota: noteForPdf,
-          token: row.token,
-        },
-        numero_orden: order.numero_orden,
-      },
-      lang,
-      printWindow
-    );
   };
 
   const handleSuggestNextService = async (data: NextServiceInput) => {

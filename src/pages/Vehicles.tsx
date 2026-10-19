@@ -88,11 +88,13 @@ export default function Vehicles() {
     setSelected(null);
     setForm(EMPTY_FORM);
     setTouched(false);
+    setActionError('');
     setShowModal(true);
   };
 
   const openEditModal = (v: Vehicle) => {
     setSelected(v);
+    setActionError('');
     setForm({
       cliente_id: v.cliente_id,
       marca: v.marca,
@@ -279,7 +281,7 @@ export default function Vehicles() {
         </button>
       </div>
 
-      {error && <div className="alert-error">{error}</div>}
+      {error && !(showModal && actionError) && <div className="alert-error">{error}</div>}
 
       <div style={{ marginBottom: 'var(--space-4)', position: 'relative', maxWidth: 400 }}>
         <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)' }} />
@@ -352,6 +354,8 @@ export default function Vehicles() {
               <button className="modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
             <div className="modal-body">
+              {/* Un error de guardar se muestra aquí: el diálogo tapa el recuadro de la página. */}
+              {actionError && <div className="alert-error" role="alert">{actionError}</div>}
               {/* 1 — Owner: pick from the customers on file, or add one here. */}
               <div className="form-section">
                 <div className="form-section-title">{t('vehicles.owner')}</div>

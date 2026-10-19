@@ -33,6 +33,17 @@ const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPAB
 /** ~50 s de trabajo por invocación: lejos del límite de 400 s y del próximo cron. */
 const TIME_BUDGET_MS = 50_000;
 
+/**
+ * Cuánto se espera a un servicio externo (Resend, Gemini, el endpoint de un push). Sin tope, uno que
+ * acepta la conexión y no responde detenía todo el lote hasta que el servidor mataba la función
+ * (QA 19/10/2026). Al vencer, `fetch` lanza y el trabajo se reintenta con la espera creciente.
+ */
+const FETCH_TIMEOUT_MS = 15_000;
+
+function fetchConTope(input: string, init: RequestInit = {}): Promise<Response> {
+  return fetch(input, { ...init, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+}
+
 function vapidDetails() {
   const publicKey = Deno.env.get('VAPID_PUBLIC_KEY');
   const privateKey = Deno.env.get('VAPID_PRIVATE_KEY');
@@ -83,7 +94,7 @@ async function sendPush(job: OutboxJob): Promise<JobResult> {
           { TTL: 60 * 60 * 24, urgency: 'high', vapidDetails: vapid }
         );
 
-        const res = await fetch(request.endpoint, {
+        const res = await fetchConTope(request.endpoint, {
           method: request.method,
           headers: request.headers as Record<string, string>,
           // Copia a un ArrayBuffer propio: `fetch` no acepta un Buffer de Node
@@ -252,7 +263,7 @@ async function sendEmail(job: OutboxJob): Promise<JobResult> {
   });
   if (!email) return { estado: 'error', detalle: `Plantilla "${job.plantilla}" desconocida.` };
 
-  const res = await fetch('https://api.resend.com/emails', {
+  const res = await fetchConTope('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -333,7 +344,7 @@ async function sendEmployeeEmail(job: OutboxJob): Promise<JobResult> {
     lineas: (datos.lineas ?? []).map((l) => String(l ?? '')),
   });
 
-  const res = await fetch('https://api.resend.com/emails', {
+  const res = await fetchConTope('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -401,7 +412,7 @@ async function sendTraduccion(job: OutboxJob): Promise<JobResult> {
   // aquí ya no existe) y cambiarlo no debe exigir un despliegue. La llave va en el encabezado,
   // no en la URL, para que no quede en los registros de nadie.
   const model = Deno.env.get('GEMINI_MODEL') || 'gemini-3.8-flash';
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+  const res = await fetchConTope(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify(prompt)
@@ -416,7 +427,10 @@ async function sendTraduccion(job: OutboxJob): Promise<JobResult> {
 
   const body = await res.json().catch(() => ({}));
   const content = body.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!content) return { estado: 'error', detalle: 'Gemini no devolvió texto en el formato esperado.' };
+  // Una respuesta vacía, rota o de otro largo es lo que suele hacer un modelo de lenguaje de vez en
+  // cuando: se reintenta (hasta cinco veces con espera creciente) en vez de dejar esa orden en
+  // español hasta que alguien edite un texto (QA 19/10/2026).
+  if (!content) throw new Error('Gemini no devolvió texto en el formato esperado.');
 
   let traduccionesStr: string[];
   try {
@@ -426,7 +440,7 @@ async function sendTraduccion(job: OutboxJob): Promise<JobResult> {
       throw new Error('La longitud del array traducido no coincide con el original.');
     }
   } catch (err) {
-    return { estado: 'error', detalle: `Respuesta JSON inválida de Gemini: ${err instanceof Error ? err.message : String(err)}` };
+    throw new Error(`Respuesta inválida de Gemini: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   const lote = textos.map((original: string, idx: number) => ({

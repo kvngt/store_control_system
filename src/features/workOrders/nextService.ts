@@ -132,6 +132,9 @@ export function presetsFor(
   ];
 }
 
+/** Más que esto no es un odómetro: la base guarda un INTEGER y un número gigante volvía un error técnico. */
+export const MAX_NEXT_SERVICE_MILES = 1_000_000;
+
 /**
  * Valida fecha, millas y nota para programar o sugerir un próximo servicio.
  * Devuelve claves de traducción para los errores detectados.
@@ -158,6 +161,9 @@ export function validateNextService(
   if (hasMillas) {
     if (input.millas! < 0) {
       errors.millas = 'nextService.errors.milesNegative';
+    } else if (input.millas! > MAX_NEXT_SERVICE_MILES) {
+      // Un número más grande que un INTEGER de la base daba un error técnico al guardar.
+      errors.millas = 'nextService.errors.milesTooHigh';
     } else if (millasIngreso !== null && input.millas! < millasIngreso) {
       errors.millas = 'nextService.errors.milesLessThanIntake';
     }

@@ -32,12 +32,14 @@ export const nextServiceService = {
   /**
    * Programa el próximo servicio y genera/conserva el código para el sticker (solo admin).
    */
-  program: async (ordenId: string, input: NextServiceInput): Promise<OrderNextService> => {
+  program: async (ordenId: string, input: NextServiceInput, idioma?: 'es' | 'en'): Promise<OrderNextService> => {
     const { data, error } = await supabase.rpc('programar_proximo_servicio', {
       p_orden_id: ordenId,
       p_fecha: input.fecha,
       p_millas: input.millas,
       p_nota: input.nota,
+      // Sin idioma, la base conserva el que ya tenía (o el del cliente).
+      p_idioma: idioma ?? null,
     });
     if (error) throw error;
     return data as OrderNextService;

@@ -20,7 +20,8 @@ vi.mock('jspdf', () => {
           // Sin `then`: `buildWorkOrderPdf` es async y devuelve el documento, y un objeto
           // con `then` lo toma `await` por una promesa que nunca resuelve.
           if (prop === 'then') return undefined;
-          if (prop === 'splitTextToSize') return (t: string) => [t];
+          // Un salto de línea en el texto hace de línea nueva, para probar descripciones largas.
+          if (prop === 'splitTextToSize') return (t: string) => String(t).split('\n');
           return (...args: unknown[]) => {
             llamadas.lista.push([prop, args]);
           };
@@ -77,6 +78,28 @@ beforeEach(() => {
 });
 
 describe('generateWorkOrderPdf', () => {
+  // QA 19/10/2026: ensureSpace(LINE) reservaba una línea aunque la descripción ocupara varias.
+  it('una descripción de varias líneas no se sale de la hoja: pasa a la siguiente', async () => {
+    // Descripciones de 1 a 6 líneas, para que alguna caiga cerca del final de la hoja.
+    const largas = Array.from({ length: 60 }, (_, i) => ({
+      id: `l${i}`,
+      descripcion: Array.from({ length: (i % 6) + 1 }, (_, k) => `Trabajo ${i} línea ${k + 1}`).join('\n'),
+      costo: 10,
+      estado: 'aprobado',
+    }));
+    const o = { ...orden('en_proceso'), labor_items: largas, total_labor: 400 } as unknown as WorkOrder;
+
+    await generateWorkOrderPdf(o, SEDE);
+
+    const paginas = llamadas.lista.filter(([m]) => m === 'addPage').length;
+    expect(paginas).toBeGreaterThan(0);
+    // Cada bloque de varias líneas termina antes del margen inferior (297 - 15 mm).
+    const excedidos = llamadas.lista
+      .filter(([m, a]) => m === 'text' && Array.isArray(a[0]) && a[0].length > 1)
+      .filter(([, a]) => Number(a[2]) + ((a[0] as string[]).length - 1) * 6 > 297 - 15 + 0.01);
+    expect(excedidos).toEqual([]);
+  });
+
   it('el nombre del taller sale en el color de esa sede, legible sobre blanco', async () => {
     await generateWorkOrderPdf(orden('en_proceso'), SEDE);
 

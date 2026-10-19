@@ -74,6 +74,9 @@ describe('useOrderSync', () => {
 
     expect(keys()).toContain(JSON.stringify(queryKeys.workOrderDetail('ord-1')));
     expect(keys()).toContain(JSON.stringify(queryKeys.quotes('ord-1')));
+    // La sugerencia del técnico y el próximo servicio programado se ven al momento en otra pantalla
+    // (QA 19/10/2026: faltaba esta clave y había que recargar).
+    expect(keys()).toContain(JSON.stringify(queryKeys.nextService('ord-1')));
     expect(keys()).toContain(JSON.stringify(['work-orders']));
     expect(keys()).toContain(JSON.stringify(['dashboard-stats']));
   });

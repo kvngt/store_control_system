@@ -7,7 +7,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { commissionsService, dashboardService, financeService, workOrdersService } from '../services/supabaseService';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
-import { todayLocal } from '../lib/dates';
+import { monthLabel, todayLocal } from '../lib/dates';
+import { openInNewTab } from '../lib/openInNewTab';
 import { getErrorMessage } from '../lib/errors';
 import type { FinancialTransaction, TransactionType, TransactionCategory, DashboardStats, WorkOrder, BankStatementImport, StatementSummary } from '../types/database';
 import { toCsv, downloadCsv } from '../lib/csv';
@@ -30,6 +31,7 @@ import {
   FileUp,
   X,
   Trash2,
+  Lock,
   Paperclip,
 } from 'lucide-react';
 import { money, moneySigned } from '../lib/money';
@@ -42,8 +44,7 @@ export default function Finance() {
   // El comprobante vive en un bucket privado: se abre con una URL firmada de pocos minutos.
   const openReceipt = async (path: string) => {
     try {
-      const url = await commissionsService.signComprobante(path);
-      window.open(url, '_blank', 'noopener,noreferrer');
+      await openInNewTab(() => commissionsService.signComprobante(path));
     } catch (err) {
       showToast('error', t('payroll.chequeOpenError'), getErrorMessage(err, language));
     }
@@ -124,6 +125,7 @@ export default function Finance() {
   // therefore behind the modal overlay, where nobody can read it.
   const [modalError, setModalError] = useState('');
   const [revertingId, setRevertingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [form, setForm] = useState({
     tipo: 'ingreso' as TransactionType,
     categoria: 'pago_cliente' as TransactionCategory,
@@ -187,7 +189,7 @@ export default function Finance() {
   // modal covers the page-level error box, so a bare `return` reads as a dead
   // button to whoever pressed it.
   const handleRevertImport = async (batch: BankStatementImport) => {
-    const when = new Date(batch.fecha_importacion).toLocaleString('es');
+    const when = new Date(batch.fecha_importacion).toLocaleString(language === 'en' ? 'en-US' : 'es-US');
     if (!confirm(`${t('finance.confirmRevertImport')} "${batch.nombre_archivo}" (${when})?`)) return;
     setRevertingId(batch.id);
     try {
@@ -202,13 +204,17 @@ export default function Finance() {
   };
 
   const handleDeleteTransaction = async (txn: FinancialTransaction) => {
+    if (deletingId) return;
     if (!confirm(t('finance.deleteTransactionConfirm').replace('{monto}', money(txn.monto)))) return;
+    setDeletingId(txn.id);
     try {
       await financeService.deleteTransaction(txn.id);
       showToast('success', t('finance.transactionDeleted'));
       loadData();
     } catch (err) {
       showToast('error', getErrorMessage(err, language));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -433,7 +439,7 @@ export default function Finance() {
                     <div className="chart-bar income" style={{ height: `${(month.ingresos / monthlyMax) * 140}px` }} title={`${t('finance.income')}: ${money(month.ingresos)}`}></div>
                     <div className="chart-bar expense" style={{ height: `${(month.egresos / monthlyMax) * 140}px` }} title={`${t('finance.expense')}: ${money(month.egresos)}`}></div>
                   </div>
-                  <span className="chart-bar-label">{month.mes}</span>
+                  <span className="chart-bar-label">{monthLabel(month.mes_inicio, language)}</span>
                 </div>
               );
             })}
@@ -547,15 +553,22 @@ export default function Finance() {
                 </td>
                 {user?.rol === 'admin' && (
                   <td data-label={t('common.actions')} style={{ textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm btn-icon"
-                      onClick={() => handleDeleteTransaction(txn)}
-                      title={t('common.delete')}
-                      aria-label={t('common.delete')}
-                    >
-                      <Trash2 size={16} style={{ color: 'var(--color-danger)' }} />
-                    </button>
+                    {txn.origen === 'sistema' && !txn.importacion_id ? (
+                      <span title={t('finance.systemEntry')} aria-label={t('finance.systemEntry')} role="img" style={{ color: 'var(--color-text-tertiary)', display: 'inline-flex' }}>
+                        <Lock size={16} />
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm btn-icon"
+                        onClick={() => handleDeleteTransaction(txn)}
+                        disabled={deletingId !== null}
+                        title={t('common.delete')}
+                        aria-label={t('common.delete')}
+                      >
+                        <Trash2 size={16} style={{ color: 'var(--color-danger)' }} />
+                      </button>
+                    )}
                   </td>
                 )}
               </tr>

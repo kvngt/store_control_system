@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mocks = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock('../lib/supabase', () => ({ supabase: { rpc: mocks.rpc } }));
 
-const { dashboardService, monthLabel } = await import('./dashboard.service');
+const { dashboardService } = await import('./dashboard.service');
 
 const RESUMEN = {
   ordenes_activas: 4,
@@ -48,8 +48,8 @@ describe('dashboardService.getDashboardStats', () => {
     expect(stats.ingresos_total).toBe(48000);
     expect(stats.tasa_ocupacion).toBe(50);
     expect(stats.ingresos_por_mes).toEqual([
-      { mes: monthLabel('2026-08-01'), ingresos: 9000, egresos: 1000 },
-      { mes: monthLabel('2026-09-01'), ingresos: 15000, egresos: 3200.5 },
+      { mes_inicio: '2026-08-01', ingresos: 9000, egresos: 1000 },
+      { mes_inicio: '2026-09-01', ingresos: 15000, egresos: 3200.5 },
     ]);
   });
 
@@ -61,12 +61,6 @@ describe('dashboardService.getDashboardStats', () => {
   it('un error de la base llega a la pantalla, no se convierte en ceros', async () => {
     mocks.rpc.mockResolvedValue({ data: null, error: { code: '42883', message: 'function does not exist' } });
     await expect(dashboardService.getDashboardStats('sede-1', 10)).rejects.toMatchObject({ code: '42883' });
-  });
-});
-
-describe('monthLabel', () => {
-  it('usa el mes de la fecha, sin correrlo por UTC', () => {
-    expect(monthLabel('2026-09-01')).toBe(new Date(2026, 8, 1).toLocaleDateString('es', { month: 'short' }));
   });
 });
 

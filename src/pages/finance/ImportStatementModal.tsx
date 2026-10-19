@@ -242,7 +242,7 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
                   <span>
                     <strong>{t('finance.fileAlreadyImported')}</strong>{' '}
                     {alreadyImported
-                      .map((b) => new Date(b.fecha_importacion).toLocaleString('es'))
+                      .map((b) => new Date(b.fecha_importacion).toLocaleString(language === 'en' ? 'en-US' : 'es-US'))
                       .join(' · ')}
                     . {t('finance.fileAlreadyImportedHint')}
                   </span>

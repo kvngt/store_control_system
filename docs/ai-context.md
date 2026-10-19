@@ -233,6 +233,24 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
   - **todo texto que el cliente lee a mano entra en `_textos_cliente`** y su tabla lleva el trigger
     de `trg_encolar_traduccion` (la nota del próximo servicio, también en `datos_servicio`);
   - **horas facturadas:** `MAX_LABOR_HOURS` (999) y `clampLaborHours`, porque la columna es `NUMERIC(6,2)`.
+- **Segunda ronda del QA, 19/10/2026** (`20261010000038`, [qa-2026-10-18.md](qa-2026-10-18.md) §8 a §10):
+  - **un movimiento de finanzas lleva su `origen`** (`manual` | `sistema`), que pone un trigger según
+    quién escribe (`current_user`: una persona por la API es `manual`; una función `SECURITY DEFINER`, `sistema`).
+    **Un admin solo edita o borra por la API lo manual y lo importado**; lo del sistema (el cobro al
+    entregar, el depósito, el costo de repuestos, el egreso de un pago) se corrige en su origen. Un
+    borrado que RLS rechaza vuelve con cero filas: usa `assertDeleted`. **Una función nueva que asiente
+    dinero de una orden tiene que ser `SECURITY DEFINER`, o su movimiento quedaría como manual**;
+  - **todo texto que va a un PDF pasa por `pdfSafe`** (`lib/pdfText.ts`, `withSafeText`): un solo
+    carácter que Helvetica no dibuja (guion que no se corta, ✓, emoji) deja ilegible TODA la línea;
+  - **sticker** (`programar_proximo_servicio` bloquea la orden, el código nunca se pisa y el idioma que
+    elige administración se guarda en `idioma` y lo usa la página del QR). El nombre del taller y el vehículo
+    se miden y se recortan con «…» antes de pisar el teléfono o la placa; la nota achica su letra (6, 5,5, 5 pt) y
+    termina en «…» si no cabe. Lo que falle después de guardar no es un error de guardar;
+  - **las alertas del panel salen de todas las órdenes visibles**, no de las cinco recientes;
+  - **`update-employee` y `create-employee` validan todo antes de tocar Auth** (sede, correo, largos), el
+    correo va en minúsculas y, si el perfil no se guarda, el correo del acceso vuelve al de antes;
+    `delete-employee` no borra a quien reportó o resolvió un hallazgo ni a quien tiene comisiones;
+  - **`process-outbox` hace sus `fetch` con tope de tiempo** y una respuesta rota de Gemini se reintenta.
 - **Índices e InitPlan** (`20261010000033`): toda clave foránea nueva lleva su índice, y toda
   llamada a un helper en una política va envuelta en `(SELECT …)`.
 - **Avisos y correos al personal.** El técnico se entera de lo no autorizado (`TechOrderStatus`)
@@ -268,7 +286,7 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
    `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca edites una migración
    ya aplicada ni cambies tablas desde el panel. **El nombre va después de la última
    migración, no de la fecha de hoy:** hay migraciones aplicadas con fecha futura (hoy la
-   última es `20261010000037`), y una con fecha anterior a la última aplicada no entra con
+   última es `20261010000038`), y una con fecha anterior a la última aplicada no entra con
    `db push` ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#4-base-de-datos), B-1).
 2. **Una función nueva en `public` es una RPC pública.** Postgres da `EXECUTE` a
    `PUBLIC` y Supabase a `anon` y `authenticated` al crearla. Revócala siempre:

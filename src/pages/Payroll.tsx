@@ -23,6 +23,7 @@ import { getErrorMessage } from '../lib/errors';
 import type { Commission, CommissionBalance, CommissionPayment } from '../types/database';
 import { AlertError } from '../components/AlertError';
 import { money } from '../lib/money';
+import { openInNewTab } from '../lib/openInNewTab';
 import CommissionApproval from '../features/workOrders/CommissionApproval';
 
 
@@ -214,8 +215,7 @@ export default function Payroll() {
 
   const openCheque = async (path: string) => {
     try {
-      const url = await commissionsService.signComprobante(path);
-      window.open(url, '_blank', 'noopener,noreferrer');
+      await openInNewTab(() => commissionsService.signComprobante(path));
     } catch (err) {
       showToast('error', t('payroll.chequeOpenError'), getErrorMessage(err, language));
     }

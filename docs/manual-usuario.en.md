@@ -800,7 +800,7 @@ The same next service also appears as the **Recommended next service** card in t
 If while working you see that the vehicle will need a service later on (the next oil change, brakes, belts), you can leave it as a suggestion for administration. You do not schedule or print anything: administration decides.
 
 1. On the order, tap **Suggest next service** in the quick actions, or go to the **Order** tab → **Next service** card.
-2. Tap a **Quick preset** or enter the **Recommended date**, the **Recommended miles** and a **Note or service** (up to 120 characters). At least the date or the miles are required.
+2. Tap a **Quick preset** or enter the **Recommended date**, the **Recommended miles** and a **Note or service** (up to 120 characters; about 64 fit on the label at normal size, and a longer one shrinks the type and cuts what is left with «…», while the customer sees it in full on their page). At least the date or the miles are required.
 3. Tap **Send suggestion**. You will see «Suggestion sent to administration.»
 
 You can only suggest on an order that is assigned to you and not yet delivered. If you suggest again, you replace your earlier suggestion. Once administration uses or discards it, it disappears.
@@ -1054,10 +1054,11 @@ for that order.
 
 ### Deleting a transaction
 
-Each row has a trash icon button. Use it **only for manual transactions**
-entered by mistake.
+Each transaction you entered by hand has a trash icon button: use it **only for the ones
+entered by mistake**. The ones the system books carry a **lock** instead of the trash icon
+and cannot be deleted from here.
 
-> **Do not delete automatic transactions** (initial deposits, final payments, parts
+> **Automatic transactions cannot be deleted** (initial deposits, final payments, parts
 > costs, commission payments, adjustments or reversals). The system uses them
 > to calculate subsequent balances: if you delete a final payment and the order is later
 > edited, accounts will not balance. To adjust an order's financial figures,

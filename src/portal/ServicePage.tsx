@@ -177,6 +177,8 @@ function servicioNota(data: ServicePortalData, language: PortalLanguage): string
 function ServiceContent({ data, todayStr, language, formatDate }: ServiceContentProps) {
   const strings = portalStrings[language];
   const { taller, vehiculo } = data;
+  // Un logo que no carga (enlace roto, bloqueado) no deja el cuadro de imagen rota: vuelve el ícono.
+  const [logoRoto, setLogoRoto] = useState(false);
   // La nota se escribió a mano en español: en inglés sale su traducción, si ya existe.
   const nota = servicioNota(data, language);
   const servicio = { ...data.servicio, nota };
@@ -209,8 +211,8 @@ function ServiceContent({ data, todayStr, language, formatDate }: ServiceContent
     <div className="portal-body">
       {/* Encabezado del taller */}
       <div className="portal-shop">
-        {taller.logo_url ? (
-          <img src={taller.logo_url} alt={taller.nombre} className="portal-shop-logo" />
+        {taller.logo_url && !logoRoto ? (
+          <img src={taller.logo_url} alt={taller.nombre} className="portal-shop-logo" onError={() => setLogoRoto(true)} />
         ) : (
           <Building2 size={32} style={{ color: 'var(--color-primary)' }} />
         )}
