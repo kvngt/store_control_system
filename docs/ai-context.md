@@ -254,6 +254,10 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
     correo va en minúsculas y, si el perfil no se guarda, el correo del acceso vuelve al de antes;
     `delete-employee` no borra a quien reportó o resolvió un hallazgo ni a quien tiene comisiones;
   - **`process-outbox` hace sus `fetch` con tope de tiempo** y una respuesta rota de Gemini se reintenta.
+- **Vehículos únicos** (`20261010000039`): el **VIN es único en todo el sistema** y la **placa es única por
+  estado**, sin importar mayúsculas ni espacios (`uq_vehiculos_vin`, `uq_vehiculos_placa`); un carro sin placa
+  no cuenta. Un carro que cambia de dueño se edita, no se vuelve a crear. `getErrorMessage` reconoce las dos
+  restricciones y dice qué hacer.
 - **Índices e InitPlan** (`20261010000033`): toda clave foránea nueva lleva su índice, y toda
   llamada a un helper en una política va envuelta en `(SELECT …)`.
 - **Avisos y correos al personal.** El técnico se entera de lo no autorizado (`TechOrderStatus`)
@@ -289,7 +293,7 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
    `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca edites una migración
    ya aplicada ni cambies tablas desde el panel. **El nombre va después de la última
    migración, no de la fecha de hoy:** hay migraciones aplicadas con fecha futura (hoy la
-   última es `20261010000038`), y una con fecha anterior a la última aplicada no entra con
+   última es `20261010000039`), y una con fecha anterior a la última aplicada no entra con
    `db push` ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#4-base-de-datos), B-1).
 2. **Una función nueva en `public` es una RPC pública.** Postgres da `EXECUTE` a
    `PUBLIC` y Supabase a `anon` y `authenticated` al crearla. Revócala siempre:

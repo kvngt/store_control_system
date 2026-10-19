@@ -31,6 +31,18 @@ describe('getErrorMessage', () => {
     expect(msg).toContain('linked to other data');
   });
 
+  // 20261010000039: VIN y placa únicos. El taller necesita saber cuál y qué hacer.
+  it('un VIN repetido dice que busque el vehículo que ya existe', () => {
+    const raw = { code: '23505', message: 'duplicate key value violates unique constraint "uq_vehiculos_vin"' };
+    expect(getErrorMessage(raw, 'es')).toContain('Ya hay un vehículo con ese VIN');
+    expect(getErrorMessage(raw, 'en')).toContain('already a vehicle with that VIN');
+  });
+
+  it('una placa repetida lo dice aparte', () => {
+    const raw = { code: '23505', message: 'duplicate key value violates unique constraint "uq_vehiculos_placa"' };
+    expect(getErrorMessage(raw, 'es')).toContain('esa placa en ese estado');
+  });
+
   it('translates a unique constraint violation', () => {
     const msg = getErrorMessage({ code: '23505' }, 'es');
     expect(msg).toContain('Ya existe un registro');

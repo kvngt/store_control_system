@@ -68,6 +68,23 @@ const FRIENDLY_BY_CODE: Record<string, Record<Language, string>> = {
   },
 };
 
+const DUPLICATE_VEHICLE: [RegExp, Record<Language, string>][] = [
+  [
+    /uq_vehiculos_vin/,
+    {
+      es: 'Ya hay un vehículo con ese VIN. Búscalo en Vehículos y úsalo; si cambió de dueño, edita el dueño de ese vehículo.',
+      en: 'There is already a vehicle with that VIN. Find it under Vehicles and use it; if it has a new owner, edit that vehicle\'s owner.',
+    },
+  ],
+  [
+    /uq_vehiculos_placa/,
+    {
+      es: 'Ya hay un vehículo con esa placa en ese estado. Búscalo en Vehículos y úsalo; si cambió de dueño, edita el dueño de ese vehículo.',
+      en: 'There is already a vehicle with that plate in that state. Find it under Vehicles and use it; if it has a new owner, edit that vehicle\'s owner.',
+    },
+  ],
+];
+
 interface ErrorLike {
   code?: string;
   message?: string;
@@ -195,6 +212,11 @@ export function getErrorMessage(err: unknown, language: Language): string {
   // así que en inglés también se usa el genérico.
   if (e?.code === '42501' && language === 'es' && isShopSentence(e.message)) {
     return e.message as string;
+  }
+  // Un VIN o una placa repetidos (20261010000039): se dice cuál y qué hacer, no el genérico.
+  if (e?.code === '23505' && e.message) {
+    const vehiculo = DUPLICATE_VEHICLE.find(([patron]) => patron.test(e.message as string));
+    if (vehiculo) return vehiculo[1][language];
   }
   const friendly = e?.code ? FRIENDLY_BY_CODE[e.code] : undefined;
   if (friendly) return friendly[language];

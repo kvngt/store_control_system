@@ -49,6 +49,14 @@ al día aparte.
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
 
+### 19/10/2026 — Claude Code (VIN y placa únicos, migración 039)
+
+- **Decisión del dueño:** VIN y placa únicos (los datos actuales no importan) y la cola de subida **se queda activa** al cerrar sesión.
+- **Hecho (sin publicar):** `20261010000039_vehiculos_vin_y_placa_unicos.sql` (VIN único global, placa única por estado, sin importar mayúsculas ni
+  espacios; guarda que se detiene con una frase clara si hubiera repetidos; en producción: 11 vehículos, 0 repetidos), prueba `43_vehiculos_unicos.test.sql`,
+  mensajes de `getErrorMessage` para las dos restricciones, manuales y `ai-context.md`. pgTAP 43 archivos / 1.053 pruebas, Vitest 1.057.
+- **Publicar (lo hace la persona responsable):** `db push` de la `039` (el índice se crea sin tocar datos) y push a `main`.
+
 ### 19/10/2026 — Claude Code (arreglos de la segunda ronda y análisis del sticker)
 
 - **Pedido:** arreglar lo de la segunda ronda (con el borrado de cobros del sistema como lo propuse) y analizar a fondo el proceso del

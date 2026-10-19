@@ -316,6 +316,12 @@ The form is designed to fill in almost entirely on its own from the VIN.
 
 ![Vehicle registration with decoded VIN.](../public/ayuda/en/11.webp)
 
+### A vehicle is never duplicated
+
+The **VIN** is unique across the whole system and the **plate** is unique within its state (the same plate can exist in
+another state). If you try to register one that already exists, the app tells you: find it under **Vehicles** and use it. If the
+car **changed owner**, edit that vehicle's owner; do not create another one, or its order history would be split.
+
 ### Vehicles with no plate
 
 Units purchased at auction often arrive without plates. Check the

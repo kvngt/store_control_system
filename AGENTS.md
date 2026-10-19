@@ -33,7 +33,7 @@ Léela antes de empezar y agrega tu entrada al terminar cada bloque de trabajo.
   documentación decía `produccion`, ver [docs/historico/evaluacion-2026-10.md](docs/historico/evaluacion-2026-10.md#5-operación-y-despliegue)):
   un push a `main` sale en vivo en uno o dos minutos, sin esperar al CI.
 - **Migraciones nuevas: nómbralas después de la última** que haya en `supabase/migrations/`
-  (hoy `20261010000038`), no con la fecha de hoy. Hay migraciones aplicadas con fecha futura y
+  (hoy `20261010000039`), no con la fecha de hoy. Hay migraciones aplicadas con fecha futura y
   una más vieja que la última no se aplica con `db push`.
 - **Commits solo cuando se piden.**
 

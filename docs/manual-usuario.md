@@ -319,6 +319,12 @@ El formulario está pensado para llenarse casi solo a partir del VIN.
 
 ![Registro de un vehículo con el VIN decodificado.](../public/ayuda/es/11.webp)
 
+### Un vehículo no se repite
+
+El **VIN** es único en todo el sistema y la **placa** es única dentro de su estado (la misma placa puede existir en otro
+estado). Si intentas registrar uno que ya existe, la app te lo dice: búscalo en **Vehículos** y úsalo. Si el carro **cambió de
+dueño**, edita el dueño de ese vehículo; no crees otro, o su historial de órdenes quedaría partido.
+
 ### Vehículos sin placa
 
 Las unidades compradas en subasta llegan sin placa. Marca la casilla
