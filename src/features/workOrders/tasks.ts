@@ -4,7 +4,7 @@
 // fase F4, el alta de la orden. Ninguna toca dinero: quién cobra cuánto lo calcula la base
 // (`comisiones_estimadas`).
 
-import type { LaborItem, Specialty, UserProfile, WorkType } from '../../types/database';
+import type { LaborItem, OrderAssignment, Specialty, UserProfile, WorkType } from '../../types/database';
 
 /** Quien puede recibir una tarea: un mecánico o pintor de la sede de la orden. */
 export type Technician = Pick<UserProfile, 'id' | 'nombre_completo' | 'rol'>;
@@ -16,6 +16,7 @@ export interface TaskDraft {
   especialidad: Specialty;
   /** Nulo = sin técnico: nadie cobra su comisión hasta que se le asigne uno. */
   asignado_a: string | null;
+  horas?: number | null;
 }
 
 /** El tipo con el que nace una tarea según el tipo de la orden (un "combinado" empieza en mecánica). */
@@ -67,3 +68,37 @@ export function suggestedTechnicianId(
   const unique = [...new Set(assignedIds)].filter(eligible);
   return unique.length === 1 ? unique[0] : null;
 }
+
+/**
+ * El técnico por omisión para una tarea nueva de cierta especialidad (pedido del 16/10/2026):
+ * 1. reportedBy, si puede recibir la tarea;
+ * 2. si no, el único técnico asignado a la orden con tipo_tarea === specialty;
+ * 3. si no, el único técnico de la orden, como suggestedTechnicianId;
+ * 4. si no, null.
+ */
+export function suggestedTechnicianFor(
+  specialty: Specialty,
+  assignments: readonly Pick<OrderAssignment, 'usuario_id' | 'tipo_tarea'>[],
+  technicians: Technician[],
+  reportedBy?: string | null
+): string | null {
+  const eligible = (id: string | null | undefined) => !!id && technicians.some((tech) => tech.id === id);
+  if (eligible(reportedBy)) return reportedBy as string;
+
+  const bySpecialty = [...new Set(
+    assignments
+      .filter((a) => a.tipo_tarea === specialty && eligible(a.usuario_id))
+      .map((a) => a.usuario_id)
+  )];
+  if (bySpecialty.length === 1) return bySpecialty[0];
+
+  const allAssigned = [...new Set(
+    assignments
+      .filter((a) => eligible(a.usuario_id))
+      .map((a) => a.usuario_id)
+  )];
+  if (allAssigned.length === 1) return allAssigned[0];
+
+  return null;
+}
+

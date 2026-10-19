@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   Building2,
   Calendar,
   Car,
   Check,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
   ClipboardList,
   FileSignature,
   Gauge,
@@ -30,10 +33,11 @@ import { formatDuration } from '../lib/media/mime';
 import { telUrl, whatsAppUrl } from '../lib/phone';
 import { translateVehicleColor } from '../lib/vehicleColor';
 import { answerQuote, fetchPortal, setEmailPreference, setLanguagePreference } from './portal.api';
-import type { PortalMedia, PortalPhoneContact, PortalQuote, PortalReport, PortalResponse, PortalShop } from './portal.types';
+import type { PortalMedia, PortalPhoneContact, PortalQuote, PortalQuoteLine, PortalReport, PortalResponse, PortalShop } from './portal.types';
 import { initialPortalLanguage, portalStrings, savePortalLanguage, savedPortalLanguage, type PortalLanguage } from './strings';
 import { translateReport } from './translate';
 import { VehicleDiagram } from '../components/VehicleDiagram';
+import PortalSection from './PortalSection';
 
 type Strings = (typeof portalStrings)['es'];
 
@@ -407,10 +411,11 @@ function Report({
         />
       )}
 
-      <section className="portal-card">
-        <h2 className="portal-section-title">
-          <Wrench size={18} /> {s.progressTitle}
-        </h2>
+      <PortalSection
+        icon={Wrench}
+        title={s.progressTitle}
+        defaultOpen={true}
+      >
         {updates.length === 0 && looseProgress.length === 0 ? (
           <p className="portal-muted">{s.noProgressMedia}</p>
         ) : (
@@ -428,13 +433,14 @@ function Report({
             {looseProgress.length > 0 && <PortalMediaGrid media={looseProgress} s={s} fmt={fmt} showDates />}
           </div>
         )}
-      </section>
+      </PortalSection>
 
       {observations.length > 0 && (
-        <section className="portal-card">
-          <h2 className="portal-section-title">
-            <Info size={18} /> {s.observationsTitle}
-          </h2>
+        <PortalSection
+          icon={Info}
+          title={s.observationsTitle}
+          defaultOpen={false}
+        >
           <p className="portal-muted">{s.observationsHint}</p>
           <div className="portal-updates">
             {observations.map((o) => (
@@ -444,13 +450,15 @@ function Report({
               </article>
             ))}
           </div>
-        </section>
+        </PortalSection>
       )}
 
-      <section className="portal-card">
-        <h2 className="portal-section-title">
-          <ClipboardList size={18} /> {s.receptionTitle}
-        </h2>
+      <PortalSection
+        icon={ClipboardList}
+        title={s.receptionTitle}
+        summary={s.receptionPhotosCount.replace('{count}', String(reception.length))}
+        defaultOpen={false}
+      >
         <dl className="portal-facts">
           <div>
             <dt><Calendar size={14} /> {s.receivedOn}</dt>
@@ -498,14 +506,26 @@ function Report({
             )}
           </div>
         )}
-      </section>
+      </PortalSection>
+
+      {/* Inspección por puntos (20261010000035) */}
+      {report.inspeccion && (
+        <InspectionSection
+          inspeccion={report.inspeccion}
+          multimedia={report.multimedia}
+          s={s}
+          fmt={fmt}
+        />
+      )}
 
       {/* Próximo servicio recomendado (20261010000029) */}
       {report.proximo_servicio && (report.proximo_servicio.fecha || report.proximo_servicio.millas !== null) && (
-        <section className="portal-card" data-testid="next-service-card">
-          <h2 className="portal-section-title">
-            <Tag size={18} /> {s.nextServiceCard.title}
-          </h2>
+        <PortalSection
+          icon={Tag}
+          title={s.nextServiceCard.title}
+          defaultOpen={true}
+          testId="next-service-card"
+        >
           <div className="portal-service-grid" style={{ margin: 'var(--space-3) 0 0' }}>
             {report.proximo_servicio.fecha && (
               <div className="portal-service-item">
@@ -535,15 +555,16 @@ function Report({
               </div>
             )}
           </div>
-        </section>
+        </PortalSection>
       )}
 
       <AccountSection report={report} s={s} fmt={fmt} language={language} />
 
-      <section className="portal-card">
-        <h2 className="portal-section-title">
-          <Phone size={18} /> {s.contactTitle}
-        </h2>
+      <PortalSection
+        icon={Phone}
+        title={s.contactTitle}
+        defaultOpen={true}
+      >
         <p className="portal-contact-name">{taller.nombre}</p>
         {taller.direccion && <p className="portal-muted">{taller.direccion}</p>}
         {phones.length > 0 && (
@@ -575,7 +596,7 @@ function Report({
             </a>
           )}
         </div>
-      </section>
+      </PortalSection>
 
       {report.cliente.tiene_correo && <EmailPreference token={token} initial={report.cliente.acepta_correos} s={s} />}
 
@@ -645,10 +666,19 @@ function AccountSection({ report, s, fmt, language }: { report: PortalReport; s:
   }
 
   return (
-    <section className="portal-card">
-      <h2 className="portal-section-title">
-        <Receipt size={18} /> {s.accountTitle}
-      </h2>
+    <PortalSection
+      icon={Receipt}
+      title={s.accountTitle}
+      // Con la tarjeta cerrada, lo mismo que dice su última línea: el saldo, a favor o pagado.
+      summary={
+        Number(cuenta.saldo) < -0.009
+          ? `${s.credit}: ${fmt.money(-Number(cuenta.saldo))}`
+          : Number(cuenta.total) > 0 && Number(cuenta.saldo) <= 0.009
+            ? s.paidInFull
+            : `${s.balance}: ${fmt.money(cuenta.saldo)}`
+      }
+      defaultOpen={false}
+    >
       {parkingNotice && (
         <div className="portal-parking-notice">
           <p>{parkingNotice}</p>
@@ -803,7 +833,113 @@ function AccountSection({ report, s, fmt, language }: { report: PortalReport; s:
           </ul>
         </div>
       )}
-    </section>
+    </PortalSection>
+  );
+}
+
+function InspectionSection({
+  inspeccion,
+  multimedia,
+  s,
+  fmt,
+}: {
+  inspeccion: NonNullable<PortalReport['inspeccion']>;
+  multimedia: PortalMedia[];
+  s: Strings;
+  fmt: Formatters;
+}) {
+  const { resumen, puntos, nombre } = inspeccion;
+  const urgentCount = resumen?.urgente ?? 0;
+  const cautionCount = resumen?.atencion ?? 0;
+  const goodCount = resumen?.bien ?? 0;
+
+  const defaultOpen = urgentCount > 0 || cautionCount > 0;
+
+  const attentionPoints = puntos.filter((p) => p.estado === 'urgente' || p.estado === 'atencion');
+  const goodPoints = puntos.filter((p) => p.estado === 'bien');
+
+  const urgentLabel = (urgentCount === 1 ? s.inspection.summaryUrgente : s.inspection.summaryUrgentes).replace(
+    '{count}',
+    String(urgentCount)
+  );
+  const cautionLabel = (cautionCount === 1 ? s.inspection.summaryAtencion : s.inspection.summaryAtenciones).replace(
+    '{count}',
+    String(cautionCount)
+  );
+  const goodLabel = s.inspection.summaryBien.replace('{count}', String(goodCount));
+
+  return (
+    <PortalSection
+      icon={ClipboardCheck}
+      title={nombre || s.inspection.title}
+      defaultOpen={defaultOpen}
+      testId="inspection-section"
+    >
+      {/* Resumen en 3 fichas */}
+      <div className="portal-inspection-chips" role="group" aria-label={s.inspection.title}>
+        <span className="portal-inspection-chip is-urgente" data-testid="chip-urgente">
+          <AlertTriangle size={14} aria-hidden="true" />
+          {urgentLabel}
+        </span>
+        <span className="portal-inspection-chip is-atencion" data-testid="chip-atencion">
+          <Info size={14} aria-hidden="true" />
+          {cautionLabel}
+        </span>
+        <span className="portal-inspection-chip is-bien" data-testid="chip-bien">
+          <CheckCircle2 size={14} aria-hidden="true" />
+          {goodLabel}
+        </span>
+      </div>
+
+      {puntos.length === 0 && <p className="portal-muted">{s.inspection.empty}</p>}
+
+      {/* Puntos en urgente y atención con nota y fotos */}
+      {attentionPoints.length > 0 && (
+        <div className="portal-inspection-points">
+          {attentionPoints.map((p) => {
+            const pointPhotos = multimedia.filter((m) => m.inspeccion_punto_id === p.id);
+            const isUrgente = p.estado === 'urgente';
+            const badgeClass = isUrgente ? 'is-urgente' : 'is-atencion';
+            const badgeText = isUrgente ? s.inspection.urgenteBadge : s.inspection.atencionBadge;
+
+            return (
+              <article key={p.id} className={`portal-inspection-point-card ${badgeClass}`}>
+                <div className="portal-inspection-point-header">
+                  <div className="portal-inspection-point-title">
+                    <span>{p.nombre}</span>
+                    <span className="portal-inspection-point-section">{p.seccion}</span>
+                  </div>
+                  <span className={`portal-inspection-point-badge ${badgeClass}`}>{badgeText}</span>
+                </div>
+                {p.nota && <p className="portal-inspection-point-note">{p.nota}</p>}
+                {pointPhotos.length > 0 && <PortalMediaGrid media={pointPhotos} s={s} fmt={fmt} />}
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Puntos en buen estado en lista plegada */}
+      {goodPoints.length > 0 && (
+        <details className="portal-inspection-good-details">
+          <summary className="portal-inspection-good-summary">
+            <CheckCircle2 size={16} className="portal-inspection-good-bullet" />
+            <span>{s.inspection.goodSectionTitle.replace('{count}', String(goodPoints.length))}</span>
+          </summary>
+          <ul className="portal-inspection-good-list">
+            {goodPoints.map((p) => (
+              <li key={p.id} className="portal-inspection-good-item">
+                <span>
+                  <strong style={{ marginRight: 'var(--space-1)' }}>✓</strong>
+                  {p.nombre}
+                </span>
+                <span className="portal-inspection-point-section">{p.seccion}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </PortalSection>
   );
 }
 
@@ -830,7 +966,32 @@ function QuoteSection({
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const toggle = (id: string) =>
+  const jobsMap = useMemo(() => new Map((quote.trabajos ?? []).map((t) => [t.id, t])), [quote.trabajos]);
+
+  type DisplayGroup =
+    | { kind: 'job'; job: { id: string; titulo: string; total: number }; lines: PortalQuoteLine[] }
+    | { kind: 'line'; line: PortalQuoteLine };
+
+  const groups = useMemo<DisplayGroup[]>(() => {
+    const list: DisplayGroup[] = [];
+    const seenJobs = new Set<string>();
+
+    for (const line of quote.lineas) {
+      if (line.trabajo_id && jobsMap.has(line.trabajo_id)) {
+        if (!seenJobs.has(line.trabajo_id)) {
+          seenJobs.add(line.trabajo_id);
+          const job = jobsMap.get(line.trabajo_id)!;
+          const jobLines = quote.lineas.filter((l) => l.trabajo_id === line.trabajo_id);
+          list.push({ kind: 'job', job, lines: jobLines });
+        }
+      } else {
+        list.push({ kind: 'line', line });
+      }
+    }
+    return list;
+  }, [quote.lineas, jobsMap]);
+
+  const toggleLine = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -838,14 +999,61 @@ function QuoteSection({
       return next;
     });
 
-  const total = quote.lineas.filter((l) => selected.has(l.id)).reduce((sum, l) => sum + Number(l.monto), 0);
+  const toggleJob = (lines: PortalQuoteLine[]) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const allChecked = lines.length > 0 && lines.every((l) => next.has(l.id));
+      if (allChecked) {
+        lines.forEach((l) => next.delete(l.id));
+      } else {
+        lines.forEach((l) => next.add(l.id));
+      }
+      return next;
+    });
+
+  const total = useMemo(() => {
+    let sum = 0;
+    const countedLineIds = new Set<string>();
+    for (const group of groups) {
+      if (group.kind === 'job') {
+        const isApproved = group.lines.length > 0 && group.lines.every((l) => selected.has(l.id));
+        if (isApproved) {
+          sum += Number(group.job.total);
+        }
+        group.lines.forEach((l) => countedLineIds.add(l.id));
+      } else {
+        if (selected.has(group.line.id)) {
+          sum += Number(group.line.monto);
+        }
+        countedLineIds.add(group.line.id);
+      }
+    }
+    return sum;
+  }, [groups, selected]);
+
+  const approvedItemCount = useMemo(() => {
+    let count = 0;
+    for (const group of groups) {
+      if (group.kind === 'job') {
+        if (group.lines.length > 0 && group.lines.every((l) => selected.has(l.id))) {
+          count++;
+        }
+      } else {
+        if (selected.has(group.line.id)) {
+          count++;
+        }
+      }
+    }
+    return count;
+  }, [groups, selected]);
+
   const nameOk = name.trim().length >= 2;
 
   const submit = async (approvedIds: string[]) => {
     const question =
       approvedIds.length === 0
         ? s.confirmRejectAll
-        : s.confirmAuthorize.replace('{count}', String(approvedIds.length)).replace('{total}', fmt.money(total));
+        : s.confirmAuthorize.replace('{count}', String(approvedItemCount)).replace('{total}', fmt.money(total));
     if (!confirm(question)) return;
 
     setSending(true);
@@ -872,11 +1080,17 @@ function QuoteSection({
     }
   };
 
+  // Solo llega el presupuesto que espera respuesta: siempre abierto.
+  const defaultOpen = true;
+
   return (
-    <section className="portal-card portal-quote is-highlighted" id="presupuesto">
-      <h2 className="portal-section-title">
-        <FileSignature size={18} /> {s.quoteTitle}
-      </h2>
+    <PortalSection
+      id="presupuesto"
+      icon={FileSignature}
+      title={s.quoteTitle}
+      defaultOpen={defaultOpen}
+      className="portal-quote is-highlighted"
+    >
       <p className="portal-muted">{s.quoteSentOn.replace('{fecha}', fmt.date(quote.enviado_en))}</p>
       <p>{s.quoteIntro}</p>
 
@@ -890,23 +1104,68 @@ function QuoteSection({
       </div>
 
       <ul className="portal-quote-lines">
-        {quote.lineas.map((line) => (
-          <li key={line.id}>
-            <label className={'portal-quote-line' + (selected.has(line.id) ? ' is-selected' : '')}>
-              <input type="checkbox" checked={selected.has(line.id)} onChange={() => toggle(line.id)} />
-              <span className="portal-quote-desc">
-                {line.descripcion}
-                {line.cantidad > 1 && (
-                  <span className="portal-muted">
-                    {' · '}
-                    {s.quantityTimes.replace('{cantidad}', String(line.cantidad)).replace('{precio}', fmt.money(line.precio_unitario))}
+        {groups.map((group) => {
+          if (group.kind === 'job') {
+            const isJobSelected = group.lines.length > 0 && group.lines.every((l) => selected.has(l.id));
+            return (
+              <li key={`job-${group.job.id}`}>
+                <label className={'portal-quote-line' + (isJobSelected ? ' is-selected' : '')}>
+                  <input
+                    type="checkbox"
+                    checked={isJobSelected}
+                    onChange={() => toggleJob(group.lines)}
+                  />
+                  <span className="portal-quote-desc">
+                    <strong>{group.job.titulo}</strong>
                   </span>
-                )}
-              </span>
-              <span className="portal-quote-amount">{fmt.money(line.monto)}</span>
-            </label>
-          </li>
-        ))}
+                  <span className="portal-quote-amount">{fmt.money(group.job.total)}</span>
+                </label>
+                <div className="portal-quote-sublines">
+                  <span className="portal-quote-sublines-header">{s.quoteIncludes}:</span>
+                  <ul className="portal-quote-sublist">
+                    {group.lines.map((line) => (
+                      <li key={line.id} className="portal-quote-subline">
+                        <span>
+                          {line.descripcion}
+                          {line.cantidad > 1 && (
+                            <span className="portal-muted">
+                              {' · '}
+                              {s.quantityTimes
+                                .replace('{cantidad}', String(line.cantidad))
+                                .replace('{precio}', fmt.money(line.precio_unitario))}
+                            </span>
+                          )}
+                        </span>
+                        <span className="portal-muted">{fmt.money(line.monto)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </li>
+            );
+          }
+
+          const line = group.line;
+          return (
+            <li key={line.id}>
+              <label className={'portal-quote-line' + (selected.has(line.id) ? ' is-selected' : '')}>
+                <input type="checkbox" checked={selected.has(line.id)} onChange={() => toggleLine(line.id)} />
+                <span className="portal-quote-desc">
+                  {line.descripcion}
+                  {line.cantidad > 1 && (
+                    <span className="portal-muted">
+                      {' · '}
+                      {s.quantityTimes
+                        .replace('{cantidad}', String(line.cantidad))
+                        .replace('{precio}', fmt.money(line.precio_unitario))}
+                    </span>
+                  )}
+                </span>
+                <span className="portal-quote-amount">{fmt.money(line.monto)}</span>
+              </label>
+            </li>
+          );
+        })}
       </ul>
 
       <div className="portal-line is-balance">
@@ -927,7 +1186,7 @@ function QuoteSection({
       <div className="portal-actions">
         <button type="button" className="btn btn-primary" disabled={sending || selected.size === 0 || !nameOk} onClick={() => void submit([...selected])}>
           {s.authorize}
-          {selected.size > 0 && ` (${selected.size})`}
+          {approvedItemCount > 0 && ` (${approvedItemCount})`}
         </button>
         <button type="button" className="btn btn-secondary" disabled={sending || !nameOk} onClick={() => void submit([])}>
           {s.rejectAll}
@@ -938,7 +1197,7 @@ function QuoteSection({
           {message.text}
         </p>
       )}
-    </section>
+    </PortalSection>
   );
 }
 
@@ -1081,15 +1340,16 @@ function EmailPreference({ token, initial, s }: { token: string; initial: boolea
   const [accepts, setAccepts] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
-  const ref = useRef<HTMLElement>(null);
 
   // Llegó desde "No quiero recibir estos correos". La baja se confirma con el
   // botón: un enlace directo daría de baja a quien tenga un filtro de correo que
   // abre los enlaces para revisarlos.
   const fromUnsubscribeLink = useMemo(() => new URLSearchParams(window.location.search).get('correos') === 'baja', []);
+  const isCorreosHash = typeof window !== 'undefined' && window.location.hash === '#correos';
+  const defaultOpen = fromUnsubscribeLink || isCorreosHash;
 
   useEffect(() => {
-    if (fromUnsubscribeLink) ref.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    if (fromUnsubscribeLink) document.getElementById('correos')?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
   }, [fromUnsubscribeLink]);
 
   const change = async (next: boolean) => {
@@ -1107,10 +1367,13 @@ function EmailPreference({ token, initial, s }: { token: string; initial: boolea
   };
 
   return (
-    <section ref={ref} className={'portal-card' + (fromUnsubscribeLink && accepts ? ' is-highlighted' : '')} id="correos">
-      <h2 className="portal-section-title">
-        <Mail size={18} /> {s.emailsTitle}
-      </h2>
+    <PortalSection
+      id="correos"
+      icon={Mail}
+      title={s.emailsTitle}
+      defaultOpen={defaultOpen}
+      className={fromUnsubscribeLink && accepts ? 'is-highlighted' : ''}
+    >
       <p className="portal-muted">{accepts ? s.emailsOn : s.emailsOff}</p>
       {fromUnsubscribeLink && accepts && <p>{s.unsubscribeHint}</p>}
       <div className="portal-actions">
@@ -1123,6 +1386,6 @@ function EmailPreference({ token, initial, s }: { token: string; initial: boolea
           {message.text}
         </p>
       )}
-    </section>
+    </PortalSection>
   );
 }

@@ -406,6 +406,7 @@ The **Previous** and **Next** buttons let you navigate between steps without los
 - **Estimated Delivery**.
 - **Insurance work**: check the box if the repair is covered by insurance, and enter the **Insurance company** and **Claim number**.
 - **Add job**: type (Mechanical or Painting), description, price and assigned **Technician**. If the type does not match the person's registered trade (for example, painting assigned to a mechanic), the system displays the warning «Assign a painting job to a mechanic?» with options **Assign anyway**, **Choose another** or **Cancel**. You can leave the job as **Unassigned**.
+- **From catalog**: next to adding a job manually, this allows selecting a predefined job package from the workshop's catalog (e.g., oil change or major tune-up). When selected, its labor and part lines are instantly added to the intake draft with their respective prices, tagged with their job chip.
 - **Add part**: description, quantity, unit price and optional cost.
 - **The customer accepted this work and these prices**: if the customer already agreed in person to the work and quote upon vehicle drop-off, check this box. The work will be marked as authorized directly under the customer's name, without requiring a separate quote sent later or a manual authorization entry.
 - If you type a job or part and do not tap **Add**, the **Create** button prompts you to add it or discard it before continuing.
@@ -532,15 +533,20 @@ On the dashboard (under **Needs attention**) and above the Summary and Work tabs
 #### Labor and Tasks
 
 - **For administrators (Labor)**:
-  - Green button **Add job**: opens a row with **Type** (Mechanical or Painting), **Description**, **Price** and **Technician**.
+  - Green button **Add job**: opens a row with **Type** (Mechanical or Painting), **Description**, **Price**, optional billed **Hours** field, and **Technician**.
+  - **From catalog**: next to «Add job», lets you import a predefined job from the workshop catalog into the order. Choosing a job displays the breakdown of its labor and part lines, allowing you to pre-assign a technician (suggested automatically based on specialty). Tapping «Add» inserts all lines grouped under that job title with their respective hours.
+  - **Grouped jobs**: above the labor table, a compact list displays each grouped job with its title, line count, and system-calculated total. From here, an administrator can rename the job or delete it along with all its lines upon confirmation.
+  - On each labor or part line belonging to a grouped job, a chip (`.job-chip`) with the job title is displayed for easy recognition.
   - If the type does not match the person's registered trade, the trade mismatch warning appears.
   - On each existing job there are two selectors (**Type** and **Technician**) that can be modified at any time without altering the quoted price. When a job is assigned to a technician, they join the order and receive a notification that a new job was assigned; when removed, they receive a notification that the job was reassigned.
   - If a job has no technician, it displays the badge **No technician**: nobody will earn that commission until one is assigned. The order warns above Summary with «N job(s) without a technician: nobody will earn their commission until you assign one.» and the **View jobs** button.
+  - **Hours and recorded time**: the table displays the billed hours for each labor line. Next to it, total recorded clock duration is displayed live, along with a **Times** button that opens a dialog where administrators can review interval logs, adjust start/end timestamps, or delete incorrect entries.
   - Once commission is paid, task selectors display a lock and the **Delete** button is disabled; to modify them, the payment must first be undone in Commissions.
 - **For technicians (Tasks)**:
   - Main status button: the **Start work** (in reception with authorized work) and **Done: let the office know** (in progress when all work is completed) actions are placed at the top in the order's **quick actions**, ensuring a single primary button per status. In the task list, when all is done an informational help hint is shown, and if their own tasks are completed but another colleague's tasks are still pending, they see the notice «Your part is done. Still pending: ...».
   - They view their tasks with description, type and labor price (from which their commission is derived). Parts are shown without prices.
-  - They tap **Done** upon completing a task; if marked by mistake, they tap **Reopen job**.
+  - **Per-task clock**: each authorized, incomplete task includes an accessible touch button (44px or larger) «▶ Start» or «⏸ Pause ({duration})» that updates elapsed duration live every minute. A technician can only have one active clock at any time: starting a task automatically pauses any other task clock.
+  - They tap **Done** upon completing a task; if a clock is running, it stops automatically. If marked by mistake, they tap **Reopen job**.
   - Using **Photo**, they can directly take or upload a camera snapshot to attach as an update to that task.
   - Using **Add update**, they can upload photos, videos or voice notes linked to that specific job.
 - **Badges on each line**:
@@ -576,6 +582,7 @@ Assigned technicians see the **Your estimated commission** card on their Tasks t
 Only administrators can assign staff belonging to the order's workshop.
 - Anyone added through a job has the **By job** tag and earns only their own jobs.
 - Anyone on legacy jobs from before October 2026 has **In the split** and participates in the pool by specialty.
+- When manually adding a technician to the order, the system automatically assigns them all unassigned non-rejected tasks of their trade (mechanical or painting) on the order; the app displays an alert showing how many tasks were assigned.
 - A technician who has assigned jobs cannot be removed from the order; their tasks must first be reassigned to another person.
 
 #### Work progress
@@ -583,6 +590,27 @@ Only administrators can assign staff belonging to the order's workshop.
 A log where staff document work performed with text, photos, videos or voice notes. An entry can be linked to a specific job. A technician can delete their own updates as long as the order is not delivered. An administrator can delete any update and control whether it is shown to the customer.
 
 ![A progress entry with photos and a voice note.](../public/ayuda/en/20.webp)
+
+#### Multi-point vehicle inspection
+
+Allows conducting a comprehensive multi-point inspection (brakes, tires, fluids, suspension, lighting, etc.) based on the templates configured for the workshop.
+
+- **How the technician performs the inspection**:
+  - In the inspection section of the order, or from their quick actions by tapping **Inspection**, the technician or administrator taps **Start inspection**.
+  - Inspection points are grouped by category (Brakes, Tires, Fluids, etc.).
+  - For each point, the technician marks its status with a single tap using large touch buttons (at least 44 px): **Good** (green), **Caution** (yellow), **Urgent** (red), or **N/A** (not applicable). Tapping the selected status again resets the point to pending.
+  - Using the camera button on each point, they can capture or upload photo evidence directly from their mobile device.
+  - They can add notes by tapping the **Note** button to record specific observations about that component.
+  - The progress bar displays live completion (e.g., «18 of 24 checked»).
+  - The **Complete inspection** button becomes active only when no points remain pending.
+
+- **How administration reviews, quotes, and publishes the inspection**:
+  - Once the inspection is completed, administrators can turn on the **Show to customer** toggle to make it visible on the customer's portal link.
+  - On every point marked **Caution** or **Urgent**, administration has two buttons to turn the finding into a quote:
+    - **Quote**: opens the labor editor pre-filling the point's name and note, ready to assign a technician and set the price.
+    - **From catalog**: opens the frequent job catalog picker to insert a predefined package with its labor lines and parts.
+  - **On the customer portal**: once published, the customer sees a dedicated **Vehicle inspection** section featuring three summary badges (Urgent, Caution, Good), detailed cards for critical items showing notes and photos, and a collapsible list of items in good condition.
+  - **Previous declined work**: attention and urgent points from completed inspections are automatically recalled on future visits of the same vehicle under the pending recommendations banner.
 
 #### Customer signature
 <!-- rol: admin -->
@@ -615,7 +643,9 @@ When jobs or parts are quoted, they start as **Not authorized**. In the **Quote*
 
 ![«Work authorized by the customer».](../public/ayuda/en/23.webp)
 
-Authorized work immediately adds to the order total and alerts technicians about which work to perform; unauthorized work is marked as **Do not do** and is neither charged nor performed. An order with a quote awaiting response cannot be delivered.
+Authorized work immediately adds to the order total and alerts technicians about which work to perform; unauthorized work is marked as **Do not do** and is neither charged nor performed. An order with a quote awaiting response cannot be delivered. In addition, the order automatically moves to **In Progress** upon the first authorization (whether from the portal, recorded manually, or accepted during intake), allowing technicians to start work without waiting for manual status updates.
+
+**Whole job authorization.** When an order contains grouped jobs from the catalog, the customer on their web portal and the office in the authorization dialog see each job as a single block with its checkbox, title, and total amount, detailing below what it includes («Includes: ...»). Checking or unchecking the box approves or declines the entire job with all its labor and part lines: individual lines within a grouped job are not approved separately.
 
 #### Ready for pickup
 <!-- rol: admin -->
@@ -694,15 +724,16 @@ On the **History** tab (administrators only), an automatic audit log is maintain
 #### Customer link and email updates
 <!-- rol: admin -->
 
-Each order has a unique web link (`restorifyauto.net/r/...`) generated automatically when the customer signs intake:
+Each order has a unique web link (`restorifyauto.net/r/...`) available right from order creation (allowing immediate sharing via WhatsApp without waiting for a signature):
 - The customer opens it on their phone without passwords or registration.
 - They view status, progress, check-in, published photos and videos, quote pending authorization, and their account balance.
+- The portal features **collapsible sections** designed for mobile devices: work progress, next service and contact start open; intake check-in (with photo count), account details (with formatted balance) and shop observations start collapsed with visible summaries and expand upon tapping. If a quote is pending authorization, it starts open for review.
 - It allows them to call the shop directly or message via WhatsApp if the workshop has phone numbers configured.
 - On the **Customer link** card, administrators can: **Copy**, **Open**, **Send via WhatsApp**, **Change link** (invalidates the previous one) or **Turn off**.
 - The link remains active while the order is open and for up to 90 days after delivery.
 - **Automatic emails**:
-  - «We received your vehicle»: when the intake is signed.
-  - «We are working on your vehicle»: when the order moves to In Progress.
+  - «We received your vehicle»: sent when the intake check-in is signed (with tracking link).
+  - «We are working on your vehicle»: when the order moves to In Progress (if the order is not yet signed, this email waits for the intake signature so it does not precede the check-in welcome email).
   - «Your vehicle is ready»: when an administrator taps **Mark ready for pickup**.
   - «Thank you for your visit»: after the vehicle is delivered.
   - Emails are sent in the customer's configured language (Spanish or English).
@@ -722,7 +753,7 @@ When a job is done (an oil change, a maintenance visit), administration can note
 ![The Next service card, with no service scheduled.](../public/ayuda/en/45.webp)
 
 **Scheduling the next service**
-1. Open the order and tap **Service sticker** in the quick actions, or go to the **Billing & customer** tab → **Next service** card → **Schedule next service**.
+1. Open the order and tap **Service sticker** in the quick actions (if a service is already scheduled or suggested, it navigates directly to the card to view or reprint; if none exists, it opens the dialog to schedule it), or go to the **Billing & customer** tab → **Next service** card → **Schedule next service**.
 2. Tap one of the **Quick presets** or fill in the fields by hand:
 
    | Preset | Miles | Date |
@@ -732,8 +763,8 @@ When a job is done (an oil change, a maintenance visit), administration can note
    | General inspection | +5,000 | in 6 months |
    | Paint warranty | no miles | in 30 days |
 
-3. Adjust what you need: **Recommended date**, **Recommended miles** and **Note or service** (up to 120 characters). At least the date or the miles are required. The date cannot be before today and the miles cannot be lower than the intake miles.
-4. Choose the **Sticker language** (**Spanish** or **English**). The customer's language is selected by default.
+3. Adjust what you need: **Recommended date**, **In how many miles** and **Note or service** (up to 120 characters). When intake miles are recorded on the order, the field is entered as «how many miles to go» (e.g. 5,000) and a live line below calculates the total sum with intake miles; saving stores the cumulative mileage. Without intake miles, enter the total directly.
+4. Choose the **Sticker language** (**Spanish** or **English**). The customer's language is selected by default. When printing, the note is automatically translated into the sticker language to match the printout; if translation is unavailable, it is printed as written.
 5. Tap **Save** (only records it) or **Save & print**.
 
 ![The sticker dialog, with a preset selected.](../public/ayuda/en/46.webp)
@@ -956,7 +987,7 @@ just like any other application.
 
 ![Finance.](../public/ayuda/en/34.webp)
 
-It has two views:
+It has three views:
 
 - **Shop records**: what the app records (order payments, parts costs,
   commissions, and manual transactions). At the top, **Income**, **Expenses** and **Balance**;
@@ -966,6 +997,8 @@ It has two views:
   reconcile past months and send them to your accountant. They are separate bookkeeping: **they are not added**
   to app income and expenses. Each shows its statement period, total money in and out, and is
   exported separately.
+- **Workshop indicators**: essential shop performance and profitability metrics for management and
+  shop owners, calculated in the database based on billed and delivered repair orders.
 
 Payment methods are **Cash, Card, Zelle, Transfer and Check**. Bank
 and Clover fees belong in the category **Bank and card fees**: record them manually
@@ -975,6 +1008,23 @@ Many transactions **are created automatically by the system** (deposits, final p
 parts costs, commission payments; section 18). Do not enter them manually or
 they will be duplicated. A commission payment appears as **one expense for each order** it
 covers ("Comisión Mario Mecánico - ORD-2026-014"), all sharing the same check number.
+
+### Workshop indicators
+
+The **Indicators** tab aggregates key metrics to evaluate shop profitability and operational throughput:
+
+- **Branch and period selectors**: select the branch (when managing multiple locations) and query timeframe using quick presets (**This month**, **Last month**, **Last 30 days**) or a **Custom range** with start and end dates.
+- **KPI cards (8 indicators)**:
+  - **Cars delivered**: total completed repair orders delivered within the selected period.
+  - **Average ticket (ARO)**: total repair order revenue divided by delivered cars.
+  - **Effective hourly rate**: labor revenue divided by billed labor hours. If a reference rate is configured for the branch, it is shown below for comparison.
+  - **Hours per order**: average billed labor hours sold per delivered vehicle.
+  - **Labor margin**: percentage of labor sales remaining after subtracting technician commissions.
+  - **Parts margin**: profit margin percentage on parts sold after deducting their actual cost.
+  - **Estimate approval rate**: ratio of approved dollar amounts over total proposed amounts across customer estimates.
+  - **Average days in shop**: average turnaround duration in days from check-in to final vehicle delivery.
+  - When data is unavailable or a division by zero occurs, the card displays «—». Each card contains a descriptive hint explaining how the metric is calculated.
+- **Technician performance breakdown**: a mobile-optimized table (`cards-on-mobile`) detailing each branch technician's **Billed hours**, accumulated **Clock hours**, **Efficiency** percentage (billed hours / clock hours), and **Completed jobs** count in the selected period.
 
 ### Margin by order
 
@@ -1250,13 +1300,15 @@ based on role.
 ### Administrators only: workshops, staff and emails
 <!-- rol: admin -->
 
-**Workshops.** Create new locations with **New Workshop** and edit existing ones: name, address, **Change workshop logo**, **Theme colour**, **Workshop capacity** (work bays, for shop occupancy) and **Commission rate**.
+**Workshops.** Create new locations with **New Workshop** and edit existing ones: name, address, **Change workshop logo**, **Theme colour**, **Workshop capacity** (work bays, for shop occupancy), **Reference hourly rate** (for benchmark comparison with effective hourly rate in workshop indicators), and **Commission rate**.
 
 Contact details and workshop rules:
 
 - **Contact email (customer replies)**: where customer replies to automatic emails are sent.
 - **Contact phones**: manageable list with **Add phone**. Each phone defines its **Type** (**Mobile** or **Office**), description, number and whether it **Answers WhatsApp**. Customers see them on their link (with call and message buttons), in emails and on the PDF.
 - **Parking Fee**: configuration of parking rules and rates for that workshop (section 14).
+- **Frequent jobs catalog**: management of the workshop's routine work packages (e.g. oil change, brake job, major tune-up). Each predefined job bundles labor lines (with description, specialty, and price) and parts (with description, quantity, retail price, and reference cost). It allows creating new packages with **New job**, editing them, toggling active/inactive status, or deleting them.
+- **Inspection templates**: management of the multi-point inspection formats for the workshop. Allows creating new templates with **New template**, setting the **Default** template for new work orders, activating or deactivating templates, and organizing points by section (adding, removing, and reordering with up/down arrows).
 
 An administrator can also use **Join this workshop** to become part of its staff. When deleting a workshop with **Delete everything**, the system shows everything that will be removed and reassigns staff to another workshop.
 
@@ -1339,6 +1391,11 @@ update it manually.
 | Employees: view pay, create and edit staff | ✅ | ❌ |
 | Settings: profile, language, appearance, push | ✅ | ✅ |
 | Settings: workshops, contact phones and customer emails | ✅ | ❌ |
+| Settings: inspection templates | ✅ | ❌ |
+| Start and perform multi-point inspection | ✅ | ✅ on assigned orders |
+| Complete multi-point inspection | ✅ | ✅ |
+| Publish inspection to customer | ✅ | ❌ |
+| Quote inspection points (labor or catalog) | ✅ | ❌ |
 | Switch active workshop | ✅ | ❌ |
 | Notifications | Check-ins, progress, completed orders, finished tasks, quotes | Assignments, tasks, commissions |
 
@@ -1385,9 +1442,11 @@ It is helpful to understand these so you are not surprised or record the same mo
 
 **When adding a job** after check-in, it starts unauthorized: it is neither charged nor performed until the customer authorizes it.
 
-**When responding to a quote**, authorized items add to the total (and if the order is already delivered, an adjustment is booked in Finance); technicians receive notifications regarding what to do and what not to do, and the customer receives an email receipt.
+**When responding to a quote**, authorized items add to the total (and if the order is already delivered, an adjustment is booked in Finance); technicians receive notifications regarding what to do and what not to do, and the customer receives an email receipt. Furthermore, upon the first authorized work, the order automatically transitions to **In Progress**.
 
-**When signing intake**, the customer link is created and, if the customer has an email on file, a check-in confirmation email is sent.
+**When assigning a technician to the order**, they automatically take on any tasks in their trade that had no technician assigned.
+
+**The customer link exists right from order creation** for immediate sharing (e.g., via WhatsApp). When signing intake, if the customer has an email on file, the check-in confirmation email is sent with their link.
 
 **When changing work order status**, if the customer has an email on file, an update email is sent a few minutes later (changes are batched in a 3-minute window).
 

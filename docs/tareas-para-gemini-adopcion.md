@@ -613,6 +613,336 @@ Pon al día en ES y EN, con la misma estructura:
 - el botón «Marcar daños en el dibujo» del alta;
 - que «Empezar trabajo» y «Terminé» están en las acciones rápidas del técnico.
 
+## Parte E: lo que salió de la prueba del 16/10/2026
+
+La persona responsable probó con la orden ORD-2026-008 y anotó 9 puntos. Claude los revisó
+contra el código y contra el historial de esa orden en producción, solo lectura:
+
+- el técnico entró a la orden 26 s después del alta, pero la tarea de mecánica siguió sin técnico
+  hasta que se la asignaron a mano;
+- el cliente autorizó a las 01:28 y la orden siguió en `recepcion` hasta las 01:34;
+- del 100 % a `finalizado` pasaron 5 minutos (el punto 7 lo resuelven la C1 y la D1, que todavía
+  no están publicadas: aquí no se toca).
+
+**Migración: `20261010000032_enlace_autorizacion_y_tareas.sql`.**
+
+### E0. Migración `20261010000032_enlace_autorizacion_y_tareas.sql`
+
+Sigue `.claude/commands/nueva-migracion.md`. Encabezado en español con los tres cambios. Cuerpo:
+
+1. **El enlace nace con la orden** (punto 2: el enlace del cliente ya no espera la firma).
+
+   ```sql
+   CREATE OR REPLACE FUNCTION public.trg_enlace_al_crear_orden()
+   RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+   BEGIN
+     BEGIN
+       PERFORM public.asegurar_enlace_orden(NEW.id);
+     EXCEPTION WHEN OTHERS THEN
+       -- Un enlace que no nace no impide abrir la orden: se crea al firmar o con el botón.
+       RAISE WARNING 'trg_enlace_al_crear_orden(%): %', NEW.id, SQLERRM;
+     END;
+     RETURN NULL;
+   END;
+   $$;
+   REVOKE ALL ON FUNCTION public.trg_enlace_al_crear_orden() FROM PUBLIC, anon, authenticated;
+   DROP TRIGGER IF EXISTS trg_order_link_on_create ON ordenes_trabajo;
+   CREATE TRIGGER trg_order_link_on_create AFTER INSERT ON ordenes_trabajo
+     FOR EACH ROW EXECUTE FUNCTION public.trg_enlace_al_crear_orden();
+   ```
+
+   Después, las órdenes abiertas que no tienen enlace activo reciben uno:
+
+   ```sql
+   SELECT public.asegurar_enlace_orden(o.id)
+   FROM ordenes_trabajo o
+   WHERE o.estatus <> 'entregado' AND o.archivada_en IS NULL
+     AND NOT EXISTS (SELECT 1 FROM orden_enlaces e WHERE e.orden_id = o.id AND e.revocado_en IS NULL);
+   ```
+
+2. **El aviso automático «en proceso» espera la firma.** El correo de recepción sale al firmar
+   (eso no cambia).
+   - Reescribe `trg_portal_on_order_change` **entera** desde
+     `20261010000021_listo_para_entregar.sql:290`.
+   - El único cambio: en la rama de estatus, el correo `estatus` de `en_proceso` no se encola si
+     `NEW.firma_ruta IS NULL`. El de `entregado`, igual que hoy.
+   - Comentario: «Antes de firmar no se le escribe al cliente: el correo de recepción, al firmar,
+     ya lleva el enlace.»
+   - **No reemitas el trigger** `trg_order_portal`: no cambia.
+
+3. **La primera autorización pone la orden en proceso** (punto 4). Esto **no reescribe**
+   `_resolver_presupuesto`: es un trigger sobre `presupuestos`, porque todo camino de
+   autorización (portal, «Registrar autorización», alta con la casilla) termina en un
+   `UPDATE presupuestos SET estado = 'respondido'`.
+
+   ```sql
+   CREATE OR REPLACE FUNCTION public.trg_presupuesto_empieza_orden()
+   RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+   BEGIN
+     BEGIN
+       UPDATE ordenes_trabajo o SET estatus = 'en_proceso'
+       WHERE o.id = NEW.orden_id AND o.estatus = 'recepcion'
+         AND (EXISTS (SELECT 1 FROM orden_labor WHERE orden_id = NEW.orden_id AND estado = 'aprobado')
+           OR EXISTS (SELECT 1 FROM orden_repuestos WHERE orden_id = NEW.orden_id AND estado = 'aprobado'));
+     EXCEPTION WHEN OTHERS THEN
+       RAISE WARNING 'trg_presupuesto_empieza_orden(%): %', NEW.id, SQLERRM;
+     END;
+     RETURN NULL;
+   END;
+   $$;
+   REVOKE ALL ON FUNCTION public.trg_presupuesto_empieza_orden() FROM PUBLIC, anon, authenticated;
+   DROP TRIGGER IF EXISTS trg_quote_starts_order ON presupuestos;
+   CREATE TRIGGER trg_quote_starts_order AFTER UPDATE OF estado ON presupuestos
+     FOR EACH ROW WHEN (NEW.estado = 'respondido' AND OLD.estado IS DISTINCT FROM 'respondido')
+     EXECUTE FUNCTION public.trg_presupuesto_empieza_orden();
+   ```
+
+   Solo sale de `recepcion`: de `espera_autorizacion` ya sale `_salir_de_espera`, y una orden
+   en otro estado no se mueve.
+
+4. **Asignar a un técnico le pasa las tareas sin técnico de su oficio** (punto 5). Sin esto,
+   asignarle la orden a un mecánico dejaba la tarea de mecánica «sin asignar», y una tarea sin
+   técnico no le paga a nadie.
+
+   ```sql
+   CREATE OR REPLACE FUNCTION public.trg_asignacion_toma_tareas()
+   RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+   BEGIN
+     BEGIN
+       UPDATE orden_labor l SET asignado_a = NEW.usuario_id
+       FROM ordenes_trabajo o, perfiles p
+       WHERE l.orden_id = NEW.orden_id AND o.id = NEW.orden_id AND p.id = NEW.usuario_id
+         AND o.estatus <> 'entregado'
+         AND p.rol IN ('mecanico', 'pintor') AND p.sede_id = o.sede_id
+         AND l.asignado_a IS NULL AND l.reparto_heredado = false
+         AND l.especialidad = NEW.tipo_tarea AND l.estado <> 'rechazado';
+     EXCEPTION WHEN OTHERS THEN
+       RAISE WARNING 'trg_asignacion_toma_tareas(%): %', NEW.id, SQLERRM;
+     END;
+     RETURN NULL;
+   END;
+   $$;
+   REVOKE ALL ON FUNCTION public.trg_asignacion_toma_tareas() FROM PUBLIC, anon, authenticated;
+   DROP TRIGGER IF EXISTS trg_assignment_takes_tasks ON orden_asignaciones;
+   CREATE TRIGGER trg_assignment_takes_tasks AFTER INSERT ON orden_asignaciones
+     FOR EACH ROW WHEN (NEW.origen = 'manual')
+     EXECUTE FUNCTION public.trg_asignacion_toma_tareas();
+   ```
+
+   - **Solo `origen = 'manual'`**, que es asignar a alguien desde la orden. La fila
+     `origen = 'tarea'` la crea `trg_labor_tecnico_asignado` cuando una tarea ya tiene técnico:
+     no debe arrastrar las demás.
+   - **Solo líneas no heredadas** (`reparto_heredado = false`): una heredada se reparte por
+     especialidad, y moverla puede chocar con lo ya pagado (`trg_guard_labor_tecnico`).
+
+**Ningún `GRANT`:** las cuatro funciones las llaman triggers.
+
+### E1. pgTAP `supabase/tests/database/37_enlace_autorizacion_y_tareas.test.sql`
+
+Toma la estructura de la `35` (datos con ids `37…`, `create_work_order` con `nivel_gasolina` y
+`fecha_estimada_entrega`). Casos:
+
+1. **Enlace:**
+   - una orden recién creada con `create_work_order` tiene un enlace activo;
+   - el `INSERT` directo de un admin también lo tiene;
+   - firmar no crea un segundo enlace.
+2. **Correo:**
+   - pasar a `en_proceso` sin firma no encola un correo `estatus`;
+   - con firma, sí.
+
+   El cliente de prueba necesita `email` y `acepta_correos = true`.
+3. **Autorización:**
+   - `registrar_autorizacion` con la línea aprobada deja la orden en `en_proceso`;
+   - con todo rechazado se queda en `recepcion`;
+   - el alta con `autorizado_en_recepcion = true` termina en `en_proceso`;
+   - una orden en `espera_autorizacion` no la toca este trigger.
+4. **Tareas.** Orden con tres líneas sin técnico (mecánica, pintura y otra de mecánica
+   rechazada) y una de mecánica ya asignada a otro mecánico. Al insertar a un mecánico en
+   `orden_asignaciones` (`origen` por omisión, `'manual'`):
+   - toma la de mecánica sin técnico;
+   - la de pintura, la rechazada y la ajena no cambian.
+
+   Además:
+   - una fila con `origen = 'tarea'` no toma nada;
+   - una orden entregada no cambia.
+
+Las pruebas `24_traducciones` y `26_proceso_del_taller` hacen `INSERT INTO orden_enlaces` sobre
+órdenes recién creadas. Con E0 esa orden ya tiene enlace activo y el `INSERT` choca con
+`uq_orden_enlaces_activo`. Cámbialas para que usen el enlace que ya existe, como hace la `36`
+(`(SELECT token FROM orden_enlaces WHERE orden_id = … AND revocado_en IS NULL)`).
+
+### E2. País del teléfono en «Nuevo usuario» (punto 1)
+
+- `src/features/settings/UsersCard.tsx:363-370`: el teléfono pasa a `<PhoneInput
+  id="user-phone" value={draft.telefono} onChange={(telefono) => setDraft({ ...draft, telefono })} />`,
+  igual que en `src/pages/Customers.tsx:476`.
+- Clientes ya lo tienen en `Customers.tsx`, `CustomerPicker.tsx` y `WorkOrderCreateModal.tsx`:
+  no los toques.
+- Prueba: el formulario de usuario muestra el selector de país (`aria-label` `phone.country`).
+
+### E3. El enlace existe desde el alta (punto 2, interfaz)
+
+- `CustomerLinkCard.tsx`: el comentario de la función ya no dice que el enlace nace al firmar.
+- `customerLink.none`:
+  - ES: «Esta orden no tiene un enlace activo. Crea uno para compartirlo.»
+  - EN: «This order has no active link. Create one to share it.»
+
+### E4. Secciones plegables en el enlace del cliente (punto 3)
+
+1. **Componente nuevo `src/portal/PortalSection.tsx`.**
+   - Es un `<details className="portal-card portal-collapsible">` con estado propio:
+     `useState(defaultOpen)` y `onToggle` lee `e.currentTarget.open`.
+   - Adentro, `<summary>` con:
+     - el `<h2 className="portal-section-title">` de siempre, para que las pruebas que buscan
+       el encabezado lo sigan encontrando;
+     - un resumen corto opcional, en `span.portal-section-summary`;
+     - un `ChevronDown` que gira al abrir.
+   - El `summary` mide 44 px o más.
+   - Props: `id?`, `icon`, `title`, `summary?`, `defaultOpen`, `className?`, `testId?`,
+     `children`.
+   - Puro: no importa nada de la app.
+2. **En `CustomerPortal.tsx` (`Report`)**, cada sección pasa a `PortalSection` así:
+   - **Sin plegar:** el aviso, la tarjeta principal del estado y «esperando repuestos».
+   - **Presupuesto** (`QuoteSection`): abierto si `presupuesto.estado === 'enviado'`, cerrado si
+     ya se respondió.
+   - **Avances:** abierto.
+   - **Observaciones:** cerrado.
+   - **Recepción** (datos, dibujo, fotos, firma): cerrado. El resumen dice cuántas fotos tiene.
+   - **Próximo servicio:** abierto.
+   - **Cuenta** (`AccountSection`): cerrado. El resumen muestra el saldo con el formateador del
+     portal (`fmt.money`) y el campo de saldo que ya usa la sección (búscalo; no calcules nada).
+   - **Contacto:** abierto.
+   - **Correos** (`EmailPreference`): cerrado, salvo cuando llegó desde el enlace para darse de
+     baja (`fromUnsubscribeLink`).
+   - Si `location.hash` es `#presupuesto` o `#correos`, esa sección arranca abierta. Los ids se
+     quedan en el `details`.
+3. **CSS en `src/portal/portal.css`:**
+   - el marcador nativo del `summary` se oculta (`list-style: none` y `::-webkit-details-marker`);
+   - el chevron gira con `[open]`;
+   - el foco es visible;
+   - solo tokens.
+4. **Pruebas en `CustomerPortal.test.tsx`:**
+   - la cuenta y la recepción nacen cerradas y se abren al tocar su título;
+   - un presupuesto enviado nace abierto.
+
+   Si una prueba existente usa `toBeVisible` sobre algo que ahora nace plegado, ábrela antes en
+   la prueba. No cambies lo que espera.
+
+### E5. Asignar técnico, y el técnico por omisión de una tarea nueva (punto 5, interfaz)
+
+1. **`addAssignment` (`useWorkOrderDetail.ts:702`).**
+   - Antes de insertar, cuenta las tareas que la base le va a pasar: las de la orden con
+     `isUnassignedTask(l)`, de la misma especialidad que `tipo` y sin estado `rechazado`.
+   - Si la orden no está entregada y la cuenta es mayor que cero, después de `refresh` avisa con
+     un toast de éxito y la clave nueva `tasks.autoAssigned`:
+     - ES: «{nombre} quedó a cargo de {n} tarea(s) de {especialidad} que no tenían técnico.»
+     - EN: «{nombre} now has {n} {especialidad} task(s) that had no technician.»
+   - Solo en el camino del insert. `setAssignmentOrigin` no pasa tareas.
+2. **En `src/features/workOrders/tasks.ts`**, agrega
+   `suggestedTechnicianFor(specialty, assignments, technicians, reportedBy?)`, con prueba en
+   `tasks.test.ts`. Regla, en este orden:
+   1. `reportedBy`, si puede recibir la tarea;
+   2. si no, el único técnico asignado a la orden con `tipo_tarea === specialty`;
+   3. si no, el único técnico de la orden, como hoy `suggestedTechnicianId`;
+   4. si no, `null`.
+3. **`TaskEditor.tsx` recibe la prop opcional `defaultTechnicianFor?: (s: Specialty) => string | null`.**
+   - Al abrir, el técnico es `defaultTechnicianFor(especialidad)` y, si no hay, `knownDefault`.
+   - Si la persona cambia el tipo **sin haber tocado el selector de técnico**, el técnico sigue
+     al tipo nuevo.
+   - Si ya eligió uno (o vino de un hallazgo), no se cambia.
+   - `LaborTable` la pasa desde `WorkOrderDetail` con las asignaciones de la orden.
+   - Prueba en `TaskEditor.test.tsx`.
+
+### E6. Millas del próximo servicio: se escribe cuántas faltan (punto 6)
+
+En `ServiceStickerModal.tsx`, si `order.millas_ingreso` es un número:
+
+- **El campo** pasa a ser «En cuántas millas» / «In how many miles» (`nextService.milesExtraLabel`).
+- **Debajo, una línea en vivo:** «Próximo servicio a las {total} mi ({actual} + {extra})» /
+  «Next service at {total} mi ({actual} + {extra})» (`nextService.milesTotal`).
+- **Al guardar** se manda `millas = millas_ingreso + extra`: la base no cambia.
+- **Los presets** escriben el incremento. Al editar uno guardado, el campo arranca en
+  `millas - millas_ingreso`.
+- **Validación:** el incremento es un entero de 1 a 100.000. Si no, «Escribe cuántas millas faltan,
+  por ejemplo 5000.» / «Enter how many miles to go, for example 5000.»
+  (`nextService.milesExtraInvalid`).
+- **Sin `millas_ingreso`**, el campo es el total, como hoy.
+- **Formato:** los números con `Intl.NumberFormat` en el idioma de la app, no con
+  `toLocaleString()` sin opciones.
+- **Prueba:** con 103.000 de ingreso y 5.000 escritas, se guardan 108.000.
+
+### E7. La acción rápida del sticker muestra el que ya existe (punto 8)
+
+1. **En `nextService.ts`**, la función pura `hasNextService(data)` devuelve si está programado o
+   sugerido (la cuenta de `isProgrammed`/`hasSuggestion` de `NextServiceCard.tsx:40`). Úsala en
+   las dos partes.
+2. **En `WorkOrderDetail.tsx`**, un `useQuery` con la misma clave
+   (`queryKeys.nextService(order.id)` y `nextServiceService.getNextService`).
+   - **Admin:** la acción `serviceSticker` (`:883`) lleva a la sección: con servicio,
+     `goTo('cobro', 'proximo_servicio')`. Ahí está la tarjeta con «Reimprimir» y «Editar». Sin
+     servicio, abre el modal como hoy.
+   - **Técnico:** `onSuggestService` (`:901`), con servicio, hace `goTo('orden', 'proximo_servicio')`.
+3. **Prueba** en `WorkOrderDetail.quickActions.test.tsx`: con un servicio programado, la acción no
+   abre el modal.
+
+### E8. La nota del sticker en el idioma del sticker (punto 9)
+
+1. **Función nueva `supabase/functions/traducir-texto/index.ts`**, con el patrón de
+   `create-employee`.
+   - **Quién:** `resolveAdminCaller(req, 'traducir textos')`.
+   - **Cuerpo:** `{ texto, idioma }`, donde `idioma` es `'es'` o `'en'` y el texto, 1 a 300
+     caracteres. Si no, 400 con `jsonResponse`.
+   - **Llamada:**
+     - Gemini como en `sendTraduccion` de `process-outbox`: `GEMINI_API_KEY`,
+       `GEMINI_MODEL` con el mismo default, llave en `x-goog-api-key` y
+       `responseMimeType: 'application/json'`;
+     - un `AbortController` de 8 s.
+   - **Instrucción:** traducir una nota corta de un sticker de servicio de un taller automotriz
+     al idioma pedido; si ya está en ese idioma, devolverla igual. Responde
+     `{"texto": "..."}`.
+   - **Errores:**
+     - sin llave, 503 con `code: 'not_configured'`;
+     - respuesta sin texto, 502.
+   - **Respuesta:** `{ texto }`, recortado a 300.
+   - **No toca la base.**
+2. **`src/services/translation.service.ts`:** `translateText(texto, idioma)` con
+   `invokeAdminFunction('traducir-texto', …)` (`users.service.ts`). Prueba con el mock de
+   `users.service.test.ts`.
+3. **`src/features/workOrders/stickerNote.ts`:**
+   `noteForSticker(nota, idioma): Promise<{ nota: string | null; fallo: boolean }>`.
+   - Sin nota, `{ nota, fallo: false }` sin llamar.
+   - Con nota, traduce, con un tope de 10 s (`Promise.race`).
+   - Si falla, `{ nota: original, fallo: true }`.
+   - Prueba.
+4. **Uso:** en `handleSaveAndPrintNextService` (`WorkOrderDetail.tsx:268`) y en
+   `handleDirectPrint` (`NextServiceCard.tsx:83`), la nota del PDF sale de
+   `noteForSticker(row.nota, lang)`.
+   - La ventana se sigue abriendo **antes** de cualquier `await`.
+   - Con `fallo`, toast de aviso `nextService.noteNotTranslated`:
+     - ES: «No se pudo traducir la nota; se imprimió como se escribió.»
+     - EN: «The note couldn't be translated; it was printed as written.»
+   - **En la base se guarda la nota como se escribió.**
+5. **`scripts/qa/api-security.mjs`:**
+   - `'traducir-texto'` entra a la lista de SEC-17;
+   - caso nuevo: un técnico que la llama recibe 403.
+
+### E9. Manual y documentación
+
+1. **El manual (ES y EN, misma estructura):**
+   - el enlace del cliente existe desde el alta y el correo de recepción sale al firmar;
+   - la orden pasa sola a «En proceso» con la primera autorización;
+   - asignar un técnico le pasa las tareas sin técnico de su oficio;
+   - las millas del próximo servicio se escriben como «cuántas faltan»;
+   - la acción del sticker lleva al que ya existe;
+   - la nota sale en el idioma del sticker;
+   - las secciones plegables del enlace del cliente.
+2. **Las demás páginas,** en la parte que habla de cada cosa:
+   - `docs/portal-y-correos.md`: enlace al crear y «en proceso» espera la firma;
+   - `docs/presupuestos.md`: la primera autorización inicia la orden;
+   - `docs/comisiones.md`: asignar pasa las tareas sin técnico;
+   - `docs/reglas-de-negocio.md` §1: el ciclo de la orden.
+3. **No toques `AGENTS.md` ni `docs/ai-context.md`:** los pone al día Claude.
+
 ## Lo que hace Claude
 
 - Correr todo y auditar cada parte: lint, `tsc`, Vitest, build, `test:db`, `qa:security` local
@@ -624,4 +954,5 @@ Pon al día en ES y EN, con la misma estructura:
 ## Fuera de esta tanda
 
 El interruptor de precio cerrado, el catálogo de trabajos, Twilio, la franja nueva de «siguiente
-paso», una función de traducción nueva y el rol de recepción.
+paso» y el rol de recepción. (La función de traducción que estaba aquí entró en la E8, solo para
+la nota del sticker.)

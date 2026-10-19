@@ -17,6 +17,7 @@ interface QuoteLine {
   cantidad: number;
   estado: LineState;
   presupuestoId: string | null;
+  trabajoId?: string | null;
 }
 
 
@@ -25,11 +26,11 @@ function linesOf(order: WorkOrder): QuoteLine[] {
   return [
     ...(order.labor_items || []).map((l) => ({
       id: l.id, descripcion: l.descripcion, monto: Number(l.costo), cantidad: 1, estado: l.estado ?? 'aprobado',
-      presupuestoId: l.presupuesto_id ?? null, creado: l.creado_en ?? '',
+      presupuestoId: l.presupuesto_id ?? null, creado: l.creado_en ?? '', trabajoId: l.trabajo_id ?? null,
     })),
     ...(order.repuestos || []).map((p) => ({
       id: p.id, descripcion: p.descripcion, monto: Number(p.subtotal), cantidad: p.cantidad, estado: p.estado ?? 'aprobado',
-      presupuestoId: p.presupuesto_id ?? null, creado: p.creado_en ?? '',
+      presupuestoId: p.presupuesto_id ?? null, creado: p.creado_en ?? '', trabajoId: p.trabajo_id ?? null,
     })),
   ]
     .sort((a, b) => a.creado.localeCompare(b.creado))
@@ -248,11 +249,49 @@ function AuthorizationModal({
   const [name, setName] = useState(order.cliente?.nombre ?? '');
   const [note, setNote] = useState('');
 
-  const toggle = (id: string) =>
+  const jobsMap = useMemo(() => new Map((order.trabajos ?? []).map((t) => [t.id, t])), [order.trabajos]);
+
+  type DisplayGroup =
+    | { kind: 'job'; job: { id: string; titulo: string; catalogo_id: string | null }; lines: QuoteLine[]; total: number }
+    | { kind: 'line'; line: QuoteLine };
+
+  const groups = useMemo<DisplayGroup[]>(() => {
+    const list: DisplayGroup[] = [];
+    const seenJobs = new Set<string>();
+
+    for (const line of lines) {
+      if (line.trabajoId && jobsMap.has(line.trabajoId)) {
+        if (!seenJobs.has(line.trabajoId)) {
+          seenJobs.add(line.trabajoId);
+          const job = jobsMap.get(line.trabajoId)!;
+          const jobLines = lines.filter((l) => l.trabajoId === line.trabajoId);
+          const jobTotal = jobLines.reduce((acc, l) => acc + l.monto, 0);
+          list.push({ kind: 'job', job, lines: jobLines, total: jobTotal });
+        }
+      } else {
+        list.push({ kind: 'line', line });
+      }
+    }
+    return list;
+  }, [lines, jobsMap]);
+
+  const toggleLine = (id: string) =>
     setApproved((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      return next;
+    });
+
+  const toggleJob = (jobLines: QuoteLine[]) =>
+    setApproved((prev) => {
+      const next = new Set(prev);
+      const allChecked = jobLines.length > 0 && jobLines.every((l) => next.has(l.id));
+      if (allChecked) {
+        jobLines.forEach((l) => next.delete(l.id));
+      } else {
+        jobLines.forEach((l) => next.add(l.id));
+      }
       return next;
     });
 
@@ -280,18 +319,54 @@ function AuthorizationModal({
           </div>
 
           <ul className="quote-lines">
-            {lines.map((line) => (
-              <li key={line.id}>
-                <label className="checkbox-row">
-                  <input type="checkbox" checked={approved.has(line.id)} onChange={() => toggle(line.id)} />
-                  <span className="quote-line-desc">
-                    {line.descripcion}
-                    {line.cantidad > 1 && <span className="quote-history-muted"> × {line.cantidad}</span>}
-                  </span>
-                  <span className="quote-line-amount">{money(line.monto)}</span>
-                </label>
-              </li>
-            ))}
+            {groups.map((group) => {
+              if (group.kind === 'job') {
+                const isJobSelected = group.lines.length > 0 && group.lines.every((l) => approved.has(l.id));
+                return (
+                  <li key={`job-${group.job.id}`}>
+                    <label className="checkbox-row">
+                      <input
+                        type="checkbox"
+                        checked={isJobSelected}
+                        onChange={() => toggleJob(group.lines)}
+                      />
+                      <span className="quote-line-desc">
+                        <strong>{group.job.titulo}</strong>
+                      </span>
+                      <span className="quote-line-amount">{money(group.total)}</span>
+                    </label>
+                    <div className="quote-sublines">
+                      <span className="quote-sublines-header">{t('quotes.includes')}:</span>
+                      <ul className="quote-sublist">
+                        {group.lines.map((line) => (
+                          <li key={line.id} className="quote-subline">
+                            <span>
+                              {line.descripcion}
+                              {line.cantidad > 1 && <span className="quote-history-muted"> × {line.cantidad}</span>}
+                            </span>
+                            <span className="quote-history-muted">{money(line.monto)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </li>
+                );
+              }
+
+              const line = group.line;
+              return (
+                <li key={line.id}>
+                  <label className="checkbox-row">
+                    <input type="checkbox" checked={approved.has(line.id)} onChange={() => toggleLine(line.id)} />
+                    <span className="quote-line-desc">
+                      {line.descripcion}
+                      {line.cantidad > 1 && <span className="quote-history-muted"> × {line.cantidad}</span>}
+                    </span>
+                    <span className="quote-line-amount">{money(line.monto)}</span>
+                  </label>
+                </li>
+              );
+            })}
           </ul>
           <div className="quote-total">
             <span>{t('quotes.approvedTotal')}</span>

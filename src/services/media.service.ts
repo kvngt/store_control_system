@@ -134,6 +134,7 @@ export const mediaService = {
           id: item.id,
           orden_id: item.ordenId,
           avance_id: item.avanceId,
+          inspeccion_punto_id: item.inspeccionPuntoId ?? null,
           tipo: item.tipo,
           origen: item.origen,
           zona: item.zona,

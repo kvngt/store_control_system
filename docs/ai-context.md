@@ -178,6 +178,52 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
   - `datos_portal` lo arma marca por marca;
   - la geometría de las vistas vive en `src/lib/vehicleDiagram.ts` y la usan la app, el portal y
     el PDF.
+- **Enlace, autorización y tareas** (`20261010000032`):
+  - **el enlace del cliente nace con la orden** (`trg_order_link_on_create`). El correo de
+    recepción sigue saliendo al firmar, y el aviso automático «en proceso» no sale antes de la
+    firma;
+  - **la primera autorización con algo aprobado pasa la orden de `recepcion` a `en_proceso`**
+    (`trg_quote_starts_order`, sobre `presupuestos`). No lo repitas en el navegador. Una forma
+    nueva de autorizar que no pase por `_resolver_presupuesto` tiene que cubrirlo;
+  - **asignar a alguien a mano** (`orden_asignaciones`, `origen = 'manual'`) **le pasa las
+    tareas no heredadas sin técnico de su oficio** (`trg_assignment_takes_tasks`). Asignar sigue
+    siendo dinero: esas tareas le pagan a él;
+  - **la nota del sticker se traduce al imprimir** con la edge function `traducir-texto`
+    (solo admin, no toca la base). En la base queda como se escribió, y si la traducción falla
+    se imprime igual.
+- **Trabajos agrupados y catálogo** (`20261010000034`, [plan-saas-2026-10.md](plan-saas-2026-10.md)):
+  - **un trabajo** (`orden_trabajos`) junta mano de obra y repuestos de su misma orden. Lo
+    garantiza la llave compuesta `(trabajo_id, orden_id)`; una línea sin trabajo es suelta, como
+    antes;
+  - **un trabajo se autoriza completo:** `_resolver_presupuesto` amplía lo aprobado a todas las
+    líneas pendientes de ese trabajo. Una forma nueva de autorizar que no pase por ahí tiene que
+    hacer lo mismo;
+  - **el catálogo es por sede y solo de admin** (lleva precios);
+  - **se escribe solo por RPC** (`guardar_trabajo_catalogo`, `agregar_trabajo_del_catalogo`,
+    `quitar_trabajo`…);
+  - **los totales salen de `trabajos_de_orden` y `catalogo_de_trabajos`.** Nunca los sumes en el
+    navegador;
+  - **en el alta,** los trabajos van en `p_order.trabajos` (`{grupo, titulo, catalogo_id}`) y cada
+    ítem lleva su `grupo`.
+- **Inspección por puntos** (`20261010000035`):
+  - **una por orden.** Se escribe solo por RPC: el técnico asignado la inicia, marca sus puntos y
+    la termina; administración la publica;
+  - **el cliente la ve solo publicada,** con las fotos de sus puntos (`orden_media.origen =
+    'inspeccion'`, ligadas al punto por una llave compuesta), aunque no estén marcadas
+    `visible_cliente`;
+  - **cada sede nace con la plantilla «Inspección multipunto»:** un trigger sobre `sedes`;
+  - **los puntos en atención o urgente** salen en `trabajos_pendientes_vehiculo` en la siguiente
+    visita.
+- **Horas, reloj por tarea e indicadores** (`20261010000036`):
+  - **`orden_labor.horas`** son las horas facturadas. Las decide administración, y por eso van al
+    historial;
+  - **el reloj (`orden_labor_tiempos`)** se escribe solo por RPC: `iniciar_reloj`,
+    `detener_reloj` y, de admin, `corregir_tiempo` y `borrar_tiempo`. Hay un reloj corriendo por
+    persona, y marcar la tarea hecha lo cierra;
+  - **los indicadores salen de `indicadores_taller`.** Cuentan lo `aprobado` de las órdenes
+    entregadas en el período, por la fecha del taller. Nunca los calcules en el navegador.
+- **Índices e InitPlan** (`20261010000033`): toda clave foránea nueva lleva su índice, y toda
+  llamada a un helper en una política va envuelta en `(SELECT …)`.
 - **Avisos y correos al personal.** El técnico se entera de lo no autorizado (`TechOrderStatus`)
   y ve lo suyo aceptado en `/mis-comisiones` (`resumen_mis_comisiones`). `notificar` le encola un
   correo (plantilla `empleado`) **sin `orden_id`** en `cola_envios`, para que nunca tome el camino
@@ -211,7 +257,7 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
    `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca edites una migración
    ya aplicada ni cambies tablas desde el panel. **El nombre va después de la última
    migración, no de la fecha de hoy:** hay migraciones aplicadas con fecha futura (hoy la
-   última es `20261010000031`), y una con fecha anterior a la última aplicada no entra con
+   última es `20261010000036`), y una con fecha anterior a la última aplicada no entra con
    `db push` ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#4-base-de-datos), B-1).
 2. **Una función nueva en `public` es una RPC pública.** Postgres da `EXECUTE` a
    `PUBLIC` y Supabase a `anon` y `authenticated` al crearla. Revócala siempre:

@@ -5,7 +5,7 @@ export type MediaKind = 'foto' | 'video' | 'audio';
  * De dónde viene: la recepción del vehículo (el reporte de ingreso que firma el
  * cliente) o un avance del trabajo.
  */
-export type MediaOrigin = 'recepcion' | 'avance';
+export type MediaOrigin = 'recepcion' | 'avance' | 'inspeccion';
 
 /** Una fila de `orden_media`. Las rutas son del bucket privado `orden_media`. */
 export interface OrderMedia {
@@ -13,6 +13,7 @@ export interface OrderMedia {
   orden_id: string;
   sede_id: string;
   avance_id: string | null;
+  inspeccion_punto_id?: string | null;
   tipo: MediaKind;
   origen: MediaOrigin;
   zona: string | null;

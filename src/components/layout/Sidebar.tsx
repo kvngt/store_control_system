@@ -195,7 +195,12 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
             <LogOut className="sidebar-link-icon" size={20} />
             <span className="sidebar-link-label">{t('nav.logout')}</span>
           </button>
-          <button className="sidebar-toggle" onClick={onToggle}>
+          <button
+            className="sidebar-toggle"
+            onClick={onToggle}
+            aria-label={collapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')}
+            title={collapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')}
+          >
             {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
           </button>
         </div>

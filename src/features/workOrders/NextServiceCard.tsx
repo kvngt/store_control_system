@@ -8,6 +8,7 @@ import { getErrorMessage } from '../../lib/errors';
 import { queryKeys } from '../../lib/queryClient';
 import { nextServiceService } from '../../services/nextService.service';
 import { openStickerWindow, serviceStickerUrl } from './nextService';
+import { noteForSticker } from './stickerNote';
 import type { Sede, WorkOrder } from '../../types/database';
 
 interface NextServiceCardProps {
@@ -31,6 +32,8 @@ export default function NextServiceCard({
 
   const [busy, setBusy] = useState(false);
   const [printing, setPrinting] = useState(false);
+  // es-US, como el dinero (lib/money.ts): 108,000 y no 108.000.
+  const numFmt = new Intl.NumberFormat(language === 'es' ? 'es-US' : 'en-US');
 
   const query = useQuery({
     queryKey: queryKeys.nextService(order.id),
@@ -85,7 +88,12 @@ export default function NextServiceCard({
     // Dentro del clic, antes del import: si no, el iPhone bloquea la ventana.
     const printWindow = openStickerWindow();
     setPrinting(true);
+    const lang = order.cliente?.idioma === 'en' ? 'en' : 'es';
     try {
+      const { nota: noteForPdf, fallo } = await noteForSticker(serviceData.nota, lang);
+      if (fallo) {
+        showToast('error', t('nextService.noteNotTranslated'));
+      }
       const { printServiceSticker } = await import('../../lib/serviceStickerPdf');
       await printServiceSticker(
         {
@@ -102,12 +110,12 @@ export default function NextServiceCard({
           servicio: {
             fecha: serviceData.fecha,
             millas: serviceData.millas,
-            nota: serviceData.nota,
+            nota: noteForPdf,
             token: serviceData.token,
           },
           numero_orden: order.numero_orden,
         },
-        order.cliente?.idioma === 'en' ? 'en' : 'es',
+        lang,
         printWindow
       );
     } catch (err) {
@@ -172,7 +180,7 @@ export default function NextServiceCard({
             )}
             {serviceData.sugerido_millas !== null && serviceData.sugerido_millas !== undefined && (
               <div>
-                <strong>{t('nextService.milesLabel')}:</strong> {serviceData.sugerido_millas.toLocaleString()} mi
+                <strong>{t('nextService.milesLabel')}:</strong> {numFmt.format(serviceData.sugerido_millas)} mi
               </div>
             )}
             {serviceData.sugerido_nota && (
@@ -210,7 +218,7 @@ export default function NextServiceCard({
                   <Gauge size={14} />
                   <span>{t('nextService.milesLabel')}</span>
                 </div>
-                <div style={{ fontSize: '1.125rem', fontWeight: 600 }}>{serviceData.millas.toLocaleString()} mi</div>
+                <div style={{ fontSize: '1.125rem', fontWeight: 600 }}>{numFmt.format(serviceData.millas)} mi</div>
               </div>
             )}
           </div>

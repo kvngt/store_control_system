@@ -106,6 +106,7 @@ Cliente abre el correo → portal → sección "Presupuesto por autorizar"
   sin respuesta", como mucho una vez al día por presupuesto (`restorify-quote-reminders`).
 - **No se entrega** una orden con un presupuesto abierto
   (`trg_guard_entrega_con_presupuesto`).
+- **La primera autorización inicia la orden**: con `trg_quote_starts_order` (`20261010000031`), cuando un presupuesto pasa a estado `respondido` (desde el portal o mediante «Registrar autorización») y la orden se encuentra en `recepcion`, si contiene al menos una línea autorizada (`aprobado`), la orden pasa automáticamente a `en_proceso`. (Si la orden estaba en `espera_autorizacion`, `_salir_de_espera` ya la devolvía a `en_proceso`).
 
 ---
 

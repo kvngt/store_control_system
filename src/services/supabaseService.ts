@@ -21,6 +21,7 @@ import { mediaService } from './media.service';
 import { usersService } from './users.service';
 import { vehiclesService } from './vehicles.service';
 import { workOrdersService } from './workOrders.service';
+import { metricsService } from './metrics.service';
 
 export {
   commissionsService,
@@ -33,6 +34,7 @@ export {
   usersService,
   vehiclesService,
   workOrdersService,
+  metricsService,
 };
 
 export const supabaseService = {
@@ -45,4 +47,5 @@ export const supabaseService = {
   ...financeService,
   ...commissionsService,
   ...dashboardService,
+  ...metricsService,
 };

@@ -32,6 +32,7 @@ export function useWorkOrderForm() {
     reValidateMode: 'onChange',
   });
 
+  const jobs = useFieldArray({ control: form.control, name: 'jobs' });
   const labor = useFieldArray({ control: form.control, name: 'laborItems' });
   const parts = useFieldArray({ control: form.control, name: 'parts' });
 
@@ -180,6 +181,7 @@ export function useWorkOrderForm() {
 
   return {
     form,
+    jobs,
     labor,
     parts,
     photos,

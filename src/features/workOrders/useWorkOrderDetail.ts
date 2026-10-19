@@ -18,7 +18,7 @@ import { isValidEmail } from '../../lib/email';
 import type { LaborItem, OrderAssignment, OrderMedia, OrderProgressUpdate, OrderStatus, PartOrderState, PreparedMedia, Specialty, UserProfile, WorkOrder } from '../../types/database';
 import type { DamageMark } from '../../lib/vehicleDiagram';
 import { isApproved } from './lineState';
-import type { TaskDraft, Technician } from './tasks';
+import { isUnassignedTask, type TaskDraft, type Technician } from './tasks';
 
 interface UseWorkOrderDetailOptions {
   /**
@@ -142,6 +142,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
       void queryClient.invalidateQueries({ queryKey: queryKeys.orderFinancialBalance(openOrderId) });
       // Todo lo que cambia una orden deja una fila en su historial (20261010000004).
       void queryClient.invalidateQueries({ queryKey: queryKeys.orderHistory(openOrderId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.orderLaborTimes(openOrderId) });
       if (alsoBoard) onBoardChanged();
     },
     [onBoardChanged, openOrderId, queryClient]
@@ -229,9 +230,9 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // que devenga al entregar). Administración recibe el reparto entero para avisar de una
   // bolsa que nadie cobra.
   const estimateQuery = useQuery({
-    queryKey: queryKeys.commissionEstimate(order?.id ?? ''),
-    queryFn: () => commissionsService.getEstimate(order!.id),
-    enabled: !!order && (isAdmin || isAssignedToMe),
+    queryKey: queryKeys.commissionEstimate(openOrderId ?? ''),
+    queryFn: () => commissionsService.getEstimate(openOrderId as string),
+    enabled: !!openOrderId && (isAdmin || isAssignedToMe),
   });
   const commissionEstimate = estimateQuery.data ?? null;
 
@@ -252,9 +253,9 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // una línea heredada aprobada cuya bolsa se pagó), así que la fila lo muestra bloqueado en vez
   // de dejar intentarlo. Solo administración lee `comisiones`.
   const paidQuery = useQuery({
-    queryKey: queryKeys.paidCommissions(order?.id ?? ''),
-    queryFn: () => workOrdersService.getPaidCommissionKeys(order!.id),
-    enabled: !!order && isAdmin,
+    queryKey: queryKeys.paidCommissions(openOrderId ?? ''),
+    queryFn: () => workOrdersService.getPaidCommissionKeys(openOrderId as string),
+    enabled: !!openOrderId && isAdmin,
   });
   const paidKeys = paidQuery.data ?? [];
   const paidTasks = new Set(paidKeys.flatMap((c) => (c.labor_id ? [c.labor_id] : [])));
@@ -269,6 +270,13 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
       )
       .map((l) => l.id)
   );
+
+  const laborTimesQuery = useQuery({
+    queryKey: queryKeys.orderLaborTimes(openOrderId ?? ''),
+    queryFn: () => workOrdersService.getOrderLaborTimes(openOrderId as string),
+    enabled: !!openOrderId,
+  });
+  const laborTimes = laborTimesQuery.data ?? [];
 
   // ----- status & progress ---------------------------------------------------
 
@@ -611,7 +619,10 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   // Los errores de la mano de obra van en un aviso y no en el recuadro de arriba de la página:
   // la tabla está a media pestaña y el recuadro queda fuera de la vista ("La comisión de este
   // trabajo ya se pagó…" parecía un botón que no hacía nada).
-  const updateLabor = async (id: string, item: { descripcion: string; costo: number }) => {
+  const updateLabor = async (
+    id: string,
+    item: { descripcion: string; costo: number; horas?: number | null }
+  ) => {
     if (!order) return;
     setBusy(true);
     try {
@@ -632,6 +643,52 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
       await refresh();
     } catch (err) {
       showToast('error', t('workOrders.laborRemoveError'), getErrorMessage(err, language));
+    }
+  };
+
+  // ----- time tracking (M2) ---------------------------------------------------
+
+  const startClock = async (laborId: string) => {
+    if (!order) return;
+    try {
+      await workOrdersService.startClock(laborId);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.orderLaborTimes(order.id) });
+      showToast('success', t('tasks.clockStarted'));
+    } catch (err) {
+      showToast('error', t('tasks.clockError'), getErrorMessage(err, language));
+    }
+  };
+
+  const stopClock = async (laborId: string) => {
+    if (!order) return;
+    try {
+      await workOrdersService.stopClock(laborId);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.orderLaborTimes(order.id) });
+      showToast('success', t('tasks.clockStopped'));
+    } catch (err) {
+      showToast('error', t('tasks.clockError'), getErrorMessage(err, language));
+    }
+  };
+
+  const correctTime = async (tiempoId: string, inicio: string, fin: string | null) => {
+    if (!order || !isAdmin) return;
+    try {
+      await workOrdersService.correctTime(tiempoId, inicio, fin);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.orderLaborTimes(order.id) });
+      showToast('success', t('tasks.timeCorrected'));
+    } catch (err) {
+      showToast('error', t('tasks.timeError'), getErrorMessage(err, language));
+    }
+  };
+
+  const deleteTime = async (tiempoId: string) => {
+    if (!order || !isAdmin) return;
+    try {
+      await workOrdersService.deleteTime(tiempoId);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.orderLaborTimes(order.id) });
+      showToast('success', t('tasks.timeDeleted'));
+    } catch (err) {
+      showToast('error', t('tasks.timeError'), getErrorMessage(err, language));
     }
   };
 
@@ -708,11 +765,27 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     const byTask = (order.asignaciones || []).find(
       (a) => a.usuario_id === operator.id && a.tipo_tarea === tipo && a.origen === 'tarea'
     );
+    const pendingTasksCount = !byTask && order.estatus !== 'entregado'
+      ? (order.labor_items || []).filter(
+          (l) => isUnassignedTask(l) && l.especialidad === tipo && l.estado !== 'rechazado'
+        ).length
+      : 0;
+
     try {
       if (byTask) await workOrdersService.setAssignmentOrigin(byTask.id, 'manual');
       else await workOrdersService.addAssignment(order.id, operator.id, tipo);
       // Assignments don't change any figure the board shows.
       await refresh(false);
+      if (pendingTasksCount > 0) {
+        const especialidadLabel = tipo === 'pintura' ? t('workOrders.painting').toLowerCase() : t('workOrders.mechanical').toLowerCase();
+        showToast(
+          'success',
+          t('tasks.autoAssigned')
+            .replace('{nombre}', operator.nombre_completo)
+            .replace('{n}', String(pendingTasksCount))
+            .replace('{especialidad}', especialidadLabel)
+        );
+      }
     } catch (err) {
       showToast('error', t('workOrders.addAssignmentError'), getErrorMessage(err, language));
     }
@@ -783,7 +856,12 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
   /** Mete archivos ya procesados en la cola de subida, atados a esta orden. */
   const enqueueMedia = (
     items: PreparedMedia[],
-    target: { origen: 'recepcion' | 'avance'; avanceId?: string | null; zona?: string | null }
+    target: {
+      origen: 'recepcion' | 'avance' | 'inspeccion';
+      avanceId?: string | null;
+      zona?: string | null;
+      inspeccionPuntoId?: string | null;
+    }
   ) => {
     if (!order || !items.length) return;
     mediaUploads.enqueue(
@@ -795,6 +873,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
         origen: target.origen,
         avanceId: target.avanceId ?? null,
         zona: target.zona ?? null,
+        inspeccionPuntoId: target.inspeccionPuntoId ?? null,
       }))
     );
   };
@@ -997,6 +1076,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     approveCommission,
     canResign,
     canSign,
+    refresh,
     canEditProgress,
     canDeliver,
     canArchive,
@@ -1064,6 +1144,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     removeAssignment,
     addProgressUpdate,
     removeProgressUpdate,
+    enqueueMedia,
     addReceptionMedia,
     toggleMediaVisibility,
     deleteMedia,
@@ -1081,6 +1162,11 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
     canSuggestNextService,
     readyNotifyOpen,
     closeReadyNotify,
+    laborTimes,
+    startClock,
+    stopClock,
+    correctTime,
+    deleteTime,
   };
 }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
@@ -18,15 +18,17 @@ import { useMediaUploads } from '../features/media/mediaUploads.context';
 import { useWorkOrderForm, type WorkOrderFormValues } from '../features/workOrders/useWorkOrderForm';
 import { firstStepWithErrors } from '../features/workOrders/workOrderForm.schema';
 import { useWorkOrderDetail } from '../features/workOrders/useWorkOrderDetail';
-import WorkOrderCreateModal from '../features/workOrders/WorkOrderCreateModal';
-import WorkOrderDetail from '../features/workOrders/WorkOrderDetail';
+import LazyModal from '../components/LazyModal';
 import { getErrorMessage } from '../lib/errors';
 import { daysFromTodayLocal } from '../lib/dates';
 import { orderDueState, type DueState } from '../lib/orderDue';
 import ArchivedOrders from '../features/workOrders/ArchivedOrders';
 import FindingsAlert from '../features/workOrders/FindingsAlert';
 import { matchesOrderSearch } from '../features/workOrders/orderSearch';
-import KanbanBoard from './KanbanBoard';
+
+const WorkOrderDetail = lazy(() => import('../features/workOrders/WorkOrderDetail'));
+const WorkOrderCreateModal = lazy(() => import('../features/workOrders/WorkOrderCreateModal'));
+const KanbanBoard = lazy(() => import('./KanbanBoard'));
 
 /** El archivo no es un estatus: es otra vista de la misma pantalla. */
 const ARCHIVED = 'archivadas';
@@ -439,6 +441,17 @@ export default function WorkOrders() {
             aseguradora: values.withInsurance ? (values.insurer?.trim() || null) : null,
             numero_reclamo: values.withInsurance ? (values.claimNumber?.trim() || null) : null,
             autorizado_en_recepcion: (values.laborItems.length > 0 || values.parts.length > 0) ? (values.authorizedAtIntake ?? false) : false,
+            trabajos: (values.jobs ?? [])
+              .filter((j) => {
+                const inLabor = values.laborItems.some((l) => l.grupo === j.grupo);
+                const inParts = values.parts.some((p) => p.grupo === j.grupo);
+                return inLabor || inParts;
+              })
+              .map((j) => ({
+                grupo: j.grupo,
+                titulo: j.titulo,
+                catalogo_id: j.catalogo_id || null,
+              })),
             // `Math.max(0, ...)` igual que en los repuestos. La labor era la única
             // cifra de dinero que aceptaba un negativo, y sobre una orden entregada
             // un total que baja lo asienta Finanzas como reembolso al cliente.
@@ -449,10 +462,12 @@ export default function WorkOrders() {
               // tarea de pintura en una orden de mecánica se guardaba como mecánica.
               especialidad: l.especialidad,
               asignado_a: l.asignado_a || null,
+              ...(l.horas?.trim() ? { horas: Math.max(0, parseFloat(l.horas) || 0) } : {}),
               // Como `addLaborItem`: una tarea de la app nunca entra al reparto por especialidad.
               // Sin técnico no le paga a nadie hasta que se le asigne (decisión del taller,
               // 03/10/2026). Sin esto, `create_work_order` la dejaba heredada.
               reparto_heredado: false,
+              ...(l.grupo ? { grupo: l.grupo } : {}),
             })),
             // El costo es opcional: vacío = el precio (el servicio lo completa), como en la
             // tabla de repuestos de la orden. Escrito, es lo que pagó el taller.
@@ -461,6 +476,7 @@ export default function WorkOrders() {
               cantidad: Math.max(1, parseInt(p.cantidad, 10) || 1),
               precio_venta_unitario: Math.max(0, parseFloat(p.precio_venta_unitario) || 0),
               costo_unitario: p.costo_unitario?.trim() ? Math.max(0, parseFloat(p.costo_unitario) || 0) : null,
+              ...(p.grupo ? { grupo: p.grupo } : {}),
             })),
             asignaciones,
             creado_por: user.id,
@@ -563,12 +579,14 @@ export default function WorkOrders() {
     // El editor de tareas se quedaba abierto con lo escrito y el técnico de la orden anterior, y
     // la tarea nueva le tocaba a esa persona (o la base la rechazaba si era de otra sede).
     return (
-      <WorkOrderDetail
-        key={detail.order.id}
-        detail={detail}
-        statusLabels={statusLabels}
-        onBack={detail.close}
-      />
+      <Suspense fallback={<div className="loading-state"><div className="spinner" /></div>}>
+        <WorkOrderDetail
+          key={detail.order.id}
+          detail={detail}
+          statusLabels={statusLabels}
+          onBack={detail.close}
+        />
+      </Suspense>
     );
   }
 
@@ -587,7 +605,13 @@ export default function WorkOrders() {
                 <span className="workorder-card-number">{order.numero_orden}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
                   {user?.rol === 'admin' && (
-                    <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={(e) => handleDeleteOrder(order, e)}>
+                    <button
+                      className="btn btn-ghost btn-sm btn-icon"
+                      title={t('common.delete')}
+                      aria-label={t('common.delete')}
+                      style={{ color: 'var(--color-danger)' }}
+                      onClick={(e) => handleDeleteOrder(order, e)}
+                    >
                       <Trash2 size={16} />
                     </button>
                   )}
@@ -728,12 +752,19 @@ export default function WorkOrders() {
                       <button
                         className="btn btn-ghost btn-sm btn-icon"
                         title={t('workOrders.openOrder')}
+                        aria-label={t('workOrders.openOrder')}
                         onClick={(e) => { e.stopPropagation(); detail.open(order.id); }}
                       >
                         <Eye size={16} />
                       </button>
                       {user?.rol === 'admin' && (
-                        <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={(e) => handleDeleteOrder(order, e)}>
+                        <button
+                          className="btn btn-ghost btn-sm btn-icon"
+                          title={t('common.delete')}
+                          aria-label={t('common.delete')}
+                          style={{ color: 'var(--color-danger)' }}
+                          onClick={(e) => handleDeleteOrder(order, e)}
+                        >
                           <Trash2 size={16} />
                         </button>
                       )}
@@ -824,7 +855,9 @@ export default function WorkOrders() {
       </div>
 
       {view === 'tablero' ? (
-        <KanbanBoard embedded search={search} onOpen={detail.open} />
+        <Suspense fallback={<div className="loading-state"><div className="spinner" /></div>}>
+          <KanbanBoard embedded search={search} onOpen={detail.open} />
+        </Suspense>
       ) : filterStatus === ARCHIVED ? (
         <>
           <p className="field-hint" style={{ marginBottom: 'var(--space-3)' }}>{t('workOrders.archivedHint')}</p>
@@ -852,17 +885,20 @@ export default function WorkOrders() {
       )}
 
       {isAdmin && showCreateModal && (
-        <WorkOrderCreateModal
-          form={form}
-          customers={customers}
-          vehiclesForCustomer={vehiclesForCustomer}
-          operators={operators}
-          isAdmin={isAdmin}
-          saving={saving}
-          error={error}
-          onSubmit={submitOrder}
-          onClose={handleCloseCreateModal}
-        />
+        <LazyModal onClose={handleCloseCreateModal}>
+          <WorkOrderCreateModal
+            form={form}
+            sedeId={sedeId || currentSede?.id || ''}
+            customers={customers}
+            vehiclesForCustomer={vehiclesForCustomer}
+            operators={operators}
+            isAdmin={isAdmin}
+            saving={saving}
+            error={error}
+            onSubmit={submitOrder}
+            onClose={handleCloseCreateModal}
+          />
+        </LazyModal>
       )}
     </div>
   );

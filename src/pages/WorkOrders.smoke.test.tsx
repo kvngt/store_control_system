@@ -947,9 +947,9 @@ describe('WorkOrders — lista y tablero en la misma página', () => {
 
     await user.click(screen.getByRole('button', { name: 'Tablero' }));
     expect(screen.getByRole('button', { name: 'Tablero' })).toHaveAttribute('aria-pressed', 'true');
+    expect(await screen.findByRole('button', { name: 'Abrir la orden OT-2026-0042' })).toBeInTheDocument();
     expect(document.querySelector('.kanban-board')).toBeTruthy();
     expect(document.querySelector('.table-container')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Abrir la orden OT-2026-0042' })).toBeInTheDocument();
 
     await user.type(screen.getByRole('textbox', { name: 'Buscar...' }), 'zzz');
     expect(screen.queryByRole('button', { name: 'Abrir la orden OT-2026-0042' })).not.toBeInTheDocument();

@@ -29,6 +29,8 @@ export interface Sede {
    * workshop, not a company-wide constant. Defaults to 35 in the database.
    */
   comision_porcentaje?: number;
+  /** Tarifa de mano de obra por hora de referencia (referencia informativa, no calcula precios). */
+  tarifa_hora?: number | null;
   fecha_creacion: string;
 }
 

@@ -86,3 +86,37 @@ export function monthRange(month: string): [string, string] {
   const next = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
   return [`${month}-01`, `${next}-01`];
 }
+
+/** Rango del mes actual: del 1 de este mes hasta hoy (`[desde, hasta]`). */
+export function currentMonthRangeLocal(): [string, string] {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return [`${year}-${month}-01`, `${year}-${month}-${day}`];
+}
+
+/** Rango del mes pasado: del 1 al último día del mes anterior (`[desde, hasta]`). */
+export function previousMonthRangeLocal(): [string, string] {
+  const now = new Date();
+  const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const year = prevMonthDate.getFullYear();
+  const month = String(prevMonthDate.getMonth() + 1).padStart(2, '0');
+  const lastDay = new Date(year, prevMonthDate.getMonth() + 1, 0).getDate();
+  return [`${year}-${month}-01`, `${year}-${month}-${String(lastDay).padStart(2, '0')}`];
+}
+
+/** Rango de los últimos 30 días: hoy - 30 hasta hoy (`[desde, hasta]`). */
+export function last30DaysRangeLocal(): [string, string] {
+  return [daysFromTodayLocal(-30), daysFromTodayLocal(0)];
+}
+
+/** Formatea minutos como "1h 25m" o "25m". */
+export function formatDurationMinutes(minutes: number): string {
+  const total = Math.max(0, Math.floor(minutes));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h === 0) return `${m}m`;
+  return `${h}h ${m < 10 ? '0' : ''}${m}m`;
+}
+

@@ -166,8 +166,8 @@ describe('workOrdersService: cambios de las órdenes en tiempo real', () => {
   it('escucha la orden y sus hijas, con las tablas que publica la migración', () => {
     workOrdersService.subscribeToChanges(vi.fn(), vi.fn());
     expect(mocks.bindings.map((b) => b.table).sort()).toEqual([
-      'orden_asignaciones', 'orden_avances', 'orden_hallazgos', 'orden_labor', 'orden_media',
-      'orden_proximo_servicio', 'orden_repuestos', 'ordenes_trabajo', 'presupuestos',
+      'orden_asignaciones', 'orden_avances', 'orden_hallazgos', 'orden_inspeccion_puntos', 'orden_inspecciones', 'orden_labor', 'orden_labor_tiempos', 'orden_media',
+      'orden_proximo_servicio', 'orden_repuestos', 'orden_trabajos', 'ordenes_trabajo', 'presupuestos',
     ]);
   });
 
@@ -529,5 +529,72 @@ describe('workOrdersService: costo y pedido de un repuesto', () => {
     expect(mocks.writes).toEqual([
       { table: 'ordenes_trabajo', method: 'update', payload: { marcas_danos: marks } },
     ]);
+  });
+
+  it('createWorkOrder incluye trabajos y grupo en labor_items y repuestos', async () => {
+    const trabajos = [{ grupo: 'g-1', titulo: 'Frenos delanteros', catalogo_id: 'cat-1' }];
+    const labor = [
+      { descripcion: 'Cambio pastillas', costo: 60, especialidad: 'mecanica' as const, asignado_a: null, reparto_heredado: true, grupo: 'g-1' },
+      { descripcion: 'Lavado', costo: 20, especialidad: 'mecanica' as const, asignado_a: null, reparto_heredado: true },
+    ];
+    const repuestos = [
+      { descripcion: 'Pastillas', cantidad: 1, precio_venta_unitario: 40, costo_unitario: 25, grupo: 'g-1' },
+    ];
+
+    await workOrdersService.createWorkOrder({
+      sede_id: 's1',
+      cliente_id: 'c1',
+      vehiculo_id: 'v1',
+      tipo_trabajo: 'mecanica',
+      millas_ingreso: 1000,
+      nivel_gasolina: '1/2',
+      deposito_inicial: 0,
+      inspeccion_360_notas: '',
+      fecha_estimada_entrega: '2026-10-20',
+      creado_por: 'u1',
+      labor_items: labor,
+      repuestos,
+      asignaciones: [],
+      trabajos,
+    });
+
+    const call = mocks.rpcs.find((r) => r.fn === 'create_work_order');
+    expect(call).toBeDefined();
+    const pOrder = call!.args.p_order as { trabajos: unknown };
+    expect(pOrder.trabajos).toEqual(trabajos);
+    const pLabor = call!.args.p_labor as { descripcion: string; grupo: string | null }[];
+    expect(pLabor).toEqual([
+      expect.objectContaining({ descripcion: 'Cambio pastillas', grupo: 'g-1' }),
+      // Una línea suelta no lleva la llave `grupo`: la base la deja sin trabajo.
+      expect.not.objectContaining({ grupo: expect.anything() }),
+    ]);
+    const pParts = call!.args.p_parts as { descripcion: string; grupo: string | null }[];
+    expect(pParts).toEqual([
+      expect.objectContaining({ descripcion: 'Pastillas', grupo: 'g-1' }),
+    ]);
+  });
+
+  it('llamadas a RPCs de trabajos del catálogo llaman a las funciones correctas', async () => {
+    await workOrdersService.addJobFromCatalog('o1', 'cat-1', 'user-1');
+    await workOrdersService.removeJob('job-1');
+    await workOrdersService.renameJob('job-1', ' Frenos traseros ');
+    await workOrdersService.getOrderJobs('o1');
+
+    expect(mocks.rpcs).toContainEqual({
+      fn: 'agregar_trabajo_del_catalogo',
+      args: { p_orden_id: 'o1', p_catalogo_id: 'cat-1', p_asignado_a: 'user-1' },
+    });
+    expect(mocks.rpcs).toContainEqual({
+      fn: 'quitar_trabajo',
+      args: { p_trabajo_id: 'job-1' },
+    });
+    expect(mocks.rpcs).toContainEqual({
+      fn: 'renombrar_trabajo',
+      args: { p_trabajo_id: 'job-1', p_titulo: 'Frenos traseros' },
+    });
+    expect(mocks.rpcs).toContainEqual({
+      fn: 'trabajos_de_orden',
+      args: { p_orden_id: 'o1' },
+    });
   });
 });

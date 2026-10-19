@@ -1,7 +1,7 @@
 import type { LaborItem, OrderStatus, WorkOrder } from '../../types/database';
 import type { QuickAction } from './QuickActions';
 import { isApproved } from './lineState';
-import { AlertTriangle, Car, CheckCircle2, ListChecks, MessageSquarePlus, Play, Tag } from 'lucide-react';
+import { AlertTriangle, Car, CheckCircle2, ClipboardCheck, ListChecks, MessageSquarePlus, Play, Tag } from 'lucide-react';
 
 export type TechNextStepResult = 'start' | 'finish' | 'partDone' | null;
 
@@ -130,6 +130,12 @@ export function buildTechActions({
       icon: MessageSquarePlus,
       label: 'quickActions.progress',
       onClick: () => goTo('avances', 'avances'),
+    },
+    {
+      key: 'inspection',
+      icon: ClipboardCheck,
+      label: 'quickActions.inspection',
+      onClick: () => goTo('orden', 'inspeccion'),
     },
     ...(order.estatus !== 'finalizado'
       ? [

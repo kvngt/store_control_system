@@ -157,4 +157,24 @@ describe('buildTechActions', () => {
     const tasksAction = actions.find((a) => a.key === 'tasks');
     expect(tasksAction?.primary).toBe(true);
   });
+
+  it('incluye la acción rápida de inspección que navega a orden/inspeccion', () => {
+    const goTo = vi.fn();
+    const actions = buildTechActions({
+      order: { estatus: 'en_proceso' } as WorkOrder,
+      laborList: [],
+      userId: 'tech-1',
+      canEdit: true,
+      changeStatus: vi.fn(),
+      goTo,
+      onReportFinding: vi.fn(),
+      onSuggestService: vi.fn(),
+    });
+
+    const inspAction = actions.find((a) => a.key === 'inspection');
+    expect(inspAction).toBeDefined();
+    expect(inspAction?.primary).toBeFalsy();
+    inspAction?.onClick();
+    expect(goTo).toHaveBeenCalledWith('orden', 'inspeccion');
+  });
 });

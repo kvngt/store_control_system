@@ -249,7 +249,9 @@ SELECT throws_ok(
 -- Recordatorio de órdenes que pasaron su fecha de entrega
 -- ------------------------------------------------------------------------------------
 RESET ROLE;
-UPDATE ordenes_trabajo SET fecha_estimada_entrega = (NOW() AT TIME ZONE 'America/Chicago')::date - 3,
+-- La misma fecha que usa el barrido (hoy_taller): con otra zona, de 12 a 1 de la mañana en
+-- Maryland la cuenta salía de 4 días.
+UPDATE ordenes_trabajo SET fecha_estimada_entrega = public.hoy_taller(sede_id) - 3,
                            estatus = 'en_proceso'
 WHERE sede_id = '10000000-0000-0000-0000-000000000001';
 

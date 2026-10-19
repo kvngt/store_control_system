@@ -22,7 +22,15 @@ export function translateReport(report: PortalReport, language: PortalLanguageCo
     observaciones: report.observaciones?.map((o) => ({ ...o, texto: tr(o.texto) })),
     esperando_repuestos: report.esperando_repuestos?.map((p) => ({ ...p, descripcion: tr(p.descripcion) })),
     presupuesto: report.presupuesto
-      ? { ...report.presupuesto, lineas: report.presupuesto.lineas.map((l) => ({ ...l, descripcion: tr(l.descripcion) })) }
+      ? {
+          ...report.presupuesto,
+          trabajos: report.presupuesto.trabajos?.map((t) => ({ ...t, titulo: tr(t.titulo) })),
+          lineas: report.presupuesto.lineas.map((l) => ({
+            ...l,
+            descripcion: tr(l.descripcion),
+            trabajo: trMaybe(l.trabajo ?? null),
+          })),
+        }
       : report.presupuesto,
     cuenta: {
       ...report.cuenta,
@@ -30,5 +38,17 @@ export function translateReport(report: PortalReport, language: PortalLanguageCo
       repuestos: report.cuenta.repuestos.map((l) => ({ ...l, descripcion: tr(l.descripcion) })),
       no_autorizados: report.cuenta.no_autorizados?.map((l) => ({ ...l, descripcion: tr(l.descripcion) })),
     },
+    inspeccion: report.inspeccion
+      ? {
+          ...report.inspeccion,
+          nombre: tr(report.inspeccion.nombre),
+          puntos: report.inspeccion.puntos.map((p) => ({
+            ...p,
+            seccion: tr(p.seccion),
+            nombre: tr(p.nombre),
+            nota: trMaybe(p.nota),
+          })),
+        }
+      : report.inspeccion,
   };
 }

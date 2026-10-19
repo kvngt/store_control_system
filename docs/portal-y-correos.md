@@ -29,9 +29,13 @@ Cómo probarlo: [plan-de-pruebas.md](plan-de-pruebas.md#413-portal-del-cliente-y
 ## 1. El recorrido
 
 ```
+Alta de la orden
+  └─ trg_order_link_on_create (AFTER INSERT ON ordenes_trabajo)
+       └─ asegurar_enlace_orden()       → orden_enlaces (token nuevo activo desde la creación)
+
 Administración captura la firma de recepción
   └─ trg_order_portal (AFTER UPDATE OF firma_ruta)
-       ├─ asegurar_enlace_orden()       → orden_enlaces (token nuevo)
+       ├─ asegurar_enlace_orden()       → orden_enlaces (si no tuviera)
        └─ encolar_correo_cliente('recepcion', al instante si ya hay una foto de recepción; si no, 30 s)
                                          → cola_envios (canal email)
 
@@ -54,8 +58,9 @@ El cliente toca el botón del correo → restorifyauto.net/r/<token>
 
 | Momento | Qué pasa |
 |---|---|
-| El cliente **firma la recepción** | Se crea solo |
-| Un admin pulsa **Crear enlace** | Se crea (para órdenes sin firma o sin correo) |
+| Se **crea la orden** | Se crea solo (`trg_order_link_on_create`, `20261010000031`) |
+| El cliente **firma la recepción** | Se asegura el enlace y se encola el correo de recepción |
+| Un admin pulsa **Crear enlace** | Se crea (si la orden no tenía enlace activo) |
 | Se encola cualquier correo | Se crea si no existe |
 | La orden se **entrega** | `expira_en` = ahora + 90 días |
 | Se **saca de Entregado** | `expira_en` vuelve a null |
@@ -160,7 +165,7 @@ muestra el próximo servicio programado:
 | Plantilla | Cuándo | Espera | Clave de agrupación |
 |---|---|---|---|
 | `recepcion` | Primera firma de la orden | Inmediato si ya hay una foto de recepción; si no, 30 s (que suba la primera) | `recepcion:<orden>`; nunca se repite |
-| `estatus` | Pasa a en proceso o entregado, o administración la marca lista para entregar (`marcar_lista_para_entregar`; finalizar no avisa). **Espera de autorización no se anuncia**: el cliente se entera con el correo del presupuesto (`ANNOUNCED_STATUSES` en `_shared/email/templates.ts` y `trg_portal_on_order_change`). Desde `20261010000028`, al pasar a `finalizado`, si la sede tiene activo el cobro por parqueo y aviso al cliente (`avisar_cliente`), incluye una nota con los días de gracia y la fecha límite antes de que empiece el cobro por día | 3 min; una ráfaga es un correo con la hora del primero | `estatus:<orden>` |
+| `estatus` | Pasa a en proceso (solo si la orden ya está firmada: antes de firmar no se le escribe al cliente, pues el correo de recepción al firmar ya lleva el enlace) o entregado, o administración la marca lista para entregar (`marcar_lista_para_entregar`; finalizar no avisa). **Espera de autorización no se anuncia**: el cliente se entera con el correo del presupuesto (`ANNOUNCED_STATUSES` en `_shared/email/templates.ts` y `trg_portal_on_order_change`). Desde `20261010000028`, al pasar a `finalizado`, si la sede tiene activo el cobro por parqueo y aviso al cliente (`avisar_cliente`), incluye una nota con los días de gracia y la fecha límite antes de que empiece el cobro por día | 3 min; una ráfaga es un correo con la hora del primero | `estatus:<orden>` |
 | `avance` | Un admin pulsa **Avisar novedades** | 1 min | `avance:<orden>` |
 | `presupuesto` | Un admin pulsa **Enviar presupuesto** (fase 5) | 1 min | `presupuesto:<presupuesto>`; se omite si ya se respondió o canceló |
 | `presupuesto_confirmacion` | Se responde un presupuesto desde el enlace o lo registra un admin | Inmediato | `presupuesto_confirmacion:<presupuesto>` |

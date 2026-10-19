@@ -40,15 +40,29 @@ export default function PendingWorkNotice({ vehicleId, excludeOrderId }: Pending
         {items.map((item, i) => (
           <li key={`${item.orden_id}-${i}`}>
             <span>
-              {item.descripcion}
+              {item.tipo === 'inspeccion'
+                ? `${t('pendingWork.inspectionPrefix')}: ${item.descripcion}`
+                : item.descripcion}
               <span className="field-hint">
                 {' · '}
                 {item.numero_orden} · {new Date(item.fecha).toLocaleDateString(language)}
-                {' · '}
-                {item.retirada ? t('pendingWork.notDone') : t('pendingWork.declined')}
+                {item.tipo !== 'inspeccion' && (
+                  <>
+                    {' · '}
+                    {item.retirada ? t('pendingWork.notDone') : t('pendingWork.declined')}
+                  </>
+                )}
+                {item.tipo === 'inspeccion' && item.retirada && (
+                  <>
+                    {' · '}
+                    {t('pendingWork.notDone')}
+                  </>
+                )}
               </span>
             </span>
-            <span className="pending-work-amount">{money(item.monto)}</span>
+            {item.monto != null && (
+              <span className="pending-work-amount">{money(item.monto)}</span>
+            )}
           </li>
         ))}
       </ul>

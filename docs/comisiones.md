@@ -42,6 +42,7 @@ tarea         = costo × su porcentaje / 100, redondeado al centavo
   pantalla pregunta antes, también al cambiar el tipo de una tarea que ya tiene técnico.
 - **Quien recibe una tarea entra solo a la orden** (asignación con `origen = 'tarea'`), para
   verla. No entra al reparto de las líneas heredadas: cobra por sus tareas.
+- **Asignar a un técnico a la orden le pasa las tareas sin técnico de su oficio** (`trg_asignacion_toma_tareas`, `20261010000031`): cuando un administrador asigna a un mecánico o pintor a la orden a mano (`origen = 'manual'`), se le asignan automáticamente las tareas no heredadas de su especialidad que estaban sin técnico y no rechazadas. La app muestra un aviso informando cuántas tareas se le asignaron.
 - **Quien está a salario** no cobra comisión por sus tareas ni por su parte de una bolsa: se
   queda en el taller.
 

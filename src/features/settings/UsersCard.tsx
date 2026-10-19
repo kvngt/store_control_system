@@ -9,6 +9,7 @@ import { usersService } from '../../services/supabaseService';
 import { getErrorMessage } from '../../lib/errors';
 import type { Sede, UserProfile, UserRole } from '../../types/database';
 import { AlertError } from '../../components/AlertError';
+import PhoneInput from '../../components/PhoneInput';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -361,11 +362,10 @@ export default function UsersCard({ users, sedes, currentUserId, loading, onChan
                 </div>
                 <div className="form-group">
                   <label className="form-label" htmlFor="user-phone">{t('common.phone')}</label>
-                  <input
-                    className="form-input"
+                  <PhoneInput
                     id="user-phone"
                     value={draft.telefono}
-                    onChange={(e) => setDraft({ ...draft, telefono: e.target.value })}
+                    onChange={(telefono) => setDraft({ ...draft, telefono })}
                   />
                 </div>
               </div>

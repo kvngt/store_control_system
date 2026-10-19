@@ -37,10 +37,22 @@ export default function ServiceStickerModal({
   const defaultLanguage: 'es' | 'en' = order.cliente?.idioma === 'en' ? 'en' : 'es';
   const [stickerLanguage, setStickerLanguage] = useState<'es' | 'en'>(defaultLanguage);
 
+  const hasIntakeMiles = typeof order.millas_ingreso === 'number' && !Number.isNaN(order.millas_ingreso);
+  // es-US, como el dinero (lib/money.ts): 108,000 y no 108.000.
+  const numFmt = new Intl.NumberFormat(language === 'es' ? 'es-US' : 'en-US');
+
+  const initialMillas = (): string => {
+    if (initialData?.millas !== null && initialData?.millas !== undefined) {
+      if (hasIntakeMiles) {
+        return String(Math.max(0, initialData.millas - order.millas_ingreso!));
+      }
+      return String(initialData.millas);
+    }
+    return '';
+  };
+
   const [fecha, setFecha] = useState(initialData?.fecha || '');
-  const [millas, setMillas] = useState(
-    initialData?.millas !== null && initialData?.millas !== undefined ? String(initialData.millas) : ''
-  );
+  const [millas, setMillas] = useState(initialMillas);
   const [nota, setNota] = useState(initialData?.nota || '');
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
 
@@ -52,7 +64,11 @@ export default function ServiceStickerModal({
 
   const applyPreset = (preset: ServicePreset) => {
     setFecha(preset.fecha);
-    setMillas(preset.millas !== null ? String(preset.millas) : '');
+    if (preset.millas !== null) {
+      setMillas(hasIntakeMiles ? String(preset.millas - order.millas_ingreso!) : String(preset.millas));
+    } else {
+      setMillas('');
+    }
     setNota(preset.nota);
     setSelectedPreset(preset.id);
     setFieldErrors({});
@@ -68,7 +84,19 @@ export default function ServiceStickerModal({
 
   const executeAction = async (andPrint: boolean) => {
     setError('');
-    const numMillas = millas.trim() === '' ? null : parseInt(millas, 10);
+    let numMillas: number | null = null;
+    if (hasIntakeMiles) {
+      if (millas.trim() !== '') {
+        const extra = Number(millas.trim());
+        if (!Number.isInteger(extra) || extra < 1 || extra > 100000) {
+          setFieldErrors({ millas: t('nextService.milesExtraInvalid') });
+          return;
+        }
+        numMillas = order.millas_ingreso! + extra;
+      }
+    } else {
+      numMillas = millas.trim() === '' ? null : parseInt(millas, 10);
+    }
     const trimmedNota = nota.trim() || null;
     const finalFecha = fecha.trim() || null;
 
@@ -170,7 +198,7 @@ export default function ServiceStickerModal({
                       <div>
                         <div style={{ fontWeight: 600 }}>{t(preset.labelKey)}</div>
                         <div style={{ fontSize: '0.75rem', opacity: 0.85 }}>
-                          {preset.millas !== null ? `${preset.millas.toLocaleString()} mi · ` : ''}
+                          {preset.millas !== null ? `${numFmt.format(preset.millas)} mi · ` : ''}
                           {formatDay(preset.fecha, language)}
                         </div>
                       </div>
@@ -201,19 +229,35 @@ export default function ServiceStickerModal({
 
               <div className="form-group">
                 <label className="form-label" htmlFor="sticker-millas">
-                  {t('nextService.milesLabel')}
+                  {hasIntakeMiles ? t('nextService.milesExtraLabel') : t('nextService.milesLabel')}
                 </label>
                 <input
                   type="number"
                   id="sticker-millas"
                   className={`form-input ${fieldErrors.millas ? 'form-input-error' : ''}`}
                   value={millas}
-                  min={order.millas_ingreso ?? 0}
+                  min={hasIntakeMiles ? 1 : (order.millas_ingreso ?? 0)}
+                  max={hasIntakeMiles ? 100000 : undefined}
                   step={500}
-                  placeholder={order.millas_ingreso ? `>= ${order.millas_ingreso}` : '65000'}
+                  placeholder={hasIntakeMiles ? '5000' : (order.millas_ingreso ? `>= ${order.millas_ingreso}` : '65000')}
                   onChange={handleInputChange(setMillas)}
                   disabled={saving}
                 />
+                {hasIntakeMiles && (() => {
+                  const extraVal = Number(millas.trim());
+                  if (millas.trim() !== '' && Number.isInteger(extraVal) && extraVal >= 1 && extraVal <= 100000) {
+                    const totalVal = order.millas_ingreso! + extraVal;
+                    return (
+                      <span className="field-hint" style={{ marginTop: 'var(--space-1)', display: 'block' }}>
+                        {t('nextService.milesTotal')
+                          .replace('{total}', numFmt.format(totalVal))
+                          .replace('{actual}', numFmt.format(order.millas_ingreso!))
+                          .replace('{extra}', numFmt.format(extraVal))}
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
                 {fieldErrors.millas && <span className="field-error">{fieldErrors.millas}</span>}
               </div>
             </div>

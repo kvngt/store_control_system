@@ -168,7 +168,8 @@ SELECT throws_ok(
   'El comprobante tiene que estar en la carpeta de la sede de la orden'
 );
 
-SELECT is((SELECT estatus::text FROM ordenes_trabajo WHERE id = (SELECT id FROM t_a)), 'recepcion',
+-- Sigue en proceso: la autorización de lo cotizado la sacó de recepción (20261010000032).
+SELECT is((SELECT estatus::text FROM ordenes_trabajo WHERE id = (SELECT id FROM t_a)), 'en_proceso',
   'Ningún intento rechazado entregó la orden');
 
 -- ------------------------------------------------------------------------------------

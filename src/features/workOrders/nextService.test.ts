@@ -6,6 +6,7 @@ import {
   presetsFor,
   validateNextService,
   serviceStickerUrl,
+  hasNextService,
 } from './nextService';
 
 describe('nextService pure logic', () => {
@@ -192,4 +193,30 @@ describe('nextService pure logic', () => {
       }
     });
   });
+
+  describe('hasNextService', () => {
+    it('devuelve false con null o undefined o vacío', () => {
+      expect(hasNextService(null)).toBe(false);
+      expect(hasNextService(undefined)).toBe(false);
+      expect(hasNextService({})).toBe(false);
+    });
+
+    it('devuelve true si está programado con fecha', () => {
+      expect(hasNextService({ token: 'abc', fecha: '2026-12-01' })).toBe(true);
+    });
+
+    it('devuelve true si está programado con millas', () => {
+      expect(hasNextService({ token: 'abc', millas: 50000 })).toBe(true);
+    });
+
+    it('devuelve true si hay sugerencia con fecha o millas', () => {
+      expect(hasNextService({ sugerido_en: '2026-10-16', sugerido_fecha: '2026-12-01' })).toBe(true);
+      expect(hasNextService({ sugerido_en: '2026-10-16', sugerido_millas: 60000 })).toBe(true);
+    });
+
+    it('devuelve false si tiene token pero ni fecha ni millas', () => {
+      expect(hasNextService({ token: 'abc', fecha: null, millas: null })).toBe(false);
+    });
+  });
 });
+

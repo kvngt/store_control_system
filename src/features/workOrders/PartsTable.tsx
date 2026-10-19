@@ -26,6 +26,7 @@ interface PartsTableProps {
   onRemove: (id: string, descripcion: string) => Promise<void>;
   /** Pedido → llegó. Sin la función, la tabla no lo ofrece. */
   onSetOrderState?: (id: string, estado: PartOrderState | null) => Promise<void>;
+  trabajos?: readonly { id?: string; grupo?: string; titulo: string }[];
 }
 
 const EMPTY_DRAFT = { descripcion: '', cantidad: '1', precio_venta_unitario: '', costo_unitario: '' };
@@ -41,7 +42,7 @@ const EMPTY_DRAFT = { descripcion: '', cantidad: '1', precio_venta_unitario: '',
  * Cada pieza puede marcarse "Pedido" y luego "Llegó": la orden aparece esperando repuestos en
  * la lista, en el tablero y en el enlace del cliente, y al llegar se avisa al técnico.
  */
-export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRemove, onSetOrderState }: PartsTableProps) {
+export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRemove, onSetOrderState, trabajos = [] }: PartsTableProps) {
   const { added, flash: flashAdded } = useAddedConfirmation();
   const { t } = useLanguage();
   const [newDraft, setNewDraft] = useState(EMPTY_DRAFT);
@@ -201,6 +202,10 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                 <tr key={part.id} className={part.estado === 'rechazado' ? 'line-rejected' : undefined}>
                   <td data-label={t('common.description')}>
                     <span className="line-desc">{part.descripcion}</span> <LineStateBadge state={part.estado} />
+                    {(() => {
+                      const job = trabajos?.find((j) => (part.trabajo_id && j.id === part.trabajo_id) || (part.grupo && j.grupo === part.grupo));
+                      return job ? <span className="job-chip">{job.titulo}</span> : null;
+                    })()}
                     {orderStateControl(part)}
                   </td>
                   <td data-label={t('common.quantity')}>{part.cantidad}</td>

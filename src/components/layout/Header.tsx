@@ -134,7 +134,7 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
           className="btn btn-ghost btn-icon mobile-menu-btn"
           onClick={onMobileMenuToggle}
           id="mobile-menu-btn"
-          aria-label="Abrir menú"
+          aria-label={t('nav.openMenu')}
         >
           <Menu size={20} />
         </button>

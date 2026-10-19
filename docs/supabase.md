@@ -265,6 +265,7 @@ Deno 2. Código en `supabase/functions/`; se despliegan con
 | `create-employee` | sí | Empleados → Nuevo usuario | JWT + rol admin | Admin API de Auth | v6 |
 | `update-employee` | sí | Empleados → editar | JWT + rol admin; no degrada al último admin | Admin API de Auth | v4 |
 | `delete-employee` | sí | Empleados → quitar | JWT + rol admin; nadie se borra a sí mismo, ni a quien tiene órdenes asignadas o pagos de comisión | Admin API de Auth | v5 |
+| `traducir-texto` | sí | Próximo servicio → imprimir el sticker (traduce la nota) | JWT + rol admin; no toca la base | Gemini (`GEMINI_API_KEY`, `GEMINI_MODEL`) | **sin desplegar** (16/10/2026) |
 
 `verify_jwt = false` para las tres primeras está declarado en `supabase/config.toml`, y
 igual se despliegan con `--no-verify-jwt` para que quede explícito.

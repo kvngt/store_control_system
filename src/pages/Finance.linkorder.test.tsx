@@ -88,7 +88,7 @@ describe('Linking a manual movement to a work order', () => {
     const { user, modal } = await openDialog();
 
     await user.type(within(modal).getByPlaceholderText('0.00'), '250');
-    await user.type(within(modal).getByRole('textbox', { name: '' }), 'Compra de faro delantero');
+    await user.type(within(modal).getByRole('textbox', { name: 'Descripción' }), 'Compra de faro delantero');
     await user.selectOptions(within(modal).getByLabelText(/Orden vinculada/i), ORDER.id);
     await user.click(within(modal).getByRole('button', { name: /^Crear$/i }));
 
@@ -103,7 +103,7 @@ describe('Linking a manual movement to a work order', () => {
     const { user, modal } = await openDialog();
 
     await user.type(within(modal).getByPlaceholderText('0.00'), '80');
-    await user.type(within(modal).getByRole('textbox', { name: '' }), 'Café para la oficina');
+    await user.type(within(modal).getByRole('textbox', { name: 'Descripción' }), 'Café para la oficina');
     await user.click(within(modal).getByRole('button', { name: /^Crear$/i }));
 
     await waitFor(() => expect(mocks.createTransaction).toHaveBeenCalled());

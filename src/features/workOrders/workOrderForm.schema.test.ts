@@ -164,4 +164,13 @@ describe('pasos del alta', () => {
     });
     expect(issues(invalid)).toHaveProperty('damageMarks.0.vista');
   });
+
+  it('accepts jobs array and grupo on labor and parts', () => {
+    const valid = form({
+      jobs: [{ grupo: 'g-1', titulo: 'Cambio de frenos', catalogo_id: 'cat-1' }],
+      laborItems: [{ descripcion: 'Instalar pastillas', costo: '80', especialidad: 'mecanica', asignado_a: '', grupo: 'g-1' }],
+      parts: [{ descripcion: 'Pastillas delanteras', cantidad: '1', precio_venta_unitario: '100', costo_unitario: '50', grupo: 'g-1' }],
+    });
+    expect(issues(valid)).toEqual({});
+  });
 });

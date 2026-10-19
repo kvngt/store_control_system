@@ -12,6 +12,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test/renderWithProviders';
 import TaskEditor from './TaskEditor';
 import type { TaskDraft, Technician } from './tasks';
+import type { Specialty } from '../../types/database';
 
 const MARIO: Technician = { id: 'u-mario', nombre_completo: 'Mario Mecánico', rol: 'mecanico' };
 const PAULA: Technician = { id: 'u-paula', nombre_completo: 'Paula Pintora', rol: 'pintor' };
@@ -234,4 +235,34 @@ describe('TaskEditor', () => {
       expect(onAdd).toHaveBeenCalled();
     });
   });
+
+  it('con defaultTechnicianFor propone según la especialidad mientras no se elija a mano', async () => {
+    const user = userEvent.setup();
+    const defaultTechnicianFor = (s: Specialty) => (s === 'mecanica' ? MARIO.id : PAULA.id);
+    renderWithProviders(
+      <TaskEditor
+        workType="combinado"
+        technicians={TECHS}
+        defaultTechnicianFor={defaultTechnicianFor}
+        onAdd={vi.fn()}
+      />
+    );
+    await openEditor(user);
+
+    // al abrir sale el mecánico
+    expect(typeSelect()).toHaveValue('mecanica');
+    expect(technicianSelect()).toHaveValue(MARIO.id);
+
+    // al cambiar el tipo a pintura sin tocar el técnico, sale el pintor
+    await user.selectOptions(typeSelect(), 'pintura');
+    expect(technicianSelect()).toHaveValue(PAULA.id);
+
+    // si antes se eligió otro técnico a mano, cambiar el tipo no lo cambia
+    await user.selectOptions(technicianSelect(), MARIO.id);
+    await user.selectOptions(typeSelect(), 'mecanica');
+    expect(technicianSelect()).toHaveValue(MARIO.id);
+    await user.selectOptions(typeSelect(), 'pintura');
+    expect(technicianSelect()).toHaveValue(MARIO.id);
+  });
 });
+

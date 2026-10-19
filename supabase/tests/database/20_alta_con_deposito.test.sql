@@ -230,7 +230,9 @@ SELECT results_eq(
   $$ SELECT descripcion, especialidad, asignado_a, reparto_heredado FROM t_lab
      WHERE vehiculo_id = 'd2000000-0000-0000-0000-00000000000e' ORDER BY descripcion $$,
   $$ VALUES ('Aceite'::text, 'mecanica'::text, 'a2000000-0000-0000-0000-000000000002'::uuid, false),
-            ('Alineación', 'mecanica', NULL, false),
+            -- a2…04 entra a la orden a mano (en `p_assignments`, no por una tarea) y se queda con
+            -- la tarea de su oficio que no tenía técnico (20261010000032).
+            ('Alineación', 'mecanica', 'a2000000-0000-0000-0000-000000000004', false),
             ('Frenos', 'mecanica', 'a2000000-0000-0000-0000-000000000002', false),
             ('Puerta', 'pintura', 'a2000000-0000-0000-0000-000000000003', false) $$,
   'Las líneas nacen con su técnico y fuera del reparto (también la que no dijo reparto_heredado)'

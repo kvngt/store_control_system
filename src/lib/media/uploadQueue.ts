@@ -14,6 +14,7 @@ export interface UploadItem {
   sedeId: string;
   numeroOrden: string | null;
   avanceId: string | null;
+  inspeccionPuntoId?: string | null;
   origen: MediaOrigin;
   zona: string | null;
   tipo: MediaKind;
@@ -45,6 +46,7 @@ export interface NewUpload extends PreparedMedia {
   sedeId: string;
   numeroOrden?: string | null;
   avanceId?: string | null;
+  inspeccionPuntoId?: string | null;
   origen: MediaOrigin;
   zona?: string | null;
 }
@@ -226,6 +228,7 @@ export class MediaUploadQueue {
         sedeId: u.sedeId,
         numeroOrden: u.numeroOrden ?? null,
         avanceId: u.avanceId ?? null,
+        inspeccionPuntoId: u.inspeccionPuntoId ?? null,
         origen: u.origen,
         zona: u.zona ?? null,
         tipo: u.tipo,

@@ -57,6 +57,7 @@ export const sedesService = {
         | 'logo_url'
         | 'comision_porcentaje'
         | 'email_contacto'
+        | 'tarifa_hora'
       >
     >
   ) => {

@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, Check, CheckCircle2, ChevronLeft, ChevronRight, Pencil, Trash2, X } from 'lucide-react';
+import { BookOpen, Camera, Check, CheckCircle2, ChevronLeft, ChevronRight, Pencil, Trash2, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { isMediaError } from '../../lib/media/errors';
 import { money } from '../../lib/money';
-import type { Customer, UserProfile, Vehicle, PaymentMethod } from '../../types/database';
+import type { Customer, UserProfile, Vehicle, PaymentMethod, Specialty } from '../../types/database';
 import VehicleFields from '../vehicles/VehicleFields';
 import MediaCaptureBar from '../media/MediaCaptureBar';
 import DraftMediaStrip from '../media/DraftMediaStrip';
 import { ZONES } from './useIntakePhotos';
 import type { WorkOrderFormApi } from './useWorkOrderForm';
 import { INTAKE_STEPS } from './workOrderForm.schema';
+import CatalogPickerModal from '../catalog/CatalogPickerModal';
 import { AlertError } from '../../components/AlertError';
 import PhoneInput from '../../components/PhoneInput';
 import PaymentFields from './PaymentFields';
@@ -38,6 +39,8 @@ const TOTAL_STEPS = INTAKE_STEPS.length;
 
 interface WorkOrderCreateModalProps {
   form: WorkOrderFormApi;
+  /** La sede donde se abre la orden: de ahí sale el catálogo de trabajos. */
+  sedeId?: string;
   customers: Customer[];
   /** Already narrowed to the selected customer by the caller. */
   vehiclesForCustomer: Vehicle[];
@@ -64,6 +67,7 @@ interface WorkOrderCreateModalProps {
  */
 export default function WorkOrderCreateModal({
   form,
+  sedeId,
   customers,
   vehiclesForCustomer,
   operators,
@@ -80,6 +84,7 @@ export default function WorkOrderCreateModal({
   const photos = form.photos;
   const newVehicle = form.newVehicle;
   const damageMarks = watch('damageMarks') ?? [];
+  const [catalogPickerOpen, setCatalogPickerOpen] = useState(false);
   const [damageDiagramOpen, setDamageDiagramOpen] = useState(false);
   const { step, furthestStep, nextStep, prevStep, goToStep } = form;
 
@@ -215,6 +220,8 @@ export default function WorkOrderCreateModal({
               <input
                 className="form-input"
                 placeholder={t('common.name')}
+                aria-label={t('common.name')}
+                autoComplete="name"
                 aria-invalid={!!errors.newCustomer?.nombre}
                 {...register('newCustomer.nombre')}
               />
@@ -238,8 +245,23 @@ export default function WorkOrderCreateModal({
             </div>
           </div>
           <div className="form-row" style={{ marginTop: 'var(--space-2)' }}>
-            <input className="form-input" type="email" placeholder={t('common.email')} {...register('newCustomer.email')} />
-            <input className="form-input" placeholder={t('common.address')} {...register('newCustomer.direccion')} />
+            <input
+              className="form-input"
+              type="email"
+              inputMode="email"
+              spellCheck={false}
+              autoComplete="email"
+              placeholder={t('common.email')}
+              aria-label={t('common.email')}
+              {...register('newCustomer.email')}
+            />
+            <input
+              className="form-input"
+              autoComplete="street-address"
+              placeholder={t('common.address')}
+              aria-label={t('common.address')}
+              {...register('newCustomer.direccion')}
+            />
           </div>
           <button
             type="button"
@@ -530,6 +552,7 @@ export default function WorkOrderCreateModal({
                           costo: parseFloat(field.costo) || 0,
                           especialidad: field.especialidad,
                           asignado_a: field.asignado_a || null,
+                          horas: field.horas ? parseFloat(field.horas) : null,
                         }}
                         onAdd={(task) => {
                           form.labor.update(i, {
@@ -537,6 +560,7 @@ export default function WorkOrderCreateModal({
                             costo: task.costo.toString(),
                             especialidad: task.especialidad,
                             asignado_a: task.asignado_a || '',
+                            horas: task.horas != null ? task.horas.toString() : '',
                           });
                           showToast('success', t('intake.lineUpdated'));
                         }}
@@ -552,12 +576,17 @@ export default function WorkOrderCreateModal({
                 }
                 const technician = operators.find((o) => o.id === field.asignado_a);
                 const fresh = justAdded?.kind === 'task' && justAdded.index === i;
+                const job = form.jobs.fields.find((j) => j.grupo === field.grupo);
                 return (
                   <li key={field.id} className={'intake-task' + (fresh ? ' is-new' : '')}>
                     <div className="intake-task-text">
-                      <strong>{field.descripcion}</strong>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                        <strong>{field.descripcion}</strong>
+                        {job && <span className="job-chip">{job.titulo}</span>}
+                      </div>
                       <span>
-                        {specialtyLabel(field.especialidad)} · {money(parseFloat(field.costo) || 0)} ·{' '}
+                        {specialtyLabel(field.especialidad)} · {money(parseFloat(field.costo) || 0)}
+                        {field.horas ? ` · ${field.horas} h` : ''} ·{' '}
                         {technician?.nombre_completo || t('tasks.unassigned')}
                       </span>
                     </div>
@@ -604,12 +633,25 @@ export default function WorkOrderCreateModal({
                   costo: task.costo.toString(),
                   especialidad: task.especialidad,
                   asignado_a: task.asignado_a || '',
+                  horas: task.horas != null ? task.horas.toString() : '',
                 });
                 showToast('success', t('intake.taskAdded').replace('{task}', task.descripcion), addedHint());
               }}
               onPendingChange={onTaskPendingChange}
               busy={saving}
               idPrefix="create-order"
+              extraActions={
+                sedeId ? (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setCatalogPickerOpen(true)}
+                    disabled={saving}
+                  >
+                    <BookOpen size={16} /> {t('catalog.fromCatalog')}
+                  </button>
+                ) : undefined
+              }
             />
             {pendingWarning === 'task' && (
               <p className="task-editor-error" role="alert">{t('intake.taskPending')}</p>
@@ -641,6 +683,7 @@ export default function WorkOrderCreateModal({
                   );
                 }
                 const fresh = justAdded?.kind === 'part' && justAdded.index === i;
+                const job = form.jobs.fields.find((j) => j.grupo === field.grupo);
                 const rowError =
                   errors.parts?.[i]?.descripcion?.message ||
                   errors.parts?.[i]?.cantidad?.message ||
@@ -648,7 +691,10 @@ export default function WorkOrderCreateModal({
                 return (
                   <li key={field.id} className={'intake-task' + (fresh ? ' is-new' : '')}>
                     <div className="intake-task-text">
-                      <strong>{field.descripcion}</strong>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                        <strong>{field.descripcion}</strong>
+                        {job && <span className="job-chip">{job.titulo}</span>}
+                      </div>
                       <span>
                         {field.cantidad} × {money(parseFloat(field.precio_venta_unitario) || 0)}
                         {field.costo_unitario?.trim() ? ` · ${t('parts.cost')} ${money(parseFloat(field.costo_unitario) || 0)}` : ''}
@@ -858,6 +904,51 @@ export default function WorkOrderCreateModal({
           </div>
         </form>
       </div>
+
+      {sedeId && (
+        <CatalogPickerModal
+          isOpen={catalogPickerOpen}
+          onClose={() => setCatalogPickerOpen(false)}
+          sedeId={sedeId}
+          technicians={operators}
+          onSelectDraft={(selectedJob, assignedTechId) => {
+            const grupo = crypto.randomUUID();
+            form.jobs.append({
+              grupo,
+              titulo: selectedJob.nombre,
+              catalogo_id: selectedJob.id,
+            });
+
+            const tech = operators.find((o) => o.id === assignedTechId);
+            for (const l of selectedJob.lineas ?? []) {
+              if (l.tipo === 'mano_obra') {
+                const spec = (l.especialidad ?? 'mecanica') as Specialty;
+                const matches =
+                  (spec === 'mecanica' && tech?.rol === 'mecanico') ||
+                  (spec === 'pintura' && tech?.rol === 'pintor');
+                form.labor.append({
+                  descripcion: l.descripcion,
+                  costo: l.precio.toString(),
+                  especialidad: spec,
+                  asignado_a: matches ? (assignedTechId || '') : '',
+                  horas: l.horas != null ? l.horas.toString() : '',
+                  grupo,
+                });
+              } else if (l.tipo === 'repuesto') {
+                form.parts.append({
+                  descripcion: l.descripcion,
+                  cantidad: l.cantidad.toString(),
+                  precio_venta_unitario: l.precio.toString(),
+                  costo_unitario:
+                    l.costo_unitario != null ? l.costo_unitario.toString() : '',
+                  grupo,
+                });
+              }
+            }
+            showToast('success', t('catalog.jobAddedSuccess'));
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -230,10 +230,7 @@ RESET ROLE;
 -- ------------------------------------------------------------------------------------
 -- 6. Repuestos pedidos y recibidos
 -- ------------------------------------------------------------------------------------
--- La firma ya le creó su enlace al cliente; si no, uno nuevo.
-INSERT INTO orden_enlaces (orden_id, sede_id, token)
-SELECT pg_temp.oa(), '26000000-0000-0000-0000-000000000001', 'c26c26c26c26c26c26c26c26c26c26c26c26c26c26c26c26c26c26c26c26c26c'
-WHERE NOT EXISTS (SELECT 1 FROM orden_enlaces WHERE orden_id = pg_temp.oa() AND revocado_en IS NULL);
+-- El enlace activo nace con la orden (20261010000032): se usa el existente.
 CREATE OR REPLACE FUNCTION pg_temp.tok() RETURNS TEXT LANGUAGE sql AS
   $$ SELECT token FROM orden_enlaces WHERE orden_id = pg_temp.oa() AND revocado_en IS NULL LIMIT 1 $$;
 DELETE FROM notificaciones;

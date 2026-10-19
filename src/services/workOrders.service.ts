@@ -9,6 +9,7 @@ import type {
   OrderMedia,
   OrderProgressUpdate,
   OrderStatus,
+  OrderJob,
   PartOrderState,
   PartSummary,
   PaymentMethod,
@@ -18,6 +19,7 @@ import type {
   WorkOrderPart,
   WithdrawalBalance,
   PendingWorkItem,
+  LaborTimeEntry,
 } from '../types/database';
 import { mediaPath } from '../lib/media/mime';
 import { assertAffected, assertDeleted, fetchAll } from './support';
@@ -43,7 +45,8 @@ import { quotesService } from './quotes.service';
 const ORDER_TABLES = [
   'ordenes_trabajo', 'orden_asignaciones', 'orden_labor', 'orden_repuestos',
   'orden_avances', 'orden_media', 'presupuestos', 'orden_hallazgos',
-  'orden_proximo_servicio'
+  'orden_proximo_servicio', 'orden_trabajos', 'orden_inspecciones', 'orden_inspeccion_puntos',
+  'orden_labor_tiempos'
 ] as const;
 
 /**
@@ -191,7 +194,8 @@ export const workOrdersService = {
         labor_items:orden_labor(*, tecnico:perfiles!asignado_a(id, nombre_completo, rol)),
         repuestos:orden_repuestos(*),
         asignaciones:orden_asignaciones(*, usuario:perfiles(*)),
-        hallazgos:orden_hallazgos(*)
+        hallazgos:orden_hallazgos(*),
+        trabajos:orden_trabajos(id, titulo, catalogo_id)
       `)
         .eq('id', orderId)
         // Las líneas en el orden en que se agregaron: es el orden del presupuesto.
@@ -273,6 +277,7 @@ export const workOrdersService = {
       numero_reclamo: input.con_seguro ? (input.numero_reclamo?.trim() || null) : null,
       autorizado_en_recepcion: input.autorizado_en_recepcion ?? false,
       marcas_danos: input.marcas_danos ?? [],
+      trabajos: input.trabajos ?? [],
     };
 
     // Una transacción del lado de la base: la orden y su labor, repuestos y
@@ -286,9 +291,13 @@ export const workOrdersService = {
     // función se quedan como segunda capa.
     const { data, error } = await supabase.rpc('create_work_order', {
       p_order: orderPayload,
+      // `grupo` (20261010000034) va solo en lo que pertenece a un trabajo: lo pone quien arma la carga.
       p_labor: input.labor_items,
       // Sin costo, la base usa el precio (20261010000017).
-      p_parts: input.repuestos.map((p) => ({ ...p, costo_unitario: p.costo_unitario ?? p.precio_venta_unitario })),
+      p_parts: input.repuestos.map((p) => ({
+        ...p,
+        costo_unitario: p.costo_unitario ?? p.precio_venta_unitario,
+      })),
       p_assignments: input.asignaciones,
     });
     if (error) throw error;
@@ -583,11 +592,16 @@ export const workOrdersService = {
   // app que estaba publicada; esta lo manda explícito en cada alta.
   addLaborItem: async (
     orderId: string,
-    item: { descripcion: string; costo: number; especialidad?: Specialty; asignado_a?: string | null }
+    item: { descripcion: string; costo: number; especialidad?: Specialty; asignado_a?: string | null; horas?: number | null }
   ) => {
     const { data, error } = await supabase
       .from('orden_labor')
-      .insert({ ...item, asignado_a: item.asignado_a ?? null, reparto_heredado: false, orden_id: orderId })
+      .insert({
+        ...item,
+        asignado_a: item.asignado_a ?? null,
+        reparto_heredado: false,
+        orden_id: orderId,
+      })
       .select()
       .single();
     if (error) throw error;
@@ -633,7 +647,10 @@ export const workOrdersService = {
         .range(from, to)
     ),
 
-  updateLaborItem: async (id: string, item: { descripcion: string; costo: number; especialidad?: Specialty }) => {
+  updateLaborItem: async (
+    id: string,
+    item: { descripcion: string; costo: number; especialidad?: Specialty; horas?: number | null }
+  ) => {
     const { data, error } = await supabase
       .from('orden_labor')
       .update(item)
@@ -868,6 +885,89 @@ export const workOrdersService = {
     assertAffected(data, 'la firma');
 
     return { ruta: path, fecha: firmaFecha };
+  },
+
+  /** Agrega un trabajo del catálogo frecuente con sus líneas a la orden (solo admin). */
+  addJobFromCatalog: async (orderId: string, catalogId: string, asignadoA?: string | null): Promise<string> => {
+    const { data, error } = await supabase.rpc('agregar_trabajo_del_catalogo', {
+      p_orden_id: orderId,
+      p_catalogo_id: catalogId,
+      p_asignado_a: asignadoA ?? null,
+    });
+    if (error) throw error;
+    return data as string;
+  },
+
+  /** Quita un trabajo de la orden y todas sus líneas (solo admin). */
+  removeJob: async (id: string): Promise<void> => {
+    const { error } = await supabase.rpc('quitar_trabajo', {
+      p_trabajo_id: id,
+    });
+    if (error) throw error;
+  },
+
+  /** Renombra un trabajo agrupado de la orden (solo admin). */
+  renameJob: async (id: string, titulo: string): Promise<void> => {
+    const { error } = await supabase.rpc('renombrar_trabajo', {
+      p_trabajo_id: id,
+      p_titulo: titulo.trim(),
+    });
+    if (error) throw error;
+  },
+
+  /** Obtiene la lista de trabajos agrupados de la orden con sus totales (solo admin). */
+  getOrderJobs: async (orderId: string): Promise<OrderJob[]> => {
+    const { data, error } = await supabase.rpc('trabajos_de_orden', {
+      p_orden_id: orderId,
+    });
+    if (error) throw error;
+    return (data ?? []) as OrderJob[];
+  },
+
+  /** Inicia el reloj del técnico actual en una tarea aprobada. */
+  startClock: async (laborId: string): Promise<string> => {
+    const { data, error } = await supabase.rpc('iniciar_reloj', {
+      p_labor_id: laborId,
+    });
+    if (error) throw error;
+    return data as string;
+  },
+
+  /** Detiene el reloj del técnico actual en la tarea indicada. */
+  stopClock: async (laborId: string): Promise<void> => {
+    const { error } = await supabase.rpc('detener_reloj', {
+      p_labor_id: laborId,
+    });
+    if (error) throw error;
+  },
+
+  /** Corrige el intervalo de tiempo registrado para una tarea (solo administración). */
+  correctTime: async (tiempoId: string, inicio: string, fin: string | null): Promise<void> => {
+    const { error } = await supabase.rpc('corregir_tiempo', {
+      p_tiempo_id: tiempoId,
+      p_inicio: inicio,
+      p_fin: fin ?? null,
+    });
+    if (error) throw error;
+  },
+
+  /** Elimina un registro de tiempo de una tarea (solo administración). */
+  deleteTime: async (tiempoId: string): Promise<void> => {
+    const { error } = await supabase.rpc('borrar_tiempo', {
+      p_tiempo_id: tiempoId,
+    });
+    if (error) throw error;
+  },
+
+  /** Obtiene todos los tiempos registrados para las tareas de una orden. */
+  getOrderLaborTimes: async (orderId: string): Promise<LaborTimeEntry[]> => {
+    const { data, error } = await supabase
+      .from('orden_labor_tiempos')
+      .select('id, labor_id, orden_id, usuario_id, inicio, fin, usuario:perfiles(nombre, rol)')
+      .eq('orden_id', orderId)
+      .order('inicio', { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as unknown as LaborTimeEntry[];
   },
 
   /**

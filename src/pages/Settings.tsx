@@ -15,6 +15,8 @@ import PushSettingsCard from '../features/notifications/PushSettingsCard';
 import EmailOutboxCard from '../features/settings/EmailOutboxCard';
 import ProblemReportCard from '../features/settings/ProblemReportCard';
 import ParkingSettingsCard from '../features/parking/ParkingSettingsCard';
+import JobCatalogCard from '../features/catalog/JobCatalogCard';
+import InspectionTemplatesCard from '../features/inspection/InspectionTemplatesCard';
 import SedePhonesEditor from '../features/settings/SedePhonesEditor';
 import { EMPTY_PHONE, cleanSedePhones, normalizeSedePhone } from '../features/settings/sedePhones';
 import { sedePhoneLine } from '../lib/phone';
@@ -144,6 +146,7 @@ export default function Settings() {
 
   const [capacityDrafts, setCapacityDrafts] = useState<Record<string, string>>({});
   const [rateDrafts, setRateDrafts] = useState<Record<string, string>>({});
+  const [ratePerHourDrafts, setRatePerHourDrafts] = useState<Record<string, string>>({});
   const [savingSedeId, setSavingSedeId] = useState<string | null>(null);
 
 
@@ -154,6 +157,11 @@ export default function Settings() {
     setCapacityDrafts(Object.fromEntries(sedes.map((sede) => [sede.id, String(sede.capacidad)])));
     setRateDrafts(
       Object.fromEntries(sedes.map((sede) => [sede.id, String(sede.comision_porcentaje ?? 35)]))
+    );
+    setRatePerHourDrafts(
+      Object.fromEntries(
+        sedes.map((sede) => [sede.id, sede.tarifa_hora != null ? String(sede.tarifa_hora) : ''])
+      )
     );
     seedBrandDrafts(sedes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -330,6 +338,8 @@ export default function Settings() {
   const handleSaveOperations = async (sedeId: string) => {
     const capacity = parseInt(capacityDrafts[sedeId], 10);
     const rate = parseFloat(rateDrafts[sedeId]);
+    const hourlyRateStr = ratePerHourDrafts[sedeId]?.trim();
+    const hourlyRate = hourlyRateStr ? parseFloat(hourlyRateStr) : null;
     if (!capacity || capacity <= 0) {
       setActionError(t('settings.capacityInvalid'));
       return;
@@ -338,12 +348,19 @@ export default function Settings() {
       setActionError(t('payroll.rateInvalid'));
       return;
     }
+    if (hourlyRate !== null && (!Number.isFinite(hourlyRate) || hourlyRate < 0)) {
+      setActionError(language === 'es' ? 'La tarifa por hora debe ser un número positivo.' : 'Hourly rate must be a positive number.');
+      return;
+    }
     setSavingSedeId(sedeId);
     setActionError('');
     try {
-      // One update for both: they sit in the same row of the card, and saving
-      // them separately meant two round trips and two chances to forget one.
-      await sedesService.updateSede(sedeId, { capacidad: capacity, comision_porcentaje: rate });
+      // One update for all operations settings.
+      await sedesService.updateSede(sedeId, {
+        capacidad: capacity,
+        comision_porcentaje: rate,
+        tarifa_hora: hourlyRate,
+      });
       await refreshSedes();
       loadData();
       showToast('success', t('settings.sedeUpdated'));
@@ -506,6 +523,12 @@ export default function Settings() {
 
         {/* Cobro por parqueo (módulo configurable por sede, solo admin). */}
         {user?.rol === 'admin' && <ParkingSettingsCard />}
+
+        {/* Catálogo de trabajos frecuentes (solo admin). */}
+        {user?.rol === 'admin' && <JobCatalogCard />}
+
+        {/* Plantillas de inspección por puntos (solo admin). */}
+        {user?.rol === 'admin' && <InspectionTemplatesCard />}
 
         {/* Reportar un problema (Sentry). No se dibuja si Sentry no está configurado. */}
         <ProblemReportCard />
@@ -688,13 +711,29 @@ export default function Settings() {
                             onChange={(e) => setRateDrafts((prev) => ({ ...prev, [sede.id]: e.target.value }))}
                           />
                         </div>
+                        <div>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
+                            {t('settings.hourlyRateReference')}
+                          </label>
+                          <input
+                            className="form-input"
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            placeholder="0.00"
+                            style={{ width: 100 }}
+                            value={ratePerHourDrafts[sede.id] ?? ''}
+                            onChange={(e) => setRatePerHourDrafts((prev) => ({ ...prev, [sede.id]: e.target.value }))}
+                          />
+                        </div>
                         <button
                           className="btn btn-secondary btn-sm"
                           onClick={() => handleSaveOperations(sede.id)}
                           disabled={
                             savingSedeId === sede.id ||
                             (capacityDrafts[sede.id] === String(sede.capacidad) &&
-                              rateDrafts[sede.id] === String(sede.comision_porcentaje ?? 35))
+                              rateDrafts[sede.id] === String(sede.comision_porcentaje ?? 35) &&
+                              (ratePerHourDrafts[sede.id] ?? '') === (sede.tarifa_hora != null ? String(sede.tarifa_hora) : ''))
                           }
                         >
                           {savingSedeId === sede.id ? t('common.loading') : t('common.update')}

@@ -424,6 +424,45 @@ const CASES = [
   tech({ id: 'SEC-170', desc: 'Un técnico no lee orden_proximo_servicio de una orden ajena', needs: ['ORDEN_AJENA'], method: 'GET', path: (c) => `/rest/v1/orden_proximo_servicio?select=orden_id&orden_id=eq.${c.ORDEN_AJENA}`, expect: 'empty' }),
   anon({ id: 'SEC-171', desc: 'Portal con servicio inexistente responde 404 con no_existe', method: 'GET', path: () => `/functions/v1/portal?servicio=${ZERO_TOKEN}`, expect: { status: 404 } }),
   tech({ id: 'SEC-172', desc: 'Un técnico no cambia las marcas de daño de una orden', needs: ['ORDEN'], method: 'PATCH', path: (c) => `/rest/v1/ordenes_trabajo?id=eq.${c.ORDEN}`, body: { marcas_danos: [{ vista: 'frontal', x: 0.5, y: 0.5, tipo: 'golpe' }] }, headers: { Prefer: 'return=representation' }, expect: 'denied-or-empty' }),
+  tech({ id: 'SEC-173', desc: 'Un técnico no llama la función traducir-texto', method: 'POST', path: () => '/functions/v1/traducir-texto', body: { texto: 'Aceite', idioma: 'en' }, expect: { status: 403 } }),
+
+  // 20261010000034: Trabajos agrupados y catálogo
+  tech({ id: 'SEC-174', desc: 'Un técnico no lee catalogo_trabajos directamente', method: 'GET', path: () => '/rest/v1/catalogo_trabajos?select=id', expect: 'denied-or-empty' }),
+  tech({ id: 'SEC-175', desc: 'Un técnico no agrega trabajos del catálogo', method: 'POST', path: () => rpc('agregar_trabajo_del_catalogo'), body: { p_orden_id: ZERO_UUID, p_catalogo_id: ZERO_UUID }, expect: 'denied' }),
+  tech({ id: 'SEC-176', desc: 'Un técnico no guarda trabajos en el catálogo', method: 'POST', path: () => rpc('guardar_trabajo_catalogo'), body: { p_id: null, p_sede_id: ZERO_UUID, p_nombre: 'Frenos', p_activo: true, p_lineas: [] }, expect: 'denied' }),
+  anon({ id: 'SEC-177', desc: 'Sin sesión no se agrega trabajo del catálogo', method: 'POST', path: () => rpc('agregar_trabajo_del_catalogo'), body: { p_orden_id: ZERO_UUID, p_catalogo_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-178', desc: 'Sin sesión no se quita un trabajo', method: 'POST', path: () => rpc('quitar_trabajo'), body: { p_trabajo_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-179', desc: 'Sin sesión no se renombra un trabajo', method: 'POST', path: () => rpc('renombrar_trabajo'), body: { p_trabajo_id: ZERO_UUID, p_titulo: 'Nuevo' }, expect: 'denied' }),
+  anon({ id: 'SEC-180', desc: 'Sin sesión no se piden los trabajos de una orden', method: 'POST', path: () => rpc('trabajos_de_orden'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-181', desc: 'Sin sesión no se pide el catálogo de trabajos', method: 'POST', path: () => rpc('catalogo_de_trabajos'), body: { p_sede_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-182', desc: 'Sin sesión no se guarda un trabajo en el catálogo', method: 'POST', path: () => rpc('guardar_trabajo_catalogo'), body: { p_id: null, p_sede_id: ZERO_UUID, p_nombre: 'Frenos', p_activo: true, p_lineas: [] }, expect: 'denied' }),
+  anon({ id: 'SEC-183', desc: 'Sin sesión no se borra un trabajo del catálogo', method: 'POST', path: () => rpc('borrar_trabajo_catalogo'), body: { p_id: ZERO_UUID }, expect: 'denied' }),
+
+  // 20261010000035: Inspección por puntos
+  tech({ id: 'SEC-184', desc: 'Un técnico no lee inspeccion_plantillas directamente', method: 'GET', path: () => '/rest/v1/inspeccion_plantillas?select=id', expect: 'denied-or-empty' }),
+  tech({ id: 'SEC-185', desc: 'Un técnico no inserta en orden_inspeccion_puntos', needs: ['ORDEN'], method: 'POST', path: () => '/rest/v1/orden_inspeccion_puntos', body: (c) => ({ orden_id: c.ORDEN, seccion: 'Frenos', nombre: 'Pastillas' }), expect: 'denied-or-empty' }),
+  tech({ id: 'SEC-186', desc: 'Un técnico no publica una inspección', method: 'POST', path: () => rpc('publicar_inspeccion'), body: { p_inspeccion_id: ZERO_UUID, p_publicar: true }, expect: 'denied' }),
+  tech({ id: 'SEC-187', desc: 'Un técnico no pide las plantillas de inspección', method: 'POST', path: () => rpc('plantillas_inspeccion'), body: { p_sede_id: ZERO_UUID }, expect: 'denied' }),
+  tech({ id: 'SEC-188', desc: 'Un técnico no guarda plantillas de inspección', method: 'POST', path: () => rpc('guardar_plantilla_inspeccion'), body: { p_id: null, p_sede_id: ZERO_UUID, p_nombre: 'P1', p_activo: true, p_predeterminada: false, p_puntos: [] }, expect: 'denied' }),
+  tech({ id: 'SEC-189', desc: 'Un técnico no borra plantillas de inspección', method: 'POST', path: () => rpc('borrar_plantilla_inspeccion'), body: { p_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-190', desc: 'Sin sesión no se inicia una inspección', method: 'POST', path: () => rpc('iniciar_inspeccion'), body: { p_orden_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-191', desc: 'Sin sesión no se marca un punto de inspección', method: 'POST', path: () => rpc('marcar_punto_inspeccion'), body: { p_punto_id: ZERO_UUID, p_estado: 'bien' }, expect: 'denied' }),
+  anon({ id: 'SEC-192', desc: 'Sin sesión no se completa una inspección', method: 'POST', path: () => rpc('completar_inspeccion'), body: { p_inspeccion_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-193', desc: 'Sin sesión no se publica una inspección', method: 'POST', path: () => rpc('publicar_inspeccion'), body: { p_inspeccion_id: ZERO_UUID, p_publicar: true }, expect: 'denied' }),
+  anon({ id: 'SEC-194', desc: 'Sin sesión no se piden las plantillas de inspección', method: 'POST', path: () => rpc('plantillas_inspeccion'), body: { p_sede_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-195', desc: 'Sin sesión no se guarda una plantilla de inspección', method: 'POST', path: () => rpc('guardar_plantilla_inspeccion'), body: { p_id: null, p_sede_id: ZERO_UUID, p_nombre: 'P1', p_activo: true, p_predeterminada: false, p_puntos: [] }, expect: 'denied' }),
+  anon({ id: 'SEC-196', desc: 'Sin sesión no se borra una plantilla de inspección', method: 'POST', path: () => rpc('borrar_plantilla_inspeccion'), body: { p_id: ZERO_UUID }, expect: 'denied' }),
+
+  // 20261010000036: Horas, reloj por tarea e indicadores
+  tech({ id: 'SEC-197', desc: 'Un técnico no inserta en orden_labor_tiempos', needs: ['ORDEN'], method: 'POST', path: () => '/rest/v1/orden_labor_tiempos', body: (c) => ({ orden_id: c.ORDEN, labor_id: ZERO_UUID, usuario_id: ZERO_UUID }), expect: 'denied-or-empty' }),
+  tech({ id: 'SEC-198', desc: 'Un técnico no consulta los indicadores del taller', method: 'POST', path: () => rpc('indicadores_taller'), body: { p_sede_id: ZERO_UUID, p_desde: '2026-10-01', p_hasta: '2026-10-31' }, expect: 'denied' }),
+  tech({ id: 'SEC-199', desc: 'Un técnico no corrige tiempos de labor', method: 'POST', path: () => rpc('corregir_tiempo'), body: { p_tiempo_id: ZERO_UUID, p_inicio: '2026-10-01T10:00:00Z', p_fin: '2026-10-01T12:00:00Z' }, expect: 'denied' }),
+  tech({ id: 'SEC-200', desc: 'Un técnico no borra tiempos de labor', method: 'POST', path: () => rpc('borrar_tiempo'), body: { p_tiempo_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-201', desc: 'Sin sesión no se inicia el reloj de una tarea', method: 'POST', path: () => rpc('iniciar_reloj'), body: { p_labor_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-202', desc: 'Sin sesión no se detiene el reloj de una tarea', method: 'POST', path: () => rpc('detener_reloj'), body: { p_labor_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-203', desc: 'Sin sesión no se corrigen tiempos de labor', method: 'POST', path: () => rpc('corregir_tiempo'), body: { p_tiempo_id: ZERO_UUID, p_inicio: '2026-10-01T10:00:00Z', p_fin: '2026-10-01T12:00:00Z' }, expect: 'denied' }),
+  anon({ id: 'SEC-204', desc: 'Sin sesión no se borran tiempos de labor', method: 'POST', path: () => rpc('borrar_tiempo'), body: { p_tiempo_id: ZERO_UUID }, expect: 'denied' }),
+  anon({ id: 'SEC-205', desc: 'Sin sesión no se consultan los indicadores del taller', method: 'POST', path: () => rpc('indicadores_taller'), body: { p_sede_id: ZERO_UUID, p_desde: '2026-10-01', p_hasta: '2026-10-31' }, expect: 'denied' }),
 ];
 
 function evaluate(expect, r) {
@@ -452,7 +491,7 @@ for (const c of CASES) {
 // SEC-17: las Edge Functions que usan la app y la base están desplegadas. Una que falta
 // responde 404 y la pantalla falla sin más pista (pasó con update-employee, AUD-26).
 {
-  const FUNCTIONS = ['portal', 'process-outbox', 'cleanup-storage', 'create-employee', 'update-employee', 'delete-employee'];
+  const FUNCTIONS = ['portal', 'process-outbox', 'cleanup-storage', 'create-employee', 'update-employee', 'delete-employee', 'traducir-texto'];
   const missing = [];
   for (const name of FUNCTIONS) {
     const r = await call('OPTIONS', `/functions/v1/${name}`);

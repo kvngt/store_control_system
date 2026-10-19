@@ -24,9 +24,11 @@ export interface PortalShop {
 export interface PortalMedia {
   id: string;
   tipo: 'foto' | 'video' | 'audio';
-  origen: 'recepcion' | 'avance';
+  origen: 'recepcion' | 'avance' | 'inspeccion';
   /** El avance al que pertenece, para agruparlo bajo su tarjeta. */
   avance_id: string | null;
+  /** El punto de inspección al que pertenece (20261010000035). */
+  inspeccion_punto_id?: string | null;
   zona: string | null;
   mime: string;
   duracion_seg: number | null;
@@ -69,6 +71,8 @@ export interface PortalQuoteLine {
   cantidad: number;
   precio_unitario: number;
   monto: number;
+  trabajo_id?: string | null;
+  trabajo?: string | null;
 }
 
 /** El presupuesto que espera la respuesta del cliente. */
@@ -78,6 +82,7 @@ export interface PortalQuote {
   enviado_en: string;
   total: number;
   lineas: PortalQuoteLine[];
+  trabajos?: { id: string; titulo: string; total: number }[];
 }
 
 export interface PortalQuoteHistory {
@@ -162,6 +167,27 @@ export interface PortalObservation {
 
 export type PortalLanguageCode = 'es' | 'en';
 
+export interface PortalInspectionSummary {
+  urgente: number;
+  atencion: number;
+  bien: number;
+}
+
+export interface PortalInspectionPoint {
+  id: string;
+  seccion: string;
+  nombre: string;
+  estado: 'urgente' | 'atencion' | 'bien';
+  nota: string | null;
+}
+
+export interface PortalInspection {
+  nombre: string;
+  completada_en: string | null;
+  resumen: PortalInspectionSummary;
+  puntos: PortalInspectionPoint[];
+}
+
 export interface PortalReport {
   estado_enlace: 'ok';
   taller: PortalShop;
@@ -184,6 +210,8 @@ export interface PortalReport {
   presupuesto?: PortalQuote | null;
   presupuestos_respondidos?: PortalQuoteHistory[];
   cuenta: PortalAccount;
+  /** Inspección por puntos publicada (20261010000035). */
+  inspeccion?: PortalInspection | null;
   /**
    * Texto original → inglés de lo que el taller escribió a mano (20261010000022). Antes solo
    * el PDF lo usaba y el enlace mostraba todo en español. Ausente en la base anterior.

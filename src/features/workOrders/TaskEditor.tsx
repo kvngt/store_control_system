@@ -15,6 +15,8 @@ interface TaskEditorProps {
   technicians: Technician[];
   /** El técnico que viene elegido (el de la primera tarea que tenga uno). */
   defaultTechnicianId?: string | null;
+  /** El técnico por omisión para cada tipo de tarea (especialidad). */
+  defaultTechnicianFor?: (s: Specialty) => string | null;
   busy?: boolean;
   /** Guarda la tarea: en una orden que existe la inserta; en el alta (F4) la suma al borrador.
    * Devolver `false` deja el formulario con lo escrito, para corregir y reintentar.
@@ -38,7 +40,11 @@ interface TaskEditorProps {
    * `onClose` en vez de quedar listo para la siguiente.
    */
   initial?: TaskDraft;
+  /** Solo admin puede cotizar horas facturadas. */
+  isAdmin?: boolean;
   onClose?: () => void;
+  /** Acciones adicionales junto al botón principal (ej. Del catálogo). */
+  extraActions?: React.ReactNode;
 }
 
 interface Draft {
@@ -47,6 +53,7 @@ interface Draft {
   especialidad: Specialty;
   /** '' = sin técnico. */
   asignado_a: string;
+  horas: string;
 }
 
 /**
@@ -60,18 +67,57 @@ interface Draft {
  * Si el tipo no es del oficio del técnico (pintura a un mecánico), pregunta antes de guardar:
  * la comisión de la tarea va a esa persona.
  */
-export default function TaskEditor({ workType, technicians, defaultTechnicianId, busy = false, onAdd, idPrefix = 'task-editor', prefill, onPendingChange, initial, onClose }: TaskEditorProps) {
+export default function TaskEditor({
+  workType,
+  technicians,
+  defaultTechnicianId,
+  defaultTechnicianFor,
+  busy = false,
+  onAdd,
+  idPrefix = 'task-editor',
+  prefill,
+  onPendingChange,
+  initial,
+  isAdmin = true,
+  onClose,
+  extraActions,
+}: TaskEditorProps) {
   const { t } = useLanguage();
   const editing = !!initial;
   const [open, setOpen] = useState(!!prefill || editing);
   // En un "combinado" el tipo que se usó la última vez: casi siempre se agregan seguidas varias
   // tareas de lo mismo.
   const [lastCombined, setLastCombined] = useState<Specialty>('mecanica');
-  const [draft, setDraft] = useState<Draft>(
-    initial
-      ? { descripcion: initial.descripcion, costo: String(initial.costo), especialidad: initial.especialidad, asignado_a: initial.asignado_a ?? '' }
-      : { descripcion: prefill?.text ?? '', costo: '', especialidad: 'mecanica', asignado_a: '' }
-  );
+  const [technicianTouched, setTechnicianTouched] = useState(!!initial || !!prefill?.technicianId);
+
+  const initialSpecialty = () => (workType === 'combinado' ? lastCombined : specialtyForWorkType(workType));
+  const knownDefault = defaultTechnicianId && technicians.some((tech) => tech.id === defaultTechnicianId) ? defaultTechnicianId : '';
+
+  const resolveDefaultTech = (spec: Specialty): string => {
+    const suggested = defaultTechnicianFor ? defaultTechnicianFor(spec) : null;
+    if (suggested && technicians.some((tech) => tech.id === suggested)) return suggested;
+    return knownDefault;
+  };
+
+  const [draft, setDraft] = useState<Draft>(() => {
+    if (initial) {
+      return {
+        descripcion: initial.descripcion,
+        costo: String(initial.costo),
+        especialidad: initial.especialidad,
+        asignado_a: initial.asignado_a ?? '',
+        horas: initial.horas != null ? String(initial.horas) : '',
+      };
+    }
+    const spec = workType === 'combinado' ? 'mecanica' : specialtyForWorkType(workType);
+    let tech = '';
+    if (prefill?.technicianId !== undefined) {
+      tech = prefill.technicianId && technicians.some((t) => t.id === prefill.technicianId) ? prefill.technicianId : '';
+    } else {
+      tech = resolveDefaultTech(spec);
+    }
+    return { descripcion: prefill?.text ?? '', costo: '', especialidad: spec, asignado_a: tech, horas: '' };
+  });
   const [error, setError] = useState('');
   const [mismatch, setMismatch] = useState<{ task: TaskDraft; technician: Technician } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -88,6 +134,9 @@ export default function TaskEditor({ workType, technicians, defaultTechnicianId,
   useEffect(() => {
     if (prefill) {
       setOpen(true);
+      if (prefill.technicianId !== undefined) {
+        setTechnicianTouched(true);
+      }
       setDraft((d) => ({
         ...d,
         descripcion: prefill.text,
@@ -102,7 +151,7 @@ export default function TaskEditor({ workType, technicians, defaultTechnicianId,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefill]);
 
-  const pending = open && (draft.descripcion.trim() !== '' || draft.costo.trim() !== '');
+  const pending = open && (draft.descripcion.trim() !== '' || draft.costo.trim() !== '' || draft.horas.trim() !== '');
   useEffect(() => {
     onPendingChange?.(pending);
     // Al desmontarse (el alta pasa a otro paso) ya no queda nada escrito.
@@ -116,11 +165,10 @@ export default function TaskEditor({ workType, technicians, defaultTechnicianId,
     }
   }, [disabled]);
 
-  const initialSpecialty = () => (workType === 'combinado' ? lastCombined : specialtyForWorkType(workType));
-  const knownDefault = defaultTechnicianId && technicians.some((tech) => tech.id === defaultTechnicianId) ? defaultTechnicianId : '';
-
   const start = () => {
-    setDraft({ descripcion: '', costo: '', especialidad: initialSpecialty(), asignado_a: knownDefault });
+    const spec = initialSpecialty();
+    setDraft({ descripcion: '', costo: '', especialidad: spec, asignado_a: resolveDefaultTech(spec), horas: '' });
+    setTechnicianTouched(false);
     setError('');
     setOpen(true);
   };
@@ -138,6 +186,12 @@ export default function TaskEditor({ workType, technicians, defaultTechnicianId,
     costo: Math.max(0, parseFloat(draft.costo) || 0),
     especialidad: draft.especialidad,
     asignado_a: draft.asignado_a || null,
+    // Las horas van solo si se escribieron; al editar, borrarlas las quita (null).
+    ...(draft.horas.trim() !== ''
+      ? { horas: Math.max(0, parseFloat(draft.horas) || 0) }
+      : initial?.horas != null
+        ? { horas: null }
+        : {}),
   });
 
   const commit = async (task: TaskDraft) => {
@@ -156,6 +210,7 @@ export default function TaskEditor({ workType, technicians, defaultTechnicianId,
         ...prev,
         descripcion: '',
         costo: '',
+        horas: '',
         especialidad: workType === 'combinado' ? task.especialidad : specialtyForWorkType(workType),
       }));
       refocus.current = true;
@@ -189,6 +244,7 @@ export default function TaskEditor({ workType, technicians, defaultTechnicianId,
         <button type="button" className="btn btn-success" onClick={start} disabled={busy} id={`${idPrefix}-open`}>
           <Plus size={16} /> {t('tasks.add')}
         </button>
+        {extraActions}
       </div>
     );
   }
@@ -202,7 +258,14 @@ export default function TaskEditor({ workType, technicians, defaultTechnicianId,
             id={`${idPrefix}-type`}
             className="form-input form-select"
             value={draft.especialidad}
-            onChange={(e) => setDraft({ ...draft, especialidad: e.target.value as Specialty })}
+            onChange={(e) => {
+              const newSpec = e.target.value as Specialty;
+              setDraft((d) => ({
+                ...d,
+                especialidad: newSpec,
+                asignado_a: technicianTouched ? d.asignado_a : resolveDefaultTech(newSpec),
+              }));
+            }}
             disabled={disabled}
           >
             {SPECIALTIES.map((s) => (
@@ -240,13 +303,34 @@ export default function TaskEditor({ workType, technicians, defaultTechnicianId,
             disabled={disabled}
           />
         </div>
+        {isAdmin && (
+          <div className="form-group task-editor-hours">
+            <label className="form-label" htmlFor={`${idPrefix}-hours`}>{t('tasks.hours')}</label>
+            <input
+              id={`${idPrefix}-hours`}
+              className="form-input"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="0.01"
+              placeholder="h"
+              value={draft.horas}
+              onChange={(e) => setDraft({ ...draft, horas: e.target.value })}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
+              disabled={disabled}
+            />
+          </div>
+        )}
         <div className="form-group task-editor-technician">
           <label className="form-label" htmlFor={`${idPrefix}-technician`}>{t('tasks.technician')}</label>
           <TechnicianSelect
             ref={technicianRef}
             id={`${idPrefix}-technician`}
             value={draft.asignado_a}
-            onChange={(id) => setDraft({ ...draft, asignado_a: id })}
+            onChange={(id) => {
+              setTechnicianTouched(true);
+              setDraft((d) => ({ ...d, asignado_a: id }));
+            }}
             technicians={technicians}
             emptyLabel={t('tasks.unassigned')}
             disabled={disabled}

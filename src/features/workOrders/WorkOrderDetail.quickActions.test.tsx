@@ -1,11 +1,13 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import WorkOrderDetail from './WorkOrderDetail';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../../context/LanguageContext';
 import { ToastProvider } from '../../context/ToastContext';
+import { nextServiceService } from '../../services/nextService.service';
 import type { WorkOrderDetailApi } from './useWorkOrderDetail';
+import { queryKeys } from '../../lib/queryClient';
 
 vi.mock('../../context/auth.context', () => ({
   useAuth: () => ({
@@ -150,5 +152,100 @@ describe('WorkOrderDetail - QuickActions markReady', () => {
     // Clicking it triggers detail.markReadyForPickup()
     fireEvent.click(markReadyBtn!);
     expect(mockMarkReady).toHaveBeenCalledTimes(1);
+  });
+
+  it('con un servicio programado, la acción rápida de sticker no abre el modal', async () => {
+    vi.mocked(nextServiceService.getNextService).mockResolvedValue({
+      orden_id: 'wo-101',
+      token: 'tok-next-svc',
+      fecha: '2026-12-01',
+      millas: 50000,
+      nota: 'Aceite sintético',
+      creado_en: '2026-10-10T10:00:00Z',
+    } as any);
+
+    const mockDetail = {
+      order: {
+        id: 'wo-101',
+        numero_orden: 'ORD-101',
+        estatus: 'en_progreso',
+        lista_para_entregar_en: null,
+        retirada_sin_reparar: false,
+        sede_id: 'sede-1',
+        vehiculo_id: 'veh-1',
+        labor: [],
+        parts: [],
+        repuestos_resumen: [],
+        cliente: { nombre: 'Juan Perez', telefono: '5551234567', idioma: 'es' },
+        millas_ingreso: 45000,
+        vehiculo: { anio: 2020, marca: 'Toyota', modelo: 'Corolla', vin: '12345678901234567' },
+      },
+      isDelivered: false,
+      isReadyForPickup: false,
+      canDeliver: false,
+      canSign: false,
+      canEdit: true,
+      canSendReport: false,
+      canArchive: false,
+      canWithdraw: false,
+      canMarkReady: false,
+      canRegisterAdvance: false,
+      markReadyForPickup: vi.fn(),
+      busy: false,
+      generatingPdf: false,
+      preparingShare: false,
+      readyNotifyOpen: false,
+      closeReadyNotify: vi.fn(),
+      technicians: [],
+      orderOperators: [],
+      lockedLaborIds: new Set(),
+      paidPools: new Set(),
+      pendingUploads: [],
+      isAdmin: true,
+      userId: 'admin-1',
+      requestedTab: null,
+      open: vi.fn(),
+      close: vi.fn(),
+      changeStatus: vi.fn(),
+      refresh: vi.fn(),
+    } as unknown as WorkOrderDetailApi;
+
+    const statusLabels: Record<string, string> = {
+      recepcion: 'Recepción',
+      en_progreso: 'En Progreso',
+      finalizado: 'Finalizado',
+      entregado: 'Entregado',
+    };
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider>
+          <ToastProvider>
+            <WorkOrderDetail
+              detail={mockDetail}
+              statusLabels={statusLabels}
+              onBack={vi.fn()}
+            />
+          </ToastProvider>
+        </LanguageProvider>
+      </QueryClientProvider>
+    );
+
+    const toolbar = screen.getByRole('toolbar', { name: /acciones rápidas|quick actions/i });
+    const stickerBtn = Array.from(toolbar.querySelectorAll('button')).find((btn) =>
+      btn.textContent?.includes('Sticker de servicio')
+    );
+    expect(stickerBtn).toBeDefined();
+
+    await waitFor(() => {
+      expect(nextServiceService.getNextService).toHaveBeenCalledWith('wo-101');
+    });
+    // Que la respuesta ya esté en la caché, no solo pedida: si no, el botón todavía no sabe que
+    // hay un servicio.
+    await waitFor(() => expect(queryClient.getQueryState(queryKeys.nextService('wo-101'))?.status).toBe('success'));
+
+    fireEvent.click(stickerBtn!);
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

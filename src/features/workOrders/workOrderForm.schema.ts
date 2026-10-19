@@ -24,6 +24,8 @@ const laborRow = z.object({
   // el tipo de orden y la base la pone sola.
   especialidad: z.enum(['mecanica', 'pintura']),
   asignado_a: stringField,
+  grupo: z.optional(stringField),
+  horas: z.optional(stringField),
 });
 
 // El precio es lo que se le cobra al cliente; el costo (lo que pagó el taller) es opcional y
@@ -34,6 +36,13 @@ const partRow = z.object({
   cantidad: stringField,
   precio_venta_unitario: stringField,
   costo_unitario: z.optional(stringField),
+  grupo: z.optional(stringField),
+});
+
+const jobRow = z.object({
+  grupo: stringField,
+  titulo: stringField,
+  catalogo_id: z.nullish(stringField),
 });
 
 const damageMarkRow = z.object({
@@ -78,6 +87,7 @@ const baseShape = z.object({
   estimatedDate: stringField,
   inspectionNotes: stringField,
   selectedOperators: z.array(stringField),
+  jobs: z.array(jobRow),
   laborItems: z.array(laborRow),
   parts: z.array(partRow),
   withInsurance: z.boolean(),
@@ -179,7 +189,7 @@ export const workOrderFormSchema = baseShape.check((ctx) => {
 export const INTAKE_STEPS = [
   { key: 'customer', fields: ['selectedCustomer', 'newCustomer'] },
   { key: 'vehicle', fields: ['selectedVehicle', 'newVehicle', 'fuelLevel', 'milesIn', 'inspectionNotes', 'damageMarks'] },
-  { key: 'work', fields: ['workType', 'estimatedDate', 'laborItems', 'parts', 'selectedOperators', 'withInsurance', 'insurer', 'claimNumber', 'authorizedAtIntake'] },
+  { key: 'work', fields: ['workType', 'estimatedDate', 'jobs', 'laborItems', 'parts', 'selectedOperators', 'withInsurance', 'insurer', 'claimNumber', 'authorizedAtIntake'] },
   { key: 'deposit', fields: ['deposit', 'paymentMethod', 'checkNumber'] },
 ] as const satisfies readonly { key: string; fields: readonly (keyof WorkOrderFormValues)[] }[];
 
@@ -219,6 +229,7 @@ export function emptyWorkOrderForm(): WorkOrderFormValues {
     inspectionNotes: '',
     damageMarks: [],
     selectedOperators: [],
+    jobs: [],
     laborItems: [],
     parts: [],
     withInsurance: false,

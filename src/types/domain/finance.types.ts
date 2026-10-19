@@ -91,9 +91,9 @@ export interface WithdrawalBalance {
 
 /** Una línea no autorizada (o no hecha) de una visita anterior (`trabajos_pendientes_vehiculo`). */
 export interface PendingWorkItem {
-  tipo: 'mano_obra' | 'repuesto';
+  tipo: 'mano_obra' | 'repuesto' | 'inspeccion';
   descripcion: string;
-  monto: number;
+  monto: number | null;
   orden_id: string;
   numero_orden: string;
   fecha: string;

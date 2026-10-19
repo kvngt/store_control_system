@@ -23,7 +23,7 @@ import {
   StickyNote,
   ChevronLeft,
 } from 'lucide-react';
-import type { Customer, Vehicle, WorkOrder } from '../types/database';
+import type { Customer } from '../types/database';
 import { AlertError } from '../components/AlertError';
 import { money } from '../lib/money';
 import PhoneInput from '../components/PhoneInput';
@@ -41,8 +41,7 @@ export default function Customers() {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [viewProfile, setViewProfile] = useState<Customer | null>(null);
-  const [profileData, setProfileData] = useState<{ vehicles: Vehicle[]; orders: WorkOrder[] } | null>(null);
+  const [openCustomerId, setOpenCustomerId] = useState<string | null>(null);
 
   const [form, setForm] = useState<{
     nombre: string; telefono: string; email: string; direccion: string; notas_crm: string; acepta_correos: boolean; idioma: 'es' | 'en';
@@ -70,37 +69,19 @@ export default function Customers() {
   useEffect(() => {
     const openId = searchParams.get('open');
     if (openId) {
-      customersService
-        .getCustomerDetail(openId)
-        .then((data) => {
-          setViewProfile(data.customer);
-          setProfileData({ vehicles: data.vehicles, orders: data.orders });
-        })
-        .catch((err) => setActionError(getErrorMessage(err, language)));
+      setOpenCustomerId(openId);
       setSearchParams({}, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // Keyed on the id rather than the object: `viewProfile` is replaced by a new
-  // object on every list reload, and keying on it re-fetched the profile each
-  // time. `enabled` keeps the query idle while no profile is open.
-  const viewProfileId = viewProfile?.id;
   const profileQuery = useQuery({
-    queryKey: queryKeys.customerDetail(viewProfileId ?? ''),
-    queryFn: () => customersService.getCustomerDetail(viewProfileId as string),
-    enabled: !!viewProfileId,
+    queryKey: queryKeys.customerDetail(openCustomerId ?? ''),
+    queryFn: () => customersService.getCustomerDetail(openCustomerId as string),
+    enabled: !!openCustomerId,
   });
 
-  useEffect(() => {
-    if (!viewProfileId) {
-      setProfileData(null);
-      return;
-    }
-    if (profileQuery.data) {
-      setProfileData({ vehicles: profileQuery.data.vehicles, orders: profileQuery.data.orders });
-    }
-  }, [viewProfileId, profileQuery.data]);
+  const viewProfile = profileQuery.data?.customer ?? customers.find((c) => c.id === openCustomerId) ?? null;
 
   // Both failure sources rendered through one box, translated at render time —
   // holding the load error raw is what stops a language toggle from re-querying.
@@ -201,21 +182,43 @@ export default function Customers() {
   };
 
   // Profile view
-  if (viewProfile) {
-    const vehicles = profileData?.vehicles || [];
-    const orders = profileData?.orders || [];
+  if (openCustomerId) {
+    if (profileQuery.isPending && !viewProfile) {
+      return (
+        <div className="loading-state"><div className="spinner" /></div>
+      );
+    }
 
-    return (
-      <div className="animate-fade-in">
-        <button
-          className="btn btn-ghost"
-          onClick={() => setViewProfile(null)}
-          style={{ marginBottom: 'var(--space-4)' }}
-        >
-          <ChevronLeft size={18} /> {t('common.back')}
-        </button>
+    if (profileQuery.error && !viewProfile) {
+      return (
+        <div className="animate-fade-in">
+          <button
+            className="btn btn-ghost"
+            onClick={() => setOpenCustomerId(null)}
+            style={{ marginBottom: 'var(--space-4)' }}
+          >
+            <ChevronLeft size={18} /> {t('common.back')}
+          </button>
+          <div className="alert-error">{error}</div>
+        </div>
+      );
+    }
 
-        {error && <div className="alert-error">{error}</div>}
+    if (viewProfile) {
+      const vehicles = profileQuery.data?.vehicles || [];
+      const orders = profileQuery.data?.orders || [];
+
+      return (
+        <div className="animate-fade-in">
+          <button
+            className="btn btn-ghost"
+            onClick={() => setOpenCustomerId(null)}
+            style={{ marginBottom: 'var(--space-4)' }}
+          >
+            <ChevronLeft size={18} /> {t('common.back')}
+          </button>
+
+          {error && <div className="alert-error">{error}</div>}
 
         <div className="responsive-grid-sidebar">
           {/* Customer Info Card */}
@@ -352,6 +355,7 @@ export default function Customers() {
         </div>
       </div>
     );
+    }
   }
 
   // List view
@@ -432,14 +436,30 @@ export default function Customers() {
                   </td>
                   <td>
                     <div className="table-actions">
-                      <button className="btn btn-ghost btn-sm btn-icon" title={t('common.view')} onClick={() => setViewProfile(customer)}>
+                      <button
+                        className="btn btn-ghost btn-sm btn-icon"
+                        title={t('common.view')}
+                        aria-label={t('common.view')}
+                        onClick={() => setOpenCustomerId(customer.id)}
+                      >
                         <Eye size={16} />
                       </button>
-                      <button className="btn btn-ghost btn-sm btn-icon" title={t('common.edit')} onClick={() => openEditModal(customer)}>
+                      <button
+                        className="btn btn-ghost btn-sm btn-icon"
+                        title={t('common.edit')}
+                        aria-label={t('common.edit')}
+                        onClick={() => openEditModal(customer)}
+                      >
                         <Edit3 size={16} />
                       </button>
                       {isAdmin && (
-                        <button className="btn btn-ghost btn-sm btn-icon" title={t('common.delete')} style={{ color: 'var(--color-danger)' }} onClick={() => handleDelete(customer)}>
+                        <button
+                          className="btn btn-ghost btn-sm btn-icon"
+                          title={t('common.delete')}
+                          aria-label={t('common.delete')}
+                          style={{ color: 'var(--color-danger)' }}
+                          onClick={() => handleDelete(customer)}
+                        >
                           <Trash2 size={16} />
                         </button>
                       )}
@@ -468,7 +488,7 @@ export default function Customers() {
               <AlertError message={formError} />
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">{t('common.name')}</label>
+                  <label className="form-label" htmlFor="customer-name">{t('common.name')}</label>
                   <input className="form-input" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} id="customer-name" />
                 </div>
                 <div className="form-group">
@@ -478,7 +498,7 @@ export default function Customers() {
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">{t('common.email')}</label>
+                  <label className="form-label" htmlFor="customer-email">{t('common.email')}</label>
                   <input className="form-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} id="customer-email" />
                 </div>
               </div>
@@ -510,11 +530,11 @@ export default function Customers() {
                 <p className="field-hint">{t('customers.languageHint')}</p>
               </div>
               <div className="form-group">
-                <label className="form-label">{t('common.address')}</label>
+                <label className="form-label" htmlFor="customer-address">{t('common.address')}</label>
                 <input className="form-input" value={form.direccion} onChange={(e) => setForm({ ...form, direccion: e.target.value })} id="customer-address" />
               </div>
               <div className="form-group">
-                <label className="form-label">{t('customers.crmNotes')}</label>
+                <label className="form-label" htmlFor="customer-notes">{t('customers.crmNotes')}</label>
                 <textarea className="form-input form-textarea" value={form.notas_crm} onChange={(e) => setForm({ ...form, notas_crm: e.target.value })} id="customer-notes" />
               </div>
             </div>

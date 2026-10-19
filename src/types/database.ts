@@ -91,3 +91,24 @@ export type {
   OrderNextService,
   NextServiceInput,
 } from './domain/nextService.types';
+export type {
+  CatalogJobLine,
+  CatalogJob,
+  OrderJob,
+} from './domain/catalog.types';
+export type {
+  InspectionPointState,
+  InspectionPoint,
+  OrderInspection,
+  InspectionTemplatePoint,
+  InspectionTemplate,
+  SaveInspectionTemplateInput,
+} from './domain/inspection.types';
+export type {
+  LaborTimeEntry,
+} from './domain/timeTracking.types';
+export type {
+  TechnicianMetrics,
+  WorkshopMetrics,
+} from './domain/metrics.types';
+

@@ -107,9 +107,9 @@ INSERT INTO orden_media (orden_id, avance_id, tipo, origen, ruta, mime, bytes, d
 SELECT id, 'e0000000-0000-0000-0000-000000000001', 'video', 'avance', sede_id || '/' || id || '/video.mp4', 'video/mp4', 1000, 30, 'a0000000-0000-0000-0000-000000000001' FROM t_orden;
 
 -- ------------------------------------------------------------------------------------
--- 1. Firmar la recepción: nace el enlace y un solo correo de recepción
+-- 1. Firmar la recepción: un solo correo de recepción (el enlace nace con la orden, 20261010000032)
 -- ------------------------------------------------------------------------------------
-SELECT is((SELECT COUNT(*)::int FROM t_enlace), 0, 'Antes de firmar la orden no tiene enlace');
+SELECT is((SELECT COUNT(*)::int FROM t_enlace), 1, 'La orden nace con su enlace, antes de firmar (20261010000032)');
 
 SET LOCAL ROLE authenticated;
 -- La firma la toma administración (20261006000000); el técnico solo mira.
@@ -137,13 +137,15 @@ RESET ROLE;
 -- `sub` del JWT aunque la sesión ya no tenga el rol authenticated.
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000001';
 DO $do$ BEGIN PERFORM pg_temp.autorizar_cotizado((SELECT id FROM t_orden)); END $do$;
-SELECT is((SELECT COUNT(*)::int FROM t_enlace), 1, 'Firmar crea el enlace');
+SELECT is((SELECT COUNT(*)::int FROM t_enlace), 1, 'Firmar no crea un segundo enlace');
 SELECT ok((SELECT token ~ '^[0-9a-f]{64}$' FROM t_enlace), 'El token tiene 64 hexadecimales');
 -- La orden ya tiene una foto de recepción registrada (ver el fixture), así que el
 -- aviso sale al instante: el cliente firma y el correo está en camino antes de que
 -- salga del mostrador.
 SELECT results_eq(
-  $$ SELECT plantilla, estado, destinatario, enviar_despues_de <= NOW() FROM t_correos $$,
+  -- Autorizar lo cotizado la pasa a en proceso (20261010000032), y ese aviso tiene su propia
+  -- espera: aquí cuenta solo el de recepción.
+  $$ SELECT plantilla, estado, destinatario, enviar_despues_de <= NOW() FROM t_correos WHERE plantilla = 'recepcion' $$,
   $$ VALUES ('recepcion'::text, 'pendiente'::text, 'marta@prueba.local'::text, true) $$,
   'Con fotos de recepción ya registradas, el aviso al cliente sale al firmar'
 );

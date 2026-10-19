@@ -81,6 +81,8 @@ export interface WorkOrder {
   esperando_repuestos?: boolean;
   /** Trabajo adicional que reportó el taller (F6). Lo leen admin y los técnicos de la orden. */
   hallazgos?: OrderFinding[];
+  /** Trabajos agrupados de la orden (Fase H/I). */
+  trabajos?: { id: string; titulo: string; catalogo_id: string | null }[];
 }
 
 /**
@@ -174,6 +176,9 @@ export interface LaborItem {
   reparto_heredado?: boolean;
   /** El perfil de `asignado_a`, embebido (`perfiles!asignado_a`). */
   tecnico?: Pick<UserProfile, 'id' | 'nombre_completo' | 'rol'> | null;
+  trabajo_id?: string | null;
+  grupo?: string | null;
+  horas?: number | null;
 }
 
 export interface OrderAssignment {
@@ -206,6 +211,8 @@ export interface WorkOrderPart {
   estado_pedido?: PartOrderState | null;
   pedido_en?: string | null;
   recibido_en?: string | null;
+  trabajo_id?: string | null;
+  grupo?: string | null;
 }
 
 export interface WorkOrderInput {
@@ -231,6 +238,7 @@ export interface WorkOrderInput {
   numero_reclamo?: string | null;
   autorizado_en_recepcion?: boolean;
   marcas_danos?: DamageMark[];
+  trabajos?: { grupo: string; titulo: string; catalogo_id?: string | null }[];
 }
 
 /** Un valor que cambió en el historial: el de antes, el de después, o los dos. */

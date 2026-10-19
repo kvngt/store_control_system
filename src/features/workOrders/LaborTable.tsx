@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Check, CheckCircle2, Circle, Lock, Pencil, Trash2, User, Wrench, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { BookOpen, Check, CheckCircle2, Circle, Clock, Lock, Pencil, Trash2, User, Wrench, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
-import { SPECIALTIES, type LaborItem, type Specialty, type WorkType } from '../../types/database';
+import { SPECIALTIES, type LaborItem, type Specialty, type WorkType, type OrderAssignment, type LaborTimeEntry } from '../../types/database';
+import { formatDurationMinutes } from '../../lib/dates';
 import LineStateBadge from './LineStateBadge';
 import { isApproved } from './lineState';
 import { money } from '../../lib/money';
@@ -9,14 +10,20 @@ import TaskEditor from './TaskEditor';
 import TechnicianSelect from './TechnicianSelect';
 import TradeMismatchDialog from './TradeMismatchDialog';
 import { defaultTechnicianId, isTradeMismatch, isUnassignedTask, type TaskDraft, type Technician } from './tasks';
+import CatalogPickerModal from '../catalog/CatalogPickerModal';
+import LaborTimesModal from './LaborTimesModal';
 
 interface LaborTableProps {
   items: LaborItem[];
+  orderId?: string;
+  orderSedeId?: string;
+  assignments?: readonly Pick<OrderAssignment, 'usuario_id' | 'tipo_tarea'>[];
+  trabajos?: readonly { id?: string; grupo?: string; titulo: string }[];
   canEdit: boolean;
   busy: boolean;
   /** Una tarea nueva, con su tipo y su técnico. `false` = no se guardó. */
   onAdd: (task: TaskDraft) => Promise<boolean | void>;
-  onUpdate: (id: string, item: { descripcion: string; costo: number }) => Promise<void>;
+  onUpdate: (id: string, item: { descripcion: string; costo: number; horas?: number | null }) => Promise<void>;
   onRemove: (id: string, descripcion: string) => Promise<void>;
   /**
    * Si se ofrece tachar el trabajo hecho. Es del técnico asignado, no solo del admin: por
@@ -49,6 +56,14 @@ interface LaborTableProps {
    * que tenga uno (así lo usaba toda la app hasta el 06/10/2026).
    */
   suggestedTechnicianId?: string | null;
+  /** El técnico por omisión para cada especialidad. */
+  defaultTechnicianFor?: (s: Specialty) => string | null;
+  /** Tiempos registrados para las tareas de la orden. */
+  laborTimes?: LaborTimeEntry[];
+  /** Corrige un registro de tiempo (solo admin). */
+  onCorrectTime?: (tiempoId: string, inicio: string, fin: string | null) => Promise<void>;
+  /** Borra un registro de tiempo (solo admin). */
+  onDeleteTime?: (tiempoId: string) => Promise<void>;
 }
 
 const NO_LOCKS: ReadonlySet<string> = new Set();
@@ -66,6 +81,10 @@ const NO_POOLS: ReadonlySet<Specialty> = new Set();
  */
 export default function LaborTable({
   items,
+  orderId,
+  orderSedeId,
+  assignments,
+  trabajos = [],
   canEdit,
   busy,
   onAdd,
@@ -82,10 +101,39 @@ export default function LaborTable({
   paidPools = NO_POOLS,
   prefill,
   suggestedTechnicianId,
+  defaultTechnicianFor,
+  laborTimes,
+  onCorrectTime,
+  onDeleteTime,
 }: LaborTableProps) {
   const { t } = useLanguage();
+  const [catalogPickerOpen, setCatalogPickerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<{ descripcion: string; costo: string }>({ descripcion: '', costo: '' });
+  const [editDraft, setEditDraft] = useState<{ descripcion: string; costo: string; horas: string }>({
+    descripcion: '',
+    costo: '',
+    horas: '',
+  });
+  const [timesModalTask, setTimesModalTask] = useState<LaborItem | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getTaskDurationMinutes = (taskId: string) => {
+    if (!laborTimes || laborTimes.length === 0) return 0;
+    return laborTimes
+      .filter((e) => e.labor_id === taskId)
+      .reduce((sum, e) => {
+        const start = new Date(e.inicio).getTime();
+        const end = e.fin ? new Date(e.fin).getTime() : now;
+        if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return sum;
+        return sum + Math.floor((end - start) / 60000);
+      }, 0);
+  };
+
   // Un cambio de técnico fuera de oficio espera la respuesta del diálogo.
   const [pendingAssign, setPendingAssign] = useState<{ item: LaborItem; technician: Technician } | null>(null);
   // Lo mismo desde el otro selector: pasar a pintura una tarea de un mecánico es el mismo cruce.
@@ -117,12 +165,26 @@ export default function LaborTable({
 
   const startEdit = (item: LaborItem) => {
     setEditingId(item.id);
-    setEditDraft({ descripcion: item.descripcion, costo: String(item.costo) });
+    setEditDraft({
+      descripcion: item.descripcion,
+      costo: String(item.costo),
+      horas: item.horas != null ? String(item.horas) : '',
+    });
   };
 
   const saveEdit = async () => {
     if (!editingId || !editDraft.descripcion.trim()) return;
-    await onUpdate(editingId, { descripcion: editDraft.descripcion, costo: toCost(editDraft.costo) });
+    // Las horas van solo si se escribieron, o en null si la línea tenía y se borraron.
+    const hadHours = items.find((i) => i.id === editingId)?.horas != null;
+    await onUpdate(editingId, {
+      descripcion: editDraft.descripcion,
+      costo: toCost(editDraft.costo),
+      ...(editDraft.horas.trim()
+        ? { horas: Math.max(0, parseFloat(editDraft.horas) || 0) }
+        : hadHours
+          ? { horas: null }
+          : {}),
+    });
     setEditingId(null);
   };
 
@@ -249,17 +311,32 @@ export default function LaborTable({
                     />
                   </td>
                   <td>
-                    <input
-                      className="form-input"
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      step="0.01"
-                      style={{ textAlign: 'right' }}
-                      value={editDraft.costo}
-                      onChange={(e) => setEditDraft({ ...editDraft, costo: e.target.value })}
-                      aria-label={t('tasks.price')}
-                    />
+                    <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end', alignItems: 'center' }}>
+                      <input
+                        className="form-input"
+                        type="number"
+                        inputMode="decimal"
+                        step="0.25"
+                        min={0}
+                        placeholder={t('tasks.hours')}
+                        title={t('tasks.hours')}
+                        style={{ width: 75, textAlign: 'right' }}
+                        value={editDraft.horas}
+                        onChange={(e) => setEditDraft({ ...editDraft, horas: e.target.value })}
+                        aria-label={t('tasks.hours')}
+                      />
+                      <input
+                        className="form-input"
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        step="0.01"
+                        style={{ width: 90, textAlign: 'right' }}
+                        value={editDraft.costo}
+                        onChange={(e) => setEditDraft({ ...editDraft, costo: e.target.value })}
+                        aria-label={t('tasks.price')}
+                      />
+                    </div>
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: 2 }}>
@@ -301,6 +378,15 @@ export default function LaborTable({
                       </button>
                     )}
                     <span className="line-desc">{item.descripcion}</span> <LineStateBadge state={item.estado} />
+                    {(() => {
+                      const job = trabajos?.find((j) => (item.trabajo_id && j.id === item.trabajo_id) || (item.grupo && j.grupo === item.grupo));
+                      return job ? <span className="job-chip">{job.titulo}</span> : null;
+                    })()}
+                    {item.horas != null && (
+                      <span className="badge" style={{ marginLeft: 6, fontSize: 'var(--font-size-xs)' }}>
+                        {item.horas} h
+                      </span>
+                    )}
                     {/* Para administración, a la vista: una tarea sin técnico no le paga
                         comisión a nadie. */}
                     {canEdit && isUnassignedTask(item) && item.estado !== 'rechazado' && (
@@ -309,6 +395,31 @@ export default function LaborTable({
                       </span>
                     )}
                     {assignmentControls(item)}
+
+                    {/* Tiempo registrado y enlace a Tiempos */}
+                    {(() => {
+                      const durationMinutes = getTaskDurationMinutes(item.id);
+                      const hasRunning = (laborTimes || []).some((e) => e.labor_id === item.id && !e.fin);
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 4 }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Clock size={12} />
+                            {durationMinutes > 0 ? formatDurationMinutes(durationMinutes) : '0m'}
+                            {hasRunning ? ` (${t('tasks.timeRunning')})` : ''}
+                          </span>
+                          {canEdit && onCorrectTime && onDeleteTime && (
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-sm"
+                              style={{ padding: '0 4px', fontSize: 'var(--font-size-xs)', height: 'auto', minHeight: 'unset' }}
+                              onClick={() => setTimesModalTask(item)}
+                            >
+                              {t('tasks.timesLink')}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td data-label={t('common.total')} style={{ textAlign: 'right', fontWeight: 600 }}>{money(item.costo)}</td>
                   {canEdit && (
@@ -385,15 +496,40 @@ export default function LaborTable({
           ahí deshabilitada sin explicar por qué. */}
       {!canEdit && <p className="field-hint" style={{ marginTop: 'var(--space-2)' }}>{t('workOrders.laborReadOnlyHint')}</p>}
       {canEdit && (
-        <TaskEditor
-          workType={workType}
-          technicians={technicians}
-          defaultTechnicianId={suggestedTechnicianId !== undefined ? suggestedTechnicianId : defaultTechnicianId(items, technicians)}
-          busy={busy}
-          onAdd={onAdd}
-          idPrefix="labor-new"
-          prefill={prefill}
-        />
+        <>
+          <TaskEditor
+            workType={workType}
+            technicians={technicians}
+            defaultTechnicianId={suggestedTechnicianId !== undefined ? suggestedTechnicianId : defaultTechnicianId(items, technicians)}
+            defaultTechnicianFor={defaultTechnicianFor}
+            busy={busy}
+            onAdd={onAdd}
+            idPrefix="labor-new"
+            prefill={prefill}
+            extraActions={
+              orderId && orderSedeId ? (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setCatalogPickerOpen(true)}
+                  disabled={busy}
+                >
+                  <BookOpen size={16} /> {t('catalog.fromCatalog')}
+                </button>
+              ) : undefined
+            }
+          />
+          {orderId && orderSedeId && (
+            <CatalogPickerModal
+              isOpen={catalogPickerOpen}
+              onClose={() => setCatalogPickerOpen(false)}
+              sedeId={orderSedeId}
+              orderId={orderId}
+              technicians={technicians}
+              assignments={assignments}
+            />
+          )}
+        </>
       )}
 
       {pendingAssign && onAssign && (
@@ -433,6 +569,16 @@ export default function LaborTable({
           onCancel={closePending}
         />
       )}
+
+      <LaborTimesModal
+        isOpen={!!timesModalTask}
+        onClose={() => setTimesModalTask(null)}
+        task={timesModalTask}
+        entries={laborTimes ?? []}
+        onCorrectTime={onCorrectTime}
+        onDeleteTime={onDeleteTime}
+        isAdmin={canEdit}
+      />
     </div>
   );
 }

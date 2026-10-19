@@ -181,11 +181,12 @@ describe('NextService smoke test', () => {
     );
 
     const fechaInput = screen.getByLabelText(/Fecha recomendada/i) as HTMLInputElement;
-    const millasInput = screen.getByLabelText(/Millas recomendadas/i) as HTMLInputElement;
+    // Con millas de ingreso (60,000) se escribe cuántas faltan: 65,000 − 60,000.
+    const millasInput = screen.getByLabelText(/En cuántas millas/i) as HTMLInputElement;
     const notaInput = screen.getByLabelText(/Nota o servicio/i) as HTMLInputElement;
 
     expect(fechaInput.value).toBe('2027-10-14');
-    expect(millasInput.value).toBe('65000');
+    expect(millasInput.value).toBe('5000');
     expect(notaInput.value).toBe('Aceite sintético 5W-30');
   });
 });

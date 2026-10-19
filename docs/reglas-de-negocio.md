@@ -38,7 +38,7 @@ Recepción ──► En proceso ◄──► Espera de autorización ──► F
 | Estado | Significa | Efectos automáticos al entrar |
 |---|---|---|
 | **Recepción** | El vehículo ingresó; no se trabaja todavía | — |
-| **En proceso** | Se está trabajando | — |
+| **En proceso** | Se está trabajando | Pasa de forma manual (administración o técnico) o **automáticamente desde Recepción con la primera autorización** de trabajos (`trg_quote_starts_order`, `20261010000031`) |
 | **Espera de autorización** | Pausa: hay trabajo adicional que el cliente tiene que autorizar. El técnico la provoca **reportando un hallazgo** (`reportar_hallazgo`); no la elige en el selector | Aviso a administración. Sale sola a En proceso al responder el cliente, al descartar el hallazgo o al cancelar el presupuesto ([hallazgos.md](hallazgos.md)) |
 | **Finalizado** | El técnico terminó el trabajo. **Todavía no es "listo para el cliente"**: administración lo revisa y lo marca "Listo para entregar" | Avance al 100 %, fecha de finalización, **aviso a admins: "Trabajo terminado"** (hay que revisarlo). **No se le avisa al cliente.** Su enlace dice "En revisión final" |
 | ↳ **Listo para entregar** | Marca sobre Finalizado que pone **solo administración** (`marcar_lista_para_entregar`, protegida por `trg_guard_lista_para_entregar` con `restorify.lista`; se borra sola si la orden deja de estar finalizada o entregada) | **Ahora sí** sale el correo "Su vehículo está listo" y el enlace dice "Listo para recoger". Queda quién y cuándo (historial). `datos_correo` entrega al `process-outbox` el estatus del cliente (`_estatus_cliente`: finalizado sin marca = en proceso), y `datos_portal` manda `orden.lista_para_entregar` ("En revisión final" si aún no tiene la marca) |
@@ -90,6 +90,7 @@ cerrada se borra su fecha de finalización y el avance se conserva.
   campo nuevo del formulario va en uno de ellos (lo exige `workOrderForm.schema.test.ts`).
 - Lo que un admin cotiza al crear la orden nace **sin autorizar** y se autoriza
   solo mediante un presupuesto o registrando la autorización manualmente (sección 8).
+- **El enlace del cliente se crea de inmediato con la orden** (`trg_order_link_on_create`, `20261010000031`), sin esperar a la firma, para poder compartirlo de inmediato (p. ej. por WhatsApp). El correo de recepción al cliente sale al firmar (`firma_ruta`), y si la orden pasa a en proceso antes de firmar, el aviso de en proceso espera a que exista firma.
 - El número `ORD-AAAA-###` se genera de forma atómica: dos órdenes simultáneas
   nunca reciben el mismo.
 - La orden y sus líneas se crean en **una sola transacción**: o entra todo, o nada.

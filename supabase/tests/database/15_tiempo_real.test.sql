@@ -26,7 +26,9 @@ SELECT set_eq(
     'notificaciones',
     'ordenes_trabajo', 'orden_asignaciones', 'orden_labor', 'orden_repuestos',
     'orden_avances', 'orden_media', 'presupuestos', 'orden_hallazgos',
-    'orden_proximo_servicio'
+    'orden_proximo_servicio', 'orden_trabajos',
+    'orden_inspecciones', 'orden_inspeccion_puntos',
+    'orden_labor_tiempos'
   ],
   'Realtime publica los avisos y las tablas de la orden, y nada más'
 );

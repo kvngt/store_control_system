@@ -409,6 +409,7 @@ Los botones **Anterior** y **Siguiente** permiten navegar entre los pasos sin pe
 - **Fecha Estimada de Entrega**.
 - **Trabajo con seguro**: marca la casilla si el servicio lo cubre una aseguradora, e ingresa la **Aseguradora** y el **Número de reclamo**.
 - **Agregar trabajo**: tipo (Mecánica o Pintura), descripción, precio y **Técnico** asignado. Si el tipo no coincide con el oficio registrado de la persona (por ejemplo, pintura a un mecánico), el sistema muestra la advertencia «¿Asignar una tarea de pintura a un mecánico?» con las opciones **Asignar igual**, **Elegir otro** o **Cancelar**. Puedes dejar la tarea en **Sin asignar**.
+- **Del catálogo**: junto al botón de agregar trabajo, permite elegir un paquete predefinido del catálogo de la sede (por ejemplo, cambio de aceite o afinación). Al seleccionarlo, sus líneas de mano de obra y repuestos se agregan de inmediato a la orden con sus precios correspondientes, identificadas con la ficha de su trabajo.
 - **Agregar repuesto**: descripción, cantidad, precio unitario y costo opcional.
 - **El cliente aceptó estos trabajos y precios**: si el cliente ya acordó en persona los trabajos y el presupuesto al entregar el vehículo, marca esta casilla. Los trabajos pasarán directamente como autorizados a nombre del cliente, sin requerir enviar un presupuesto posterior ni registrar autorización manual.
 - Si escribes una tarea o repuesto y no presionas **Agregar**, el botón **Crear** te avisa para que lo agregues o lo descartes antes de continuar.
@@ -535,15 +536,20 @@ En el panel principal (en **Requiere atención**) y arriba de las pestañas Resu
 #### Mano de obra y Tareas
 
 - **Para administradores (Mano de obra)**:
-  - Botón verde **Agregar trabajo**: abre una fila con **Tipo** (Mecánica o Pintura), **Descripción**, **Precio** y **Técnico**.
+  - Botón verde **Agregar trabajo**: abre una fila con **Tipo** (Mecánica o Pintura), **Descripción**, **Precio**, campo opcional de **Horas** facturadas y **Técnico**.
+  - **Del catálogo**: junto a «Agregar trabajo», permite incorporar a la orden un trabajo predefinido del catálogo de la sede. Al seleccionarlo, se muestra el desglose de sus líneas de mano de obra y repuestos y se puede asignar de una vez un técnico (sugerido automáticamente según la especialidad de la primera tarea). Al agregarlo, todas sus líneas se crean agrupadas bajo el título del trabajo y con sus horas correspondientes.
+  - **Trabajos agrupados**: arriba de la tabla de mano de obra, una lista compacta muestra cada trabajo agrupado con su título, la cantidad de líneas que incluye y su total calculado por el sistema. Desde esta lista, un administrador puede renombrar el trabajo o quitarlo por completo junto con todas sus líneas mediante confirmación.
+  - En cada línea de mano de obra o repuesto perteneciente a un trabajo, se muestra una ficha (`.job-chip`) con el nombre del trabajo para identificarlo rápidamente.
   - Si el tipo no coincide con el oficio registrado de la persona, sale la advertencia de oficio.
   - En cada tarea existente hay dos selectores (**Tipo** y **Técnico**) que se pueden modificar en cualquier momento sin alterar lo cotizado. Al asignar una tarea a un técnico, este entra a la orden y recibe la notificación «Nueva tarea»; al retirársela recibe «Tarea reasignada».
   - Si una tarea no tiene técnico, muestra la insignia **Sin técnico**: nadie cobrará esa comisión hasta que se le asigne uno. La orden lo alerta arriba de Resumen con «N tarea(s) sin técnico: nadie cobrará su comisión hasta que se la asignes.» y el botón **Ver trabajos**.
+  - **Horas y tiempos registrados**: la tabla muestra las horas facturadas de cada labor. Al lado, se muestra el tiempo total registrado en reloj por los técnicos y un botón **Tiempos** que abre una ventana donde administración puede consultar el historial de intervalos, corregir fechas y horas de inicio y fin, o eliminar registros erróneos.
   - Con la comisión pagada, los selectores de la tarea muestran un candado y el botón **Eliminar** se bloquea; para modificarlos, primero debe deshacerse el pago en Comisiones.
 - **Para técnicos (Tareas)**:
   - Botón principal de estado: las acciones **Empezar trabajo** (en recepción con tarea autorizada) y **Terminé: avisar a la oficina** (en proceso cuando todo está hecho) se ubican arriba en las **acciones rápidas** de la orden, asegurando un solo botón principal por estado. En la lista de tareas, al estar en proceso con todo listo se muestra la ayuda explicativa, y si sus tareas están terminadas pero faltan tareas de otro compañero, ve el aviso «Tu parte está lista. Falta: ...».
   - Ve sus tareas con su descripción, su tipo y el precio de la mano de obra (de ahí sale su comisión). Los repuestos los ve sin precio.
-  - Toca **Realizado** al terminar una tarea; si la marcó por error, presiona **Reabrir tarea**.
+  - **Reloj por tarea**: cada tarea aprobada y no terminada tiene un botón táctil amplio (44 px o más) «▶ Iniciar» o «⏸ Pausar ({tiempo})» que actualiza el tiempo transcurrido en vivo cada minuto. El técnico solo puede tener un reloj corriendo a la vez: presionar «Iniciar» en otra tarea pausa automáticamente la anterior y arranca la nueva.
+  - Toca **Realizado** al terminar una tarea; si el reloj estaba corriendo, se detiene automáticamente. Si la marcó por error, presiona **Reabrir tarea**.
   - Con **Foto** puede tomar o subir directamente una fotografía con la cámara para adjuntarla como avance a esa tarea.
   - Con **Agregar avance** puede subir fotos, videos o notas de voz vinculados a esa tarea específica.
 - **Insignias de cada línea**:
@@ -579,6 +585,7 @@ Los técnicos asignados ven en su pestaña Tareas la tarjeta **Tu comisión esti
 Solo administración puede asignar personal de la sede de la orden.
 - Quien entra por una tarea lleva la etiqueta **Por tarea** y cobra únicamente sus tareas.
 - Quien está en trabajos heredados de antes de octubre de 2026 lleva **En el reparto** y participa en la bolsa por especialidad.
+- Al agregar a un técnico a la orden a mano, el sistema le pasa automáticamente todas las tareas de la orden de su mismo oficio (mecánica o pintura) que se encuentren sin técnico asignado y no estén rechazadas; la app muestra un aviso informando cuántas tareas se le asignaron.
 - No se puede eliminar de la orden a un técnico que tenga tareas asignadas; primero deben reasignarse sus tareas a otra persona.
 
 #### Avance del trabajo
@@ -586,6 +593,27 @@ Solo administración puede asignar personal de la sede de la orden.
 Bitácora donde el personal documenta los trabajos realizados con texto, fotos, videos o notas de voz. Se puede asociar el avance a una tarea específica. Un técnico puede borrar sus propios avances mientras la orden no esté entregada. Un administrador puede borrarlos todos y gestionar si se muestran o no al cliente.
 
 ![Un avance con fotos y una nota de voz.](../public/ayuda/es/20.webp)
+
+#### Inspección por puntos del vehículo
+
+Permite realizar una revisión multipunto detallada (frenos, llantas, fluidos, suspensión, luces, etc.) basada en las plantillas configuradas en la sede.
+
+- **Cómo el técnico realiza la inspección**:
+  - En la sección de inspección de la orden, o desde sus acciones rápidas pulsando **Inspección**, el técnico o administrador presiona **Iniciar inspección**.
+  - Los puntos se presentan agrupados por sección (Frenos, Llantas, Fluidos, etc.).
+  - Para cada punto, el técnico califica su estado con un solo toque mediante botones táctiles amplios (mínimo 44 px): **Bien** (verde), **Atención** (amarillo) o **Urgente** (rojo), o **N/A** (no aplica). Si vuelve a tocar el botón seleccionado, el punto regresa a estado pendiente.
+  - Con el botón de cámara de cada punto, puede capturar o adjuntar fotografías de evidencia directamente desde el teléfono.
+  - Puede añadir notas tocando el botón **Nota** para registrar observaciones concretas sobre ese componente.
+  - El encabezado indica el avance en tiempo real (por ejemplo, «18 de 24 revisados»).
+  - El botón **Terminar inspección** se activa únicamente cuando no queda ningún punto pendiente de revisión.
+
+- **Cómo administración revisa, cotiza y publica la inspección**:
+  - Una vez finalizada la inspección, administración dispone del interruptor **Mostrar al cliente** para publicar los resultados en el portal web del cliente.
+  - En cada punto calificado en **Atención** o **Urgente**, administración cuenta con dos botones para convertir el hallazgo en una cotización:
+    - **Cotizar**: abre el editor de mano de obra precargando el nombre del punto y su nota, permitiendo asignar técnico y precio de inmediato.
+    - **Del catálogo**: abre el catálogo de trabajos frecuentes para incorporar un paquete predefinido con sus repuestos y mano de obra correspondientes.
+  - **En el enlace del cliente**: al publicarse, el cliente visualiza la sección destacada **Inspección de su vehículo** con tres fichas de resumen (Urgente, Atención y Bien), las tarjetas detalladas de los puntos críticos acompañadas de sus notas y fotografías, y un desplegable con los componentes que se encuentran en buen estado.
+  - **Trabajos pendientes de visitas anteriores**: los puntos en atención o urgente de inspecciones terminadas se recuerdan automáticamente en visitas posteriores del mismo vehículo en el aviso de recomendaciones pendientes.
 
 #### Firma del cliente
 <!-- rol: admin -->
@@ -618,7 +646,9 @@ Cuando se cotizan trabajos o repuestos, quedan **Sin autorizar**. En la sección
 
 ![«Trabajos autorizados por el cliente».](../public/ayuda/es/23.webp)
 
-Lo autorizado suma inmediatamente al total de la orden y genera avisos a los técnicos sobre qué trabajos deben realizar; lo no autorizado queda marcado como **No realizar** y no se cobra ni se realiza. No se puede entregar una orden que tenga un presupuesto pendiente de respuesta.
+Lo autorizado suma inmediatamente al total de la orden y genera avisos a los técnicos sobre qué trabajos deben realizar; lo no autorizado queda marcado como **No realizar** y no se cobra ni se realiza. No se puede entregar una orden que tenga un presupuesto pendiente de respuesta. Además, la orden pasa sola a **En proceso** con la primera autorización (ya sea desde el portal, registrándola o si se aceptó en el alta), de modo que los técnicos pueden empezar de inmediato sin esperar un cambio manual.
+
+**Autorización por trabajo completo.** Cuando la orden incluye trabajos agrupados del catálogo, el cliente en su portal web y la administración en la ventana de registro ven cada trabajo como un solo bloque con su casilla, su título y su monto total, desglosando abajo lo que incluye («Incluye: ...»). Marcar o desmarcar la casilla aprueba o descarta el trabajo entero con todas sus líneas de mano de obra y repuestos: no se aprueban líneas individuales dentro de un trabajo agrupado.
 
 #### Listo para entregar
 <!-- rol: admin -->
@@ -697,15 +727,16 @@ En la pestaña **Historial** (solo administradores), se registra una bitácora a
 #### Enlace del cliente y avisos por correo
 <!-- rol: admin -->
 
-Cada orden cuenta con un enlace web único (`restorifyauto.net/r/...`) que se genera automáticamente cuando el cliente firma la recepción:
+Cada orden cuenta con un enlace web único (`restorifyauto.net/r/...`) que existe desde el alta de la orden (para poder compartirlo por WhatsApp de inmediato sin esperar a la firma):
 - El cliente lo abre en su teléfono sin necesidad de contraseñas ni registro.
 - Visualiza el estado, avance, recepción, fotos y videos publicados, presupuesto por autorizar y el desglose de su cuenta.
+- El portal cuenta con **secciones plegables** pensadas para el teléfono: los avances, el próximo servicio y el contacto arrancan abiertos; la recepción (con el conteo de fotos), la cuenta (con el saldo formateado) y las observaciones arrancan cerradas con un resumen visible y se despliegan al tocarlas. Si hay un presupuesto pendiente, arranca abierto para su revisión.
 - Permite llamar directamente al taller o escribir por WhatsApp si la sede tiene teléfonos configurados.
 - En la tarjeta **Enlace del cliente**, administración puede: **Copiar**, **Abrir**, **Enviar por WhatsApp**, **Cambiar enlace** (invalida el anterior) o **Desactivar**.
 - El enlace permanece activo mientras la orden está en curso y hasta 90 días después de entregada.
 - **Correos automáticos**:
-  - «Recibimos su vehículo»: al firmar la recepción.
-  - «Estamos trabajando en su vehículo»: al pasar a En Proceso.
+  - «Recibimos su vehículo»: sale al capturar la firma de recepción (con el enlace de seguimiento).
+  - «Estamos trabajando en su vehículo»: al pasar a En Proceso (si la orden aún no está firmada, este correo espera la firma para no adelantarse a la bienvenida de recepción).
   - «Su vehículo está listo»: cuando administración presiona **Marcar listo para entregar**.
   - «Gracias por su visita»: tras entregar el vehículo.
   - Los correos se envían en el idioma configurado para el cliente (español o inglés).
@@ -725,7 +756,7 @@ Al terminar un trabajo (un cambio de aceite, un mantenimiento), administración 
 ![La tarjeta Próximo servicio, sin servicio programado.](../public/ayuda/es/45.webp)
 
 **Programar el próximo servicio**
-1. Abre la orden y pulsa **Sticker de servicio** en las acciones rápidas, o ve a la pestaña **Cobro y cliente** → tarjeta **Próximo servicio** → **Programar próximo servicio**.
+1. Abre la orden y pulsa **Sticker de servicio** en las acciones rápidas (si ya existe un servicio programado o sugerido, te lleva directamente a la tarjeta para verlo o reimprimirlo; si no hay ninguno, abre el diálogo para crearlo), o ve a la pestaña **Cobro y cliente** → tarjeta **Próximo servicio** → **Programar próximo servicio**.
 2. Toca uno de los **Presets rápidos** o llena los campos a mano:
 
    | Preset | Millas | Fecha |
@@ -735,8 +766,8 @@ Al terminar un trabajo (un cambio de aceite, un mantenimiento), administración 
    | Revisión general | +5,000 | en 6 meses |
    | Garantía de pintura | sin millas | en 30 días |
 
-3. Ajusta lo que haga falta: **Fecha recomendada**, **Millas recomendadas** y **Nota o servicio** (hasta 120 caracteres). Hace falta al menos la fecha o las millas. La fecha no puede ser anterior a hoy y las millas no pueden ser menores que las de ingreso.
-4. Elige el **Idioma del sticker** (**Español** o **Inglés**). Viene marcado el idioma del cliente.
+3. Ajusta lo que haga falta: **Fecha recomendada**, **En cuántas millas** y **Nota o servicio** (hasta 120 caracteres). Con millas de ingreso registradas en la orden, el campo se llena indicando «cuántas millas faltan» (por ejemplo 5,000) y debajo una línea en vivo calcula el total sumándolas al ingreso; al guardar se almacena el kilometraje acumulado. Sin millas de ingreso, se ingresa el total directamente.
+4. Elige el **Idioma del sticker** (**Español** o **Inglés**). Viene marcado el idioma del cliente. Al mandar a imprimir, la nota se traduce automáticamente al idioma seleccionado para el sticker; si la traducción no responde a tiempo, se imprime tal como se escribió.
 5. Pulsa **Guardar** (solo lo anota) o **Guardar e imprimir**.
 
 ![El diálogo del sticker, con un preset elegido.](../public/ayuda/es/46.webp)
@@ -960,7 +991,7 @@ como los de cualquier otra aplicación.
 
 ![Finanzas.](../public/ayuda/es/34.webp)
 
-Tiene dos vistas:
+Tiene tres vistas:
 
 - **Registros del taller**: lo que registra la app (cobros de las órdenes, costo de repuestos,
   comisiones y lo que registres a mano). Arriba, **ingresos**, **egresos** y **balance**;
@@ -970,6 +1001,8 @@ Tiene dos vistas:
   ordenar meses anteriores y mandárselos al contador. Son contabilidad aparte: **no se suman**
   a los ingresos y egresos de la app. Cada uno muestra su periodo, cuánto entró y salió, y se
   exporta por separado.
+- **Indicadores del taller**: los números y métricas clave del negocio para administración y
+  dueños, calculados en la base de datos sobre las órdenes cobradas y entregadas.
 
 Los métodos de pago son **efectivo, tarjeta, Zelle, transferencia y cheque**. Las comisiones
 del banco y de Clover van en la categoría **Comisiones de banco y tarjeta**: regístralas a mano
@@ -979,6 +1012,23 @@ Muchos movimientos **los crea el sistema solo** (depósitos, cobros al entregar,
 costo de repuestos, pagos de comisiones; sección 18). No los registres a mano o
 quedarán duplicados. Un pago de comisiones aparece como **un egreso por cada orden** que
 cubre ("Comisión Mario Mecánico - ORD-2026-014"), todos con el mismo número de cheque.
+
+### Indicadores del taller
+
+La pestaña **Indicadores** reúne los números indispensables para medir la rentabilidad y productividad del taller:
+
+- **Selector de sede y período**: permite elegir la sede (si administras más de una) y el lapso de tiempo a consultar mediante accesos rápidos (**Este mes**, **Mes pasado**, **Últimos 30 días**) o un rango **Personalizado** con fechas de inicio y fin.
+- **Cuadrícula de indicadores (8 fichas)**:
+  - **Carros entregados**: total de órdenes entregadas dentro del período.
+  - **Ticket promedio (ARO)**: facturación total general dividida entre la cantidad de autos entregados.
+  - **Tarifa efectiva / hora**: ventas de mano de obra aprobada divididas entre las horas facturadas. Si la sede tiene configurada una tarifa de referencia, se muestra debajo para contrastar el valor real contra el esperado.
+  - **Horas por orden**: promedio de horas de mano de obra vendidas por cada auto entregado.
+  - **Margen de mano de obra**: porcentaje que queda de la venta de mano de obra tras descontar las comisiones del personal.
+  - **Margen de repuestos**: porcentaje de beneficio sobre la venta de repuestos tras restar su costo real.
+  - **Aprobación de presupuestos**: proporción del dinero cotizado en presupuestos que fue autorizada por los clientes en el período.
+  - **Días promedio en taller**: tiempo promedio transcurrido desde el ingreso del vehículo hasta su entrega final.
+  - Si en algún indicador no existen datos suficientes en el período o se produce una división por cero, el valor se muestra como «—». Cada ficha incluye una explicación breve accesible al colocar el cursor o consultar su información.
+- **Rendimiento por técnico**: tabla adaptada para móviles (`cards-on-mobile`) que desglosa por cada mecánico o pintor de la sede sus **Horas vendidas**, las **Horas reloj** acumuladas en sus tareas, su porcentaje de **Eficiencia** (horas vendidas entre horas de reloj) y los **Trabajos hechos** terminados en el lapso seleccionado.
 
 ### Margen por orden
 
@@ -1255,13 +1305,15 @@ según el rol.
 ### Solo administradores: sedes, personal y correos
 <!-- rol: admin -->
 
-**Sedes.** Crear talleres nuevos con **Nueva Sede** y editar los existentes: nombre, dirección, **Cambiar logo de la sede**, **Color del tema**, **Capacidad del taller** (espacios de trabajo, para la ocupación del taller) y **Porcentaje de comisión**.
+**Sedes.** Crear talleres nuevos con **Nueva Sede** y editar los existentes: nombre, dirección, **Cambiar logo de la sede**, **Color del tema**, **Capacidad del taller** (espacios de trabajo, para la ocupación del taller), **Tarifa por hora (referencia)** (para comparar la tarifa efectiva en los indicadores del taller) y **Porcentaje de comisión**.
 
 Datos de contacto y reglas de la sede:
 
 - **Correo de contacto (respuestas de clientes)**: a dónde llegan las respuestas de los clientes a los correos automáticos.
 - **Teléfonos de contacto**: lista administrable con **Agregar teléfono**. Cada teléfono define su **Tipo** (**Celular** u **Oficina**), descripción, número y si **Atiende WhatsApp**. El cliente los ve en su enlace (con botones para llamar y escribir), en los correos y en el PDF.
 - **Cobro por parqueo**: configuración de reglas y tarifas de estacionamiento para esa sede (sección 14).
+- **Catálogo de trabajos frecuentes**: administración de los paquetes habituales de trabajo de la sede (por ejemplo, cambio de aceite, frenos, afinación). Cada trabajo predefinido reúne líneas de mano de obra (con descripción, especialidad y precio) y repuestos (con descripción, cantidad, precio de venta y costo de referencia). Permite crear nuevos trabajos con **Nuevo trabajo**, editarlos, activarlos/desactivarlos o eliminarlos.
+- **Plantillas de inspección por puntos**: administración de los formatos de inspección vehicular de la sede. Permite crear nuevas plantillas con **Nueva plantilla**, definir cuál es la **Predeterminada** para las órdenes nuevas, activarlas o desactivarlas, y organizar los puntos por sección (agregar, eliminar y ordenar con las flechas de subir y bajar).
 
 Un administrador también puede usar **Unirme a esta sede** para formar parte de su personal. Al eliminar una sede con **Eliminar todo**, el sistema muestra antes todo lo que se va a borrar y reubica a los empleados en otra sede.
 
@@ -1344,6 +1396,11 @@ actualizarla.
 | Empleados: ver pagos, crear y editar personal | ✅ | ❌ |
 | Configuración: perfil, idioma, apariencia, push | ✅ | ✅ |
 | Configuración: sedes, teléfonos y correos al cliente | ✅ | ❌ |
+| Configuración: plantillas de inspección | ✅ | ❌ |
+| Iniciar y realizar inspección por puntos | ✅ | ✅ en sus órdenes |
+| Terminar inspección por puntos | ✅ | ✅ |
+| Publicar inspección al cliente | ✅ | ❌ |
+| Cotizar puntos de inspección (tarea o catálogo) | ✅ | ❌ |
 | Cambiar de sede activa | ✅ | ❌ |
 | Notificaciones | Recepciones, avances, finalizadas, tareas hechas, presupuestos | Asignaciones, tareas, comisiones |
 
@@ -1390,9 +1447,11 @@ Conviene conocerlas para no sorprenderse ni registrar el mismo dinero dos veces.
 
 **Al agregar un trabajo** después de la firma, queda sin autorizar: no se cobra ni se realiza hasta que el cliente lo autorice.
 
-**Al responder un presupuesto**, lo autorizado suma al total (y si la orden ya se entregó, se registra el ajuste en Finanzas); los técnicos reciben el aviso de qué hacer y qué no, y al cliente le llega la constancia.
+**Al responder un presupuesto**, lo autorizado suma al total (y si la orden ya se entregó, se registra el ajuste en Finanzas); los técnicos reciben el aviso de qué hacer y qué no, y al cliente le llega la constancia. Además, con la primera autorización de trabajos la orden pasa automáticamente a **En proceso**.
 
-**Al firmar la recepción**, además, se crea el enlace del cliente y, si tiene correo, le llega el aviso de ingreso.
+**Al asignar a un técnico a la orden**, este toma automáticamente las tareas de su oficio que se encontraban sin técnico asignado.
+
+**El enlace del cliente existe desde el alta de la orden** para compartirlo de inmediato (p. ej. por WhatsApp). Al firmar la recepción, si el cliente tiene correo registrado, le llega el correo de ingreso con su enlace.
 
 **Al cambiar el estado de una orden**, si el cliente tiene correo, le llega el aviso unos minutos después (se agrupan cambios en una ventana de 3 minutos).
 

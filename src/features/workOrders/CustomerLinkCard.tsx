@@ -29,7 +29,7 @@ const STATE_BADGE: Record<CustomerEmail['estado'], string> = {
  * El enlace personal del cliente y los correos que ha recibido. Solo admin: el
  * enlace abre precios y totales.
  *
- * El enlace nace solo al firmar la recepción; esta tarjeta sirve para compartirlo
+ * El enlace nace con la orden; esta tarjeta sirve para compartirlo
  * por WhatsApp a quien no tiene correo, para cambiarlo si llegó a otra persona y
  * para ver si el cliente lo abrió.
  */

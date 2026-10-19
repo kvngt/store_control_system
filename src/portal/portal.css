@@ -535,6 +535,38 @@
   font-variant-numeric: tabular-nums;
 }
 
+.portal-quote-sublines {
+  margin: calc(var(--space-2) * -1) 0 var(--space-2) var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-secondary);
+  border-left: 2px solid var(--color-primary-light);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+.portal-quote-sublines-header {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  display: block;
+  margin-bottom: var(--space-1);
+}
+
+.portal-quote-sublist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.portal-quote-subline {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+}
+
 .portal-field {
   margin-top: var(--space-3);
 }
@@ -689,4 +721,219 @@
   gap: var(--space-2);
   margin-top: var(--space-4);
 }
+
+/* Secciones plegables del portal (E4) */
+details.portal-collapsible {
+  padding: var(--space-5) var(--space-4);
+}
+
+details.portal-collapsible summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 44px;
+  user-select: none;
+  border-radius: var(--radius-md);
+}
+
+details.portal-collapsible summary::-webkit-details-marker {
+  display: none;
+}
+
+details.portal-collapsible summary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+details.portal-collapsible summary .portal-section-title {
+  margin: 0;
+  flex: 1;
+}
+
+.portal-section-summary {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  margin-left: auto;
+  margin-right: var(--space-2);
+}
+
+.portal-section-chevron {
+  color: var(--color-text-tertiary);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+details.portal-collapsible[open] .portal-section-chevron {
+  transform: rotate(180deg);
+}
+
+details.portal-collapsible[open] summary {
+  margin-bottom: var(--space-4);
+}
+
+/* ===== Portal Inspection Section ===== */
+.portal-inspection-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.portal-inspection-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.portal-inspection-chip.is-urgente {
+  background: var(--color-danger-subtle, rgba(239, 68, 68, 0.15));
+  color: var(--color-danger, #ef4444);
+  border: 1px solid var(--color-danger, #ef4444);
+}
+
+.portal-inspection-chip.is-atencion {
+  background: var(--color-warning-subtle, rgba(245, 158, 11, 0.15));
+  color: var(--color-warning-text, #b45309);
+  border: 1px solid var(--color-warning, #f59e0b);
+}
+
+.portal-inspection-chip.is-bien {
+  background: var(--color-success-subtle, rgba(34, 197, 94, 0.15));
+  color: var(--color-success, #22c55e);
+  border: 1px solid var(--color-success, #22c55e);
+}
+
+.portal-inspection-points {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.portal-inspection-point-card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+}
+
+.portal-inspection-point-card.is-urgente {
+  border-left: 4px solid var(--color-danger, #ef4444);
+}
+
+.portal-inspection-point-card.is-atencion {
+  border-left: 4px solid var(--color-warning, #f59e0b);
+}
+
+.portal-inspection-point-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.portal-inspection-point-title {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.portal-inspection-point-section {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-weight: normal;
+}
+
+.portal-inspection-point-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.portal-inspection-point-badge.is-urgente {
+  background: var(--color-danger-subtle, rgba(239, 68, 68, 0.15));
+  color: var(--color-danger, #ef4444);
+}
+
+.portal-inspection-point-badge.is-atencion {
+  background: var(--color-warning-subtle, rgba(245, 158, 11, 0.15));
+  color: var(--color-warning-text, #b45309);
+}
+
+.portal-inspection-point-note {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin: var(--space-1) 0 var(--space-2);
+  white-space: pre-wrap;
+}
+
+.portal-inspection-good-details {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.portal-inspection-good-summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  min-height: 40px;
+  user-select: none;
+}
+
+.portal-inspection-good-summary::-webkit-details-marker {
+  display: none;
+}
+
+.portal-inspection-good-list {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.portal-inspection-good-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-sm);
+}
+
+.portal-inspection-good-item:nth-child(even) {
+  background: var(--color-surface);
+}
+
+.portal-inspection-good-bullet {
+  color: var(--color-success, #22c55e);
+  font-weight: 700;
+  margin-right: var(--space-1);
+}
+
 

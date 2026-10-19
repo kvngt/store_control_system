@@ -17,6 +17,7 @@ import { toCsv, downloadCsv } from '../lib/csv';
 const ImportStatementModal = lazy(() => import('./finance/ImportStatementModal'));
 import LazyModal from '../components/LazyModal';
 import OrderMarginCard from '../features/finance/OrderMarginCard';
+import WorkshopMetricsTab from '../features/finance/WorkshopMetricsTab';
 import { AlertError } from '../components/AlertError';
 import {
   DollarSign,
@@ -114,7 +115,7 @@ export default function Finance() {
   const [filterType, setFilterType] = useState<'all' | 'ingreso' | 'egreso'>('all');
   // Dos libros (decisión del taller, 05/10/2026): lo que registra la app, y los estados de
   // cuenta importados, que son para la contabilidad de meses pasados y para el contador.
-  const [view, setView] = useState<'app' | 'banco'>('app');
+  const [view, setView] = useState<'app' | 'banco' | 'indicadores'>('app');
   // 'AAAA-MM' o '' (todos): para revisar un mes y mandárselo al contador.
   const [month, setMonth] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -295,18 +296,18 @@ export default function Finance() {
                 <Plus size={18} /> {t('finance.newTransaction')}
               </button>
             </>
-          ) : (
+          ) : view === 'banco' ? (
             <button className="btn btn-primary" id="import-statement-btn" onClick={() => setShowImportModal(true)}>
               <FileUp size={18} /> {t('finance.importStatement')}
             </button>
-          )}
+          ) : null}
         </div>
       </div>
 
       {error && <div className="alert-error">{error}</div>}
 
       <div className="tabs finance-views" role="tablist" aria-label={t('finance.title')}>
-        {(['app', 'banco'] as const).map((v) => (
+        {(['app', 'banco', 'indicadores'] as const).map((v) => (
           <button
             key={v}
             type="button"
@@ -315,10 +316,14 @@ export default function Finance() {
             className={`tab ${view === v ? 'active' : ''}`}
             onClick={() => setView(v)}
           >
-            {v === 'app' ? t('finance.viewShop') : t('finance.viewStatements')}
+            {v === 'app' ? t('finance.viewShop') : v === 'banco' ? t('finance.viewStatements') : t('finance.viewMetrics')}
           </button>
         ))}
       </div>
+
+      {view === 'indicadores' && (
+        <WorkshopMetricsTab sedeId={sedeId} />
+      )}
 
       {view === 'banco' && (
         <div className="card finance-statements" style={{ marginBottom: 'var(--space-4)' }}>
@@ -547,6 +552,7 @@ export default function Finance() {
                       className="btn btn-ghost btn-sm btn-icon"
                       onClick={() => handleDeleteTransaction(txn)}
                       title={t('common.delete')}
+                      aria-label={t('common.delete')}
                     >
                       <Trash2 size={16} style={{ color: 'var(--color-danger)' }} />
                     </button>
@@ -572,9 +578,10 @@ export default function Finance() {
               <AlertError message={modalError} />
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">{t('common.type')}</label>
+                  <label className="form-label" htmlFor="txn-type">{t('common.type')}</label>
                   <select
                     className="form-input form-select"
+                    id="txn-type"
                     value={form.tipo}
                     onChange={(e) => setForm({ ...form, tipo: e.target.value as TransactionType })}
                   >
@@ -583,9 +590,10 @@ export default function Finance() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">{t('common.category')}</label>
+                  <label className="form-label" htmlFor="txn-category">{t('common.category')}</label>
                   <select
                     className="form-input form-select"
+                    id="txn-category"
                     value={form.categoria}
                     onChange={(e) => setForm({ ...form, categoria: e.target.value as TransactionCategory })}
                   >
@@ -599,20 +607,23 @@ export default function Finance() {
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">{t('common.amount')}</label>
+                  <label className="form-label" htmlFor="txn-amount">{t('common.amount')}</label>
                   <input
                     className="form-input"
+                    id="txn-amount"
                     type="number"
                     step="0.01"
+                    inputMode="decimal"
                     placeholder="0.00"
                     value={form.monto}
                     onChange={(e) => setForm({ ...form, monto: e.target.value })}
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">{t('common.date')}</label>
+                  <label className="form-label" htmlFor="txn-date">{t('common.date')}</label>
                   <input
                     className="form-input"
+                    id="txn-date"
                     type="date"
                     value={form.fecha}
                     onChange={(e) => setForm({ ...form, fecha: e.target.value })}
@@ -637,9 +648,10 @@ export default function Finance() {
                 <p className="field-hint">{t('finance.linkedOrderHint')}</p>
               </div>
               <div className="form-group">
-                <label className="form-label">{t('common.description')}</label>
+                <label className="form-label" htmlFor="txn-description">{t('common.description')}</label>
                 <textarea
                   className="form-input form-textarea"
+                  id="txn-description"
                   placeholder={t('common.description')}
                   value={form.descripcion}
                   onChange={(e) => setForm({ ...form, descripcion: e.target.value })}

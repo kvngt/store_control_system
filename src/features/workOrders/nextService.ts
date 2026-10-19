@@ -190,3 +190,21 @@ export function openStickerWindow(): Window | null {
     return null;
   }
 }
+
+/**
+ * Devuelve si un próximo servicio está programado o sugerido (pedido del 16/10/2026).
+ */
+export function hasNextService(data: {
+  token?: string | null;
+  fecha?: string | null;
+  millas?: number | null;
+  sugerido_en?: string | null;
+  sugerido_fecha?: string | null;
+  sugerido_millas?: number | null;
+} | null | undefined): boolean {
+  if (!data) return false;
+  const isProgrammed = !!data.token && (!!data.fecha || (data.millas !== null && data.millas !== undefined));
+  const hasSuggestion = !!data.sugerido_en && (!!data.sugerido_fecha || (data.sugerido_millas !== null && data.sugerido_millas !== undefined));
+  return isProgrammed || hasSuggestion;
+}
+

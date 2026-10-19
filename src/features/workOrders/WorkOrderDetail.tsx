@@ -41,10 +41,12 @@ import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import { useIsMobile } from '../../lib/useMediaQuery';
 import type { NextServiceInput, OrderStatus } from '../../types/database';
 import { nextServiceService } from '../../services/nextService.service';
-import { openStickerWindow } from './nextService';
+import { hasNextService, openStickerWindow } from './nextService';
+import { noteForSticker } from './stickerNote';
 import NextServiceCard from './NextServiceCard';
 import ServiceStickerModal from './ServiceStickerModal';
 import LaborTable from './LaborTable';
+import OrderJobsList from './OrderJobsList';
 import PartsTable from './PartsTable';
 import PartsSummaryCard from './PartsSummaryCard';
 import CommissionEstimateCard from './CommissionEstimateCard';
@@ -75,10 +77,11 @@ import CustomerLinkCard from './CustomerLinkCard';
 import QuoteCard from './QuoteCard';
 import OrderHistory from './OrderHistory';
 import ReadyNotifyModal from './ReadyNotifyModal';
-import { isUnassignedTask, suggestedTechnicianId } from './tasks';
+import { isUnassignedTask, suggestedTechnicianFor, suggestedTechnicianId } from './tasks';
 import SignatureCard from './SignatureCard';
 import MediaCaptureBar from '../media/MediaCaptureBar';
 import MediaGallery from '../media/MediaGallery';
+import PointInspection from '../inspection/PointInspection';
 import type { WorkOrderDetailApi } from './useWorkOrderDetail';
 import { money } from '../../lib/money';
 
@@ -171,6 +174,14 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     enabled: isAdmin && isParkingEnabled && !!order?.id,
   });
   const parkingAmount = parkingQuery.data?.monto ?? 0;
+
+  // La misma consulta que `NextServiceCard`: la acción rápida del sticker lleva al que ya existe.
+  const nextServiceQuery = useQuery({
+    queryKey: queryKeys.nextService(order?.id ?? ''),
+    queryFn: () => nextServiceService.getNextService(order?.id ?? ''),
+    enabled: !!order?.id,
+  });
+  const serviceExists = hasNextService(nextServiceQuery.data);
 
   useEffect(() => {
     const next = detail.requestedTab && tabIds.includes(detail.requestedTab) ? detail.requestedTab : tabIds[0];
@@ -284,6 +295,10 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
       printWindow?.close();
       return;
     }
+    const { nota: noteForPdf, fallo } = await noteForSticker(row.nota, lang);
+    if (fallo) {
+      showToast('error', t('nextService.noteNotTranslated'));
+    }
     const { printServiceSticker } = await import('../../lib/serviceStickerPdf');
     await printServiceSticker(
       {
@@ -300,7 +315,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         servicio: {
           fecha: row.fecha,
           millas: row.millas,
-          nota: row.nota,
+          nota: noteForPdf,
           token: row.token,
         },
         numero_orden: order.numero_orden,
@@ -437,6 +452,35 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
             <MediaCaptureBar onAdd={detail.addReceptionMedia} disabled={detail.busy} />
           </div>
         )}
+
+        <PointInspection
+          orderId={order.id}
+          orderSedeId={order.sede_id}
+          isAdmin={detail.isAdmin}
+          canEdit={detail.canEdit}
+          isDelivered={detail.isDelivered}
+          media={order.media || []}
+          pendingUploads={detail.pendingUploads}
+          technicians={detail.technicians}
+          assignments={assignments}
+          onQuotePoint={(point) => {
+            const text = point.nota ? `${point.nombre} — ${point.nota}` : point.nombre;
+            setPrefill({
+              text,
+              nonce: Date.now(),
+              technicianId: suggestedTechnicianId(assignments.map((a) => a.usuario_id), detail.technicians),
+            });
+            openSection('mano_obra');
+            selectTab('trabajos');
+          }}
+          onRefreshOrder={detail.refresh}
+          onAddMedia={(puntoId, items) => {
+            detail.enqueueMedia(items, {
+              origen: 'inspeccion',
+              inspeccionPuntoId: puntoId,
+            });
+          }}
+        />
       </div>
     </CollapsibleSection>
   );
@@ -463,9 +507,16 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   const laborTitle = isAdmin ? t('workOrders.laborDescription') : t('workOrders.tasks');
   const laborSection = (
     <CollapsibleSection {...sectionState('mano_obra')} title={laborTitle} icon={<Wrench size={18} />} summary={laborList.length || undefined}>
+      {isAdmin && (order.trabajos?.length ?? 0) > 0 && (
+        <OrderJobsList orderId={order.id} onRefresh={detail.refresh} />
+      )}
       <LaborTable
         title={laborTitle}
         items={laborList}
+        orderId={order.id}
+        orderSedeId={order.sede_id}
+        assignments={assignments}
+        trabajos={order.trabajos}
         workType={order.tipo_trabajo}
         canEdit={detail.canEditLines}
         busy={detail.busy}
@@ -483,6 +534,10 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         // Un trabajo que agrega administración: el único técnico de la orden, o nadie si hay
         // varios, para que se elija a quién va (06/10/2026).
         suggestedTechnicianId={suggestedTechnicianId(assignments.map((a) => a.usuario_id), detail.technicians)}
+        defaultTechnicianFor={(s) => suggestedTechnicianFor(s, assignments, detail.technicians)}
+        laborTimes={detail.laborTimes}
+        onCorrectTime={detail.correctTime}
+        onDeleteTime={detail.deleteTime}
       />
     </CollapsibleSection>
   );
@@ -504,6 +559,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
       {isAdmin ? (
         <PartsTable
           items={partsList}
+          trabajos={order.trabajos}
           canEdit={detail.canEditLines}
           busy={detail.busy}
           onAdd={detail.addPart}
@@ -880,7 +936,18 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           ? [{ key: 'sign', icon: PenLine, label: 'quickActions.sign', onClick: () => goTo('resumen', 'firma'), primary: order.estatus === 'recepcion' && hasLabor }]
           : []),
         { key: 'progress', icon: MessageSquarePlus, label: 'quickActions.progress', onClick: () => goTo('fotos', 'avances') },
-        { key: 'serviceSticker', icon: Tag, label: 'quickActions.serviceSticker', onClick: () => setStickerModal({ open: true, initialData: null }) },
+        {
+          key: 'serviceSticker',
+          icon: Tag,
+          label: 'quickActions.serviceSticker',
+          onClick: () => {
+            if (serviceExists) {
+              goTo('cobro', 'proximo_servicio');
+            } else {
+              setStickerModal({ open: true, initialData: null });
+            }
+          },
+        },
         ...(detail.canRegisterAdvance
           ? [{ key: 'advance', icon: Banknote, label: 'quickActions.advance', onClick: detail.startAdvance }]
           : []),
@@ -898,7 +965,13 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         changeStatus: detail.changeStatus,
         goTo,
         onReportFinding: () => setReportRequest((n) => n + 1),
-        onSuggestService: () => setStickerModal({ open: true, initialData: null }),
+        onSuggestService: () => {
+          if (serviceExists) {
+            goTo('orden', 'proximo_servicio');
+          } else {
+            setStickerModal({ open: true, initialData: null });
+          }
+        },
       })
     : [];
 

@@ -210,7 +210,8 @@ describe('CustomerPortal', () => {
       report({ cuenta: { ...report().cuenta, pagado: 400, saldo: 0 }, orden: { ...report().orden, estatus: 'entregado' } })
     );
     render(<CustomerPortal token={TOKEN} />);
-    expect(await screen.findByText('Pagado en su totalidad')).toBeInTheDocument();
+    // En el resumen de la tarjeta cerrada y en su última línea.
+    expect(await screen.findAllByText('Pagado en su totalidad')).toHaveLength(2);
     expect(screen.queryByText('Saldo pendiente')).not.toBeInTheDocument();
   });
 
@@ -309,7 +310,7 @@ describe('CustomerPortal', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<CustomerPortal token={TOKEN} />);
 
-    const section = (await screen.findByRole('heading', { name: /Avisos por correo/ })).closest('section')!;
+    const section = (await screen.findByRole('heading', { name: /Avisos por correo/ })).closest<HTMLElement>('details, section')!;
     // Abrir el enlace de baja no da de baja: un filtro de correo lo abre solo.
     expect(mocks.setEmailPreference).not.toHaveBeenCalled();
     await userEvent.click(within(section).getByRole('button', { name: 'Dejar de recibir correos' }));
@@ -339,7 +340,7 @@ describe('CustomerPortal', () => {
       mocks.fetchPortal.mockResolvedValue(withQuote());
       render(<CustomerPortal token={TOKEN} />);
 
-      const section = (await screen.findByRole('heading', { name: /Presupuesto por autorizar/ })).closest('section')!;
+      const section = (await screen.findByRole('heading', { name: /Presupuesto por autorizar/ })).closest<HTMLElement>('details, section')!;
       const authorize = within(section).getByRole('button', { name: /Autorizar lo marcado/ });
       expect(authorize).toBeDisabled();
 
@@ -356,7 +357,7 @@ describe('CustomerPortal', () => {
       vi.spyOn(window, 'confirm').mockReturnValue(true);
       render(<CustomerPortal token={TOKEN} />);
 
-      const section = (await screen.findByRole('heading', { name: /Presupuesto por autorizar/ })).closest('section')!;
+      const section = (await screen.findByRole('heading', { name: /Presupuesto por autorizar/ })).closest<HTMLElement>('details, section')!;
       await userEvent.click(within(section).getByLabelText(/Alineación/));
       await userEvent.type(within(section).getByLabelText('Su nombre'), 'Marta Ruiz');
       await userEvent.click(within(section).getByRole('button', { name: /Autorizar lo marcado/ }));
@@ -372,13 +373,99 @@ describe('CustomerPortal', () => {
       expect(screen.queryByRole('heading', { name: /Presupuesto por autorizar/ })).not.toBeInTheDocument();
     });
 
+    it('agrupa por trabajo y marcar un trabajo manda todos sus ids', async () => {
+      const JOB_ID = 'job-uuid-1111';
+      const LINE_1 = 'line-uuid-1111';
+      const LINE_2 = 'line-uuid-2222';
+      const LINE_LOOSE = 'line-uuid-3333';
+
+      mocks.fetchPortal
+        .mockResolvedValueOnce(
+          report({
+            presupuesto: {
+              id: '33333333-3333-4333-8333-333333333333',
+              numero: 3,
+              enviado_en: '2026-09-12T15:00:00Z',
+              total: 350,
+              trabajos: [{ id: JOB_ID, titulo: 'Frenos completos', total: 250 }],
+              lineas: [
+                {
+                  id: LINE_1,
+                  tipo: 'mano_obra',
+                  descripcion: 'Cambio de pastillas',
+                  cantidad: 1,
+                  precio_unitario: 100,
+                  monto: 100,
+                  trabajo_id: JOB_ID,
+                  trabajo: 'Frenos completos',
+                },
+                {
+                  id: LINE_2,
+                  tipo: 'repuesto',
+                  descripcion: 'Juego de pastillas',
+                  cantidad: 1,
+                  precio_unitario: 150,
+                  monto: 150,
+                  trabajo_id: JOB_ID,
+                  trabajo: 'Frenos completos',
+                },
+                {
+                  id: LINE_LOOSE,
+                  tipo: 'mano_obra',
+                  descripcion: 'Lavado de carrocería',
+                  cantidad: 1,
+                  precio_unitario: 100,
+                  monto: 100,
+                  trabajo_id: null,
+                  trabajo: null,
+                },
+              ],
+            },
+          })
+        )
+        .mockResolvedValue(report());
+
+      mocks.answerQuote.mockResolvedValue({ ok: true, autorizados: 2, rechazados: 1, total_autorizado: 250 });
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      render(<CustomerPortal token={TOKEN} />);
+
+      const section = (await screen.findByRole('heading', { name: /Presupuesto por autorizar/ })).closest<HTMLElement>('details, section')!;
+
+      // Debe mostrar el título del trabajo agrupado y su total
+      expect(within(section).getByText('Frenos completos')).toBeInTheDocument();
+      expect(within(section).getByText('$250.00')).toBeInTheDocument();
+      // Y el desglose de lo que incluye
+      expect(within(section).getByText(/Incluye/)).toBeInTheDocument();
+      expect(within(section).getByText('Cambio de pastillas')).toBeInTheDocument();
+      expect(within(section).getByText('Juego de pastillas')).toBeInTheDocument();
+
+      // Al marcar el trabajo "Frenos completos"
+      await userEvent.click(within(section).getByLabelText(/Frenos completos/));
+      expect(within(section).getByText('Total autorizado').parentElement).toHaveTextContent('$250.00');
+
+      await userEvent.type(within(section).getByLabelText('Su nombre'), 'Marta Ruiz');
+      await userEvent.click(within(section).getByRole('button', { name: /Autorizar lo marcado/ }));
+
+      // Verifica que approvedIds contiene TODOS los IDs de las líneas del trabajo, y no la línea suelta
+      expect(mocks.answerQuote).toHaveBeenCalledWith(TOKEN, {
+        quoteId: '33333333-3333-4333-8333-333333333333',
+        approvedIds: expect.arrayContaining([LINE_1, LINE_2]),
+        shownIds: [LINE_1, LINE_2, LINE_LOOSE],
+        name: 'Marta Ruiz',
+        comment: '',
+      });
+      const submittedApproved = mocks.answerQuote.mock.calls[0][1].approvedIds;
+      expect(submittedApproved).toHaveLength(2);
+      expect(submittedApproved).not.toContain(LINE_LOOSE);
+    });
+
     it('si el taller cambió el presupuesto, lo explica y lo vuelve a pedir', async () => {
       mocks.fetchPortal.mockResolvedValue(withQuote());
       mocks.answerQuote.mockResolvedValue({ ok: false, motivo: 'presupuesto_cambio' });
       vi.spyOn(window, 'confirm').mockReturnValue(true);
       render(<CustomerPortal token={TOKEN} />);
 
-      const section = (await screen.findByRole('heading', { name: /Presupuesto por autorizar/ })).closest('section')!;
+      const section = (await screen.findByRole('heading', { name: /Presupuesto por autorizar/ })).closest<HTMLElement>('details, section')!;
       await userEvent.type(within(section).getByLabelText('Su nombre'), 'Marta Ruiz');
       await userEvent.click(within(section).getByRole('button', { name: 'No autorizar nada' }));
 
@@ -415,7 +502,7 @@ describe('CustomerPortal — la cuenta', () => {
     );
     render(<CustomerPortal token={TOKEN} />);
 
-    const account = (await screen.findByRole('heading', { name: 'Su cuenta' })).closest('section') as HTMLElement;
+    const account = (await screen.findByRole('heading', { name: 'Su cuenta' })).closest('details, section') as HTMLElement;
     expect(within(account).getByText('Depósito y anticipos')).toBeInTheDocument();
     expect(within(account).getByText('Otros pagos')).toBeInTheDocument();
     expect(within(account).getByText('$150.00', { selector: '.portal-line:not(.is-balance) span' })).toBeInTheDocument();
@@ -429,7 +516,7 @@ describe('CustomerPortal — la cuenta', () => {
     );
     render(<CustomerPortal token={TOKEN} />);
 
-    const account = (await screen.findByRole('heading', { name: 'Su cuenta' })).closest('section') as HTMLElement;
+    const account = (await screen.findByRole('heading', { name: 'Su cuenta' })).closest('details, section') as HTMLElement;
     expect(within(account).getByText('Saldo a su favor')).toBeInTheDocument();
     expect(within(account).queryByText('Pagado en su totalidad')).toBeNull();
   });
@@ -440,7 +527,7 @@ describe('CustomerPortal — la cuenta', () => {
     );
     render(<CustomerPortal token={TOKEN} />);
 
-    const account = (await screen.findByRole('heading', { name: 'Su cuenta' })).closest('section') as HTMLElement;
+    const account = (await screen.findByRole('heading', { name: 'Su cuenta' })).closest('details, section') as HTMLElement;
     expect(within(account).getByText('Subtotal')).toBeInTheDocument();
     expect(within(account).getByText('Descuento')).toBeInTheDocument();
     expect(within(account).getByText('$360.00')).toBeInTheDocument();
@@ -626,5 +713,47 @@ describe('CustomerPortal — la cuenta', () => {
     expect(screen.getByText(/Frente: Golpe o abolladura/)).toBeInTheDocument();
     expect(screen.getByText(/Lado derecho: Rayón/)).toBeInTheDocument();
   });
+
+  it('la cuenta y la recepción nacen cerradas y se abren al tocar su título', async () => {
+    mocks.fetchPortal.mockResolvedValue(report());
+    const user = userEvent.setup();
+    render(<CustomerPortal token={TOKEN} />);
+
+    const receptionHeading = await screen.findByRole('heading', { name: /Recepción del vehículo/ });
+    const receptionDetails = receptionHeading.closest('details') as HTMLDetailsElement;
+    expect(receptionDetails.open).toBe(false);
+
+    const accountHeading = screen.getByRole('heading', { name: /Su cuenta/ });
+    const accountDetails = accountHeading.closest('details') as HTMLDetailsElement;
+    expect(accountDetails.open).toBe(false);
+
+    await user.click(receptionHeading);
+    expect(receptionDetails.open).toBe(true);
+
+    await user.click(accountHeading);
+    expect(accountDetails.open).toBe(true);
+  });
+
+  it('un presupuesto enviado nace abierto', async () => {
+    mocks.fetchPortal.mockResolvedValue(
+      report({
+        presupuesto: {
+          id: '33333333-3333-4333-8333-333333333333',
+          numero: 2,
+          enviado_en: '2026-09-12T15:00:00Z',
+          total: 200,
+          lineas: [
+            { id: '11111111-1111-4111-8111-111111111111', tipo: 'mano_obra', descripcion: 'Alineación', cantidad: 1, precio_unitario: 200, monto: 200 },
+          ],
+        },
+      })
+    );
+    render(<CustomerPortal token={TOKEN} />);
+
+    const quoteHeading = await screen.findByRole('heading', { name: /Presupuesto por autorizar/ });
+    const quoteDetails = quoteHeading.closest('details') as HTMLDetailsElement;
+    expect(quoteDetails.open).toBe(true);
+  });
 });
+
 

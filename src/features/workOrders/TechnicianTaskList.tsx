@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Camera, CheckCircle2, Circle, MessageSquarePlus, Clock, X, Plus, Eye, EyeOff, XCircle } from 'lucide-react';
+import { AlertTriangle, Camera, CheckCircle2, Circle, MessageSquarePlus, Clock, X, Plus, Eye, EyeOff, XCircle, Play, Pause } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
+import { formatDurationMinutes } from '../../lib/dates';
 import { isMediaError } from '../../lib/media/errors';
 import type { LaborItem, OrderProgressUpdate, PreparedMedia } from '../../types/database';
 import { isApproved } from './lineState';
@@ -28,6 +29,12 @@ export default function TechnicianTaskList({ items, currentUserId, detail, repor
   const [addingProgressTo, setAddingProgressTo] = useState<LaborItem | null>(null);
   const [initialDrafts, setInitialDrafts] = useState<PreparedMedia[]>([]);
   const [reporting, setReporting] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
   useEffect(() => {
     if (reportRequest > 0) setReporting(true);
   }, [reportRequest]);
@@ -101,8 +108,12 @@ export default function TechnicianTaskList({ items, currentUserId, detail, repor
             <div key={task.id} className={`card task-card ${completed ? 'task-done' : ''} ${rejected ? 'task-rejected' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, marginBottom: 'var(--space-1)' }}>
-                    {t('tasks.taskLabel')}: {task.descripcion}
+                  <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, marginBottom: 'var(--space-1)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                    <span>{t('tasks.taskLabel')}: {task.descripcion}</span>
+                    {(() => {
+                      const job = detail.order?.trabajos?.find((j) => j.id === task.trabajo_id);
+                      return job ? <span className="job-chip">{job.titulo}</span> : null;
+                    })()}
                   </h3>
                   {rejected ? (
                     <span className="badge line-state line-state-rechazado" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
@@ -149,6 +160,8 @@ export default function TechnicianTaskList({ items, currentUserId, detail, repor
                   task={task}
                   completed={completed}
                   detail={detail}
+                  currentUserId={currentUserId}
+                  now={now}
                   onAddProgress={handleAddProgress}
                   onQuickPhoto={handleQuickPhoto}
                 />
@@ -203,6 +216,7 @@ export default function TechnicianTaskList({ items, currentUserId, detail, repor
             onRemove={detail.removeLabor}
             canComplete={false}
             onToggleComplete={detail.toggleLaborComplete}
+            laborTimes={detail.laborTimes}
           />
         </div>
       )}
@@ -243,12 +257,16 @@ function TaskActions({
   task,
   completed,
   detail,
+  currentUserId,
+  now,
   onAddProgress,
   onQuickPhoto,
 }: {
   task: LaborItem;
   completed: boolean;
   detail: WorkOrderDetailApi;
+  currentUserId: string;
+  now: number;
   onAddProgress: (task: LaborItem) => void;
   onQuickPhoto: (task: LaborItem, file: File) => void;
 }) {
@@ -263,11 +281,41 @@ function TaskActions({
     }
   };
 
+  const runningEntry = (detail.laborTimes || []).find(
+    (e) => e.labor_id === task.id && e.usuario_id === currentUserId && !e.fin
+  );
+
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+      {!completed && (
+        runningEntry ? (
+          <button
+            type="button"
+            className="btn btn-warning"
+            style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}
+            onClick={() => detail.stopClock(task.id)}
+            disabled={detail.busy}
+          >
+            <Pause size={18} />
+            {t('tasks.pauseClock')} ({formatDurationMinutes(Math.max(0, Math.floor((now - new Date(runningEntry.inicio).getTime()) / 60000)))})
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}
+            onClick={() => detail.startClock(task.id)}
+            disabled={detail.busy}
+          >
+            <Play size={18} />
+            {t('tasks.startClock')}
+          </button>
+        )
+      )}
       <button
         type="button"
         className={`btn ${completed ? 'btn-secondary' : 'btn-success'}`}
+        style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}
         onClick={() => detail.toggleLaborComplete(task)}
         disabled={detail.busy}
       >
@@ -277,6 +325,7 @@ function TaskActions({
       <button
         type="button"
         className="btn btn-primary"
+        style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}
         onClick={() => onAddProgress(task)}
         disabled={detail.busy}
       >
@@ -285,6 +334,7 @@ function TaskActions({
       <button
         type="button"
         className="btn btn-secondary"
+        style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}
         onClick={() => fileInputRef.current?.click()}
         disabled={detail.busy}
       >

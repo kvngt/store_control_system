@@ -27,7 +27,10 @@
 | Seguro y parqueo 10/10 | Fase A: la orden dice si se trabaja con seguro. Fases B–D: módulo de cobro por parqueo configurable por sede (perfiles con y sin seguro, tramos, gracia, topes, ajustes por orden), en la cuenta del cliente, el PDF y el correo de "listo" | **Publicado** el 11/10/2026 (`3731cd8` en `main`; `db:check`: 82 migraciones aplicadas; `process-outbox` v18 desplegada el 11/10). Migraciones `20261010000027` y `20261010000028`. Gemini lo implementó y Claude Code lo auditó y corrigió el 11/10/2026 (un cobro de parqueo sobre órdenes ya entregadas, "vigente desde" hacia atrás, pruebas que llamaban a producción). `test:db` 33/811 ✓, Vitest 97/802 ✓. `qa:security` contra producción (11/10/2026, lo corrió el usuario): 126 PASS, 1 FAIL, 28 SKIP; el FAIL era la prueba SEC-160, que esperaba un rechazo donde la regla es cero filas (corregida; ver la bitácora). Detalle en la [bitácora](#11102026--claude-code-auditoría-y-arreglo-del-módulo-de-parqueo-de-gemini) |
 | Ayuda 12/10 | El manual de usuario dentro de la app (`/ayuda`), en español e inglés y por rol, con capturas | **Publicado** (`b6d8792` en `main`; sin migración ni funciones). Ver la entrada del 12/10/2026, tarde |
 | Sticker 14/10 | Sticker térmico de próximo servicio (62 × 50 mm, Brother QL-810W) con QR a una página pública propia (`/s/<código>`); el técnico sugiere y administración programa | **Publicado** el 14/10/2026 por el usuario (`3b38be0` y `3c3d53f` en `main`). Comprobado el 14/10: `db:check` con 83 migraciones aplicadas, incluida la `20261010000029`; la función `portal` de producción ya responde a `?servicio=` (`404 {"estado":"no_existe"}` con un código inexistente). Gemini lo implementó y Claude Code lo auditó y corrigió: `test:db` 34/845 ✓, Vitest 104/870 ✓. Falta: probar la impresora (§6 del plan) y correr `qa:security` (SEC-162 a SEC-171) |
-| Adopción 14–16/10 | Plan a partir del diagnóstico de Gemini, más lo que pidió la persona responsable. **A:** autorizar en el mostrador (migración `030`), VIN opcional y escáner, aviso de «listo» sin correo, mensajes en el idioma del cliente, color traducido. **B:** dibujo del vehículo con daños marcados (migración `031`). **C:** «Empezar» y «Terminé» para el técnico. **D:** ajustes visuales | **Hecho, sin publicar** (sin commit). Gemini lo programó y Claude Code lo verificó y corrigió el 16/10/2026: `test:db` 36/876 ✓, Vitest 115/936 ✓, lint, `tsc` y build ✓, más capturas reales. Falta publicar en el orden de la [bitácora](#16102026--claude-code-verificación-de-las-partes-a-a-d-de-adopción) y correr `qa:security`. [plan](plan-adopcion-2026-10.md) · [tareas](tareas-para-gemini-adopcion.md) |
+| Adopción 14–16/10 | Plan a partir del diagnóstico de Gemini, más lo que pidió la persona responsable. **A:** autorizar en el mostrador (migración `030`), VIN opcional y escáner, aviso de «listo» sin correo, mensajes en el idioma del cliente, color traducido. **B:** dibujo del vehículo con daños marcados (migración `031`). **C:** «Empezar» y «Terminé» para el técnico. **D:** ajustes visuales | **Publicado** (commit `818370d` en `main`; la `030` y la `031`, aplicadas según `db:check` del 17/10/2026). Gemini lo programó y Claude Code lo verificó y corrigió el 16/10/2026: `test:db` 36/876 ✓, Vitest 115/936 ✓, lint, `tsc` y build ✓, más capturas reales. Falta confirmar que se corrió `qa:security`. [plan](plan-adopcion-2026-10.md) · [tareas](tareas-para-gemini-adopcion.md) |
+| Adopción parte E 16/10 | **E:** Enlace desde el alta, aviso en proceso con firma, primera autorización inicia la orden, autoasignar tareas al asignar técnico, selector de país en teléfono de usuario, secciones plegables en portal, millaje faltante en sticker, acción rápida a sticker existente, traducción de nota con Gemini | **Hecho, sin publicar** (sin commit). Gemini lo programó; Claude Code lo verificó y corrigió el 16/10/2026: `test:db` 37/891 ✓, Vitest 963/963 en el repositorio, lint, `tsc` y build ✓, y capturas reales. Migración `032` y edge function `traducir-texto` sin desplegar. Orden de publicación en la [bitácora](#16102026--claude-code-parte-e-lo-que-salió-de-la-prueba-con-la-ord-2026-008). |
+| Plan SaaS 17/10 | Comparación con los programas de pago de 2026, auditoría con skills (Supabase, Vercel, Trail of Bits) y plan por fases: cimientos, mensajes SMS, cobro con enlace, trabajos agrupados, inspección por puntos, citas, indicadores y plataforma para vender | **Decidido: solo Restorify, sin SMS.** Se programó la fase 0, la 1.1, la 1.4 y la parte de la fase 3 de abajo. [plan](plan-saas-2026-10.md) |
+| Plan 17/10 (G–M) | Fase 0 (`033`), trabajos agrupados y catálogo (`034`), inspección por puntos (`035`), horas, reloj e indicadores (`036`) | **Hecho, sin publicar** (sin commit). Gemini programó y Claude verificó y corrigió: `test:db` 40/1000 ✓, Vitest, lint, `tsc` y build ✓, y capturas. Orden de publicación en la [bitácora](#17102026--claude-code-plan-del-1710-fase-0-trabajos-y-catálogo-inspección-por-puntos-horas-reloj-e-indicadores) |
 
 Nada se publica sin que la persona responsable lo pida: cada `db push`, `functions deploy`,
 push a `main` y commit se piden aparte.
@@ -45,6 +48,200 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 17/10/2026 — Claude Code (plan del 17/10: fase 0, trabajos y catálogo, inspección por puntos, horas, reloj e indicadores)
+
+- **Pedido:** «solo enfócate en las funcionalidades para Restorify, no para vender; no implementes
+  lo del SMS todavía». Plan: [plan-saas-2026-10.md](plan-saas-2026-10.md). Tareas:
+  [tareas-para-gemini-plan-2026-10.md](tareas-para-gemini-plan-2026-10.md), partes G a M.
+- **Quién hizo qué:**
+  - **Claude** diseñó cada parte, escribió la `033`, verificó y corrigió todo, y pasó todo al
+    repositorio;
+  - **Gemini** (Antigravity, sin terminal) programó G y H–M. J y L corrieron en paralelo, en una
+    segunda copia (git worktree).
+- **Qué hay nuevo (todo sin publicar):**
+  - **Fase 0:**
+    - la `033` (10 índices de claves foráneas y 7 políticas con `(SELECT is_admin())`);
+    - el detalle, el alta y el tablero se cargan diferidos;
+    - las consultas del detalle van en paralelo;
+    - el cliente se pide una vez;
+    - `aria-label`, `htmlFor`, `autoComplete` e `inputMode`.
+  - **Trabajos agrupados y catálogo** (`034`): trabajos y catálogo por sede; «Del catálogo» en la
+    orden y en el alta; el portal y administración autorizan por trabajo.
+  - **Inspección por puntos** (`035`):
+    - una plantilla multipunto de 25 puntos por sede;
+    - el técnico marca bien, atención o urgente con fotos;
+    - administración publica;
+    - el portal muestra el resumen y los puntos;
+    - lo pendiente sale en la siguiente visita.
+  - **Horas, reloj e indicadores** (`036`):
+    - horas facturadas por línea;
+    - reloj por tarea para el técnico;
+    - la pestaña «Indicadores» en Finanzas (ARO, tarifa efectiva, márgenes, eficiencia por
+      técnico).
+- **Corregido sobre lo de Gemini** (lo que más importa):
+  - **tres funciones que nadie habría podido usar:** `publicar_inspeccion`, `corregir_tiempo` y
+    `borrar_tiempo` eran `SECURITY INVOKER` y escribían en tablas de solo lectura por la API. Las
+    pruebas pasaban porque las llamaban como superusuario. Ahora son `DEFINER` con su chequeo de
+    admin, y las pruebas las llaman con la sesión del admin. Una consulta confirma que no queda
+    ninguna función así;
+  - **el reloj:** mezclaba `clock_timestamp()` y `now()`, así que el fin quedaba antes del inicio;
+  - **el portal:** no mostraba las fotos de la inspección publicada;
+  - **la traducción:** publicar no encolaba la traducción de los puntos;
+  - **la pestaña de indicadores:** pedía 16 claves de traducción que no existían. El script nuevo
+    `check-keys.mjs`, en la copia de trabajo, encontró además 2 en el catálogo;
+  - **el portal, otra vez:** se había borrado un tipo, `PortalLanguageCode`;
+  - **la orden:** el alta tomaba la sede con `useAuth`, en vez de recibirla;
+  - **las cargas:** llevaban `grupo` y `horas` en `null` aunque no hubiera. Ahora solo van si
+    existen; al editar, borrar las horas manda `null`;
+  - **las pruebas de Gemini:** casi todas buscaban textos o campos inventados, o armaban datos
+    que la base rechaza. Las lecciones quedaron en la sección 0 de las tareas.
+- **Verificación en el repositorio:**
+  - `test:db`: 40 archivos y 1000 pruebas ✓;
+  - Vitest ✓;
+  - lint, `tsc` y build ✓;
+  - todas las claves de traducción existen;
+  - capturas reales con datos locales del catálogo, el selector, la orden con su trabajo, el
+    presupuesto agrupado en el portal, la inspección en el teléfono del técnico y en el portal,
+    el reloj y los indicadores.
+- **Sin probar:** la traducción con Gemini de verdad (no hay llave en local) y la cámara en un
+  teléfono real.
+- **Publicación, cuando la persona responsable lo pida:**
+  1. `npm run test:db`;
+  2. `npx supabase db push`, que aplica `032` a `036`;
+  3. commit y push a `main` enseguida;
+  4. `npm run qa:security`. Tiene casos nuevos de la `034` a la `036`.
+- **Siguiente, según el plan:** citas y recordatorios por correo y por el enlace de WhatsApp de
+  siempre (2.1 y 2.2), y el tablero por etapas (3.4). Siguen esperando: el cobro con enlace
+  (cuenta de Stripe), el impuesto (el contador) y el SMS.
+
+### 17/10/2026 — Claude Code (plan para llegar al nivel de los programas de pago)
+
+- **Pedido:** buscar e instalar skills útiles, analizar el proyecto y proponer cómo llevarlo al nivel de los SaaS de pago para talleres, usando a Gemini.
+- **Skills instaladas a nivel de usuario** (`~/.claude/skills` y `~/.agents/skills`, no en el repositorio):
+  - `supabase`, `supabase-postgres-best-practices`;
+  - `vercel-react-best-practices`, `vercel-composition-patterns`, `web-design-guidelines`;
+  - `frontend-design`, `webapp-testing`;
+  - `differential-review`, `sharp-edges`, `supply-chain-risk-auditor`.
+- **Auditoría:**
+  - **frontend:** Gemini, con las guías de Vercel; 28 hallazgos. Claude verificó los principales y descartó dos (`confirm()` en el portal, que las reglas permiten; y el conteo de estilos en línea, que es 858 y no 320);
+  - **base:** Claude, con la guía de Supabase y consultas sobre el Supabase local. Sin hallazgos críticos: 10 claves foráneas sin índice y 7 políticas sin `(SELECT is_admin())`;
+  - **dependencias:** `npm audit` da 2 avisos, los dos dentro de `jspdf` y del plugin de Sentry.
+- **Hallazgo principal para vender:** no hay una capa de «taller» encima de `sedes`. Un admin ve todas las sedes, así que dos talleres distintos en el mismo proyecto se verían entre sí.
+- **Entregado:** [plan-saas-2026-10.md](plan-saas-2026-10.md), con fases 0 a 4, IA como diferenciador y las decisiones D1–D5. No se tocó código.
+- **Siguiente paso:** que la persona responsable decida D1 (¿para Restorify o para vender?) y D3 (abrir Twilio y Stripe). Después, las tareas de la fase 0 para Gemini.
+
+### 16/10/2026 — Claude Code (parte E: lo que salió de la prueba con la ORD-2026-008)
+
+- **Pedido.** La persona responsable probó y anotó 9 puntos. Corrigió dos de la transcripción:
+  - el enlace del cliente tiene que existir desde el alta, sin esperar la firma;
+  - asignar un técnico tiene que pasarle las tareas de su oficio que estaban sin técnico.
+
+  Pidió usar a Gemini para programar y que Claude revisara e implementara la mejor solución.
+- **Diagnóstico con datos reales.** El historial de la ORD-2026-008 se leyó en producción, solo
+  con lectura:
+  - el mecánico entró a la orden 26 s después del alta y la tarea siguió sin técnico 22 minutos;
+  - el cliente autorizó desde el portal a las 01:28 y la orden siguió en recepción hasta las
+    01:34;
+  - del 100 % a `finalizado` pasaron 5 minutos sin un botón claro. Eso lo resuelven la C1 y la D1,
+    que todavía no están publicadas;
+  - la orden se entregó como «retirada sin reparar». Hay que preguntarle a la persona
+    responsable si fue a propósito.
+- **Diseño (parte E de [tareas-para-gemini-adopcion.md](tareas-para-gemini-adopcion.md)).**
+  Migración `032`, todo con triggers que solo avisan con un WARNING si fallan:
+  - el enlace nace con la orden (las abiertas sin enlace reciben uno);
+  - el aviso «en proceso» espera la firma;
+  - la primera autorización pasa la orden de recepción a en proceso. Es un trigger en
+    `presupuestos`: no se reescribió `_resolver_presupuesto`;
+  - asignar a mano pasa las tareas no heredadas sin técnico del oficio.
+
+  En la interfaz:
+  - el país del teléfono en «Nuevo usuario»;
+  - secciones plegables en el portal;
+  - millas como «cuántas faltan»;
+  - la acción del sticker lleva al que existe;
+  - la nota del sticker se traduce con la edge function nueva `traducir-texto`.
+- **Corregido sobre lo de Gemini.** La primera corrida no arrancó (rutas relativas del script) y
+  la segunda se cortó por la red a mitad de la E5. Lo que corregí:
+  - **`PortalSection`** pintaba el ícono de lucide como objeto y tumbaba el portal (35 errores).
+    Además, el clic del título abría y cerraba dos veces. Lo reescribí con el estado como único
+    dueño;
+  - **un `useQuery` después de un `return`** en `WorkOrderDetail` (regla de hooks);
+  - **`order.mano_obra`**, que no existe: es `labor_items`;
+  - **el presupuesto del portal no tiene `estado`:** solo llega el pendiente, así que nace
+    abierto;
+  - **la cuenta plegada** dice «Saldo pendiente», «Saldo a su favor» o «Pagado», no solo el
+    monto;
+  - **las millas** se formatean con `es-US`: 108,000, no 108.000;
+  - **las pruebas:**
+    - la `37` (`millas_ingreso`, `RESET ROLE`, el rechazo con la bandera de presupuestos);
+    - la `24` (el token se lee antes de `anon`);
+    - fixtures y `jsdom` de las de Vitest.
+- **Pruebas viejas que cambian a propósito** con la `032`:
+  - **la `04`:** la orden ya nace con enlace, y al autorizar sale además el aviso «en proceso»;
+  - **la `11`:** tras autorizar, la orden queda en proceso;
+  - **la `20`:** quien entra por `p_assignments` toma la tarea de su oficio sin técnico.
+
+  La `08` comparaba con la hora de Chicago y fallaba de 12 a 1 de la mañana en Maryland: ahora
+  usa `hoy_taller`.
+- **Verificación**, en `ws-adopcion` y después en el repositorio:
+  - `test:db`: 37 archivos y 891 pruebas ✓. La función reescrita difiere de la `021` solo en las
+    3 líneas pedidas;
+  - lint y `tsc` ✓;
+  - Vitest: 963 de 963 en el repositorio. En la copia, una corrida con la máquina cargada dejó 4
+    por tiempo, de pantallas que no se tocaron, y solas pasaron;
+  - build ✓.
+- **Capturas con datos locales.** Se ven bien:
+  - el país en «Nuevo usuario»;
+  - el enlace listo en una orden recién creada;
+  - el aviso «Óscar Ruiz quedó a cargo de 1 tarea(s) de mecánica», con la de pintura sin
+    técnico;
+  - las millas «48,200 + 5,000»;
+  - la acción del sticker, que lleva al que existe;
+  - el portal plegado en el teléfono.
+
+  Por la API: una orden autorizada en el mostrador nace en proceso.
+- **Sin probar:** la traducción con Gemini de verdad (no hay llave en local). Si falla, el
+  sticker se imprime con la nota como se escribió (prueba de `stickerNote`).
+- **Publicación, cuando la persona responsable lo pida.** Las partes A a D ya están publicadas:
+  commit `818370d` en `main`, y `db:check` del 17/10 solo lista la `032` sin aplicar.
+  1. `npm run test:db`;
+  2. `npx supabase db push`: aplica solo la `032`;
+  3. `npx supabase functions deploy traducir-texto`. Usa `GEMINI_API_KEY` y `GEMINI_MODEL`, que
+     ya están para `process-outbox`;
+  4. commit y push a `main`, enseguida del `db push`;
+  5. `npm run qa:security`. SEC-17 y SEC-173 esperan `traducir-texto` desplegada.
+
+### 16/10/2026 — Antigravity / Gemini (Parte E de adopción: tareas E5 a E9 completadas)
+
+- **Pedido:** Completar la PARTE E (tareas E5 a E9) de `docs/tareas-para-gemini-adopcion.md` en la copia aislada `ws-adopcion`. E0 a E4 se mantuvieron intactas. Condiciones de la corrida: sin terminal (no ejecutar comandos npm, git, supabase ni vitest), sin subagentes, sin tocar `supabase/migrations/` ni `supabase/tests/`, sin tocar `package.json`, `package-lock.json`, `AGENTS.md` ni `docs/ai-context.md`, tipos con `import type`, tokens CSS para estilos e i18n completo en español e inglés.
+- **Pruebas:** **NO se corrió ninguna prueba porque no se contaba con terminal** (el entorno de trabajo no permite correr `npm`, `git`, `supabase` ni `vitest`). Todo el código y las pruebas se escribieron para pasar a la primera para que Claude Code los verifique.
+- **Qué se completó:**
+  - **E5 (Asignación de tareas y técnico sugerido por especialidad):**
+    - En `src/features/workOrders/useWorkOrderDetail.ts`, `addAssignment` usa `order.labor_items` para contar las tareas sin técnico (`isUnassignedTask`), no rechazadas y de la especialidad correspondiente (`mecanica` o `pintura`). Si la orden no está entregada y hay tareas pendientes, tras el guardado y refresco emite toast de éxito con `tasks.autoAssigned` reemplazando `{nombre}`, `{n}` y `{especialidad}` (traducida con `workOrders.mechanical` o `workOrders.painting`). Claves verificadas en español e inglés.
+    - `src/features/workOrders/LaborTable.tsx` recibe la prop `defaultTechnicianFor?: (s: Specialty) => string | null` y se la pasa a `TaskEditor`.
+    - `src/features/workOrders/WorkOrderDetail.tsx` le pasa a `LaborTable` `defaultTechnicianFor={(s) => suggestedTechnicianFor(s, assignments, detail.technicians)}`.
+    - En `src/features/workOrders/TaskEditor.test.tsx`, se incluyó la prueba unitaria que verifica que con `defaultTechnicianFor` al abrir sale el mecánico, al cambiar el tipo a pintura sin tocar el técnico sale la pintora, y si se eligió un técnico a mano, cambiar el tipo no lo altera.
+  - **E6 (Millas del próximo servicio como incremento):**
+    - En `src/features/workOrders/ServiceStickerModal.tsx`: si `order.millas_ingreso` es un número, el campo pasa a «En cuántas millas» (`nextService.milesExtraLabel`); cálculo en vivo «Próximo servicio a las {total} mi ({actual} + {extra})» (`nextService.milesTotal`); al guardar se suma `millas = order.millas_ingreso + extra`; los presets y la edición restan el ingreso; validación de incremento entre 1 y 100.000 (`nextService.milesExtraInvalid`); formateo de números con `numFmt = new Intl.NumberFormat(language)`.
+    - Pruebas unitarias en `src/features/workOrders/ServiceStickerModal.test.tsx` (ingreso 103.000 + 5.000 extra guarda 108.000, edición, orden sin millas de ingreso y validación).
+  - **E7 (Acción rápida de sticker muestra servicio existente):**
+    - En `src/features/workOrders/nextService.ts`, se exporta la función pura `hasNextService(data)` que evalúa si está programado o sugerido. Pruebas unitarias en `src/features/workOrders/nextService.test.ts`.
+    - En `src/features/workOrders/WorkOrderDetail.tsx`, consulta con `useQuery` y `queryKeys.nextService(order.id)`. La acción rápida `serviceSticker` para admin y `onSuggestService` para técnico navegan a la sección (`goTo('cobro', 'proximo_servicio')` o `goTo('orden', 'proximo_servicio')`) si ya existe un servicio programado o sugerido (`serviceExists`), o abren el modal si no existe.
+    - En `src/features/workOrders/WorkOrderDetail.quickActions.test.tsx`, prueba que comprueba que con un servicio programado la acción rápida no abre el modal.
+  - **E8 (Traducción de nota del sticker con Gemini):**
+    - Nueva Edge Function `supabase/functions/traducir-texto/index.ts`: autoriza con `resolveAdminCaller(req, 'traducir textos')`, valida texto (1-300 caracteres) e idioma (`es` o `en`), invoca Gemini API con `AbortController` de 8s, maneja 503 (`not_configured`) y 502, y devuelve `{ texto: resultTexto.slice(0, 300) }`.
+    - Servicio `src/services/translation.service.ts` con `translateText` llamando a `invokeAdminFunction('traducir-texto', ...)`. Pruebas en `src/services/translation.service.test.ts`.
+    - Helper `src/features/workOrders/stickerNote.ts` con `noteForSticker(nota, idioma)` con límite de 10s (`Promise.race`) devolviendo `{ nota, fallo }`. Pruebas en `src/features/workOrders/stickerNote.test.ts`.
+    - Integrado en `WorkOrderDetail.tsx` (`handleSaveAndPrintNextService`) y `NextServiceCard.tsx` (`handleDirectPrint`): abren la ventana antes de cualquier `await`, traducen la nota para el PDF e informan con toast `nextService.noteNotTranslated` si falla la traducción. En base de datos la nota se guarda intacta.
+    - En `scripts/qa/api-security.mjs`, se incluyó `'traducir-texto'` en `FUNCTIONS` de SEC-17 y se agregó el caso `SEC-173` para técnico recibiendo 403.
+  - **E9 (Manual y documentación):**
+    - `docs/manual-usuario.md` y `docs/manual-usuario.en.md`: enlace del cliente disponible desde el alta, correo de recepción al firmar y correo de en proceso esperando la firma; primera autorización avanza la orden a En proceso; asignar un técnico transfiere automáticamente tareas de su oficio sin asignar; millas del próximo servicio como «cuántas faltan»; acción rápida de sticker navega al existente si ya está programado; nota traducida al idioma del sticker; y secciones plegables en el portal del cliente.
+    - `docs/portal-y-correos.md`: enlace creado en el alta y aviso «en proceso» esperando firma.
+    - `docs/presupuestos.md`: primera autorización inicia la orden.
+    - `docs/comisiones.md`: asignación de técnico transfiere tareas sin técnico.
+    - `docs/reglas-de-negocio.md` (§1): ciclo de vida de la orden y enlace en el alta.
+- **Siguiente paso:** Claude Code ejecuta lint, `tsc`, Vitest, build, `test:db`, y `qa:security` para auditar la entrega completa.
 
 ### 16/10/2026 — Claude Code (verificación de las partes A a D de adopción)
 

@@ -61,7 +61,20 @@ export const queryKeys = {
   orderParking: (orderId: string) => ['order-parking', orderId] as const,
   /** Próximo servicio programado y sugerencias de una orden de trabajo. */
   nextService: (orderId: string) => ['next-service', orderId] as const,
-} as const;
+  /** Catálogo de trabajos frecuentes por sede. */
+  catalog: (sedeId?: string) => ['catalog', sedeId] as const,
+  /** Trabajos agrupados de una orden de trabajo. */
+  orderJobs: (orderId: string) => ['order-jobs', orderId] as const,
+  /** Inspección por puntos de una orden de trabajo. */
+  inspection: (orderId: string) => ['inspection', orderId] as const,
+  /** Plantillas de inspección por sede. */
+  inspectionTemplates: (sedeId?: string) => ['inspection-templates', sedeId] as const,
+  /** Registros de tiempo de las tareas de una orden. */
+  orderLaborTimes: (orderId: string) => ['order-labor-times', orderId] as const,
+  /** Indicadores del taller por sede y período. */
+  workshopMetrics: (sedeId?: string, desde?: string, hasta?: string) =>
+    ['workshop-metrics', sedeId, desde, hasta] as const,
+};
 
 /**
  * Builds the app's query client.

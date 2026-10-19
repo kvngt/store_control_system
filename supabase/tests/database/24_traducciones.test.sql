@@ -146,11 +146,9 @@ SELECT is((SELECT COUNT(*)::int FROM t_cola), 1, 'Un avance que nace visible enc
 INSERT INTO traducciones (sede_id, md5_hash, idioma_destino, texto_original, traduccion)
 VALUES ('10000000-0000-0000-0000-000000000001', md5('Cambio de aceite'), 'en', 'Cambio de aceite', 'Oil change');
 -- Los tokens son 64 caracteres hexadecimales (CHECK de orden_enlaces) y hay un solo enlace
--- activo por orden: el revocado entra ya revocado.
+-- activo por orden: el revocado entra ya revocado. El activo ya existe desde el alta (20261010000032).
 INSERT INTO orden_enlaces (orden_id, sede_id, token, revocado_en) VALUES
   ((SELECT id FROM t_o), '10000000-0000-0000-0000-000000000001', 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', now());
-INSERT INTO orden_enlaces (orden_id, sede_id, token) VALUES
-  ((SELECT id FROM t_o), '10000000-0000-0000-0000-000000000001', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
 
 SET LOCAL ROLE authenticated;
 SELECT is((SELECT traducciones_orden((SELECT id FROM t_o)) ->> 'Cambio de aceite'), 'Oil change',
@@ -166,8 +164,10 @@ SELECT is((SELECT traducciones_orden((SELECT id FROM t_o))), '{}'::jsonb,
   'Un técnico que no está en la orden no recibe nada (antes recibía las de cualquier orden)');
 
 RESET ROLE;
+-- El token se lee antes de ser anon: anon no ve orden_enlaces.
+SELECT set_config('test.token24', (SELECT token FROM orden_enlaces WHERE orden_id = (SELECT id FROM t_o) AND revocado_en IS NULL), true);
 SET LOCAL ROLE anon;
-SELECT is((SELECT traducciones_portal('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa') ->> 'Cambio de aceite'), 'Oil change',
+SELECT is((SELECT traducciones_portal(current_setting('test.token24')) ->> 'Cambio de aceite'), 'Oil change',
   'El portal recibe el diccionario con un enlace vigente');
 SELECT is((SELECT traducciones_portal('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb')), '{}'::jsonb,
   'Con un enlace revocado, nada');
