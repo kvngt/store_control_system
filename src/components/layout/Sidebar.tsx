@@ -77,7 +77,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
         onClick={onMobileClose}
       />
 
-      <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
+      <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`} aria-label={t('nav.mainMenu')}>
         <Link to="/" className="sidebar-logo" onClick={handleNavClick} title={t('nav.dashboard')}>
           {currentSede?.logo_url ? (
             <img

@@ -598,3 +598,23 @@ describe('workOrdersService: costo y pedido de un repuesto', () => {
     });
   });
 });
+
+// QA 18/10/2026: la lista de tiempos pedía `perfiles(nombre, …)`, una columna que no existe, y la
+// base respondía 400 en todas las pantallas de la orden. El tipo `LaborTimeEntry` dice
+// `nombre_completo`; la prueba fija que la consulta pida lo mismo.
+describe('workOrdersService: tiempos del reloj de una orden', () => {
+  beforeEach(() => {
+    mocks.filters = [];
+  });
+
+  it('pide el nombre del perfil con la columna nombre_completo y filtra por orden', async () => {
+    mocks.deleted = [] as never;
+
+    await workOrdersService.getOrderLaborTimes('o1');
+
+    const select = mocks.filters.find(([method]) => method === 'select')?.[1] as string;
+    expect(select).toContain('usuario:perfiles(id, nombre_completo, rol)');
+    expect(select).not.toMatch(/perfiles\([^)]*\bnombre\b[^_]/);
+    expect(mocks.filters).toContainEqual(['eq', 'orden_id', 'o1']);
+  });
+});

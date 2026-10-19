@@ -222,6 +222,17 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
     persona, y marcar la tarea hecha lo cierra;
   - **los indicadores salen de `indicadores_taller`.** Cuentan lo `aprobado` de las órdenes
     entregadas en el período, por la fecha del taller. Nunca los calcules en el navegador.
+- **Arreglos del QA del 18/10/2026** (`20261010000037`, [qa-2026-10-18.md](qa-2026-10-18.md)):
+  - **un reloj abierto no dura más de `_reloj_tope()`** (12 h) al cerrarse solo; administración lo
+    corrige con `corregir_tiempo`. `iniciar_reloj` toma un turno por persona y bloquea la tarea;
+  - **el número de orden no se recorta:** del 1000 en adelante se escribe completo (un `LPAD` con
+    ancho fijo corta lo que se pasa). **Cuidado con `LPAD` en cualquier consecutivo**;
+  - **lo que ya ve el cliente solo lo cambia administración** (puntos de una inspección publicada),
+    y una RPC que avisa (`completar_inspeccion`) es idempotente;
+  - **una RPC que agrega trabajo a una orden rechaza una entregada** (`agregar_trabajo_del_catalogo`);
+  - **todo texto que el cliente lee a mano entra en `_textos_cliente`** y su tabla lleva el trigger
+    de `trg_encolar_traduccion` (la nota del próximo servicio, también en `datos_servicio`);
+  - **horas facturadas:** `MAX_LABOR_HOURS` (999) y `clampLaborHours`, porque la columna es `NUMERIC(6,2)`.
 - **Índices e InitPlan** (`20261010000033`): toda clave foránea nueva lleva su índice, y toda
   llamada a un helper en una política va envuelta en `(SELECT …)`.
 - **Avisos y correos al personal.** El técnico se entera de lo no autorizado (`TechOrderStatus`)
@@ -257,7 +268,7 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
    `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca edites una migración
    ya aplicada ni cambies tablas desde el panel. **El nombre va después de la última
    migración, no de la fecha de hoy:** hay migraciones aplicadas con fecha futura (hoy la
-   última es `20261010000036`), y una con fecha anterior a la última aplicada no entra con
+   última es `20261010000037`), y una con fecha anterior a la última aplicada no entra con
    `db push` ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#4-base-de-datos), B-1).
 2. **Una función nueva en `public` es una RPC pública.** Postgres da `EXECUTE` a
    `PUBLIC` y Supabase a `anon` y `authenticated` al crearla. Revócala siempre:

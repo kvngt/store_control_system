@@ -106,7 +106,7 @@ export default function ServicePage({ token }: ServicePageProps) {
   }, []);
 
   return (
-    <div className="portal">
+    <main className="portal">
       <div className="portal-topbar">
         <button
           type="button"
@@ -156,7 +156,7 @@ export default function ServicePage({ token }: ServicePageProps) {
           formatDate={formatDate}
         />
       )}
-    </div>
+    </main>
   );
 }
 
@@ -167,9 +167,20 @@ interface ServiceContentProps {
   formatDate: (d: string | null | undefined) => string;
 }
 
+/** La nota del servicio en el idioma de la página; sin traducción guardada, como se escribió. */
+function servicioNota(data: ServicePortalData, language: PortalLanguage): string | null {
+  const nota = data.servicio.nota;
+  if (!nota || language !== 'en') return nota;
+  return data.traducciones?.[nota.trim()] ?? nota;
+}
+
 function ServiceContent({ data, todayStr, language, formatDate }: ServiceContentProps) {
   const strings = portalStrings[language];
-  const { taller, vehiculo, servicio } = data;
+  const { taller, vehiculo } = data;
+  // La nota se escribió a mano en español: en inglés sale su traducción, si ya existe.
+  const nota = servicioNota(data, language);
+  const servicio = { ...data.servicio, nota };
+  const locale = language === 'es' ? 'es-US' : 'en-US';
 
   const traffic = computeServiceStatus(servicio.fecha, todayStr);
 
@@ -180,7 +191,7 @@ function ServiceContent({ data, todayStr, language, formatDate }: ServiceContent
 
   const serviceText =
     servicio.nota ||
-    (servicio.millas ? `${servicio.millas.toLocaleString()} mi` : '') ||
+    (servicio.millas ? `${servicio.millas.toLocaleString(locale)} mi` : '') ||
     (servicio.fecha ? formatDate(servicio.fecha) : '');
 
   // Teléfono para WhatsApp (priorizar whatsapp: true, o primer teléfono)
@@ -272,7 +283,7 @@ function ServiceContent({ data, todayStr, language, formatDate }: ServiceContent
         {traffic.estado === 'solo_millas' && servicio.millas !== null && servicio.millas !== undefined && (
           <div className="portal-traffic-badge is-solo_millas" role="status">
             <Gauge size={16} />
-            <span>{strings.service.atMiles.replace('{miles}', servicio.millas.toLocaleString())}</span>
+            <span>{strings.service.atMiles.replace('{miles}', servicio.millas.toLocaleString(locale))}</span>
           </div>
         )}
 
@@ -294,7 +305,7 @@ function ServiceContent({ data, todayStr, language, formatDate }: ServiceContent
                 <Gauge size={14} />
                 <span>{strings.service.milesLabel}</span>
               </div>
-              <div className="portal-service-item-value">{servicio.millas.toLocaleString()} mi</div>
+              <div className="portal-service-item-value">{servicio.millas.toLocaleString(locale)} mi</div>
             </div>
           )}
 

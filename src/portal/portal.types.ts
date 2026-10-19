@@ -265,6 +265,8 @@ export interface ServicePortalData {
   vehiculo: ServiceVehicleInfo;
   servicio: ServiceDetail;
   idioma: string;
+  /** Texto original → inglés de la nota (20261010000037). Ausente en la base anterior. */
+  traducciones?: Record<string, string>;
 }
 
 /** Respuesta cuando el código no existe o el servicio fue quitado. */

@@ -92,7 +92,7 @@ function block(tok: Token, key: number, sectionId: string): ReactNode {
     case 'blockquote':
       return <blockquote key={key}>{(tok as Tokens.Blockquote).tokens.map((x, i) => block(x, i, sectionId))}</blockquote>;
     case 'code':
-      return <pre key={key}><code>{(tok as Tokens.Code).text}</code></pre>;
+      return <pre key={key} tabIndex={0}><code>{(tok as Tokens.Code).text}</code></pre>;
     case 'text': {
       const t = tok as Tokens.Text;
       return <p key={key}>{inline(t.tokens ?? [t])}</p>;

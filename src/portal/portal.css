@@ -24,7 +24,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 var(--space-3);
   border: 1px solid var(--color-surface-border);
   border-radius: var(--radius-full);
@@ -458,7 +458,7 @@
 .portal-footer-brand {
   font-weight: 700;
   letter-spacing: 0.08em;
-  opacity: 0.6;
+  color: var(--color-text-secondary);
 }
 
 /* Aviso del parqueo arriba de la cuenta: cuándo empieza el cobro o desde cuándo corre. */
@@ -795,7 +795,7 @@ details.portal-collapsible[open] summary {
 
 .portal-inspection-chip.is-urgente {
   background: var(--color-danger-subtle, rgba(239, 68, 68, 0.15));
-  color: var(--color-danger, #ef4444);
+  color: var(--color-danger-text, #b91c1c);
   border: 1px solid var(--color-danger, #ef4444);
 }
 
@@ -868,7 +868,7 @@ details.portal-collapsible[open] summary {
 
 .portal-inspection-point-badge.is-urgente {
   background: var(--color-danger-subtle, rgba(239, 68, 68, 0.15));
-  color: var(--color-danger, #ef4444);
+  color: var(--color-danger-text, #b91c1c);
 }
 
 .portal-inspection-point-badge.is-atencion {

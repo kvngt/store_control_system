@@ -118,7 +118,7 @@ export default function JobCatalogCard() {
             {t('catalog.empty')}
           </p>
         ) : (
-          <div className="table-container" style={{ border: 'none' }}>
+          <div className="table-container cards-on-mobile" style={{ border: 'none' }}>
             <table className="table">
               <thead>
                 <tr>
@@ -132,12 +132,12 @@ export default function JobCatalogCard() {
               <tbody>
                 {jobs.map((job) => (
                   <tr key={job.id}>
-                    <td style={{ fontWeight: 600 }}>{job.nombre}</td>
-                    <td style={{ color: 'var(--color-text-secondary)' }}>
+                    <td data-label={t('catalog.name')} style={{ fontWeight: 600 }}>{job.nombre}</td>
+                    <td data-label={t('catalog.lines')} style={{ color: 'var(--color-text-secondary)' }}>
                       {job.lineas?.length ?? 0}
                     </td>
-                    <td style={{ fontWeight: 600 }}>{money(job.total)}</td>
-                    <td>
+                    <td data-label={t('common.total')} style={{ fontWeight: 600 }}>{money(job.total)}</td>
+                    <td data-label={t('common.status')}>
                       {job.activo ? (
                         <span
                           className="job-chip"
@@ -157,7 +157,7 @@ export default function JobCatalogCard() {
                             color: 'var(--color-text-tertiary)',
                           }}
                         >
-                          <XCircle size={12} /> Inactivo
+                          <XCircle size={12} /> {t('catalog.inactive')}
                         </span>
                       )}
                     </td>

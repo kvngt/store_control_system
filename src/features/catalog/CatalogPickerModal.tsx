@@ -141,7 +141,7 @@ export default function CatalogPickerModal({
           <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
             <BookOpen size={18} /> {t('catalog.selectJob')}
           </h3>
-          <button type="button" className="modal-close" onClick={onClose} disabled={busy}>
+          <button type="button" className="modal-close" onClick={onClose} disabled={busy} aria-label={t('common.close')}>
             <X size={20} />
           </button>
         </div>

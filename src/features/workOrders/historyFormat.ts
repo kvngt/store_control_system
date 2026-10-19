@@ -20,6 +20,7 @@ interface Ctx {
 
 const MONEY_FIELDS = new Set([
   'costo', 'precio_venta_unitario', 'costo_unitario', 'deposito_inicial', 'descuento', 'total_propuesto', 'total_aprobado',
+  'tarifa_manual',
 ]);
 const SPECIALTY_KEY: Record<string, string> = {
   mecanica: 'workOrders.mechanical',
@@ -54,6 +55,10 @@ function formatValue(entry: OrderHistoryEntry, field: string, value: unknown, ct
       return entry.entidad === 'presupuesto' ? t(`history.quoteState.${value}`) : t(`quotes.lineState.${value}`);
     case 'porcentaje_avance':
       return `${value} %`;
+    case 'horas':
+      return `${value} h`;
+    case 'cobrar':
+      return value ? t('common.yes') : t('common.no');
     case 'especialidad':
     case 'tipo_tarea':
     case 'tipo_trabajo':

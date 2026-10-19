@@ -227,8 +227,7 @@ export default function InspectionTemplateModal({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                       <button
                         type="button"
-                        className="btn btn-ghost btn-sm btn-icon"
-                        style={{ padding: 2, height: 20, minHeight: 20 }}
+                        className="btn btn-ghost btn-sm btn-icon btn-reorder"
                         onClick={() => handleMoveUp(index)}
                         disabled={index === 0}
                         title={t('inspection.templates.moveUp')}
@@ -238,8 +237,7 @@ export default function InspectionTemplateModal({
                       </button>
                       <button
                         type="button"
-                        className="btn btn-ghost btn-sm btn-icon"
-                        style={{ padding: 2, height: 20, minHeight: 20 }}
+                        className="btn btn-ghost btn-sm btn-icon btn-reorder"
                         onClick={() => handleMoveDown(index)}
                         disabled={index === puntos.length - 1}
                         title={t('inspection.templates.moveDown')}

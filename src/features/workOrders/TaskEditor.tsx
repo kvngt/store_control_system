@@ -7,6 +7,7 @@ import TradeMismatchDialog from './TradeMismatchDialog';
 import AddedConfirmation from './AddedConfirmation';
 import { useAddedConfirmation } from './useAddedConfirmation';
 import { isTradeMismatch, specialtyForWorkType, type TaskDraft, type Technician } from './tasks';
+import { MAX_LABOR_HOURS, clampLaborHours } from '../../lib/laborHours';
 
 interface TaskEditorProps {
   /** El tipo de la orden: de él sale el tipo con el que nace cada tarea. */
@@ -188,7 +189,7 @@ export default function TaskEditor({
     asignado_a: draft.asignado_a || null,
     // Las horas van solo si se escribieron; al editar, borrarlas las quita (null).
     ...(draft.horas.trim() !== ''
-      ? { horas: Math.max(0, parseFloat(draft.horas) || 0) }
+      ? { horas: clampLaborHours(draft.horas) }
       : initial?.horas != null
         ? { horas: null }
         : {}),
@@ -312,6 +313,7 @@ export default function TaskEditor({
               type="number"
               inputMode="decimal"
               min={0}
+              max={MAX_LABOR_HOURS}
               step="0.01"
               placeholder="h"
               value={draft.horas}

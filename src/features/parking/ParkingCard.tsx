@@ -278,7 +278,8 @@ export default function ParkingCard({ order }: ParkingCardProps) {
                 step="0.01"
                 min="0"
                 className="form-input"
-                placeholder="Automática"
+                placeholder={t('parking.orderCard.manualRateAuto')}
+                aria-label={t('parking.orderCard.manualRate')}
                 value={tarifaManual}
                 onChange={(e) => setTarifaManual(e.target.value)}
                 disabled={saving || !cobrar}
@@ -291,6 +292,7 @@ export default function ParkingCard({ order }: ParkingCardProps) {
               </label>
               <input
                 type="date"
+                aria-label={t('parking.orderCard.manualStart')}
                 className="form-input"
                 value={inicioManual}
                 onChange={(e) => setInicioManual(e.target.value)}
@@ -305,6 +307,7 @@ export default function ParkingCard({ order }: ParkingCardProps) {
               <input
                 type="number"
                 min="0"
+                aria-label={t('parking.orderCard.waivedDays')}
                 className="form-input"
                 value={diasExonerados}
                 onChange={(e) => setDiasExonerados(e.target.value)}
@@ -320,7 +323,8 @@ export default function ParkingCard({ order }: ParkingCardProps) {
             <input
               type="text"
               className="form-input"
-              placeholder="Motivo de ajuste o exoneración..."
+              placeholder={t('parking.orderCard.notePlaceholder')}
+              aria-label={t('parking.orderCard.note')}
               value={nota}
               onChange={(e) => setNota(e.target.value)}
               disabled={saving}

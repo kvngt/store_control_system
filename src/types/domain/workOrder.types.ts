@@ -256,7 +256,7 @@ export interface OrderHistoryEntry {
   ocurrido_en: string;
   actor_nombre: string | null;
   origen: 'app' | 'portal' | 'sistema';
-  entidad: 'orden' | 'mano_obra' | 'repuesto' | 'asignacion' | 'deposito' | 'descuento' | 'presupuesto' | 'archivo' | 'avance';
+  entidad: 'orden' | 'mano_obra' | 'repuesto' | 'asignacion' | 'deposito' | 'descuento' | 'presupuesto' | 'archivo' | 'avance' | 'proximo_servicio' | 'parqueo';
   entidad_id: string | null;
   accion: 'crear' | 'cambiar' | 'borrar';
   resumen: string | null;

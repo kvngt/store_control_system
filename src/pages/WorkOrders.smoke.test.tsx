@@ -345,7 +345,8 @@ describe('WorkOrders', () => {
 
     await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
 
-    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    // El modal se carga con import() diferido: en una máquina lenta pasa del segundo que espera findBy.
+    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' }, { timeout: 10000 })).closest('.modal') as HTMLElement;
     expect(dialog).toBeTruthy();
     // The pickers come from the screen's own load, through the extracted modal: the
     // customers on step 1, the technicians in the job editor of step 4.

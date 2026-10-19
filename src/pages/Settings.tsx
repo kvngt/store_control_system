@@ -443,16 +443,18 @@ export default function Settings() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">{t('common.name')}</label>
+            <label className="form-label" htmlFor="profile-name">{t('common.name')}</label>
             <input
+              id="profile-name"
               className="form-input"
               value={profileForm.nombre_completo}
               onChange={(e) => setProfileForm({ ...profileForm, nombre_completo: e.target.value })}
             />
           </div>
           <div className="form-group">
-            <label className="form-label">{t('common.email')}</label>
+            <label className="form-label" htmlFor="profile-email">{t('common.email')}</label>
             <input
+              id="profile-email"
               className="form-input"
               type="email"
               value={profileForm.email}
@@ -663,6 +665,7 @@ export default function Settings() {
                           value={brandDrafts[sede.id]?.color_tema ?? '#EBC334'}
                           onChange={(e) => setBrandDrafts((p) => ({ ...p, [sede.id]: { ...p[sede.id], color_tema: e.target.value } }))}
                           title={t('settings.themeColor')}
+                          aria-label={t('settings.themeColor')}
                         />
                         <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
                           {brandDrafts[sede.id]?.color_tema}
@@ -681,10 +684,11 @@ export default function Settings() {
                     {user?.rol === 'admin' && (
                       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-4)', flexWrap: 'wrap' }}>
                         <div>
-                          <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
+                          <label htmlFor={`sede-capacity-${sede.id}`} style={{ display: 'block', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
                             {t('settings.capacity')}
                           </label>
                           <input
+                            id={`sede-capacity-${sede.id}`}
                             className="form-input"
                             type="number"
                             min={1}
@@ -697,10 +701,11 @@ export default function Settings() {
                             this workshop is paid, so it lives with the other
                             things only an admin can set. */}
                         <div>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
+                          <label htmlFor={`sede-rate-${sede.id}`} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
                             <Percent size={12} /> {t('payroll.commissionRate')}
                           </label>
                           <input
+                            id={`sede-rate-${sede.id}`}
                             className="form-input"
                             type="number"
                             min={0}
@@ -712,10 +717,11 @@ export default function Settings() {
                           />
                         </div>
                         <div>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
+                          <label htmlFor={`sede-hourly-${sede.id}`} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
                             {t('settings.hourlyRateReference')}
                           </label>
                           <input
+                            id={`sede-hourly-${sede.id}`}
                             className="form-input"
                             type="number"
                             min={0}
@@ -900,8 +906,9 @@ export default function Settings() {
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label className="form-label">{t('settings.newSedeName')}</label>
+                <label className="form-label" htmlFor="new-sede-name">{t('settings.newSedeName')}</label>
                 <input
+                  id="new-sede-name"
                   className="form-input"
                   value={newSedeName}
                   onChange={(e) => setNewSedeName(e.target.value)}
@@ -909,8 +916,9 @@ export default function Settings() {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">{t('common.address')}</label>
+                <label className="form-label" htmlFor="new-sede-address">{t('common.address')}</label>
                 <input
+                  id="new-sede-address"
                   className="form-input"
                   placeholder={t('common.address')}
                   value={newSedeAddress}

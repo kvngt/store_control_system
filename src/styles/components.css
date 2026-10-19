@@ -950,6 +950,27 @@ body.drawer-open {
   border-radius: var(--radius-md);
 }
 
+/* Acción que el técnico toca en el teléfono: 44 px de alto aunque el botón sea compacto. */
+.btn-touch,
+.btn-sm.btn-touch {
+  min-height: 44px;
+}
+
+/* Subir / bajar un punto: compacto en escritorio, de 44 px en una pantalla táctil (QA 18/10/2026). */
+.btn-reorder {
+  padding: 2px;
+  height: 20px;
+  min-height: 20px;
+}
+
+@media (pointer: coarse), (max-width: 768px) {
+  .btn-reorder {
+    height: 44px;
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
 /* ===== Inputs ===== */
 .form-group {
   margin-bottom: var(--space-4);
@@ -1845,6 +1866,13 @@ body.drawer-open {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-4);
+}
+
+/* Un hijo de la rejilla no se ensancha más que su columna: con el mínimo automático, una tabla ancha
+   dentro de una tarjeta estiraba toda la pantalla de Configuración a 673 px en un teléfono. */
+.responsive-grid-2 > *,
+.responsive-grid-sidebar > * {
+  min-width: 0;
 }
 
 .responsive-grid-sidebar {
@@ -3932,8 +3960,8 @@ body.drawer-open {
   height: 18px;
   padding: 0 5px;
   border-radius: var(--radius-full);
-  background: var(--color-danger);
-  color: #fff;
+  background: var(--color-danger-fill);
+  color: var(--color-on-danger);
   font-size: 10px;
   font-weight: var(--font-weight-bold);
   line-height: 18px;
@@ -5814,12 +5842,12 @@ button.intake-step-button:hover:not(:disabled) {
 
 .badge-waiting-parts {
   background: var(--color-info-bg);
-  color: var(--color-info);
+  color: var(--color-info-text);
 }
 
 .badge-retirada {
   background: var(--color-danger-bg);
-  color: var(--color-danger);
+  color: var(--color-danger-text);
 }
 
 .badge-insurance {
@@ -5869,6 +5897,11 @@ button.intake-step-button:hover:not(:disabled) {
 }
 
 /* Repuestos: costo y pedido. */
+.cell-main {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .part-order-state {
   display: block;
   margin-top: var(--space-1);
@@ -6764,9 +6797,9 @@ button.intake-step-button:hover:not(:disabled) {
 }
 
 .inspection-btn.is-active.is-bien {
-  background: var(--color-success);
-  color: #ffffff;
-  border-color: var(--color-success);
+  background: var(--color-success-fill);
+  color: var(--color-on-success);
+  border-color: var(--color-success-fill);
 }
 
 .inspection-btn.is-active.is-atencion {
@@ -6776,14 +6809,14 @@ button.intake-step-button:hover:not(:disabled) {
 }
 
 .inspection-btn.is-active.is-urgente {
-  background: var(--color-danger);
-  color: #ffffff;
-  border-color: var(--color-danger);
+  background: var(--color-danger-fill);
+  color: var(--color-on-danger);
+  border-color: var(--color-danger-fill);
 }
 
 .inspection-btn.is-na {
-  min-height: 38px;
-  min-width: 38px;
+  min-height: 44px;
+  min-width: 44px;
   padding: 0 var(--space-2);
   font-size: var(--font-size-xs);
 }
@@ -6957,3 +6990,45 @@ button.intake-step-button:hover:not(:disabled) {
 
 
 
+
+/* ===== Objetivos táctiles de 44 px en el teléfono (QA 18/10/2026) =====
+   La barra superior, las pestañas y los atajos de la orden medían 28 a 36 px: el técnico, con guantes
+   o grasa, los fallaba. Solo en pantallas angostas, para no ensanchar el escritorio. */
+.tabs {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .tab,
+  .header-lang-btn,
+  .view-switch-option,
+  .sidebar-toggle,
+  .section-tools .btn,
+  .portal-quote-select .btn,
+  .portal-language {
+    min-height: 44px;
+  }
+
+  .header-lang-btn {
+    min-width: 40px;
+  }
+
+  .header-notification {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .header-avatar {
+    width: 44px;
+    height: 44px;
+  }
+}

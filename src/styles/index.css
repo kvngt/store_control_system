@@ -62,6 +62,12 @@
   --color-warning: #F59E0B;
   --color-warning-bg: rgba(245, 158, 11, 0.1);
   --color-danger: #EF4444;
+  /* Relleno con texto blanco encima (contador de avisos, punto urgente): 6,5:1, el rojo claro daba 3,8:1. */
+  --color-danger-fill: #B91C1C;
+  --color-on-danger: #FFFFFF;
+  /* Texto rojo y azul de una insignia sobre su fondo tenue: el tono de relleno no pasaba 4,5:1. */
+  --color-danger-text: #F87171;
+  --color-info-text: #60A5FA;
   --color-danger-bg: rgba(239, 68, 68, 0.1);
   --color-info: #3B82F6;
   --color-info-bg: rgba(59, 130, 246, 0.1);
@@ -185,6 +191,8 @@
   --color-text-secondary: #525252;
   --color-text-tertiary: #6B6B6B;
   --color-text-inverse: #171717;
+  --color-danger-text: #B91C1C;
+  --color-info-text: #1D4ED8;
 
   /* Status background slightly stronger */
   --color-success-bg: rgba(16, 185, 129, 0.15);

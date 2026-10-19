@@ -216,4 +216,50 @@ describe('describeHistoryEntry', () => {
     );
     expect(item.details).toEqual(['Daños marcados: 3 marcas → 4 marcas']);
   });
+
+  // QA 18/10/2026: el historial mostraba la clave cruda («history.field.horas: 1.5»), porque la
+  // migración 036 empezó a registrar las horas sin que nadie escribiera su etiqueta. Esta lista es
+  // la de los campos que graba trg_historial (supabase/migrations): si la base suma uno, suma aquí.
+  const CAMPOS_QUE_GRABA_LA_BASE = [
+    'estatus', 'porcentaje_avance', 'tipo_trabajo', 'fecha_estimada_entrega', 'millas_ingreso', 'nivel_gasolina',
+    'inspeccion_360_notas', 'motivo_autorizacion', 'descripcion', 'costo', 'horas', 'especialidad', 'estado',
+    'cantidad', 'precio_venta_unitario', 'costo_unitario', 'estado_pedido', 'descuento', 'descuento_motivo',
+    'tipo_tarea', 'deposito_inicial', 'total_propuesto', 'total_aprobado', 'respondido_por_nombre', 'tecnico',
+    'respondido_via', 'tipo', 'origen', 'zona', 'marcas_danos', 'fecha', 'millas', 'nota', 'sugerido_fecha',
+    'sugerido_millas', 'sugerido_nota', 'cobrar', 'tarifa_manual', 'inicio_manual', 'dias_exonerados',
+  ];
+
+  const ENTIDADES_QUE_GRABA_LA_BASE = [
+    'orden', 'mano_obra', 'repuesto', 'asignacion', 'deposito', 'descuento', 'presupuesto', 'archivo', 'avance',
+    'proximo_servicio', 'parqueo',
+  ];
+
+  it.each(['es', 'en'])('toda entidad que graba la base dice qué pasó en %s', (lang) => {
+    const faltan = ENTIDADES_QUE_GRABA_LA_BASE.flatMap((entidad) =>
+      ['crear', 'cambiar', 'borrar'].map((accion) => `history.action.${entidad}.${accion}`)
+    ).filter((key) => getTranslation(lang as 'es' | 'en', key) === key);
+    expect(faltan).toEqual([]);
+  });
+
+  it.each(['es', 'en'])('todo campo que graba la base tiene su etiqueta en %s', (lang) => {
+    const faltan = CAMPOS_QUE_GRABA_LA_BASE.filter((campo) => {
+      const key = `history.field.${campo}`;
+      return getTranslation(lang as 'es' | 'en', key) === key;
+    });
+    expect(faltan).toEqual([]);
+  });
+
+  it('un cambio de horas y uno del cobro de parqueo se leen con palabras', () => {
+    const horas = describeHistoryEntry(
+      entry({ entidad: 'mano_obra', cambios: { horas: { antes: 1.5, despues: 2 } } }),
+      ctx
+    );
+    expect(horas.details).toEqual(['Horas: 1.5 h → 2 h']);
+
+    const parqueo = describeHistoryEntry(
+      entry({ entidad: 'parqueo', cambios: { cobrar: { antes: true, despues: false }, tarifa_manual: { antes: null, despues: 5 } } }),
+      ctx
+    );
+    expect(parqueo.details).toEqual(['Cobrar parqueo: Sí → No', 'Tarifa manual: — → $5.00']);
+  });
 });

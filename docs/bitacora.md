@@ -49,6 +49,26 @@ al día aparte.
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
 
+### 18/10/2026 — Claude Code (QA completo de la versión `f2e1148`)
+
+- **Qué hice:** plan y resultados en [qa-2026-10-18.md](qa-2026-10-18.md). Pruebas dinámicas contra Supabase
+  **local** (52 ataques por la API, dinero y estado, portal, bordes, concurrencia, barrido de 23 pantallas con axe a
+  390/768/1366 px en español e inglés) y tres revisiones de código de Gemini, cada sospecha reproducida antes de
+  contarla. No se tocó producción, no hay commit ni cambios de código.
+- **Lo más urgente:** `workOrders.service.ts:966` pide `perfiles(nombre, rol)` (la columna es `nombre_completo`):
+  la consulta del reloj responde 400 en las pantallas de la orden. Segundo: `LPAD(…, 3, '0')` del número de orden
+  se rompe en la orden 1000 del año. Lista completa (16 errores y la accesibilidad) en el documento.
+- **Arreglos (mismo día, sin commit ni publicar):** los 16 errores del informe, salvo el 14 (a propósito), en la
+  migración `20261010000037_arreglos_del_qa.sql` y su prueba `41_arreglos_del_qa.test.sql`, más el código y los
+  textos del §7 de [qa-2026-10-18.md](qa-2026-10-18.md). Salieron dos más al revisar: el historial mostraba
+  `history.field.horas` crudo y el parqueo no tenía etiquetas en el historial. Verificación local con números:
+  `db reset` + `test:db` 41 archivos / 1.021 pruebas, Vitest 1.028, lint, `tsc -b`, `build` y barrido de pantallas
+  sin errores de consola, sin HTTP de error y sin desbordes a 390 px.
+- **Qué falta:** rendimiento con 2.000 órdenes, XSS en PDF y correos, `traducir-texto` con técnico/anónimo; las
+  sumas de dinero en el navegador (LaborTable, QuoteCard, AuthorizationPanel) por decidir.
+- **Publicar (lo hace la persona responsable):** `test:db` → `db push` de la `037` → push a `main` enseguida (sin
+  `functions deploy`). Nada de esto está publicado.
+
 ### 17/10/2026 — Claude Code (plan del 17/10: fase 0, trabajos y catálogo, inspección por puntos, horas, reloj e indicadores)
 
 - **Pedido:** «solo enfócate en las funcionalidades para Restorify, no para vender; no implementes

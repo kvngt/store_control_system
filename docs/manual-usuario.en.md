@@ -417,7 +417,7 @@ Items quoted in this step start as **Not authorized** unless you checked the in-
 
 **Step 4 — Deposit.** The advance payment left by the customer (leave 0 if none). If the customer pays a deposit:
 - Select **How the customer paid** (Cash, Card, Zelle, Transfer, Check).
-- If paid by check, record the **Check number** or upload a **Receipt photo (optional)**.
+- If paid by check, record the **Check number** (it is required); the **Receipt photo** is optional.
 - It is automatically recorded as income in Finance under initial deposit.
 
 When you tap **Create**, the system generates the order number (for example, `ORD-2026-001`) and opens its details. Photos and multimedia files continue uploading in the background without interrupting your workflow.
@@ -671,7 +671,7 @@ When selecting the **Delivered** status or tapping **Deliver and charge** in qui
   - **To refund to the customer**: if deposit or advances exceeded the total. The button shows **Deliver and refund {monto}**.
   - **Nothing left to collect.**: button shows **Deliver**.
 - Select under **How the customer paid** or **How it is refunded**: Cash, Card, Zelle, Transfer or Check.
-- If by check, record the **Check number** or upload a **Receipt photo (optional)**.
+- If by check, record the **Check number** or upload the **Receipt photo** (either one is enough).
 - Upon confirmation:
   - The payment or refund entry is booked in Finance.
   - The expense for parts cost is booked.

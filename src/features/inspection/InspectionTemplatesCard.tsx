@@ -121,7 +121,7 @@ export default function InspectionTemplatesCard() {
             {t('inspection.templates.empty')}
           </p>
         ) : (
-          <div className="table-container" style={{ border: 'none' }}>
+          <div className="table-container cards-on-mobile" style={{ border: 'none' }}>
             <table className="table">
               <thead>
                 <tr>
@@ -134,8 +134,8 @@ export default function InspectionTemplatesCard() {
               <tbody>
                 {templates.map((tpl) => (
                   <tr key={tpl.id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                    <td data-label={t('inspection.templates.name')}>
+                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
                         <span style={{ fontWeight: 600 }}>{tpl.nombre}</span>
                         {tpl.predeterminada && (
                           <span
@@ -151,10 +151,10 @@ export default function InspectionTemplatesCard() {
                         )}
                       </div>
                     </td>
-                    <td style={{ color: 'var(--color-text-secondary)' }}>
+                    <td data-label={t('inspection.templates.sections')} style={{ color: 'var(--color-text-secondary)' }}>
                       {t('inspection.templates.pointsCount').replace('{n}', String(tpl.puntos?.length ?? 0))}
                     </td>
-                    <td>
+                    <td data-label={t('common.status')}>
                       {tpl.activo ? (
                         <span
                           className="job-chip"
@@ -174,7 +174,7 @@ export default function InspectionTemplatesCard() {
                             color: 'var(--color-text-tertiary)',
                           }}
                         >
-                          <XCircle size={12} /> Inactiva
+                          <XCircle size={12} /> {t('inspection.templates.inactive')}
                         </span>
                       )}
                     </td>

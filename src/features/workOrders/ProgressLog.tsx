@@ -124,7 +124,7 @@ export default function ProgressLog({
           )}
           <div className="progress-entry-submit">
             <p className="field-hint">{t('media.internalUntilPublished')}</p>
-            <button type="button" className="btn btn-primary btn-sm" onClick={submit} disabled={!canSubmit}>
+            <button type="button" className="btn btn-primary btn-sm btn-touch" onClick={submit} disabled={!canSubmit}>
               <Plus size={16} /> {busy ? t('common.loading') : t('workOrders.addProgress')}
             </button>
           </div>

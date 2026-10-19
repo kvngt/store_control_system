@@ -6,6 +6,7 @@ import { AlertError } from '../../components/AlertError';
 import { catalogService } from '../../services/catalog.service';
 import { getErrorMessage } from '../../lib/errors';
 import type { CatalogJob } from '../../types/database';
+import { MAX_LABOR_HOURS, clampLaborHours } from '../../lib/laborHours';
 
 interface EditableLine {
   id?: string;
@@ -193,7 +194,7 @@ export default function CatalogJobModal({
           <h3 className="modal-title">
             {job ? t('catalog.editJob') : t('catalog.newJob')}
           </h3>
-          <button type="button" className="modal-close" onClick={onClose}>
+          <button type="button" className="modal-close" onClick={onClose} aria-label={t('common.close')}>
             <X size={20} />
           </button>
         </div>
@@ -379,13 +380,14 @@ export default function CatalogJobModal({
                                 type="number"
                                 step="0.25"
                                 min="0"
+                                max={MAX_LABOR_HOURS}
                                 className="form-input"
                                 placeholder={t('tasks.hours')}
                                 title={t('tasks.hours')}
                                 value={line.horas ?? ''}
                                 onChange={(e) =>
                                   handleUpdateLine(idx, {
-                                    horas: e.target.value === '' ? '' : Math.max(0, parseFloat(e.target.value) || 0),
+                                    horas: e.target.value === '' ? '' : clampLaborHours(e.target.value),
                                   })
                                 }
                                 disabled={saving}

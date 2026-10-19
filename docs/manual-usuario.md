@@ -420,7 +420,7 @@ Lo que cotizas en este paso nace **Sin autorizar** salvo que hayas marcado la ca
 
 **Paso 4 — Depósito.** El anticipo que deja el cliente (deja 0 si no deja nada). Si el cliente paga un depósito:
 - Elige **Cómo pagó el cliente** (Efectivo, Tarjeta, Zelle, Transferencia, Cheque).
-- Si pagó con cheque, anota el **Número de cheque** o sube una **Foto del comprobante (opcional)**.
+- Si pagó con cheque, anota el **Número de cheque** (es obligatorio); la **Foto del comprobante** es opcional.
 - Queda registrado automáticamente como ingreso en Finanzas bajo el concepto «Depósito inicial».
 
 Al presionar **Crear**, el sistema genera el número de orden (por ejemplo, `ORD-2026-001`) y abre su detalle. Las fotos y archivos multimedia continúan subiendo en segundo plano sin interrumpir tu navegación.
@@ -430,7 +430,7 @@ Al presionar **Crear**, el sistema genera el número de orden (por ejemplo, `ORD
 
 Para ingresar un vehículo en menos de 60 segundos en el mostrador:
 1. **Cliente**: escribe solo el nombre y el teléfono (o selecciónalo si ya existe).
-2. **Vehículo**: escanea el VIN con el botón **Escanear**, o escribe solo la marca y el modelo (el VIN y la placa se pueden agregar después).
+2. **Vehículo**: escanea el VIN con el botón **Escanear** (o sube una foto del código de barras), o escribe solo la marca y el modelo (el VIN y la placa se pueden agregar después).
 3. **Trabajos**: agrega un trabajo con el precio acordado, y marca la casilla **El cliente aceptó estos trabajos y precios** si ya dio su visto bueno.
 4. **Depósito**: ingresa el anticipo si dejó alguno, o déjalo en 0.
 5. **Crear**: pulsa **Crear** y la orden queda abierta en el acto.
@@ -674,7 +674,7 @@ Al seleccionar el estado **Entregado** o pulsar **Entregar y cobrar** en las acc
   - **Hay que devolver al cliente**: si el depósito o anticipos superaron el total. El botón indica **Entregar y devolver (monto)**.
   - **No hay nada pendiente de cobro.**: botón **Entregar**.
 - Selecciona en **Cómo pagó el cliente** o **Cómo se le devuelve**: Efectivo, Tarjeta, Zelle, Transferencia o Cheque.
-- Si es con cheque, registra el **Número de cheque** o la **Foto del comprobante (opcional)**.
+- Si es con cheque, registra el **Número de cheque** o sube la **Foto del comprobante** (con uno de los dos basta).
 - Al confirmar:
   - Se registra el movimiento de cobro o devolución en Finanzas.
   - Se registra el egreso por el costo de los repuestos.

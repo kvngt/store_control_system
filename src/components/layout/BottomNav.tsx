@@ -36,7 +36,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <div className="bottom-nav">
+    <nav className="bottom-nav" aria-label={t('nav.quickMenu')}>
       {navItems.map((item) => (
         <NavLink
           key={item.to}
@@ -49,6 +49,6 @@ export default function BottomNav() {
           <span className="bottom-nav-label">{item.label}</span>
         </NavLink>
       ))}
-    </div>
+    </nav>
   );
 }

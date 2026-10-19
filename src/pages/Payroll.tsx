@@ -276,6 +276,7 @@ export default function Payroll() {
                   min={0}
                   max={100}
                   step="0.5"
+                  aria-label={t('payroll.commissionRate')}
                   style={{ width: 100 }}
                   value={rateValue}
                   onChange={(e) => setRateDraft(e.target.value)}

@@ -12,6 +12,7 @@ import TradeMismatchDialog from './TradeMismatchDialog';
 import { defaultTechnicianId, isTradeMismatch, isUnassignedTask, type TaskDraft, type Technician } from './tasks';
 import CatalogPickerModal from '../catalog/CatalogPickerModal';
 import LaborTimesModal from './LaborTimesModal';
+import { MAX_LABOR_HOURS, clampLaborHours } from '../../lib/laborHours';
 
 interface LaborTableProps {
   items: LaborItem[];
@@ -180,7 +181,7 @@ export default function LaborTable({
       descripcion: editDraft.descripcion,
       costo: toCost(editDraft.costo),
       ...(editDraft.horas.trim()
-        ? { horas: Math.max(0, parseFloat(editDraft.horas) || 0) }
+        ? { horas: clampLaborHours(editDraft.horas) }
         : hadHours
           ? { horas: null }
           : {}),
@@ -318,6 +319,7 @@ export default function LaborTable({
                         inputMode="decimal"
                         step="0.25"
                         min={0}
+                        max={MAX_LABOR_HOURS}
                         placeholder={t('tasks.hours')}
                         title={t('tasks.hours')}
                         style={{ width: 75, textAlign: 'right' }}

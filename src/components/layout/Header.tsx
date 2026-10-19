@@ -236,6 +236,7 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
                 cursor: 'pointer',
               }}
               id="sede-selector"
+              aria-label={t('settings.workshops')}
             >
               {allSedes.map((sede) => (
                 <option key={sede.id} value={sede.id} style={{ background: 'var(--color-bg-elevated)' }}>

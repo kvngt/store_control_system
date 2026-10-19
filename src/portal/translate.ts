@@ -38,6 +38,9 @@ export function translateReport(report: PortalReport, language: PortalLanguageCo
       repuestos: report.cuenta.repuestos.map((l) => ({ ...l, descripcion: tr(l.descripcion) })),
       no_autorizados: report.cuenta.no_autorizados?.map((l) => ({ ...l, descripcion: tr(l.descripcion) })),
     },
+    proximo_servicio: report.proximo_servicio
+      ? { ...report.proximo_servicio, nota: trMaybe(report.proximo_servicio.nota) }
+      : report.proximo_servicio,
     inspeccion: report.inspeccion
       ? {
           ...report.inspeccion,

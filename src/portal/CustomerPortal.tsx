@@ -138,7 +138,7 @@ export default function CustomerPortal({ token }: { token: string | null }) {
   };
 
   return (
-    <div className="portal">
+    <main className="portal">
       <div className="portal-topbar">
         <button type="button" className="portal-language" onClick={toggleLanguage}>
           <Globe size={14} /> {s.language}
@@ -166,7 +166,7 @@ export default function CustomerPortal({ token }: { token: string | null }) {
       )}
 
       {shown && token && <Report report={shown} token={token} s={s} language={language} onReload={() => load(undefined, true)} />}
-    </div>
+    </main>
   );
 }
 

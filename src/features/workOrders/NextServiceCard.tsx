@@ -250,7 +250,7 @@ export default function NextServiceCard({
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
               <button
                 type="button"
-                className="btn btn-secondary btn-sm"
+                className="btn btn-secondary btn-sm btn-touch"
                 onClick={() =>
                   onOpenModal({
                     fecha: serviceData.fecha,
@@ -265,7 +265,7 @@ export default function NextServiceCard({
               </button>
               <button
                 type="button"
-                className="btn btn-primary btn-sm"
+                className="btn btn-primary btn-sm btn-touch"
                 onClick={() => void handleDirectPrint()}
                 disabled={busy || printing}
                 id="btn-print-sticker"
@@ -274,7 +274,7 @@ export default function NextServiceCard({
               </button>
               <button
                 type="button"
-                className="btn btn-danger btn-sm"
+                className="btn btn-danger btn-sm btn-touch"
                 onClick={() => void handleRemove()}
                 disabled={busy}
                 id="btn-remove-service"
@@ -293,7 +293,7 @@ export default function NextServiceCard({
           {isAdmin && (
             <button
               type="button"
-              className="btn btn-primary btn-sm"
+              className="btn btn-primary btn-sm btn-touch"
               onClick={() => onOpenModal(null)}
               id="btn-program-service-empty"
             >
@@ -304,7 +304,7 @@ export default function NextServiceCard({
           {!isAdmin && canSuggest && !hasSuggestion && (
             <button
               type="button"
-              className="btn btn-primary btn-sm"
+              className="btn btn-primary btn-sm btn-touch"
               onClick={() => onOpenModal(null)}
               id="btn-suggest-service-empty"
             >
@@ -319,7 +319,7 @@ export default function NextServiceCard({
         <div style={{ marginTop: 'var(--space-2)', borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)' }}>
           <button
             type="button"
-            className="btn btn-secondary btn-sm"
+            className="btn btn-secondary btn-sm btn-touch"
             onClick={() =>
               onOpenModal({
                 fecha: serviceData?.sugerido_fecha || serviceData?.fecha,

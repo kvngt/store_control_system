@@ -201,12 +201,16 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
               ) : (
                 <tr key={part.id} className={part.estado === 'rechazado' ? 'line-rejected' : undefined}>
                   <td data-label={t('common.description')}>
-                    <span className="line-desc">{part.descripcion}</span> <LineStateBadge state={part.estado} />
-                    {(() => {
-                      const job = trabajos?.find((j) => (part.trabajo_id && j.id === part.trabajo_id) || (part.grupo && j.grupo === part.grupo));
-                      return job ? <span className="job-chip">{job.titulo}</span> : null;
-                    })()}
-                    {orderStateControl(part)}
+                    {/* Un solo hijo: en el teléfono la celda es una fila flex, y el selector del pedido
+                        suelto la ensanchaba más que la pantalla (QA 18/10/2026). */}
+                    <div className="cell-main">
+                      <span className="line-desc">{part.descripcion}</span> <LineStateBadge state={part.estado} />
+                      {(() => {
+                        const job = trabajos?.find((j) => (part.trabajo_id && j.id === part.trabajo_id) || (part.grupo && j.grupo === part.grupo));
+                        return job ? <span className="job-chip">{job.titulo}</span> : null;
+                      })()}
+                      {orderStateControl(part)}
+                    </div>
                   </td>
                   <td data-label={t('common.quantity')}>{part.cantidad}</td>
                   <td data-label={t('common.price')} style={{ textAlign: 'right' }}>{money(part.precio_venta_unitario)}</td>

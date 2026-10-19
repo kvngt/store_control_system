@@ -240,11 +240,12 @@ export default function ParkingSettingsCard() {
           </label>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
           <div className="form-group">
             <label className="form-label" style={{ fontSize: 'var(--font-size-xs)' }}>{t('parking.startEvent')}</label>
             <select
               className="form-input form-select"
+              aria-label={t('parking.startEvent')}
               value={profile.evento_inicio}
               onChange={(e) =>
                 updateProfile(type, (prev) => ({
@@ -262,6 +263,7 @@ export default function ParkingSettingsCard() {
           <div className="form-group">
             <label className="form-label" style={{ fontSize: 'var(--font-size-xs)' }}>{t('parking.graceDays')}</label>
             <input
+              aria-label={t('parking.graceDays')}
               type="number"
               min="0"
               max="365"
@@ -280,9 +282,10 @@ export default function ParkingSettingsCard() {
           <div className="form-group">
             <label className="form-label" style={{ fontSize: 'var(--font-size-xs)' }}>{t('parking.maxDays')}</label>
             <input
+              aria-label={t('parking.maxDays')}
               type="number"
               min="1"
-              placeholder="Sin tope"
+              placeholder={t('parking.orderCard.noLimit')}
               className="form-input"
               value={profile.tope_dias ?? ''}
               onChange={(e) =>
@@ -298,10 +301,11 @@ export default function ParkingSettingsCard() {
           <div className="form-group">
             <label className="form-label" style={{ fontSize: 'var(--font-size-xs)' }}>{t('parking.maxAmount')}</label>
             <input
+              aria-label={t('parking.maxAmount')}
               type="number"
               step="0.01"
               min="1"
-              placeholder="Sin tope"
+              placeholder={t('parking.orderCard.noLimit')}
               className="form-input"
               value={profile.tope_monto ?? ''}
               onChange={(e) =>
@@ -361,8 +365,9 @@ export default function ParkingSettingsCard() {
                   </span>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', width: 140 }}>
-                    <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>Día:</span>
+                    <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>{t('parking.dayLabel')}</span>
                     <input
+                      aria-label={t('parking.tierFromAria')}
                       type="number"
                       min="2"
                       className="form-input"
@@ -377,6 +382,7 @@ export default function ParkingSettingsCard() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', flex: 1 }}>
                   <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>$</span>
                   <input
+                    aria-label={t('parking.tierPriceAria')}
                     type="number"
                     step="0.01"
                     min="0"
@@ -420,6 +426,7 @@ export default function ParkingSettingsCard() {
         {sedes.length > 1 && (
           <select
             className="form-input form-select"
+            aria-label={t('settings.workshops')}
             style={{ maxWidth: 220 }}
             value={selectedSedeId}
             onChange={(e) => setSelectedSedeId(e.target.value)}
@@ -462,12 +469,13 @@ export default function ParkingSettingsCard() {
               </span>
             </label>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-3)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 'var(--space-3)' }}>
               <div className="form-group">
                 <label className="form-label" style={{ fontSize: 'var(--font-size-xs)' }}>
                   {t('parking.effectiveFrom')}
                 </label>
                 <input
+                  aria-label={t('parking.effectiveFrom')}
                   type="date"
                   className="form-input"
                   value={vigenteDesde}
@@ -503,7 +511,7 @@ export default function ParkingSettingsCard() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 'var(--space-3)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 'var(--space-3)' }}>
               <div className="form-group">
                 <label className="form-label" style={{ fontSize: 'var(--font-size-xs)' }}>
                   {t('parking.policyEs')}
@@ -534,7 +542,7 @@ export default function ParkingSettingsCard() {
           </div>
 
           {/* Dos paneles de perfiles */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 'var(--space-4)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: 'var(--space-4)' }}>
             {renderProfileEditor('seguro', perfilSeguro)}
             {renderProfileEditor('particular', perfilParticular)}
           </div>
@@ -550,7 +558,7 @@ export default function ParkingSettingsCard() {
               borderRadius: 'var(--radius-lg)',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
               <h4 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>
                 <Calculator size={16} />
                 {t('parking.livePreview')}
@@ -573,10 +581,11 @@ export default function ParkingSettingsCard() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
               <div className="form-group">
                 <label className="form-label" style={{ fontSize: 'var(--font-size-xs)' }}>{t('parking.previewEventDate')}</label>
                 <input
+                  aria-label={t('parking.previewEventDate')}
                   type="date"
                   className="form-input"
                   value={previewEventDate}
@@ -586,6 +595,7 @@ export default function ParkingSettingsCard() {
               <div className="form-group">
                 <label className="form-label" style={{ fontSize: 'var(--font-size-xs)' }}>{t('parking.previewUntil')}</label>
                 <input
+                  aria-label={t('parking.previewUntil')}
                   type="date"
                   className="form-input"
                   value={previewEndDate}

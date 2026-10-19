@@ -186,4 +186,29 @@ describe('ServicePage', () => {
     render(<ServicePage token={TOKEN} />);
     expect(await screen.findByText(/Gray/)).toBeInTheDocument();
   });
+
+  it('en inglés muestra la traducción de la nota y las millas con formato de inglés (QA 18/10/2026)', async () => {
+    localStorage.setItem('restorify_portal_lang', 'en');
+    mocks.fetchService.mockResolvedValue({
+      ...sampleService({ idioma: 'en' }),
+      traducciones: { 'Cambio de aceite 5W-30 y filtro de aire': 'Oil change 5W-30 and air filter' },
+    });
+
+    render(<ServicePage token={TOKEN} />);
+
+    expect(await screen.findByText('Oil change 5W-30 and air filter')).toBeInTheDocument();
+    expect(screen.queryByText('Cambio de aceite 5W-30 y filtro de aire')).not.toBeInTheDocument();
+    expect(screen.getByText('45,000 mi')).toBeInTheDocument();
+  });
+
+  it('en español, la nota se queda como se escribió aunque haya traducción', async () => {
+    mocks.fetchService.mockResolvedValue({
+      ...sampleService(),
+      traducciones: { 'Cambio de aceite 5W-30 y filtro de aire': 'Oil change 5W-30 and air filter' },
+    });
+
+    render(<ServicePage token={TOKEN} />);
+
+    expect(await screen.findByText('Cambio de aceite 5W-30 y filtro de aire')).toBeInTheDocument();
+  });
 });

@@ -740,6 +740,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
             <select
               className="form-input form-select"
               style={{ maxWidth: 280 }}
+              aria-label={t('workOrders.assignedTechnician')}
               value={addingOperatorId}
               onChange={(e) => setAddingOperatorId(e.target.value)}
             >
@@ -1177,6 +1178,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           <select
             key={detail.statusEpoch}
             className="form-input form-select"
+            aria-label={t('common.status')}
             value={order.estatus}
             onChange={(e) => detail.changeStatus(e.target.value as OrderStatus)}
             // F6: la pausa la quita administración (al cotizar, descartar o con la respuesta del
@@ -1224,6 +1226,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
               min={0}
               max={100}
               step={5}
+              aria-label={t('workOrders.progress')}
               value={sliderProgress}
               onChange={(e) => detail.setProgressDraft(e.target.value)}
               onPointerUp={detail.commitProgress}
@@ -1239,6 +1242,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
                 inputMode="numeric"
                 min={0}
                 max={100}
+                aria-label={t('workOrders.progress')}
                 value={detail.progressDraft}
                 disabled={!detail.canEditProgress}
                 style={{ width: 70, textAlign: 'right', padding: 'var(--space-1) var(--space-2)', color: detail.isComplete ? 'var(--color-success)' : undefined, fontWeight: detail.isComplete ? 700 : undefined }}

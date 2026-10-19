@@ -463,6 +463,7 @@ const CASES = [
   anon({ id: 'SEC-203', desc: 'Sin sesión no se corrigen tiempos de labor', method: 'POST', path: () => rpc('corregir_tiempo'), body: { p_tiempo_id: ZERO_UUID, p_inicio: '2026-10-01T10:00:00Z', p_fin: '2026-10-01T12:00:00Z' }, expect: 'denied' }),
   anon({ id: 'SEC-204', desc: 'Sin sesión no se borran tiempos de labor', method: 'POST', path: () => rpc('borrar_tiempo'), body: { p_tiempo_id: ZERO_UUID }, expect: 'denied' }),
   anon({ id: 'SEC-205', desc: 'Sin sesión no se consultan los indicadores del taller', method: 'POST', path: () => rpc('indicadores_taller'), body: { p_sede_id: ZERO_UUID, p_desde: '2026-10-01', p_hasta: '2026-10-31' }, expect: 'denied' }),
+  admin({ id: 'SEC-206', desc: 'Ni un admin llama el tope interno del reloj como RPC', method: 'POST', path: () => rpc('_reloj_tope'), body: {}, expect: 'denied' }),
 ];
 
 function evaluate(expect, r) {

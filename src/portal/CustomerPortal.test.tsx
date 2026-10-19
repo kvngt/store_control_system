@@ -683,6 +683,21 @@ describe('CustomerPortal — la cuenta', () => {
     expect(screen.getByText('Cambio de aceite y filtro sintético')).toBeInTheDocument();
   });
 
+  it('en inglés traduce la nota del próximo servicio (QA 18/10/2026)', async () => {
+    mocks.fetchPortal.mockResolvedValue(
+      report({
+        proximo_servicio: { fecha: '2026-11-15', millas: 50000, nota: 'Cambio de aceite y filtro sintético' },
+        traducciones: { 'Cambio de aceite y filtro sintético': 'Synthetic oil and filter change' },
+      })
+    );
+    const user = userEvent.setup();
+    render(<CustomerPortal token={TOKEN} />);
+
+    expect(await screen.findByText('Cambio de aceite y filtro sintético')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /English/ }));
+    expect(await screen.findByText('Synthetic oil and filter change')).toBeInTheDocument();
+  });
+
   it('no muestra la tarjeta de próximo servicio cuando no hay o viene null', async () => {
     mocks.fetchPortal.mockResolvedValue(
       report({
