@@ -8,7 +8,7 @@ import { queryKeys } from '../../lib/queryClient';
 import { relativeTime } from '../notifications/renderNotification';
 import { quotesService } from '../../services/quotes.service';
 import type { AdminAuthorizationVia, LineState, Quote, WorkOrder } from '../../types/database';
-import { money } from '../../lib/money';
+import { money, sumMoney } from '../../lib/money';
 
 interface QuoteLine {
   id: string;
@@ -62,7 +62,7 @@ export default function QuoteCard({ order }: { order: WorkOrder }) {
   const quotes = quotesQuery.data ?? [];
   const open = quotes.find((q) => q.estado === 'enviado') ?? null;
   const history = quotes.filter((q) => q.estado !== 'enviado');
-  const sum = (list: QuoteLine[]) => list.reduce((acc, l) => acc + l.monto, 0);
+  const sum = (list: QuoteLine[]) => sumMoney(list.map((l) => l.monto));
 
   const refreshAll = async () => {
     await Promise.all([
@@ -265,7 +265,7 @@ function AuthorizationModal({
           seenJobs.add(line.trabajoId);
           const job = jobsMap.get(line.trabajoId)!;
           const jobLines = lines.filter((l) => l.trabajoId === line.trabajoId);
-          const jobTotal = jobLines.reduce((acc, l) => acc + l.monto, 0);
+          const jobTotal = sumMoney(jobLines.map((l) => l.monto));
           list.push({ kind: 'job', job, lines: jobLines, total: jobTotal });
         }
       } else {
@@ -295,7 +295,7 @@ function AuthorizationModal({
       return next;
     });
 
-  const total = lines.filter((l) => approved.has(l.id)).reduce((acc, l) => acc + l.monto, 0);
+  const total = sumMoney(lines.filter((l) => approved.has(l.id)).map((l) => l.monto));
 
   return (
     <div className="modal-overlay" onClick={onClose}>

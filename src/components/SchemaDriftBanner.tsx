@@ -50,7 +50,7 @@ export default function SchemaDriftBanner() {
         )}
       </div>
       {!databaseBehind && (
-        <button type="button" className="btn btn-secondary btn-sm" onClick={() => window.location.reload()}>
+        <button type="button" className="btn btn-secondary btn-sm btn-touch" onClick={() => window.location.reload()}>
           {t('schema.reload')}
         </button>
       )}

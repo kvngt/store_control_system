@@ -21,7 +21,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(25);
+SELECT plan(27);
 
 -- ------------------------------------------------------------------------------------
 -- Datos base
@@ -163,7 +163,7 @@ SELECT is(
   'a las primeras les toca el sobrante: 116,67 + 116,67 + 116,66'
 );
 
--- Una sola tarea con porcentaje a mano sigue siendo la cuenta de siempre.
+-- Las tres partes quedaron aceptadas.
 SELECT is(
   (SELECT sum(monto) FROM comisiones WHERE orden_id = '42e00000-0000-0000-0000-000000000001' AND estado = 'aceptada'),
   350.00::numeric,
@@ -173,6 +173,20 @@ SELECT is(
 -- ------------------------------------------------------------------------------------
 -- 3. Fecha del taller por omisión
 -- ------------------------------------------------------------------------------------
+-- Pagar sin mandar la fecha asienta la del taller, no la de UTC.
+SELECT lives_ok(
+  $$ SELECT public.pay_commissions(
+       '42b00000-0000-0000-0000-000000000001'::uuid,
+       ARRAY(SELECT id FROM comisiones WHERE usuario_id = '42b00000-0000-0000-0000-000000000001'),
+       p_metodo => 'cheque', p_numero_cheque => '4201') $$,
+  'pay_commissions se llama sin fecha de pago'
+);
+SELECT is(
+  (SELECT fecha_pago FROM comision_pagos WHERE usuario_id = '42b00000-0000-0000-0000-000000000001'),
+  (now() AT TIME ZONE 'America/New_York')::date,
+  'y la fecha asentada es la del taller'
+);
+
 SELECT ok(
   (SELECT pg_get_function_arguments(p.oid) ILIKE '%p_fecha_pago date DEFAULT NULL%'
    FROM pg_proc p WHERE p.proname = 'pay_commissions' AND p.pronamespace = 'public'::regnamespace),

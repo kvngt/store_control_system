@@ -27,6 +27,23 @@ export function money(value: number | string | null | undefined): string {
 }
 
 /**
+ * La suma de unos montos YA cargados en pantalla, sin la deriva de la coma flotante
+ * (`0.1 + 0.2 = 0.30000000000000004`): se suma en centavos enteros.
+ *
+ * Es solo para **vistas previas** de lo que se ve (cuánto falta que autorice el cliente, lo que
+ * lleva marcado); el total de una orden, de un pago o de un período lo calcula la base y nunca se
+ * escribe desde aquí (docs/ai-context.md).
+ */
+export function sumMoney(values: Iterable<number | string | null | undefined>): number {
+  let cents = 0;
+  for (const v of values) {
+    const n = Number(v ?? 0);
+    if (Number.isFinite(n)) cents += Math.round(n * 100);
+  }
+  return cents / 100;
+}
+
+/**
  * El monto con su signo delante, para las filas de finanzas: `+$200.00` / `-$200.00`.
  *
  * Los movimientos se guardan siempre positivos y el signo lo da el tipo, así que se pasa

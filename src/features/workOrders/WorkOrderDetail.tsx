@@ -292,7 +292,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     await queryClient.invalidateQueries({ queryKey: queryKeys.nextService(order.id) });
     await queryClient.invalidateQueries({ queryKey: queryKeys.workOrderDetail(order.id) });
     showToast('success', t('nextService.programmedSuccess'));
-    if (!row.token) {
+    if (!row?.token) {
       printWindow?.close();
       return;
     }

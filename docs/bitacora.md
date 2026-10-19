@@ -61,7 +61,7 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
   si lo que falló fue el PDF; panel, vehículos, meses por idioma, `fetchAll` en duplicados, `openInNewTab`, funciones de empleados
   y `process-outbox` (tope de tiempo y reintento de Gemini).
 - **Retirado:** el hallazgo 3 de la segunda ronda era un falso positivo (la RPC ya filtraba por asignación).
-- **Verificación local con números:** `db reset` con 38 migraciones y `test:db` 42 archivos / 1.046 pruebas; Vitest 137 archivos / 1.052 pruebas, `oxlint`, `tsc -b` y
+- **Verificación local con números:** `db reset` con 38 migraciones y `test:db` 42 archivos / 1.048 pruebas; Vitest 137 archivos / 1.055 pruebas, `oxlint`, `tsc -b` y
   `build` limpios, `npm audit` en 0.
 - **Publicar (lo hace la persona responsable):** `test:db` → `db push` de la `038` → `functions deploy` de `process-outbox`, `create-employee`,
   `update-employee` y `delete-employee` → push a `main` enseguida. Nada de esto está publicado.

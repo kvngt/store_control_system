@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { money, moneySigned } from './money';
+import { sumMoney, money, moneySigned } from './money';
 
 describe('money', () => {
   // El fallo que lo motivó: `toLocaleString()` escribía "1,650.5" por 1650.50.
@@ -38,5 +38,20 @@ describe('money', () => {
     expect(moneySigned(200, false)).toBe('-$200.00');
     // Un monto negativo por error no produce "+-$200.00".
     expect(moneySigned(-200, true)).toBe('+$200.00');
+  });
+});
+
+describe('sumMoney', () => {
+  it('suma en centavos: 0,1 + 0,2 es 0,30 y no 0,30000000000000004', () => {
+    expect(sumMoney([0.1, 0.2])).toBe(0.3);
+    expect(sumMoney(Array.from({ length: 10 }, () => 0.1))).toBe(1);
+  });
+
+  it('acepta cadenas de la API, null y lo que no es número', () => {
+    expect(sumMoney(['10.50', null, undefined, '4.25', 'abc'])).toBe(14.75);
+  });
+
+  it('una lista vacía es cero', () => {
+    expect(sumMoney([])).toBe(0);
   });
 });

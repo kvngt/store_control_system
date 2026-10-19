@@ -5,7 +5,7 @@ import { SPECIALTIES, type LaborItem, type Specialty, type WorkType, type OrderA
 import { formatDurationMinutes } from '../../lib/dates';
 import LineStateBadge from './LineStateBadge';
 import { isApproved } from './lineState';
-import { money } from '../../lib/money';
+import { money, sumMoney } from '../../lib/money';
 import TaskEditor from './TaskEditor';
 import TechnicianSelect from './TechnicianSelect';
 import TradeMismatchDialog from './TradeMismatchDialog';
@@ -148,10 +148,10 @@ export default function LaborTable({
 
   // Solo lo autorizado se cobra; lo demás se muestra aparte para que se vea cuánto
   // falta que el cliente autorice.
-  const total = items.filter(isApproved).reduce((sum, l) => sum + l.costo, 0);
-  const unauthorized = items
-    .filter((l) => l.estado === 'borrador' || l.estado === 'pendiente')
-    .reduce((sum, l) => sum + l.costo, 0);
+  const total = sumMoney(items.filter(isApproved).map((l) => l.costo));
+  const unauthorized = sumMoney(
+    items.filter((l) => l.estado === 'borrador' || l.estado === 'pendiente').map((l) => l.costo)
+  );
 
   // Solo se tacha lo autorizado, así que el conteo se mide contra eso y no contra todas
   // las líneas: si no, el taller vería "2 de 5" con tres cosas que nadie aprobó.

@@ -22,7 +22,7 @@ import { todayLocal } from '../lib/dates';
 import { getErrorMessage } from '../lib/errors';
 import type { Commission, CommissionBalance, CommissionPayment } from '../types/database';
 import { AlertError } from '../components/AlertError';
-import { money } from '../lib/money';
+import { money, sumMoney } from '../lib/money';
 import { openInNewTab } from '../lib/openInNewTab';
 import CommissionApproval from '../features/workOrders/CommissionApproval';
 
@@ -82,8 +82,9 @@ export default function Payroll() {
 
   const pending = useMemo(() => commissions.filter((c) => !c.pago_id), [commissions]);
   const balances = useMemo(() => commissionsService.buildBalances(pending), [pending]);
-  const totalPending = useMemo(() => balances.reduce((sum, b) => sum + b.total, 0), [balances]);
-  const totalPaid = useMemo(() => payments.reduce((sum, p) => sum + Number(p.monto), 0), [payments]);
+  // Vista previa de lo cargado (los pagos vienen completos con fetchAll); el pago mismo lo suma la base.
+  const totalPending = useMemo(() => sumMoney(balances.map((b) => b.total)), [balances]);
+  const totalPaid = useMemo(() => sumMoney(payments.map((p) => p.monto)), [payments]);
 
   const [tab, setTab] = useState<Tab>('pending');
   const [expanded, setExpanded] = useState<string | null>(null);

@@ -247,6 +247,9 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
     se miden y se recortan con «…» antes de pisar el teléfono o la placa; la nota achica su letra (6, 5,5, 5 pt) y
     termina en «…» si no cabe. Lo que falle después de guardar no es un error de guardar;
   - **las alertas del panel salen de todas las órdenes visibles**, no de las cinco recientes;
+  - **los subtotales que se ven en pantalla** (lo que falta que autorice el cliente, lo marcado en un
+    presupuesto, lo pagado en Nómina) se suman con `sumMoney` (`lib/money.ts`, en centavos enteros) y son solo
+    vista previa de lo ya cargado; **el total de una orden, un pago o un período sigue siendo de la base**;
   - **`update-employee` y `create-employee` validan todo antes de tocar Auth** (sede, correo, largos), el
     correo va en minúsculas y, si el perfil no se guarda, el correo del acceso vuelve al de antes;
     `delete-employee` no borra a quien reportó o resolvió un hallazgo ni a quien tiene comisiones;

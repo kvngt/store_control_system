@@ -4,7 +4,7 @@ import { useLanguage } from '../../context/language.context';
 import type { PartOrderState, WorkOrderPart } from '../../types/database';
 import LineStateBadge from './LineStateBadge';
 import { isApproved } from './lineState';
-import { money } from '../../lib/money';
+import { money, sumMoney } from '../../lib/money';
 import AddedConfirmation from './AddedConfirmation';
 import { useAddedConfirmation } from './useAddedConfirmation';
 
@@ -49,10 +49,10 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState(EMPTY_DRAFT);
 
-  const totalSale = items.filter(isApproved).reduce((sum, p) => sum + p.subtotal, 0);
-  const unauthorized = items
-    .filter((p) => p.estado === 'borrador' || p.estado === 'pendiente')
-    .reduce((sum, p) => sum + p.subtotal, 0);
+  const totalSale = sumMoney(items.filter(isApproved).map((p) => p.subtotal));
+  const unauthorized = sumMoney(
+    items.filter((p) => p.estado === 'borrador' || p.estado === 'pendiente').map((p) => p.subtotal)
+  );
 
   const toInput = (draft: typeof EMPTY_DRAFT): PartInput => {
     const cost = parseFloat(draft.costo_unitario);

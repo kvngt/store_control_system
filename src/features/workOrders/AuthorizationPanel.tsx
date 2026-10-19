@@ -4,7 +4,7 @@ import { CheckCircle2, Clock, FileWarning, Send, XCircle } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { getErrorMessage } from '../../lib/errors';
-import { money } from '../../lib/money';
+import { money, sumMoney } from '../../lib/money';
 import { queryKeys } from '../../lib/queryClient';
 import { quotesService } from '../../services/quotes.service';
 import { relativeTime } from '../notifications/renderNotification';
@@ -58,7 +58,7 @@ export default function AuthorizationPanel({ order, onOpenQuote }: { order: Work
   const answeredLines = lastAnswered ? lines.filter((l) => l.presupuestoId === lastAnswered.id) : [];
   const approved = answeredLines.filter((l) => l.estado === 'aprobado');
   const rejected = answeredLines.filter((l) => l.estado === 'rechazado');
-  const sum = (list: Line[]) => list.reduce((acc, l) => acc + l.monto, 0);
+  const sum = (list: Line[]) => sumMoney(list.map((l) => l.monto));
 
   if (order.estatus === 'entregado' || (drafts.length === 0 && !open && !lastAnswered)) return null;
 
