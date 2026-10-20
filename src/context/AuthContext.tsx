@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import type { UserProfile, Sede } from '../types/database';
 import { AuthContext, type LoginResult } from './auth.context';
 import { identifyUser } from '../lib/monitoring';
+import { clearAllIntakeDrafts } from '../features/workOrders/intakeDraft';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -24,6 +25,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const forgetCachedData = useCallback(() => {
     queryClient.clear();
+    // El borrador de una orden a medias es de esta sesión: no se queda en el aparato (regla 8c).
+    clearAllIntakeDrafts();
     cacheOwner.current = null;
   }, [queryClient]);
 

@@ -7,7 +7,7 @@
 // loaded, and a field typed in the dialog reaches the form state.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useNavigate } from 'react-router-dom';
 import { setViewportMatches } from '../test/viewport';
@@ -220,6 +220,8 @@ const TECH_DETAIL: WorkOrder = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // El alta se guarda sola como borrador (intakeDraft.ts): que uno no pase al siguiente caso.
+  localStorage.clear();
   mocks.auth.current = authValue(ADMIN_USER);
   mocks.getWorkOrders.mockResolvedValue([ORDER]);
   mocks.getCustomers.mockResolvedValue([CUSTOMER]);
@@ -358,9 +360,8 @@ describe('WorkOrders', () => {
 
   // The seam between the screen's close handler and the hook's `isDirty`:
   // a half-filled intake must not vanish on a stray click.
-  it('asks before discarding a half-filled intake, and stays open on cancel', async () => {
+  it('asks before discarding a half-filled intake, and stays open on «Seguir editando»', async () => {
     const user = userEvent.setup();
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
 
     renderWithProviders(<WorkOrders />);
     await screen.findAllByText('OT-2026-0042');
@@ -371,10 +372,114 @@ describe('WorkOrders', () => {
     await user.type(document.getElementById('order-miles-in') as HTMLInputElement, '45000');
     await user.click(within(dialog).getByRole('button', { name: /Cancelar/i }));
 
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/sin guardar/i));
+    const pregunta = await screen.findByRole('alertdialog');
+    expect(within(pregunta).getByText('¿Salir de la orden?')).toBeInTheDocument();
+    await user.click(within(pregunta).getByRole('button', { name: 'Seguir editando' }));
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.getByText(/^Nueva Orden/i, { selector: '.modal-title' })).toBeInTheDocument();
+    expect((document.getElementById('order-miles-in') as HTMLInputElement).value).toBe('45000');
+  });
+
+  // Reportado en el taller: en Android, «atrás» sacaba de la pantalla y la orden se perdía.
+  it('el botón «atrás» no pierde la orden: pregunta, y «Seguir editando» la deja como estaba', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await screen.findAllByText('OT-2026-0042');
+    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
+    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    await pickCustomer(user, dialog);
+    await user.type(document.getElementById('order-miles-in') as HTMLInputElement, '45000');
+
+    act(() => { window.history.back(); });
+
+    const pregunta = await screen.findByRole('alertdialog');
+    expect(within(pregunta).getByRole('button', { name: 'Guardar borrador y salir' })).toBeInTheDocument();
     expect(screen.getByText(/^Nueva Orden/i, { selector: '.modal-title' })).toBeInTheDocument();
 
-    confirmSpy.mockRestore();
+    await user.click(within(pregunta).getByRole('button', { name: 'Seguir editando' }));
+    // Otro «atrás» vuelve a preguntar.
+    act(() => { window.history.back(); });
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+  });
+
+  it('«atrás» con el formulario vacío cierra sin preguntar', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await screen.findAllByText('OT-2026-0042');
+    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
+    await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' });
+
+    act(() => { window.history.back(); });
+
+    await waitFor(() =>
+      expect(screen.queryByText(/^Nueva Orden/i, { selector: '.modal-title' })).not.toBeInTheDocument()
+    );
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('«Guardar borrador y salir» lo guarda, y al abrir «Nueva orden» se ofrece retomarlo', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await screen.findAllByText('OT-2026-0042');
+    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
+    let dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    await pickCustomer(user, dialog);
+    await user.type(document.getElementById('order-miles-in') as HTMLInputElement, '45000');
+
+    await user.click(within(dialog).getByRole('button', { name: /Cancelar/i }));
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Guardar borrador y salir' }));
+    await waitFor(() =>
+      expect(screen.queryByText(/^Nueva Orden/i, { selector: '.modal-title' })).not.toBeInTheDocument()
+    );
+
+    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
+    const oferta = await screen.findByRole('alertdialog');
+    expect(within(oferta).getByText('Tienes una orden sin terminar')).toBeInTheDocument();
+    await user.click(within(oferta).getByRole('button', { name: 'Continuar el borrador' }));
+
+    dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    await waitFor(() => expect((document.getElementById('order-miles-in') as HTMLInputElement).value).toBe('45000'));
+  });
+
+  it('«Descartar y salir» borra el borrador: la próxima vez empieza limpio', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await screen.findAllByText('OT-2026-0042');
+    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
+    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    await pickCustomer(user, dialog);
+    await user.type(document.getElementById('order-miles-in') as HTMLInputElement, '45000');
+
+    await user.click(within(dialog).getByRole('button', { name: /Cancelar/i }));
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Descartar y salir' }));
+    await waitFor(() =>
+      expect(screen.queryByText(/^Nueva Orden/i, { selector: '.modal-title' })).not.toBeInTheDocument()
+    );
+
+    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
+    await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' });
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('si se retoma un borrador y se vuelve a salir, sigue preguntando (hay trabajo que no se debe perder)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await screen.findAllByText('OT-2026-0042');
+    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
+    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    await pickCustomer(user, dialog);
+    await user.type(document.getElementById('order-miles-in') as HTMLInputElement, '45000');
+    await user.click(within(dialog).getByRole('button', { name: /Cancelar/i }));
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Guardar borrador y salir' }));
+    await waitFor(() => expect(screen.queryByText(/^Nueva Orden/i, { selector: '.modal-title' })).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Continuar el borrador' }));
+    const retomado = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    await user.click(within(retomado).getByRole('button', { name: /Cancelar/i }));
+
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
   });
 
   it('closes without asking when nothing has been entered', async () => {
@@ -591,17 +696,18 @@ describe('WorkOrders — el cliente nuevo del alta queda guardado', () => {
 
   it('al cancelar, guarda el cliente nuevo que ya estaba completo', async () => {
     mocks.createCustomer.mockResolvedValue({ ...CUSTOMER, id: 'cli-nuevo', nombre: 'Pedro Pérez' });
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     const user = userEvent.setup();
     const dialog = await openIntake(user);
     await typeNewCustomer(user, dialog);
 
     await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    const pregunta = await screen.findByRole('alertdialog');
+    // La pregunta avisa que el cliente nuevo se guarda igual.
+    expect(within(pregunta).getByText(/se guardan igual/)).toBeInTheDocument();
+    await user.click(within(pregunta).getByRole('button', { name: 'Descartar y salir' }));
 
     await waitFor(() => expect(mocks.createCustomer).toHaveBeenCalledTimes(1));
-    expect(confirmSpy.mock.calls[0][0]).toMatch(/se guardan igual/);
     expect(mocks.createWorkOrder).not.toHaveBeenCalled();
-    confirmSpy.mockRestore();
   });
 
   it('el costo del repuesto viaja con la orden; vacío, sale como nulo', async () => {

@@ -254,6 +254,14 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
     correo va en minúsculas y, si el perfil no se guarda, el correo del acceso vuelve al de antes;
     `delete-employee` no borra a quien reportó o resolvió un hallazgo ni a quien tiene comisiones;
   - **`process-outbox` hace sus `fetch` con tope de tiempo** y una respuesta rota de Gemini se reintenta.
+- **El alta de una orden no se pierde** (pedido del taller, 19/10/2026): en Android, «atrás» sacaba de la pantalla y la orden
+  se cancelaba. Mientras el alta está abierta, `useBackButtonTrap` (`lib/backButtonTrap.ts`) deja una entrada de más en el
+  historial: «atrás» gasta esa entrada, la pantalla se queda y, si hay algo capturado, pregunta con `ChoiceDialog`
+  (**Seguir editando / Guardar borrador y salir / Descartar y salir**; con el formulario vacío cierra sin preguntar). El formulario
+  se guarda solo como borrador (`features/workOrders/intakeDraft.ts`, en este dispositivo y por persona: con una pausa, al cambiar
+  de paso y al mandar la app al fondo) y al abrir «Nueva orden» se ofrece retomarlo. **Las fotos, los videos y la foto del
+  comprobante no entran en el borrador** (son archivos) y el diálogo lo avisa. Se borra al crear la orden, al descartar y al cerrar
+  sesión (regla 8c). **Un diálogo con trabajo a medias usa esta trampa; una pregunta con varias salidas usa `ChoiceDialog`, no `confirm`.**
 - **Vehículos únicos** (`20261010000039`): el **VIN es único en todo el sistema** y la **placa es única por
   estado**, sin importar mayúsculas ni espacios (`uq_vehiculos_vin`, `uq_vehiculos_placa`); un carro sin placa
   no cuenta. Un carro que cambia de dueño se edita, no se vuelve a crear. `getErrorMessage` reconoce las dos

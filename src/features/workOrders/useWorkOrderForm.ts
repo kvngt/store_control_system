@@ -41,6 +41,9 @@ export function useWorkOrderForm() {
   const [furthestStep, setFurthestStep] = useState(1);
   // La foto del comprobante del depósito. Fuera de RHF, como las fotos de la inspección.
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  // Se retomó un borrador: `reset(values)` lo deja como «sin cambios» para RHF, pero hay trabajo que no se
+  // puede perder, así que cuenta como sucio hasta que se cierre o se cree la orden.
+  const [draftRestored, setDraftRestored] = useState(false);
   /**
    * Lo que hace la pantalla al salir de un paso con "Siguiente", después de validarlo. Devuelve
    * `false` para quedarse. Así se guardan el cliente y el vehículo nuevos en cuanto se
@@ -147,7 +150,20 @@ export function useWorkOrderForm() {
     setStep(1);
     setFurthestStep(1);
     setReceiptFile(null);
+    setDraftRestored(false);
   }, [form, photos]);
+
+  /** Retoma un borrador guardado (`intakeDraft.ts`): sus valores y el paso donde se quedó. */
+  const restoreDraft = useCallback(
+    (values: WorkOrderFormValues, stepTo: number) => {
+      form.reset(values);
+      const target = Math.min(Math.max(stepTo, 1), INTAKE_STEPS.length);
+      setStep(target);
+      setFurthestStep(target);
+      setDraftRestored(true);
+    },
+    [form]
+  );
 
   // "Siguiente" valida solo lo del paso que se deja. El esquema ya ignora la rama que no se
   // usa (cliente existente o nuevo), así que se pasan los dos lados del paso tal cual.
@@ -177,7 +193,7 @@ export function useWorkOrderForm() {
   );
 
   // RHF's own `isDirty` covers the fields; the photos, videos and voice notes are state it never sees.
-  const isDirty = form.formState.isDirty || photos.hasMedia;
+  const isDirty = form.formState.isDirty || photos.hasMedia || draftRestored;
 
   return {
     form,
@@ -213,6 +229,7 @@ export function useWorkOrderForm() {
     markCustomerCreated,
     markVehicleCreated,
     reset,
+    restoreDraft,
   };
 }
 

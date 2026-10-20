@@ -431,6 +431,13 @@ Lo que cotizas en este paso nace **Sin autorizar** salvo que hayas marcado la ca
 
 Al presionar **Crear**, el sistema genera el número de orden (por ejemplo, `ORD-2026-001`) y abre su detalle. Las fotos y archivos multimedia continúan subiendo en segundo plano sin interrumpir tu navegación.
 
+### Salir del alta sin perder lo capturado
+
+Si tocas **Cancelar**, la X o el botón **atrás** del teléfono con una orden a medias, la app pregunta: **Seguir editando**,
+**Guardar borrador y salir** o **Descartar y salir**. El borrador se guarda solo mientras capturas y, al abrir **Nueva orden**,
+la app te ofrece continuarlo. Las fotos, los videos y la foto del comprobante **no** se guardan en el borrador. El cliente y el
+vehículo nuevos que ya estén completos se guardan siempre.
+
 ### Recibir un carro rápido
 <!-- rol: admin -->
 

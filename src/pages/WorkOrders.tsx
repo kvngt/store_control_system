@@ -25,6 +25,9 @@ import { orderDueState, type DueState } from '../lib/orderDue';
 import ArchivedOrders from '../features/workOrders/ArchivedOrders';
 import FindingsAlert from '../features/workOrders/FindingsAlert';
 import { matchesOrderSearch } from '../features/workOrders/orderSearch';
+import ChoiceDialog from '../components/ChoiceDialog';
+import { useBackButtonTrap } from '../lib/backButtonTrap';
+import { clearIntakeDraft, loadIntakeDraft, saveIntakeDraft, type IntakeDraft } from '../features/workOrders/intakeDraft';
 
 const WorkOrderDetail = lazy(() => import('../features/workOrders/WorkOrderDetail'));
 const WorkOrderCreateModal = lazy(() => import('../features/workOrders/WorkOrderCreateModal'));
@@ -206,6 +209,11 @@ export default function WorkOrders() {
   // about the open order lives in `useWorkOrderDetail`. What is left here is
   // the board itself.
   const [showCreateModal, setShowCreateModal] = useState(false);
+  // La pregunta al querer salir de un alta a medias (X, fondo o «atrás» de Android) y la de retomar un
+  // borrador al abrirla.
+  const [exitDialog, setExitDialog] = useState(false);
+  const [restoreDialog, setRestoreDialog] = useState<IntakeDraft | null>(null);
+  const userId = user?.id;
 
   const typeLabels: Record<string, string> = {
     mecanica: t('workOrders.typeMecanica'),
@@ -340,19 +348,66 @@ export default function WorkOrders() {
     return saved;
   };
 
-  const handleCloseCreateModal = async () => {
-    // Al cerrar es cuando se pierde el hilo: el formulario se vacía y el cliente recién
-    // creado deja de estar seleccionado, así que la confirmación tiene que decir que sigue
-    // guardado.
-    const aviso = avisoDeLoGuardado();
-    const values = form.form.getValues();
-    const pendingNew = values.customerMode === 'new' || values.vehicleMode === 'new';
-    const texto = [t('workOrders.confirmDiscard'), aviso, pendingNew ? t('intake.keepNewOnCancel') : '']
-      .filter(Boolean)
-      .join('\n\n');
-    if (form.isDirty && !confirm(texto)) {
+  /** Abrir el alta: si hay un borrador de esta persona, se ofrece retomarlo. */
+  const openCreateModal = () => {
+    const draft = userId ? loadIntakeDraft(userId) : null;
+    setRestoreDialog(draft);
+    setShowCreateModal(true);
+  };
+
+  // Quiere salir (X, fondo o «atrás»). Sin nada capturado se cierra; con trabajo a medias se pregunta.
+  const handleCloseCreateModal = () => {
+    if (!form.isDirty) {
+      void closeCreateModal(false);
       return;
     }
+    setExitDialog(true);
+  };
+
+  // «Atrás» de Android: la pantalla se queda y se pregunta, en vez de perder lo capturado.
+  const backTrap = useBackButtonTrap(showCreateModal, () => {
+    // Con la pregunta de retomar el borrador abierta, «atrás» no hace nada.
+    if (restoreDialog || exitDialog) {
+      backTrap.rearm();
+      return;
+    }
+    handleCloseCreateModal();
+  });
+
+  // El borrador se guarda solo mientras se captura: cada cambio (con una pausa), al cambiar de paso y al
+  // mandar la app al fondo, que es cuando Android puede descartar la pestaña.
+  useEffect(() => {
+    if (!showCreateModal || !userId || restoreDialog) return undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const guardar = () => saveIntakeDraft(userId, form.form.getValues(), form.step);
+    const subscription = form.form.watch(() => {
+      clearTimeout(timer);
+      timer = setTimeout(guardar, 600);
+    });
+    const alFondo = () => {
+      if (document.visibilityState === 'hidden') guardar();
+    };
+    document.addEventListener('visibilitychange', alFondo);
+    window.addEventListener('pagehide', guardar);
+    guardar();
+    return () => {
+      clearTimeout(timer);
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', alFondo);
+      window.removeEventListener('pagehide', guardar);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCreateModal, userId, restoreDialog, form.step]);
+
+  /**
+   * Cierra el alta. `keepDraft`: dejar lo capturado como borrador para retomarlo; si no, se borra.
+   * El cliente y el vehículo nuevos que ya estén completos se guardan igual (pedido del 06/10/2026).
+   */
+  const closeCreateModal = async (keepDraft: boolean) => {
+    // Al cerrar es cuando se pierde el hilo: el formulario se vacía y el cliente recién creado deja de
+    // estar seleccionado.
+    const values = form.form.getValues();
+    const pendingNew = values.customerMode === 'new' || values.vehicleMode === 'new';
     if (pendingNew) {
       try {
         const saved = await savePendingRecordsOnCancel();
@@ -365,9 +420,19 @@ export default function WorkOrders() {
       }
     }
     if (guardadoAntesDeFallar.current.cliente || guardadoAntesDeFallar.current.vehiculo) reloadPickers();
+    // Después de guardar lo pendiente: el borrador lleva ya al cliente y al vehículo como existentes.
+    if (userId) {
+      if (keepDraft) {
+        saveIntakeDraft(userId, form.form.getValues(), form.step);
+        showToast('success', t('intake.draftSaved'));
+      } else {
+        clearIntakeDraft(userId);
+      }
+    }
     createdOrderRef.current = null;
     receiptPathRef.current = null;
     guardadoAntesDeFallar.current = { cliente: false, vehiculo: false };
+    setExitDialog(false);
     setShowCreateModal(false);
     form.reset();
   };
@@ -521,6 +586,8 @@ export default function WorkOrders() {
       createdOrderRef.current = null;
       receiptPathRef.current = null;
       guardadoAntesDeFallar.current = { cliente: false, vehiculo: false };
+      // La orden ya existe: el borrador no vale.
+      if (userId) clearIntakeDraft(userId);
       setShowCreateModal(false);
       form.reset();
       loadOrders();
@@ -819,7 +886,7 @@ export default function WorkOrders() {
             administración. La base lo impone con `ordenes_trabajo_insert`; esconder el
             botón solo evita que un técnico se lleve un error. */}
         {isAdmin && (
-          <button className="btn btn-primary" id="new-order-btn" onClick={() => setShowCreateModal(true)}>
+          <button className="btn btn-primary" id="new-order-btn" onClick={openCreateModal}>
             <Plus size={18} /> {t('workOrders.newOrder')}
           </button>
         )}
@@ -899,6 +966,75 @@ export default function WorkOrders() {
             onClose={handleCloseCreateModal}
           />
         </LazyModal>
+      )}
+
+      {isAdmin && showCreateModal && restoreDialog && (
+        <ChoiceDialog
+          title={t('intake.restoreTitle')}
+          body={t('intake.restoreBody').replace(
+            '{fecha}',
+            new Date(restoreDialog.savedAt).toLocaleString(language === 'en' ? 'en-US' : 'es-US', {
+              day: 'numeric',
+              month: 'short',
+              hour: 'numeric',
+              minute: '2-digit',
+            })
+          )}
+          onDismiss={() => {
+            form.restoreDraft(restoreDialog.values, restoreDialog.step);
+            setRestoreDialog(null);
+          }}
+          actions={[
+            {
+              label: t('intake.restoreContinue'),
+              variant: 'primary',
+              onClick: () => {
+                form.restoreDraft(restoreDialog.values, restoreDialog.step);
+                setRestoreDialog(null);
+              },
+            },
+            {
+              label: t('intake.restoreStartNew'),
+              variant: 'secondary',
+              onClick: () => {
+                if (userId) clearIntakeDraft(userId);
+                setRestoreDialog(null);
+              },
+            },
+          ]}
+        />
+      )}
+
+      {isAdmin && showCreateModal && exitDialog && (
+        <ChoiceDialog
+          title={t('intake.exitTitle')}
+          body={[
+            t('intake.exitBody'),
+            avisoDeLoGuardado(),
+            form.form.getValues().customerMode === 'new' || form.form.getValues().vehicleMode === 'new'
+              ? t('intake.keepNewOnCancel')
+              : '',
+            form.photos.hasMedia || form.receiptFile ? t('intake.exitMediaWarning') : '',
+          ]
+            .filter(Boolean)
+            .join('\n\n')}
+          onDismiss={() => {
+            setExitDialog(false);
+            backTrap.rearm();
+          }}
+          actions={[
+            {
+              label: t('intake.exitKeepEditing'),
+              variant: 'primary',
+              onClick: () => {
+                setExitDialog(false);
+                backTrap.rearm();
+              },
+            },
+            { label: t('intake.exitSaveDraft'), variant: 'secondary', onClick: () => void closeCreateModal(true) },
+            { label: t('intake.exitDiscard'), variant: 'danger', onClick: () => void closeCreateModal(false) },
+          ]}
+        />
       )}
     </div>
   );

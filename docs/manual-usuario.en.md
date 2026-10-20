@@ -428,6 +428,13 @@ Items quoted in this step start as **Not authorized** unless you checked the in-
 
 When you tap **Create**, the system generates the order number (for example, `ORD-2026-001`) and opens its details. Photos and multimedia files continue uploading in the background without interrupting your workflow.
 
+### Leaving the intake without losing what you entered
+
+If you tap **Cancel**, the X or your phone's **back** button with an order half-filled, the app asks: **Keep editing**,
+**Save draft and leave** or **Discard and leave**. The draft saves itself while you type and, when you open **New order**,
+the app offers to continue it. Photos, videos and the receipt photo are **not** kept in the draft. A new customer and vehicle
+that are already complete are always saved.
+
 ### Fast check-in
 <!-- rol: admin -->
 

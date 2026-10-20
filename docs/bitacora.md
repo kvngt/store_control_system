@@ -49,6 +49,20 @@ al día aparte.
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
 
+### 19/10/2026 — Claude Code (el alta de la orden no se pierde con «atrás»)
+
+- **Pedido del taller:** en Android, el botón «atrás» durante el alta cancelaba la orden y se perdía lo capturado.
+- **Hecho (sin commit, sin publicar; no toca la base):** `lib/backButtonTrap.ts` (`useBackButtonTrap`: una entrada de historial
+  de más mientras el alta está abierta), `components/ChoiceDialog.tsx` (pregunta con tres salidas: Seguir editando / Guardar
+  borrador y salir / Descartar y salir), `features/workOrders/intakeDraft.ts` (borrador por persona en este aparato; se borra
+  al crear la orden, al descartar y al cerrar sesión), cableado en `pages/WorkOrders.tsx`, `useWorkOrderForm.ts`
+  (`restoreDraft`, `draftRestored`) y `AuthContext.tsx`; textos `intake.exit*`, `intake.restore*`, `intake.draftSaved`.
+  Con el formulario vacío «atrás» cierra sin preguntar. Las fotos, los videos y el comprobante **no** entran en el borrador.
+- **Verificado:** lint, `tsc -b`, `npm test` (139 archivos, 1074 pruebas) y `npm run build`; en Chromium con emulación de Pixel 7
+  contra la base local: «atrás» pregunta, «Seguir editando» la deja igual, el borrador se ofrece al reabrir, el historial no
+  crece y un «atrás» normal sale.
+- **Falta:** probarlo en un Android real; el commit; publicar junto con lo pendiente de abajo.
+
 ### 19/10/2026 — Claude Code (VIN y placa únicos, migración 039)
 
 - **Decisión del dueño:** VIN y placa únicos (los datos actuales no importan) y la cola de subida **se queda activa** al cerrar sesión.
