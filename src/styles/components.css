@@ -1173,6 +1173,17 @@ body.drawer-open {
   max-width: 900px;
 }
 
+/* Un diálogo cuyo cuerpo y pie van dentro de un <form> (el sticker, el seguro, la plantilla de
+   inspección): sin esto el form crece a su contenido, el `overflow: hidden` de .modal lo recorta y
+   .modal-body nunca llega a desplazarse, así que lo de abajo no se alcanzaba. El form pasa a ser
+   la columna que reparte el alto, como lo era .modal. */
+.modal > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .modal-header {
   display: flex;
   align-items: center;

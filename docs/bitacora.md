@@ -28,9 +28,10 @@
 | Ayuda 12/10 | El manual de usuario dentro de la app (`/ayuda`), en español e inglés y por rol, con capturas | **Publicado** (`b6d8792` en `main`; sin migración ni funciones). Ver la entrada del 12/10/2026, tarde |
 | Sticker 14/10 | Sticker térmico de próximo servicio (62 × 50 mm, Brother QL-810W) con QR a una página pública propia (`/s/<código>`); el técnico sugiere y administración programa | **Publicado** el 14/10/2026 por el usuario (`3b38be0` y `3c3d53f` en `main`). Comprobado el 14/10: `db:check` con 83 migraciones aplicadas, incluida la `20261010000029`; la función `portal` de producción ya responde a `?servicio=` (`404 {"estado":"no_existe"}` con un código inexistente). Gemini lo implementó y Claude Code lo auditó y corrigió: `test:db` 34/845 ✓, Vitest 104/870 ✓. Falta: probar la impresora (§6 del plan) y correr `qa:security` (SEC-162 a SEC-171) |
 | Adopción 14–16/10 | Plan a partir del diagnóstico de Gemini, más lo que pidió la persona responsable. **A:** autorizar en el mostrador (migración `030`), VIN opcional y escáner, aviso de «listo» sin correo, mensajes en el idioma del cliente, color traducido. **B:** dibujo del vehículo con daños marcados (migración `031`). **C:** «Empezar» y «Terminé» para el técnico. **D:** ajustes visuales | **Publicado** (commit `818370d` en `main`; la `030` y la `031`, aplicadas según `db:check` del 17/10/2026). Gemini lo programó y Claude Code lo verificó y corrigió el 16/10/2026: `test:db` 36/876 ✓, Vitest 115/936 ✓, lint, `tsc` y build ✓, más capturas reales. Falta confirmar que se corrió `qa:security`. [plan](plan-adopcion-2026-10.md) · [tareas](tareas-para-gemini-adopcion.md) |
-| Adopción parte E 16/10 | **E:** Enlace desde el alta, aviso en proceso con firma, primera autorización inicia la orden, autoasignar tareas al asignar técnico, selector de país en teléfono de usuario, secciones plegables en portal, millaje faltante en sticker, acción rápida a sticker existente, traducción de nota con Gemini | **Hecho, sin publicar** (sin commit). Gemini lo programó; Claude Code lo verificó y corrigió el 16/10/2026: `test:db` 37/891 ✓, Vitest 963/963 en el repositorio, lint, `tsc` y build ✓, y capturas reales. Migración `032` y edge function `traducir-texto` sin desplegar. Orden de publicación en la [bitácora](#16102026--claude-code-parte-e-lo-que-salió-de-la-prueba-con-la-ord-2026-008). |
+| Adopción parte E 16/10 | **E:** Enlace desde el alta, aviso en proceso con firma, primera autorización inicia la orden, autoasignar tareas al asignar técnico, selector de país en teléfono de usuario, secciones plegables en portal, millaje faltante en sticker, acción rápida a sticker existente, traducción de nota con Gemini | **Publicado** (verificado el 21/10/2026: `db:check` con 93 migraciones aplicadas y SEC-17 con las 7 edge functions desplegadas). Gemini lo programó; Claude Code lo verificó y corrigió el 16/10/2026: `test:db` 37/891 ✓, Vitest 963/963 en el repositorio, lint, `tsc` y build ✓, y capturas reales. Orden de publicación en la [bitácora](#16102026--claude-code-parte-e-lo-que-salió-de-la-prueba-con-la-ord-2026-008). |
 | Plan SaaS 17/10 | Comparación con los programas de pago de 2026, auditoría con skills (Supabase, Vercel, Trail of Bits) y plan por fases: cimientos, mensajes SMS, cobro con enlace, trabajos agrupados, inspección por puntos, citas, indicadores y plataforma para vender | **Decidido: solo Restorify, sin SMS.** Se programó la fase 0, la 1.1, la 1.4 y la parte de la fase 3 de abajo. [plan](plan-saas-2026-10.md) |
-| Plan 17/10 (G–M) | Fase 0 (`033`), trabajos agrupados y catálogo (`034`), inspección por puntos (`035`), horas, reloj e indicadores (`036`) | **Hecho, sin publicar** (sin commit). Gemini programó y Claude verificó y corrigió: `test:db` 40/1000 ✓, Vitest, lint, `tsc` y build ✓, y capturas. Orden de publicación en la [bitácora](#17102026--claude-code-plan-del-1710-fase-0-trabajos-y-catálogo-inspección-por-puntos-horas-reloj-e-indicadores) |
+| Plan 17/10 (G–M) | Fase 0 (`033`), trabajos agrupados y catálogo (`034`), inspección por puntos (`035`), horas, reloj e indicadores (`036`) | **Publicado** (verificado el 21/10/2026: `db:check` con 93 migraciones aplicadas). Gemini programó y Claude verificó y corrigió: `test:db` 40/1000 ✓, Vitest, lint, `tsc` y build ✓, y capturas. Orden de publicación en la [bitácora](#17102026--claude-code-plan-del-1710-fase-0-trabajos-y-catálogo-inspección-por-puntos-horas-reloj-e-indicadores) |
+| QA 18–19/10 | Dos rondas de QA (migraciones `037` y `038`), VIN y placa únicos (`039`) y el alta que no se pierde con «atrás» | **Publicado** el 19/10/2026: commits `dda612f`, `80e345b`, `9c4b843` y `aaed9dc` en `main`; `db push` de la `038` y de la `039` (`db:check`: 93 migraciones aplicadas); `functions deploy` de `process-outbox` (sin verificación de JWT), `create-employee`, `update-employee` y `delete-employee`. `qa:security` contra producción: 171 PASS, 0 FAIL, 31 SKIP. Detalle en [qa-2026-10-18.md](qa-2026-10-18.md) y la [bitácora](#21102026--claude-code-publicación-de-la-qa-del-1819-y-qué-queda-pendiente) |
 
 Nada se publica sin que la persona responsable lo pida: cada `db push`, `functions deploy`,
 push a `main` y commit se piden aparte.
@@ -49,10 +50,37 @@ al día aparte.
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
 
+### 26/10/2026 — Claude Code (los diálogos con <form> no se desplazaban)
+
+- **Reporte:** en escritorio, el diálogo «Sticker de próximo servicio» no dejaba bajar hasta el idioma ni los botones.
+- **Causa:** `.modal` es una columna con `overflow: hidden` y el que se desplaza es `.modal-body`, pero el `<form>` que envuelve
+  cuerpo y pie quedaba en medio sin ser columna ni tener `min-height: 0`: crecía a su contenido y `.modal` lo recortaba. Lo mismo
+  pasaba en el teléfono. Solo hay una ventana de creación de stickers (`ServiceStickerModal`; la otra es la hoja de impresión).
+- **Arreglo (sin commit, sin publicar; solo CSS):** `.modal > form` pasa a ser una columna flexible (`components.css`), con lo que también
+  quedan bien `OrderInsuranceModal` e `InspectionTemplateModal`. Prueba nueva `src/styles/modalForm.test.ts`.
+- **Verificado:** en Chromium a 1366 y 390 px el cuerpo se desplaza y el pie queda dentro, y sin la regla se reproduce el fallo;
+  lint, `build` y las pruebas de estilos y del sticker pasan.
+
+### 21/10/2026 — Claude Code (publicación de la QA del 18–19 y qué queda pendiente)
+
+- **Publicado el 19/10/2026, a pedido de la persona responsable:** `git push origin main` (`dda612f`, `80e345b`, `9c4b843`, `aaed9dc`);
+  `db push` de la `039` (la `037` y la `038` ya estaban); `functions deploy` de `process-outbox --no-verify-jwt`, `create-employee`,
+  `update-employee` y `delete-employee`. Después: `db:check` (93 migraciones aplicadas), `qa:security` (171 PASS, 0 FAIL, 31 SKIP) y
+  `restorifyauto.net` responde 200.
+- **Pendiente (nadie lo ha hecho):**
+  - Probar el «atrás» del alta en un **Android real** (solo se probó en Chromium con emulación de Pixel 7).
+  - Los **31 SKIP de `qa:security`** (faltan `TOKEN_ADMIN`, `TOKEN_TECH` y una orden de prueba; entre ellos SEC-91 a SEC-105 y SEC-197).
+  - Imprimir el **sticker** en la Brother QL-810W y revisarlo ([plan-adopcion-2026-10.md](plan-adopcion-2026-10.md) §6).
+  - De la QA del 18/10, «qué falta»: XSS en PDF y correos, y `traducir-texto` con técnico y anónimo (no se anotó que se hicieran).
+  - F0, que hace la persona responsable: llave de Resend, DSN de Sentry en Hostinger y push pendiente.
+  - Decisiones con el taller: asignar técnico a una línea heredada la saca del reparto para siempre ([pagos-a-empleados.md](pagos-a-empleados.md#5-preguntas-enviadas-al-taller));
+    la migración que contrae la guardia del técnico ([hallazgos.md §6](hallazgos.md#6-lo-que-falta-en-orden)).
+  - Si el borrador del alta debe **sobrevivir al cerrar sesión** (hoy se borra, por la regla 8c; la cola de subida sí queda).
+
 ### 19/10/2026 — Claude Code (el alta de la orden no se pierde con «atrás»)
 
 - **Pedido del taller:** en Android, el botón «atrás» durante el alta cancelaba la orden y se perdía lo capturado.
-- **Hecho (sin commit, sin publicar; no toca la base):** `lib/backButtonTrap.ts` (`useBackButtonTrap`: una entrada de historial
+- **Hecho (commit `aaed9dc`, publicado el 19/10/2026; no toca la base):** `lib/backButtonTrap.ts` (`useBackButtonTrap`: una entrada de historial
   de más mientras el alta está abierta), `components/ChoiceDialog.tsx` (pregunta con tres salidas: Seguir editando / Guardar
   borrador y salir / Descartar y salir), `features/workOrders/intakeDraft.ts` (borrador por persona en este aparato; se borra
   al crear la orden, al descartar y al cerrar sesión), cableado en `pages/WorkOrders.tsx`, `useWorkOrderForm.ts`
@@ -61,7 +89,7 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
 - **Verificado:** lint, `tsc -b`, `npm test` (139 archivos, 1074 pruebas) y `npm run build`; en Chromium con emulación de Pixel 7
   contra la base local: «atrás» pregunta, «Seguir editando» la deja igual, el borrador se ofrece al reabrir, el historial no
   crece y un «atrás» normal sale.
-- **Falta:** probarlo en un Android real; el commit; publicar junto con lo pendiente de abajo.
+- **Falta:** probarlo en un Android real.
 
 ### 19/10/2026 — Claude Code (VIN y placa únicos, migración 039)
 
@@ -69,7 +97,7 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
 - **Hecho (sin publicar):** `20261010000039_vehiculos_vin_y_placa_unicos.sql` (VIN único global, placa única por estado, sin importar mayúsculas ni
   espacios; guarda que se detiene con una frase clara si hubiera repetidos; en producción: 11 vehículos, 0 repetidos), prueba `43_vehiculos_unicos.test.sql`,
   mensajes de `getErrorMessage` para las dos restricciones, manuales y `ai-context.md`. pgTAP 43 archivos / 1.053 pruebas, Vitest 1.057.
-- **Publicar (lo hace la persona responsable):** `db push` de la `039` (el índice se crea sin tocar datos) y push a `main`.
+- **Publicar (lo hace la persona responsable):** `db push` de la `039` (el índice se crea sin tocar datos) y push a `main`. **Hecho el 19/10/2026.**
 
 ### 19/10/2026 — Claude Code (arreglos de la segunda ronda y análisis del sticker)
 
