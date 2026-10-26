@@ -63,8 +63,8 @@ las migraciones desde cero en cada cambio (CI).
 
 ### Riesgos para el mantenimiento
 
-**R-B1. La versión vigente de una función está repartida en migraciones.** Hay 161 funciones
-definidas a lo largo de 82 migraciones (al 11/10/2026). Cuando una cambia, la migración nueva
+**R-B1. La versión vigente de una función está repartida en migraciones.** Hay 93 migraciones (al 19/10/2026, hasta `20261010000039`; 161 funciones contadas al 11/10/2026 en la migración `028`, más las de `029` a `039`). Cuando una cambia, la migración nueva
+la reescribe entera. `handle_order_delivery_payment` va por su quinta versión;
 la reescribe entera. `handle_order_delivery_payment` va por su quinta versión;
 `sync_order_commissions`, `pay_commissions`, `create_work_order`, `recalculate_order_totals` y
 `trg_guard_order_technician`, por la cuarta. El riesgo concreto: quien la cambie parte de una
@@ -88,7 +88,7 @@ corren. Toda migración va de la base local directo al taller.
 **R-B4. No hay respaldos.** *(Resuelto el 30/09/2026: el proyecto pasó a Pro, con respaldo diario.)* El plan Free no los hace. Un error en una migración de datos o un
 borrado en cascada no tiene vuelta atrás.
 
-**R-B5. Un admin puede borrar movimientos automáticos de Finanzas.** Borrar un "Pago final"
+**R-B5. Un admin puede borrar movimientos automáticos de Finanzas.** *(Resuelto el 19/10/2026 en `20261010000038`: la columna `finanzas_movimientos.origen` distingue `manual` de `sistema` y las políticas RLS de UPDATE y DELETE bloquean editar o borrar movimientos del sistema por la API.)* Borrar un "Pago final"
 descuadra los cálculos posteriores de esa orden. Conocido desde la auditoría; sigue abierto
 ([reglas-de-negocio.md §10](reglas-de-negocio.md)).
 
@@ -214,7 +214,7 @@ Dos inconsistencias menores:
 | P2-4 | Partir `portal/CustomerPortal.tsx` en una sección por archivo dentro de `portal/` |
 | P2-5 | Llevar a `features/<dominio>/` Finanzas, Comisiones, Clientes y Vehículos cuando crezcan |
 | P2-6 | Convención de orden para triggers nuevos de `ordenes_trabajo` (R-B2) |
-| P2-7 | Decidir si un admin puede borrar movimientos automáticos (R-B5) |
+| P2-7 | ~~Decidir si un admin puede borrar movimientos automáticos (R-B5)~~ *(Resuelto en `20261010000038`)* |
 
 **Nada de P1-2 a P2-5 cambia lo que ve el usuario ni toca la base.** Son movimientos de
 código cubiertos por las 480 pruebas unitarias; se pueden hacer uno por uno y publicar cada

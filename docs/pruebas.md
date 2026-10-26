@@ -23,10 +23,10 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 802 pruebas, 97 archivos (11/10/2026) | ~30 s | Nada |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención", teléfonos de la sede, trabajo con seguro, cobro por parqueo y los hallazgos de la auditoría y de la revisión previa a producción contra un Postgres real | 811 aserciones, 33 archivos (11/10/2026) | ~1 min | Docker |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 1.076 pruebas, 140 archivos (19/10/2026) | ~30 s | Nada |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención", teléfonos de la sede, trabajo con seguro, cobro por parqueo, próximo servicio, autorización en recepción, marcas de daños, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, unicidad de VIN/placa y los hallazgos de la auditoría y del QA contra un Postgres real | 1.053 pruebas, 43 archivos (19/10/2026) | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, 77 casos (76 pasan, 1 se salta) | 2–5 min | Credenciales de prueba (**al 1/10/2026 no existen**: se borraron el 29/09) |
-| **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 100 casos con las cuentas de prueba, todos de solo lectura (los que escriben, escriben el valor que ya hay). Los 66 anteriores, 66 PASS · 0 SKIP; los de las migraciones `20261006000000` a `20261010000006` pasan solo con ellas aplicadas (SEC-91 a SEC-105, verificados contra el Supabase local el 4/10/2026) | ~15 s | Nada; con cuentas de prueba cubre más |
+| **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 202 casos (171 PASS + 31 SKIP al 19/10/2026), todos de solo lectura (los que escriben, escriben el valor que ya hay) | ~15 s | Nada; con cuentas de prueba cubre más |
 | **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
 
 Por qué hacen falta todas: **Vitest simula la base**, así que no puede detectar una
@@ -74,13 +74,13 @@ declaran `// @vitest-environment jsdom` y renderizan con los proveedores reales
 | Importación bancaria | `lib/bankStatementParser*`, `lib/categorizationRules`, `pages/finance/ImportStatementModal`, `pages/Finance.import` | Lectura del PDF de Wells Fargo, casos límite, categorización, carga diferida del importador |
 | Finanzas | `pages/Finance.linkorder` | Vincular un movimiento a una orden; errores visibles en el diálogo |
 | Multimedia | `lib/media/uploadQueue`, `lib/media/mime`, `lib/media/videoFrame`, `services/media.service`, `features/media/MediaGallery`, `features/media/VideoRecorderModal`, `features/media/DraftMediaStrip` | Cola: no re-subir tras fallar la fila, no reintentar permisos, reanudar tras recarga solo para el mismo usuario, concurrencia, sin conexión; formatos MP4 primero; galería: miniaturas firmadas, publicar solo admin, borrar solo lo propio, progreso, **video sin miniatura con ícono y no un cargando eterno**; **cuadro negro descartado** como miniatura; el grabador saca la miniatura del archivo grabado y revisa sin autoplay; **el video del borrador se abre y se reproduce** |
-| Órdenes | `pages/WorkOrders.smoke`, `features/workOrders/*` (incluye `workOrderForm.schema`) | Lista (una sola versión según ancho), alta y validación, detalle; **técnico sin totales ni precios**, comisión estimada por especialidad (la calcula la base: mecánica $1,000 × 35 % ÷ 1 = $350), entregar abre el diálogo de pago, alta de técnico sin depósito/labor/repuestos; fotos de recepción comprimidas y su ciclo de memoria; avance solo con nota de voz; **firmar vuelve a leer la orden** (la firma autoriza lo cotizado); la lista para asignar solo trae personal de la sede de la orden; **el técnico ve una sola lista, sin "Otras órdenes" ni catálogos de clientes y vehículos**, y abrir una orden que no es suya lo explica; **la firma solo la toma administración** (`SignatureCard`) |
+| Órdenes | `pages/WorkOrders.smoke`, `features/workOrders/*` (incluye `workOrderForm.schema`) | Lista (una sola versión según ancho), alta y validación, detalle; **técnico sin totales ni precios**, comisión estimada por especialidad (la calcula la base: mecánica $1,000 × 35 % ÷ 1 = $350), entregar abre el diálogo de pago, alta de técnico sin depósito/labor/repuestos; fotos de recepción comprimidas y su ciclo de memoria; avance solo con nota de voz; **firmar vuelve a leer la orden** (desde `20261010000022` la firma ya no autoriza lo cotizado); la lista para asignar solo trae personal de la sede de la orden; **el técnico ve una sola lista, sin "Otras órdenes" ni catálogos de clientes y vehículos**, y abrir una orden que no es suya lo explica; **la firma solo la toma administración** (`SignatureCard`) |
 | Kanban | `pages/KanbanBoard` | Mover tarjetas; **entregar abre el diálogo de cobro** y pasa por `entregar_orden`, nunca por un cambio de estatus suelto |
 | Secciones plegables del detalle | `components/CollapsibleSection`, `pages/WorkOrders.smoke` ("secciones plegables del detalle") | Cerradas al entrar en escritorio y en el teléfono, con el resumen en el encabezado; la flecha abre y cierra sin desmontar lo escrito; "Desplegar todo" / "Contraer todo" por pestaña (uno solo en el teléfono); lo abierto sigue abierto al cambiar de pestaña; un enlace a Trabajos abre Mano de obra y el del técnico abre sus Tareas. El ayudante `openDetail` de las demás pruebas del detalle abre las secciones de la pestaña |
 | Lista y tablero (F7) | `pages/WorkOrders.smoke` ("lista y tablero"), `components/layout/BottomNav` | Órdenes tiene dos vistas: cambiar al tablero, **recordarlo** al volver, `?vista=tablero`, la búsqueda filtra también el tablero, el número de la tarjeta abre la orden; la barra inferior ya no tiene pestaña de tablero |
 | Panel (F7) | `features/dashboard/AttentionCard`, `features/dashboard/MyTasksCard`, `services/dashboard.service`, `services/workOrders.service` (`getMyTasks`) | "Requiere atención": solo los grupos con algo, tres órdenes y "+n más", cada una abre su pestaña, los correos llevan a Configuración, "todo al día", **si la RPC aún no existe no se muestra**; "Mis tareas": primero lo autorizado y la orden que vence antes, las hechas solo se cuentan, abre la orden en Tareas; la consulta filtra por técnico, estado y orden sin entregar |
 | Alta en cuatro pasos (F4) | `pages/WorkOrders.smoke` ("intake validation", "el alta en cuatro pasos"), `features/workOrders/WorkOrderCreateModal`, `features/workOrders/workOrderForm.schema`, `services/workOrders.service` (`createWorkOrder`) | "Siguiente" valida solo su paso y dice qué falta en el campo; **Enter avanza de paso, no crea la orden**; un doble clic no cae en "Crear"; volver a un paso visto sin perder lo escrito; **cada tarea va con su tipo, su técnico y `reparto_heredado: false`**; una tarea escrita sin agregar frena "Crear"; depósito con método obligatorio, cheque y comprobante; **el servicio manda `deposito_numero_cheque` y `deposito_comprobante_ruta`** (los nombres que lee la base); el comprobante se borra si la base rechaza la orden y se reutiliza si se cayó la red; cada campo del formulario está en un paso |
-| Comisión por especialidad | `features/workOrders/CommissionEstimateCard`, `features/workOrders/LaborTable` | El técnico ve su bolsa, su porcentaje y el total que da la base; a salario, que no genera; administración ve el reparto y el aviso de una bolsa sin nadie. En una orden combinada cada línea lleva especialidad y se manda al agregar y al editar; en las demás no se pide |
+| Comisión por especialidad y Mis comisiones | `features/workOrders/CommissionEstimateCard`, `features/workOrders/LaborTable`, `pages/MyCommissions` | El técnico ve su bolsa, su porcentaje y el total que da la base (y consulta sus comisiones aprobadas y pagadas en `/mis-comisiones`); a salario, que no genera; administración ve el reparto y el aviso de una bolsa sin nadie. En una orden combinada cada línea lleva especialidad y se manda al agregar y al editar; en las demás no se pide |
 | Comisión por tarea (F3) | `features/workOrders/TaskEditor`, `features/workOrders/LaborTable`, `features/workOrders/CommissionEstimateCard`, `features/workOrders/DeliveryModal`, `services/workOrders.service`, `pages/WorkOrders.smoke` ("tareas con técnico"), `features/workOrders/historyFormat`, `styles/laborMobile` | Agregar trabajo con tipo, precio y técnico (el tipo nace del de la orden, el técnico de la primera tarea; **el foco vuelve a Descripción**); preguntar antes de un cruce de oficio, **también al cambiar el tipo de una fila con técnico**; "Sin técnico" y el aviso en Resumen; **el servicio manda `reparto_heredado: false` al crear y al dar técnico** (y solo el técnico al quitarlo); candado y **Borrar deshabilitado** con la comisión pagada; una línea heredada no se ofrece a una bolsa pagada; el diálogo de entrega lee las tareas sin técnico de la base (sale también desde el Kanban); la tarjeta de técnicos distingue "Por tarea" de "En el reparto" y los mete o saca del reparto; **abrir otra orden en el teléfono empieza el editor de cero**; en el teléfono tipo y técnico bajan a su renglón (CSS) |
 | Empleados | `pages/Employees.pay`, `pages/Employees.users` | Pago de cada quien (el % de la sede, uno propio o salario); guardar un porcentaje; fuera de 0–100 se rechaza en el diálogo; pasar a salario con pendientes avisa con el monto. El alta y la edición del personal (antes en Configuración) |
 | Margen por orden | `features/finance/OrderBalanceCard`, `features/finance/OrderMarginCard` | El balance muestra lo que da la base y lista aparte lo vinculado; la lista del mes pide el mes en curso, muestra las sumas del servidor, pagina pidiendo la siguiente página y avisa si no hubo entregas; el rango del mes cruza diciembre |
@@ -90,7 +90,7 @@ declaran `// @vitest-environment jsdom` y renderizan con los proveedores reales
 | Panel y Finanzas | `services/dashboard.service` | Llama `resumen_panel` con el día y la zona del navegador, arma tarjetas y ocupación, capacidad cero sin dividir entre cero, un error de la base no se vuelve ceros, etiqueta del mes sin correrla por UTC |
 | Borrados en la orden | `services/workOrders.service` | Quitar mano de obra, un repuesto o una asignación falla con mensaje si la base no borró nada (RLS), en vez de fingir éxito; igual cambiar el técnico, el tipo o el origen de una asignación |
 | Importación bancaria | `pages/finance/ImportStatementModal` | El lote y sus movimientos viajan en una sola llamada; si falla se borra el PDF subido |
-| Notificaciones | `features/notifications/*`, `lib/push` | Campana: conteo, marcar leído, navegar, aviso en tiempo real con toast; traducción de avisos; detección de iPhone sin instalar; tarjeta de push: activar, permiso negado, prueba, desactivar |
+| Notificaciones | `features/notifications/*` (incluye `features/notifications/PushSettingsCard`), `lib/push` | Campana: conteo, marcar leído, navegar, aviso en tiempo real con toast; traducción de avisos; detección de iPhone sin instalar; tarjeta de push (`PushSettingsCard`): activar, permiso negado, prueba, desactivar |
 | Portal del cliente | `portal/CustomerPortal`, `lib/emailTemplates`, `lib/phone` | Estado, vehículo, multimedia publicada y cuenta; visor de video; WhatsApp y llamar; "pagado en su totalidad"; enlace vencido con teléfono; ruta sin token no consulta; reintento; **la baja se confirma con botón, nunca al abrir**; inglés. Plantillas: asunto por estado, fecha DATE sin correrse un día, **HTML escapado**, logo solo https y color solo hexadecimal, Reply-To solo si hay correo de contacto |
 | Presupuestos | `features/workOrders/QuoteCard`, `features/workOrders/LaborTable`, `portal/CustomerPortal` (sección presupuesto), `lib/emailTemplates` | Tarjeta: se oculta sin nada que autorizar; enviar tras confirmar; aviso si el cliente no tiene correo; registrar autorización (todo marcado, se desmarca lo rechazado, vía y nombre); cancelar con confirmación; historial con vía, conteos y comentario. Tabla: total solo autorizado, "sin autorizar" aparte, insignias, línea pendiente sin controles. Portal: nada marcado, exige nombre, manda lo marcado **y todas las líneas vistas**, confirmación que sobrevive a la recarga, "el taller actualizó el presupuesto", lo no autorizado aparte. Correos: presupuesto solo con lo pendiente, constancia con lo autorizado y la vía |
 | Enlace del cliente (admin) | `features/workOrders/CustomerLinkCard` | Crear enlace; visitas; WhatsApp con el enlace; cambiar enlace pide confirmación; historial de correos con estado y motivo; avisar novedades; sin correo o con baja no ofrece avisar |
@@ -132,7 +132,7 @@ PostgREST en cada petición.
 
 - Asignación → aviso al técnico con el número de orden; nadie más lo ve; solo se
   marca leído; nadie crea avisos por la API; el actor no se avisa a sí mismo.
-- Avance y finalizado del técnico → avisos al admin; entrega → "comisión generada".
+- Avance y finalizado del técnico → avisos al admin; aprobación (`aprobar_comision` / `aprobar_comisiones`) → "Comisión aprobada · ORD-…" (al entregar nace sugerida sin avisar al técnico).
 - Tablet compartida: el endpoint pasa a la última persona; solo se encola push a
   quien tiene dispositivo.
 - Multimedia: la foto de recepción nace visible, avance nace interno aunque lo pida; una fila
@@ -238,7 +238,7 @@ PostgREST en cada petición.
 
 - La base calcula el saldo (falta cobrar, devolver o nada) y solo administración lo
   consulta o entrega.
-- Entregar con saldo exige método (uno de los tres); un cheque, número o foto; el
+- Entregar con saldo exige método (uno de los cinco: efectivo, tarjeta, Zelle, transferencia o cheque); un cheque, número o foto; el
   comprobante, en la carpeta de la sede. Ningún intento rechazado entrega la orden.
 - El "Pago final" queda una sola vez, con método, cheque, comprobante y quién lo registró; lo
   cobrado es el total; una segunda entrega se rechaza.
@@ -344,8 +344,8 @@ entregada donde una persona pasó de salario a comisión sin fila (a propósito)
 monto editado a mano, la migración aplica y la tabla `comisiones` queda idéntica; con un error
 inyectado en la fórmula, o una comisión reescrita antes de la red, aborta y se deshace entera.
 
-Las pruebas 01 y 02 firman la recepción antes de entregar: desde la fase 5, sin
-autorización no hay nada que cobrar ni comisión que generar.
+Desde la fase 5, sin autorización no hay nada que cobrar ni comisión que generar (y desde `20261010000022` la firma de recepción ya no autoriza lo cotizado: las pruebas autorizan con presupuesto, "Registrar autorización" o el auxiliar `pg_temp.autorizar_cotizado`).
+
 
 **`supabase/tests/database/20_alta_con_deposito.test.sql`** (25)
 
@@ -427,6 +427,52 @@ Las decisiones del taller del 05/10/2026 ([analisis-del-proceso-2026-10.md](hist
   los de otra sede (como los reintentaría `reintentar_correos_fallidos`).
 - Filtra por sede, o todas sin sede; los grupos vacíos llegan en cero con la misma forma.
 
+**`supabase/tests/database/27_pago_mixto.test.sql`** a **`33_parqueo.test.sql`**
+
+- Archivos 27 a 33: pedidos del 05/10 y 06/10 (pago mixto, marcar lista para entregar, firma sin autorizar, idioma y traducciones del cliente, resumen de mis comisiones, correo al técnico), teléfonos de la sede con tipo y WhatsApp (`31_telefonos_tipo_y_whatsapp.test.sql`), trabajo con seguro (`32_orden_con_seguro.test.sql`) y cobro por parqueo configurable por sede (`33_parqueo.test.sql`).
+
+**`supabase/tests/database/34_proximo_servicio.test.sql`** (34)
+
+- Próximo servicio y sticker (`20261010000029`): sugerir (técnico o admin), programar, quitar y descartar (solo admin), lectura pública por código en `datos_servicio`, sección en `datos_portal` y conteo en `requiere_atencion`.
+
+**`supabase/tests/database/35_autorizar_en_recepcion.test.sql`** (12)
+
+- Autorización presencial en recepción (`20261010000030`): `create_work_order` con `autorizado_en_recepcion = true` aprueba tareas y repuestos del alta y registra un presupuesto `admin_presencial`; desmarcado o creado por técnico sigue en `borrador`.
+
+**`supabase/tests/database/36_marcas_de_danos.test.sql`** (19)
+
+- Marcas de daños en el vehículo (`20261010000031`): columna `ordenes_trabajo.marcas_danos`, validación de coordenadas y tipos, candado tras la firma (`trg_marcas_danos_firmadas`), exposición en `datos_portal` y registro en `historial_orden`.
+
+**`supabase/tests/database/37_enlace_autorizacion_y_tareas.test.sql`** (15)
+
+- Parte E de adopción (`20261010000032`): enlace del cliente creado al dar de alta la orden (`trg_order_link_on_create`), correo `en_proceso` tras la firma, paso automático a `en_proceso` al responder presupuesto con aprobadas (`trg_quote_starts_order`) y asignación automática de tareas sin técnico (`trg_assignment_takes_tasks`).
+
+**`supabase/tests/database/38_trabajos_y_catalogo.test.sql`**
+
+- Trabajos agrupados y catálogo por sede (`20261010000034`): tablas `catalogo_trabajos`, `catalogo_trabajo_lineas` y `orden_trabajos`, RPCs de catálogo y de trabajos de la orden, autorización del trabajo completo desde el portal y RLS por sede y rol.
+
+**`supabase/tests/database/39_inspeccion_por_puntos.test.sql`**
+
+- Inspección multipunto (`20261010000035`): plantillas por sede (`inspeccion_plantillas`, `inspeccion_plantilla_puntos` y `trg_sede_sembrar_inspeccion`), iniciar/marcar/completar/publicar inspección, fotos por punto (`orden_media.inspeccion_punto_id`) y hallazgos como pendientes del vehículo.
+
+**`supabase/tests/database/40_horas_reloj_indicadores.test.sql`**
+
+- Horas facturadas, reloj de tiempo por tarea e indicadores del taller (`20261010000036`): `orden_labor_tiempos`, `iniciar_reloj`, `detener_reloj`, `corregir_tiempo`, `borrar_tiempo`, cierre automático al completar tarea (`trg_labor_cerrar_reloj`), bloqueo en órdenes cerradas e `indicadores_taller`.
+
+**`supabase/tests/database/41_arreglos_del_qa.test.sql`**
+
+- Primera ronda de QA (`20261010000037`): número de orden de 4+ dígitos, bloqueo de catálogo en órdenes entregadas, inspección publicada solo editable por admin, encolado de traducción de la nota de próximo servicio, tope de 12 h en sesiones abiertas del reloj e `indicadores_taller`.
+
+**`supabase/tests/database/42_arreglos_segunda_ronda.test.sql`**
+
+- Segunda ronda de QA (`20261010000038`): `finanzas_movimientos.origen` (`manual | sistema`) e inmutabilidad de movimientos del sistema por RLS, reparto exacto del último centavo en `aprobar_comision`, `hoy_taller` sin fallo si falta zona horaria y bloqueo/idioma en `programar_proximo_servicio`.
+
+**`supabase/tests/database/43_vehiculos_unicos.test.sql`**
+
+- Unicidad de VIN (`uq_vehiculos_vin`) y de placa por estado (`uq_vehiculos_placa`) en `vehiculos` (`20261010000039`), ignorando mayúsculas, espacios y guiones.
+
+> **Estado (19 de octubre de 2026):** 1.053 pruebas en verde en los 43 archivos, con las 93 migraciones aplicadas desde cero (hasta `20261010000039_vehiculos_vin_y_placa_unicos`).
+>
 > **Estado (11 de octubre de 2026):** 811 aserciones en verde en los 33 archivos, desde una
 > base vacía (de la 31 a la 33: teléfonos con tipo y WhatsApp, trabajo con seguro y cobro por
 > parqueo; la 26 sumó el retiro con algunos trabajos hechos, el anticipo, el descuento en
@@ -572,10 +618,10 @@ Cada caso espera un rechazo o una lista vacía. Es la capa que atrapó el hallaz
 grave de la auditoría: funciones internas de dinero que pgTAP no probaba porque nadie
 había pensado en llamarlas desde fuera ([auditoria-2026-09.md](historico/auditoria-2026-09.md)).
 
-- **Sin cuentas** corre los 23 casos sin sesión, incluidos SEC-17 (las 6 edge functions responden, no 404) y SEC-18 (el registro público está apagado).
+- **Sin cuentas** corre los 23 casos sin sesión, incluidos SEC-17 (las 7 edge functions responden, no 404) y SEC-18 (el registro público está apagado).
 - **Con cuentas** (`E2E_ADMIN_*` y `E2E_MECHANIC_*` de `.env.test.local`, o `QA_TECH_*` /
   `QA_ADMIN_*`) inicia sesión, busca una orden asignada al técnico y una entregada con su
-  sesión, y una ajena con la del admin (el técnico ya no la ve), y corre los 100.
+  sesión, y una ajena con la del admin (el técnico ya no la ve), y corre los 202 casos (171 PASS + 31 SKIP al 19/10/2026).
 - **Hoy no hay cuentas de prueba** (se borraron el 29/09/2026): corre solo los 23 sin sesión.
 - Lo que no puede preparar lo marca **SKIP**. Termina con código 1 si hay un **FAIL**.
 

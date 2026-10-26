@@ -33,7 +33,7 @@ de estados de cuenta de Wells Fargo, comisiones del personal y avisos push al te
 | **Usuarios** | Personal del taller (admin, mecánico, pintor) y clientes finales (solo el portal) |
 | **Escala esperada** | 2 talleres, ~8 personas cada uno, ~120 órdenes al mes |
 | **Frontend** | React 19 + TypeScript + Vite, sitio estático en Hostinger (`restorifyauto.net`), publicado desde GitHub en cada push (el diseño es la rama `produccion`; **hoy publica `main`**, ver [evaluacion-2026-10.md](historico/evaluacion-2026-10.md#5-operación-y-despliegue)) |
-| **Backend** | Supabase (proyecto `dbstores`): Postgres con RLS y triggers, Auth, Storage, Realtime, 6 Edge Functions, pg_cron |
+| **Backend** | Supabase (proyecto `dbstores`): Postgres con RLS y triggers, Auth, Storage, Realtime, 7 Edge Functions, pg_cron |
 | **Correo** | Resend, dominio `restorifyauto.net` (correos al cliente y SMTP de Auth) |
 | **Estado** | Al día en [bitacora.md](bitacora.md#estado): qué está hecho, qué falta publicar y quién hizo qué. La historia (seis fases del cliente, auditoría, revisión previa a producción, reuniones con el taller) está en [evolucion.md](evolucion.md). El 29 de septiembre de 2026 la base se limpió para la prueba del taller: un administrador y una sede. Antes de atender clientes reales: [salida-a-produccion.md](historico/salida-a-produccion.md) §2 y [mantenimiento.md §5](mantenimiento.md#5-plan-priorizado) |
 | **Idioma** | La interfaz en español e inglés; la documentación y los comentarios del código, en español (algunos antiguos en inglés) |
@@ -186,7 +186,7 @@ Reglas completas: [ai-context.md](ai-context.md) (sirven igual para personas).
 | **Revisar la salud** | [salida-a-produccion.md §6](historico/salida-a-produccion.md#6-la-primera-semana) |
 | **Dejar la plataforma sin datos de prueba** | [scripts/admin/limpiar-datos.sql](../scripts/admin/limpiar-datos.sql): conserva los correos que indiques (al menos un admin) y las sedes; termina en `ROLLBACK` hasta que lo cambies. Después, vaciar los buckets **desde el panel**: `supabase storage rm -r ss:///<bucket>` borra también el bucket (pasó el 29/09/2026) |
 | **Encontrar dónde cambiar una parte** | [mapa-de-secciones.md](mapa-de-secciones.md); para una función de la base, `npm run db:donde -- <nombre>` |
-| **Probar la plataforma a mano** | [manual-de-pruebas.md](manual-de-pruebas.md) (142 casos por sesiones) |
+| **Probar la plataforma a mano** | [manual-de-pruebas.md](manual-de-pruebas.md) (151 casos por sesiones) |
 
 ---
 

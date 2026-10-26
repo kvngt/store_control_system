@@ -42,7 +42,7 @@ Para **por qué** está construido así: [radiografia.md](radiografia.md). Para
 | **Plan** | **Pro** desde el 30 de septiembre de 2026: respaldos diarios (Database → Backups). Los buckets siguen con 50 MB por archivo, que es lo que la app permite ([deployment.md §4.1](deployment.md#41-plan-y-límites-de-gasto)) |
 | **Postgres** | 17.6 |
 | **Tamaño de la base** | ~19 MB (29 de septiembre de 2026, recién limpiada) |
-| **Migraciones aplicadas** | 82 al 11/10/2026 (la última, `20261010000028_modulo_parqueo`). `npm run db:check` dice si producción va al día |
+| **Migraciones aplicadas** | 93 al 19/10/2026 (la última, `20261010000039_vehiculos_vin_y_placa_unicos`). `npm run db:check` dice si producción va al día |
 | **Max rows de la API** | 1.000 (valor por defecto; Project Settings → API). **No bajarlo**: `fetchAll` asume páginas de 1.000 |
 | **Enlace con este repositorio** | `supabase/.temp/project-ref` (lo crea `npx supabase link`) |
 | **Entornos** | Solo este. No hay staging: es la primera recomendación de [mantenimiento.md](mantenimiento.md#5-plan-priorizado) |
@@ -67,10 +67,10 @@ Para **por qué** está construido así: [radiografia.md](radiografia.md). Para
 │  Realtime ─────── `notificaciones` → campana · órdenes y sus hijas → pantallas al día  │
 │  Storage ──────── /storage/v1: fotos, videos, audio, firmas, logos, cheques, PDFs      │
 │  Edge Functions ─ /functions/v1: portal · process-outbox · cleanup-storage ·           │
-│                   create-employee · update-employee · delete-employee                  │
+│                   create-employee · update-employee · delete-employee · traducir-texto │
 │                                                                                        │
 │  PostgreSQL 17                                                                         │
-│   ├─ public: 27 tablas, 119 funciones, triggers del dinero y los avisos                │
+│   ├─ public: 30 tablas al 11/10/2026 más las 9 de 029–039; 161 funciones al 11/10/2026 │
 │   ├─ pg_cron ── cada minuto / 09:00 / 15:00 UTC / minuto 7 de cada hora                │
 │   ├─ pg_net ─── llama a las Edge Functions internas                                    │
 │   └─ Vault ──── URL del proyecto y secreto de las funciones internas                   │
@@ -133,13 +133,13 @@ Supabase local, para las pruebas.
 
 ### 4.2 Tablas de `public`
 
-Las 23 tienen **RLS activado**. Columnas y relaciones: [radiografia.md §4](arquitectura.md#4-modelo-de-datos).
+Todas tienen **RLS activado** (30 tablas al 11/10/2026 más las 9 tablas de las migraciones `029` a `039`). Columnas y relaciones: [arquitectura.md §4](arquitectura.md#4-modelo-de-datos).
 
 | Dominio | Tabla | Qué guarda | Quién lee |
 |---|---|---|---|
 | **Organización** | `sedes` | Talleres: nombre, marca, capacidad, % de comisión, correo y teléfonos de contacto (`telefonos`, con tipo oficina/celular, descripción y WhatsApp; `telefono` y `whatsapp` como respaldos heredados) | Todo usuario con sesión |
 | | `perfiles` | Una fila por usuario de `auth.users`: nombre, rol, sede | Uno mismo, su sede, admin |
-| | `perfiles_pago` | Esquema de pago de cada empleado: comisión (su % o el de la sede) o salario | **Admin**; cada quien el suyo |
+| | `perfiles_pago` | Esquema de pago de cada empleado: comisión (su % o el de la sede), salario o mixto (`20261010000020`) | **Admin**; cada quien el suyo |
 | **Clientes** | `clientes` | Datos de contacto y preferencia de correos | Admin; un técnico, los de sus órdenes. **Crear y editar, solo admin** |
 | | `vehiculos` | VIN, placa, marca, modelo | Admin; un técnico, los de sus órdenes. **Crear y editar, solo admin** |
 | **Órdenes** | `ordenes_trabajo` | La orden: estado, avance, firma, total de mano de obra, `archivada_en` (archivo a mano, solo entregadas) | Admin; un técnico, **solo las que tiene asignadas** (`mis_ordenes_asignadas`). **Abrirla, solo admin**; el trigger decide qué columnas cambia el técnico |
@@ -152,7 +152,7 @@ Las 23 tienen **RLS activado**. Columnas y relaciones: [radiografia.md §4](arqu
 | | `numero_orden_contadores` | Último folio por año | Nadie directamente (RLS sin políticas); la usa un trigger |
 | **Cliente final** | `orden_enlaces` | Token del portal, vencimiento, visitas | **Solo admin** |
 | | `presupuestos` | Cada presupuesto y su evidencia (vía, nombre, IP) | **Solo admin** |
-| **Dinero** | `finanzas_movimientos` | Ingresos y egresos, automáticos e importados; el cobro al entregar lleva `metodo_pago` y `comprobante_ruta` | **Solo admin** |
+| **Dinero** | `finanzas_movimientos` | Ingresos y egresos, automáticos (`origen = 'sistema'`) y manuales/importados (`origen = 'manual'`, `20261010000038`); el cobro al entregar lleva `metodo_pago` y `comprobante_ruta` | **Solo admin** (los de `sistema` no se editan ni borran por la API) |
 | | `finanzas_importaciones` | Estados de cuenta importados y su huella | **Solo admin** |
 | | `finanzas_reglas_categorizacion` | 56 reglas para categorizar movimientos del banco | **Solo admin** |
 | | `comisiones` | Comisión devengada al entregar: una por tarea (`labor_id`) y una por técnico y bolsa heredada (`labor_id` nulo); llave (orden, usuario, especialidad, `labor_id`) | Cada técnico las suyas, admin |
@@ -163,7 +163,19 @@ Las 23 tienen **RLS activado**. Columnas y relaciones: [radiografia.md §4](arqu
 | **Parqueo** | `parqueo_config` | Configuración de cobro por parqueo por sede: si está activo, días de gracia y aviso al cliente (`20261010000028`) | **Solo admin** |
 | | `parqueo_perfiles` | Perfiles de tarifas de parqueo por sede (por defecto, seguros, etc.) | **Solo admin** |
 | | `parqueo_tramos` | Tramos escalonados de días y tarifas diarias por perfil | **Solo admin** |
-| | `orden_parqueo` | Días acumulados, cobrados, total calculado/ajustado, estado y motivos por orden | Admin; un técnico, las de sus órdenes |
+| | `orden_parqueo` | Días acumulados, cobrados, total calculado/ajustado, estado y motivos por orden | **Solo admin** (`orden_parqueo_select_admin`, `20261010000033`) |
+| **Trazabilidad y traducción** | `historial_orden` | Auditoría campo por campo de los cambios en una orden (`20261010000004`) | **Solo admin** |
+| | `orden_hallazgos` | Trabajo adicional reportado por el técnico (`20261010000010`) | Admin; un técnico, los de sus órdenes |
+| | `traducciones` | Diccionario es↔en de textos visibles al cliente (`20261010000013`, `015`) | Vía RPC (`traducciones_orden`, `traducciones_portal`) |
+| **Próximo servicio (`029`)** | `orden_proximo_servicio` | Próximo mantenimiento sugerido/programado y código QR del sticker (`20261010000029`, `038`) | Admin; un técnico, los de sus órdenes (público vía `datos_servicio` en `portal`) |
+| **Catálogo y trabajos (`034`)** | `catalogo_trabajos` | Plantillas de trabajos frecuentes por sede | Todo usuario con sesión de la sede (escribe solo admin) |
+| | `catalogo_trabajo_lineas` | Líneas (mano de obra y repuestos) de cada plantilla del catálogo | Todo usuario con sesión de la sede (escribe solo admin) |
+| | `orden_trabajos` | Trabajos agrupados dentro de una orden | Admin; un técnico, los de sus órdenes (escribe solo admin) |
+| **Inspección (`035`)** | `inspeccion_plantillas` | Plantillas de inspección multipunto por sede | Todo usuario con sesión de la sede (escribe solo admin) |
+| | `inspeccion_plantilla_puntos` | Puntos de revisión de cada plantilla de inspección | Todo usuario con sesión de la sede (escribe solo admin) |
+| | `orden_inspecciones` | Cabecera de inspección multipunto de una orden (`en_curso`, `completada`, `publicada_en`) | Admin; un técnico, las de sus órdenes |
+| | `orden_inspeccion_puntos` | Estado (`bien`, `atencion`, `urgente`, `no_aplica`) y nota de cada punto en la orden | Admin; un técnico, los de sus órdenes |
+| **Tiempos (`036`)** | `orden_labor_tiempos` | Sesiones de reloj (inicio, fin, minutos) por tarea de mano de obra | Admin; un técnico, las de sus órdenes |
 
 **Tipos enumerados:** `user_role` (admin, mecanico, pintor), `order_status` (recepcion,
 en_proceso, espera_autorizacion, finalizado, entregado), `work_type` (mecanica, pintura,
@@ -174,13 +186,13 @@ No hay vistas.
 
 ### 4.3 Funciones de `public`
 
-111 funciones, en cuatro grupos según **quién puede ejecutarlas**. Los grupos y los
+111 funciones contadas el 15/09/2026 (161 al 11/10/2026 en la migración `028`, más las de las migraciones `029` a `039`), en cuatro grupos según **quién puede ejecutarlas**. Los grupos y los
 nombres salen del catálogo (`has_function_privilege('authenticated', …)`), no de una lista
 a mano: la anterior se quedó cinco funciones atrás sin que nadie lo notara.
 
 | Grupo | Cuántas | Cuáles | Quién |
 |---|---|---|---|
-| **RPC de la app** | 34 | `resumen_panel`, `saldo_orden`, `entregar_orden` (migración `20261008000000`), `comisiones_estimadas`, `resumen_empleado` (migración `20261009000000`), `balance_orden`, `margen_ordenes` (migración `20261010000000`), `importar_estado_cuenta` (migración 36), `deshacer_importacion_estado_cuenta`, `create_work_order`, `repuestos_de_orden`, `marcar_labor_completada`, `pay_commissions`, `sede_delete_impact`, `delete_sede_cascade`, `registrar_push`, `eliminar_push`, `probar_push`, `usuarios_con_push`, `crear_enlace_cliente`, `regenerar_enlace_cliente`, `revocar_enlace_cliente`, `notificar_cliente_avance`, `enviar_reporte_cliente`, `enviar_presupuesto`, `registrar_autorizacion`, `cancelar_presupuesto`, `ordenes_esperando_autorizacion`, `app_schema_version`, `parqueo_config_sede`, `guardar_config_parqueo`, `vista_previa_parqueo`, `parqueo_de_orden`, `ajustar_parqueo_orden` (`20261010000028`) | Usuarios con sesión (`authenticated`). Las de admin lo validan por dentro |
+| **RPC de la app** | 34 al 15/09/2026 (más las agregadas después) | `resumen_panel`, `saldo_orden`, `entregar_orden` (`20261008000000`), `comisiones_estimadas`, `resumen_empleado` (`20261009000000`), `balance_orden`, `margen_ordenes` (`20261010000000`), `importar_estado_cuenta`, `deshacer_importacion_estado_cuenta`, `create_work_order`, `repuestos_de_orden`, `marcar_labor_completada`, `pay_commissions`, `sede_delete_impact`, `delete_sede_cascade`, `registrar_push`, `eliminar_push`, `probar_push`, `usuarios_con_push`, `crear_enlace_cliente`, `regenerar_enlace_cliente`, `revocar_enlace_cliente`, `notificar_cliente_avance`, `enviar_reporte_cliente`, `enviar_presupuesto`, `registrar_autorizacion`, `cancelar_presupuesto`, `ordenes_esperando_autorizacion`, `app_schema_version`, `parqueo_config_sede`, `guardar_config_parqueo`, `vista_previa_parqueo`, `parqueo_de_orden`, `ajustar_parqueo_orden` (`028`), y las de `029`–`038`: `sugerir_proximo_servicio`, `descartar_sugerencia_proximo_servicio`, `programar_proximo_servicio`, `quitar_proximo_servicio`, `catalogo_de_trabajos`, `guardar_trabajo_catalogo`, `borrar_trabajo_catalogo`, `agregar_trabajo_del_catalogo`, `quitar_trabajo`, `renombrar_trabajo`, `trabajos_de_orden`, `iniciar_inspeccion`, `marcar_punto_inspeccion`, `completar_inspeccion`, `publicar_inspeccion`, `plantillas_inspeccion`, `guardar_plantilla_inspeccion`, `borrar_plantilla_inspeccion`, `iniciar_reloj`, `detener_reloj`, `corregir_tiempo`, `borrar_tiempo`, `indicadores_taller` | Usuarios con sesión (`authenticated`). Las de admin lo validan por dentro |
 | **Ayudantes de RLS** | 5 | `is_admin`, `current_user_role`, `current_user_sede_id`, `is_assigned_to_order`, `mis_ordenes_asignadas` (migración `20261007000000`: qué órdenes ve un técnico) | Las usan las políticas; sin sesión devuelven vacío |
 | **Internas** | 32 | Dinero (`_saldo_orden`, `_reparto_comisiones`, `_balance_orden`, `recalculate_order_totals`, `sync_order_commissions`, `sync_order_parts_expense`, `reverse_order_delivery_finance`); parqueo (`_parqueo_calculo`, `recalcular_parqueo_pendiente`); avisos (`notificar`, `admins_de_sede`, `datos_orden_aviso`); cola (`claim_outbox`, `finish_outbox`, `dispatch_outbox_if_due`, `invoke_edge_function`, `purge_old_notifications`, `archivos_huerfanos`); portal y correos (`datos_portal`, `datos_correo`, `encolar_correo_cliente`, `asegurar_enlace_orden`, `preferencia_correos_portal`, `responder_presupuesto_portal`, `marcar_estatus_enviado`, `es_correo_valido`); presupuestos (`_crear_presupuesto`, `_agregar_borradores`, `_lineas_pendientes`, `_resolver_presupuesto`, `recordar_presupuestos_sin_respuesta`); recordatorios (`recordar_ordenes_vencidas`) | Solo `service_role` (Edge Functions), triggers y pg_cron |
 | **De trigger** | 48 | `trg_*`, `handle_*`, `cleanup_order_finance`, `trg_parqueo_orden` | Solo como trigger |
@@ -195,7 +207,7 @@ Qué hace cada trigger, por tabla: [radiografia.md §5](arquitectura.md#5-dónde
 
 Viven en `supabase/migrations/` y se aplican con `npx supabase db push --linked`. **No se
 cambia el esquema desde el panel**: lo que no está en una migración no existe en otro
-entorno y lo borra el próximo `db reset`. Historia de las 54:
+entorno y lo borra el próximo `db reset`. Historia de las primeras 54 (hoy son 93 migraciones, hasta `20261010000039`):
 [evolucion.md §12](evolucion.md#12-todas-las-migraciones).
 
 Una función se reescribe entera en cada migración que la cambia. Para saber cuál es la
@@ -265,7 +277,7 @@ Deno 2. Código en `supabase/functions/`; se despliegan con
 | `create-employee` | sí | Empleados → Nuevo usuario | JWT + rol admin | Admin API de Auth | v6 |
 | `update-employee` | sí | Empleados → editar | JWT + rol admin; no degrada al último admin | Admin API de Auth | v4 |
 | `delete-employee` | sí | Empleados → quitar | JWT + rol admin; nadie se borra a sí mismo, ni a quien tiene órdenes asignadas o pagos de comisión | Admin API de Auth | v5 |
-| `traducir-texto` | sí | Próximo servicio → imprimir el sticker (traduce la nota) | JWT + rol admin; no toca la base | Gemini (`GEMINI_API_KEY`, `GEMINI_MODEL`) | **sin desplegar** (16/10/2026) |
+| `traducir-texto` | sí | Próximo servicio → imprimir el sticker (traduce la nota) | JWT + rol admin; no toca la base | Gemini (`GEMINI_API_KEY`, `GEMINI_MODEL`) | desplegada (SEC-17, 19/10/2026) |
 
 `verify_jwt = false` para las tres primeras está declarado en `supabase/config.toml`, y
 igual se despliegan con `--no-verify-jwt` para que quede explícito.

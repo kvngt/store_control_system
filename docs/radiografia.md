@@ -1,6 +1,6 @@
 # Radiografía Técnica de Restorify
 
-**Fecha de actualización:** 11 de octubre de 2026 (cifras); el resto, 6 de octubre de 2026
+**Fecha de actualización:** 19 de octubre de 2026 (cifras y módulos de las migraciones `029` a `039`)
 **Audiencia:** Desarrolladores y agentes de IA que toman el proyecto.
 
 Restorify es un sistema B2B multi-sede para talleres mecánicos y de pintura. Administra la operación completa: vehículos, recepción con fotos/videos, presupuestos línea por línea, trabajos, finanzas y cálculo de comisiones.
@@ -11,20 +11,20 @@ La característica fundamental del sistema es que **no tiene backend propio**. E
 
 ## 1. Cifras Actuales del Proyecto
 
-Contadas el **11/10/2026** (las demás guías remiten aquí en vez de repetir cifras que envejecen).
+Contadas el **19/10/2026** (las demás guías remiten aquí en vez de repetir cifras que envejecen).
 
 | Métrica | Valor | Detalle |
 | :--- | :--- | :--- |
 | **Archivos fuente (TypeScript)** | 196 | `src/` excluyendo pruebas |
-| **Pruebas (Vitest)** | 97 archivos | 802 pruebas unitarias y de componentes |
-| **Migraciones de base de datos** | 82 | En `supabase/migrations/`, hasta `20261010000028`; todas aplicadas en producción (`npm run db:check`) |
-| **Tablas de base de datos** | 30 | En `public` |
-| **Funciones SQL** | 161 | En `public` (RPC, internas y de trigger); `npm run db:donde -- <nombre>` da la versión vigente de cada una |
-| **Triggers en `ordenes_trabajo`** | 24 | La tabla con más lógica asociada |
+| **Pruebas (Vitest)** | 140 archivos | 1.076 pruebas unitarias y de componentes (19/10/2026) |
+| **Migraciones de base de datos** | 93 | En `supabase/migrations/`, hasta `20261010000039_vehiculos_vin_y_placa_unicos` (aplicada en producción el 19/10/2026; `npm run db:check`) |
+| **Tablas de base de datos** | 30 al 11/10/2026 más las 9 tablas de las migraciones 029 a 039 | En `public` (`orden_proximo_servicio`, `catalogo_trabajos`, `catalogo_trabajo_lineas`, `orden_trabajos`, `inspeccion_plantillas`, `inspeccion_plantilla_puntos`, `orden_inspecciones`, `orden_inspeccion_puntos`, `orden_labor_tiempos`) |
+| **Funciones SQL** | 161 al 11/10/2026 (más las de las migraciones 029 a 039) | En `public` (RPC, internas y de trigger); `npm run db:donde -- <nombre>` da la versión vigente de cada una |
+| **Triggers en `ordenes_trabajo`** | 24 al 11/10/2026 (más los 2 de las migraciones 029 a 039) | La tabla con más lógica asociada (`trg_marcas_danos_firmadas` en `031` y `trg_order_link_on_create` en `032`) |
 | **Tareas programadas** | 5 | `pg_cron`: `restorify-outbox`, `-maintenance`, `-due-reminders`, `-quote-reminders`, `-parqueo` |
-| **Pruebas de base de datos** | 33 archivos | 811 aserciones (`supabase/tests/database/`, pgTAP) |
-| **Casos de `qa:security`** | 156 | `scripts/qa/api-security.mjs`, contra la API |
-| **Edge Functions** | 6 | En `supabase/functions/` (Deno 2) |
+| **Pruebas de base de datos** | 43 archivos | 1.053 pruebas (`supabase/tests/database/`, pgTAP, 19/10/2026) |
+| **Casos de `qa:security`** | 202 | `scripts/qa/api-security.mjs`, contra la API (171 PASS + 31 SKIP al 19/10/2026) |
+| **Edge Functions** | 7 | En `supabase/functions/` (Deno 2): `cleanup-storage`, `create-employee`, `delete-employee`, `portal`, `process-outbox`, `traducir-texto`, `update-employee` |
 | **Pruebas e2e** | 8 | En `e2e/` (Playwright) |
 
 ---
@@ -69,14 +69,18 @@ El sistema se divide en varios dominios funcionales, reflejados en `src/features
 
 ### 3.1 Órdenes de Trabajo (`workOrders`)
 El núcleo del sistema. Administra el ciclo de vida del vehículo en el taller.
-- **Creación:** Asistente de 4 pasos (Cliente, Vehículo, Recepción con fotos 360°, Tareas y Depósito). Usa `create_work_order` (RPC transaccional).
+- **Creación:** Asistente de 4 pasos (Cliente, Vehículo y recepción, Trabajos, Depósito). Usa `create_work_order` (RPC transaccional). Guarda un borrador automático en `localStorage` (`intakeDraft`) por persona en este aparato y protege el botón «atrás» del teléfono (`useBackButtonTrap` y `ChoiceDialog`: *Seguir editando / Guardar borrador y salir / Descartar y salir*). En vehículos, el VIN y la placa por estado son únicos (`20261010000039`: `uq_vehiculos_vin` y `uq_vehiculos_placa`).
+- **Trabajos agrupados y catálogo (`20261010000034`, `037`):** Plantillas reutilizables por sede (`catalogo_trabajos`, `catalogo_trabajo_lineas`) y trabajos agrupados en la orden (`orden_trabajos`, con `trabajo_id` opcional en `orden_labor` y `orden_repuestos`).En el portal el cliente autoriza cada trabajo completo con su total cerrado.
+- **Inspección por puntos (`20261010000035`, `037`):** Lista multipunto por sede (`inspeccion_plantillas`, `orden_inspecciones`, `orden_inspeccion_puntos`) con estados `bien | atencion | urgente | no_aplica`, fotos por punto (`orden_media.inspeccion_punto_id`) y publicación al portal del cliente; los puntos marcados en atención o urgente alimentan `trabajos_pendientes_vehiculo`.
+- **Horas, reloj e indicadores (`20261010000036`, `037`):** Horas facturadas en tareas (`orden_labor.horas`) y tarifa por hora en la sede (`sedes.tarifa_hora`), sesiones de reloj de tiempo real por tarea (`orden_labor_tiempos`: `iniciar_reloj`, `detener_reloj`, `corregir_tiempo`, `borrar_tiempo`, con cierre automático al completar la tarea y tope de 12 h) e indicadores del taller (`indicadores_taller`: ticket promedio, horas facturadas vs. reales, eficiencia e ingresos por hora).
+- **Próximo servicio y sticker (`20261010000029`, `032`, `037`, `038`):** El técnico sugiere y administración programa el próximo servicio (`orden_proximo_servicio`) e imprime una etiqueta térmica de 62 × 50 mm con QR hacia `/s/<código>`; la nota se traduce con Gemini (`traducir-texto` o `cola_envios`).
 - **Ejecución:** Los técnicos marcan sus tareas. `trg_labor_avance` recalcula el porcentaje de avance general.
 - **Presupuestos:** Se envían cotizaciones por correo/SMS. El cliente aprueba/rechaza cada línea (repuesto/tarea) desde el portal.
 - **Entrega:** La orden se marca como "Lista". El admin la entrega vía `entregar_orden`, que bloquea modificaciones futuras y asienta el ingreso del saldo en finanzas.
 - **Archivado:** Una vez entregada, la orden desaparece de la vista principal si tiene más de 90 días, o puede ser ocultada manualmente por el administrador (esto graba la fecha en la columna `archivada_en`, la cual exige por regla de BD que la orden esté previamente `entregado`).
 
 ### 3.2 Finanzas (`finance`)
-- **Contabilidad Automática:** Los cobros de entrega, depósitos, pagos de comisiones y costos de repuestos son insertados automáticamente por triggers.
+- **Contabilidad Automática:** Los cobros de entrega, depósitos, pagos de comisiones y costos de repuestos son insertados automáticamente por triggers. Desde `20261010000038`, `finanzas_movimientos.origen` (`'manual' | 'sistema'`, forzado por `trg_finanzas_origen`) distingue los movimientos del sistema: ni un admin puede editarlos ni borrarlos por la API (`finanzas_movimientos_update` y `finanzas_movimientos_delete` exigen `origen = 'manual'`).
 - **Conciliación:** Los estados de cuenta bancarios se importan (`importar_estado_cuenta`) y se emparejan, para separar lo contable de lo operativo.
 
 ### 3.3 Empleados y Comisiones (`employees` / `payroll`)
@@ -132,6 +136,8 @@ flowchart LR
 1. **`process-outbox`:** Lee `cola_envios` y despacha correos (Resend), notificaciones push, y traducciones al inglés (Gemini).
 2. **`portal`:** El portal del cliente, que no usa la librería de Supabase, hace peticiones HTTP a esta función, la cual lee de la base de datos de forma segura (usando tokens de enlace) para servir la cotización.
 3. **`cleanup-storage`:** Tarea de limpieza programada para purgar huérfanos.
+4. **`traducir-texto`:** Traduce al instante la nota del sticker de próximo servicio con Gemini (solo admin; no toca la base).
+5. **`create-employee`, `update-employee`, `delete-employee`:** Administración de cuentas de personal en Supabase Auth y `perfiles` (solo admin).
 
 ### Integraciones Externas
 - **Resend:** Proveedor de emails transaccionales.

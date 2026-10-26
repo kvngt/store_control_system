@@ -347,7 +347,7 @@ Si la versión incluye migraciones nuevas, **los pasos 4 y 6 van seguidos**.
 Diez minutos. Es el nivel **humo** del plan de pruebas; si algo falla,
 [plan-de-pruebas.md](plan-de-pruebas.md) tiene el detalle de cada caso.
 
-- [ ] `npm run qa:security` → 0 FAIL (SEC-17 confirma que las 6 edge functions están desplegadas).
+- [ ] `npm run qa:security` → 0 FAIL (SEC-17 confirma que las 7 edge functions están desplegadas).
 - [ ] `npx supabase functions list` → `portal`, `process-outbox`, `cleanup-storage`, `create-employee`, `update-employee`, `delete-employee`, `traducir-texto`.
 
 - [ ] La app abre sin el banner de "esquema desactualizado".

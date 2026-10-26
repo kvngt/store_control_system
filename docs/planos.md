@@ -170,9 +170,9 @@ Qué dispara cada paso (todo en la base, `supabase/migrations/`):
 
 ```mermaid
 flowchart TD
-  A["Alta (4 pasos): cliente → vehículo/recepción → trabajos (seguro, técnico por tarea) → depósito (con método)"] --> B["Orden en Recepción<br/>+ fila en orden_montos<br/>+ 'Depósito inicial' en Finanzas"]
+  A["Alta (4 pasos): cliente → vehículo/recepción → trabajos (seguro, técnico por tarea) → depósito (con método)"] --> B["Orden en Recepción<br/>+ fila en orden_montos<br/>+ 'Depósito inicial' en Finanzas<br/>+ enlace del cliente (trg_order_link_on_create, 032)"]
   B --> C["Cliente firma recepción<br/>(acepta estado, fotos, millas; NO autoriza cotizado)"]
-  C --> D["asegurar_enlace_orden + encolar_correo_cliente:<br/>token de 64 hex + correo de recepción<br/>(trg_quote_on_signature ya no existe)"]
+  C --> D["encolar_correo_cliente:<br/>correo de recepción (y de 'en proceso' si ya estaba en proceso)<br/>(trg_quote_on_signature ya no existe)"]
   D --> E["Trabajo: técnico marca tareas hechas<br/>(marcar_labor_completada)"]
   E --> F["trg_labor_avance: recalcula el avance<br/>(peso = precio de la tarea)"]
   E --> G{"¿Algo más que hacer?"}
@@ -503,7 +503,7 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-  F["Firma de recepción o Crear enlace"] --> L["orden_enlaces:<br/>token de 64 hex"]
+  F["Alta de la orden (trg_order_link_on_create, 032) o Crear enlace"] --> L["orden_enlaces:<br/>token de 64 hex"]
   L --> URL["restorifyauto.net/r/<token>"]
   URL --> EF["Edge function 'portal'<br/>(sin sesión, verify_jwt = false)"]
   EF --> DP["datos_portal(token)<br/>arma el JSON a mano, campo por campo"]
@@ -616,7 +616,7 @@ flowchart LR
 
 - La base va **antes** que el sitio: una app nueva sobre una base vieja rompe funciones.
 - **Nombres de migraciones:** una migración nueva se nombra **después de la última que haya en
-  `supabase/migrations/`** (hoy después de `20261010000028`, por ejemplo `20261010000029_...`),
+  `supabase/migrations/`** (hoy después de `20261010000039`, por ejemplo `20261010000040_...`),
   **nunca según la fecha de hoy**. Una fecha anterior a la última migración aplicada no se aplica
   con `supabase db push`.
 - **Publicación:** Hostinger publica la rama `main` en 1–2 minutos directamente (verificado el
@@ -649,7 +649,7 @@ flowchart LR
 
 ---
 
-*Última revisión: 11 de octubre de 2026 (migraciones hasta `20261010000028`). Si cambias la
+*Última revisión: 19 de octubre de 2026. Los diagramas cubren hasta la migración `20261010000028` (11/10/2026); lo agregado en las migraciones `029` a `039` está documentado en [arquitectura.md](arquitectura.md) y [ai-context.md](ai-context.md). Si cambias la
 estructura —una tabla, un estado, una pantalla, un flujo de dinero— actualiza el diagrama
 correspondiente en el mismo cambio.*
 

@@ -39,12 +39,12 @@ la base sin comprometer la operación: [mantenimiento.md §4](mantenimiento.md#4
 | Pantalla | `pages/WorkOrders.tsx` (lista y archivo; para un técnico, solo "Mis órdenes"). Desde F7, dos vistas con la misma búsqueda (`features/workOrders/orderSearch.ts`): **Lista** y **Tablero** (`KanbanBoard` con `embedded`). La vista va en la URL y se recuerda en el navegador (`restorify_orders_view`) |
 | Detalle | `features/workOrders/WorkOrderDetail.tsx` (dibuja) y `useWorkOrderDetail.ts` (estado, permisos derivados como `canEdit`, `canSign`, `canDeliver`, y todas las acciones). En escritorio, pestañas (`components/Tabs.tsx`) bajo un encabezado fijo: admin Resumen/Trabajos/Fotos y avances/Cobro y cliente/Historial; técnico Tareas/Orden/Avances. Cada pestaña se monta al abrirla y después solo se esconde. Cada tarjeta es una sección plegable (`components/CollapsibleSection.tsx`), **cerrada al entrar**, en escritorio y en el teléfono (ahí apiladas, en el orden de las pestañas). Qué sección va en cada pestaña: `TAB_SECTIONS`; la que abre un enlace: `LINKED_SECTION`. Enlace directo a una pestaña: `/work-orders?open=<id>&tab=<id de la pestaña>`. Inspección 360° incluye el diagrama de daños (`DamageDiagramEditor`, `VehicleDiagram`, `lib/vehicleDiagram.ts`) |
 | Historial de la orden | Tabla `historial_orden` (trigger `trg_historial`, `20261010000004`, `20261010000031` para `marcas_danos`); `workOrdersService.getHistory`; `features/workOrders/OrderHistory.tsx` y `historyFormat.ts` (convierte cada fila en una frase); pruebas `17_historial_orden.test.sql` y `historyFormat.test.ts` |
-| Alta | `features/workOrders/WorkOrderCreateModal.tsx`, `useWorkOrderForm.ts`, `workOrderForm.schema.ts`. Cuatro pasos (F4): Cliente, Vehículo y recepción (con `DamageDiagramEditor`), Trabajos (con casilla de autorización en recepción `autorizado_en_recepcion`, migración `20261010000030_autorizar_en_recepcion.sql`), Depósito. Qué campo va en qué paso: `INTAKE_STEPS` (un error al crear abre su paso, `firstStepWithErrors`). Las tareas con `TaskEditor`; el depósito con `PaymentFields`. Lo envía `submitOrder` en `pages/WorkOrders.tsx` |
+| Alta | `features/workOrders/WorkOrderCreateModal.tsx`, `useWorkOrderForm.ts`, `workOrderForm.schema.ts`, `features/workOrders/intakeDraft.ts` (borrador automático en `localStorage`, por persona), `components/ChoiceDialog.tsx` y `lib/backButtonTrap.ts` (`useBackButtonTrap`, protección del botón «atrás» del teléfono). Cuatro pasos (F4): Cliente, Vehículo y recepción (con `DamageDiagramEditor`), Trabajos (con casilla de autorización en recepción `autorizado_en_recepcion`, migración `20261010000030_autorizar_en_recepcion.sql`, y selector de catálogo `CatalogPickerModal`), Depósito. Qué campo va en qué paso: `INTAKE_STEPS` (un error al crear abre su paso, `firstStepWithErrors`). Las tareas con `TaskEditor`; el depósito con `PaymentFields`. Lo envía `submitOrder` en `pages/WorkOrders.tsx` |
 | Tarjetas del detalle | `LaborTable` (con `TaskEditor`, `TechnicianSelect`, `TradeMismatchDialog` y las reglas de `tasks.ts`), `PartsTable`, `PartsSummaryCard`, `SignatureCard`, `ProgressLog`, `QuoteCard`, `CustomerLinkCard`, `CommissionEstimateCard`, `DeliveryModal`, `ShareReportModal`, `ReadyNotifyModal` (aviso SMS/WhatsApp sin correo al marcar listo), `DamageDiagramEditor`, `ArchivedOrders`; del técnico, `TechnicianTaskList` (Mis tareas, F5; acción rápida principal con `techNextStep.ts`) y `ReportFindingModal`; de administración, `FindingsCard` (con `DiscardFindingModal`; reglas en `findings.ts`) |
 | Servicio | `services/workOrders.service.ts` |
-| Tablas | `ordenes_trabajo` (con `marcas_danos` y `trg_marcas_danos_firmadas`, 20 triggers), `orden_montos`, `orden_labor`, `orden_repuestos`, `orden_asignaciones`, `orden_avances`, `orden_hallazgos` (F6) |
+| Tablas | `ordenes_trabajo` (con `marcas_danos`, `trg_marcas_danos_firmadas` y `trg_order_link_on_create`; 24 triggers al 11/10/2026 más los 2 de `031` y `032`), `orden_montos`, `orden_labor`, `orden_repuestos`, `orden_asignaciones`, `orden_avances`, `orden_hallazgos` (F6), `orden_trabajos` (`034`), `orden_labor_tiempos` (`036`) |
 | RPC | `create_work_order`, `repuestos_de_orden`, `marcar_labor_completada`, `mis_ordenes_asignadas`; hallazgos: `reportar_hallazgo`, `cotizar_hallazgo`, `descartar_hallazgo` (y `_salir_de_espera`, interna) |
-| Pruebas | `pages/WorkOrders.smoke.test.tsx`, `features/workOrders/*.test.tsx`, `techNextStep.test.ts`, `VehicleDiagram.test.tsx`, `vehicleDiagram.test.ts`, `ReadyNotifyModal.test.tsx`; pgTAP `01`, `03`, `07`, `09`, `10`, `21`, `22` (hallazgos), `35_autorizar_en_recepcion.test.sql`, `36_marcas_de_danos.test.sql` |
+| Pruebas | `pages/WorkOrders.smoke.test.tsx`, `features/workOrders/*.test.tsx`, `features/workOrders/intakeDraft.test.ts`, `lib/backButtonTrap.test.tsx`, `techNextStep.test.ts`, `VehicleDiagram.test.tsx`, `vehicleDiagram.test.ts`, `ReadyNotifyModal.test.tsx`; pgTAP `01`, `03`, `07`, `09`, `10`, `21`, `22` (hallazgos), `35_autorizar_en_recepcion.test.sql`, `36_marcas_de_danos.test.sql`, `37_enlace_autorizacion_y_tareas.test.sql`, `41_arreglos_del_qa.test.sql` |
 | Documento | [reglas-de-negocio.md §1 y §3](reglas-de-negocio.md) |
 
 - **Qué puede tocar un técnico** de una orden: trigger `trg_guard_order_technician` (columnas
@@ -123,11 +123,11 @@ Decisiones en [analisis-del-proceso-2026-10.md](historico/analisis-del-proceso-2
 | | |
 |---|---|
 | Pantalla | `pages/Finance.tsx`; `pages/finance/ImportStatementModal.tsx` |
-| Frontend | `features/finance/OrderMarginCard.tsx`, `OrderBalanceCard.tsx` (esta va en el detalle de la orden) |
+| Frontend | `features/finance/OrderMarginCard.tsx`, `OrderBalanceCard.tsx` (esta va en el detalle de la orden), `features/finance/WorkshopMetricsTab.tsx` (pestaña Indicadores del taller, `036`) |
 | Servicio | `finance.service.ts`, `dashboard.service.ts` (`resumen_panel`) |
 | Lógica sin React | `lib/bankStatementParser.ts`, `lib/categorizationRules.ts` |
-| Base | `finanzas_movimientos`, `finanzas_importaciones`, `finanzas_reglas_categorizacion`; `resumen_panel`, `importar_estado_cuenta`, `deshacer_importacion_estado_cuenta`, `balance_orden`, `margen_ordenes` |
-| Pruebas | `Finance.*.test.tsx`, `ImportStatementModal.test.tsx`, `features/finance/OrderMargin.test.tsx`; pgTAP `08`, `13` |
+| Base | `finanzas_movimientos` (con columna `origen = 'manual' \| 'sistema'`, trigger `trg_finanzas_origen` y políticas `finanzas_movimientos_update` / `finanzas_movimientos_delete` que bloquean editar o borrar movimientos del sistema, `20261010000038`), `finanzas_importaciones`, `finanzas_reglas_categorizacion`; `resumen_panel`, `importar_estado_cuenta`, `deshacer_importacion_estado_cuenta`, `balance_orden`, `margen_ordenes`, `indicadores_taller` |
+| Pruebas | `Finance.*.test.tsx`, `ImportStatementModal.test.tsx`, `features/finance/OrderMargin.test.tsx`, `features/finance/WorkshopMetricsTab.test.tsx`; pgTAP `08`, `13`, `40_horas_reloj_indicadores.test.sql`, `42_arreglos_segunda_ronda.test.sql` |
 | Documento | [reglas-de-negocio.md §2](reglas-de-negocio.md) |
 
 **El dinero automático** (depósito, pago final, costo de repuestos, ajustes, reversiones,
@@ -152,8 +152,8 @@ egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
 | Frontend | `features/vehicles/VehicleFields.tsx`, `VinScannerModal.tsx`, `vehicleForm.ts`; `components/CustomerPicker.tsx`, `components/PhoneInput.tsx` |
 | Servicios | `customers.service.ts`, `vehicles.service.ts`, `search.service.ts` (buscador del encabezado) |
 | Lógica sin React | `lib/vin.ts` (decodifica con NHTSA), `lib/vinScan.ts` (limpieza y validación de código de barras del VIN), `lib/barcodeDetector.ts` (BarcodeDetector nativo o ponyfill dinámico zxing-wasm), `lib/vehicleColor.ts` (traducción bidireccional es/en de colores), `lib/phone.ts` |
-| Base | `clientes`, `vehiculos` (sede derivada por `trg_vehiculo_sede`) |
-| Pruebas | `Vehicles.*.test.tsx`, `VinScannerModal.test.tsx`, `vinScan.test.ts`, `barcodeDetector.test.ts`, `vehicleColor.test.ts`, `customers.service.test.ts`, `search.service.test.ts`, `PhoneInput.test.tsx`; pgTAP `10` |
+| Base | `clientes`, `vehiculos` (sede derivada por `trg_vehiculo_sede`; unicidad de VIN `uq_vehiculos_vin` y de placa por estado `uq_vehiculos_placa` en `20261010000039_vehiculos_vin_y_placa_unicos.sql`) |
+| Pruebas | `Vehicles.*.test.tsx`, `VinScannerModal.test.tsx`, `vinScan.test.ts`, `barcodeDetector.test.ts`, `vehicleColor.test.ts`, `customers.service.test.ts`, `search.service.test.ts`, `PhoneInput.test.tsx`; pgTAP `10`, `43_vehiculos_unicos.test.sql` |
 
 ## Multimedia (fotos, videos, notas de voz)
 
@@ -214,12 +214,42 @@ egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
 | | |
 |---|---|
 | Módulo | `features/workOrders/ServiceStickerModal.tsx` (diálogo para programar, prellenar e imprimir sticker), `features/workOrders/NextServiceCard.tsx` (tarjeta en detalle de la orden), `features/dashboard/AttentionCard.tsx` (aviso en Requiere atención del panel) |
-| Lógica pura | `features/workOrders/nextService.ts` (cálculo de fechas y kilometrajes sugeridos a 3/6/12 meses y +3k/+5k/+10k mi) |
-| Servicio y tipos | `services/nextService.service.ts`, `types/domain/nextService.types.ts` |
+| Lógica pura | `features/workOrders/nextService.ts` (cálculo de fechas y kilometrajes sugeridos a 3/6/12 meses y +3k/+5k/+10k mi), `features/workOrders/stickerNote.ts` (resolución de nota traducida en su idioma), `lib/pdfText.ts` |
+| Servicio y tipos | `services/nextService.service.ts`, `services/translation.service.ts` (llama a la edge function `traducir-texto`), `types/domain/nextService.types.ts` |
 | Generador de sticker | `lib/serviceStickerPdf.ts` (PDF 62 × 50 mm para impresora térmica de etiquetas con QR vectorizado) |
 | Portal y página pública | `portal/ServicePage.tsx` (página pública `/s/<token>` con semáforo y agendamiento por WhatsApp, sin PII), `portal/serviceStatus.ts`, tarjeta en `portal/CustomerPortal.tsx` |
-| Base | Tabla `orden_proximo_servicio`; RPCs `programar_proximo_servicio`, `quitar_proximo_servicio`, `sugerir_proximo_servicio`, `descartar_sugerencia_proximo_servicio`, `datos_servicio`; migración `20261010000029_proximo_servicio.sql` |
-| Pruebas | `services/nextService.service.test.ts`, `features/workOrders/nextService.test.ts`, `features/workOrders/NextService.smoke.test.tsx`, `lib/serviceStickerPdf.test.ts`, `portal/serviceStatus.test.ts`, `portal/ServicePage.test.tsx`, `portal/CustomerPortal.test.tsx`; pgTAP `34_proximo_servicio.test.sql`; API Security SEC-162..171 en `scripts/qa/api-security.mjs` |
+| Base | Tabla `orden_proximo_servicio` (con columna `idioma` en `038`); RPCs `programar_proximo_servicio`, `quitar_proximo_servicio`, `sugerir_proximo_servicio`, `descartar_sugerencia_proximo_servicio`, `datos_servicio`; trigger `trg_orden_proximo_servicio_traducir` (`037`); edge function `supabase/functions/traducir-texto/index.ts`; migraciones `20261010000029_proximo_servicio.sql`, `032`, `037`, `038` |
+| Pruebas | `services/nextService.service.test.ts`, `services/translation.service.test.ts`, `features/workOrders/nextService.test.ts`, `features/workOrders/stickerNote.test.ts`, `features/workOrders/NextService.smoke.test.tsx`, `lib/serviceStickerPdf.test.ts`, `lib/pdfText.test.ts`, `portal/serviceStatus.test.ts`, `portal/ServicePage.test.tsx`, `portal/CustomerPortal.test.tsx`; pgTAP `34_proximo_servicio.test.sql`, `41_arreglos_del_qa.test.sql`, `42_arreglos_segunda_ronda.test.sql`; API Security SEC-162..171 en `scripts/qa/api-security.mjs` |
+
+## Catálogo y trabajos agrupados (`20261010000034`, `037`)
+
+| | |
+|---|---|
+| Módulo | `features/catalog/JobCatalogCard.tsx` (tarjeta en Configuración), `features/catalog/CatalogJobModal.tsx` (crear/editar plantilla), `features/catalog/CatalogPickerModal.tsx` (selector en el alta y en Trabajos), `features/workOrders/OrderJobsList.tsx` (trabajos agrupados en el detalle de la orden) |
+| Servicio y tipos | `services/catalog.service.ts`, `types/domain/catalog.types.ts` |
+| Portal y PDF | `portal/CustomerPortal.tsx` (autorización por trabajo completo con precio cerrado), `lib/workOrderPdf.ts` |
+| Base | Tablas `catalogo_trabajos`, `catalogo_trabajo_lineas`, `orden_trabajos` (y `trabajo_id` opcional en `orden_labor` y `orden_repuestos`); RPCs `catalogo_de_trabajos`, `guardar_trabajo_catalogo`, `borrar_trabajo_catalogo`, `agregar_trabajo_del_catalogo`, `quitar_trabajo`, `renombrar_trabajo`, `trabajos_de_orden` |
+| Pruebas | `services/catalog.service.test.ts`, `features/catalog/CatalogPickerModal.test.tsx`, `features/catalog/JobCatalogCard.test.tsx`; pgTAP `38_trabajos_y_catalogo.test.sql`, `41_arreglos_del_qa.test.sql` |
+
+## Inspección por puntos (`20261010000035`, `037`)
+
+| | |
+|---|---|
+| Módulo | `features/inspection/PointInspection.tsx` (lista multipunto en el detalle de la orden), `features/inspection/InspectionTemplatesCard.tsx` y `features/inspection/InspectionTemplateModal.tsx` (plantillas por sede en Configuración) |
+| Servicio y tipos | `services/inspection.service.ts`, `types/domain/inspection.types.ts` |
+| Portal y PDF | `portal/CustomerPortal.tsx` (sección de inspección publicada con semáforo y fotos por punto), `lib/workOrderPdf.ts` |
+| Base | Tablas `inspeccion_plantillas`, `inspeccion_plantilla_puntos`, `orden_inspecciones`, `orden_inspeccion_puntos` (y `orden_media.inspeccion_punto_id`); trigger `trg_sede_sembrar_inspeccion`; RPCs `iniciar_inspeccion`, `marcar_punto_inspeccion`, `completar_inspeccion`, `publicar_inspeccion`, `plantillas_inspeccion`, `guardar_plantilla_inspeccion`, `borrar_plantilla_inspeccion` |
+| Pruebas | `services/inspection.service.test.ts`, `features/inspection/PointInspection.test.tsx`, `features/inspection/InspectionTemplatesCard.test.tsx`; pgTAP `39_inspeccion_por_puntos.test.sql`, `41_arreglos_del_qa.test.sql` |
+
+## Reloj, horas e indicadores del taller (`20261010000036`, `037`)
+
+| | |
+|---|---|
+| Módulo | `features/workOrders/LaborTimesModal.tsx` (historial y corrección de sesiones por tarea), `features/workOrders/TaskEditor.tsx`, `features/workOrders/LaborTable.tsx`, `features/workOrders/TechnicianTaskList.tsx` (botones Iniciar/Pausar reloj), `features/finance/WorkshopMetricsTab.tsx` (pestaña Indicadores del taller en Finanzas) |
+| Lógica pura | `lib/laborHours.ts` (cálculo horas × tarifa = monto y formato de duración) |
+| Servicio y tipos | `services/metrics.service.ts`, `types/domain/metrics.types.ts` |
+| Base | Tabla `orden_labor_tiempos` y columnas `orden_labor.horas`, `catalogo_trabajo_lineas.horas`, `sedes.tarifa_hora`; trigger `trg_labor_cerrar_reloj`; RPCs `iniciar_reloj`, `detener_reloj`, `corregir_tiempo`, `borrar_tiempo`, `indicadores_taller` |
+| Pruebas | `lib/laborHours.test.ts`, `services/metrics.service.test.ts`, `features/finance/WorkshopMetricsTab.test.tsx`, `features/workOrders/LaborTable.test.tsx`, `features/workOrders/TechnicianTaskList.test.tsx`, `features/workOrders/TaskEditor.test.tsx`; pgTAP `40_horas_reloj_indicadores.test.sql`, `41_arreglos_del_qa.test.sql` |
 
 
 ## Configuración y sedes

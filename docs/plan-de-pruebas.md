@@ -181,11 +181,11 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | ID | P | Ejecuta | Comando | Esperado |
 |---|---|---|---|---|
 | AUT-01 | P0 | IA | `npm run lint` y `npx tsc -b` | Sin errores ni avisos |
-| AUT-02 | P0 | IA | `npm test` | Todas en verde (802 al 11/10/2026) |
+| AUT-02 | P0 | IA | `npm test` | Todas en verde (1.076 pruebas en 140 archivos al 19/10/2026) |
 | AUT-03 | P0 | IA | `npm run build` | Termina sin errores |
 | AUT-04 | P0 | IA | `npm run db:check` | "Base de datos al día" |
-| AUT-05 | P0 | IA | `npx supabase start` y `npm run test:db` (requiere Docker) | Todos los archivos pgTAP en verde (33 al 11/10/2026). Sin Docker: **BLOQUEADO** |
-| AUT-06 | P0 | IA | `npm run qa:security` | 0 FAIL. Los SKIP dicen qué falta (una cuenta o una orden) |
+| AUT-05 | P0 | IA | `npx supabase start` y `npm run test:db` (requiere Docker) | Todos los archivos pgTAP en verde (43 archivos / 1.053 pruebas al 19/10/2026). Sin Docker: **BLOQUEADO** |
+| AUT-06 | P0 | IA | `npm run qa:security` | 0 FAIL (202 casos al 19/10/2026: 171 PASS + 31 SKIP). Los SKIP dicen qué falta (una cuenta o una orden) |
 | AUT-07 | P1 | IA | `npm run qa:security` (con cuenta de técnico) | SEC-55 PASS. Ya no crea nada: desde que abrir una orden es solo de admin, el caso comprueba el rechazo |
 | AUT-08 | P1 | IA | `npm run test:e2e` | Todas en verde o saltadas por falta de credenciales |
 
@@ -237,7 +237,7 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 
 | ID | P | Ejecuta | Pasos → Esperado |
 |---|---|---|---|
-| ORD-01 | P0 | IA | **A** crea una orden con cliente y vehículo nuevos (paso 1 y 2), 6 fotos de recepción (paso 2), depósito $200 en efectivo (paso 3), y en el paso 4 una tarea de mano de obra $1,000 para **M**, otra para **P** y un repuesto 2 × $100 → se crea sin esperar a las fotos; la bandeja muestra el progreso; se abre el detalle con **M** y **P** en la orden, cada uno con su tarea. |
+| ORD-01 | P0 | IA | **A** crea una orden con cliente y vehículo nuevos (paso 1 y 2), 6 fotos de recepción (paso 2), en el paso 3 una tarea de mano de obra $1,000 para **M**, otra para **P** y un repuesto 2 × $100, y depósito $200 en efectivo (paso 4) → se crea sin esperar a las fotos; la bandeja muestra el progreso; se abre el detalle con **M** y **P** en la orden, cada uno con su tarea. |
 | ORD-02 | P1 | IA | El número es el siguiente consecutivo `ORD-AAAA-###`. |
 | ORD-03 | P2 | IA | Mientras una foto se comprime, el botón **Siguiente** del paso 2 dice "Procesando…" y no deja seguir. |
 | ORD-04 | P1 | IA | Millas negativas → rechazado (el campo no acepta el signo menos). |
@@ -265,10 +265,10 @@ El alta va en cuatro pasos desde F4 y Órdenes tiene dos vistas desde F7 (migrac
 
 | ID | P | Ejecuta | Pasos → Esperado |
 |---|---|---|---|
-| ALT-01 | P0 | IA | **A** → **Nueva orden** → **Siguiente** sin cliente → "Selecciona un cliente" en el campo y sigue en el paso 1; elegir uno borra el aviso. En el paso 2, Enter en **Millas** pasa a **Depósito** sin crear nada. Los pasos ya vistos se abren tocando su nombre, con lo escrito intacto. |
-| ALT-02 | P0 | IA | Paso 3: depósito $200 sin método → "Elige cómo pagó el cliente." Con **Cheque**, número 1042 y foto → crear → en **Finanzas**, el "Depósito inicial" de la orden dice Cheque, **N.º 1042**, y el comprobante abre. *(Hasta el 4/10/2026 el número y el comprobante del alta se perdían.)* |
-| ALT-03 | P0 | IA | Paso 4, orden de **Mecánica**: **Agregar trabajo** de tipo **Pintura** para **P** y otro sin técnico → crear → en Trabajos la primera fila dice Pintura y **P**; la segunda, "Sin técnico", y Resumen avisa "1 tarea(s) sin técnico". |
-| ALT-04 | P1 | IA | Paso 4: escribir una descripción en **Agregar trabajo** sin tocar **Agregar** y tocar **Crear** → aviso "Hay un trabajo escrito sin agregar…"; no se crea la orden hasta agregarla o cancelarla. |
+| ALT-01 | P0 | IA | **A** → **Nueva orden** → **Siguiente** sin cliente → "Selecciona un cliente" en el campo y sigue en el paso 1; elegir uno borra el aviso. En el paso 2, Enter en **Millas** pasa a **Trabajos** sin crear nada. Los pasos ya vistos se abren tocando su nombre, con lo escrito intacto. |
+| ALT-02 | P0 | IA | Paso 4: depósito $200 sin método → "Elige cómo pagó el cliente." Con **Cheque**, número 1042 y foto → crear → en **Finanzas**, el "Depósito inicial" de la orden dice Cheque, **N.º 1042**, y el comprobante abre. *(Hasta el 4/10/2026 el número y el comprobante del alta se perdían.)* |
+| ALT-03 | P0 | IA | Paso 3, orden de **Mecánica**: **Agregar trabajo** de tipo **Pintura** para **P** y otro sin técnico → crear → en Trabajos la primera fila dice Pintura y **P**; la segunda, "Sin técnico", y Resumen avisa "1 tarea(s) sin técnico". |
+| ALT-04 | P1 | IA | Paso 3: escribir una descripción en **Agregar trabajo** sin tocar **Agregar** y tocar **Siguiente** → aviso "Hay un trabajo escrito sin agregar…"; no avanza hasta agregarla o cancelarla. |
 | NAV-01 | P1 | IA | **Órdenes → Tablero** → salir al Panel y volver a Órdenes → abre el tablero. `/kanban` lleva al tablero. Escribir en el buscador filtra las tarjetas (la ocupación no cambia); el número de una tarjeta abre la orden. **Lista** vuelve a la lista. |
 | NAV-02 | P0 | IA | Panel de **A** con un hallazgo pendiente, un presupuesto enviado, una tarea sin técnico, una orden vencida y un correo con error → **Requiere atención** muestra los cinco con su número; cada orden abre su pestaña (hallazgo → Resumen, presupuesto y tarea → Trabajos); **Revisar** de correos → Configuración. Al asignar la tarea desde otra pestaña, el número baja sin recargar. Sin pendientes: "Todo al día". |
 | NAV-03 | P0 | IA | Panel de **M**: **Mis tareas** lista sus tareas sin hacer de todas sus órdenes sin entregar (primero las autorizadas; las demás con "Esperando autorización"), nunca las de **P**. Tocar una abre la orden en **Tareas**; marcarla **Realizado** → al volver al panel ya no está y cuenta como hecha. |
@@ -284,7 +284,7 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 | ID | P | Ejecuta | Acción (**A**) | Movimientos esperados | Comisiones |
 |---|---|---|---|---|---|
 | DIN-01 | P0 | IA | Crear y **firmar la recepción** | +$200 "Depósito inicial" | — |
-| DIN-02 | P0 | IA | Entregar (diálogo: efectivo) | +$1,000 "Pago final" **con método Efectivo**, −$200 "Costo de repuestos" | 2 × $175.00 |
+| DIN-02 | P0 | IA | Entregar (diálogo: efectivo) | +$1,000 "Pago final" **con método Efectivo**, −$200 "Costo de repuestos" | 2 × $175.00 (sugeridas; sin aviso hasta aceptarlas) |
 | DIN-03 | P0 | IA | Agregar mano de obra $100 (queda **sin autorizar**, nada cambia) y **Registrar autorización** → en persona | +$100 "Ajuste por cargo adicional" | 2 × $192.50 |
 | DIN-04 | P0 | IA | Sacar de Entregado (confirmar la advertencia) | −$1,100 "Reversión de entrega", +$200 "Reversión de costo de repuestos" | ninguna |
 | DIN-05 | P0 | IA | Volver a entregar | +$1,100 "Pago final", −$200 "Costo de repuestos" | 2 × $192.50 |
@@ -355,7 +355,7 @@ técnicos). Verifica cada paso en Finanzas (filtrando por la orden) **y** con
 | NOT-02 | P1 | IA | **M** toca el aviso → abre la orden y lo marca leído. |
 | NOT-03 | P2 | IA | "Marcar todo leído" → contador en cero. |
 | NOT-04 | P2 | IA | Idioma inglés → los avisos se leen en inglés. |
-| NOT-05 | P1 | IA | Quién recibe cada evento: asignar → técnico; quitar → técnico ("Ya no estás asignado"); **M** registra recepción → admins; **M** agrega un avance con varios archivos → admins, **un** aviso; **M** finaliza → admins ("Trabajo terminado · revisarla y marcarla lista"); **A** la marca "Listo para entregar" → **entonces** sale el correo al cliente (antes no); **A** entrega → cada técnico ("Comisión generada" con su monto). Quien hace la acción nunca recibe su propio aviso. |
+| NOT-05 | P1 | IA | Quién recibe cada evento: asignar → técnico; quitar → técnico ("Ya no estás asignado"); **M** registra recepción → admins; **M** agrega un avance con varios archivos → admins, **un** aviso; **M** finaliza → admins ("Trabajo terminado · revisarla y marcarla lista"); **A** la marca "Listo para entregar" → **entonces** sale el correo al cliente (antes no); **A** entrega → la comisión nace sugerida sin avisar al técnico; **A** acepta la comisión (`aprobar_comision` / `aprobar_comisiones`) → cada técnico recibe "Comisión aprobada · ORD-…" con su monto. Quien hace la acción nunca recibe su propio aviso. |
 | NOT-06 | P1 | H | Android: Configuración → activar en este dispositivo → "Enviar prueba" llega en segundos; con Chrome **cerrado**, asignar una orden → llega y abre la orden; en Empleados (**A**) el técnico muestra la campana con "1". |
 | NOT-07 | P1 | H | iPhone: en Safari sin instalar, la tarjeta explica los 3 pasos; desde el ícono de inicio se activa; con la app cerrada, una asignación llega. |
 | NOT-08 | P2 | H | Tablet compartida: **M** activa push y cierra sesión; entra **P** en el mismo dispositivo → los avisos de **M** ya no llegan ahí; los de **P** sí. |
@@ -420,7 +420,7 @@ Reglas: [portal-y-correos.md](portal-y-correos.md).
 
 | ID | P | Ejecuta | Pasos → Esperado |
 |---|---|---|---|
-| POR-01 | P0 | IA | Orden sin firma: la tarjeta **Enlace del cliente** (**A**) dice que se crea al firmar y ofrece **Crear enlace**. **A** firma → la tarjeta muestra el enlace sin recargar. **M** no ve la tarjeta (ni firma: ORD-07). |
+| POR-01 | P0 | IA | Orden recién creada (sin firma): la tarjeta **Enlace del cliente** (**A**) ya muestra el enlace activo (se crea al dar de alta la orden desde `20261010000032`, `trg_order_link_on_create`). **M** no ve la tarjeta (ni firma: ORD-07). |
 | POR-02 | P0 | IA | **Copiar** el enlace → abrirlo en otro navegador sin sesión → abre el reporte. |
 | POR-03 | P1 | IA | **Enviar por WhatsApp** → `wa.me/1<teléfono>` con el mensaje y el enlace. |
 | POR-04 | P2 | IA | Tras abrir el enlace, la tarjeta dice "Abierto 1 veces · última vez hace …". |
@@ -486,7 +486,7 @@ D-02, fotos de recepción, un avance con una foto publicada, otra interna y una 
 | ID | P | Ejecuta | Pasos → Esperado |
 |---|---|---|---|
 | REP-01 | P0 | IA | **A** ve **Descargar PDF** y **Enviar reporte**; **M** no ve ninguno. |
-| REP-02 | P1 | IA | **Enviar reporte** en una orden sin firma → la ventana muestra el enlace (creado en ese momento) y dice que vence 90 días después de entregar; la tarjeta del enlace lo muestra sin recargar. |
+| REP-02 | P1 | IA | **Enviar reporte** en una orden sin firma → la ventana muestra el enlace (que ya nació al crear la orden, `20261010000032`) y dice que vence 90 días después de entregar; la tarjeta del enlace lo muestra sin recargar. |
 | REP-03 | P0 | IA | **Enviar por correo** → "Reporte enviado", la ventana se cierra; en la tarjeta el correo pasa de **Programado** a **Enviado**. |
 | REP-04 | P1 | H | El correo del reporte llega con el botón al portal y el nombre del taller como remitente. |
 | REP-05 | P1 | IA | **Enviar por correo** dos veces en menos de un minuto (reabriendo la ventana) → un solo correo `reporte`. |
@@ -521,7 +521,7 @@ que no encuentra lo marca SKIP.
 
 | Grupo | Casos | Qué se espera |
 |---|---|---|
-| Sin sesión | SEC-01 a SEC-18 | Registro público apagado (SEC-18); las 6 edge functions desplegadas (SEC-17); sin datos, sin funciones internas (`reverse_order_delivery_finance`, `sync_*`, `recalculate_order_totals`, `claim_outbox`, `datos_portal`, `responder_presupuesto_portal`, `pay_commissions`), `process-outbox` 401, portal 404 con token falso, buckets privados |
+| Sin sesión | SEC-01 a SEC-18 | Registro público apagado (SEC-18); las 7 edge functions desplegadas (SEC-17); sin datos, sin funciones internas (`reverse_order_delivery_finance`, `sync_*`, `recalculate_order_totals`, `claim_outbox`, `datos_portal`, `responder_presupuesto_portal`, `pay_commissions`), `process-outbox` 401, portal 404 con token falso, buckets privados |
 | Técnico: lectura | SEC-20 a SEC-35 | No ve montos, repuestos con precio, Finanzas, enlaces, presupuestos, cola de correos, pagos ni avisos ajenos, ni datos de otra sede |
 | Técnico: solo lo suyo | SEC-36, SEC-77, SEC-78 | No ve una orden de su sede que no tiene asignada, ni sus archivos, ni su cliente (`20261007000000`) |
 | Técnico: clientes y vehículos | SEC-37, SEC-75, SEC-76 | No da de alta clientes ni vehículos, ni edita el cliente de su propia orden |

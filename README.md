@@ -40,7 +40,7 @@ triggers y funciones), nunca solo en la interfaz. Esconder un botón no es un pe
  │                                                                     └──► Resend (correos)
  │  Storage privado (fotos, videos, firmas) · Realtime · Auth            │
  │  Edge functions: portal (pública), create/update/delete-employee,     │
- │                  process-outbox y cleanup-storage (internas)          │
+ │                  traducir-texto, process-outbox y cleanup-storage     │
  └───────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -90,7 +90,7 @@ src/
 
 supabase/
   migrations/     el esquema completo, RLS, triggers y funciones, en orden
-  functions/      6 edge functions (Deno)
+  functions/      7 edge functions (Deno)
   tests/database/ pruebas pgTAP de la base (dinero y permisos)
 
 public/           service worker (solo push), manifiesto e íconos de la PWA, .htaccess
@@ -100,27 +100,28 @@ docs/             documentación (empieza por docs/README.md)
 ```
 
 Unas 25 000 líneas de TypeScript (33 600 con pruebas) y 5 600 de CSS. Mapa detallado en
-[docs/radiografia.md §3](docs/arquitectura.md#3-mapa-del-repositorio); qué archivos, tablas y
+[docs/arquitectura.md §3](docs/arquitectura.md#3-mapa-del-repositorio); qué archivos, tablas y
 pruebas tiene cada sección, en [docs/mapa-de-secciones.md](docs/mapa-de-secciones.md).
 
 ---
 
 ## Base de datos a grandes rasgos
 
-23 tablas, todas con RLS. El eje es la **sede**: casi todo cuelga de ella.
+30 tablas al 11/10/2026 más las 9 tablas de las migraciones `029` a `039` (23 tablas al 01/10/2026), todas con RLS. El eje es la **sede**: casi todo cuelga de ella.
 
 | Dominio | Tablas |
 |---|---|
-| Sedes y personas | `sedes`, `perfiles`, `perfiles_pago` (pago de cada empleado, solo admin) |
+| Sedes, catálogo y personas | `sedes`, `perfiles`, `perfiles_pago` (pago de cada empleado, solo admin), `catalogo_trabajos`, `catalogo_trabajo_lineas`, `inspeccion_plantillas`, `inspeccion_plantilla_puntos` |
 | Clientes | `clientes`, `vehiculos` |
-| Órdenes | `ordenes_trabajo`, `orden_montos` (totales, solo admin), `orden_labor`, `orden_repuestos` (solo admin), `orden_asignaciones`, `orden_avances`, `orden_media`, `orden_enlaces` (enlace del cliente), `presupuestos` |
-| Personal | `comisiones` (una por orden, persona y especialidad), `comision_pagos` |
+| Órdenes | `ordenes_trabajo`, `orden_montos` (totales, solo admin), `orden_labor`, `orden_labor_tiempos`, `orden_repuestos` (solo admin), `orden_trabajos`, `orden_asignaciones`, `orden_avances`, `orden_media`, `orden_hallazgos`, `orden_inspecciones`, `orden_inspeccion_puntos`, `orden_proximo_servicio`, `historial_orden`, `numero_orden_contadores`, `orden_enlaces` (enlace del cliente), `presupuestos`, `traducciones` |
+| Parqueo | `parqueo_config`, `parqueo_perfiles`, `parqueo_tramos`, `orden_parqueo` |
+| Personal | `comisiones` (una por orden, persona y tarea o especialidad), `comision_pagos` |
 | Finanzas | `finanzas_movimientos`, `finanzas_importaciones`, `finanzas_reglas_categorizacion` |
 | Avisos | `notificaciones`, `push_suscripciones`, `cola_envios` |
 
-Además: 114 funciones, 55 triggers y 125 políticas. Diagrama y detalles en
-[docs/radiografia.md §4](docs/arquitectura.md#4-modelo-de-datos). Evaluación de su estado en
-[docs/evaluacion-2026-10.md §4](docs/historico/evaluacion-2026-10.md#4-base-de-datos).
+Además: 161 funciones al 11/10/2026 (114 funciones, 55 triggers y 125 políticas al 01/10/2026, más lo agregado en las migraciones `029` a `039`; ver [docs/radiografia.md §1](docs/radiografia.md#1-cifras-actuales-del-proyecto)). Diagrama y detalles en
+[docs/arquitectura.md §4](docs/arquitectura.md#4-modelo-de-datos). Evaluación de su estado en
+[docs/historico/evaluacion-2026-10.md §4](docs/historico/evaluacion-2026-10.md#4-base-de-datos).
 
 ---
 
@@ -172,7 +173,7 @@ de GitHub corre eso y las pruebas pgTAP en cada push a `main`.
 
 - **Migraciones:** `npx supabase db push --linked`, siempre **antes** de publicar el frontend
   que las necesita.
-- **Nombres de migraciones:** van después de la última (`20261010000000`), no con la fecha de
+- **Nombres de migraciones:** van después de la última (hoy `20261010000039`), no con la fecha de
   hoy ([por qué](docs/historico/evaluacion-2026-10.md#4-base-de-datos)).
 - **Edge functions:** `npx supabase functions deploy <nombre>`.
 - **Lo que no está en el código:** hay configuración fuera del repositorio (secretos, Vault,

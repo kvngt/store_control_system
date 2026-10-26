@@ -155,7 +155,7 @@ amounts.
 The main menu, organized in three sections:
 - **Workshop**: **Dashboard**, **Customers**, **Vehicles**, **Work Orders** and, for technicians, **My commissions**. (Customers and Vehicles are only visible to administrators).
 - **Finance** (administrators only): **Finance**, **Commissions** and **Employees**.
-- **System**: **Settings**.
+- **System**: **Settings** and **Help** (where you view this manual tailored to your role, with a **Contents** index and the **Search the manual…** field that filters sections instantly).
 
 At the bottom is the **Log Out** button. The Kanban board no longer has its own entry in the menu: it is located inside **Work Orders** (section 10).
 
@@ -163,7 +163,7 @@ It can be collapsed using the arrow to gain screen space.
 
 ### Header (top)
 
-- **Global search.** The **Search...** field: type at least 2 characters to search across
+- **Global search.** The **Search...** field: type at least 2 characters. If you are a technician, it searches by order number across your assigned orders and tapping one opens its details. If you are an administrator, it searches across
   customers, vehicles and work orders at the same time. Results appear grouped by type. A customer opens their profile and an order
   opens its details; a vehicle takes you to the **Vehicles** list.
 - **Workshop selector** (administrators only). Switches the active shop. Everything
@@ -175,8 +175,8 @@ It can be collapsed using the arrow to gain screen space.
 
 ### On the phone
 
-- The sidebar turns into a menu opened with the ☰ button at the top
-  left. There you will find the workshop picker and **Log Out**.
+- The sidebar turns into a menu opened with the ☰ button (**Open menu**) at the top
+  left. From there you access **Settings**, **Help** and **Log Out** (plus the workshop picker, if you are an administrator with more than one workshop).
 - Search opens with the **magnifying glass** in the header and takes over the full screen.
 - A **bottom bar** appears with the most commonly used shortcuts:
   - For everyone: **Home** and **Orders**.
@@ -225,7 +225,7 @@ This is the home screen. It summarizes shop activity.
 ### What a technician sees
 <!-- rol: tecnico -->
 
-The same screen, without any money figures: revenue, totals, new customers
+The same screen, without financial figures or overall capacity data: revenue, totals, new customers, occupancy rate
 and the financial chart do not appear. The order indicator shows **My Active Orders**,
 and **Alerts** and **Recent Orders** show only **their own orders**.
 
@@ -355,7 +355,7 @@ The system automatically remembers the last view you used on that device.
 
 ![Mechanic work orders: only assigned ones.](../public/ayuda/en/12.webp)
 
-At the top there is a search bar with the **Search...** field (filters by order number or customer name in both list and board views). In the list view, there are also status filters: **All**, **Intake**, **In Progress**, **Waiting for Approval**, **Completed**, **Delivered** and **Archived** (on the board these are not needed: the columns are the statuses).
+At the top there is a search bar with the **Search...** field (filters by order number or customer name in both list and board views). In the list view, there are also status filters: **All**, **Intake**, **In Progress**, **Waiting for Approval**, **Completed**, **Delivered** and **Archived** (on the board these are not needed: the columns are the statuses). The **Archived** view gathers orders delivered more than 90 days ago or archived manually: it has its own search bar (**Search by order number or customer**), shows the delivery date, and lets you open the details of any order (the **Back to the board** button only appears for administrators).
 
 Each order can display badges depending on its condition:
 - **Insurance**: if the work is handled through an insurance company.
@@ -429,6 +429,7 @@ Items quoted in this step start as **Not authorized** unless you checked the in-
 When you tap **Create**, the system generates the order number (for example, `ORD-2026-001`) and opens its details. Photos and multimedia files continue uploading in the background without interrupting your workflow.
 
 ### Leaving the intake without losing what you entered
+<!-- rol: admin -->
 
 If you tap **Cancel**, the X or your phone's **back** button with an order half-filled, the app asks: **Keep editing**,
 **Save draft and leave** or **Discard and leave**. The draft saves itself while you type and, when you open **New order**,
@@ -494,7 +495,9 @@ Below the header are highlighted buttons with the most frequent actions based on
   - **Done: let the office know** (highlighted as the primary button during in-progress when all authorized tasks on the order are completed; moves the order to finalized and alerts the office).
   - **My jobs** (highlighted when neither starting nor finishing is due; takes them straight to assigned tasks).
   - **Add progress**.
+  - **Inspection** (opens the **360° Inspection** section, where **Point inspection** is located).
   - **Report additional work** (active while the order is not completed).
+  - **Suggest next service** (opens the dialog to suggest the date and miles for the next maintenance, or takes you to the **Next service** section if the order already has one recorded).
   - **Vehicle details**.
 
 #### Tabs (on computer)
@@ -522,7 +525,7 @@ Distributed across tabs, the sections are:
   - **History**: immutable audit log of all order changes.
 - **In the Technician view**:
   - **Tasks**: list of assigned **Tasks** and the **Your estimated commission** card.
-  - **Order**: **Vehicle Information**, **360° Inspection** (with the vehicle damage diagram in read-only mode), **Parts Description** (without dollar amounts), **Customer Signature**, **Assigned Technician**, **Next service** (suggest only).
+  - **Order** (on desktop; on mobile all sections are stacked in a single column below **Tasks**): **Vehicle Information**, **360° Inspection** (with the vehicle damage diagram in read-only mode, check-in photo, video and voice note capture, and **Point inspection**), **Parts Description** (with **Ordered** / **Arrived** status, without dollar amounts), **Customer Signature** (only appears if the customer already signed), **Assigned Technician**, **Next service** (suggest only).
   - **Progress**: log of **Work Progress**.
 
 #### Additional work reported by the technician
@@ -543,6 +546,17 @@ On the dashboard (under **Needs attention**) and above the Summary and Work tabs
 
 ![Additional work reported by the shop, to quote or discard.](../public/ayuda/en/17.webp)
 
+#### Tracking reported additional work (technicians)
+<!-- rol: tecnico -->
+
+After reporting a finding, inside your **Tasks** section the **Additional work you reported** block appears showing each report on that order, its attached files, and a badge with the office or customer decision:
+- **To review**: administration has not quoted or discarded it yet.
+- **Quoted to the customer**: administration turned it into a labor item to quote it.
+- **Waiting for the customer**: included in a sent quote and awaiting customer response.
+- **Authorized by the customer**: the customer approved the work.
+- **The customer did not authorize it**: the customer declined the quote for that finding.
+- **Not for now**: administration discarded it for now (showing their note, if one was added).
+
 #### Labor and Tasks
 
 - **For administrators (Labor)**:
@@ -558,20 +572,35 @@ On the dashboard (under **Needs attention**) and above the Summary and Work tabs
 - **For technicians (Tasks)**:
   - Main status button: the **Start work** (in reception with authorized work) and **Done: let the office know** (in progress when all work is completed) actions are placed at the top in the order's **quick actions**, ensuring a single primary button per status. In the task list, when all is done an informational help hint is shown, and if their own tasks are completed but another colleague's tasks are still pending, they see the notice «Your part is done. Still pending: ...».
   - They view their tasks with description, type and labor price (from which their commission is derived). Parts are shown without prices.
-  - **Per-task clock**: each authorized, incomplete task includes an accessible touch button (44px or larger) «▶ Start» or «⏸ Pause ({duration})» that updates elapsed duration live every minute. A technician can only have one active clock at any time: starting a task automatically pauses any other task clock.
+  - **Per-task clock**: on their own tasks (labeled **Job: {description}**), each authorized, incomplete task includes an accessible touch button (44px or larger) showing **Start** when stopped or **Pause ({duration})** when running, updating elapsed duration live every minute. A technician can only have one active clock at any time: tapping **Start** on another task automatically pauses the previous one and starts the new one, and tapping **Done** also stops that task's active clock. If a clock is left running by mistake, the system automatically caps it at a maximum of 12 hours.
   - They tap **Done** upon completing a task; if a clock is running, it stops automatically. If marked by mistake, they tap **Reopen job**.
   - Using **Photo**, they can directly take or upload a camera snapshot to attach as an update to that task.
   - Using **Add update**, they can upload photos, videos or voice notes linked to that specific job.
 - **Badges on each line**:
-  - *(No badge)*: **Authorized** by the customer. Performed and charged.
-  - **Not authorized**: recently added; the customer has not seen it. Neither charged nor performed.
-  - **Waiting for customer**: included in a sent quote; cannot be edited while awaiting response.
-  - **Do not do** (struck through): declined by the customer. Neither performed nor charged.
+  - **On your own task cards (technicians)**: each task always displays an explicit badge: **Pending** (authorized, ready to do), **Done** (completed), **Waiting for authorization** (do not perform yet), or **Not authorized · not done** (closed with the notice «The customer did not authorize this job: it is closed without being done.»).
+  - **In the Labor table (administration), Parts Description, and Other jobs on this order**:
+    - *(No badge)*: **Authorized** by the customer. Performed and charged.
+    - **Not authorized**: recently added; the customer has not seen it. Neither charged nor performed.
+    - **Waiting for customer**: included in a sent quote; cannot be edited while awaiting response.
+    - **Do not do** (struck through): declined by the customer. Neither performed nor charged.
+
+#### Technician task view: order status, updates and other jobs
+<!-- rol: tecnico -->
+
+- **Order status summary above tasks**: at the top of the **Tasks** section, a banner displays **Order status: {status}** along with the authorization summary for the entire order:
+  - If the order is in **Waiting for Approval**, it warns: «On hold: waiting for the customer to answer. You can keep working on what is already authorized.»
+  - It shows how many jobs are approved and completed (**{n} authorized by the customer · {done} done**).
+  - It lists by name the jobs **Waiting for customer authorization** and those **The customer did not authorize** («Not to be done.»).
+- **Progress updates from a task card**:
+  - **Add update** opens an inline form right inside the card where you can type what you did, attach photos, video or a voice note, and check **Visible to the customer** if you want to publish it to the customer report right away.
+  - **Photo** opens your phone's camera directly; once you take the photo, it opens that same inline form with the image already attached so you can add an optional note and tap **Save progress**.
+  - Below any task that already has updates, the **{n} update(s) for this job** collapsible toggle lets you view its history without leaving the task list.
+- **Other jobs on this order**: when the same order has jobs assigned to other coworkers or **Unassigned**, a read-only **Other jobs on this order** table appears below your tasks showing the **Assigned to** column, authorization status, and whether they are completed. This helps you coordinate with the rest of the shop and see what is still pending before you can tap **Done: let the office know**, though you cannot mark them as done or start their clock.
 
 #### Parts
 
 - **Administrator**: table with Description, Quantity, Price, **Cost** (what the shop paid; if left blank it defaults to price) and order selector: **Not ordered**, **Ordered**, **Arrived**. When marked **Arrived**, assigned technicians on the order are notified.
-- **Technician**: **Parts Description** card, where they only see parts and quantities required for their work, with no prices or costs.
+- **Technician**: **Parts Description** card, where they see the parts, quantities required for their work, the authorization badge, and whether each part is **Ordered** or has **Arrived**, with no prices or costs.
 
 #### Insurance work
 <!-- rol: admin -->
@@ -586,7 +615,7 @@ If the repair is covered by an insurance company:
 #### Your estimated commission (technicians)
 <!-- rol: tecnico -->
 
-Assigned technicians see the **Your estimated commission** card on their Tasks tab. It displays each authorized personal task with its price. The rate and amount show **Pending** until the office accepts the commission, after the order is delivered; the card explains: «Your commission is confirmed when the office accepts it, after the order is delivered.» Once accepted, the calculation appears (*task price × rate*) along with its amount. If the employee is on salary, the card indicates that the order earns no commission.
+Assigned technicians see the **Your estimated commission** card in their **Tasks** section. It displays each authorized personal task with its price. The rate and amount show **Pending** until the office accepts the commission, after the order is delivered; the card explains: «Your commission is confirmed when the office accepts it, after the order is delivered.» Once accepted, the calculation appears (*task price × rate*) along with its amount. If the employee is on salary, the card indicates that the order earns no commission.
 
 ![The same order viewed by a mechanic, with the "Your estimated commission" card.](../public/ayuda/en/19.webp)
 
@@ -600,7 +629,7 @@ Only administrators can assign staff belonging to the order's workshop.
 
 #### Work progress
 
-A log where staff document work performed with text, photos, videos or voice notes. An entry can be linked to a specific job. A technician can delete their own updates as long as the order is not delivered. An administrator can delete any update and control whether it is shown to the customer.
+A log where staff document work performed with text, photos, videos or voice notes. An entry can be linked to a specific job. If you try to leave the screen or close the order while leaving unsaved text or files in the form, the system warns you («There is an unsaved progress entry (note, photos or video). Leaving now will discard it. Leave anyway?») so you do not lose what you captured. A technician can delete their own updates as long as the order is not delivered and choose whether their own normal updates are shown to the customer (by checking **Visible to the customer** when adding one from a task or tapping the eye icon **Show to customer** / **Stop showing** in **Work Progress**). An administrator can delete any update and publish or hide both updates and individual files.
 
 ![A progress entry with photos and a voice note.](../public/ayuda/en/20.webp)
 
@@ -609,20 +638,20 @@ A log where staff document work performed with text, photos, videos or voice not
 Allows conducting a comprehensive multi-point inspection (brakes, tires, fluids, suspension, lighting, etc.) based on the templates configured for the workshop.
 
 - **How the technician performs the inspection**:
-  - In the inspection section of the order, or from their quick actions by tapping **Inspection**, the technician or administrator taps **Start inspection**.
+  - Inside the **360° Inspection** section of the order (under **Point inspection**), or from their quick actions by tapping **Inspection**, the technician or administrator taps **Start inspection**.
   - Inspection points are grouped by category (Brakes, Tires, Fluids, etc.).
-  - For each point, the technician marks its status with a single tap using large touch buttons (at least 44 px): **Good** (green), **Caution** (yellow), **Urgent** (red), or **N/A** (not applicable). Tapping the selected status again resets the point to pending.
-  - Using the camera button on each point, they can capture or upload photo evidence directly from their mobile device.
-  - They can add notes by tapping the **Note** button to record specific observations about that component.
+  - For each point, the technician marks its status with a single tap using large touch buttons (at least 44 px): **Good** (green), **Attention** (yellow), **Urgent** (red), or **N/A** (not applicable). Tapping the selected status again resets the point to pending.
+  - Using the camera icon button (**Take photo**) on each point, they can capture or upload photo evidence directly from their mobile device.
+  - Tapping the note icon button (**Add note**) opens the text field to record specific observations about that component and confirm with **Save note** (or **Cancel**).
   - The progress bar displays live completion (e.g., «18 of 24 checked»).
   - The **Complete inspection** button becomes active only when no points remain pending.
 
 - **How administration reviews, quotes, and publishes the inspection**:
   - Once the inspection is completed, administrators can turn on the **Show to customer** toggle to make it visible on the customer's portal link.
-  - On every point marked **Caution** or **Urgent**, administration has two buttons to turn the finding into a quote:
+  - On every point marked **Attention** or **Urgent**, administration has two buttons to turn the finding into a quote:
     - **Quote**: opens the labor editor pre-filling the point's name and note, ready to assign a technician and set the price.
     - **From catalog**: opens the frequent job catalog picker to insert a predefined package with its labor lines and parts.
-  - **On the customer portal**: once published, the customer sees a dedicated **Vehicle inspection** section featuring three summary badges (Urgent, Caution, Good), detailed cards for critical items showing notes and photos, and a collapsible list of items in good condition.
+  - **On the customer portal**: once published, the customer sees a dedicated **Vehicle inspection** section featuring three summary badges (Urgent, Attention, Good), detailed cards for critical items showing notes and photos, and a collapsible list of items in good condition.
   - **Previous declined work**: attention and urgent points from completed inspections are automatically recalled on future visits of the same vehicle under the pending recommendations banner.
 
 #### Customer signature
@@ -812,8 +841,8 @@ The same next service also appears as the **Recommended next service** card in t
 
 If while working you see that the vehicle will need a service later on (the next oil change, brakes, belts), you can leave it as a suggestion for administration. You do not schedule or print anything: administration decides.
 
-1. On the order, tap **Suggest next service** in the quick actions, or go to the **Order** tab → **Next service** card.
-2. Tap a **Quick preset** or enter the **Recommended date**, the **Recommended miles** and a **Note or service** (up to 120 characters; about 64 fit on the label at normal size, and a longer one shrinks the type and cuts what is left with «…», while the customer sees it in full on their page). At least the date or the miles are required.
+1. On the order, tap **Suggest next service** in the quick actions (opens the dialog directly if no service is recorded yet; if one is already scheduled or suggested, it takes you to the **Next service** section, where you can tap **Suggest next service**).
+2. Under **Quick presets**, tap an option (**Synthetic oil (+5,000 mi / 6 mo)**, **Conventional oil (+3,000 mi / 3 mo)**, **General inspection (+5,000 mi / 6 mo)** or **Paint warranty (+30 days)**) or fill in the **Recommended date**, the **In how many miles** field (when the order has check-in miles, you enter how many miles to add—for example, `5000`—and below it shows the live total «Next service at {total} mi ({actual} + {extra})»; if there are no check-in miles, the field asks for **Recommended miles**) and a **Note or service** (up to 120 characters). At least the date or the miles are required.
 3. Tap **Send suggestion**. You will see «Suggestion sent to administration.»
 
 You can only suggest on an order that is assigned to you and not yet delivered. If you suggest again, you replace your earlier suggestion. Once administration uses or discards it, it disappears.
@@ -963,6 +992,8 @@ while the app is open, with a brief on-screen message.
 | **Work finished** | Administrators, when a technician finishes an order: it has to be reviewed and marked ready for pickup |
 | **The customer answered the quote** (or **The customer did not authorize the quote**, if they authorized nothing) | Administrators, when the customer answers from their link |
 | **Additional work reported** | Administrators, when a technician reports additional work |
+| **Needs approval** | Administrators, when the order moves to **Waiting for Approval** |
+| **Inspection complete** | Administrators, when a technician completes the order's point inspection |
 | **A part arrived** | Assigned technicians, when an ordered part is marked **Arrived** |
 | **Quote without a response** | Administrators, once a day if a quote has gone more than 24 hours without a response |
 | **Quote answered** / **Work not authorized** | Assigned technicians, when the customer answers the quote, with what was authorized or not |
@@ -1303,11 +1334,11 @@ based on role.
 
 ### For everyone
 
-- **My Profile**: photo (**Change profile photo**), name and email.
+- **My Profile**: photo (**Change profile photo**), **Name** (editable with the **Save** button) and **Email** (read-only; ask an administrator if it needs to be changed).
 - **Language** (**Español** / **English**) and **Appearance** (**Dark** / **Light**).
 - **Notifications on this device**: enable, test and disable push alerts
   (section 11).
-- **Report a problem**: button to notify support if you encounter a bug or system failure. You can attach a screenshot, and diagnostic data from the last 30 seconds is automatically attached securely (hiding private customer data and photos).
+- **Something not working?**: card with the **Report a problem** button to notify support if something failed or blocked you. When tapped, you describe **What happened**, can **Add a screenshot**, and tap **Send report**; the system securely attaches technical diagnostics and the last 30 seconds of screen activity (hiding private customer data and photos).
 
 ![Technician settings.](../public/ayuda/en/43.webp)
 
@@ -1384,7 +1415,7 @@ update it manually.
 | Assign technician and type for each task | ✅ | ❌ (views who is assigned to each) |
 | Report additional work | — | ✅ from the order |
 | Review, quote or discard additional work | ✅ | ❌ |
-| Mark a task as done | ✅ all | ✅ their own and unassigned tasks |
+| Mark a task as done | ✅ all | ✅ only their own (administration marks tasks without a technician) |
 | View their commission on the order | — | ✅ on their orders (amount, once the office accepts it) |
 | Check **My commissions** | — | ✅ only their own accepted and paid commissions |
 | Change order status | ✅ | ✅ on their orders (In Progress and Completed only) |
@@ -1520,7 +1551,7 @@ It has a quote awaiting customer response. Record authorization (if the customer
 responded) or cancel the quote.
 
 **«I am a technician: should I perform this job?»**
-If the line has no badge, it is authorized. **Not authorized** and **Waiting for
+On your own task cards, only perform those marked **Pending** (those marked **Waiting for authorization** are not done yet, and those marked **Not authorized · not done** are closed without being done). In the **Other jobs on this order** table or in **Parts Description**, if the line has no badge it is authorized; **Not authorized** and **Waiting for
 customer**: not yet. **Do not do**: no.
 
 **«The customer says they authorized but it does not show up.»**
@@ -1543,8 +1574,8 @@ send them the new one. If it says «Invalid link», the link was truncated when 
 again.
 
 **«The customer cannot see progress photos.»**
-Progress files are internal until an administrator taps **Show on the customer
-report** on each one.
+Progress updates and their files start as internal unless **Visible to the customer** was checked when creating the update from a task. To publish them afterward, whoever created the update (technician or administrator) can tap the eye icon (**Show to customer**) in **Work Progress**, which publishes the update along with its photos. For an individual file or an additional work finding, only an administrator can publish it using **Show on the customer
+report**.
 
 **«I did not receive the password recovery email.»**
 Check your spam folder. If it still does not arrive, ask an administrator
@@ -1563,7 +1594,7 @@ the office accepts it.
 These are added by an administrator. If you found something extra during repairs, use **Report additional work** on the order so the office can review and quote it. You can also document it in a progress entry (with photo, video or voice note).
 
 **«I cannot find an order that I know exists.»**
-Check that the status filter is set to «All» and—if you are an administrator—that
+Check that the status filter is set to **All** or tap the **Archived** filter (orders delivered more than 90 days ago move there). If you are a technician, remember that you only see orders where you are assigned to the order or to at least one task: ask an administrator to assign you. If you are an administrator, also check that
 you are in the correct workshop.
 
 **«I was asked to help on an order and I cannot edit it.»**
@@ -1618,7 +1649,21 @@ If they still have assigned orders, those must be reassigned first.
 Check the **No plate** box.
 
 **«I found a system error or the application crashed, what should I do?»**
-Go to Settings (by tapping your avatar at top right) and use the **Report a problem** button. Describe what you were doing and submit it. The system will securely attach diagnostics and a screen recording so we can investigate.
+Go to **Settings** (by tapping your avatar at top right or from the ☰ menu on your phone) and on the **Something not working?** card tap **Report a problem**. Describe what you were doing under **What happened**, use **Add a screenshot** if you have an image of the issue, and tap **Send report**. The system will securely attach diagnostics and the last 30 seconds of screen activity so we can investigate.
+
+### Frequent technician questions
+<!-- rol: tecnico -->
+
+**«I left a task clock running by mistake (or the time seems capped at 12 hours).»**
+To prevent a forgotten clock from distorting time logs, the system automatically caps any continuous interval at a maximum of **12 hours** (720 minutes). If you forgot to pause it or need to adjust the actual start or end time, ask an administrator to edit or delete the interval under **Labor → Times** on the order.
+
+**«Why doesn't the Start work or Done: let the office know button appear for me?»**
+Each order status displays a single primary button when its conditions are met:
+- **Start work** appears only when the order is in **Intake** and you have at least one **authorized** task assigned to you.
+- **Done: let the office know** appears only when the order is **In Progress** and **all** authorized tasks across the entire order are marked as done (including those assigned to coworkers or unassigned, which you can check under **Other jobs on this order**).
+
+**«I cannot tap Complete inspection or the inspection points are locked.»**
+The **Complete inspection** button is only enabled once no points remain pending (if a component does not apply to the vehicle, mark it **N/A**). If point buttons are disabled, it is because the inspection has already been published to the customer (**Visible to customer**) or because the order is already **Delivered**; to edit a published inspection on an undelivered order, ask an administrator to tap **Hide from customer** first.
 
 ---
 

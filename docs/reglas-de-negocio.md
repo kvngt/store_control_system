@@ -23,6 +23,7 @@ solo en la interfaz, se dice.
 9. [Retención y limpieza](#9-retención-y-limpieza)
 10. [Riesgos conocidos y decisiones abiertas](#10-riesgos-conocidos-y-decisiones-abiertas)
 11. [Próximo servicio y sticker](#11-próximo-servicio-y-sticker)
+12. [Catálogo y trabajos agrupados, inspección por puntos y horas/reloj](#12-catálogo-y-trabajos-agrupados-inspección-por-puntos-y-horasreloj)
 
 ---
 
@@ -38,7 +39,7 @@ Recepción ──► En proceso ◄──► Espera de autorización ──► F
 | Estado | Significa | Efectos automáticos al entrar |
 |---|---|---|
 | **Recepción** | El vehículo ingresó; no se trabaja todavía | — |
-| **En proceso** | Se está trabajando | Pasa de forma manual (administración o técnico) o **automáticamente desde Recepción con la primera autorización** de trabajos (`trg_quote_starts_order`, `20261010000031`) |
+| **En proceso** | Se está trabajando | Pasa de forma manual (administración o técnico) o **automáticamente desde Recepción con la primera autorización** de trabajos (`trg_quote_starts_order`, `20261010000032`) |
 | **Espera de autorización** | Pausa: hay trabajo adicional que el cliente tiene que autorizar. El técnico la provoca **reportando un hallazgo** (`reportar_hallazgo`); no la elige en el selector | Aviso a administración. Sale sola a En proceso al responder el cliente, al descartar el hallazgo o al cancelar el presupuesto ([hallazgos.md](hallazgos.md)) |
 | **Finalizado** | El técnico terminó el trabajo. **Todavía no es "listo para el cliente"**: administración lo revisa y lo marca "Listo para entregar" | Avance al 100 %, fecha de finalización, **aviso a admins: "Trabajo terminado"** (hay que revisarlo). **No se le avisa al cliente.** Su enlace dice "En revisión final" |
 | ↳ **Listo para entregar** | Marca sobre Finalizado que pone **solo administración** (`marcar_lista_para_entregar`, protegida por `trg_guard_lista_para_entregar` con `restorify.lista`; se borra sola si la orden deja de estar finalizada o entregada) | **Ahora sí** sale el correo "Su vehículo está listo" y el enlace dice "Listo para recoger". Queda quién y cuándo (historial). `datos_correo` entrega al `process-outbox` el estatus del cliente (`_estatus_cliente`: finalizado sin marca = en proceso), y `datos_portal` manda `orden.lista_para_entregar` ("En revisión final" si aún no tiene la marca) |
@@ -90,7 +91,10 @@ cerrada se borra su fecha de finalización y el avance se conserva.
   campo nuevo del formulario va en uno de ellos (lo exige `workOrderForm.schema.test.ts`).
 - Lo que un admin cotiza al crear la orden nace **sin autorizar** y se autoriza
   solo mediante un presupuesto o registrando la autorización manualmente (sección 8).
-- **El enlace del cliente se crea de inmediato con la orden** (`trg_order_link_on_create`, `20261010000031`), sin esperar a la firma, para poder compartirlo de inmediato (p. ej. por WhatsApp). El correo de recepción al cliente sale al firmar (`firma_ruta`), y si la orden pasa a en proceso antes de firmar, el aviso de en proceso espera a que exista firma.
+- **El enlace del cliente se crea de inmediato con la orden** (`trg_order_link_on_create`, `20261010000032`), sin esperar a la firma, para poder compartirlo de inmediato (p. ej. por WhatsApp). El correo de recepción al cliente sale al firmar (`firma_ruta`), y si la orden pasa a en proceso antes de firmar, el aviso de en proceso espera a que exista firma.
+- **Autorización en recepción y marcas de daños (`20261010000030`, `031`):** si el cliente autoriza en el mostrador al dejar el carro, administración marca `autorizado_en_recepcion` en el paso 3 y `create_work_order` aprueba lo cotizado dejando constancia en `presupuestos` (`via = 'admin_presencial'`). Las marcas de daños sobre el diagrama del vehículo (`ordenes_trabajo.marcas_danos`) se bloquean tras la firma de recepción (`trg_marcas_danos_firmadas`).
+- **Borrador del alta y botón «atrás»:** el formulario del alta guarda un borrador automático en `localStorage` (`intakeDraft`) por persona en este aparato (sin fotos, videos ni la foto del comprobante; se borra al crear la orden, al descartar y al cerrar sesión) y, si hay cambios sin guardar, intercepta el cierre y el botón «atrás» del teléfono (`useBackButtonTrap` y `ChoiceDialog`: *Seguir editando / Guardar borrador y salir / Descartar y salir*).
+- **VIN y placa únicos (`20261010000039`):** no pueden existir dos vehículos con el mismo VIN (`uq_vehiculos_vin`) ni con la misma placa y estado (`uq_vehiculos_placa`), ignorando mayúsculas, espacios y guiones.
 - El número `ORD-AAAA-###` se genera de forma atómica: dos órdenes simultáneas
   nunca reciben el mismo.
 - La orden y sus líneas se crean en **una sola transacción**: o entra todo, o nada.
@@ -184,6 +188,7 @@ Nadie registra a mano el dinero de una orden. Estos movimientos los crea la base
   No asientes un pago anticipado por otra vía.
 - **Negativos no.** Mano de obra, precios y depósito no aceptan valores negativos, ni
   un repuesto cantidad cero (formulario y base).
+- **Inmutabilidad de los movimientos automáticos (`20261010000038`):** `finanzas_movimientos.origen` distingue `'manual'` de `'sistema'` (forzado por `trg_finanzas_origen` según quién escribe (`current_user`)). Ni siquiera un administrador puede editar o borrar por la API un movimiento creado por el sistema (`finanzas_movimientos_update` y `finanzas_movimientos_delete` exigen `origen = 'manual'`).
 
 ### Entregar
 
@@ -480,7 +485,7 @@ línea de antes de F3   = reparto por especialidad: bolsa ÷ asignados a mano co
 | ~~Un **técnico** registra una recepción~~ | Admins de la sede | "Recepción registrada · ORD-… Falta cotizar." **Ya no ocurre:** abrir una orden es de administración (20261004000000), así que `trg_order_created_notify` quedó sin caso. El trigger se deja como red |
 | Un **técnico** agrega un avance | Admins de la sede | "Nuevo avance · ORD-…" con su nota |
 | Una orden pasa a **Finalizado** | Admins de la sede | "Trabajo terminado · ORD-…": revísala y márcala lista para entregar |
-| Se genera tu comisión (al entregar) | El técnico | "Comisión generada · ORD-… $175.00": **uno** por orden y persona, con la suma de sus tareas y su parte de las bolsas |
+| Administración acepta tu comisión (`aprobar_comision` / `aprobar_comisiones`; al entregar nace `sugerida` sin aviso) | El técnico | "Comisión aprobada · ORD-…": con el monto aceptado por la mano de obra del vehículo (`20261010000014`, `018`) |
 | Se responde un presupuesto (cliente o admin) | Técnicos asignados | "Trabajos autorizados · ORD-…" / "Presupuesto rechazado · ORD-…" con "Autorizado: … No realizar: …" |
 | El **cliente** responde un presupuesto desde su enlace | Admins de la sede | "El cliente respondió el presupuesto · ORD-… Autorizó 2 de 3 ($450.00)" y su comentario |
 | Un presupuesto lleva **más de 24 horas** sin respuesta | Admins de la sede | "Presupuesto sin respuesta · ORD-…" (una vez al día, 15:00 UTC) |
@@ -511,7 +516,7 @@ Detalle técnico: [portal-y-correos.md](portal-y-correos.md).
 
 - Cada orden tiene **un enlace personal activo** (`restorifyauto.net/r/<token>`). El
   cliente no crea cuenta.
-- **Nace al firmar la recepción.** Un admin también puede crearlo antes.
+- **Nace al crear la orden** (`trg_order_link_on_create`, `20261010000032`), sin esperar a la firma.
 - Solo un **admin** lo ve, lo copia, lo manda por WhatsApp, lo cambia (el anterior
   deja de abrir) o lo desactiva.
 - **Vence 90 días después de entregar** la orden. Mientras el vehículo está en el
@@ -650,10 +655,10 @@ firmar.
 Cosas que hoy funcionan así a propósito o por falta de decisión. Conviene
 resolverlas con el cliente.
 
-1. **Un admin puede borrar movimientos automáticos de Finanzas.** Borrar un "Pago
-   final" o un "Costo de repuestos" deja la orden descuadrada para cálculos
-   posteriores (re-entrega, reversión, ajustes). *Propuesta:* permitir borrar solo
-   movimientos manuales o importados, y corregir los automáticos con ajustes.
+1. ~~**Un admin puede borrar movimientos automáticos de Finanzas.**~~ Resuelto el 19/10/2026 (`20261010000038`): la columna `finanzas_movimientos.origen` distingue `'manual'` de `'sistema'` (forzado por `trg_finanzas_origen`) y las políticas RLS de UPDATE y DELETE bloquean editar o borrar movimientos del sistema por la API.
+
+
+
 2. **No hay orden obligatorio entre estados.** Se puede saltar de Recepción a
    Finalizado. Solo Entregado está restringido.
 3. **Recalcular comisiones con una parte ya pagada puede pagar de más.** Si se
@@ -695,7 +700,9 @@ resolverlas con el cliente.
 
 ---
 
-## 11. Próximo servicio y sticker (`20261010000029`)
+## 11. Próximo servicio y sticker
+
+*Migración `20261010000029`.*
 
 Módulo para programar el siguiente mantenimiento recomendado para el vehículo (cambio de aceite, frenos, filtros, etc.) e imprimir un sticker para el parabrisas con un código QR que abre la página de seguimiento.
 
@@ -728,4 +735,30 @@ Módulo para programar el siguiente mantenimiento recomendado para el vehículo 
 - Formato estándar de etiqueta de 62 mm de ancho × 50 mm de alto, compatible con impresoras térmicas (e.g. Brother QL o similares).
 - Código QR vectorizado (dibujado mediante rectángulos SVG/PDF con zona de silencio de 2 módulos), sin pixelación.
 - Tipografía mínima de 6 pt para garantizar legibilidad térmica.
+- **Idioma y traducción de la nota (`20261010000032`, `037`, `038`):** el sticker se imprime en el idioma del cliente (`orden_proximo_servicio.idioma`). Al imprimir, si falta traducción de la nota, la app invoca `traducir-texto` (Gemini) y además `trg_orden_proximo_servicio_traducir` encola su traducción en `cola_envios` al guardar la nota. `programar_proximo_servicio` rechaza órdenes entregadas o retiradas sin reparar.
+
+---
+
+## 12. Catálogo y trabajos agrupados, inspección por puntos y horas/reloj
+
+*Migraciones `20261010000034` a `038`.*
+
+### Trabajos agrupados y catálogo por sede (`20261010000034`, `037`)
+
+- **Plantillas por sede:** administración configura en `catalogo_trabajos` y `catalogo_trabajo_lineas` paquetes reutilizables (nombre en español e inglés, especialidad y líneas de mano de obra o repuestos con horas, cantidad, precio y costo).
+- **En la orden:** `agregar_trabajo_del_catalogo` copia una plantilla a `orden_trabajos` y crea sus filas en `orden_labor` y `orden_repuestos` vinculadas por `trabajo_id` (no se permite en órdenes entregadas o retiradas sin reparar, `037`). `quitar_trabajo` borra el trabajo y sus líneas mientras ninguna esté pagada ni en un presupuesto pendiente.
+- **Autorización por trabajo completo:** en el portal y en los correos de presupuesto, las líneas con `trabajo_id` se presentan agrupadas como un solo trabajo con su total cerrado; el cliente autoriza o rechaza el trabajo entero (`_resolver_presupuesto` amplía lo aprobado a todas las líneas pendientes del trabajo), sin ver el desglose interno de repuestos ni mano de obra.
+
+### Inspección por puntos (`20261010000035`, `037`)
+
+- **Plantilla por sede:** cada sede tiene su plantilla multipunto (`inspeccion_plantillas`, `inspeccion_plantilla_puntos`), sembrada automáticamente al crear la sede (`trg_sede_sembrar_inspeccion`) y editable por administración en Configuración.
+- **Semáforo por punto:** el técnico asignado o un admin inicia la inspección (`iniciar_inspeccion`) y marca cada punto (`marcar_punto_inspeccion`) como `bien`, `atencion`, `urgente` o `no_aplica`, con nota y fotos opcionales (`orden_media.inspeccion_punto_id`).
+- **Publicación y candado:** el técnico o admin marca la inspección como completada (`completar_inspeccion`), y **solo administración** la publica al portal del cliente (`publicar_inspeccion`). Una vez publicada, solo un admin puede modificar sus puntos (`037`). Los puntos en `atencion` o `urgente` sin trabajo asociado aparecen como pendientes del vehículo en visitas futuras (`trabajos_pendientes_vehiculo`).
+
+### Horas facturadas, reloj de tiempo e indicadores (`20261010000036`, `037`, `038`)
+
+- **Horas facturadas:** cada sede define su `tarifa_hora` (opcional) y cada línea de mano de obra puede llevar `horas`; en la pantalla, escribir horas o tarifa calcula `horas × tarifa = monto` (`lib/laborHours.ts`), pero el monto sigue siendo editable y es la base de los totales y comisiones.
+- **Reloj por tarea:** el técnico asignado a la tarea (o un admin) inicia y pausa el reloj en `orden_labor_tiempos` (`iniciar_reloj`, `detener_reloj`). Iniciar una tarea detiene cualquier otra sesión abierta de ese técnico; marcar la tarea como completada cierra su reloj (`trg_labor_cerrar_reloj`); no se permite iniciar el reloj en órdenes finalizadas o entregadas. Las sesiones abiertas que superen 12 h se acotan a 12 h al cerrar o al calcular indicadores (`037`). Solo administración corrige o borra intervalos (`corregir_tiempo`, `borrar_tiempo`).
+- **Indicadores del taller:** en Finanzas → **Indicadores del taller**, la RPC `indicadores_taller` (solo admin) calcula en la base las órdenes entregadas, ingresos, ticket promedio, horas facturadas, horas reales trabajadas, eficiencia (`horas_facturadas / horas_reales`) e ingresos por hora del periodo, global y por técnico.
+- **Asignación automática de tareas sin técnico (`20261010000032`):** al asignar a alguien a mano en `orden_asignaciones`, `trg_assignment_takes_tasks` le pasa las tareas de `orden_labor` que no son heredadas, no tienen técnico y son de su oficio. Asignar sigue siendo dinero: esas tareas le pagan a él.
 

@@ -66,15 +66,15 @@ edge functions y el despliegue.
 
 **[planos.md](planos.md)** — Los planos en diagramas: las capas, el mapa de pantallas, el ciclo de
 vida de una orden, las tablas y cómo se relacionan, el camino del dinero y de las comisiones, lo
-que ve el cliente, los avisos, quién puede hacer qué y cómo sale un cambio. Restaurado el
-11/10/2026 tal como estaba el 05/10: le falta lo posterior.
+que ve el cliente, los avisos, quién puede hacer qué y cómo sale un cambio. Cubre hasta la migración `028`: lo de `029` a `039` está en [arquitectura.md](arquitectura.md) y [ai-context.md](ai-context.md).
+ 
 
 **[arquitectura.md](arquitectura.md)** — La arquitectura a fondo, para quien va a tocar el código:
 el mapa del repositorio, el modelo de datos, dónde vive la lógica de negocio (triggers y RPC),
 seguridad y permisos, el servidor, el frontend por dentro, cómo se escriben migraciones, cómo
-levantar el proyecto y las trampas que ya mordieron a alguien. Restaurado el 11/10/2026 tal como
-estaba el 05/10: le falta lo posterior (donde no coincida, manda
-[ai-context.md](ai-context.md)).
+levantar el proyecto y las trampas que ya mordieron a alguien. Actualizado hasta la migración `028` más el resumen de las migraciones `029` a `039` (donde no coincida, manda [ai-context.md](ai-context.md)).
+ 
+ 
 
 **[bitacora.md](bitacora.md)** — Documento vivo: la tabla de estado (qué está hecho y qué falta
 publicar) y la bitácora de traspaso, donde cada agente (Claude Code, Gemini, Antigravity…)
@@ -122,7 +122,7 @@ una, las decisiones que se reemplazaron y cómo creció la red de pruebas.
 
 **[manual-de-pruebas.md](manual-de-pruebas.md)** — Para la persona que prueba la
 plataforma desde la pantalla: qué preparar, una orden de ejemplo con los montos que deben
-salir, 142 casos en 13 sesiones (acceso y contraseñas, personal, órdenes como admin y como
+salir, 151 casos en 13 sesiones (acceso y contraseñas, personal, órdenes como admin y como
 técnico, presupuestos, enlace del cliente, dinero y comisiones, finanzas, teléfono, uso
 real, borrados), cómo reportar un fallo y la hoja de resultados.
 
@@ -143,7 +143,7 @@ se comprueba y los riesgos que quedan abiertos.
 **[supabase.md](supabase.md)** — El inventario del proyecto de Supabase y de la plataforma
 completa: el mapa de servicios (Hostinger, Supabase, Resend, push, NHTSA), quién habla
 con qué y con qué llave, esquemas y tablas, las funciones agrupadas por quién puede
-ejecutarlas, buckets y sus rutas, las 6 edge functions, nombres de secretos y de Vault,
+ejecutarlas, buckets y sus rutas, las 7 edge functions, nombres de secretos y de Vault,
 Auth, Realtime, tareas programadas, dónde está cada cosa en el panel, el Supabase local y
 lo que falta limpiar.
 
@@ -184,7 +184,7 @@ correo con Resend, variables de entorno, el orden en que tiene que hacerse todo 
 qué revisar después.
 
 **[manual-usuario.md](manual-usuario.md)** — La aplicación pantalla por pantalla,
-escrita para el personal del taller, al día con la app del 12/10/2026 (incluye parqueo, seguro,
+escrita para el personal del taller, al día con la app del 26/10/2026 (incluye parqueo, seguro,
 trabajo adicional, "listo para entregar" y comisiones por aceptar). Base en texto para el
 manual con capturas: 46 marcadores dicen qué captura va en cada lugar.
 

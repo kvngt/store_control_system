@@ -155,7 +155,7 @@ montos.
 El menú principal, en tres grupos:
 - **Taller**: **Panel Principal**, **Clientes**, **Vehículos**, **Órdenes de Trabajo** y, para los técnicos, **Mis comisiones**. (Clientes y Vehículos solo los ve administración).
 - **Finanzas** (solo administradores): **Finanzas**, **Comisiones** y **Empleados**.
-- **Sistema**: **Configuración**.
+- **Sistema**: **Configuración** y **Ayuda** (donde consultas este manual adaptado a tu rol, con un índice de **Contenido** y el campo **Buscar en el manual…** que filtra las secciones al instante).
 
 Abajo está el botón **Cerrar Sesión**. El tablero Kanban ya no tiene entrada propia en el menú: está dentro de **Órdenes de Trabajo** (sección 10).
 
@@ -163,7 +163,7 @@ Se puede plegar con la flecha para ganar espacio en pantalla.
 
 ### Encabezado (arriba)
 
-- **Buscador global.** Campo **Buscar...**: escribe al menos 2 caracteres y busca a la vez entre
+- **Buscador global.** Campo **Buscar...**: escribe al menos 2 caracteres. Si eres técnico, busca por número de orden entre tus órdenes asignadas y al tocar una abre su detalle. Si eres administrador, busca a la vez entre
   clientes, vehículos y órdenes. Los resultados aparecen agrupados por tipo. Un cliente abre su ficha y una orden
   abre su detalle; un vehículo te lleva a la lista de **Vehículos**.
 - **Selector de sede** (solo administradores). Cambia el taller activo. Todo lo
@@ -175,8 +175,8 @@ Se puede plegar con la flecha para ganar espacio en pantalla.
 
 ### En el teléfono
 
-- La barra lateral se convierte en un menú que se abre con el botón ☰ de arriba a
-  la izquierda. Ahí están el selector de sede y **Cerrar Sesión**.
+- La barra lateral se convierte en un menú que se abre con el botón ☰ (**Abrir menú**) arriba a
+  la izquierda. Desde ahí accedes a **Configuración**, **Ayuda** y **Cerrar Sesión** (y al selector de sede, si eres administrador con más de una sede).
 - El buscador se abre con la **lupa** del encabezado y ocupa toda la pantalla.
 - Aparece una **barra inferior** con los accesos más usados:
   - Para todos: **Panel** y **Órdenes**.
@@ -225,14 +225,14 @@ Es la pantalla de inicio. Resume cómo va el taller.
 ### Lo que ve un técnico
 <!-- rol: tecnico -->
 
-La misma pantalla, sin nada de dinero: no aparecen ingresos, totales, clientes
-nuevos ni el gráfico financiero. El indicador de órdenes dice **Mis Órdenes Activas**,
+La misma pantalla, sin datos financieros ni de capacidad global: no aparecen ingresos, totales, clientes
+nuevos, tasa de ocupación ni el gráfico financiero. El indicador de órdenes dice **Mis Órdenes Activas**,
 y las **Alertas** y las **Órdenes Recientes** muestran únicamente **sus propias órdenes**.
 
 Arriba de todo está **Mis tareas**: los trabajos que tiene asignados en todas sus órdenes
 sin entregar y que todavía no marca como hechos. Primero los que ya se pueden hacer (la
 orden que vence antes, primero); al final, los marcados con **Esperando autorización**. Al
-tocar uno se abre su orden en la pestaña **Tareas**, donde se marca **Realizado** y se
+tocar uno se abre su orden en la sección **Tareas**, donde se marca **Realizado** y se
 agregan avances. Las tareas hechas no se listan una por una, solo se cuentan («N hecha(s) en órdenes sin entregar»).
 
 ![Panel principal de un mecánico.](../public/ayuda/es/07.webp)
@@ -358,7 +358,7 @@ El sistema recuerda automáticamente la última vista que utilizaste en ese disp
 
 ![Órdenes de un mecánico: solo las que tiene asignadas.](../public/ayuda/es/12.webp)
 
-Arriba hay un buscador con el campo **Buscar...** (filtra por número de orden o nombre de cliente tanto en lista como en tablero) En la vista de lista, además, hay filtros por estado: **Todos**, **Recepción**, **En Proceso**, **Espera Autorización**, **Finalizado**, **Entregado** y **Archivadas** (en el tablero no hacen falta: las columnas ya son los estados).
+Arriba hay un buscador con el campo **Buscar...** (filtra por número de orden o nombre de cliente tanto en lista como en tablero). En la vista de lista, además, hay filtros por estado: **Todos**, **Recepción**, **En Proceso**, **Espera Autorización**, **Finalizado**, **Entregado** y **Archivadas** (en el tablero no hacen falta: las columnas ya son los estados). La vista **Archivadas** reúne las órdenes entregadas hace más de 90 días o archivadas manualmente: tiene su propio buscador (**Buscar por número de orden o cliente**), muestra la fecha de entrega y permite abrir el detalle de cualquiera (el botón **Devolver al tablero** solo aparece para administradores).
 
 Cada orden puede mostrar distintivos o insignias según su condición:
 - **Seguro**: si el trabajo se procesa a través de una aseguradora.
@@ -432,6 +432,7 @@ Lo que cotizas en este paso nace **Sin autorizar** salvo que hayas marcado la ca
 Al presionar **Crear**, el sistema genera el número de orden (por ejemplo, `ORD-2026-001`) y abre su detalle. Las fotos y archivos multimedia continúan subiendo en segundo plano sin interrumpir tu navegación.
 
 ### Salir del alta sin perder lo capturado
+<!-- rol: admin -->
 
 Si tocas **Cancelar**, la X o el botón **atrás** del teléfono con una orden a medias, la app pregunta: **Seguir editando**,
 **Guardar borrador y salir** o **Descartar y salir**. El borrador se guarda solo mientras capturas y, al abrir **Nueva orden**,
@@ -497,7 +498,9 @@ Debajo del encabezado aparecen botones destacados con las acciones más frecuent
   - **Terminé: avisar a la oficina** (aparece destacado como botón principal en proceso cuando todas las tareas autorizadas de la orden están terminadas; cambia la orden a finalizado y avisa a administración).
   - **Mis tareas** (destacado cuando no toca empezar ni terminar; lleva directo a sus tareas asignadas).
   - **Registrar avance**.
+  - **Inspección** (abre la sección **Inspección 360°**, donde está la **Inspección por puntos**).
   - **Reportar trabajo adicional** (activo mientras la orden no esté finalizada).
+  - **Sugerir próximo servicio** (abre el diálogo para sugerir fecha y millas del próximo mantenimiento, o te lleva a la sección **Próximo servicio** si la orden ya tiene uno registrado).
   - **Datos del vehículo**.
 
 #### Pestañas (en computadora)
@@ -525,7 +528,7 @@ Distribuídas por pestaña, las secciones son:
   - **Historial**: bitácora inalterable de todos los cambios de la orden.
 - **En la vista de Técnico**:
   - **Tareas**: lista de **Tareas** asignadas y tarjeta **Tu comisión estimada**.
-  - **Orden**: **Información del Vehículo**, **Inspección 360°** (con el dibujo de daños en modo de solo lectura), **Descripción de Repuestos** (sin montos de dinero), **Firma del Cliente**, **Técnico Asignado**, **Próximo servicio** (solo para sugerir).
+  - **Orden** (en computadora; en el teléfono todas las secciones aparecen apiladas en una sola columna debajo de **Tareas**): **Información del Vehículo**, **Inspección 360°** (con el dibujo de daños en modo de solo lectura, captura de fotos, videos y notas de voz de recepción y la **Inspección por puntos**), **Descripción de Repuestos** (con estado **Pedido** / **Llegó**, sin montos de dinero), **Firma del Cliente** (solo aparece si el cliente ya firmó), **Técnico Asignado**, **Próximo servicio** (solo para sugerir).
   - **Avances**: bitácora de **Avance del Trabajo**.
 
 #### Trabajo adicional reportado por el técnico
@@ -546,6 +549,17 @@ En el panel principal (en **Requiere atención**) y arriba de las pestañas Resu
 
 ![Trabajo adicional reportado por el taller, para cotizar o descartar.](../public/ayuda/es/17.webp)
 
+#### Seguimiento del trabajo adicional reportado (técnicos)
+<!-- rol: tecnico -->
+
+Después de reportar un hallazgo, dentro de tu sección **Tareas** aparece el bloque **Trabajo adicional que reportaste** con cada reporte de esa orden, sus archivos adjuntos y una insignia con la decisión de la oficina o del cliente:
+- **Por revisar**: administración todavía no lo cotiza ni lo descarta.
+- **Cotizado al cliente**: administración lo convirtió en una tarea de mano de obra para cotizarlo.
+- **Esperando al cliente**: se envió en un presupuesto y espera respuesta del cliente.
+- **Autorizado por el cliente**: el cliente aprobó el trabajo.
+- **El cliente no lo autorizó**: el cliente rechazó el presupuesto de ese hallazgo.
+- **No se hará por ahora**: administración lo descartó por ahora (con su nota, si dejó una).
+
 #### Mano de obra y Tareas
 
 - **Para administradores (Mano de obra)**:
@@ -561,20 +575,35 @@ En el panel principal (en **Requiere atención**) y arriba de las pestañas Resu
 - **Para técnicos (Tareas)**:
   - Botón principal de estado: las acciones **Empezar trabajo** (en recepción con tarea autorizada) y **Terminé: avisar a la oficina** (en proceso cuando todo está hecho) se ubican arriba en las **acciones rápidas** de la orden, asegurando un solo botón principal por estado. En la lista de tareas, al estar en proceso con todo listo se muestra la ayuda explicativa, y si sus tareas están terminadas pero faltan tareas de otro compañero, ve el aviso «Tu parte está lista. Falta: ...».
   - Ve sus tareas con su descripción, su tipo y el precio de la mano de obra (de ahí sale su comisión). Los repuestos los ve sin precio.
-  - **Reloj por tarea**: cada tarea aprobada y no terminada tiene un botón táctil amplio (44 px o más) «▶ Iniciar» o «⏸ Pausar ({tiempo})» que actualiza el tiempo transcurrido en vivo cada minuto. El técnico solo puede tener un reloj corriendo a la vez: presionar «Iniciar» en otra tarea pausa automáticamente la anterior y arranca la nueva.
+  - **Reloj por tarea**: en sus propias tareas (identificadas como **Tarea: {descripción}**), cada tarea autorizada y no terminada tiene un botón táctil amplio (44 px o más) con **Iniciar** si el reloj está detenido o **Pausar ({tiempo})** si está corriendo, actualizando el tiempo transcurrido en vivo cada minuto. El técnico solo puede tener un reloj corriendo a la vez: presionar **Iniciar** en otra tarea pausa automáticamente la anterior y arranca la nueva, y tocar **Realizado** también detiene el reloj activo de esa tarea. Si un reloj queda abierto por olvido, el sistema lo limita automáticamente a un máximo de 12 horas.
   - Toca **Realizado** al terminar una tarea; si el reloj estaba corriendo, se detiene automáticamente. Si la marcó por error, presiona **Reabrir tarea**.
   - Con **Foto** puede tomar o subir directamente una fotografía con la cámara para adjuntarla como avance a esa tarea.
   - Con **Agregar avance** puede subir fotos, videos o notas de voz vinculados a esa tarea específica.
 - **Insignias de cada línea**:
-  - *(Sin insignia)*: **Autorizado** por el cliente. Se realiza y se cobra.
-  - **Sin autorizar**: agregada recientemente; el cliente no la ha visto. No se cobra ni se realiza.
-  - **Esperando al cliente**: incluida en un presupuesto enviado; no se puede editar mientras espera respuesta.
-  - **No realizar** (tachada): rechazada por el cliente. No se realiza ni se cobra.
+  - **En las tarjetas de tus propias tareas (técnicos)**: cada tarea muestra siempre una insignia explícita: **Pendiente** (autorizada, lista para hacer), **Hecha** (terminada), **Esperando autorización** (todavía no se realiza) o **No autorizada · no se realiza** (cerrada con el aviso «El cliente no autorizó este trabajo: queda cerrado sin ejecutarse.»).
+  - **En la tabla de Mano de obra (administración), Descripción de Repuestos y Otras tareas de la orden**:
+    - *(Sin insignia)*: **Autorizado** por el cliente. Se realiza y se cobra.
+    - **Sin autorizar**: agregada recientemente; el cliente no la ha visto. No se cobra ni se realiza.
+    - **Esperando al cliente**: incluida en un presupuesto enviado; no se puede editar mientras espera respuesta.
+    - **No realizar** (tachada): rechazada por el cliente. No se realiza ni se cobra.
+
+#### Vista de tareas del técnico: estado, avances y otras tareas
+<!-- rol: tecnico -->
+
+- **Resumen de estado de la orden arriba de las tareas**: al inicio de la sección **Tareas**, un recuadro muestra **Estado de la orden: {estado}** junto con el resumen de autorización de toda la orden:
+  - Si la orden está en **Espera Autorización**, advierte: «En pausa: se espera la respuesta del cliente. Puedes seguir con lo que ya está autorizado.»
+  - Muestra cuántas tareas están aprobadas y terminadas (**{n} autorizada(s) por el cliente · {done} hecha(s)**).
+  - Lista por nombre las tareas que siguen **Esperando autorización del cliente** y las que **El cliente no autorizó** («No se realizan.»).
+- **Avances desde la tarjeta de una tarea**:
+  - **Agregar avance** despliega un formulario dentro de la misma tarjeta para escribir qué hiciste, adjuntar fotos, video o nota de voz y marcar la casilla **Visible para el cliente** si quieres publicarlo desde ese momento en el reporte del cliente.
+  - **Foto** abre directamente la cámara del teléfono; al tomar la foto, despliega ese mismo formulario con la imagen ya adjunta para que escribas una nota opcional y presiones **Guardar avance**.
+  - Debajo de cada tarea que ya tiene registros aparece el desplegable **{n} avance(s) de esta tarea** para consultar su historial sin salir de la lista de tareas.
+- **Otras tareas de la orden**: cuando en la misma orden hay tareas asignadas a otros compañeros o **Sin asignar**, debajo de tus tareas aparece la tabla de solo lectura **Otras tareas de la orden** con la columna **Asignado a**, el estado de autorización y si ya están hechas. Te sirve para coordinarte con el resto del taller y saber qué falta para poder usar **Terminé: avisar a la oficina**, pero no puedes marcarlas ni iniciarles reloj.
 
 #### Repuestos
 
 - **Administrador**: tabla con Descripción, Cantidad, Precio de venta, **Costo** (lo que pagó el taller; si se deja vacío asume el precio) y selector de pedido: **Sin pedir**, **Pedido**, **Llegó**. Al marcar **Llegó**, se notifica a los técnicos de la orden.
-- **Técnico**: tarjeta **Descripción de Repuestos**, donde solo ve las piezas y cantidades requeridas para su labor, sin ningún precio ni costo.
+- **Técnico**: tarjeta **Descripción de Repuestos**, donde ve las piezas, las cantidades requeridas para su labor, la insignia de autorización y si cada repuesto ya fue **Pedido** o ya **Llegó**, sin ningún precio ni costo.
 
 #### Trabajo con seguro
 <!-- rol: admin -->
@@ -589,7 +618,7 @@ Si la reparación la cubre una compañía de seguros:
 #### Tu comisión estimada (técnicos)
 <!-- rol: tecnico -->
 
-Los técnicos asignados ven en su pestaña Tareas la tarjeta **Tu comisión estimada**. Muestra cada tarea propia autorizada con su precio. El porcentaje y el monto dicen **Pendiente** hasta que administración acepta la comisión, después de entregar la orden; la tarjeta lo explica: «Tu comisión se confirma cuando administración la acepta, después de entregar la orden.» Ya aceptada, aparece el cálculo (*precio de la tarea × su porcentaje*) con su monto. Si el empleado está configurado a salario, la tarjeta le indica que la orden no le genera comisión.
+Los técnicos asignados ven en su sección **Tareas** la tarjeta **Tu comisión estimada**. Muestra cada tarea propia autorizada con su precio. El porcentaje y el monto dicen **Pendiente** hasta que administración acepta la comisión, después de entregar la orden; la tarjeta lo explica: «Tu comisión se confirma cuando administración la acepta, después de entregar la orden.» Ya aceptada, aparece el cálculo (*precio de la tarea × su porcentaje*) con su monto. Si el empleado está configurado a salario, la tarjeta le indica que la orden no le genera comisión.
 
 ![La misma orden vista por un mecánico, con la tarjeta «Tu comisión estimada».](../public/ayuda/es/19.webp)
 
@@ -603,7 +632,7 @@ Solo administración puede asignar personal de la sede de la orden.
 
 #### Avance del trabajo
 
-Bitácora donde el personal documenta los trabajos realizados con texto, fotos, videos o notas de voz. Se puede asociar el avance a una tarea específica. Un técnico puede borrar sus propios avances mientras la orden no esté entregada. Un administrador puede borrarlos todos y gestionar si se muestran o no al cliente.
+Bitácora donde el personal documenta los trabajos realizados con texto, fotos, videos o notas de voz. Se puede asociar el avance a una tarea específica. Si intentas cambiar de pantalla o cerrar la orden dejando texto o archivos sin guardar en el formulario, el sistema te avisa («Hay un avance sin guardar (nota, fotos o video). Si sales ahora se perderá. ¿Salir de todos modos?») para que no pierdas lo capturado. Un técnico puede borrar sus propios avances mientras la orden no esté entregada y decidir si sus propios avances normales se muestran al cliente (marcando **Visible para el cliente** al crearlos desde una tarea o tocando el ícono del ojo **Mostrar al cliente** / **Dejar de mostrar** en **Avance del Trabajo**). Un administrador puede borrar cualquier avance y publicar u ocultar tanto avances como archivos sueltos.
 
 ![Un avance con fotos y una nota de voz.](../public/ayuda/es/20.webp)
 
@@ -612,11 +641,11 @@ Bitácora donde el personal documenta los trabajos realizados con texto, fotos, 
 Permite realizar una revisión multipunto detallada (frenos, llantas, fluidos, suspensión, luces, etc.) basada en las plantillas configuradas en la sede.
 
 - **Cómo el técnico realiza la inspección**:
-  - En la sección de inspección de la orden, o desde sus acciones rápidas pulsando **Inspección**, el técnico o administrador presiona **Iniciar inspección**.
+  - Dentro de la sección **Inspección 360°** de la orden (en **Inspección por puntos**), o desde sus acciones rápidas pulsando **Inspección**, el técnico o administrador presiona **Iniciar inspección**.
   - Los puntos se presentan agrupados por sección (Frenos, Llantas, Fluidos, etc.).
   - Para cada punto, el técnico califica su estado con un solo toque mediante botones táctiles amplios (mínimo 44 px): **Bien** (verde), **Atención** (amarillo) o **Urgente** (rojo), o **N/A** (no aplica). Si vuelve a tocar el botón seleccionado, el punto regresa a estado pendiente.
-  - Con el botón de cámara de cada punto, puede capturar o adjuntar fotografías de evidencia directamente desde el teléfono.
-  - Puede añadir notas tocando el botón **Nota** para registrar observaciones concretas sobre ese componente.
+  - Con el botón de ícono de cámara (**Tomar foto**) de cada punto, puede capturar o adjuntar fotografías de evidencia directamente desde el teléfono.
+  - Con el botón de ícono de nota (**Agregar nota**), despliega el campo de texto para escribir observaciones sobre ese componente y confirmarlas con **Guardar nota** (o **Cancelar**).
   - El encabezado indica el avance en tiempo real (por ejemplo, «18 de 24 revisados»).
   - El botón **Terminar inspección** se activa únicamente cuando no queda ningún punto pendiente de revisión.
 
@@ -815,8 +844,8 @@ El mismo próximo servicio aparece como la tarjeta **Próximo servicio recomenda
 
 Si mientras trabajas ves que el vehículo va a necesitar un servicio más adelante (el siguiente cambio de aceite, frenos, bandas), puedes dejárselo sugerido a administración. Tú no programas ni imprimes nada: administración decide.
 
-1. En la orden, pulsa **Sugerir próximo servicio** en las acciones rápidas, o ve a la pestaña **Orden** → tarjeta **Próximo servicio**.
-2. Toca un **Preset rápido** o escribe la **Fecha recomendada**, las **Millas recomendadas** y una **Nota o servicio** (hasta 120 caracteres; en la etiqueta caben unos 64 a letra normal, y si es más larga la letra se achica y lo que sobra se corta con «…», mientras que el cliente la ve completa en su página). Hace falta al menos la fecha o las millas.
+1. En la orden, pulsa **Sugerir próximo servicio** en las acciones rápidas (abre el diálogo directamente si aún no hay servicio registrado; si ya hay uno programado o sugerido, te lleva a la sección **Próximo servicio**, donde puedes pulsar **Sugerir próximo servicio**).
+2. En **Presets rápidos**, toca una opción (**Aceite sintético (+5,000 mi / 6 m)**, **Aceite convencional (+3,000 mi / 3 m)**, **Revisión general (+5,000 mi / 6 m)** o **Garantía de pintura (+30 días)**) o completa la **Fecha recomendada**, el campo **En cuántas millas** (si la orden tiene millas de ingreso, escribes cuántas millas sumar —por ejemplo, `5000`— y debajo ves el cálculo en vivo «Próximo servicio a las {total} mi ({actual} + {extra})»; si no tiene millas de ingreso, el campo pide las **Millas recomendadas**) y una **Nota o servicio** (hasta 120 caracteres). Hace falta al menos la fecha o las millas.
 3. Pulsa **Enviar sugerencia**. Sale el aviso «Sugerencia enviada a administración.»
 
 Solo puedes sugerir en una orden que tengas asignada y que todavía no esté entregada. Si vuelves a sugerir, reemplazas tu sugerencia anterior. Cuando administración la usa o la descarta, desaparece.
@@ -967,6 +996,8 @@ mientras la app está abierta, con un mensaje breve en pantalla.
 | **Trabajo terminado** | Administradores, cuando un técnico finaliza una orden: hay que revisarla y marcarla lista para entregar |
 | **El cliente respondió el presupuesto** (o **El cliente no autorizó el presupuesto**, si no autorizó nada) | Administradores, cuando el cliente responde desde su enlace |
 | **Trabajo adicional reportado** | Administradores, cuando un técnico reporta trabajo adicional |
+| **Requiere autorización** | Administradores, cuando la orden pasa a **Espera Autorización** |
+| **Inspección lista** | Administradores, cuando un técnico termina la inspección por puntos de la orden |
 | **Llegó un repuesto** | Técnicos asignados, cuando una pieza pedida se marca como **Llegó** |
 | **Presupuesto sin respuesta** | Administradores, una vez al día si un presupuesto lleva más de 24 horas sin respuesta |
 | **Trabajos autorizados** / **Trabajo no autorizado** | Técnicos asignados, cuando se responde el presupuesto con lo que se autorizó o rechazó |
@@ -1308,11 +1339,11 @@ según el rol.
 
 ### Para todos
 
-- **Mi Perfil**: foto (**Cambiar foto de perfil**), nombre y correo.
+- **Mi Perfil**: foto (**Cambiar foto de perfil**), **Nombre** (editable con el botón **Guardar**) y **Correo Electrónico** (solo lectura; para cambiarlo, pídelo a un administrador).
 - **Idioma** (**Español** / **English**) y **Apariencia** (**Oscuro** / **Claro**).
 - **Notificaciones en este dispositivo**: activar, probar y desactivar push
   (sección 11).
-- **Reportar un problema**: botón para notificar a soporte si encuentras un error o falla en el sistema. Puedes agregar captura de pantalla y se adjunta automáticamente un diagnóstico de los últimos 30 segundos (ocultando datos privados y fotos).
+- **¿Algo no funciona?**: tarjeta con el botón **Reportar un problema** para avisar a soporte si algo falló o no te dejó avanzar. Al tocarlo, describes **Qué pasó**, puedes **Agregar captura de pantalla** y presionas **Enviar reporte**; el sistema adjunta de forma segura un diagnóstico técnico y los últimos 30 segundos de actividad en la pantalla (ocultando datos privados y fotos).
 
 ![Configuración de un técnico.](../public/ayuda/es/43.webp)
 
@@ -1389,7 +1420,7 @@ actualizarla.
 | Asignar el técnico y el tipo de cada tarea | ✅ | ❌ (ve quién tiene cada una) |
 | Reportar trabajo adicional | — | ✅ desde la orden |
 | Revisar, cotizar o descartar trabajo adicional | ✅ | ❌ |
-| Marcar una tarea como hecha | ✅ todas | ✅ las suyas y las que no tienen técnico |
+| Marcar una tarea como hecha | ✅ todas | ✅ solo las suyas (administración marca las que no tienen técnico) |
 | Ver su comisión en la orden | — | ✅ en sus órdenes (el monto, cuando administración la acepta) |
 | Consultar **Mis comisiones** | — | ✅ solo lo suyo aceptado y pagado |
 | Cambiar estado de la orden | ✅ | ✅ en sus órdenes (solo En Proceso y Finalizado) |
@@ -1525,7 +1556,7 @@ Tiene un presupuesto esperando respuesta. Registra la autorización (si el clien
 te respondió) o cancela el presupuesto.
 
 **«Soy técnico: ¿hago este trabajo?»**
-Si la línea no tiene insignia, está autorizada. **Sin autorizar** y **Esperando al
+En las tarjetas de tus tareas, haz únicamente las que dicen **Pendiente** (las que dicen **Esperando autorización** todavía no se hacen, y las que dicen **No autorizada · no se realiza** quedan cerradas sin ejecutarse). En la tabla de **Otras tareas de la orden** o en **Descripción de Repuestos**, si la línea no tiene insignia está autorizada; **Sin autorizar** y **Esperando al
 cliente**: todavía no. **No realizar**: no.
 
 **«El cliente dice que autorizó y no aparece.»**
@@ -1548,8 +1579,8 @@ mándale el nuevo. Si dice "no válido", el enlace se cortó al copiarlo: vuelve
 mandarlo.
 
 **«El cliente no ve las fotos del avance.»**
-Los archivos de los avances son internos hasta que un administrador toca **Mostrar
-en el reporte del cliente** en cada uno.
+Los avances y sus archivos nacen como internos, salvo que al crear el avance desde una tarea se marque **Visible para el cliente**. Para publicarlos después, quien escribió el avance (técnico o administrador) puede tocar el ícono del ojo (**Mostrar al cliente**) en **Avance del Trabajo**, lo que publica el avance con sus fotos. Si es un archivo suelto o un hallazgo de trabajo adicional, solo un administrador puede publicarlo con **Mostrar
+en el reporte del cliente**.
 
 **«No me llegó el correo para recuperar la contraseña.»**
 Revisa el correo no deseado. Si aun así no llega, pídele a un administrador que
@@ -1568,7 +1599,7 @@ administración la acepta.
 Los agrega un administrador. Si encontraste algo adicional durante la reparación, usa **Reportar trabajo adicional** en la orden para que administración lo revise y cotice. También puedes dejarlo documentado en un avance (con foto, video o nota de voz).
 
 **«No encuentro una orden que sé que existe.»**
-Revisa que el filtro de estado esté en «Todos» y —si eres administrador— que
+Revisa que el filtro de estado esté en **Todos** o toca el filtro **Archivadas** (las órdenes entregadas hace más de 90 días pasan ahí). Si eres técnico, recuerda que solo aparecen las órdenes donde estás asignado como responsable o en al menos una tarea: pide a administración que te asigne. Si eres administrador, revisa también que
 estés en la sede correcta.
 
 **«Me pidieron ayudar en una orden y no puedo editarla.»**
@@ -1623,7 +1654,21 @@ Si todavía tiene órdenes asignadas hay que reasignarlas primero.
 Marca la casilla **Sin placa**.
 
 **«Encontré un error en el sistema o la aplicación falló, ¿qué hago?»**
-Ve a Configuración (tocando tu avatar arriba a la derecha) y usa el botón **Reportar un problema**. Describe qué intentabas hacer y envíalo. El sistema adjuntará un diagnóstico y un video de la pantalla de forma segura para que podamos revisarlo.
+Ve a **Configuración** (tocando tu avatar arriba a la derecha o desde el menú ☰ en el teléfono) y en la tarjeta **¿Algo no funciona?** toca **Reportar un problema**. Escribe en **Qué pasó** qué intentabas hacer, usa **Agregar captura de pantalla** si tienes una imagen del fallo y presiona **Enviar reporte**. El sistema adjuntará un diagnóstico y los últimos 30 segundos de la pantalla de forma segura para que podamos revisarlo.
+
+### Dudas frecuentes del técnico
+<!-- rol: tecnico -->
+
+**«Dejé el reloj de una tarea corriendo por olvido (o el tiempo parece cortado en 12 horas).»**
+Para evitar que un reloj olvidado distorsione los tiempos, el sistema limita automáticamente cualquier intervalo continuo a un máximo de **12 horas** (720 minutos). Si olvidaste pausarlo o necesitas corregir la hora real de inicio o fin, pide a administración que ajuste o borre el intervalo desde **Mano de Obra → Tiempos** en la orden.
+
+**«¿Por qué no me aparece el botón Empezar trabajo o Terminé: avisar a la oficina?»**
+Cada estado de la orden muestra un único botón principal cuando se cumplen sus condiciones:
+- **Empezar trabajo** aparece únicamente cuando la orden está en **Recepción** y tienes al menos una tarea **autorizada** asignada.
+- **Terminé: avisar a la oficina** aparece únicamente cuando la orden está **En Proceso** y **todas** las tareas autorizadas de toda la orden están marcadas como hechas (incluidas las de otros compañeros o sin asignar, que puedes consultar en **Otras tareas de la orden**).
+
+**«No puedo pulsar Terminar inspección o los puntos de la inspección están bloqueados.»**
+El botón **Terminar inspección** solo se habilita cuando no queda ningún punto pendiente de calificar (si un componente no aplica al vehículo, márcalo como **N/A**). Si los botones de los puntos aparecen desactivados, es porque la inspección ya fue publicada al cliente (**Visible para el cliente**) o porque la orden ya está **Entregado**; para corregir una inspección publicada en una orden aún no entregada, pide a administración que pulse primero **Ocultar al cliente**.
 
 ---
 

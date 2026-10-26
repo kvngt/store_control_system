@@ -3,7 +3,7 @@
 > **Restaurado el 11/10/2026.** Este documento se perdió en la limpieza automática del 06/10/2026
 > (commit `1955f30`, que fusionó la arquitectura y los planos en uno más corto, y `ec689da`, que
 > lo reemplazó por [radiografia.md](radiografia.md)). Se recuperó tal como estaba el 05/10/2026.
-> Puesto al día el 11/10/2026 con lo posterior (historial, comisión por tarea, hallazgos, pago mixto, listo para entregar, idioma del cliente, teléfonos por sede, seguro y parqueo).
+> Puesto al día el 19/10/2026 con las migraciones hasta `20261010000039` (historial, comisión por tarea, hallazgos, pago mixto, listo para entregar, idioma del cliente, teléfonos por sede, seguro, parqueo, próximo servicio y sticker, autorización en recepción, marcas de daños, enlace al crear la orden, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, origen de movimientos en finanzas y unicidad de VIN/placa).
 > Donde no coincida, mandan [ai-context.md](ai-context.md) y
 > [mapa-de-secciones.md](mapa-de-secciones.md); lo pendiente de actualizar está en la
 > [bitácora](bitacora.md#bitácora-de-traspaso-entre-agentes).
@@ -127,6 +127,8 @@ src/
     Payroll.tsx                  comisiones y pagos (ruta /payroll)
     Employees.tsx                pago de cada empleado y alta del personal (ruta /employees)
     Settings.tsx                 perfil, idioma, tema, push, sedes
+    MyCommissions.tsx            comisiones aprobadas y pagadas del técnico (ruta /mis-comisiones)
+    Help.tsx                     manual de usuario por rol en es/en (ruta /ayuda)
 
   features/                      módulos con estado propio, extraídos de las páginas
     workOrders/                  detalle de orden (pestañas y tarjetas plegables), alta (4 pasos),
@@ -143,7 +145,12 @@ src/
     notifications/               campana, push del dispositivo
     vehicles/                    formulario de vehículo con VIN
     employees/                   detalle de un empleado: su pago, lo que se le debe, actividad
-    finance/                     balance de una orden y margen por orden
+    finance/                     balance de una orden (OrderBalanceCard), margen por orden
+                                 (OrderMarginCard) e indicadores del taller (WorkshopMetricsTab, 036)
+    catalog/                     catálogo de trabajos por sede (JobCatalogCard, CatalogJobModal,
+                                 CatalogPickerModal, 034)
+    inspection/                  inspección por puntos y plantillas (PointInspection,
+                                 InspectionTemplatesCard, InspectionTemplateModal, 035)
     settings/                    tarjeta de usuarios (se usa en Empleados)
 
   components/
@@ -161,7 +168,7 @@ src/
 
   services/                      TODAS las consultas a Supabase, un módulo por dominio
     workOrders, customers, vehicles, finance, commissions, employees, dashboard,
-    media, notifications, customerPortal, quotes, reports, search, sedes, users, parking
+    media, notifications, customerPortal, quotes, reports, search, sedes, users, parking, nextService, catalog, inspection, metrics, translation
     support.ts                   fetchAll, assertAffected, assertDeleted
     supabaseService.ts           fachada que re-exporta los anteriores (compatibilidad;
                                  se propone retirarla, mantenimiento.md P1-3)
@@ -195,7 +202,8 @@ supabase/
   functions/                     edge functions (Deno)
     create-employee, update-employee, delete-employee   con clave de servicio
     process-outbox, cleanup-storage                     internas, llamadas por la base
-    portal                                              pública: el reporte del cliente
+    portal                                              pública: el reporte del cliente y /s/<código>
+    traducir-texto                                      admin: traduce la nota del sticker con Gemini
     _shared/internal.ts                                 autenticación de las internas
     _shared/email/templates.ts                          plantillas de correo (TS puro)
   tests/database/                pruebas pgTAP
@@ -334,6 +342,20 @@ en `recalculate_order_totals`. El cálculo puro reside en `_parqueo_calculo`. Se
 (`fin_congelado`), las órdenes ya entregadas no se recalculan solas y `vigente_desde` nunca va hacia
 atrás. Ver [parqueo.md](parqueo.md).
 
+### Migraciones 029 a 039 (14/10 al 19/10/2026)
+
+Las migraciones `20261010000029` a `20261010000039` sumaron **9 tablas** en `public` (30 tablas al 11/10/2026 más estas 9):
+
+- **Próximo servicio y sticker (`029`, `032`, `037`, `038`):** tabla `orden_proximo_servicio` (1:1 con la orden; `token` permanente (el código del QR), sugerencia del técnico, programación por admin e `idioma` de la nota). RPCs: `sugerir_proximo_servicio`, `descartar_sugerencia_proximo_servicio`, `programar_proximo_servicio`, `quitar_proximo_servicio`, `datos_servicio` (solo `service_role`, servida por `portal?servicio=<codigo>`). Trigger `trg_orden_proximo_servicio_traducir` (`037`) y edge function `traducir-texto` (`032`).
+- **Autorización en recepción y marcas de daños (`030`, `031`):** `create_work_order` acepta `autorizado_en_recepcion` (solo admin, registra un presupuesto `admin_presencial`). Columna JSONB `ordenes_trabajo.marcas_danos` bloqueada tras la firma por `trg_marcas_danos_firmadas`.
+- **Enlace al crear la orden, inicio automático y tareas al asignar (`032`):** `trg_order_link_on_create` crea el enlace del cliente en `orden_enlaces` al dar de alta la orden; `trg_quote_starts_order` pasa la orden de `recepcion` a `en_proceso` con la primera autorización; `trg_assignment_takes_tasks` le pasa a quien se asigna a mano las tareas no heredadas, sin técnico y de su oficio.
+- **Endurecimiento de parqueo (`033`):** la lectura de `orden_parqueo` queda restringida a administración (`orden_parqueo_select_admin`).
+- **Trabajos agrupados y catálogo por sede (`034`, `037`):** tablas `catalogo_trabajos`, `catalogo_trabajo_lineas` y `orden_trabajos` (más `trabajo_id` opcional en `orden_labor` y `orden_repuestos`). RPCs: `catalogo_de_trabajos`, `guardar_trabajo_catalogo`, `borrar_trabajo_catalogo`, `agregar_trabajo_del_catalogo`, `quitar_trabajo`, `renombrar_trabajo`, `trabajos_de_orden`. En el portal el cliente autoriza el trabajo completo: `_resolver_presupuesto` amplía lo aprobado a todas las líneas pendientes de ese trabajo.
+- **Inspección por puntos (`035`, `037`):** tablas `inspeccion_plantillas`, `inspeccion_plantilla_puntos`, `orden_inspecciones` y `orden_inspeccion_puntos` (más `orden_media.inspeccion_punto_id` y el trigger `trg_sede_sembrar_inspeccion`). RPCs: `iniciar_inspeccion`, `marcar_punto_inspeccion`, `completar_inspeccion`, `publicar_inspeccion`, `plantillas_inspeccion`, `guardar_plantilla_inspeccion`, `borrar_plantilla_inspeccion`. Una vez publicada al portal, solo administración puede editar sus puntos (`037`).
+- **Horas, reloj de tiempo e indicadores del taller (`036`, `037`):** tabla `orden_labor_tiempos` y columnas `orden_labor.horas`, `catalogo_trabajo_lineas.horas` y `sedes.tarifa_hora`. RPCs: `iniciar_reloj`, `detener_reloj`, `corregir_tiempo`, `borrar_tiempo`, `indicadores_taller` (ticket promedio, horas facturadas vs. reales, eficiencia e ingresos por hora). Trigger `trg_labor_cerrar_reloj` al completar una tarea y tope de 12 h por sesión abierta (`037`).
+- **Origen de movimientos en Finanzas (`038`):** columna `finanzas_movimientos.origen` (`'manual' | 'sistema'`), forzada por `trg_finanzas_origen` según `restorify.finanzas_sistema = 'on'`. Las políticas `finanzas_movimientos_update` y `finanzas_movimientos_delete` exigen `origen = 'manual'`, impidiendo editar o borrar movimientos automáticos por la API.
+- **VIN y placa únicos (`039`):** índices únicos parciales `uq_vehiculos_vin` (sobre `upper(btrim(vin))`) y `uq_vehiculos_placa` (sobre `(coalesce(upper(btrim(placa_estado)), ''), upper(regexp_replace(placa, '[\s-]+', '', 'g')))`).
+
 **Decisiones del proceso del taller (`20261010000016`–`18`).**
 - **Fecha del taller:** movimientos automáticos usan `hoy_taller(sede)` según `sedes.zona_horaria`,
   nunca `CURRENT_DATE` en UTC.
@@ -348,7 +370,7 @@ atrás. Ver [parqueo.md](parqueo.md).
   mecánico o pintor en asignación y presupuestos respondidos, sin `orden_id` en `cola_envios`.
 
 **El cobro al entregar lleva su método.** `finanzas_movimientos.metodo_pago`
-(efectivo, cheque, transferencia) y `comprobante_ruta` (foto en el bucket privado
+(efectivo, tarjeta, zelle, transferencia, cheque) y `comprobante_ruta` (foto en el bucket privado
 `comprobantes`). Una orden entregada se puede **archivar** a mano
 (`ordenes_trabajo.archivada_en`) sin dejar de estar entregada.
 
@@ -397,7 +419,9 @@ técnico.
 | | `trg_order_money_guard` | Técnico: no entrega, no cambia sede/número, no escribe `total_labor` |
 | | `trg_order_technician_guard` | Técnico: solo asignado, orden sin entregar, y solo estados permitidos (`en_proceso`, `espera_autorizacion` y `finalizado`); la firma es de administración (`20261006000000`). La pausa se rige por hallazgos y presupuestos (`20261010000024`), y no puede tocar campos administrativos (seguro, lista para entregar) |
 | | `trg_order_quote_delivery_guard` | No se entrega con un presupuesto esperando respuesta |
-| | `trg_order_portal` | Firma → enlace del cliente y correo de recepción; estatus → correo con espera y vencimiento del enlace (finalizar no avisa al cliente) |
+| | `trg_order_link_on_create` | Crea el enlace del cliente en `orden_enlaces` al dar de alta la orden (`20261010000032`) |
+| | `trg_marcas_danos_firmadas` | Bloquea editar `marcas_danos` después de la firma de recepción (`20261010000031`) |
+| | `trg_order_portal` | Firma → correo de recepción (y correo `en_proceso` si la orden ya estaba en proceso, `20261010000032`); estatus → correo con espera y vencimiento del enlace (finalizar no avisa al cliente) |
 | | `trg_order_lista_guard` | Protege `lista_para_entregar_en` (función `trg_guard_lista_para_entregar`): solo la escribe `marcar_lista_para_entregar` y se borra sola si la orden deja de estar finalizada o entregada (`20261010000021`) |
 | | `trg_order_montos_create` | Crea la fila de `orden_montos` |
 | | `trg_progress_on_status` | Avance en 100 % mientras la orden esté finalizada o entregada, no solo al cerrarla: una escritura del avance que llegue después no la deja por debajo (`20261010000001`). Reabierta, conserva el 100 y se puede bajar |
@@ -441,7 +465,13 @@ técnico.
 | | `trg_orden_avances_traducir` | Encola la traducción si un avance nace o se marca visible para el cliente (`trg_encolar_traduccion`) |
 | `orden_hallazgos` | `trg_orden_hallazgos_traducir` | Encola la traducción del texto para el cliente (`texto_cliente`, `en_reporte`; `20261010000022`) |
 | `orden_media` | `trg_orden_media_prepare`, `trg_orden_media_guard` | Sede, ruta válida, visibilidad inicial; inmutable salvo visibilidad |
-| `comisiones` | `trg_commission_notify` | Desde `20261010000014` solo avisa de lo que nace aceptado (hoy, nada): el aviso "comisión generada" lo manda `aprobar_comision` al aceptarla, con el monto aceptado |
+| `comisiones` | `trg_commission_notify` | Desde `20261010000014` solo avisa de lo que nace aceptado (hoy, nada): al entregar la comisión nace `sugerida` sin avisar al técnico, y el aviso "Comisión aprobada · ORD-…" lo manda `aprobar_comision` / `aprobar_comisiones` al aceptarla |
+| `presupuestos` | `trg_quote_starts_order` | Pasa la orden de `recepcion` a `en_proceso` cuando se registra la primera autorización con líneas aprobadas (`20261010000032`) |
+| `orden_asignaciones` | `trg_assignment_takes_tasks` | Al asignar a alguien a la orden, le pasa las tareas no heredadas sin técnico de su oficio (`20261010000032`) |
+| `orden_labor` | `trg_labor_cerrar_reloj` | Detiene las sesiones abiertas en `orden_labor_tiempos` al marcar la tarea como completada (`20261010000036`) |
+| `orden_proximo_servicio` | `trg_orden_proximo_servicio_traducir` | Encola la traducción de la nota del próximo servicio (`20261010000037`) |
+| `sedes` | `trg_sede_sembrar_inspeccion` | Siembra la plantilla de inspección por defecto al crear una sede (`20261010000035`) |
+| `finanzas_movimientos` | `trg_finanzas_origen` | Fuerza `origen = 'sistema'` o `'manual'` según quién escribe (`current_user`: una persona por la API es `manual`; una función `SECURITY DEFINER`, `sistema`) e impide cambiar `origen` en UPDATE (`20261010000038`) |
 | `comision_pagos` | — | Desde `20261010000000` el egreso lo asienta `pay_commissions`, uno por orden (solo comisiones en estado `aceptada`, `20261010000018`) |
 | `perfiles_pago` | `trg_perfiles_pago_sello`, `trg_pay_scheme_commissions` | Quién y cuándo cambió el esquema (soporta `mixto`, `20261010000020`); recalcula las comisiones pendientes de esa persona |
 | `sedes` | `trg_sede_commission_rate` | Re-precia comisiones pendientes al cambiar el % |
@@ -503,6 +533,10 @@ permiten cambiar totales con esa bandera: un `PATCH` directo a la API no la tien
 | `ordenes_esperando_autorizacion` | todos | Marca "Esperando autorización" en lista y tablero, sin montos |
 | `resumen_panel` | todos (RLS decide) | KPIs del panel y totales de Finanzas, sumados en la base con la zona horaria del taller (excluye movimientos bancarios con `importacion_id`). Un técnico recibe ceros en dinero |
 | `importar_estado_cuenta` | admin | El lote de un estado de cuenta y todos sus movimientos, en una transacción |
+| `sugerir_proximo_servicio`, `descartar_sugerencia_proximo_servicio`, `programar_proximo_servicio`, `quitar_proximo_servicio` | técnico asignado (sugerir) / admin | Sugerir, descartar, programar o quitar el próximo servicio del vehículo (`20261010000029`, `038`) |
+| `catalogo_de_trabajos`, `guardar_trabajo_catalogo`, `borrar_trabajo_catalogo`, `agregar_trabajo_del_catalogo`, `quitar_trabajo`, `renombrar_trabajo`, `trabajos_de_orden` | admin (`trabajos_de_orden` también técnico asignado) | Catálogo de trabajos por sede y trabajos agrupados dentro de la orden (`20261010000034`, `037`) |
+| `iniciar_inspeccion`, `marcar_punto_inspeccion`, `completar_inspeccion`, `publicar_inspeccion`, `plantillas_inspeccion`, `guardar_plantilla_inspeccion`, `borrar_plantilla_inspeccion` | técnico asignado y admin (publicar y plantillas: solo admin) | Inspección multipunto por orden y plantillas por sede (`20261010000035`, `037`) |
+| `iniciar_reloj`, `detener_reloj`, `corregir_tiempo`, `borrar_tiempo`, `indicadores_taller` | técnico de la tarea y admin (corregir, borrar e indicadores: solo admin) | Reloj de tiempo real por tarea e indicadores del taller en Finanzas (`20261010000036`, `037`) |
 
 > **Antes de calcular algo en el frontend, revisa si un trigger ya lo hace.** Los
 > totales de una orden no se calculan a mano en React: se releen de la base
@@ -592,6 +626,7 @@ Lo privado se ve con URLs firmadas (1 hora para galerías, 10 minutos para el PD
   llama `datos_portal`, `_diccionario_traducciones`, `preferencia_idioma_portal` y
   `preferencia_correos_portal`, que están concedidas únicamente a `service_role` y arman la
   respuesta campo por campo.
+- `traducir-texto` — traduce al instante la nota del sticker de próximo servicio con la API de Google Gemini (`20261010000032`); exige JWT de admin y no toca la base.
 
 Todas corren con la clave de servicio y **saltan RLS**: cada una valida permisos
 por su cuenta. Versiones desplegadas, secretos que usa cada una y cómo comprobar que
@@ -801,7 +836,7 @@ npx supabase db push --linked             # aplicar
 Antes de aplicar a producción: respaldo, staging y orden de publicación en
 [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación).
 
-Nombre: `AAAAMMDDHHMMSS_descripcion.sql`, **posterior a la última que haya en `supabase/migrations/` (hoy `20261010000028`)**, no según la fecha de hoy. Hay migraciones aplicadas con marcas de tiempo futuras: si se nombra una migración con la fecha de hoy quedaría antes de la última y `db push` no la aplicaría sin `--include-all`. El número total de migraciones vigentes se consulta en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto). El build estampa la migración más nueva (`__SCHEMA_VERSION__`) y la app la compara con `app_schema_version()`: si la base está atrasada, `SchemaDriftBanner` lo dice en pantalla.
+Nombre: `AAAAMMDDHHMMSS_descripcion.sql`, **posterior a la última que haya en `supabase/migrations/` (hoy `20261010000039`)**, no según la fecha de hoy. Hay migraciones aplicadas con marcas de tiempo futuras: si se nombra una migración con la fecha de hoy quedaría antes de la última y `db push` no la aplicaría sin `--include-all`. El número total de migraciones vigentes se consulta en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto). El build estampa la migración más nueva (`__SCHEMA_VERSION__`) y la app la compara con `app_schema_version()`: si la base está atrasada, `SchemaDriftBanner` lo dice en pantalla.
 
 ### Cómo escribirlas
 
@@ -892,10 +927,10 @@ de estado no hay render. Se remonta con una `key` que cambia al cancelar
 
 **Un `DELETE` que RLS rechaza informa éxito.** Ver sección 6.
 
-**Un admin puede borrar cualquier movimiento de Finanzas, incluso los
-automáticos.** Borrar un "Pago final" descuadra la orden: una re-entrega o una
-reversión posterior calculan contra un libro incompleto. Hasta que se decida
-restringirlo, corrige con un movimiento de ajuste en vez de borrar.
+~~**Un admin puede borrar cualquier movimiento de Finanzas, incluso los automáticos.**~~ *(Resuelto en `20261010000038`: la columna `finanzas_movimientos.origen` distingue `'manual'` de `'sistema'` —forzado por `trg_finanzas_origen`— y las políticas RLS de UPDATE y DELETE bloquean editar o borrar movimientos del sistema por la API.)*
+
+
+
 
 **Importar dos veces el mismo estado de cuenta duplica el mes.** Hay tres defensas
 y una salida: revertir la importación.
@@ -962,5 +997,5 @@ aceptarla (`aprobar_comision` o `aprobar_comisiones`) antes de que el proceso de
 
 ---
 
-*Última revisión: 11 de octubre de 2026 (fases 1–6, pedidos de taller, seguro y parqueo).*
+*Última revisión: 19 de octubre de 2026 (migraciones hasta `20261010000039`).*
 
