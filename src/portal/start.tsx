@@ -1,5 +1,9 @@
 import { StrictMode } from 'react';
 import type { Root } from 'react-dom/client';
+// Las variables y los botones de la app, antes que cualquier componente y que lo propio del portal
+// (main.tsx ya no los carga: la página del taller no los usa).
+import '../styles/index.css';
+import '../styles/components.css';
 import CustomerPortal from './CustomerPortal';
 import ServicePage from './ServicePage';
 import { isServicePath, serviceTokenFromPath, tokenFromPath } from './path';

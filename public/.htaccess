@@ -22,6 +22,7 @@ AddType application/manifest+json .webmanifest
 # WebAssembly: tipo MIME para zxing-wasm
 AddType application/wasm .wasm
 
+
 # Cabeceras de seguridad para todo el sitio. Solo directivas que Apache y LiteSpeed
 # (Hostinger) aceptan dentro de mod_headers: una directiva desconocida en .htaccess
 # tumba el sitio con un error 500. Después de publicar, comprobar con
@@ -34,12 +35,18 @@ AddType application/wasm .wasm
   Header always set Strict-Transport-Security "max-age=31536000"
 
   # index.html siempre fresco (apunta a los archivos de la versión publicada); los
-  # archivos de assets/ llevan un hash en el nombre y pueden guardarse un año.
+  # archivos de assets/ llevan un hash en el nombre y pueden guardarse un año (también las
+  # imágenes y las fuentes de la página de inicio).
   <Files "index.html">
     Header set Cache-Control "no-cache"
   </Files>
-  <FilesMatch "-[A-Za-z0-9_-]{8}\.(js|css)$">
+  <FilesMatch "-[A-Za-z0-9_-]{8}\.(js|css|webp|png|svg|woff2)$">
     Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  # El video de la portada (public/videos/) no lleva hash en el nombre: se guarda una semana. Si se
+  # cambia el video, se cambia también el nombre del archivo.
+  <FilesMatch "\.mp4$">
+    Header set Cache-Control "public, max-age=604800"
   </FilesMatch>
 </IfModule>
 

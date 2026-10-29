@@ -97,8 +97,13 @@ technician. A job **without a technician** pays commission to nobody.
 
 ## 3. Signing in
 
-Open the system address in your browser (`restorifyauto.net`). You will see the
-sign-in screen.
+Open `restorifyauto.net/login` in your browser. You will see the sign-in screen. At
+`restorifyauto.net` you always get the shop's page for customers, even if you already
+signed in; at the top (the arrow icon; on a phone, inside the menu) and in its footer,
+**Staff login** brings you here. If you were already signed in, it takes you straight to the dashboard, which is at
+`restorifyauto.net/panel` (you can bookmark it). The installed app goes straight to the
+sign-in screen or the dashboard. Below the form, **Go to the shop's website** opens the
+page customers see.
 
 1. Enter your **Email**.
 2. Enter your **Password**.
@@ -1382,12 +1387,14 @@ with its own icon, and on iPhone it is **required** to receive push notification
 
 ### Android (Chrome)
 
-1. Open `restorifyauto.net` in Chrome.
+1. Open `restorifyauto.net/login` in Chrome (from the shop's page, without the
+   `/login`, the install option does not appear).
 2. Menu ⋮ → **Install app** (or **Add to Home screen**).
 
 ### iPhone (Safari, iOS 16.4 or later)
 
-1. Open `restorifyauto.net` in **Safari** (not Chrome or another browser).
+1. Open `restorifyauto.net/login` in **Safari** (not Chrome or another browser). From
+   the shop's page, without the `/login`, you would add the customers' page, not the app.
 2. Tap the **Share** button (the square with an arrow).
 3. Choose **Add to Home Screen**.
 4. Open Restorify **from the new icon**, sign in, and enable

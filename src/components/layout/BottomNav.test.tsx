@@ -22,7 +22,7 @@ describe('BottomNav', () => {
     renderWithProviders(<BottomNav />);
 
     const hrefs = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
-    expect(hrefs).toEqual(['/', '/work-orders', '/customers', '/vehicles']);
+    expect(hrefs).toEqual(['/panel', '/work-orders', '/customers', '/vehicles']);
   });
 
   // Reunión con el taller (sept. 2026): Clientes y Vehículos son de administración. Un
@@ -33,7 +33,7 @@ describe('BottomNav', () => {
     renderWithProviders(<BottomNav />);
 
     const hrefs = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
-    expect(hrefs).toEqual(['/', '/work-orders', '/mis-comisiones']);
+    expect(hrefs).toEqual(['/panel', '/work-orders', '/mis-comisiones']);
   });
 
   it('translates every label, including the orders tab', () => {

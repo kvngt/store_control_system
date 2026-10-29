@@ -651,6 +651,7 @@ Según lo que toca el cambio:
 | Listas, totales o servicios de datos | DIN-12 y la lista afectada con más de 1.000 filas |
 | Sesión o caché de datos | ACC-07 |
 | Edge functions o secretos | SEC-17 y los casos del módulo que usa la función (CFG para empleados, POR para `portal`, NOT/POR para `process-outbox`) |
+| La página de inicio (`src/landing/`) o `main.tsx` | `npm run build` y `vite preview` (con `VITE_SUPABASE_URL` de mentira): `/` sin sesión y con sesión (siempre la página, con sus estilos), `/panel` (el panel; sin sesión, el login), la app instalada en `/` (va al login o al panel), `/home` con sesión, `/login`, un `/r/` (el portal con los suyos) y una dirección que no existe (lleva a la página). En un teléfono real: los botones llaman (cada uno a la persona que dice), abren WhatsApp y el mapa; en «¿Qué necesita su carro?» las casillas se marcan con el dedo y «Mandar a…» abre WhatsApp con lo marcado (y el enlace del otro idioma, en ese idioma); las fotos de trabajos cargan; las pestañas del portal cambian la pantalla; en el estudio de color el carro gira con el dedo de lado (de arriba abajo sigue bajando la página), cambia de color y de acabado, y «Pedir este color» abre WhatsApp con lo elegido; con ahorro de datos o sin WebGL queda la imagen fija |
 
 Después de publicar: [deployment.md §6](deployment.md#6-verificación-después-de-publicar).
 

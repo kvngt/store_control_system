@@ -28,7 +28,7 @@ function renderAt() {
   renderWithProviders(
     <Routes>
       <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/" element={<p>panel</p>} />
+      <Route path="/panel" element={<p>panel</p>} />
       <Route path="/login" element={<p>pantalla de login</p>} />
     </Routes>,
     { route: '/reset-password' }

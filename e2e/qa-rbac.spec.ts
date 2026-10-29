@@ -66,19 +66,19 @@ test.describe('RBAC-03 | Admin ve botón Eliminar en clientes y vehículos', () 
 // ---------------------------------------------------------------------------
 test.describe('RBAC-10 | Mecánico redirigido desde /finance', () => {
   test.skip(!hasMechanicCredentials, 'Requiere credenciales de mecánico');
-  test('intenta ir a /finance y cae en /', async ({ page }) => {
+  test('intenta ir a /finance y cae en /panel', async ({ page }) => {
     await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
     await page.goto('/finance');
-    await expect(page).toHaveURL('/');
+    await expect(page).toHaveURL('/panel');
   });
 });
 
 test.describe('RBAC-11 | Mecánico redirigido desde /payroll', () => {
   test.skip(!hasMechanicCredentials, 'Requiere credenciales de mecánico');
-  test('intenta ir a /payroll y cae en /', async ({ page }) => {
+  test('intenta ir a /payroll y cae en /panel', async ({ page }) => {
     await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
     await page.goto('/payroll');
-    await expect(page).toHaveURL('/');
+    await expect(page).toHaveURL('/panel');
   });
 });
 
@@ -214,14 +214,14 @@ test.describe('RBAC-41 | Settings: mecánico NO ve gestión de sedes', () => {
 // ---------------------------------------------------------------------------
 test.describe('RBAC-50 | Pintor redirigido de rutas admin', () => {
   test.skip(!hasPainterCredentials, 'Requiere credenciales de pintor');
-  test('/finance redirige a /', async ({ page }) => {
+  test('/finance redirige a /panel', async ({ page }) => {
     await login(page, PAINTER_EMAIL!, PAINTER_PASSWORD!);
     await page.goto('/finance');
-    await expect(page).toHaveURL('/');
+    await expect(page).toHaveURL('/panel');
   });
-  test('/payroll redirige a /', async ({ page }) => {
+  test('/payroll redirige a /panel', async ({ page }) => {
     await login(page, PAINTER_EMAIL!, PAINTER_PASSWORD!);
     await page.goto('/payroll');
-    await expect(page).toHaveURL('/');
+    await expect(page).toHaveURL('/panel');
   });
 });

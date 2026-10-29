@@ -7,6 +7,7 @@ import { supabaseService } from '../services/supabaseService';
 import { getAuthErrorMessage } from '../lib/errors';
 import loginBg from '../assets/login-bg.webp';
 import logo from '../assets/restorify-logo.webp';
+import { STAFF_HOME } from '../lib/staffHome';
 
 /**
  * Shown when the session came from a password-recovery email link.
@@ -105,7 +106,7 @@ export default function ResetPassword() {
                 id="reset-continue"
                 onClick={() => {
                   endPasswordRecovery();
-                  navigate('/', { replace: true });
+                  navigate(STAFF_HOME, { replace: true });
                 }}
               >
                 {t('auth.continueToApp')}

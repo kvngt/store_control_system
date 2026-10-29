@@ -39,11 +39,11 @@ test('AUTH-02 | contraseña vacía: no hace petición de red innecesaria', async
   await expect(page).toHaveURL(/\/login/);
 });
 
-test('AUTH-03 | usuario ya logueado: /login redirige a /', async ({ page }) => {
+test('AUTH-03 | usuario ya logueado: /login redirige a /panel', async ({ page }) => {
   test.skip(!hasAdminCredentials, 'Requiere E2E_ADMIN_EMAIL/PASSWORD');
   await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
   await page.goto('/login');
-  await expect(page).toHaveURL('/');
+  await expect(page).toHaveURL('/panel');
 });
 
 // ---------------------------------------------------------------------------
@@ -53,7 +53,7 @@ test.describe('AUTH-10 | Admin Main puede entrar', () => {
   test.skip(!hasAdminCredentials, 'Requiere E2E_ADMIN_EMAIL/PASSWORD');
   test('login correcto y ve el dashboard', async ({ page }) => {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
-    await expect(page).toHaveURL('/');
+    await expect(page).toHaveURL('/panel');
     // La barra lateral muestra Finanzas y Nómina
     await expect(page.locator('a[href="/finance"]')).toBeVisible();
     await expect(page.locator('a[href="/payroll"]')).toBeVisible();
@@ -66,7 +66,7 @@ test.describe('AUTH-11 | Mecánico puede entrar y ve vista reducida', () => {
   test.skip(!hasMechanicCredentials, 'Requiere E2E_MECHANIC_EMAIL/PASSWORD');
   test('login correcto y NO ve Finanzas ni Nómina', async ({ page }) => {
     await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
-    await expect(page).toHaveURL('/');
+    await expect(page).toHaveURL('/panel');
     await expect(page.locator('a[href="/finance"]')).toHaveCount(0);
     await expect(page.locator('a[href="/payroll"]')).toHaveCount(0);
     await expect(page.locator('#sede-selector')).toHaveCount(0);
@@ -77,7 +77,7 @@ test.describe('AUTH-12 | Pintor puede entrar y ve vista reducida', () => {
   test.skip(!hasPainterCredentials, 'Requiere E2E_PAINTER_EMAIL/PASSWORD');
   test('login correcto y NO ve Finanzas ni Nómina', async ({ page }) => {
     await login(page, PAINTER_EMAIL!, PAINTER_PASSWORD!);
-    await expect(page).toHaveURL('/');
+    await expect(page).toHaveURL('/panel');
     await expect(page.locator('a[href="/finance"]')).toHaveCount(0);
     await expect(page.locator('a[href="/payroll"]')).toHaveCount(0);
   });
@@ -110,8 +110,8 @@ test.describe('AUTH-30 | Cierre de sesión', () => {
     await logoutBtn.waitFor({ timeout: 10000 });
     await logoutBtn.click();
     await expect(page).toHaveURL(/\/login/);
-    // Intentar ir al dashboard debe redirigir a login
-    await page.goto('/');
+    // Intentar ir al panel debe redirigir a login (la raíz es la página del taller)
+    await page.goto('/panel');
     await expect(page).toHaveURL(/\/login/);
   });
 });

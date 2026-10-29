@@ -108,13 +108,19 @@ de red, a un clic de las herramientas del navegador.
 
 ```
 src/
-  main.tsx                       entrada: /r/... carga portal/, lo demás appStart
-  appStart.tsx                   app del taller: Sentry, service worker, <App />
+  main.tsx                       entrada: /r/ y /s/ cargan portal/; / en el navegador, landing/; lo demás appStart (el panel, en /panel)
+  appStart.tsx                   app del taller: estilos, Sentry, service worker, <App />
   App.tsx                        proveedores + rutas + guardias de acceso
 
   portal/                        reporte web del cliente (paquete aparte, sin Supabase JS)
     start.tsx                    metas de privacidad, tema claro, render
     CustomerPortal.tsx           la página; strings.ts (es/en), portal.api.ts, portal.css
+
+  landing/                       página del taller para el público (paquete aparte, sin Supabase JS)
+    entry.ts                     qué paquete arranca en cada dirección (lo usa main.tsx)
+    Landing.tsx                  la página; strings.ts (en/es), business.ts, landing.css
+    sections/                    portada, trabajos, servicios, seguros, estudio de color, simulador del portal, reseñas, visítenos
+    studio/                      el carro en 3D del estudio (three.js, se descarga solo al llegar) y su paleta
 
   pages/                         una pantalla por archivo
     Login.tsx, ResetPassword.tsx acceso y recuperación de contraseña

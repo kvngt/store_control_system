@@ -9,6 +9,7 @@ import { ArrowLeft } from 'lucide-react';
 import PasswordInput from '../components/PasswordInput';
 import loginBg from '../assets/login-bg.webp';
 import logo from '../assets/restorify-logo.webp';
+import { STAFF_HOME } from '../lib/staffHome';
 
 export default function Login() {
   const { t, language, setLanguage } = useLanguage();
@@ -32,7 +33,7 @@ export default function Login() {
     setLoading(false);
 
     if (result.success) {
-      navigate('/');
+      navigate(STAFF_HOME);
     } else {
       setError(getAuthErrorMessage(result.error, language));
     }
@@ -141,6 +142,11 @@ export default function Login() {
               </button>
             )}
           </form>
+
+          {/* La raíz sin sesión es la página del taller para los clientes (src/landing). */}
+          <a className="login-link" href="/">
+            <ArrowLeft size={14} /> {t('auth.backToSite')}
+          </a>
 
           {/* Language toggle at bottom */}
           <div className="login-lang-toggle">

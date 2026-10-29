@@ -97,8 +97,13 @@ técnico. Una tarea **sin técnico** no le paga comisión a nadie.
 
 ## 3. Entrar al sistema
 
-Abre la dirección del sistema en el navegador (`restorifyauto.net`). Verás la
-pantalla de acceso.
+Abre `restorifyauto.net/login` en el navegador. Verás la pantalla de acceso. En
+`restorifyauto.net` aparece siempre la página del taller para los clientes, aunque ya
+hayas entrado; arriba (el ícono de la flecha; en el teléfono, dentro del menú) y en su
+pie, **Acceso del taller** lleva aquí. Si ya habías entrado, te pasa directo al panel, que está en
+`restorifyauto.net/panel` (puedes guardarlo en favoritos). La app instalada va directo
+al acceso o al panel. Debajo del formulario, **Ir a la página del taller** abre la
+página que ven los clientes.
 
 1. Escribe tu **Correo Electrónico**.
 2. Escribe tu **Contraseña**.
@@ -1387,12 +1392,14 @@ con su ícono, y en iPhone es **obligatorio** para recibir notificaciones.
 
 ### Android (Chrome)
 
-1. Abre `restorifyauto.net` en Chrome.
+1. Abre `restorifyauto.net/login` en Chrome (desde la página del taller, sin el
+   `/login`, no aparece la opción de instalar).
 2. Menú ⋮ → **Instalar app** (o **Agregar a pantalla de inicio**).
 
 ### iPhone (Safari, iOS 16.4 o posterior)
 
-1. Abre `restorifyauto.net` en **Safari** (no en Chrome ni en otra app).
+1. Abre `restorifyauto.net/login` en **Safari** (no en Chrome ni en otra app). Desde
+   la página del taller, sin el `/login`, se agregaría la página de los clientes y no la app.
 2. Toca el botón **Compartir** (el cuadro con la flecha).
 3. Elige **Agregar a inicio**.
 4. Abre Restorify **desde el ícono nuevo**, inicia sesión y activa las

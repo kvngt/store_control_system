@@ -159,6 +159,46 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
   arrastre `lib/supabase`, `services/`, contextos de la app ni `i18n/translations.ts`: habla con
   la edge function `portal` por `fetch`. Todo dato nuevo para el cliente se agrega a mano en
   `datos_portal` (**nunca `to_jsonb(fila)`**).
+- **La raíz es la página del taller para el público** (`src/landing/`, 26/10/2026), otro paquete
+  aparte con las mismas reglas que el portal (sin Supabase ni nada de la app). `main.tsx` la
+  arranca en `/` en el navegador **aunque haya una sesión del personal** (28/10/2026), y en `/home`
+  siempre (`landing/entry.ts`). En la app instalada o con la sesión de un enlace de Supabase en la URL,
+  `/` es la app, que manda al login o al panel. Detalles que no se ven a simple vista:
+  - **el panel del personal vive en `/panel`** (`lib/staffHome.ts`), no en la raíz: el login, el menú y
+    las redirecciones van ahí. El manifiesto abre la app instalada en `/panel` con `"id": "/"` (sin el
+    `id`, cambiar `start_url` le cambia la identidad a la app ya instalada), y `public/sw.js` manda ahí
+    un aviso sin dirección. **La app se instala desde `/login`**: la página del taller quita el
+    manifiesto para que un cliente no instale el login del personal;
+  - **los `import()` de `main.tsx` van en el objeto `starters`**: con un `if/else` de tres ramas, el
+    minificador los juntó con la lista de archivos de la app y la página salía sin sus estilos en el build;
+  - los datos del taller están en `landing/business.ts` **y** en el JSON-LD de `index.html` (lo compara
+    `business.test.ts`), y los teléfonos también en Configuración;
+  - **el diseño sale de los materiales del taller, no de una plantilla** (27/10/2026): la tarjeta de
+    presentación (negro, su amarillo, el plateado del logo, el chevrón que enmarca la foto, los íconos en
+    hexágono y sus tres letras: Archivo Expanded ExtraBold Italic, Montserrat y Open Sans, recortadas con
+    `scripts/landing/recortar-fuentes.py` en `assets/fonts/`), su orden de trabajo en papel (la lista de
+    servicios con casillas) y fotos de trabajos reales (`assets/work/`, de su sitio anterior
+    restorifyauto.shop). **No vuelvas a meter imágenes generadas** ni los adornos de plantilla que se
+    quitaron (etiquetas en mayúsculas sobre cada título, números donde no hay secuencia, animaciones al
+    bajar por la página). La excepción es **el video de la portada**: la intro que dio el dueño
+    (`public/videos/rfiintro.mp4`). La página carga sus versiones livianas sin audio
+    (`rfiintro-720.mp4` y `rfiintro-480.mp4`, cómo sacarlas en `heroImage.ts`), **sin botón de pausa ni
+    controles** (pedido del dueño, 28/10/2026), quieto con «reducir movimiento» y sin descargarse con
+    ahorro de datos. **La página abre siempre en inglés**, sin mirar el idioma del navegador; el español
+    se elige con EN / ES y se recuerda (`initialLandingLanguage`);
+  - **la página no promete estimados gratis**: la orden de trabajo del taller cobra el diagnóstico y el
+    estimado ($100). Lo vigila `Landing.test.tsx`;
+  - **el estudio de color** (`sections/ColorStudio.tsx`, `studio/`) descarga three.js y el modelo solo al
+    acercarse a la sección, con WebGL 2 y sin ahorro de datos; si no, queda su imagen fija
+    (`studio-poster.webp`, se saca con `scripts/landing/foto-del-estudio.mjs`). El modelo es CC BY 4.0:
+    **su crédito en el pie no se quita**, y se regenera con `scripts/landing/preparar-carro.mjs`, que le
+    quita los logos;
+  - lo único que se mueve solo (las pestañas del simulador del portal) se detiene al tocarlo, y con
+    «reducir movimiento» no se mueve (WCAG 2.2.2);
+  - `landing/boundary.test.ts` falla si algo de `src/landing/` llega a Supabase, los servicios, los
+    contextos o las traducciones de la app;
+  - **lo que la página afirma del taller** (garantía, precios, años, servicios, quién contesta) tiene que estar
+    confirmado por el taller: lo que falta confirmar está en la bitácora.
 - **Próximo servicio y sticker** (`20261010000029`, [portal-y-correos.md](portal-y-correos.md)):
   lo programa solo administración (`programar_proximo_servicio`); el técnico asignado solo
   sugiere. La página del QR (`/s/<código>`) sale de `datos_servicio` (solo `service_role`, por la

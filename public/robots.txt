@@ -1,0 +1,8 @@
+# La página del taller (la raíz) se indexa. Los enlaces de los clientes (/r/) y los stickers de
+# próximo servicio (/s/) son privados: ningún buscador debe pedirlos. La app del taller se marca
+# como no indexable al arrancar.
+User-agent: *
+Disallow: /r/
+Disallow: /s/
+
+Sitemap: https://restorifyauto.net/sitemap.xml

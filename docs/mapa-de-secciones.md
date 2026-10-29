@@ -190,6 +190,18 @@ egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
 | Pruebas | `portal/CustomerPortal.test.tsx`, `CustomerLinkCard.test.tsx`; pgTAP `04`, `06` |
 | Documento | [portal-y-correos.md](portal-y-correos.md) |
 
+## Página de inicio (restorifyauto.net)
+
+La ven los clientes en la raíz (sin sesión del personal) y en `/home`. Paquete aparte, como el portal.
+
+| | |
+|---|---|
+| Entrada | `main.tsx` (objeto `starters`) y `landing/entry.ts` (`chooseEntry`: qué paquete arranca en cada dirección); `App.tsx` (`UnknownRoute`: una dirección que no existe lleva a un visitante a la página) |
+| Página | `landing/start.tsx`, `Landing.tsx` (encabezado, pie, barra del teléfono), `sections/` (`Hero`, `Work`, `Services`, `Insurance`, `ColorStudio`, `PortalDemo`, `Reviews`, `Visit`), `landing.css` (con las tres letras de la tarjeta del taller); `heroImage.ts` (la foto y las letras de la portada, que `main.tsx` precarga); el estudio de color en 3D, `studio/colorStudio.ts` (three.js, diferido) y `studio/palette.ts` (colores y acabados); textos en `landing/strings.ts` (en/es, misma llave de idioma que el portal); `hours.ts` (abierto o cerrado, con la hora de Maryland) |
+| Datos del taller | `landing/business.ts` y el JSON-LD de `index.html` (título, descripción y vista previa también ahí); `public/og-image.jpg`, `robots.txt`, `sitemap.xml` |
+| Recursos | `public/videos/` (el video de la portada: `rfiintro.mp4` es el original del taller y la página carga `rfiintro-720.mp4` y `rfiintro-480.mp4`, sin audio; su primer cuadro es `landing/assets/rfiintro-poster.webp`); `landing/assets/`: `work/` (fotos de trabajos reales del taller, de su sitio anterior restorifyauto.shop, recortadas y en WebP), `fonts/` (Archivo Expanded, Montserrat y Open Sans recortadas: `scripts/landing/recortar-fuentes.py`), `shop-map.svg` (`scripts/landing/mapa-del-taller.mjs`, datos de OpenStreetMap), `qr-sitio.svg` (QR real a restorifyauto.net para el sticker de ejemplo), `restorify-logo-light.webp`, `restorify-car.glb` (modelo «Car Concept», CC BY 4.0, sin logos: `scripts/landing/preparar-carro.mjs`) y `studio-poster.webp` (su imagen fija: `scripts/landing/foto-del-estudio.mjs`) |
+| Pruebas | `landing/Landing.test.tsx`, `entry.test.ts`, `business.test.ts`, `strings.test.ts`, `hours.test.ts`, `boundary.test.ts` (la página no llega a Supabase ni a la app) |
+
 ## PDF de la orden
 
 | | |

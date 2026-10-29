@@ -36,7 +36,7 @@ self.addEventListener('push', (event) => {
     // El mismo tag reemplaza al aviso anterior en vez de apilar otro igual.
     tag: data.tag || undefined,
     renotify: Boolean(data.tag),
-    data: { url: data.url || '/' },
+    data: { url: data.url || '/panel' },
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
@@ -44,9 +44,13 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  // Solo rutas de esta app: un aviso nunca abre otro sitio, aunque su `url` lo pidiera.
-  const requested = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin);
-  const target = requested.origin === self.location.origin ? requested.href : self.location.origin + '/';
+  // Solo rutas de esta app: un aviso nunca abre otro sitio, aunque su `url` lo pidiera. Un aviso
+  // sin dirección (o con la raíz, que en el navegador es la página del taller) abre el panel, que
+  // vive en /panel (src/lib/staffHome.ts).
+  const PANEL = '/panel';
+  const asked = (event.notification.data && event.notification.data.url) || PANEL;
+  const requested = new URL(asked === '/' ? PANEL : asked, self.location.origin);
+  const target = requested.origin === self.location.origin ? requested.href : self.location.origin + PANEL;
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {

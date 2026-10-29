@@ -31,6 +31,7 @@
 | Adopción parte E 16/10 | **E:** Enlace desde el alta, aviso en proceso con firma, primera autorización inicia la orden, autoasignar tareas al asignar técnico, selector de país en teléfono de usuario, secciones plegables en portal, millaje faltante en sticker, acción rápida a sticker existente, traducción de nota con Gemini | **Publicado** (verificado el 21/10/2026: `db:check` con 93 migraciones aplicadas y SEC-17 con las 7 edge functions desplegadas). Gemini lo programó; Claude Code lo verificó y corrigió el 16/10/2026: `test:db` 37/891 ✓, Vitest 963/963 en el repositorio, lint, `tsc` y build ✓, y capturas reales. Orden de publicación en la [bitácora](#16102026--claude-code-parte-e-lo-que-salió-de-la-prueba-con-la-ord-2026-008). |
 | Plan SaaS 17/10 | Comparación con los programas de pago de 2026, auditoría con skills (Supabase, Vercel, Trail of Bits) y plan por fases: cimientos, mensajes SMS, cobro con enlace, trabajos agrupados, inspección por puntos, citas, indicadores y plataforma para vender | **Decidido: solo Restorify, sin SMS.** Se programó la fase 0, la 1.1, la 1.4 y la parte de la fase 3 de abajo. [plan](plan-saas-2026-10.md) |
 | Plan 17/10 (G–M) | Fase 0 (`033`), trabajos agrupados y catálogo (`034`), inspección por puntos (`035`), horas, reloj e indicadores (`036`) | **Publicado** (verificado el 21/10/2026: `db:check` con 93 migraciones aplicadas). Gemini programó y Claude verificó y corrigió: `test:db` 40/1000 ✓, Vitest, lint, `tsc` y build ✓, y capturas. Orden de publicación en la [bitácora](#17102026--claude-code-plan-del-1710-fase-0-trabajos-y-catálogo-inspección-por-puntos-horas-reloj-e-indicadores) |
+| Página de inicio 26–27/10 | restorifyauto.net para los clientes, hecha con la tarjeta del taller (sus letras y su chevrón), su orden de trabajo y fotos reales: portada, trabajos, «¿Qué necesita su carro?», seguros, estudio de color en 3D, simulador del enlace del cliente, reseña, visítenos; bilingüe | **Hecho, sin commit ni publicar** (sin migración ni funciones). Antes de publicar, confirmar con el taller lo que dice la página. Ver la [bitácora](#27102026--claude-code-la-página-de-inicio-hecha-con-la-tarjeta-la-orden-de-trabajo-y-fotos-reales) |
 | QA 18–19/10 | Dos rondas de QA (migraciones `037` y `038`), VIN y placa únicos (`039`) y el alta que no se pierde con «atrás» | **Publicado** el 19/10/2026: commits `dda612f`, `80e345b`, `9c4b843` y `aaed9dc` en `main`; `db push` de la `038` y de la `039` (`db:check`: 93 migraciones aplicadas); `functions deploy` de `process-outbox` (sin verificación de JWT), `create-employee`, `update-employee` y `delete-employee`. `qa:security` contra producción: 171 PASS, 0 FAIL, 31 SKIP. Detalle en [qa-2026-10-18.md](qa-2026-10-18.md) y la [bitácora](#21102026--claude-code-publicación-de-la-qa-del-1819-y-qué-queda-pendiente) |
 
 Nada se publica sin que la persona responsable lo pida: cada `db push`, `functions deploy`,
@@ -50,11 +51,122 @@ al día aparte.
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
 
+### 28/10/2026 — Claude Code (la raíz siempre es la página del taller; revisión responsiva con Gemini)
+
+- **Pedido:** que `restorifyauto.net` muestre primero la página del taller y que el login salga solo al pulsar «Acceso del taller», sin cambiar la app instalada en Android e iPhone, que sigue yendo directo al login. Además, revisar con Gemini que la página se vea bien en todos los anchos, con Claude como coordinador y auditor.
+- **Ruteo (sin migración ni funciones):**
+  - en el navegador, `/` es **siempre** la página, aunque haya una sesión del personal guardada (`landing/entry.ts`; se fue `hasStaffSession`). En la app instalada, o al volver de un enlace de Supabase con la sesión en la URL, `/` es la app: manda al login o al panel;
+  - **el panel pasó a `/panel`** (`lib/staffHome.ts`): ahí van el login, el cambio de contraseña, el menú lateral, la barra inferior, las rutas de admin que rechazan a un técnico y una ruta inexistente. Si no, recargar el panel en el navegador llevaba a la página;
+  - `manifest.webmanifest`: `start_url: "/panel"` con `"id": "/"`, para que la app ya instalada no cambie de identidad;
+  - `public/sw.js`: un aviso sin dirección, o con `/`, abre `/panel`;
+  - **arreglado de paso:** el manual decía que la app se instalaba desde `restorifyauto.net`, pero esa página quita el manifiesto, así que desde ahí no se podía instalar. El manual, en los dos idiomas, ahora dice `restorifyauto.net/login`;
+  - las pruebas e2e esperan `/panel` después de entrar.
+- **Revisión responsiva:** Gemini 4 Argon (`agy`, la CLI de Antigravity, en modo de solo lectura y sobre una copia del código) revisó capturas en 320, 390, 768, 1024, 1440 y 1920 px, y Claude midió desbordes, objetivos táctiles y letra chica. De los 7 hallazgos de Gemini:
+  - **4 confirmados y corregidos:**
+    - el video de la portada medía 720 px de alto en el teléfono por el `height` del `<video>`, y el título quedaba fuera de la primera pantalla (error del día anterior);
+    - Visítenos se salía a 320 px por el lema espaciado;
+    - las pestañas del simulador se cortaban en una fila que se deslizaba (ahora van en una cuadrícula de 2×2);
+    - había letra de 10,9 y 11,5 px.
+  - **1 confirmado a medias:** a 768 px, el Charger ahora va en una fila y Visítenos en dos columnas; el estudio de color a 768 px se veía bien y no se tocó.
+  - **2 descartados con prueba:**
+    - «el carro 3D no aparece»: en una captura de la página completa la sección estaba fuera de pantalla, y el 3D solo dibuja cuando se ve;
+    - «botones apilados a 1024 px y franja corta a 1920 px»: lado a lado no caben, y la franja respeta a propósito el ancho del contenido.
+  - **Claude encontró dos más a 320 px:** la hora partida («9 am – 6 / pm») y el correo cortado a mitad de palabra.
+  - Después de los arreglos: cero desbordes y ninguna letra de menos de 12 px en los seis anchos. Gemini revisó las capturas nuevas en una segunda vuelta: los cinco puntos quedaron resueltos y no encontró problemas nuevos.
+- **Verificado:**
+  - lint, `tsc -b`, `npm test` (146 archivos, 1.111 pruebas: salieron las 3 de `hasStaffSession`) y `npm run build`;
+  - en `vite preview`: `/` con y sin sesión da la página; `/login` y `/panel` sin sesión dan el login; `/inicio` da la página; la app instalada (simulada con `navigator.standalone`) va de `/` y de `/panel` al login;
+  - no se probaron la app instalada real ni un teléfono real.
+- **Después, pedido del dueño:** la página del taller es `/home` y no `/inicio` (`LANDING_ALIAS`; `/inicio` ya no existe y se comporta como cualquier ruta desconocida); se quitó el botón de pausa del video de la portada (queda sin controles; con «reducir movimiento» sigue quieto), con lo que la portada ya no cumple WCAG 2.2.2 para el movimiento de más de 5 segundos (decisión del dueño); y la página abre siempre en inglés, aunque el navegador pida español.
+- **Video de la portada en escritorio:** en un monitor chico o casi cuadrado se cortaban la R y la Y del logo del final (la caja del video seguía la forma de la pantalla y `object-fit: cover` recortaba los lados: según el monitor se veía entre el 46 % y el 99 % del ancho). Primero se le dio a la caja la forma del video (16:9), pero quedó flotando, más baja y corta que el lema, con un borde duro arriba. Quedó así: el recuadro (`.lp-hero__clip`, `min(54vw, 1280px)`) ocupa toda la altura de la portada, con el corte y la línea dorada del chevrón como antes; el video (16:9, entero) va centrado dentro y se desvanece hacia el negro arriba y abajo (`mask-image`). El logo se ve completo en 1024×768, 1280×720, 1366×768, 1440×900, 1536×864, 1920×1080 y 2560×1440; en teléfono y tableta (3:2) ya se veía completo. Con 56 % de ancho la punta del chevrón rozaba el punto de «PERFORM.»: se quedó en 54 %. El costo: en los monitores altos el video ocupa solo la franja central y el resto es negro.
+- **Falta:**
+  - commit y push a `main`;
+  - `process-outbox` sigue mandando `/` como dirección por defecto en los correos al personal: en el navegador esos enlaces abren la página, y desde ahí se entra con «Acceso del taller». Cambiarlo es un `functions deploy`, que no se hizo.
+
+### 27/10/2026 — Claude Code (la página de inicio hecha con la tarjeta, la orden de trabajo y fotos reales)
+
+- **Pedido:** la versión de abajo «sigue viéndose no muy profesional, muy genérica». La persona responsable mandó la tarjeta de presentación del taller (para usar sus letras), la orden de trabajo en papel (dice que el diagnóstico y el estimado cuestan $100: no son gratis) y el sitio anterior del taller, restorifyauto.shop, para sacar de ahí lo que sirva.
+- **Por qué se veía genérica:** fotos generadas por IA, letra de videojuego (Chakra Petch) y adornos de plantilla: una etiqueta en mayúsculas sobre cada título, números «01 02 03» en tarjetas que no son una secuencia, una cinta animada, tarjetas con íconos y animaciones al bajar.
+- **Qué hice:**
+  - **Letras de la tarjeta.** Las comparé con el logo y los datos de la tarjeta: el logo se parece a **Archivo Expanded ExtraBold Italic**, el lema REPAIR • RESTORE • PERFORM es **Montserrat** espaciada y los teléfonos son **Open Sans**. Las tres van recortadas a lo que usa la página (`scripts/landing/recortar-fuentes.py`, 95 KB en total contra 333 KB de los archivos completos) y la portada precarga dos (`heroImage.ts`). Se fueron Chakra Petch y Barlow; las fuentes de origen quedan como `devDependencies` (`@fontsource-variable/archivo`, `montserrat`, `open-sans`).
+  - **La portada es la tarjeta hecha página:** el lema con la letra y el plateado del logo; un botón por persona, como en la tarjeta («Jesus D., in English», «Carlos G., en español», primero la del idioma de quien lee); la foto real de la cabina de pintura cortada con el chevrón dorado, y la franja «We work with ALL insurance companies» con su línea que termina en diagonal. Es lo único que se anima, una vez, al cargar.
+  - **Fotos reales** (`assets/work/`, de restorifyauto.shop: tienen la marca de Google Maps y muestran el edificio del taller): un Lexus IS y un Dodge Charger con su antes y su después en «Trabajos de nuestro taller», y un Evo chocado y el Charger con fondo en el simulador del enlace del cliente. Se borraron las imágenes generadas y el comparador «ilustración de las capas de pintura».
+  - **«¿Qué necesita su carro?»** reemplaza las tres tarjetas de servicios: es la lista de la orden de trabajo en papel (los 11 servicios de mecánica tal cual, más carrocería y pintura), con casillas cuadradas. Lo marcado arma el mensaje de WhatsApp para la persona del idioma de la página; el enlace del otro idioma lo arma en ese idioma.
+  - **Seguros:** cuatro pasos numerados (sí son una secuencia) y los nombres de aseguradoras quietos, sin cinta.
+  - **Visítenos:** la tarjeta reproducida (logo, lema, íconos en hexágono, nombres en dorado, «Ste C» en su renglón), mapa y horario.
+  - **Nada gratis:** «Free estimate» pasó a «Message us» / «Escríbanos» y los mensajes piden «un estimado», sin «gratis». `Landing.test.tsx` falla si «free» o «gratis» vuelven a la página.
+  - **Del sitio anterior** se tomaron las fotos y se confirmó el horario y «30+ years combined experience» (va en la sección de trabajos). No se tomó «Lifetime warranty» ni «Insurance certified» (sin confirmar), ni el «Get My Free Quote» (contradice la orden de trabajo).
+  - `public/og-image.jpg` rehecha con la foto de la cabina y la nueva letra.
+- **Verificado:**
+  - lint, `tsc -b`, `npm test` (146 archivos, 1.113 pruebas) y `npm run build`;
+  - en `vite preview` con Supabase falso: la página baja su CSS (33 KB), la foto de la portada (56 KB a 1440 px) y sus letras (95 KB, la del título con el mismo archivo en la precarga y en el CSS); three.js y el modelo, solo al llegar al estudio. La raíz con y sin sesión, `/inicio`, `/login`, un `/r/`, una ruta inexistente y «reducir movimiento» arrancan lo que deben, sin errores;
+  - capturas de cada sección en escritorio (1440) y teléfono (390), en inglés y en español: sin desbordes (salvo la fila de pestañas del simulador, que se desliza a propósito) ni errores de consola;
+  - no se probó en un teléfono real. Sigue pendiente lo de Google Fonts (Outfit) de la entrada de abajo.
+- **Confirmar con el taller antes de publicar:**
+  - que se pueden usar sus fotos de restorifyauto.shop (las de afuera muestran el número 14711-22: ¿es el local anterior?) y los nombres de Carlos G. y Jesus D. en la página, como en la tarjeta;
+  - «30+ años de experiencia combinada», la calificación 4.9 y el horario;
+  - si quiere que la página diga el precio del diagnóstico y del estimado ($100) o solo que no lo prometa gratis (hoy no dice precio);
+  - si tiene TikTok (la orden de trabajo lo pregunta y no encontré la cuenta) para sumarlo a las redes;
+  - que restorifyauto.shop sigue en línea con «Free Quote» y un artículo que no tiene nada que ver («How to Export Chrome Bookmarks»): conviene bajarlo o redirigirlo a restorifyauto.net.
+- **Después, el mismo día:**
+  - el lema de la portada se pinta de dorado de izquierda a derecha al pasar el mouse por cada palabra (solo con mouse; `landing.css`, «Portada»);
+  - **otro modelo para el estudio de color:** se evaluaron los de Innerscene que propuso otra IA (CC0, `.glb` descargable, con la pintura en un material `paint` aparte). Los seis existen y la licencia sirve, pero renderizados con la luz del estudio se ven de los años 90 y de juguete al lado del actual: no se cambió. Los dos de Sketchfab que también propuso no son gratis (se venden en Fab y CGTrader), y el «CarConcept» que propuso es el que ya se usa.
+- **Video en la portada** (pedido de la persona responsable): en lugar de la foto de la cabina va la intro `public/videos/rfiintro.mp4` (10 s, 1080p, 7,1 MB con audio y con el índice al final). Se cargan versiones sin audio y con el índice al principio, `rfiintro-720.mp4` (1,9 MB) y `rfiintro-480.mp4` (0,9 MB, para el teléfono), con su primer cuadro como póster (`assets/rfiintro-poster.webp`, 32 KB, el que se precarga). Tiene botón de pausa; con «reducir movimiento» no arranca solo y con ahorro de datos no se descarga; fuera de la pantalla se detiene. `.htaccess` guarda los `.mp4` una semana. Probado en Edge: 720p en escritorio y 480p en el teléfono, sin errores. El original de 7,1 MB queda en `public/videos/` sin usarse: se publica igual, conviene borrarlo o guardarlo fuera de `public/`. **Confirmar con el taller:** en el segundo ~3,8 se ve el escudo de Ferrari, y el taller del video no parece el suyo.
+- **Falta:** commit y push a `main` (sin migración ni funciones), cuando la persona responsable lo pida.
+
+### 27/10/2026 — Claude Code (rediseño de la página de inicio y estudio de color)
+
+- **Pedido:** a la persona responsable no le gustó la primera versión («no se ve profesional»). Pidió rehacerla tomando lo del prototipo de Lovable y la investigación de Argon, y después sumó un visualizador de color como el de Avery Dennison.
+- **Qué hice:**
+  - **El diseño** se rehízo con el estilo del prototipo de Lovable: fondo casi negro, dorado de la marca, esquinas cortadas, hexágonos y franjas de advertencia, tipografías Chakra Petch y Barlow (servidas desde el sitio, sin Google Fonts). Las fotos de la portada, de la pintura y del acabado son las del prototipo, en WebP de varios tamaños.
+  - **El carro que se pintaba con el scroll** se cambió por un **estudio de color**: la persona elige entre 10 colores y 4 acabados (brillante, metálico, perlado, mate), gira el carro y pide ese color por WhatsApp. three.js y el modelo (1,4 MB) se descargan solo al acercarse a la sección; sin WebGL 2 o con ahorro de datos queda una imagen fija.
+  - **Las secciones**, en orden: portada con las dos líneas (inglés y español) y cifras; cinta de aseguradoras (con botón de pausa); servicios en tres tarjetas (Repair, Restore, Perform); estudio de color; seguros con su «expediente» y los pasos; acabado (comparador de fondo y pintura, que dice que es ilustración); simulador del enlace del cliente (fotos de recepción, avances, presupuesto con casillas, sticker); la reseña de Google; visítenos (mapa, horario con «abierto ahora» en hora de Maryland, la tarjeta con las tres líneas, correo, dirección y redes).
+  - **Revisión con 4 agentes** (contenido, accesibilidad, componentes y estilos): 60 hallazgos. Se descartaron dos: «enderezado de chasis» y «nos coordinamos directamente con la aseguradora» sí vienen de restorify.store. Se aplicó el resto. Entre lo más importante: el foco ya no queda recortado por las esquinas, lo que se mueve solo se puede detener (WCAG 2.2.2), los botones del teléfono miden 44 px, cada parte en inglés lleva su `lang` y la barra del teléfono se esconde mientras se ven los botones de la portada.
+  - **Archivos nuevos:** `landing/studio/` (escena y paleta), `sections/ColorStudio.tsx`, `hours.ts`, `heroImage.ts` (precarga de la foto de la portada), `boundary.test.ts`, `hours.test.ts` y `scripts/landing/foto-del-estudio.mjs` (la imagen fija del estudio). También se rehicieron `public/og-image.jpg` y los estilos globales de la app, que pasaron de `main.tsx` a `appStart.tsx` y `portal/start.tsx`.
+  - **Dependencias:** `@fontsource/chakra-petch` y `@fontsource/barlow` reemplazan a `@fontsource-variable/archivo`. `three` y `@types/three` siguen.
+- **Encontrado y corregido:** el carro del estudio arrancaba de frente y no en su ángulo de tres cuartos (OrbitControls ya había movido la cámara al crearse, así que la condición del ángulo inicial nunca se cumplía).
+- **Verificado:**
+  - lint, `tsc -b`, `npm test` (146 archivos, 1.112 pruebas) y `npm run build`;
+  - en `vite preview` con Supabase falso, la página carga solo su CSS (44 KB) y three.js y el modelo llegan solo al bajar al estudio. Se probaron la raíz con y sin sesión, `/inicio`, `/login`, un `/r/`, una ruta inexistente y «reducir movimiento»;
+  - capturas de cada sección en escritorio (1440) y teléfono (390), en inglés y español, sin desbordes ni errores de consola;
+  - el estudio, con WebGL por software: carga, cambia color y acabado, gira y arma el mensaje de WhatsApp.
+  - No se probó en un teléfono real.
+- **Confirmar con el taller antes de publicar** (los datos salen de `landing/business.ts` y `landing/strings.ts`):
+  - estimados gratis, «30+ años de experiencia combinada», «trabajamos con todas las aseguradoras» y que atienden todo el DMV;
+  - los servicios de mecánica (reparaciones mecánicas y mantenimiento);
+  - la calificación 4.9 (cambia con el tiempo) y el horario (el «abierto ahora» no sabe de feriados);
+  - que la dirección lleva la «C» y que la línea de oficina no atiende WhatsApp;
+  - que los nombres de la cinta (GEICO, State Farm…) se pueden mostrar: la cinta dice «por ejemplo».
+- **Pedir al taller fotos reales** de trabajos terminados: las de ahora son imágenes generadas en el prototipo de Lovable.
+- **Falta:**
+  - commit y push a `main`, sin migración ni funciones;
+  - la captura `public/ayuda/*/02.webp` del login no muestra el enlace «Ir a la página del taller»;
+  - mejora posible: el `<link>` de Google Fonts (Outfit) de `index.html` también se pide en la página de inicio, que no lo usa. Moverlo a `appStart.tsx` y `portal/start.tsx` lo quitaría.
+
+### 26/10/2026 — Claude Code (página de inicio con el carro 3D)
+
+- **Pedido:** que restorifyauto.net muestre a los clientes una página de inicio con redes, contacto y dirección, moderna y con un efecto 3D de carros que refleje el arte de pintar y reparar. Datos de partida: un borrador de Gemini con lo de la tarjeta y los sitios anteriores del taller.
+- **Qué hice:**
+  - **La página** está en `src/landing/`, paquete aparte como el portal: en `/` sin sesión y fuera de la app instalada, y en `/inicio` siempre. Con sesión, en la app instalada o al volver de un enlace de Supabase con la sesión en la URL, `/` sigue siendo la app.
+  - **El carro 3D:** al bajar, la luz de inspección lo recorre en primer y con los vidrios enmascarados, el color amarillo de la marca entra de atrás hacia adelante y al final llegan el barniz, el papel fuera y las luces encendidas. Los reflejos son de una cabina con luces LED en panal (la tuerca del logo).
+  - **Las secciones:** servicios, etiqueta de datos (30+ años, garantía, estimados, idiomas, 4.9 en Google), seguros con los pasos del reclamo, «Siga la reparación desde su teléfono» (el portal), visítenos con mapa propio de OpenStreetMap, horario, las tres líneas con llamar/WhatsApp/mensaje, correo y redes, y la barra de contacto en el teléfono.
+  - **El SEO** va en `index.html` (título, descripción, vista previa `public/og-image.jpg`, JSON-LD `AutoBodyShop`), junto con `robots.txt` (sin `/r/` ni `/s/`) y `sitemap.xml`. La app se marca `noindex` al arrancar.
+  - **El modelo:** «Car Concept» (Khronos, CC BY 4.0, crédito en el pie). `scripts/landing/preparar-carro.mjs` le quita los logos de Khronos (placa, rines, espejos y costados de las llantas) y el interior: de 11,8 MB a 1,4 MB. three.js va diferido (166 KB comprimido) y solo con WebGL 2; sin él o con «reducir movimiento», una imagen.
+  - **Dependencias nuevas:** `three`, `@types/three` y `@fontsource-variable/archivo`.
+- **Encontrado y corregido antes de publicar:** con tres ramas `if/else` de `import()` en `main.tsx`, el minificador juntó las llamadas con la lista de archivos de la app. En el build, la página cargaba los estilos y paquetes de la app y no los suyos, aunque en `vite dev` se veía bien. Ahora es el objeto `starters` (ver `ai-context.md`).
+- **Verificado:**
+  - lint, `tsc -b`, `npm test` (145 archivos, 1.106 pruebas) y `npm run build`;
+  - capturas en escritorio y teléfono, en `vite dev` y en `vite preview` del build, con Supabase apuntando a una dirección falsa: la raíz sin sesión, con sesión, `/inicio`, `/login`, un `/r/`, una ruta inexistente y «reducir movimiento»;
+  - sin desbordes horizontales ni errores de consola. No se probó en un teléfono real.
+- **Confirmar con el taller antes de publicar** (todo sale de `landing/business.ts`): la garantía de por vida, los estimados gratis y los «30+ años» (del perfil de Google del taller), la calificación 4.9 (cambia con el tiempo), el horario, que la dirección lleva la «C» y que la línea de oficina no atiende WhatsApp.
+- **Falta:** commit y push a `main` (sin migración ni funciones). La captura `public/ayuda/*/02.webp` del login no muestra el enlace nuevo «Ir a la página del taller».
+
 ### 26/10/2026 — Claude Code (alertas de Hostinger: vite y zod)
 
 - **Aviso de Hostinger al publicar:** `vite` 8.2.0 (CVE de `launch-editor` en Windows, corregido en 8.2.4) y `zod` hasta 4.6.5 (consumo de memoria con arreglos enormes, corregido en 4.6.6). Las dos están dentro del rango que ya permitía `package.json`.
 - **Hecho (sin commit, sin publicar):** `npm audit fix` dejó `vite` 8.3.5 y `zod` 4.6.7 (solo cambia `package-lock.json`). Verificado: lint, `tsc -b`, `npm test` (140 archivos, 1.076 pruebas) y `npm run build`.
 - **Falta:** commit y push a `main` para que Hostinger vuelva a compilar con el lock nuevo. Quedan 2 avisos moderados de `vitest`/`@vitest/mocker` (solo desarrollo, no entran al sitio); su arreglo es vitest 5 (cambio mayor), que se deja para otro momento.
+- **Publicado** por el usuario el mismo día, junto con la revisión de la documentación: commit `07bae33` en `main`.
 
 ### 26/10/2026 — Claude Code (los diálogos con <form> no se desplazaban)
 

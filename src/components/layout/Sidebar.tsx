@@ -4,6 +4,7 @@ import { useAuth } from '../../context/auth.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import { detachThisDevice } from '../../features/notifications/pushDevice';
 import { LayoutDashboard, Users, Car, ClipboardList, DollarSign, CreditCard, Settings, LogOut, ChevronLeft, ChevronRight, Wrench, Building2, Hexagon, UserCog, Wallet, LifeBuoy } from 'lucide-react';
+import { STAFF_HOME } from '../../lib/staffHome';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -39,7 +40,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   // Clientes y Vehículos son de administración: un técnico ve el cliente y el vehículo de
   // sus órdenes dentro de la orden (la base le esconde los demás).
   const mainLinks = [
-    { to: '/', icon: LayoutDashboard, label: t('nav.dashboard') },
+    { to: STAFF_HOME, icon: LayoutDashboard, label: t('nav.dashboard') },
     ...(isAdmin
       ? [
           { to: '/customers', icon: Users, label: t('nav.customers') },
@@ -78,7 +79,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
       />
 
       <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`} aria-label={t('nav.mainMenu')}>
-        <Link to="/" className="sidebar-logo" onClick={handleNavClick} title={t('nav.dashboard')}>
+        <Link to={STAFF_HOME} className="sidebar-logo" onClick={handleNavClick} title={t('nav.dashboard')}>
           {currentSede?.logo_url ? (
             <img
               src={currentSede.logo_url}
@@ -143,7 +144,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
               className={({ isActive }) =>
                 `sidebar-link ${isActive && (link.to === '/' ? location.pathname === '/' : true) ? 'active' : ''}`
               }
-              end={link.to === '/'}
+              end={link.to === STAFF_HOME}
               onClick={handleNavClick}
             >
               <link.icon className="sidebar-link-icon" size={20} />

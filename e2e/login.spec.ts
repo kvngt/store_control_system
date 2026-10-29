@@ -45,7 +45,7 @@ test.describe('mechanic/painter session', () => {
   test('mechanic is redirected away from /finance', async ({ page }) => {
     await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
     await page.goto('/finance');
-    await expect(page).toHaveURL('/');
+    await expect(page).toHaveURL('/panel');
   });
 
   test('work orders open on "my orders", with the rest of the board collapsed', async ({ page }) => {

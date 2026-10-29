@@ -28,7 +28,7 @@ export async function login(page: Page, email: string, password: string) {
   await page.fill('#login-email', email);
   await page.fill('#login-password', password);
   await page.click('#login-submit');
-  await page.waitForURL('/');
+  await page.waitForURL('/panel');
 }
 
 /** Waits for the dashboard to fully load (spinner gone, page title present). */

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createQueryClient } from './lib/queryClient';
@@ -9,6 +9,7 @@ import { useAuth } from './context/auth.context';
 import { ToastProvider } from './context/ToastContext';
 import { UnsavedChangesProvider } from './context/UnsavedChangesContext';
 import { isSupabaseConfigured } from './lib/supabase';
+import { STAFF_HOME } from './lib/staffHome';
 import ErrorBoundary from './components/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
 import Login from './pages/Login';
@@ -38,7 +39,7 @@ function ProtectedRoute({ children, adminOnly = false }: { children: React.React
   }
 
   if (adminOnly && user?.rol !== 'admin') {
-    return <Navigate to="/" replace />;
+    return <Navigate to={STAFF_HOME} replace />;
   }
 
   return <>{children}</>;
@@ -67,8 +68,11 @@ function AppRoutes() {
       <Routes>
       <Route
         path="/login"
-        element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
+        element={isAuthenticated ? <Navigate to={STAFF_HOME} replace /> : <Login />}
       />
+      {/* La raíz solo llega a la app en la app instalada o al volver de un enlace de Supabase
+          (landing/entry.ts); en el navegador es la página del taller. El panel vive en /panel. */}
+      <Route path="/" element={<Navigate to={isAuthenticated ? STAFF_HOME : '/login'} replace />} />
       {/* The address recovery emails point at. Supabase puts the session in the
           URL fragment and the client picks it up, which fires PASSWORD_RECOVERY
           and the branch above — but only if it has finished doing so. Landing
@@ -84,7 +88,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<Dashboard />} />
+        <Route path={STAFF_HOME} element={<Dashboard />} />
         {/* Clientes y vehículos son de administración (reunión con el taller, sept. 2026):
             un técnico ve el cliente y el vehículo de sus órdenes dentro de la orden, y la
             base no le deja crear ni editar ninguno. */}
@@ -141,10 +145,23 @@ function AppRoutes() {
         <Route path="/ayuda" element={<Help />} />
         <Route path="/help" element={<Navigate to="/ayuda" replace />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<UnknownRoute />} />
       </Routes>
     </Suspense>
   );
+}
+
+/**
+ * Una dirección que no existe. El personal vuelve al panel; un visitante sin sesión, a la página del
+ * taller, que es otro paquete (main.tsx): por eso se recarga en vez de navegar dentro de la app, que
+ * lo habría llevado al login del personal.
+ */
+function UnknownRoute() {
+  const { isAuthenticated } = useAuth();
+  useEffect(() => {
+    if (!isAuthenticated) window.location.replace('/');
+  }, [isAuthenticated]);
+  return isAuthenticated ? <Navigate to={STAFF_HOME} replace /> : null;
 }
 
 function MissingConfigScreen() {
