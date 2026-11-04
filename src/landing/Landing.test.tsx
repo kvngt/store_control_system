@@ -81,14 +81,18 @@ describe('Landing', () => {
     languages.mockRestore();
   });
 
+  // Ni lo promete gratis ni dice el precio: el dueño decidió no mostrar el cobro del diagnóstico
+  // (04/11/2026).
   it('never promises a free estimate: the shop charges for estimates', async () => {
     render(<Landing />);
     expect(document.body.textContent).not.toMatch(/\bfree\b/i);
+    expect(document.body.textContent).not.toMatch(/\$\s?100\b/);
     const [message] = screen.getAllByRole('link', { name: 'Message us' });
     expect(message.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/12403551266\?text=/);
 
     await userEvent.click(screen.getByRole('button', { name: /Español/ }));
     expect(document.body.textContent).not.toMatch(/\bgratis\b/i);
+    expect(document.body.textContent).not.toMatch(/\$\s?100\b/);
     const [escribanos] = screen.getAllByRole('link', { name: 'Escríbanos' });
     expect(escribanos.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/12026076126\?text=/);
   });

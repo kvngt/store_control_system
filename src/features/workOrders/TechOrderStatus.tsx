@@ -9,7 +9,18 @@ import { summarizeTechTasks } from './techStatus';
  * cliente no lo autorizó. Antes un trabajo rechazado seguía apareciendo "esperando
  * autorización" y el mecánico no sabía si hacerlo.
  */
-export default function TechOrderStatus({ order, myTasks, statusLabel }: { order: WorkOrder; myTasks: LaborItem[]; statusLabel: string }) {
+export default function TechOrderStatus({
+  order,
+  myTasks,
+  statusLabel,
+  waitingAuthorization = false,
+}: {
+  order: WorkOrder;
+  myTasks: LaborItem[];
+  statusLabel: string;
+  /** Nada autorizado todavía: la base no le deja empezar ni terminar (20261010000041). */
+  waitingAuthorization?: boolean;
+}) {
   const { t } = useLanguage();
   const summary = summarizeTechTasks(myTasks);
   const paused = order.estatus === 'espera_autorizacion';
@@ -24,6 +35,7 @@ export default function TechOrderStatus({ order, myTasks, statusLabel }: { order
         </span>
       </div>
       {paused && <p className="tech-order-status-note">{t('techStatus.pausedNote')}</p>}
+      {waitingAuthorization && <p className="tech-order-status-note">{t('techStatus.waitingAuthorizationNote')}</p>}
       {myTasks.length > 0 && (
         <ul className="tech-order-status-list">
           {summary.authorized > 0 && (

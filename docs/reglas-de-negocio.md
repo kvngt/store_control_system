@@ -39,7 +39,7 @@ Recepción ──► En proceso ◄──► Espera de autorización ──► F
 | Estado | Significa | Efectos automáticos al entrar |
 |---|---|---|
 | **Recepción** | El vehículo ingresó; no se trabaja todavía | — |
-| **En proceso** | Se está trabajando | Pasa de forma manual (administración o técnico) o **automáticamente desde Recepción con la primera autorización** de trabajos (`trg_quote_starts_order`, `20261010000032`) |
+| **En proceso** | Se está trabajando | Pasa de forma manual (administración, o el técnico si hay algo autorizado) o **automáticamente desde Recepción con la primera autorización** de trabajos (`trg_quote_starts_order`, `20261010000032`) |
 | **Espera de autorización** | Pausa: hay trabajo adicional que el cliente tiene que autorizar. El técnico la provoca **reportando un hallazgo** (`reportar_hallazgo`); no la elige en el selector | Aviso a administración. Sale sola a En proceso al responder el cliente, al descartar el hallazgo o al cancelar el presupuesto ([hallazgos.md](hallazgos.md)) |
 | **Finalizado** | El técnico terminó el trabajo. **Todavía no es "listo para el cliente"**: administración lo revisa y lo marca "Listo para entregar" | Avance al 100 %, fecha de finalización, **aviso a admins: "Trabajo terminado"** (hay que revisarlo). **No se le avisa al cliente.** Su enlace dice "En revisión final" |
 | ↳ **Listo para entregar** | Marca sobre Finalizado que pone **solo administración** (`marcar_lista_para_entregar`, protegida por `trg_guard_lista_para_entregar` con `restorify.lista`; se borra sola si la orden deja de estar finalizada o entregada) | **Ahora sí** sale el correo "Su vehículo está listo" y el enlace dice "Listo para recoger". Queda quién y cuándo (historial). `datos_correo` entrega al `process-outbox` el estatus del cliente (`_estatus_cliente`: finalizado sin marca = en proceso), y `datos_portal` manda `orden.lista_para_entregar` ("En revisión final" si aún no tiene la marca) |
@@ -60,6 +60,10 @@ cualquier otro, con estas restricciones:
 - **El técnico elige solo** En proceso y Finalizado (y no saca la orden de la espera de
   autorización: eso pasa al resolver lo que la puso ahí). Devolver una orden a Recepción es
   de administración.
+- **El técnico no pasa una orden a En proceso ni a Finalizado sin nada autorizado** (decisión del
+  dueño, 04/11/2026, `20261010000041`): hace falta al menos una mano de obra o un repuesto
+  `aprobado`. Antes podía, y se terminaban órdenes que al entregarse cobraban $0. Administración sí
+  puede (garantía, cortesía), y esas órdenes salen en «Requiere atención» (`sin_autorizar`).
 - **Una orden finalizada solo la reabre administración** (pedido del taller, 05/10/2026,
   `20261010000021`): el técnico no la devuelve a En proceso, ni desde la orden ni arrastrándola
   en el tablero, ni reportando trabajo adicional (que pausaría la orden). La base lo rechaza
@@ -132,6 +136,11 @@ del banco se conservan: ese dinero sí pasó por la cuenta.
 
 **No se borra una orden con comisiones ya pagadas.** El pago (el cheque y su egreso)
 quedaría sin el detalle de qué pagó. Primero se deshace ese pago en Comisiones.
+
+**Una orden entregada no se borra: se archiva** (decisión del dueño, `20261010000041`,
+`trg_guard_order_delete_entregada`). Lleva el cobro, el costo de los repuestos y las comisiones.
+Vale también para un admin; solo un script de mantenimiento sin sesión, o borrar la sede entera
+(`delete_sede_cascade`), la borra.
 
 ---
 

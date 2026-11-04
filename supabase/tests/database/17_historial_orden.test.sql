@@ -87,6 +87,16 @@ SELECT is(
   'El depósito con su antes y después'
 );
 
+-- Desde 20261010000041 la mecánica no empieza una orden sin algo autorizado. Un repuesto
+-- autorizado, sin presupuesto (la orden sigue en recepción) y sin tocar la mano de obra: aprobar
+-- una tarea haría que la base recalcule el avance y cambiaría lo que cuenta esta prueba.
+DO $do$ BEGIN
+  PERFORM set_config('restorify.presupuesto', 'on', true);
+  INSERT INTO orden_repuestos (orden_id, descripcion, cantidad, precio_venta_unitario, estado)
+  SELECT id, 'Foco', 1, 10, 'aprobado' FROM t_orden;
+  PERFORM set_config('restorify.presupuesto', 'off', true);
+END $do$;
+
 -- ------------------------------------------------------------------------------------
 -- 2. Lo que hace la mecánica, con su nombre
 -- ------------------------------------------------------------------------------------

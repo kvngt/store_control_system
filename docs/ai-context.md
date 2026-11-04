@@ -45,10 +45,12 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
   técnico, una orden ajena **no existe** (PGRST116, cero filas en un UPDATE), no da 42501.
   [arquitectura.md §6](arquitectura.md#6-seguridad-y-permisos).
 - **Un técnico modifica una orden solo si está asignado y no está entregada**, y solo estado
-  (`en_proceso`, `espera_autorizacion`, `finalizado`) y avance (`trg_order_technician_guard`).
-  La firma de recepción, devolver a recepción, reabrir una finalizada y entregar son de
-  administración. **Si agregas una acción de técnico que cambie otra columna de
-  `ordenes_trabajo`, añádela a la lista permitida de ese trigger en una migración nueva.**
+  (`en_proceso`, `espera_autorizacion`, `finalizado`) y avance (`trg_guard_order_technician`).
+  **No la pasa a `en_proceso` ni a `finalizado` si no hay ninguna línea `aprobado`** (decisión del
+  dueño, `20261010000041`): la primera autorización la pasa sola a `en_proceso`, y administración sí
+  puede moverla sin nada autorizado. La firma de recepción, devolver a recepción, reabrir una
+  finalizada y entregar son de administración. **Si agregas una acción de técnico que cambie otra
+  columna de `ordenes_trabajo`, añádela a la lista permitida de ese trigger en una migración nueva.**
 - **Abrir una orden y asignar a alguien (alta, edición y baja) son solo de admin**
   (`ordenes_trabajo_insert`, `orden_asignaciones_*`). Asignar es dinero, no una etiqueta: reparte
   la comisión de las líneas heredadas. [arquitectura.md §6](arquitectura.md#6-seguridad-y-permisos).
@@ -180,14 +182,17 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
     servicios con casillas) y fotos de trabajos reales (`assets/work/`, de su sitio anterior
     restorifyauto.shop). **No vuelvas a meter imágenes generadas** ni los adornos de plantilla que se
     quitaron (etiquetas en mayúsculas sobre cada título, números donde no hay secuencia, animaciones al
-    bajar por la página). La excepción es **el video de la portada**: la intro que dio el dueño
-    (`public/videos/rfiintro.mp4`). La página carga sus versiones livianas sin audio
-    (`rfiintro-720.mp4` y `rfiintro-480.mp4`, cómo sacarlas en `heroImage.ts`), **sin botón de pausa ni
-    controles** (pedido del dueño, 28/10/2026), quieto con «reducir movimiento» y sin descargarse con
-    ahorro de datos. **La página abre siempre en inglés**, sin mirar el idioma del navegador; el español
-    se elige con EN / ES y se recuerda (`initialLandingLanguage`);
-  - **la página no promete estimados gratis**: la orden de trabajo del taller cobra el diagnóstico y el
-    estimado ($100). Lo vigila `Landing.test.tsx`;
+    bajar por la página). La excepción es **el video de la portada**: la intro que dio el dueño. La
+    página carga sus versiones livianas sin audio (`public/videos/rfiintro-720.mp4` y `rfiintro-480.mp4`,
+    cómo sacarlas en `heroImage.ts`; el original de 7,1 MB salió del repositorio el 04/11/2026 y lo tiene
+    el taller), **sin botón de pausa ni controles** (pedido del dueño, 28/10/2026), quieto con «reducir
+    movimiento» y sin descargarse con ahorro de datos. El escudo de Ferrari que se ve en el video se
+    queda (decisión del dueño, 04/11/2026: se cambia solo si hay un reclamo). **La página abre siempre
+    en inglés**, sin mirar el idioma del navegador; el español se elige con EN / ES y se recuerda
+    (`initialLandingLanguage`);
+  - **la página no promete estimados gratis ni dice el precio**: la orden de trabajo del taller cobra el
+    diagnóstico y el estimado ($100), y el dueño decidió no mostrar ese cobro (04/11/2026). Lo vigila
+    `Landing.test.tsx`;
   - **el estudio de color** (`sections/ColorStudio.tsx`, `studio/`) descarga three.js y el modelo solo al
     acercarse a la sección, con WebGL 2 y sin ahorro de datos; si no, queda su imagen fija
     (`studio-poster.webp`, se saca con `scripts/landing/foto-del-estudio.mjs`). El modelo es CC BY 4.0:
@@ -324,9 +329,24 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
     nombre de una ruta de la app hace que el servidor responda 403 al recargar esa ruta;
   - **al iniciar sesión se vuelve a donde se iba** (`ProtectedRoute` guarda `state.from`, `afterLoginPath`
     solo acepta rutas propias) y **cerrar sesión es solo en este aparato** (`signOut({ scope: 'local' })`);
-  - **la CLI de Supabase 3.0 rechaza el `config.toml` actual** (`[inbucket]`): para la base local usa
-    `npx supabase@2 …` hasta migrarlo, y **`supabase db reset` borra los datos de demostración locales**
-    (respáldalos antes; ver [pruebas.md](pruebas.md)).
+  - **`supabase db reset` borra los datos de demostración locales** (respáldalos antes; ver
+    [pruebas.md](pruebas.md)).
+- **Decisiones del dueño del 04/11/2026** (`20261010000041`, [bitacora.md](bitacora.md)):
+  - **el técnico no empieza ni termina una orden sin nada autorizado** (ver arriba). En pantalla, su
+    selector de estado se apaga y `TechOrderStatus` le dice por qué; el botón rápido ya lo exigía;
+  - **una orden entregada no se borra, se archiva** (`trg_guard_order_delete_entregada`, 42501), ni
+    siendo admin. La lista ofrece «Archivar» en su lugar. Sin sesión (scripts de mantenimiento) no se
+    frena, y `delete_sede_cascade` la deja pasar con la bandera `restorify.borrar_sede`;
+  - **las razones de la base en inglés:** los 42501 propios vienen en español; los que más ve el taller
+    se traducen en `SHOP_REASONS_EN` (`lib/errors.ts`). **Una razón nueva que vea el taller, súmala ahí**;
+  - **un correo con líneas del presupuesto espera a su traducción:** en inglés, si la traducción de esa
+    orden sigue en cola, `process-outbox` lo devuelve a la cola (hasta dos veces, ~5 min) y después lo
+    manda como esté;
+  - **una subida rechazada por permisos se explica** en la bandeja (`UploadTray`: la orden ya se
+    entregó o ya no está asignada), con el mensaje crudo en el `title`;
+  - **la configuración local es de la CLI 3** (`[local_smtp]`, `[auth.email] enabled`): necesita la
+    CLI 2.122 o más nueva, y `npm run test:db` usa `npx supabase@3`. **`[auth.email] enabled` es el
+    proveedor de correo**: en `false` nadie inicia sesión (regla 8d).
 - **Índices e InitPlan** (`20261010000033`): toda clave foránea nueva lleva su índice, y toda
   llamada a un helper en una política va envuelta en `(SELECT …)`.
 - **Avisos y correos al personal.** El técnico se entera de lo no autorizado (`TechOrderStatus`)
@@ -362,7 +382,7 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
    `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca edites una migración
    ya aplicada ni cambies tablas desde el panel. **El nombre va después de la última
    migración, no de la fecha de hoy:** hay migraciones aplicadas con fecha futura (hoy la
-   última es `20261010000040`), y una con fecha anterior a la última aplicada no entra con
+   última es `20261010000041`), y una con fecha anterior a la última aplicada no entra con
    `db push` ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#4-base-de-datos), B-1).
 2. **Una función nueva en `public` es una RPC pública.** Postgres da `EXECUTE` a
    `PUBLIC` y Supabase a `anon` y `authenticated` al crearla. Revócala siempre:
@@ -413,7 +433,7 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
    no guardes datos de la sesión en otro lado (localStorage, IndexedDB) sin borrarlos al
    cerrar sesión.
 8d. **`supabase/config.toml` es la configuración local, no la real.** No uses
-   `supabase config push` sin revisar el diff: `[auth.email] enable_signup = false` apaga el
+   `supabase config push` sin revisar el diff: `[auth.email] enabled = false` (antes `enable_signup`) apaga el
    inicio de sesión con correo. La configuración real de Auth está en el panel.
 9. **Una orden puede ser de otra sede que la elegida** (un admin abre órdenes desde avisos y
    enlaces). Lo que depende de la sede (logo, nombre, porcentaje, personal) sale de

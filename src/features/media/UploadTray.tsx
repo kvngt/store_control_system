@@ -7,6 +7,19 @@ import { useMediaUploads } from './mediaUploads.context';
 const KIND_ICON = { foto: ImageIcon, video: Video, audio: Mic } as const;
 
 /**
+ * El motivo para el taller. Una subida que termina después de entregar la orden (o de que quiten
+ * al técnico) choca con los permisos de Storage o de `orden_media`: antes se veía el mensaje
+ * crudo («new row violates row-level security policy…») y nadie sabía qué hacer. El crudo queda en
+ * el `title`, para soporte.
+ */
+const DENIED = /row-level security|permission denied|\b42501\b|\b403\b|unauthorized/i;
+function uploadErrorKey(error: string): string | null {
+  if (/^La inspección ya está publicada/.test(error.trim())) return 'media.uploadInspectionPublished';
+  if (DENIED.test(error)) return 'media.uploadDenied';
+  return null;
+}
+
+/**
  * La bandeja de subidas: lo único que el técnico necesita saber de la cola.
  *
  * Aparece solo mientras hay algo en camino, flota por encima de la barra
@@ -79,12 +92,16 @@ export default function UploadTray() {
                     {item.numeroOrden || t('workOrders.title')} · {t(`media.kind.${item.tipo}`)}
                   </div>
                   <div className="upload-tray-item-state">{stateLabel(item)}</div>
-                  {/* El motivo técnico, recortado: es lo que alguien de soporte
-                      necesita para saber si es la red, un permiso o el límite
-                      de tamaño (ver docs/multimedia-y-notificaciones.md). */}
+                  {/* Un permiso negado se explica (uploadErrorKey); lo demás va recortado: es lo
+                      que alguien de soporte necesita para saber si es la red o el límite de
+                      tamaño (ver docs/multimedia-y-notificaciones.md). El crudo, en el title. */}
                   {item.error && (item.estado === 'error' || item.intentos > 0) && (
                     <div className="upload-tray-item-error" title={item.error}>
-                      {item.error.length > 90 ? `${item.error.slice(0, 90)}…` : item.error}
+                      {uploadErrorKey(item.error)
+                        ? t(uploadErrorKey(item.error) as string)
+                        : item.error.length > 90
+                          ? `${item.error.slice(0, 90)}…`
+                          : item.error}
                     </div>
                   )}
                   {item.estado !== 'error' && item.estado !== 'listo' && (

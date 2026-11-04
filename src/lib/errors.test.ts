@@ -51,9 +51,24 @@ describe('getErrorMessage', () => {
   it('muestra la razón que da la base en un 42501 propio, y el genérico en uno de RLS', () => {
     const own = { code: '42501', message: 'La orden ya fue entregada. Sólo un administrador puede modificarla.' };
     expect(getErrorMessage(own, 'es')).toBe(own.message);
-    expect(getErrorMessage(own, 'en')).toBe("You don't have permission to perform this action.");
+    expect(getErrorMessage(own, 'en')).toBe('The order was already delivered. Only an administrator can change it.');
+    // Una razón propia que no está en la lista en inglés: el genérico.
+    const otra = { code: '42501', message: 'Escribe por qué la orden necesita autorización.' };
+    expect(getErrorMessage(otra, 'en')).toBe("You don't have permission to perform this action.");
     const rls = { code: '42501', message: 'new row violates row-level security policy for table "orden_labor"' };
     expect(getErrorMessage(rls, 'es')).toBe('No tienes permiso para realizar esta acción.');
+    expect(getErrorMessage(rls, 'en')).toBe("You don't have permission to perform this action.");
+  });
+
+  it('en inglés explica las razones de la revisión del 04/11/2026', () => {
+    const sinAutorizar = {
+      code: '42501',
+      message: 'El cliente todavía no autoriza ningún trabajo de esta orden. No se puede empezar ni terminar hasta que administración registre la autorización.',
+    };
+    expect(getErrorMessage(sinAutorizar, 'es')).toBe(sinAutorizar.message);
+    expect(getErrorMessage(sinAutorizar, 'en')).toMatch(/has not authorized any work/);
+    const entregada = { code: '42501', message: 'Una orden entregada no se borra: lleva el cobro, el costo de los repuestos y las comisiones. Archívala para sacarla de la lista.' };
+    expect(getErrorMessage(entregada, 'en')).toMatch(/Archive it/);
   });
 
   it('traduce un CHECK violado (monto negativo)', () => {

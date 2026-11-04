@@ -138,7 +138,7 @@ Settings → Usage después del primer mes.
 
 | Síntoma | Dónde mirar |
 |---|---|
-| "No se pudo subir" en la bandeja | Expande la bandeja: debajo de cada archivo aparece el motivo. 413/"too large" → el archivo pasa de 50 MB (o el límite global de Storage quedó por debajo del bucket). 42501 → la persona no está asignada o la orden está entregada |
+| "No se pudo subir" en la bandeja | Expande la bandeja: debajo de cada archivo aparece el motivo. 413/"too large" → el archivo pasa de 50 MB (o el límite global de Storage quedó por debajo del bucket). 42501 → la persona no está asignada o la orden está entregada; la bandeja lo dice así («No se guardó: la orden ya se entregó o ya no la tienes asignada», `uploadErrorKey` en `UploadTray.tsx`) y deja el mensaje crudo en el `title` |
 | El video no pasa de 0 % | Red del dispositivo; ¿está en modo sin conexión? La bandeja lo dice. Probar con wifi |
 | "Este teléfono no puede convertir ese video" | Navegador sin WebCodecs y archivo `.mov`/HEVC. Grabar con el botón **Video** |
 | "El video dura más de 2 minutos" | Esperado. Recortarlo en el teléfono o grabarlo desde la app |

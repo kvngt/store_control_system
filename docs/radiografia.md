@@ -1,6 +1,6 @@
 # Radiografía Técnica de Restorify
 
-**Fecha de actualización:** 19 de octubre de 2026 (cifras y módulos de las migraciones `029` a `039`); pruebas y migraciones al 3 de noviembre de 2026 (la `040` no agrega tablas: reescribe funciones y suma el trigger `trg_guard_inspeccion_media` en `orden_media`)
+**Fecha de actualización:** 19 de octubre de 2026 (cifras y módulos de las migraciones `029` a `039`); pruebas y migraciones al 4 de noviembre de 2026 (la `040` y la `041` no agregan tablas: reescriben funciones y suman los triggers `trg_guard_inspeccion_media` en `orden_media` y `trg_a_orden_entregada_no_se_borra` en `ordenes_trabajo`)
 **Audiencia:** Desarrolladores y agentes de IA que toman el proyecto.
 
 Restorify es un sistema B2B multi-sede para talleres mecánicos y de pintura. Administra la operación completa: vehículos, recepción con fotos/videos, presupuestos línea por línea, trabajos, finanzas y cálculo de comisiones.
@@ -16,13 +16,13 @@ Contadas el **19/10/2026** (las demás guías remiten aquí en vez de repetir ci
 | Métrica | Valor | Detalle |
 | :--- | :--- | :--- |
 | **Archivos fuente (TypeScript)** | 196 | `src/` excluyendo pruebas |
-| **Pruebas (Vitest)** | 148 archivos | 1.128 pruebas unitarias y de componentes (03/11/2026) |
-| **Migraciones de base de datos** | 94 | En `supabase/migrations/`, hasta `20261010000040_arreglos_revision_2026_11` (producción va hasta la `039`; la `040` espera su `db push`; `npm run db:check`) |
+| **Pruebas (Vitest)** | 149 archivos | 1.135 pruebas unitarias y de componentes (04/11/2026) |
+| **Migraciones de base de datos** | 95 | En `supabase/migrations/`, hasta `20261010000041_decisiones_del_dueno_2026_11` (producción va hasta la `039`; la `040` y la `041` esperan su `db push`; `npm run db:check`) |
 | **Tablas de base de datos** | 30 al 11/10/2026 más las 9 tablas de las migraciones 029 a 039 | En `public` (`orden_proximo_servicio`, `catalogo_trabajos`, `catalogo_trabajo_lineas`, `orden_trabajos`, `inspeccion_plantillas`, `inspeccion_plantilla_puntos`, `orden_inspecciones`, `orden_inspeccion_puntos`, `orden_labor_tiempos`) |
 | **Funciones SQL** | 161 al 11/10/2026 (más las de las migraciones 029 a 039) | En `public` (RPC, internas y de trigger); `npm run db:donde -- <nombre>` da la versión vigente de cada una |
-| **Triggers en `ordenes_trabajo`** | 24 al 11/10/2026 (más los 2 de las migraciones 029 a 039) | La tabla con más lógica asociada (`trg_marcas_danos_firmadas` en `031` y `trg_order_link_on_create` en `032`) |
+| **Triggers en `ordenes_trabajo`** | 24 al 11/10/2026 (más los 2 de las migraciones 029 a 039 y 1 de la 041) | La tabla con más lógica asociada (`trg_marcas_danos_firmadas` en `031`, `trg_order_link_on_create` en `032` y `trg_a_orden_entregada_no_se_borra` en `041`) |
 | **Tareas programadas** | 5 | `pg_cron`: `restorify-outbox`, `-maintenance`, `-due-reminders`, `-quote-reminders`, `-parqueo` |
-| **Pruebas de base de datos** | 44 archivos | 1.076 pruebas (`supabase/tests/database/`, pgTAP, 03/11/2026) |
+| **Pruebas de base de datos** | 45 archivos | 1.093 pruebas (`supabase/tests/database/`, pgTAP, 04/11/2026) |
 | **Casos de `qa:security`** | 202 | `scripts/qa/api-security.mjs`, contra la API (171 PASS + 31 SKIP al 19/10/2026) |
 | **Edge Functions** | 7 | En `supabase/functions/` (Deno 2): `cleanup-storage`, `create-employee`, `delete-employee`, `portal`, `process-outbox`, `traducir-texto`, `update-employee` |
 | **Pruebas e2e** | 8 | En `e2e/` (Playwright) |

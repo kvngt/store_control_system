@@ -32,7 +32,8 @@
 | Plan SaaS 17/10 | Comparación con los programas de pago de 2026, auditoría con skills (Supabase, Vercel, Trail of Bits) y plan por fases: cimientos, mensajes SMS, cobro con enlace, trabajos agrupados, inspección por puntos, citas, indicadores y plataforma para vender | **Decidido: solo Restorify, sin SMS.** Se programó la fase 0, la 1.1, la 1.4 y la parte de la fase 3 de abajo. [plan](plan-saas-2026-10.md) |
 | Plan 17/10 (G–M) | Fase 0 (`033`), trabajos agrupados y catálogo (`034`), inspección por puntos (`035`), horas, reloj e indicadores (`036`) | **Publicado** (verificado el 21/10/2026: `db:check` con 93 migraciones aplicadas). Gemini programó y Claude verificó y corrigió: `test:db` 40/1000 ✓, Vitest, lint, `tsc` y build ✓, y capturas. Orden de publicación en la [bitácora](#17102026--claude-code-plan-del-1710-fase-0-trabajos-y-catálogo-inspección-por-puntos-horas-reloj-e-indicadores) |
 | Página de inicio 26–27/10 | restorifyauto.net para los clientes, hecha con la tarjeta del taller (sus letras y su chevrón), su orden de trabajo y fotos reales: portada, trabajos, «¿Qué necesita su carro?», seguros, estudio de color en 3D, simulador del enlace del cliente, reseña, visítenos; bilingüe | **Hecho, sin commit ni publicar** (sin migración ni funciones). Antes de publicar, confirmar con el taller lo que dice la página. Ver la [bitácora](#27102026--claude-code-la-página-de-inicio-hecha-con-la-tarjeta-la-orden-de-trabajo-y-fotos-reales) |
-| Revisión 30/10–03/11 | Revisión completa del proyecto con seguimiento de las órdenes reales: ~30 errores de la app arreglados, migración `040` (traducciones, grupo «sin nada autorizado», fotos de una inspección publicada, indicadores, sticker, reloj), `delete-employee` más estricto, zona horaria de Maryland por defecto, `/ayuda` sin 403, documentación y Ayuda al día | **Hecho, sin commit ni publicar.** Orden de publicación y decisiones para el dueño en la [bitácora](#03112026--claude-code-revisión-completa-seguimiento-de-las-órdenes-reales-errores-docs-y-ayuda) |
+| Revisión 30/10–03/11 | Revisión completa del proyecto con seguimiento de las órdenes reales: ~30 errores de la app arreglados, migración `040` (traducciones, grupo «sin nada autorizado», fotos de una inspección publicada, indicadores, sticker, reloj), `delete-employee` más estricto, zona horaria de Maryland por defecto, `/ayuda` sin 403, documentación y Ayuda al día | **Publicado** el 04/11/2026: commits `259cd1f` y `c3a31d7` en `main`, `db push` de la `040`, `delete-employee` v13 y `process-outbox` v20 (lo hizo la persona responsable). Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
+| Decisiones 04/11 | El técnico no empieza ni termina sin nada autorizado; una orden entregada se archiva, no se borra (migración `041`); el correo del presupuesto espera a la traducción; subidas rechazadas con un motivo claro; la página no muestra el cobro del diagnóstico; se borró el video original; `config.toml` para la CLI 3 | **Publicado** el 04/11/2026: `db push` de la `041` (95 migraciones), `process-outbox` v21 y push a `main`. Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
 | QA 18–19/10 | Dos rondas de QA (migraciones `037` y `038`), VIN y placa únicos (`039`) y el alta que no se pierde con «atrás» | **Publicado** el 19/10/2026: commits `dda612f`, `80e345b`, `9c4b843` y `aaed9dc` en `main`; `db push` de la `038` y de la `039` (`db:check`: 93 migraciones aplicadas); `functions deploy` de `process-outbox` (sin verificación de JWT), `create-employee`, `update-employee` y `delete-employee`. `qa:security` contra producción: 171 PASS, 0 FAIL, 31 SKIP. Detalle en [qa-2026-10-18.md](qa-2026-10-18.md) y la [bitácora](#21102026--claude-code-publicación-de-la-qa-del-1819-y-qué-queda-pendiente) |
 
 Nada se publica sin que la persona responsable lo pida: cada `db push`, `functions deploy`,
@@ -51,6 +52,76 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 04/11/2026 — Claude Code (decisiones del dueño, migración 041 y CLI 3)
+
+- **Pedido:** el dueño respondió las decisiones de la entrada del 03/11 y pidió arreglar lo que había
+  quedado pendiente.
+- **Decisiones y lo que se hizo:**
+  - **El técnico no empieza ni termina una orden hasta que haya algo autorizado:**
+    - en la base, `trg_guard_order_technician` (migración `20261010000041`): sin ninguna mano de obra
+      ni repuesto `aprobado`, el técnico no la pasa a «en proceso» ni a «finalizado» (42501, con la
+      razón). La primera autorización la pasa sola a «en proceso»;
+    - administración sí puede (garantía, cortesía), y el grupo «sin nada autorizado» de «Requiere
+      atención» (`040`) sigue avisando;
+    - en pantalla, el aviso en `TechOrderStatus` y el selector de estado apagado; el botón rápido ya lo
+      exigía, y el Kanban devuelve la tarjeta con la razón;
+    - las razones de la base que más ve el taller ahora salen en inglés (`SHOP_REASONS_EN` en
+      `lib/errors.ts`; antes, en inglés, salía «no tienes permiso»).
+  - **Una orden entregada solo se archiva:**
+    - `trg_guard_order_delete_entregada` (`041`) la protege de un borrado por la API, aunque lo pida
+      un admin;
+    - borrar la sede entera (`delete_sede_cascade`, con la bandera `restorify.borrar_sede`) y un script
+      sin sesión sí pueden;
+    - en la lista de órdenes, una entregada muestra **Archivar** en lugar de la papelera.
+  - **La página del taller no muestra el cobro de $100.** Ya no lo mostraba; ahora `Landing.test.tsx`
+    lo vigila.
+  - **Escudo de Ferrari en el video:** se queda; se cambia solo si hay un reclamo (anotado en
+    `ai-context.md`).
+  - **El video original (7,1 MB):** borrado de `public/videos/` (`git rm`). Lo tiene el taller, y
+    `heroImage.ts` dice cómo volver a sacar las versiones livianas.
+  - **El correo del presupuesto ya no sale antes que su traducción:** en inglés, si la traducción de
+    la orden sigue en cola, `process-outbox` devuelve `presupuesto` y `presupuesto_confirmacion` a la
+    cola, hasta dos veces (1 y 4 minutos), y después lo manda como esté. Se comprobó la sintaxis con
+    esbuild; no hay Deno en este equipo para ejecutarlo.
+  - **Subida que termina después de entregar:** la bandeja ahora dice «No se guardó: la orden ya se
+    entregó o ya no la tienes asignada…» (o el motivo de la inspección publicada), con el mensaje crudo
+    en el `title`. Reintentar no sirve, y el manual dice que el archivo se le pase a administración.
+  - **`config.toml` para la CLI 3:**
+    - `[inbucket]` pasó a `[local_smtp]`;
+    - `[auth.email] enable_signup` pasó a `enabled` y `[auth.sms] enable_signup` también. Es el mismo
+      significado: el **proveedor**, no el registro. El registro público sigue cerrado con
+      `[auth] enable_signup = false`;
+    - la CLI 3.0 y la 2.122 lo leen sin avisos; **la 2.107 (la de scoop en este equipo) ya no**:
+      `scoop update supabase`;
+    - `npm run test:db` ahora es `npx -y supabase@3 test db`;
+    - el CI usa `version: latest` (la 3.0) y no podía levantar la base con el `[inbucket]` de antes.
+- **Pruebas:**
+  - pgTAP `45_decisiones_del_dueno` (16 aserciones);
+  - la `03`, la `07`, la `14` y la `17` se adaptaron: un técnico ya no mueve una orden sin nada
+    autorizado, y la `07` ya no borra una entregada con sesión;
+  - Vitest nuevas en `TechOrderStatus`, `errors`, `UploadTray`, `WorkOrders.smoke` y `Landing`.
+- **Verificado:**
+  - `test:db` 45/1.093 con la CLI 3, en una base local recién reseteada; los datos de demostración se
+    respaldaron y se volvieron a cargar (las 40 tablas con datos coinciden);
+  - `npm run lint`, `npx tsc -b`, `npm test` (149 archivos, 1.135 pruebas) y `npm run build`.
+- **Ojo:**
+  - la CLI 3 pide `--yes` (y `--remote=<url>` en lugar de `--db-url`) incluso contra la base local;
+  - un `node -e "…"` con comillas invertidas adentro, en bash, ejecuta lo que esté entre ellas: un
+    intento mío corrió `supabase config push\` por error. La CLI lo rechazó como subcomando
+    desconocido y no se aplicó nada, pero **para editar texto con comillas invertidas usa el editor o un
+    heredoc con comillas simples**.
+- **Publicado el 04/11/2026, a pedido de la persona responsable:**
+  - lo del 03/11 ya estaba en `main` (commits `259cd1f` y `c3a31d7`), con la `040` aplicada y
+    `delete-employee` (v13) y `process-outbox` (v20) desplegadas a las 16:50 UTC;
+  - `db push` de la `041` (`--dry-run` antes: solo esa). Comprobado en producción, con una consulta de
+    solo lectura: 95 migraciones, los dos triggers nuevos, la regla del técnico, la bandera de
+    `delete_sede_cascade`, ninguna función interna llamable por la API, y ORD-2026-005 y ORD-2026-010
+    todavía sin nada autorizado;
+  - `functions deploy process-outbox --no-verify-jwt`: v21, sigue sin verificación de JWT;
+  - commit y push a `main` de este trabajo.
+- **Falta:** revisar ORD-2026-005 y ORD-2026-010 antes de entregarlas (están terminadas sin nada
+  autorizado). La trampa del botón «atrás» en los diálogos del técnico va en la entrada siguiente.
 
 ### 03/11/2026 — Claude Code (revisión completa: seguimiento de las órdenes reales, errores, docs y Ayuda)
 

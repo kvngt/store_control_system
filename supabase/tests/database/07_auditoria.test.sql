@@ -31,7 +31,7 @@ BEGIN
     NULL, NULL, 'Autorizado en la prueba.', NULL, NULL);
 END $h$;
 
-SELECT plan(25);
+SELECT plan(26);
 
 -- ------------------------------------------------------------------------------------
 -- 1. Funciones internas fuera del alcance de la API
@@ -250,14 +250,24 @@ DO $do$ BEGIN
     CURRENT_DATE, 'cheque', '2001', NULL, NULL);
 END $do$;
 
+-- Desde 20261010000041 una orden entregada no se borra por la API (se archiva), ni siendo admin.
 SELECT throws_ok(
   $$ DELETE FROM ordenes_trabajo WHERE id = (SELECT id FROM t_orden) $$,
-  'P0001', NULL,
-  'Borrar una orden con comisiones pagadas pide deshacer el pago primero'
+  '42501', NULL,
+  'Una orden entregada no se borra por la API, aunque la pida un admin'
 );
 SELECT isnt_empty(
   $$ SELECT 1 FROM ordenes_trabajo WHERE id = (SELECT id FROM t_orden) $$,
   'La orden sigue ahí'
+);
+
+-- Sin sesión (un script de mantenimiento) sí se puede, pero no con comisiones pagadas.
+RESET ROLE;
+RESET request.jwt.claim.sub;
+SELECT throws_ok(
+  $$ DELETE FROM ordenes_trabajo WHERE id = (SELECT id FROM t_orden) $$,
+  'P0001', NULL,
+  'Borrar una orden con comisiones pagadas pide deshacer el pago primero'
 );
 
 DELETE FROM comision_pagos WHERE usuario_id = 'a0000000-0000-0000-0000-000000000002';

@@ -60,6 +60,15 @@ CREATE TEMP VIEW t_orden AS
   SELECT * FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001';
 GRANT SELECT ON t_orden TO authenticated;
 
+-- Desde 20261010000041 el técnico no empieza ni termina una orden sin algo autorizado. Lo
+-- cotizado se da por autorizado sin presupuesto, para que la orden siga en recepción.
+DO $do$ BEGIN
+  PERFORM set_config('restorify.presupuesto', 'on', true);
+  UPDATE orden_labor SET estado = 'aprobado'
+  WHERE orden_id = (SELECT id FROM ordenes_trabajo WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001');
+  PERFORM set_config('restorify.presupuesto', 'off', true);
+END $do$;
+
 -- ------------------------------------------------------------------------------------
 -- 1. La mecánica trabaja la orden y la finaliza
 -- ------------------------------------------------------------------------------------

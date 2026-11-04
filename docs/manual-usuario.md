@@ -874,9 +874,9 @@ Una orden entregada permanece en la lista principal durante 90 días. Para retir
 ### Eliminar una orden
 <!-- rol: admin -->
 
-Solo un administrador puede eliminar una orden. Esto borra sus archivos multimedia, avances, comisiones y los movimientos automáticos que generó en Finanzas. Los movimientos importados del banco se conservan intactos.
+Solo un administrador puede eliminar una orden, y **solo si todavía no se entregó**. Esto borra sus archivos multimedia, avances y los movimientos automáticos que generó en Finanzas (por ejemplo, el depósito). Los movimientos importados del banco se conservan intactos.
 
-**Si la orden ya tiene comisiones pagadas, el sistema impide eliminarla** para no romper la conciliación de los pagos. Primero debes dirigirte a **Comisiones → Pagos realizados**, presionar **Deshacer pago** sobre el pago correspondiente, y luego proceder a eliminar la orden.
+**Una orden entregada no se elimina: se archiva.** Lleva el cobro, el costo de los repuestos y las comisiones, y borrarla borraría ese dinero de Finanzas. En la lista de órdenes, en lugar del botón de eliminar aparece **Archivar**: la orden sale de la lista y queda en **Archivadas**, de donde se puede devolver cuando quieras.
 
 ---
 
@@ -917,6 +917,9 @@ subidos». Tócala para ver cada archivo y su progreso.
   entrar con la misma cuenta. Los videos largos continúan donde se quedaron.
 - **Si un archivo falla**, se queda en la bandeja con el motivo y dos botones:
   **Reintentar** o **Descartar**. Un archivo no se pierde hasta que tú lo descartas.
+- **Si la orden se entregó mientras subía** (o ya no la tienes asignada), el motivo dice «No se
+  guardó: la orden ya se entregó o ya no la tienes asignada». Reintentar no sirve: si el archivo hace
+  falta, pásaselo a administración, que sí puede subirlo.
 
 ### Visibilidad para el cliente
 
@@ -1678,6 +1681,7 @@ Para evitar que un reloj olvidado distorsione los tiempos, el sistema limita aut
 **«¿Por qué no me aparece el botón Empezar trabajo o Terminé: avisar a la oficina?»**
 Cada estado de la orden muestra un único botón principal cuando se cumplen sus condiciones:
 - **Empezar trabajo** aparece únicamente cuando la orden está en **Recepción** y tienes al menos una tarea **autorizada** asignada.
+- Si el cliente todavía no autoriza **ningún** trabajo de la orden, no puedes empezarla ni terminarla: la pantalla dice «El cliente todavía no autoriza ningún trabajo…» y el selector de estado queda apagado. Cuando administración registra la autorización, la orden pasa sola a **En Proceso**.
 - **Terminé: avisar a la oficina** aparece únicamente cuando la orden está **En Proceso** y **todas** las tareas autorizadas de toda la orden están marcadas como hechas (incluidas las de otros compañeros o sin asignar, que puedes consultar en **Otras tareas de la orden**).
 
 **«No puedo pulsar Terminar inspección o los puntos de la inspección están bloqueados.»**

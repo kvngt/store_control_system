@@ -10,9 +10,10 @@ import textFont from './assets/fonts/open-sans.woff2?url';
 export const HERO_POSTER = poster;
 
 /**
- * El video de la intro, que dio el taller (public/videos/rfiintro.mp4), sin audio y con el índice al
- * principio para que arranque sin bajarlo entero: 1,9 MB en 720p y 0,9 MB en 480p para el teléfono.
- * Se sacan del original con ffmpeg:
+ * El video de la intro, que dio el taller, sin audio y con el índice al principio para que arranque
+ * sin bajarlo entero: 1,9 MB en 720p y 0,9 MB en 480p para el teléfono. El original (rfiintro.mp4,
+ * 7,1 MB) ya no está en el repositorio (decisión del dueño, 04/11/2026); si hay que volver a sacarlos,
+ * se le pide al taller y se convierte con ffmpeg:
  *   ffmpeg -i rfiintro.mp4 -vf scale=1280:-2 -c:v libx264 -preset slow -crf 25 -pix_fmt yuv420p -an -movflags +faststart rfiintro-720.mp4
  *   (igual con scale=854:-2 y -crf 27 para rfiintro-480.mp4; el póster, con -frames:v 1 -c:v libwebp)
  */

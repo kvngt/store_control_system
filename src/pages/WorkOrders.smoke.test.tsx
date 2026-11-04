@@ -44,6 +44,8 @@ const mocks = vi.hoisted(() => ({
   getBalance: vi.fn(),
   getEstimate: vi.fn(),
   getHistory: vi.fn(),
+  setArchived: vi.fn(),
+  deleteWorkOrder: vi.fn(),
   reportFinding: vi.fn(),
   quoteFinding: vi.fn(),
   discardFinding: vi.fn(),
@@ -101,6 +103,8 @@ vi.mock('../services/supabaseService', () => {
     reportFinding: mocks.reportFinding,
     quoteFinding: mocks.quoteFinding,
     discardFinding: mocks.discardFinding,
+    setArchived: mocks.setArchived,
+    deleteWorkOrder: mocks.deleteWorkOrder,
   };
   const customers = { getCustomers: mocks.getCustomers, createCustomer: mocks.createCustomer };
   const vehicles = { getVehicles: mocks.getVehicles, createVehicle: mocks.createVehicle };
@@ -315,6 +319,27 @@ async function crear(user: ReturnType<typeof userEvent.setup>, dialog: HTMLEleme
 }
 
 describe('WorkOrders', () => {
+  // Decisión del dueño (04/11/2026, 20261010000041): una orden entregada no se borra, se archiva.
+  it('una orden entregada se archiva; las demás se pueden borrar', async () => {
+    mocks.getWorkOrders.mockResolvedValue([
+      { ...ORDER, estatus: 'entregado' },
+      { ...ORDER, id: 'ord-2', numero_orden: 'OT-2026-0043' },
+    ]);
+    mocks.setArchived.mockResolvedValue(undefined);
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+
+    const archivar = await screen.findByRole('button', { name: 'Archivar OT-2026-0042' });
+    expect(screen.queryByRole('button', { name: 'Eliminar OT-2026-0042' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Eliminar OT-2026-0043' })).toBeInTheDocument();
+
+    await user.click(archivar);
+    await waitFor(() => expect(mocks.setArchived).toHaveBeenCalledWith('ord-1', true));
+    expect(mocks.deleteWorkOrder).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
   it('lists the sede orders', async () => {
     renderWithProviders(<WorkOrders />);
 

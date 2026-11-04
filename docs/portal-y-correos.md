@@ -218,7 +218,10 @@ clientes que ya existían). Lo cambia:
 - **administración**, en la ficha del cliente (*Idioma de los correos*).
 
 `datos_correo` entrega `cliente.idioma` y `traducciones`; `process-outbox` redacta la plantilla
-en ese idioma (`renderEmail` con `lang`) y, en inglés, traduce las líneas del presupuesto. El
+en ese idioma (`renderEmail` con `lang`) y, en inglés, traduce las líneas del presupuesto. **Si la
+traducción de esa orden todavía está en cola** (se encola 10 s después de escribir una línea), el
+correo `presupuesto` o `presupuesto_confirmacion` vuelve a la cola hasta dos veces (1 y 4 min) en vez
+de salir con las líneas en español; después sale como esté (revisión del 04/11/2026). El
 portal abre en el idioma que el cliente eligió en ese navegador, o si nunca eligió, en el de sus
 correos.
 

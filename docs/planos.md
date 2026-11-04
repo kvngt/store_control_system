@@ -616,7 +616,7 @@ flowchart LR
 
 - La base va **antes** que el sitio: una app nueva sobre una base vieja rompe funciones.
 - **Nombres de migraciones:** una migración nueva se nombra **después de la última que haya en
-  `supabase/migrations/`** (hoy después de `20261010000040`, por ejemplo `20261010000041_...`),
+  `supabase/migrations/`** (hoy después de `20261010000041`, por ejemplo `20261010000042_...`),
   **nunca según la fecha de hoy**. Una fecha anterior a la última migración aplicada no se aplica
   con `supabase db push`.
 - **Publicación:** Hostinger publica la rama `main` en 1–2 minutos directamente (verificado el

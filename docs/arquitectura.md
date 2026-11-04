@@ -842,7 +842,7 @@ npx supabase db push --linked             # aplicar
 Antes de aplicar a producción: respaldo, staging y orden de publicación en
 [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación).
 
-Nombre: `AAAAMMDDHHMMSS_descripcion.sql`, **posterior a la última que haya en `supabase/migrations/` (hoy `20261010000040`)**, no según la fecha de hoy. Hay migraciones aplicadas con marcas de tiempo futuras: si se nombra una migración con la fecha de hoy quedaría antes de la última y `db push` no la aplicaría sin `--include-all`. El número total de migraciones vigentes se consulta en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto). El build estampa la migración más nueva (`__SCHEMA_VERSION__`) y la app la compara con `app_schema_version()`: si la base está atrasada, `SchemaDriftBanner` lo dice en pantalla.
+Nombre: `AAAAMMDDHHMMSS_descripcion.sql`, **posterior a la última que haya en `supabase/migrations/` (hoy `20261010000041`)**, no según la fecha de hoy. Hay migraciones aplicadas con marcas de tiempo futuras: si se nombra una migración con la fecha de hoy quedaría antes de la última y `db push` no la aplicaría sin `--include-all`. El número total de migraciones vigentes se consulta en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto). El build estampa la migración más nueva (`__SCHEMA_VERSION__`) y la app la compara con `app_schema_version()`: si la base está atrasada, `SchemaDriftBanner` lo dice en pantalla.
 
 ### Cómo escribirlas
 
@@ -909,7 +909,7 @@ del panel y de Finanzas ([salida-a-produccion.md](historico/salida-a-produccion.
 **`.in('columna', [cientos de ids])` rompe por largo de URL.** La lista de clientes dejaba
 de cargar con unos cientos de clientes (PRD-12). Conteos embebidos o una RPC.
 
-**`supabase/config.toml` no es la configuración real.** Y `[auth.email] enable_signup =
+**`supabase/config.toml` no es la configuración real.** Y `[auth.email] enabled =
 false` no apaga solo el registro: apaga el inicio de sesión con correo (PRD-16).
 
 **El cuerpo de una función plpgsql no se valida al crearla.** Una migración con un

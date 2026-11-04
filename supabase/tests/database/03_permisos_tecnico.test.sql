@@ -105,10 +105,13 @@ SELECT throws_ok(
 -- ------------------------------------------------------------------------------------
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
 
-SELECT lives_ok(
+-- Desde 20261010000041, sin nada autorizado el técnico no la empieza: la primera autorización
+-- (más abajo) la pasa sola a en proceso, y de ahí él sí la mueve.
+SELECT throws_ok(
   $$ UPDATE ordenes_trabajo SET estatus = 'en_proceso', fecha_finalizacion = NULL
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
-  'El técnico asignado cambia el estado'
+  '42501', NULL,
+  'El técnico asignado no empieza la orden mientras no haya nada autorizado'
 );
 
 SELECT lives_ok(

@@ -68,6 +68,18 @@ const FRIENDLY_BY_CODE: Record<string, Record<Language, string>> = {
   },
 };
 
+/**
+ * Las razones de la base que más ve el taller, en inglés. Los 42501 propios vienen en español:
+ * sin esta lista, en inglés se veía el genérico "no tienes permiso" y nadie sabía qué hacer.
+ */
+const SHOP_REASONS_EN: [RegExp, string][] = [
+  [/^El cliente todavía no autoriza ningún trabajo/, "The customer has not authorized any work on this order yet. It cannot be started or finished until the office records the authorization."],
+  [/^Una orden entregada no se borra/, "A delivered order cannot be deleted: it holds the payment, the parts cost and the commissions. Archive it to take it off the list."],
+  [/^La inspección ya está publicada para el cliente/, "The customer can already see this inspection. Only the office can change its photos."],
+  [/^La orden ya fue entregada/, "The order was already delivered. Only an administrator can change it."],
+  [/^La orden ya está finalizada/, "The order is already finished. Only an administrator can reopen it."],
+];
+
 const DUPLICATE_VEHICLE: [RegExp, Record<Language, string>][] = [
   [
     /uq_vehiculos_vin/,
@@ -208,10 +220,12 @@ export function getErrorMessage(err: unknown, language: Language): string {
   // genérico "no tienes permiso" la escondía. Se reconocen por la forma: una
   // oración con mayúscula y punto final. Los de RLS y de privilegios de Postgres
   // ("new row violates row-level security policy…", "permission denied for…") no
-  // la tienen y siguen cambiándose por el genérico. Los propios están en español,
-  // así que en inglés también se usa el genérico.
-  if (e?.code === '42501' && language === 'es' && isShopSentence(e.message)) {
-    return e.message as string;
+  // la tienen y siguen cambiándose por el genérico. Los propios están en español: en inglés
+  // se traducen los de SHOP_REASONS_EN y los demás quedan con el genérico.
+  if (e?.code === '42501' && isShopSentence(e.message)) {
+    if (language === 'es') return e.message as string;
+    const reason = SHOP_REASONS_EN.find(([patron]) => patron.test((e.message as string).trim()));
+    if (reason) return reason[1];
   }
   // Un VIN o una placa repetidos (20261010000039): se dice cuál y qué hacer, no el genérico.
   if (e?.code === '23505' && e.message) {

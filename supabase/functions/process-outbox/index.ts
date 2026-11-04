@@ -33,6 +33,9 @@ const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPAB
 /** ~50 s de trabajo por invocación: lejos del límite de 400 s y del próximo cron. */
 const TIME_BUDGET_MS = 50_000;
 
+/** Las plantillas que llevan las líneas del presupuesto (traducidas en inglés). */
+const LINE_TEMPLATES: ReadonlySet<string> = new Set(['presupuesto', 'presupuesto_confirmacion']);
+
 /**
  * Cuánto se espera a un servicio externo (Resend, Gemini, el endpoint de un push). Sin tope, uno que
  * acepta la conexión y no responde detenía todo el lote hasta que el servidor mataba la función
@@ -225,6 +228,24 @@ async function sendEmail(job: OutboxJob): Promise<JobResult> {
   // Inglés salvo que el cliente haya elegido español en su enlace (pedido del taller,
   // 06/10/2026). En inglés, las líneas del presupuesto van traducidas si ya hay traducción.
   const lang = ctx.cliente.idioma === 'es' ? 'es' : 'en';
+
+  // Las líneas recién escritas se traducen unos segundos después (la traducción se encola a los
+  // 10 s), y el correo del presupuesto, o el de su confirmación, salía antes con las líneas en
+  // español. Si la traducción de esta orden sigue en cola, el correo vuelve a la cola
+  // (reintentar: 1 min y luego 4 min). Solo las dos primeras veces: después sale como esté, para
+  // que una traducción que falla no detenga el correo.
+  if (lang === 'en' && LINE_TEMPLATES.has(job.plantilla) && job.orden_id && job.intentos <= 2) {
+    const { count, error: pendingErr } = await supabase
+      .from('cola_envios')
+      .select('id', { count: 'exact', head: true })
+      .eq('canal', 'traduccion')
+      .eq('orden_id', job.orden_id)
+      .in('estado', ['pendiente', 'procesando']);
+    if (!pendingErr && (count ?? 0) > 0) {
+      throw new Error('Esperando la traducción de las líneas del presupuesto.');
+    }
+  }
+
   const dict = lang === 'en' ? ctx.traducciones ?? {} : {};
   const tr = (text: string) => dict[text.trim()] ?? text;
 

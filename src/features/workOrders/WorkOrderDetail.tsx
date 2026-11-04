@@ -261,6 +261,10 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   const sliderProgress = Number.isNaN(draftProgress) ? order.porcentaje_avance : draftProgress;
   // Algo cotizado que el cliente todavía no autorizó: no se cobra ni genera comisión.
   const hasUnauthorized = [...laborList, ...partsList].some((l) => l.estado === 'borrador');
+  // Algo autorizado (mano de obra o repuesto). Sin eso, el técnico no empieza ni termina la orden
+  // (decisión del dueño, 20261010000041); el técnico lee los repuestos del resumen, sin precios.
+  const hasAuthorizedWork = [...laborList, ...partsList, ...(order.repuestos_resumen || [])].some((l) => l.estado === 'aprobado');
+  const techWaitsAuthorization = !isAdmin && !hasAuthorizedWork && (order.estatus === 'recepcion' || order.estatus === 'en_proceso');
   // Tareas sin técnico (no heredadas, no rechazadas): nadie cobrará su comisión hasta asignarlas
   // (20261010000006). Se cuentan líneas, no se suma dinero.
   const unassignedCount = laborList.filter((l) => isUnassignedTask(l) && l.estado !== 'rechazado').length;
@@ -1029,6 +1033,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         order={order}
         myTasks={laborList.filter((l) => l.asignado_a === detail.userId)}
         statusLabel={statusLabels[order.estatus] ?? order.estatus}
+        waitingAuthorization={techWaitsAuthorization}
       />
       </>
     ),
@@ -1218,10 +1223,13 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
             // Una finalizada solo la reabre administración (05/10/2026).
             disabled={
               !detail.canEdit ||
-              (!detail.isAdmin && (order.estatus === 'espera_autorizacion' || order.estatus === 'finalizado'))
+              (!detail.isAdmin && (order.estatus === 'espera_autorizacion' || order.estatus === 'finalizado')) ||
+              techWaitsAuthorization
             }
             title={
-              !detail.isAdmin && order.estatus === 'espera_autorizacion'
+              techWaitsAuthorization
+                ? t('techStatus.waitingAuthorizationNote')
+                : !detail.isAdmin && order.estatus === 'espera_autorizacion'
                 ? t('findings.pausedByOffice')
                 : !detail.isAdmin && order.estatus === 'finalizado'
                   ? t('workOrders.onlyAdminReopens')

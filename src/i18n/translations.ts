@@ -711,6 +711,7 @@ const translations: Record<Language, Translations> = {
     techStatus: {
       order: 'Estado de la orden',
       pausedNote: 'En pausa: se espera la respuesta del cliente. Puedes seguir con lo que ya está autorizado.',
+      waitingAuthorizationNote: 'El cliente todavía no autoriza ningún trabajo: la orden no se puede empezar ni terminar hasta que administración registre la autorización.',
       authorized: '{n} autorizada(s) por el cliente · {done} hecha(s)',
       waiting: 'Esperando autorización del cliente: {list}',
       rejected: 'El cliente no autorizó: {list}. No se realizan.',
@@ -905,6 +906,8 @@ const translations: Record<Language, Translations> = {
       uploadSaving: 'Guardando…',
       uploadDone: 'Listo',
       uploadFailed: 'No se pudo subir',
+      uploadDenied: 'No se guardó: la orden ya se entregó o ya no la tienes asignada. Si hace falta, pásale el archivo a administración.',
+      uploadInspectionPublished: 'No se guardó: el cliente ya ve esa inspección y sus fotos solo las cambia administración.',
       retry: 'Reintentar',
       discard: 'Descartar',
       discardConfirm: '¿Descartar este archivo? No se subirá.',
@@ -2573,6 +2576,7 @@ const translations: Record<Language, Translations> = {
     techStatus: {
       order: 'Order status',
       pausedNote: 'On hold: waiting for the customer to answer. You can keep working on what is already authorized.',
+      waitingAuthorizationNote: 'The customer has not authorized any work yet: the order cannot be started or finished until the office records the authorization.',
       authorized: '{n} authorized by the customer · {done} done',
       waiting: 'Waiting for customer authorization: {list}',
       rejected: 'The customer did not authorize: {list}. Not to be done.',
@@ -2766,6 +2770,8 @@ const translations: Record<Language, Translations> = {
       uploadSaving: 'Saving…',
       uploadDone: 'Done',
       uploadFailed: 'Upload failed',
+      uploadDenied: 'Not saved: the order was already delivered or is no longer assigned to you. If needed, give the file to the office.',
+      uploadInspectionPublished: 'Not saved: the customer can already see that inspection; only the office can change its photos.',
       retry: 'Retry',
       discard: 'Discard',
       discardConfirm: 'Discard this file? It will not be uploaded.',

@@ -631,6 +631,10 @@ Errores ya corregidos. Si alguno reaparece, es una regresión **P0**.
 | El técnico cambiaba fotos de una inspección ya publicada | Publicar y probar como técnico: botones apagados | pgTAP 44, `PointInspection.test.tsx` |
 | Abrir el enlace del cliente desde la orden y cambiar el idioma cambiaba el de sus correos | Abrir desde la orden, cambiar a English, revisar `clientes.idioma` | `CustomerPortal.test.tsx` |
 | Mi Perfil cambiaba el correo en el perfil pero no en el acceso | Mi Perfil: el correo es de solo lectura | — |
+| El técnico empezaba y terminaba órdenes sin nada autorizado *(decisión del dueño, 04/11/2026)* | Como técnico, en una orden sin autorizar: aviso y selector apagado; arrastrarla en el tablero la regresa con el motivo | pgTAP 45 y 03, `TechOrderStatus.test.tsx`, `errors.test.ts` |
+| Borrar una orden entregada borraba su dinero de Finanzas *(decisión del dueño, 04/11/2026)* | Órdenes → en una entregada sale «Archivar», no la papelera | pgTAP 45 y 07, `WorkOrders.smoke.test.tsx` |
+| El correo del presupuesto en inglés salía antes que la traducción de sus líneas | Agregar una línea y enviar el presupuesto enseguida a un cliente en inglés | — (`process-outbox`, sin pruebas de Deno) |
+| Una subida que terminaba después de entregar mostraba el error crudo de la base | Entregar una orden con una subida en cola, en el teléfono del técnico | `UploadTray.test.tsx` |
 | Un teléfono pegado con «+1» o escrito «1 202…» quedaba con el +1 dos veces | Alta de cliente con `+1 202 607 6126` | `phone.test.ts` |
 | «Anterior» en el alta perdía un trabajo escrito sin agregar | Trabajos → escribir sin agregar → Anterior | `WorkOrders.smoke.test.tsx` |
 | El aviso del navegador al cerrar la pestaña salía con el formulario vacío | Abrir «Nueva orden» sin escribir y cerrar la pestaña | `UnsavedChangesContext.test.tsx` |

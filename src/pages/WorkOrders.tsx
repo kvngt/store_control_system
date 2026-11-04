@@ -62,7 +62,7 @@ function saveView(view: OrdersView) {
 }
 import { checkUsPlate, checkVin } from '../lib/vin';
 import type { WorkOrder, Customer, Vehicle, UserProfile, PaymentMethod } from '../types/database';
-import { Plus, Search, Eye, Car, Calendar, Trash2, ChevronRight, Wrench, List, Kanban } from 'lucide-react';
+import { Plus, Search, Eye, Car, Calendar, Trash2, ChevronRight, Wrench, List, Kanban, Archive } from 'lucide-react';
 import { money } from '../lib/money';
 
 export default function WorkOrders() {
@@ -619,6 +619,44 @@ export default function WorkOrders() {
     }
   };
 
+  // Una orden entregada no se borra, se archiva (decisión del dueño, 20261010000041): lleva el
+  // cobro, el costo de los repuestos y las comisiones. Archivada sale de la lista y vuelve desde
+  // Archivadas cuando se quiera.
+  const handleArchiveOrder = async (order: WorkOrder, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(t('workOrders.archiveConfirm'))) return;
+    try {
+      await workOrdersService.setArchived(order.id, true);
+      showToast('success', t('workOrders.archivedToast'));
+      loadOrders();
+    } catch (err) {
+      setActionError(getErrorMessage(err, language));
+    }
+  };
+
+  /** Borrar una orden, o archivarla si ya se entregó. */
+  const removeButton = (order: WorkOrder) =>
+    order.estatus === 'entregado' ? (
+      <button
+        className="btn btn-ghost btn-sm btn-icon"
+        title={t('workOrders.archive')}
+        aria-label={`${t('workOrders.archive')} ${order.numero_orden}`}
+        onClick={(e) => handleArchiveOrder(order, e)}
+      >
+        <Archive size={16} />
+      </button>
+    ) : (
+      <button
+        className="btn btn-ghost btn-sm btn-icon"
+        title={t('common.delete')}
+        aria-label={`${t('common.delete')} ${order.numero_orden}`}
+        style={{ color: 'var(--color-danger)' }}
+        onClick={(e) => handleDeleteOrder(order, e)}
+      >
+        <Trash2 size={16} />
+      </button>
+    );
+
   // Deep link from the global header search and from notifications:
   // /work-orders?open=<id>[&tab=<pestaña>]
   useEffect(() => {
@@ -671,17 +709,7 @@ export default function WorkOrders() {
               <div className="workorder-card-top">
                 <span className="workorder-card-number">{order.numero_orden}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
-                  {user?.rol === 'admin' && (
-                    <button
-                      className="btn btn-ghost btn-sm btn-icon"
-                      title={t('common.delete')}
-                      aria-label={t('common.delete')}
-                      style={{ color: 'var(--color-danger)' }}
-                      onClick={(e) => handleDeleteOrder(order, e)}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
+                  {user?.rol === 'admin' && removeButton(order)}
                   <ChevronRight size={18} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
                 </div>
               </div>
@@ -824,17 +852,7 @@ export default function WorkOrders() {
                       >
                         <Eye size={16} />
                       </button>
-                      {user?.rol === 'admin' && (
-                        <button
-                          className="btn btn-ghost btn-sm btn-icon"
-                          title={t('common.delete')}
-                          aria-label={t('common.delete')}
-                          style={{ color: 'var(--color-danger)' }}
-                          onClick={(e) => handleDeleteOrder(order, e)}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
+                      {user?.rol === 'admin' && removeButton(order)}
                     </div>
                   </td>
                 </tr>

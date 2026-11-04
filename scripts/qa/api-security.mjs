@@ -468,6 +468,8 @@ const CASES = [
   // Revisión del 03/11/2026 (20261010000040).
   // (requiere_atencion, con su grupo nuevo, ya lo cubren SEC-113 y SEC-114.)
   admin({ id: 'SEC-208', desc: 'Ni un admin llama el guardia de fotos de una inspección publicada como RPC', method: 'POST', path: () => rpc('trg_guard_inspeccion_media'), body: {}, expect: 'denied' }),
+  // Decisiones del dueño del 04/11/2026 (20261010000041).
+  admin({ id: 'SEC-209', desc: 'Ni un admin llama el guardia del borrado de una orden entregada como RPC', method: 'POST', path: () => rpc('trg_guard_order_delete_entregada'), body: {}, expect: 'denied' }),
 ];
 
 function evaluate(expect, r) {

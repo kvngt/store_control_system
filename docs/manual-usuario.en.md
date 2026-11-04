@@ -871,9 +871,9 @@ A delivered order remains in the main list for 90 days. To remove it from the da
 ### Deleting an order
 <!-- rol: admin -->
 
-Only an administrator can delete an order. This deletes its media files, progress updates, commissions and the automatic entries it generated in Finance. Bank-imported transactions remain intact.
+Only an administrator can delete an order, and **only if it has not been delivered yet**. This deletes its media files, progress updates and the automatic entries it generated in Finance (for example, the deposit). Bank-imported transactions remain intact.
 
-**If the order already has paid commissions, the system prevents deletion** to avoid breaking payment reconciliations. You must first go to **Commissions → Payments made**, tap **Undo payment** on the corresponding payment, and then proceed to delete the order.
+**A delivered order is not deleted: it is archived.** It holds the payment, the parts cost and the commissions, and deleting it would erase that money from Finance. In the order list, the delete button is replaced by **Archive**: the order leaves the list and goes to **Archived**, from where you can bring it back whenever you want.
 
 ---
 
@@ -913,6 +913,9 @@ While files are uploading, a floating tray appears: «{done} of {total} files up
   in with the same account. Long videos resume where they left off.
 - **If a file fails**, it stays in the tray with the reason and two buttons:
   **Retry** or **Discard**. A file is not lost until you discard it.
+- **If the order was delivered while it was uploading** (or is no longer assigned to you), the reason
+  says «Not saved: the order was already delivered or is no longer assigned to you». Retrying won't
+  help: if the file is needed, give it to the office, which can upload it.
 
 ### Customer visibility
 
@@ -1673,6 +1676,7 @@ To prevent a forgotten clock from distorting time logs, the system automatically
 **«Why doesn't the Start work or Done: let the office know button appear for me?»**
 Each order status displays a single primary button when its conditions are met:
 - **Start work** appears only when the order is in **Intake** and you have at least one **authorized** task assigned to you.
+- If the customer has not authorized **any** work on the order yet, you cannot start or finish it: the screen says «The customer has not authorized any work yet…» and the status selector is turned off. Once the office records the authorization, the order moves to **In Progress** on its own.
 - **Done: let the office know** appears only when the order is **In Progress** and **all** authorized tasks across the entire order are marked as done (including those assigned to coworkers or unassigned, which you can check under **Other jobs on this order**).
 
 **«I cannot tap Complete inspection or the inspection points are locked.»**
