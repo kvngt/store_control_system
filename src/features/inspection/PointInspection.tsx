@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
@@ -20,6 +20,8 @@ import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';
 import { prepareMediaFile } from '../media/prepareMedia';
 import { useSignedUrls } from '../media/useSignedUrls';
+import { useDiscardGuard } from '../../components/useDiscardGuard';
+import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import CatalogPickerModal from '../catalog/CatalogPickerModal';
 import type {
   InspectionPoint,
@@ -84,6 +86,26 @@ export default function PointInspection({
 
   const inspection = inspectionQuery.data;
   const puntos = useMemo(() => inspection?.puntos ?? [], [inspection?.puntos]);
+
+  // La nota de un punto a medio escribir (04/11/2026): «atrás» en el teléfono pregunta en vez de salir de
+  // la orden, y el «Volver» de la pantalla también. Solo mientras la nota cambió.
+  const editingPoint = editingNoteId ? puntos.find((p) => p.id === editingNoteId) : undefined;
+  const noteDirty = !!editingPoint && noteDraft.trim() !== (editingPoint.nota ?? '').trim();
+  const noteGuard = useDiscardGuard({
+    active: noteDirty,
+    dirty: noteDirty,
+    busy: savingNoteId !== null,
+    onClose: () => setEditingNoteId(null),
+    title: t('inspection.discardNoteTitle'),
+    body: t('inspection.discardNoteBody'),
+  });
+  const { registerGuard } = useUnsavedChanges();
+  const noteDirtyRef = useRef(false);
+  noteDirtyRef.current = noteDirty;
+  useEffect(
+    () => registerGuard(() => !noteDirtyRef.current || confirm(t('inspection.discardNoteTitle')), () => noteDirtyRef.current),
+    [registerGuard, t],
+  );
 
   // Puntos agrupados por sección conservando el orden de aparición
   const sections = useMemo(() => {
@@ -514,6 +536,7 @@ export default function PointInspection({
           }}
         />
       )}
+      {noteGuard.dialog}
     </div>
   );
 }

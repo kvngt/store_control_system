@@ -357,6 +357,8 @@ export default function WorkOrders() {
 
   // Quiere salir (X, fondo o «atrás»). Sin nada capturado se cierra; con trabajo a medias se pregunta.
   const handleCloseCreateModal = () => {
+    // Guardando no se sale: la orden se está creando (la X y el fondo quedaban activos).
+    if (saving) return;
     if (!form.isDirty) {
       void closeCreateModal(false);
       return;
@@ -365,13 +367,26 @@ export default function WorkOrders() {
   };
 
   // «Atrás» de Android: la pantalla se queda y se pregunta, en vez de perder lo capturado.
+  // Cada rama que deja el alta abierta vuelve a armar la trampa: si no, el siguiente «atrás» salía de la
+  // pantalla y se perdían las fotos y el comprobante, que no entran en el borrador (revisión del 04/11/2026).
   const backTrap = useBackButtonTrap(showCreateModal, () => {
-    // Con la pregunta de retomar el borrador abierta, «atrás» no hace nada.
-    if (restoreDialog || exitDialog) {
+    // Guardando, o con la pregunta de retomar el borrador abierta, «atrás» no hace nada.
+    if (saving || restoreDialog) {
       backTrap.rearm();
       return;
     }
-    handleCloseCreateModal();
+    // Con la pregunta de salir abierta, «atrás» la cierra y se sigue editando.
+    if (exitDialog) {
+      setExitDialog(false);
+      backTrap.rearm();
+      return;
+    }
+    if (form.isDirty) {
+      setExitDialog(true);
+      backTrap.rearm();
+      return;
+    }
+    void closeCreateModal(false);
   });
 
   // El borrador se guarda solo mientras se captura: cada cambio (con una pausa), al cambiar de paso y al
@@ -588,6 +603,8 @@ export default function WorkOrders() {
       guardadoAntesDeFallar.current = { cliente: false, vehiculo: false };
       // La orden ya existe: el borrador no vale.
       if (userId) clearIntakeDraft(userId);
+      // Por si se tocó «atrás» mientras guardaba: la pregunta no aparece al abrir la orden siguiente.
+      setExitDialog(false);
       setShowCreateModal(false);
       form.reset();
       loadOrders();

@@ -12,6 +12,7 @@ import MediaCaptureBar from '../media/MediaCaptureBar';
 import { prepareMediaFile } from '../media/prepareMedia';
 import type { WorkOrderDetailApi } from './useWorkOrderDetail';
 import ReportFindingModal from './ReportFindingModal';
+import { useDiscardGuard } from '../../components/useDiscardGuard';
 import { findingOutcome } from './techStatus';
 import { techNextStep } from './techNextStep';
 
@@ -376,15 +377,25 @@ function TaskProgressModal({
 
   const canSubmit = !saving && !processing && (note.trim().length > 0 || drafts.length > 0);
 
+  // La X, «Cancelar», el fondo y el «atrás» de Android: con una nota, un archivo o uno que se está
+  // preparando, se pregunta antes de perderlo.
+  const guard = useDiscardGuard({
+    dirty: note.trim().length > 0 || drafts.length > 0 || processing,
+    busy: saving,
+    onClose: onCancel,
+    title: t('tasks.discardProgressTitle'),
+    body: t('tasks.discardProgressBody'),
+  });
+
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className="modal-overlay" onClick={guard.requestClose}>
       <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-header">
           <h2 className="modal-title">
             <MessageSquarePlus size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
             {t('tasks.addProgress')}
           </h2>
-          <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={onCancel} disabled={saving} aria-label={t('common.cancel')}>
+          <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={guard.requestClose} disabled={saving} aria-label={t('common.cancel')}>
             <X size={18} />
           </button>
         </div>
@@ -417,7 +428,7 @@ function TaskProgressModal({
           </div>
         </div>
         <div className="modal-footer">
-          <button type="button" className="btn btn-ghost" onClick={onCancel} disabled={saving}>
+          <button type="button" className="btn btn-ghost" onClick={guard.requestClose} disabled={saving}>
             {t('common.cancel')}
           </button>
           <button type="button" className="btn btn-primary" onClick={() => onConfirm(note, drafts, isVisible)} disabled={!canSubmit}>
@@ -425,6 +436,7 @@ function TaskProgressModal({
           </button>
         </div>
       </div>
+      {guard.dialog}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import BodyPortal from '../../components/BodyPortal';
+import { useBackButtonTrap } from '../../lib/backButtonTrap';
 
 interface MediaLightboxProps {
   tipo: 'foto' | 'video';
@@ -21,6 +22,8 @@ interface MediaLightboxProps {
  */
 export default function MediaLightbox({ tipo, itemKey, src, poster, onClose, onPrev, onNext }: MediaLightboxProps) {
   const { t } = useLanguage();
+  // En el teléfono, «atrás» cierra el visor (lo que la persona espera), no la orden.
+  useBackButtonTrap(true, onClose);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

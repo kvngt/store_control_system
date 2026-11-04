@@ -547,6 +547,8 @@ When a mechanic or painter finds damage or worn components not in the original o
 4. They tap **Report and pause the order**.
 5. The order automatically moves to **Waiting for Approval** and a notification is sent to the office.
 
+If halfway through you press the phone's **back** button, tap outside the box or tap **Cancel** with something already typed or a photo taken, the system asks before losing it: **Keep editing** or **Discard**. With nothing typed, it closes without asking.
+
 ![«Report additional work», from a mechanic's phone.](../public/manual/en/16.webp)
 
 On the dashboard (under **Needs attention**) and above the Summary and Work tabs on the order, the office sees the card **The shop reported additional work**:
@@ -602,9 +604,10 @@ After reporting a finding, inside your **Tasks** section the **Additional work y
   - It shows how many jobs are approved and completed (**{n} authorized by the customer · {done} done**).
   - It lists by name the jobs **Waiting for customer authorization** and those **The customer did not authorize** («Not to be done.»).
 - **Progress updates from a task card**:
-  - **Add update** opens an inline form right inside the card where you can type what you did, attach photos, video or a voice note, and check **Visible to the customer** if you want to publish it to the customer report right away.
-  - **Photo** opens your phone's camera directly; once you take the photo, it opens that same inline form with the image already attached so you can add an optional note and tap **Save progress**.
+  - **Add update** opens a window where you can type what you did, attach photos, video or a voice note, and check **Visible to the customer** if you want to publish it to the customer report right away.
+  - **Photo** opens your phone's camera directly; once you take the photo, it opens that same window with the image already attached so you can add an optional note and tap **Save progress**.
   - Below any task that already has updates, the **{n} update(s) for this job** collapsible toggle lets you view its history without leaving the task list.
+  - **The phone's back button does not make you lose what you type or record.** With the camera, the recorder or a photo open, back closes only that and you return to the update as it was; if you already recorded a video or a voice note without using it, it asks first. In the update window, in the form on the **Progress** tab and in the note of an inspection point, with something typed or a file, it asks **Keep editing** or **Discard**; the same if you tap outside the window. With nothing typed, back works as usual.
 - **Other jobs on this order**: when the same order has jobs assigned to other coworkers or **Unassigned**, a read-only **Other jobs on this order** table appears below your tasks showing the **Assigned to** column, authorization status, and whether they are completed. This helps you coordinate with the rest of the shop and see what is still pending before you can tap **Done: let the office know**, though you cannot mark them as done or start their clock.
 
 #### Parts
@@ -639,7 +642,7 @@ Only administrators can assign staff belonging to the order's workshop.
 
 #### Work progress
 
-A log where staff document work performed with text, photos, videos or voice notes. An entry can be linked to a specific job. If you try to leave the screen or close the order while leaving unsaved text or files in the form, the system warns you («There is an unsaved progress entry (note, photos or video). Leaving now will discard it. Leave anyway?») so you do not lose what you captured. A technician can delete their own updates as long as the order is not delivered and choose whether their own normal updates are shown to the customer (by checking **Visible to the customer** when adding one from a task or tapping the eye icon **Show to customer** / **Stop showing** in **Work Progress**). An administrator can delete any update and publish or hide both updates and individual files.
+A log where staff document work performed with text, photos, videos or voice notes. An entry can be linked to a specific job. If you try to leave the screen, close the order or use the phone's back button while leaving unsaved text or files in the form, the system warns you («There is an unsaved progress entry (note, photos or video). Leaving now will discard it. Leave anyway?») so you do not lose what you captured. A technician can delete their own updates as long as the order is not delivered and choose whether their own normal updates are shown to the customer (by checking **Visible to the customer** when adding one from a task or tapping the eye icon **Show to customer** / **Stop showing** in **Work Progress**). An administrator can delete any update and publish or hide both updates and individual files.
 
 ![A progress entry with photos and a voice note.](../public/manual/en/20.webp)
 

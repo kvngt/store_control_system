@@ -7,6 +7,7 @@ import type { OrderMedia, OrderProgressUpdate, PreparedMedia } from '../../types
 import DraftMediaStrip from '../media/DraftMediaStrip';
 import MediaCaptureBar from '../media/MediaCaptureBar';
 import MediaGallery from '../media/MediaGallery';
+import { useDiscardGuard } from '../../components/useDiscardGuard';
 
 interface ProgressLogProps {
   entries: OrderProgressUpdate[];
@@ -70,14 +71,31 @@ export default function ProgressLog({
   const [note, setNote] = useState('');
   const [drafts, setDrafts] = useState<PreparedMedia[]>([]);
   const [taskId, setTaskId] = useState('');
+  // Un video de la galería que todavía se convierte no está en drafts: guardar ahí lo perdía.
+  const [processing, setProcessing] = useState(false);
   const { registerGuard } = useUnsavedChanges();
 
   // Un avance a medias es trabajo real: una nota escrita con guantes, un video
   // de treinta segundos, una nota de voz. Vivía solo en este estado local y se
   // perdía sin preguntar al tocar una pestaña o el botón Volver. El guardia se
   // lee de una referencia para no darlo de alta y de baja en cada tecla.
+  const dirty = note.trim().length > 0 || drafts.length > 0 || processing;
   const dirtyRef = useRef(false);
-  dirtyRef.current = note.trim().length > 0 || drafts.length > 0;
+  dirtyRef.current = dirty;
+
+  // El «atrás» de Android (04/11/2026): con un avance a medias, se pregunta en vez de salir de la orden.
+  // Solo mientras hay algo escrito; sin nada, «atrás» sale como siempre.
+  const guard = useDiscardGuard({
+    active: dirty,
+    dirty,
+    busy,
+    onClose: () => {
+      setNote('');
+      setDrafts([]);
+    },
+    title: t('tasks.discardProgressTitle'),
+    body: t('tasks.discardProgressBody'),
+  });
 
   useEffect(
     () => registerGuard(() => !dirtyRef.current || confirm(t('workOrders.confirmDiscardProgress')), () => dirtyRef.current),
@@ -91,7 +109,7 @@ export default function ProgressLog({
     }
   };
 
-  const canSubmit = canEdit && !busy && (note.trim().length > 0 || drafts.length > 0);
+  const canSubmit = canEdit && !busy && !processing && (note.trim().length > 0 || drafts.length > 0);
 
   return (
     <div className="card" style={{ marginTop: 'var(--space-4)' }}>
@@ -110,7 +128,7 @@ export default function ProgressLog({
             rows={2}
           />
           <DraftMediaStrip items={drafts} onRemove={(index) => setDrafts((prev) => prev.filter((_, i) => i !== index))} />
-          <MediaCaptureBar onAdd={(items) => setDrafts((prev) => [...prev, ...items])} disabled={busy} />
+          <MediaCaptureBar onAdd={(items) => setDrafts((prev) => [...prev, ...items])} disabled={busy} onBusyChange={setProcessing} />
           {tasks.length > 0 && (
             <div className="form-group" style={{ marginTop: 'var(--space-2)', marginBottom: 0 }}>
               <label className="form-label" htmlFor="progress-task">{t('workOrders.progressTask')}</label>
@@ -192,6 +210,7 @@ export default function ProgressLog({
           ))}
         </div>
       )}
+      {guard.dialog}
     </div>
   );
 }

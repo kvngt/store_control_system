@@ -34,6 +34,7 @@
 | Página de inicio 26–27/10 | restorifyauto.net para los clientes, hecha con la tarjeta del taller (sus letras y su chevrón), su orden de trabajo y fotos reales: portada, trabajos, «¿Qué necesita su carro?», seguros, estudio de color en 3D, simulador del enlace del cliente, reseña, visítenos; bilingüe | **Hecho, sin commit ni publicar** (sin migración ni funciones). Antes de publicar, confirmar con el taller lo que dice la página. Ver la [bitácora](#27102026--claude-code-la-página-de-inicio-hecha-con-la-tarjeta-la-orden-de-trabajo-y-fotos-reales) |
 | Revisión 30/10–03/11 | Revisión completa del proyecto con seguimiento de las órdenes reales: ~30 errores de la app arreglados, migración `040` (traducciones, grupo «sin nada autorizado», fotos de una inspección publicada, indicadores, sticker, reloj), `delete-employee` más estricto, zona horaria de Maryland por defecto, `/ayuda` sin 403, documentación y Ayuda al día | **Publicado** el 04/11/2026: commits `259cd1f` y `c3a31d7` en `main`, `db push` de la `040`, `delete-employee` v13 y `process-outbox` v20 (lo hizo la persona responsable). Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
 | Decisiones 04/11 | El técnico no empieza ni termina sin nada autorizado; una orden entregada se archiva, no se borra (migración `041`); el correo del presupuesto espera a la traducción; subidas rechazadas con un motivo claro; la página no muestra el cobro del diagnóstico; se borró el video original; `config.toml` para la CLI 3 | **Publicado** el 04/11/2026: `db push` de la `041` (95 migraciones), `process-outbox` v21 y push a `main`. Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
+| «Atrás» 04/11 | El botón «atrás» del teléfono ya no hace perder lo que el técnico escribe o graba: avance de una tarea, trabajo adicional, pestaña Avances, nota de un punto, grabadores, visor y próximo servicio; trampa del historial en pila; arreglos del alta | **Publicado** el 04/11/2026 (push a `main`; sin migración ni funciones). Falta probarlo en un Android real. Ver la [bitácora](#04112026-tarde--claude-code-el-botón-atrás-en-lo-que-el-técnico-escribe-o-graba) |
 | QA 18–19/10 | Dos rondas de QA (migraciones `037` y `038`), VIN y placa únicos (`039`) y el alta que no se pierde con «atrás» | **Publicado** el 19/10/2026: commits `dda612f`, `80e345b`, `9c4b843` y `aaed9dc` en `main`; `db push` de la `038` y de la `039` (`db:check`: 93 migraciones aplicadas); `functions deploy` de `process-outbox` (sin verificación de JWT), `create-employee`, `update-employee` y `delete-employee`. `qa:security` contra producción: 171 PASS, 0 FAIL, 31 SKIP. Detalle en [qa-2026-10-18.md](qa-2026-10-18.md) y la [bitácora](#21102026--claude-code-publicación-de-la-qa-del-1819-y-qué-queda-pendiente) |
 
 Nada se publica sin que la persona responsable lo pida: cada `db push`, `functions deploy`,
@@ -52,6 +53,58 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 04/11/2026, tarde — Claude Code (el botón «atrás» en lo que el técnico escribe o graba)
+
+- **Pedido:** proteger del botón «atrás» los diálogos que usa el técnico. En Android, «atrás» lo sacaba de la
+  orden y perdía el avance, el trabajo adicional o el video a medias.
+- **Lo que se hizo (sin migración ni funciones):**
+  - **`lib/backButtonTrap.ts` ahora es una pila.** Antes cada trampa escuchaba `popstate` por su cuenta, y
+    con dos diálogos anidados (el avance abre la cámara) un «atrás» lo tomaban los dos, y cerrar el de
+    adentro se tomaba por un «atrás» del de afuera. Cada «atrás» lo atiende el de arriba; las que se
+    sueltan juntas se juntan en un solo `history.go(-n)`; dentro de un mismo commit de React, el padre queda
+    debajo del hijo;
+  - **`components/useDiscardGuard.tsx`** junta la trampa y la pregunta (`ChoiceDialog`: Seguir editando /
+    Descartar). Lo usan el avance de una tarea (`TaskProgressModal`), el trabajo adicional
+    (`ReportFindingModal`) y el próximo servicio (`ServiceStickerModal`): la X, «Cancelar», el fondo y
+    «atrás» pasan por ahí. **Arreglado de paso:** un toque fuera de esos diálogos los cerraba sin preguntar;
+  - el visor de fotos cierra con «atrás», como con la X.
+- **Revisión adversarial** (tres agentes de Claude, cada uno desde un ángulo: el historial, los diálogos y lo que
+  faltaba; cada hallazgo se comprobó en el código antes de tocar nada). Todos eran reales y se arreglaron:
+  - **el formulario de la pestaña Avances (`ProgressLog`) no tenía trampa**, y es el camino principal del técnico
+    para registrar un avance. Ahora la tiene, solo mientras hay algo escrito, y además ya no se guarda mientras
+    se convierte un video (el mismo error que se arregló el 03/11 en el diálogo de avance);
+  - **la nota de un punto de la inspección** tampoco tenía trampa ni guardia para «Volver». Ya tiene las dos;
+  - **los grabadores tiraban sin preguntar una toma grabándose o sin usar**. Ahora preguntan, con la pregunta en
+    una capa encima del grabador de video, que va encima de todo;
+  - **el atajo «Reportar trabajo adicional» abría el diálogo invisible** si la sección Tareas estaba plegada (así
+    arranca la orden), y su trampa se habría comido el «atrás». Ahora abre la sección primero;
+  - **el alta de la orden:** el segundo «atrás», con la pregunta «¿Salir de la orden?» abierta, salía de la
+    pantalla y perdía las fotos y el comprobante. Venía del 19/10. Ahora «atrás» cierra la pregunta y vuelve a
+    armar la trampa. Además, mientras guarda, «atrás», la X y el fondo no hacen nada, y la pregunta ya no
+    reaparece al abrir la orden siguiente;
+  - **un «adelante» del navegador se tomaba por un «atrás»** (el botón del mouse en la computadora). Cada entrada
+    guarda ahora su profundidad;
+  - el aviso de descartar un trabajo adicional nombra también videos y notas de voz; las pruebas comprueban que la
+    trampa se vuelve a armar; el manual decía que «Agregar avance» era un formulario dentro de la tarjeta (es una
+    ventana).
+- **Pruebas:**
+  - `backButtonTrap.test.tsx`: anidados y el «adelante»;
+  - `ReportFindingModal.test.tsx`, `TaskProgressModal.back.test.tsx` (la cámara dentro del avance, el fondo y
+    «Cancelar»), `MediaLightbox.test.tsx`, `VideoRecorderModal.test.tsx`, `ProgressLog.test.tsx` y
+    `ServiceStickerModal.test.tsx`;
+  - en `WorkOrders.smoke.test.tsx`, el segundo «atrás» del alta y el atajo con Tareas plegada. Se comprobó que la
+    del atajo falla sin el arreglo;
+  - documentación: manual (los dos idiomas), `ai-context.md`, `mapa-de-secciones.md`, `plan-de-pruebas.md`
+    (§7, y en §8 qué probar en un Android real).
+- **Queda:** **abrir una orden no deja una entrada en el historial**. Con una orden abierta y nada escrito,
+  «atrás» sale de `/work-orders` en lugar de volver a la lista. Las trampas solo cubren lo que se está
+  escribiendo; cambiarlo es otro trabajo (llevar la orden abierta a la dirección).
+- **Verificado:** lint, `tsc -b`, `npm test` (152 archivos, 1.156 pruebas, sin errores sueltos: `src/test/setup.ts` ahora
+  trae un `scrollIntoView` vacío, que jsdom no tiene) y `npm run build`. No se probó en un teléfono
+  real: jsdom no tiene la intervención de Chrome que puede saltar entradas del historial creadas sin un toque.
+  Hay que probarlo en Android (§8 del plan de pruebas).
+- **`qa:security` después de la `041`:** 181 PASS, 0 FAIL, 23 SKIP (SEC-208 y SEC-209 incluidas).
 
 ### 04/11/2026 — Claude Code (decisiones del dueño, migración 041 y CLI 3)
 

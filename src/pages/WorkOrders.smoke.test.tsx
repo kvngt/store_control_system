@@ -428,6 +428,30 @@ describe('WorkOrders', () => {
     expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
   });
 
+  // Revisión del 04/11/2026: el primer «atrás» abría la pregunta sin volver a armar la trampa, y el
+  // segundo (el gesto natural para cerrarla) salía de la pantalla y perdía las fotos y el comprobante.
+  it('un segundo «atrás» con la pregunta abierta la cierra y el alta sigue en pantalla', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await screen.findAllByText('OT-2026-0042');
+    await user.click(screen.getByRole('button', { name: /Nueva Orden/i }));
+    const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' })).closest('.modal') as HTMLElement;
+    await pickCustomer(user, dialog);
+    await user.type(document.getElementById('order-miles-in') as HTMLInputElement, '45000');
+
+    act(() => { window.history.back(); });
+    await screen.findByRole('alertdialog');
+    act(() => { window.history.back(); });
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(screen.getByText(/^Nueva Orden/i, { selector: '.modal-title' })).toBeInTheDocument();
+    expect((document.getElementById('order-miles-in') as HTMLInputElement).value).toBe('45000');
+    // Y la trampa sigue armada: el tercero vuelve a preguntar.
+    expect(window.history.state).toMatchObject({ restorifyTrap: expect.any(Number) });
+    act(() => { window.history.back(); });
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+  });
+
   it('«atrás» con el formulario vacío cierra sin preguntar', async () => {
     const user = userEvent.setup();
     renderWithProviders(<WorkOrders />);
@@ -1964,5 +1988,27 @@ describe('WorkOrders — trabajo adicional reportado (F6)', () => {
 
     expect(mocks.reportFinding).toHaveBeenCalledWith(ORDER.id, 'Fuga en la bomba de agua');
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  // 04/11/2026: con «Tareas» plegada (como arranca la orden), el atajo abría el diálogo escondido.
+  it('el atajo «Reportar trabajo adicional» abre la sección Tareas y el diálogo se ve', async () => {
+    mocks.auth.current = authValue(MECHANIC_USER);
+    mocks.getWorkOrderDetail.mockResolvedValue({
+      ...TECH_DETAIL,
+      asignaciones: [{ id: 'asg-1', orden_id: ORDER.id, usuario_id: MECHANIC_USER.id, tipo_tarea: 'mecanica', estatus_tarea: 'pendiente' }],
+      hallazgos: [],
+    });
+    mocks.getEstimate.mockResolvedValue({ bolsas: [], reparto: [], mi_total: 0, tareas: [], sin_asignar: [] });
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+    // Se pliega «Tareas», como arranca la orden sin `&tab=`.
+    const tareas = document.querySelector('[data-section="tareas"] .collapsible-section-toggle') as HTMLButtonElement;
+    if (tareas.getAttribute('aria-expanded') === 'true') await user.click(tareas);
+    expect(tareas.getAttribute('aria-expanded')).toBe('false');
+
+    await user.click(within(screen.getByRole('toolbar', { name: 'Acciones rápidas' })).getByRole('button', { name: /Reportar trabajo adicional/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Reportar trabajo adicional' });
+    expect(dialog.closest('[hidden]')).toBeNull();
   });
 });

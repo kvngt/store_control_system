@@ -117,3 +117,45 @@ describe('ServiceStickerModal (E6)', () => {
     expect(screen.getByText('Escribe cuántas millas faltan, por ejemplo 5000.')).toBeInTheDocument();
   });
 });
+
+describe('ServiceStickerModal: lo escrito no se pierde (04/11/2026)', () => {
+  it('sin cambios, la X cierra sin preguntar', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderWithProviders(
+      <ServiceStickerModal
+        mode="tecnico"
+        order={makeOrder(103000)}
+        initialData={{ fecha: '2027-01-15', millas: 108000, nota: 'Aceite' }}
+        onSuggest={vi.fn(async () => undefined)}
+        onClose={onClose}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: 'Cerrar' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('el técnico escribe una nota: «atrás» y tocar fuera preguntan; sin cambios, cierra sin preguntar', async () => {
+    const { act, fireEvent } = await import('@testing-library/react');
+    const { resetBackButtonTrapsForTests } = await import('../../lib/backButtonTrap');
+    resetBackButtonTrapsForTests();
+    window.history.replaceState({ idx: 0, key: 'base' }, '', '/');
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderWithProviders(
+      <ServiceStickerModal mode="tecnico" order={makeOrder(103000)} onSuggest={vi.fn(async () => undefined)} onClose={onClose} />
+    );
+
+    await user.type(document.getElementById('sticker-nota') as HTMLTextAreaElement, 'Cambiar balatas traseras');
+    act(() => { window.history.back(); });
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('¿Descartar los cambios?');
+    expect(onClose).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Seguir editando' }));
+
+    fireEvent.click(document.querySelector('.modal-overlay') as HTMLElement);
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Descartar' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});

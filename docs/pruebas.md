@@ -23,7 +23,7 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 1.135 pruebas, 149 archivos (04/11/2026) | ~30 s | Nada |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 1.156 pruebas, 152 archivos (04/11/2026) | ~30 s | Nada |
 | **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención", teléfonos de la sede, trabajo con seguro, cobro por parqueo, próximo servicio, autorización en recepción, marcas de daños, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, unicidad de VIN/placa, la revisión del 03/11 (`sin_autorizar`, fotos de una inspección publicada, traducciones), las decisiones del dueño del 04/11 (el técnico sin nada autorizado, la orden entregada que no se borra) y los hallazgos de la auditoría y del QA contra un Postgres real | 1.093 pruebas, 45 archivos (04/11/2026) | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, 77 casos (76 pasan, 1 se salta) | 2–5 min | Credenciales de prueba (**al 1/10/2026 no existen**: se borraron el 29/09) |
 | **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 202 casos (171 PASS + 31 SKIP al 19/10/2026), todos de solo lectura (los que escriben, escriben el valor que ya hay) | ~15 s | Nada; con cuentas de prueba cubre más |

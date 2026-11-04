@@ -101,3 +101,31 @@ describe('ProgressLog', () => {
     expect(screen.queryByRole('button', { name: /Agregar Avance/i })).not.toBeInTheDocument();
   });
 });
+
+describe('ProgressLog y el botón «atrás» (04/11/2026)', () => {
+  it('con una nota escrita, «atrás» pregunta en vez de salir de la orden; sin nada, no hay trampa', async () => {
+    const { act } = await import('@testing-library/react');
+    const { resetBackButtonTrapsForTests } = await import('../../lib/backButtonTrap');
+    resetBackButtonTrapsForTests();
+    window.history.replaceState({ idx: 0, key: 'base' }, '', '/');
+    const user = userEvent.setup();
+    renderLog();
+
+    // Sin nada escrito no se deja ninguna entrada de reserva: «atrás» sale como siempre.
+    expect((window.history.state as { restorifyTrap?: number }).restorifyTrap).toBeUndefined();
+
+    await user.type(screen.getByPlaceholderText(/Describe el trabajo realizado/), 'Se cambió el empaque');
+    expect(window.history.state).toMatchObject({ restorifyTrap: 1 });
+
+    act(() => { window.history.back(); });
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('¿Descartar este avance?');
+    await user.click(screen.getByRole('button', { name: 'Seguir editando' }));
+    expect(screen.getByDisplayValue('Se cambió el empaque')).toBeInTheDocument();
+
+    // La trampa se volvió a armar: el siguiente «atrás» pregunta otra vez, y «Descartar» vacía el avance.
+    act(() => { window.history.back(); });
+    await screen.findByRole('alertdialog');
+    await user.click(screen.getByRole('button', { name: 'Descartar' }));
+    expect(screen.queryByDisplayValue('Se cambió el empaque')).not.toBeInTheDocument();
+  });
+});

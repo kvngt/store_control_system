@@ -7,6 +7,7 @@ import { inspectVideo, thumbFromVideoElement } from '../../lib/media/videoFrame'
 import type { PreparedMedia } from '../../types/database';
 import { useMediaRecorder } from './useMediaRecorder';
 import BodyPortal from '../../components/BodyPortal';
+import { useDiscardGuard } from '../../components/useDiscardGuard';
 
 interface VideoRecorderModalProps {
   onDone: (media: PreparedMedia) => void;
@@ -55,6 +56,18 @@ export default function VideoRecorderModal({ onDone, onClose }: VideoRecorderMod
   const [finishing, setFinishing] = useState(false);
 
   const { openDevice, stream, recording, state, elapsed } = recorder;
+
+  // La X y el «atrás» de Android: con una toma grabándose o sin usar, se pregunta antes de tirarla; sin
+  // toma, cierran la cámara y dejan el diálogo de abajo como estaba (antes «atrás» salía de la orden y
+  // se perdía el avance entero). La pregunta va encima del grabador, que está encima de todo.
+  const guard = useDiscardGuard({
+    dirty: state === 'recording' || state === 'recorded',
+    busy: finishing,
+    onClose,
+    title: t('media.discardRecordingTitle'),
+    body: t('media.discardVideoBody'),
+    zIndex: 'calc(var(--z-toast) + 10)',
+  });
 
   useEffect(() => {
     void openDevice(facing);
@@ -155,7 +168,7 @@ export default function VideoRecorderModal({ onDone, onClose }: VideoRecorderMod
     <BodyPortal>
     <div className="recorder-overlay" role="dialog" aria-modal="true" aria-label={t('media.recordVideo')}>
       <div className="recorder-topbar">
-        <button type="button" className="recorder-icon-btn" onClick={onClose} aria-label={t('common.close')}>
+        <button type="button" className="recorder-icon-btn" onClick={guard.requestClose} aria-label={t('common.close')}>
           <X size={22} />
         </button>
         {state === 'recording' && (
@@ -243,6 +256,7 @@ export default function VideoRecorderModal({ onDone, onClose }: VideoRecorderMod
       </div>
       {state === 'ready' && <p className="recorder-hint">{t('media.videoLimitHint')}</p>}
     </div>
+    {guard.dialog}
     </BodyPortal>
   );
 }

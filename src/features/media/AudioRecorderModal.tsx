@@ -6,6 +6,7 @@ import { formatDuration } from '../../lib/media/mime';
 import type { PreparedMedia } from '../../types/database';
 import { useMediaRecorder } from './useMediaRecorder';
 import BodyPortal from '../../components/BodyPortal';
+import { useDiscardGuard } from '../../components/useDiscardGuard';
 
 interface AudioRecorderModalProps {
   onDone: (media: PreparedMedia) => void;
@@ -20,6 +21,15 @@ export default function AudioRecorderModal({ onDone, onClose }: AudioRecorderMod
   const { t } = useLanguage();
   const recorder = useMediaRecorder('audio');
   const { openDevice, recording, state, elapsed } = recorder;
+
+  // La X, el fondo y el «atrás» de Android: con una nota grabándose o sin usar, se pregunta antes de
+  // tirarla; sin nota, cierran el grabador sin sacar de la orden.
+  const guard = useDiscardGuard({
+    dirty: state === 'recording' || state === 'recorded',
+    onClose,
+    title: t('media.discardRecordingTitle'),
+    body: t('media.discardAudioBody'),
+  });
 
   useEffect(() => {
     void openDevice();
@@ -62,7 +72,7 @@ export default function AudioRecorderModal({ onDone, onClose }: AudioRecorderMod
   // ancestros (ver `BodyPortal`).
   return (
     <BodyPortal>
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={guard.requestClose}>
       <div
         className="modal audio-recorder"
         style={{ maxWidth: 420 }}
@@ -73,7 +83,7 @@ export default function AudioRecorderModal({ onDone, onClose }: AudioRecorderMod
       >
         <div className="modal-header">
           <h2 className="modal-title">{t('media.recordAudio')}</h2>
-          <button type="button" className="modal-close" onClick={onClose} aria-label={t('common.close')}>
+          <button type="button" className="modal-close" onClick={guard.requestClose} aria-label={t('common.close')}>
             <X size={18} />
           </button>
         </div>
@@ -118,6 +128,7 @@ export default function AudioRecorderModal({ onDone, onClose }: AudioRecorderMod
         </div>
       </div>
     </div>
+    {guard.dialog}
     </BodyPortal>
   );
 }

@@ -136,3 +136,43 @@ describe('VideoRecorderModal', () => {
     expect(toma.getAttribute('src')).toBe('blob:mock/video');
   });
 });
+
+describe('VideoRecorderModal y el botón «atrás» (04/11/2026)', () => {
+  it('con una toma sin usar, «atrás» y la X preguntan antes de tirarla', async () => {
+    const { act } = await import('@testing-library/react');
+    const { resetBackButtonTrapsForTests } = await import('../../lib/backButtonTrap');
+    resetBackButtonTrapsForTests();
+    window.history.replaceState({ idx: 0, key: 'base' }, '', '/');
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock/video');
+    hook.state = 'recorded';
+    hook.recorded = true;
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(<VideoRecorderModal onDone={vi.fn()} onClose={onClose} />);
+
+    act(() => { window.history.back(); });
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('¿Descartar la grabación?');
+    expect(onClose).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Seguir editando' }));
+
+    await user.click(screen.getByRole('button', { name: 'Cerrar' }));
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Descartar' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('sin nada grabado, «atrás» cierra la cámara sin preguntar', async () => {
+    const { act } = await import('@testing-library/react');
+    const { resetBackButtonTrapsForTests } = await import('../../lib/backButtonTrap');
+    resetBackButtonTrapsForTests();
+    window.history.replaceState({ idx: 0, key: 'base' }, '', '/');
+    hook.state = 'ready';
+    hook.recorded = false;
+    const onClose = vi.fn();
+    renderWithProviders(<VideoRecorderModal onDone={vi.fn()} onClose={onClose} />);
+
+    act(() => { window.history.back(); });
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+});

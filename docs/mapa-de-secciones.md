@@ -53,6 +53,14 @@ la base sin comprometer la operación: [mantenimiento.md §4](mantenimiento.md#4
   selector de estado de `WorkOrderDetail.tsx`.
 - **Borrar o archivar** (`pages/WorkOrders.tsx`, `removeButton`): una orden entregada no se borra,
   se archiva (`trg_guard_order_delete_entregada`, `20261010000041`).
+- **«Atrás» en el teléfono** (04/11/2026): `lib/backButtonTrap.ts` (pila de trampas en el historial) y
+  `components/useDiscardGuard.tsx` (la trampa más la pregunta Seguir editando / Descartar). La trampa sola: el alta
+  (`pages/WorkOrders.tsx`) y el visor (`MediaLightbox.tsx`). Con `useDiscardGuard`: `TaskProgressModal` (en
+  `TechnicianTaskList.tsx`), `ReportFindingModal`, `ServiceStickerModal`, los grabadores
+  (`features/media/VideoRecorderModal.tsx`, `AudioRecorderModal.tsx`), `ProgressLog` y la nota de un punto
+  (`features/inspection/PointInspection.tsx`). Pruebas: `backButtonTrap.test.tsx`, `TaskProgressModal.back.test.tsx`,
+  `ReportFindingModal.test.tsx`, `MediaLightbox.test.tsx`, `VideoRecorderModal.test.tsx`, `ProgressLog.test.tsx`,
+  `ServiceStickerModal.test.tsx` y `WorkOrders.smoke.test.tsx` (el alta y el atajo de trabajo adicional).
 - **Trabajo adicional (hallazgos, F6):** el técnico lo reporta desde Tareas
   (`reportar_hallazgo`: hallazgo + avance interno para las fotos + pausa + un aviso
   `hallazgo_reportado`); administración lo ve en Resumen y Trabajos (`FindingsCard`) y en las

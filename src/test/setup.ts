@@ -21,6 +21,12 @@ if (typeof document !== 'undefined') {
     } as unknown as typeof ResizeObserver;
   }
 
+  // Ni `scrollIntoView`: los atajos de la orden (`goTo`) llevan la vista a la sección que abren, y en
+  // jsdom eso tiraba un error suelto después de la prueba. Sin layout, no hay nada que desplazar.
+  if (!Element.prototype.scrollIntoView) {
+    Element.prototype.scrollIntoView = () => {};
+  }
+
   // jsdom tampoco trae `matchMedia`, y la pantalla de Órdenes ya decide en
   // JavaScript si monta la tabla o las tarjetas. Arranca en escritorio y se
   // reinicia entre pruebas, para que una que simule un teléfono no filtre ese

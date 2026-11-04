@@ -1001,7 +1001,12 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         canSuggestNextService: detail.canSuggestNextService,
         changeStatus: detail.changeStatus,
         goTo,
-        onReportFinding: () => setReportRequest((n) => n + 1),
+        // El diálogo vive en la lista de tareas: con «Tareas» plegada se abría invisible (y desde el
+        // 04/11/2026 su trampa se habría comido el «atrás»). Primero se abre la sección.
+        onReportFinding: () => {
+          goTo('tareas', 'tareas');
+          setReportRequest((n) => n + 1);
+        },
         onSuggestService: () => {
           if (serviceExists) {
             goTo('orden', 'proximo_servicio');

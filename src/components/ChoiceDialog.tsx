@@ -16,6 +16,8 @@ interface ChoiceDialogProps {
   actions: ChoiceAction[];
   /** Esc y el fondo: lo mismo que la opción segura (seguir donde se estaba). */
   onDismiss: () => void;
+  /** La capa: por defecto, encima de los diálogos. Sobre el grabador (que va encima de todo), más alta. */
+  zIndex?: string;
 }
 
 /**
@@ -25,7 +27,7 @@ interface ChoiceDialogProps {
  * Los botones miden 44 px y van uno debajo de otro, para que el pulgar no falle. La opción que se
  * recomienda es la primera de la lista y es donde cae el foco.
  */
-export default function ChoiceDialog({ title, body, actions, onDismiss }: ChoiceDialogProps) {
+export default function ChoiceDialog({ title, body, actions, onDismiss, zIndex = 'calc(var(--z-modal) + 10)' }: ChoiceDialogProps) {
   const first = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -43,7 +45,7 @@ export default function ChoiceDialog({ title, body, actions, onDismiss }: Choice
   return (
     <BodyPortal>
       {/* El clic no sube al diálogo de abajo (React propaga por el árbol aunque esté en el body). */}
-      <div className="modal-overlay" style={{ zIndex: 'calc(var(--z-modal) + 10)' }} onClick={(e) => { e.stopPropagation(); onDismiss(); }}>
+      <div className="modal-overlay" style={{ zIndex }} onClick={(e) => { e.stopPropagation(); onDismiss(); }}>
         <div
           className="modal"
           // En el teléfono `.modal` ocupa toda la pantalla: una pregunta es una tarjeta del tamaño de su texto.

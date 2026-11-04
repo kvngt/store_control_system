@@ -16,7 +16,7 @@ Contadas el **19/10/2026** (las demás guías remiten aquí en vez de repetir ci
 | Métrica | Valor | Detalle |
 | :--- | :--- | :--- |
 | **Archivos fuente (TypeScript)** | 196 | `src/` excluyendo pruebas |
-| **Pruebas (Vitest)** | 149 archivos | 1.135 pruebas unitarias y de componentes (04/11/2026) |
+| **Pruebas (Vitest)** | 152 archivos | 1.156 pruebas unitarias y de componentes (04/11/2026) |
 | **Migraciones de base de datos** | 95 | En `supabase/migrations/`, hasta `20261010000041_decisiones_del_dueno_2026_11` (producción va hasta la `039`; la `040` y la `041` esperan su `db push`; `npm run db:check`) |
 | **Tablas de base de datos** | 30 al 11/10/2026 más las 9 tablas de las migraciones 029 a 039 | En `public` (`orden_proximo_servicio`, `catalogo_trabajos`, `catalogo_trabajo_lineas`, `orden_trabajos`, `inspeccion_plantillas`, `inspeccion_plantilla_puntos`, `orden_inspecciones`, `orden_inspeccion_puntos`, `orden_labor_tiempos`) |
 | **Funciones SQL** | 161 al 11/10/2026 (más las de las migraciones 029 a 039) | En `public` (RPC, internas y de trigger); `npm run db:donde -- <nombre>` da la versión vigente de cada una |

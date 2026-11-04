@@ -307,6 +307,26 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
   de paso y al mandar la app al fondo) y al abrir «Nueva orden» se ofrece retomarlo. **Las fotos, los videos y la foto del
   comprobante no entran en el borrador** (son archivos) y el diálogo lo avisa. Se borra al crear la orden, al descartar y al cerrar
   sesión (regla 8c). **Un diálogo con trabajo a medias usa esta trampa; una pregunta con varias salidas usa `ChoiceDialog`, no `confirm`.**
+- **Lo que el técnico escribe o graba no se pierde con «atrás»** (04/11/2026):
+  - **las trampas forman una pila** (`lib/backButtonTrap.ts`), porque los diálogos se anidan (el avance abre la
+    cámara): cada «atrás» lo atiende el de arriba, y lo que hace una al soltarse no lo toma otra por un «atrás».
+    Cada entrada guarda su profundidad (`restorifyTrap: n`), así un «adelante» no se toma por un «atrás».
+    Antes cada una escuchaba por su cuenta;
+  - **`useDiscardGuard`** (`components/useDiscardGuard.tsx`) junta la trampa y la pregunta (**Seguir editando /
+    Descartar**). La X, «Cancelar» y el fondo llaman a `requestClose`: sin nada capturado cierra, con algo pregunta,
+    guardando no hace nada. **«Atrás» tiene su propia rama:** con la pregunta abierta la cierra, guardando no hace
+    nada, y si no, lo mismo; **cada vez que la pantalla se queda, vuelve a armar la trampa** (si no, el siguiente
+    «atrás» sale de la orden: pasaba en el alta). Lo usan:
+    - los diálogos: el avance de una tarea (`TaskProgressModal`), el trabajo adicional (`ReportFindingModal`), el
+      próximo servicio (`ServiceStickerModal`) y los grabadores de video y audio (con una toma grabándose o sin usar;
+      sin toma cierran directo). Antes, un toque fuera del avance o del trabajo adicional lo borraba todo;
+    - los formularios en la página, con `active` solo mientras hay algo escrito (sin nada, «atrás» sale de la orden
+      como siempre): el avance de la pestaña Avances (`ProgressLog`) y la nota de un punto de la inspección;
+  - **el visor de fotos** cierra con «atrás», como con la X (`useBackButtonTrap` directo);
+  - **un diálogo o formulario nuevo donde se escribe o se graba usa `useDiscardGuard`**; una capa que solo se mira,
+    `useBackButtonTrap` con su cierre. Una pregunta encima del grabador va en su capa (`zIndex` de `ChoiceDialog`);
+  - **el detalle de la orden no está en el historial** (abrirla no deja entrada): «atrás» con una orden abierta sale de
+    `/work-orders`. Las trampas solo cubren lo que se está escribiendo.
 - **Vehículos únicos** (`20261010000039`): el **VIN es único en todo el sistema** y la **placa es única por
   estado**, sin importar mayúsculas ni espacios (`uq_vehiculos_vin`, `uq_vehiculos_placa`); un carro sin placa
   no cuenta. Un carro que cambia de dueño se edita, no se vuelve a crear. `getErrorMessage` reconoce las dos

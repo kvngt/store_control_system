@@ -6,6 +6,7 @@ import { getErrorMessage } from '../../lib/errors';
 import { formatDay, todayLocal } from '../../lib/dates';
 import type { NextServiceInput, WorkOrder } from '../../types/database';
 import { presetsFor, validateNextService, type ServicePreset } from './nextService';
+import { useDiscardGuard } from '../../components/useDiscardGuard';
 
 interface ServiceStickerModalProps {
   mode: 'admin' | 'tecnico';
@@ -56,9 +57,11 @@ export default function ServiceStickerModal({
     return '';
   };
 
-  const [fecha, setFecha] = useState(initialData?.fecha || '');
-  const [millas, setMillas] = useState(initialMillas);
-  const [nota, setNota] = useState(initialData?.nota || '');
+  // Lo que traía al abrirse: lo que se pregunta antes de perder es lo que cambió.
+  const [initial] = useState(() => ({ fecha: initialData?.fecha || '', millas: initialMillas(), nota: initialData?.nota || '' }));
+  const [fecha, setFecha] = useState(initial.fecha);
+  const [millas, setMillas] = useState(initial.millas);
+  const [nota, setNota] = useState(initial.nota);
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
 
   const [saving, setSaving] = useState(false);
@@ -66,6 +69,15 @@ export default function ServiceStickerModal({
   const [fieldErrors, setFieldErrors] = useState<{ fecha?: string; millas?: string; nota?: string }>({});
 
   const presets = presetsFor(order.millas_ingreso, today, stickerLanguage);
+
+  // La X, «Cancelar», el fondo y el «atrás» de Android (el técnico lo sugiere desde el teléfono).
+  const guard = useDiscardGuard({
+    dirty: fecha !== initial.fecha || millas !== initial.millas || nota !== initial.nota,
+    busy: saving,
+    onClose,
+    title: t('nextService.discardChangesTitle'),
+    body: t('nextService.discardChangesBody'),
+  });
 
   const applyPreset = (preset: ServicePreset) => {
     setFecha(preset.fecha);
@@ -150,7 +162,7 @@ export default function ServiceStickerModal({
 
   return (
     // Mientras guarda o traduce no se cierra: el trabajo seguiría en el aire sin que se viera cómo terminó.
-    <div className="modal-overlay" onClick={saving ? undefined : onClose}>
+    <div className="modal-overlay" onClick={guard.requestClose}>
       <div
         className="modal"
         style={{ maxWidth: '520px' }}
@@ -164,7 +176,7 @@ export default function ServiceStickerModal({
             <Tag size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
             {isTechnician ? t('nextService.suggestTitle') : t('nextService.modalTitle')}
           </h2>
-          <button type="button" className="modal-close" onClick={onClose} disabled={saving} aria-label={t('common.close')}>
+          <button type="button" className="modal-close" onClick={guard.requestClose} disabled={saving} aria-label={t('common.close')}>
             <X size={20} />
           </button>
         </div>
@@ -314,7 +326,7 @@ export default function ServiceStickerModal({
           </div>
 
           <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
-            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={saving}>
+            <button type="button" className="btn btn-secondary" onClick={guard.requestClose} disabled={saving}>
               {t('common.cancel')}
             </button>
 
@@ -352,6 +364,7 @@ export default function ServiceStickerModal({
           </div>
         </form>
       </div>
+      {guard.dialog}
     </div>
   );
 }

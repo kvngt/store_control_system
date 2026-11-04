@@ -4,6 +4,7 @@ import { useLanguage } from '../../context/language.context';
 import type { PreparedMedia } from '../../types/database';
 import DraftMediaStrip from '../media/DraftMediaStrip';
 import MediaCaptureBar from '../media/MediaCaptureBar';
+import { useDiscardGuard } from '../../components/useDiscardGuard';
 
 const MAX_TEXT = 1000;
 
@@ -28,8 +29,17 @@ export default function ReportFindingModal({ saving, onCancel, onConfirm }: Repo
   const [processing, setProcessing] = useState(false);
   const canSubmit = !saving && !processing && texto.trim().length > 0;
 
+  // La X, «Cancelar», el fondo y el «atrás» de Android: con algo escrito o una foto, se pregunta.
+  const guard = useDiscardGuard({
+    dirty: texto.trim().length > 0 || drafts.length > 0 || processing,
+    busy: saving,
+    onClose: onCancel,
+    title: t('findings.discardReportTitle'),
+    body: t('findings.discardReportBody'),
+  });
+
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className="modal-overlay" onClick={guard.requestClose}>
       <div
         className="modal"
         style={{ maxWidth: 520 }}
@@ -71,7 +81,7 @@ export default function ReportFindingModal({ saving, onCancel, onConfirm }: Repo
           <p className="field-hint">{t('findings.reportInternal')}</p>
         </div>
         <div className="modal-footer">
-          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={saving}>
+          <button type="button" className="btn btn-secondary" onClick={guard.requestClose} disabled={saving}>
             {t('common.cancel')}
           </button>
           <button
@@ -84,6 +94,7 @@ export default function ReportFindingModal({ saving, onCancel, onConfirm }: Repo
           </button>
         </div>
       </div>
+      {guard.dialog}
     </div>
   );
 }

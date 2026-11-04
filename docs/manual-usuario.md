@@ -550,6 +550,8 @@ Cuando un mecánico o pintor encuentra daños o piezas gastadas que no estaban e
 4. Presiona **Reportar y pausar la orden**.
 5. La orden pasa automáticamente a **Espera Autorización** y se genera una notificación para administración.
 
+Si a medio camino pulsas **«atrás»** en el teléfono, tocas fuera del recuadro o presionas **Cancelar** con algo ya escrito o una foto tomada, el sistema pregunta antes de perderlo: **Seguir editando** o **Descartar**. Sin nada escrito, se cierra sin preguntar.
+
 ![«Reportar trabajo adicional», desde el teléfono de un mecánico.](../public/manual/es/16.webp)
 
 En el panel principal (en **Requiere atención**) y arriba de las pestañas Resumen y Trabajos de la orden, administración ve la tarjeta **El taller reportó trabajo adicional**:
@@ -605,9 +607,10 @@ Después de reportar un hallazgo, dentro de tu sección **Tareas** aparece el bl
   - Muestra cuántas tareas están aprobadas y terminadas (**{n} autorizada(s) por el cliente · {done} hecha(s)**).
   - Lista por nombre las tareas que siguen **Esperando autorización del cliente** y las que **El cliente no autorizó** («No se realizan.»).
 - **Avances desde la tarjeta de una tarea**:
-  - **Agregar avance** despliega un formulario dentro de la misma tarjeta para escribir qué hiciste, adjuntar fotos, video o nota de voz y marcar la casilla **Visible para el cliente** si quieres publicarlo desde ese momento en el reporte del cliente.
-  - **Foto** abre directamente la cámara del teléfono; al tomar la foto, despliega ese mismo formulario con la imagen ya adjunta para que escribas una nota opcional y presiones **Guardar avance**.
+  - **Agregar avance** abre una ventana para escribir qué hiciste, adjuntar fotos, video o nota de voz y marcar la casilla **Visible para el cliente** si quieres publicarlo desde ese momento en el reporte del cliente.
+  - **Foto** abre directamente la cámara del teléfono; al tomar la foto, abre esa misma ventana con la imagen ya adjunta para que escribas una nota opcional y presiones **Guardar avance**.
   - Debajo de cada tarea que ya tiene registros aparece el desplegable **{n} avance(s) de esta tarea** para consultar su historial sin salir de la lista de tareas.
+  - **El botón «atrás» del teléfono no te hace perder lo que escribes o grabas.** Con la cámara, la grabadora o una foto abierta, «atrás» cierra solo eso y vuelves al avance como estaba; si ya grabaste un video o una nota de voz sin usarlos, primero pregunta. En la ventana del avance, en el formulario de la pestaña **Avances** y en la nota de un punto de la inspección, con algo escrito o un archivo, pregunta **Seguir editando** o **Descartar**; lo mismo si tocas fuera de la ventana. Sin nada escrito, «atrás» funciona como siempre.
 - **Otras tareas de la orden**: cuando en la misma orden hay tareas asignadas a otros compañeros o **Sin asignar**, debajo de tus tareas aparece la tabla de solo lectura **Otras tareas de la orden** con la columna **Asignado a**, el estado de autorización y si ya están hechas. Te sirve para coordinarte con el resto del taller y saber qué falta para poder usar **Terminé: avisar a la oficina**, pero no puedes marcarlas ni iniciarles reloj.
 
 #### Repuestos
@@ -642,7 +645,7 @@ Solo administración puede asignar personal de la sede de la orden.
 
 #### Avance del trabajo
 
-Bitácora donde el personal documenta los trabajos realizados con texto, fotos, videos o notas de voz. Se puede asociar el avance a una tarea específica. Si intentas cambiar de pantalla o cerrar la orden dejando texto o archivos sin guardar en el formulario, el sistema te avisa («Hay un avance sin guardar (nota, fotos o video). Si sales ahora se perderá. ¿Salir de todos modos?») para que no pierdas lo capturado. Un técnico puede borrar sus propios avances mientras la orden no esté entregada y decidir si sus propios avances normales se muestran al cliente (marcando **Visible para el cliente** al crearlos desde una tarea o tocando el ícono del ojo **Mostrar al cliente** / **Dejar de mostrar** en **Avance del Trabajo**). Un administrador puede borrar cualquier avance y publicar u ocultar tanto avances como archivos sueltos.
+Bitácora donde el personal documenta los trabajos realizados con texto, fotos, videos o notas de voz. Se puede asociar el avance a una tarea específica. Si intentas cambiar de pantalla, cerrar la orden o usar el botón «atrás» del teléfono dejando texto o archivos sin guardar en el formulario, el sistema te avisa («Hay un avance sin guardar (nota, fotos o video). Si sales ahora se perderá. ¿Salir de todos modos?») para que no pierdas lo capturado. Un técnico puede borrar sus propios avances mientras la orden no esté entregada y decidir si sus propios avances normales se muestran al cliente (marcando **Visible para el cliente** al crearlos desde una tarea o tocando el ícono del ojo **Mostrar al cliente** / **Dejar de mostrar** en **Avance del Trabajo**). Un administrador puede borrar cualquier avance y publicar u ocultar tanto avances como archivos sueltos.
 
 ![Un avance con fotos y una nota de voz.](../public/manual/es/20.webp)
 
