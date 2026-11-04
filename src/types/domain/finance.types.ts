@@ -13,6 +13,8 @@ export interface FinancialTransaction {
   /** Set automatically for money the order lifecycle books, and settable by
    *  hand from Finanzas so a manual movement can be traced to its order. */
   referencia_orden_id?: string | null;
+  /** El número de esa orden, embebido por getTransactions. */
+  orden?: { numero_orden: string } | null;
   /** Vino de un estado de cuenta: contabilidad aparte, no cuenta en los totales de la app. */
   importacion_id?: string | null;
   tipo: TransactionType;

@@ -228,8 +228,8 @@ export default function ParkingCard({ order }: ParkingCardProps) {
               >
                 <span>
                   {tier.desde_dia === tier.hasta_dia
-                    ? `Día ${tier.desde_dia}`
-                    : `Días ${tier.desde_dia}–${tier.hasta_dia}`}{' '}
+                    ? t('parking.orderCard.dayOne').replace('{desde}', String(tier.desde_dia))
+                    : t('parking.orderCard.dayRange').replace('{desde}', String(tier.desde_dia)).replace('{hasta}', String(tier.hasta_dia))}{' '}
                   ({tier.dias} {t('parking.orderCard.days')} × {money(tier.tarifa)})
                 </span>
                 <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>

@@ -19,12 +19,13 @@ interface ResumenPanel {
   ingresos_por_mes: { mes_inicio: string; ingresos: number; egresos: number }[];
 }
 
-/** La zona horaria del navegador: "este mes" es el mes del taller, no el del servidor. */
+/** La zona horaria del navegador: "este mes" es el mes del taller, no el del servidor. Sin ella, la del
+ *  taller (Maryland). */
 export function shopTimeZone(): string {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Chicago';
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York';
   } catch {
-    return 'America/Chicago';
+    return 'America/New_York';
   }
 }
 

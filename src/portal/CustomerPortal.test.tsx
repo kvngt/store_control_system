@@ -117,6 +117,22 @@ describe('CustomerPortal', () => {
     expect(mocks.setLanguagePreference).toHaveBeenCalledWith(TOKEN, 'en');
   });
 
+  // El personal abre el enlace desde la orden con ?vista=taller: cambiar el idioma para leerlo no
+  // cambia el de los correos del cliente.
+  it('visto por el personal, cambiar el idioma no toca los correos del cliente', async () => {
+    mocks.fetchPortal.mockResolvedValue(report());
+    window.history.replaceState(null, '', '/r/abc?vista=taller');
+    try {
+      const user = userEvent.setup();
+      render(<CustomerPortal token={TOKEN} />);
+      await screen.findByRole('heading', { name: /2019 Toyota Camry/ });
+      await user.click(screen.getByRole('button', { name: /English/ }));
+      expect(mocks.setLanguagePreference).not.toHaveBeenCalled();
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
   // Los correos salen en inglés por defecto: quien nunca eligió en este navegador abre el
   // enlace en el idioma de sus correos.
   it('sin una elección guardada, abre en el idioma del cliente', async () => {
@@ -176,7 +192,10 @@ describe('CustomerPortal', () => {
 
     expect(await screen.findByRole('heading', { name: /2019 Toyota Camry/ })).toBeInTheDocument();
     expect(mocks.fetchPortal).toHaveBeenCalledWith(TOKEN, expect.anything());
-    expect(screen.getAllByText('Esperando su autorización').length).toBeGreaterThan(0);
+    // En espera sin presupuesto enviado: el taller todavía lo prepara, no hay nada que autorizar.
+    expect(screen.getByText('Revisando un trabajo adicional')).toBeInTheDocument();
+    expect(screen.getByText(/Le enviaremos un presupuesto/)).toBeInTheDocument();
+    expect(screen.queryByText(/Le enviamos un presupuesto/)).not.toBeInTheDocument();
     expect(screen.getByText(/VIN termina en 004352/)).toBeInTheDocument();
     expect(screen.getByText('Rayón en la puerta trasera.')).toBeInTheDocument();
     expect(screen.getByAltText('Firma del cliente')).toHaveAttribute('src', expect.stringContaining('firma.png'));
@@ -335,6 +354,15 @@ describe('CustomerPortal', () => {
           ],
         },
       });
+
+    it('con el presupuesto enviado, la espera es del cliente', async () => {
+      mocks.fetchPortal.mockResolvedValue(withQuote());
+      render(<CustomerPortal token={TOKEN} />);
+
+      expect((await screen.findAllByText('Esperando su autorización')).length).toBeGreaterThan(0);
+      expect(screen.getByText(/Le enviamos un presupuesto/)).toBeInTheDocument();
+      expect(screen.queryByText('Revisando un trabajo adicional')).not.toBeInTheDocument();
+    });
 
     it('nada viene marcado y autorizar exige marcar algo y escribir el nombre', async () => {
       mocks.fetchPortal.mockResolvedValue(withQuote());

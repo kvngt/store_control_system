@@ -481,7 +481,7 @@ export default function Payroll() {
                 </tr>
               ))}
               {commissions.length === 0 && (
-                <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--color-text-tertiary)' }}>{t('common.noResults')}</td></tr>
+                <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--color-text-tertiary)' }}>{t('common.noResults')}</td></tr>
               )}
             </tbody>
           </table>

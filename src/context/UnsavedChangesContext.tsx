@@ -1,31 +1,40 @@
 import React, { useRef, useCallback, useEffect, useMemo } from 'react';
-import { UnsavedChangesContext, type Guard } from './unsavedChanges.context';
+import { UnsavedChangesContext, type DirtyCheck, type Guard } from './unsavedChanges.context';
 
 export function UnsavedChangesProvider({ children }: { children: React.ReactNode }) {
   // Varios guardias a la vez. El hueco de `setGuard` se guarda aparte para que
   // su dueño pueda seguir reemplazándolo sin tocar a los demás.
-  const guardsRef = useRef(new Set<Guard>());
+  // Cada guardia con su revisión de "hay algo sin guardar" (opcional, ver DirtyCheck).
+  const guardsRef = useRef(new Map<Guard, DirtyCheck | undefined>());
   const slotRef = useRef<Guard | null>(null);
+  const slotDirtyRef = useRef<DirtyCheck | undefined>(undefined);
 
-  const setGuard = useCallback((guard: Guard | null) => {
+  const setGuard = useCallback((guard: Guard | null, isDirty?: DirtyCheck) => {
     slotRef.current = guard;
+    slotDirtyRef.current = guard ? isDirty : undefined;
   }, []);
 
-  const registerGuard = useCallback((guard: Guard) => {
-    guardsRef.current.add(guard);
+  const registerGuard = useCallback((guard: Guard, isDirty?: DirtyCheck) => {
+    guardsRef.current.set(guard, isDirty);
     return () => {
       guardsRef.current.delete(guard);
     };
   }, []);
 
-  const hasGuards = useCallback(() => !!slotRef.current || guardsRef.current.size > 0, []);
+  const anyDirty = useCallback(() => {
+    if (slotRef.current && (slotDirtyRef.current?.() ?? true)) return true;
+    for (const isDirty of guardsRef.current.values()) {
+      if (isDirty?.() ?? true) return true;
+    }
+    return false;
+  }, []);
 
   const confirmNavigation = useCallback(() => {
     // Basta con que uno diga que no. Se para en el primero para no encadenar
     // dos confirmaciones seguidas, que es una forma segura de que alguien
     // acepte la segunda sin leerla.
     if (slotRef.current && !slotRef.current()) return false;
-    for (const guard of guardsRef.current) {
+    for (const guard of guardsRef.current.keys()) {
       if (!guard()) return false;
     }
     return true;
@@ -34,13 +43,13 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
   // Also protect against closing the tab / hard refresh while dirty.
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
-      if (hasGuards()) {
+      if (anyDirty()) {
         e.preventDefault();
       }
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [hasGuards]);
+  }, [anyDirty]);
 
   const value = useMemo(
     () => ({ setGuard, registerGuard, confirmNavigation }),

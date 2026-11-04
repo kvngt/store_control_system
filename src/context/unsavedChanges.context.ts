@@ -8,13 +8,19 @@
 import { createContext, useContext } from 'react';
 
 export type Guard = () => boolean; // return true = OK to leave, false = user cancelled
+/**
+ * Si de verdad hay algo sin guardar, sin preguntar. Lo usa el aviso del navegador al cerrar la
+ * pestaña o recargar: sin él, avisaba con solo tener abierto el formulario aunque estuviera vacío.
+ * Un guardia sin esta función cuenta como sucio.
+ */
+export type DirtyCheck = () => boolean;
 
 interface UnsavedChangesContextType {
   /**
    * El hueco de siempre, para un único dueño (hoy el modal de nueva orden).
    * Mantiene su semántica: volver a llamarlo reemplaza lo que hubiera.
    */
-  setGuard: (guard: Guard | null) => void;
+  setGuard: (guard: Guard | null, isDirty?: DirtyCheck) => void;
   /**
    * Registra un guardia más y devuelve su baja.
    *
@@ -23,7 +29,7 @@ interface UnsavedChangesContextType {
    * otro. Con esto, el formulario de avance puede protegerse sin desproteger la
    * orden que se está creando.
    */
-  registerGuard: (guard: Guard) => () => void;
+  registerGuard: (guard: Guard, isDirty?: DirtyCheck) => () => void;
   confirmNavigation: () => boolean;
 }
 

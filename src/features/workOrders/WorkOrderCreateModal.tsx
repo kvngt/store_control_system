@@ -165,24 +165,29 @@ export default function WorkOrderCreateModal({
 
   // Enter dentro de un paso avanza al siguiente; solo en el último crea la orden. Antes de
   // esto, un Enter en el depósito enviaba el formulario entero desde la mitad del asistente.
+  // Salir de Trabajos con algo escrito sin agregar, o con una línea abierta, lo perdería: el
+  // editor se desmonta al cambiar de paso. Vale para avanzar, para «Anterior» y para los pasos
+  // de arriba (antes solo se revisaba al avanzar).
+  const holdOnWorkStep = (): boolean => {
+    if (currentKey !== 'work') return false;
+    if (editingTask !== null || editingPart !== null) {
+      setPendingWarning('edit');
+      return true;
+    }
+    if (taskPending) {
+      setPendingWarning('task');
+      return true;
+    }
+    if (partPending) {
+      setPendingWarning('part');
+      return true;
+    }
+    return false;
+  };
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Salir de Trabajos con algo escrito sin agregar, o con una línea abierta, lo perdería: el
-    // editor se desmonta al cambiar de paso.
-    if (currentKey === 'work') {
-      if (editingTask !== null || editingPart !== null) {
-        setPendingWarning('edit');
-        return;
-      }
-      if (taskPending) {
-        setPendingWarning('task');
-        return;
-      }
-      if (partPending) {
-        setPendingWarning('part');
-        return;
-      }
-    }
+    if (holdOnWorkStep()) return;
     if (step < TOTAL_STEPS) {
       void nextStep();
       return;
@@ -555,7 +560,9 @@ export default function WorkOrderCreateModal({
                           horas: field.horas ? parseFloat(field.horas) : null,
                         }}
                         onAdd={(task) => {
+                          // `update` reemplaza la fila entera: sin `grupo`, la línea salía de su trabajo.
                           form.labor.update(i, {
+                            grupo: field.grupo,
                             descripcion: task.descripcion,
                             costo: task.costo.toString(),
                             especialidad: task.especialidad,
@@ -669,7 +676,7 @@ export default function WorkOrderCreateModal({
                       <PartEditor
                         initial={{ descripcion: field.descripcion, cantidad: field.cantidad, precio_venta_unitario: field.precio_venta_unitario, costo_unitario: field.costo_unitario ?? '' }}
                         onSave={(part) => {
-                          form.parts.update(i, part);
+                          form.parts.update(i, { ...part, grupo: field.grupo });
                           showToast('success', t('intake.lineUpdated'));
                         }}
                         onClose={() => {
@@ -842,7 +849,7 @@ export default function WorkOrderCreateModal({
                 return (
                   <li key={key} className={`intake-step intake-step-${state}`} aria-current={n === step ? 'step' : undefined}>
                     {state === 'done' ? (
-                      <button type="button" className="intake-step-button" onClick={() => goToStep(n)} disabled={saving}>
+                      <button type="button" className="intake-step-button" onClick={() => { if (n === step || !holdOnWorkStep()) goToStep(n); }} disabled={saving}>
                         <span className="intake-step-number"><Check size={12} /></span>
                         <span className="intake-step-label">{label}</span>
                       </button>
@@ -871,7 +878,7 @@ export default function WorkOrderCreateModal({
           <div className="modal-footer intake-footer">
             <div>
               {step > 1 && (
-                <button type="button" className="btn btn-secondary" onClick={prevStep} disabled={saving}>
+                <button type="button" className="btn btn-secondary" onClick={() => { if (!holdOnWorkStep()) prevStep(); }} disabled={saving}>
                   <ChevronLeft size={16} /> {t('common.previous')}
                 </button>
               )}

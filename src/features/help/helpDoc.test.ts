@@ -58,8 +58,8 @@ describe('prepareManual (manual en español)', () => {
     expect(tecnico).toMatch(/^### Cómo se calcula/m);
   });
 
-  it('las imágenes apuntan a /ayuda/es/', () => {
-    expect(admin).toMatch(/\]\(\/ayuda\/es\/01\.webp\)/);
+  it('las imágenes apuntan a /manual/es/ (no a /ayuda/, que es la ruta de la pantalla)', () => {
+    expect(admin).toMatch(/\]\(\/manual\/es\/01\.webp\)/);
     expect(admin).not.toMatch(/\.\.\/public\//);
   });
 });
@@ -67,7 +67,7 @@ describe('prepareManual (manual en español)', () => {
 describe('los dos manuales', () => {
   it('tienen la misma estructura: títulos, marcas de rol e imágenes en el mismo orden', () => {
     const forma = (md: string) => md.split(/\r?\n/)
-      .map((l) => (/^(#{2,6}) /.exec(l)?.[1] ?? /<!-- rol: (\w+) -->/.exec(l)?.[1] ?? /ayuda\/\w+\/(\d+)\.webp/.exec(l)?.[1] ?? null))
+      .map((l) => (/^(#{2,6}) /.exec(l)?.[1] ?? /<!-- rol: (\w+) -->/.exec(l)?.[1] ?? /manual\/\w+\/(\d+)\.webp/.exec(l)?.[1] ?? null))
       .filter((x): x is string => x !== null);
     expect(forma(MANUALES.en)).toEqual(forma(MANUALES.es));
   });
@@ -83,15 +83,19 @@ describe('los dos manuales', () => {
     }
   });
 
-  it('cada imagen existe en public/ayuda/<idioma>/', () => {
+  it('cada imagen existe en public/manual/<idioma>/', () => {
     for (const [idioma, md] of Object.entries(MANUALES)) {
-      const rutas = [...md.matchAll(/\]\(\.\.\/public\/(ayuda\/[^)]+)\)/g)].map((m) => m[1]);
+      const rutas = [...md.matchAll(/\]\(\.\.\/public\/(manual\/[^)]+)\)/g)].map((m) => m[1]);
       expect(rutas.length).toBeGreaterThan(30);
       for (const r of rutas) {
-        expect(r.startsWith(`ayuda/${idioma}/`), r).toBe(true);
+        expect(r.startsWith(`manual/${idioma}/`), r).toBe(true);
         expect(fs.existsSync(new URL(`public/${r}`, raiz)), r).toBe(true);
       }
     }
+  });
+
+  it('no hay carpeta public/ayuda: con ella el servidor respondía 403 al recargar la Ayuda', () => {
+    expect(fs.existsSync(new URL('public/ayuda', raiz))).toBe(false);
   });
 
   it('el inglés tiene sus títulos traducidos (no es una copia del español)', () => {

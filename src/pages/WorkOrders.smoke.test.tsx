@@ -945,6 +945,20 @@ describe('WorkOrders — el alta en cuatro pasos', () => {
     expect(mocks.createWorkOrder).not.toHaveBeenCalled();
   });
 
+  // Revisión 03/11/2026: «Anterior» también desmonta el editor; antes perdía lo escrito sin avisar.
+  it('«Anterior» tampoco sale de Trabajos con un trabajo escrito sin agregar', async () => {
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+    await goToWorkStep(user, dialog);
+
+    await user.click(within(dialog).getByRole('button', { name: /Agregar trabajo/ }));
+    await user.type(document.getElementById('create-order-description') as HTMLInputElement, 'Frenos');
+    await user.click(within(dialog).getByRole('button', { name: /^Anterior$/ }));
+
+    expect(await within(dialog).findByText(/trabajo escrito sin agregar/i)).toBeInTheDocument();
+    expect(currentStep(dialog)).toMatch(/Trabajos/);
+  });
+
   it('un doble clic en "Siguiente" del paso 3 no crea la orden al caer en "Crear"', async () => {
     const user = userEvent.setup();
     const dialog = await openIntake(user);

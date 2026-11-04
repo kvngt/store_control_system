@@ -46,6 +46,12 @@ export interface AttentionSummary {
    * Órdenes con sugerencia de próximo servicio hecha por el técnico (20261010000029).
    */
   sugerencias_servicio?: AttentionGroup;
+  /**
+   * Órdenes en proceso, en espera o terminadas sin nada autorizado (20261010000040): se está
+   * trabajando, o ya se terminó, algo que no se va a cobrar. Opcional mientras la base no tenga
+   * la migración.
+   */
+  sin_autorizar?: AttentionGroup;
   correos: { total: number };
 }
 

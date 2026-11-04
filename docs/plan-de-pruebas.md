@@ -622,6 +622,18 @@ Errores ya corregidos. Si alguno reaparece, es una regresión **P0**.
 | Montos del admin visibles para el siguiente usuario de la tablet *(PRD-13)* | ACC-07 | `AuthContext.test.tsx` |
 | Importación bancaria que dejaba un lote vacío *(PRD-14)* | FIN-08 | pgTAP 08, `ImportStatementModal.test.tsx` |
 | Registro público abierto *(PRD-01)* | ACC-08 | `qa:security` SEC-18 |
+| Recargar `/ayuda` daba 403: la carpeta `public/ayuda` tapaba la ruta *(rev. 03/11/2026)* | En producción, abrir `/ayuda` y recargar | `helpDoc.test.ts` |
+| Las fotos de la inspección por puntos no se veían: la ruta privada iba directo al `<img>` | Inspección con una foto por punto, en el detalle | `PointInspection.test.tsx` |
+| Marcar daños en el dibujo no hacía nada (el editor no tenía `onChange`) | Marcar y guardar un daño antes de firmar | — |
+| El técnico no se enteraba de un error al tachar una tarea (el recuadro quedaba arriba) | Sin red, tachar una tarea en el teléfono: sale un aviso | — |
+| El texto para el cliente de un hallazgo no se traducía (la `037` perdió esa rama) | Hallazgo descartado con texto para el cliente, cliente en inglés | pgTAP 44 |
+| Una orden en proceso o terminada sin nada autorizado no avisaba a nadie (se entregaba en $0) | Panel → Requiere atención → «sin nada autorizado» | pgTAP 44, `AttentionCard.test.tsx` |
+| El técnico cambiaba fotos de una inspección ya publicada | Publicar y probar como técnico: botones apagados | pgTAP 44, `PointInspection.test.tsx` |
+| Abrir el enlace del cliente desde la orden y cambiar el idioma cambiaba el de sus correos | Abrir desde la orden, cambiar a English, revisar `clientes.idioma` | `CustomerPortal.test.tsx` |
+| Mi Perfil cambiaba el correo en el perfil pero no en el acceso | Mi Perfil: el correo es de solo lectura | — |
+| Un teléfono pegado con «+1» o escrito «1 202…» quedaba con el +1 dos veces | Alta de cliente con `+1 202 607 6126` | `phone.test.ts` |
+| «Anterior» en el alta perdía un trabajo escrito sin agregar | Trabajos → escribir sin agregar → Anterior | `WorkOrders.smoke.test.tsx` |
+| El aviso del navegador al cerrar la pestaña salía con el formulario vacío | Abrir «Nueva orden» sin escribir y cerrar la pestaña | `UnsavedChangesContext.test.tsx` |
 
 ---
 

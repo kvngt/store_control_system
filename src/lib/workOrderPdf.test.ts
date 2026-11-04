@@ -132,12 +132,13 @@ describe('generateWorkOrderPdf', () => {
     expect(rayas).toContainEqual([232, 198, 74]);
   });
 
-  // El estado se llamaba "Espera de Repuestos" antes de F1; el portal ya decía otra cosa.
-  it('dice el estado igual que el portal del cliente', async () => {
+  // El estado se llamaba "Espera de Repuestos" antes de F1. Sin "su": el PDF no sabe si ya hay un
+  // presupuesto enviado o si el taller todavía lo prepara (revisión del 03/11/2026).
+  it('dice el estado sin suponer que el cliente ya tiene un presupuesto', async () => {
     await generateWorkOrderPdf(orden('espera_autorizacion'), SEDE);
 
     const texto = textoPintado().join(' | ');
-    expect(texto).toContain('Esperando su autorización');
+    expect(texto).toContain('Esperando autorización');
     expect(texto).not.toContain('Espera de Repuestos');
   });
 });
@@ -166,6 +167,17 @@ describe('generateWorkOrderPdf: idioma y cuenta', () => {
     expect(texto).toContain('Rayón en la puerta');
     expect(texto).toContain('Balance due');
     expect(texto.some((t) => t.startsWith('Orden de Trabajo'))).toBe(false);
+  });
+
+  it('traduce aunque la descripción tenga espacios de más (el diccionario va recortado)', async () => {
+    const orden = conLineas();
+    orden.labor_items = [{ ...orden.labor_items![0], descripcion: 'Cambio de frenos  ' }];
+    await generateWorkOrderPdf(orden, SEDE, {}, {
+      language: 'en',
+      translations: { 'Cambio de frenos': 'Brake replacement' },
+      balance: { cobrado: 100, saldo: 260 },
+    });
+    expect(textoPintado()).toContain('Brake replacement');
   });
 
   // 06/10/2026: el enlace mostraba lo que el técnico escribió en un avance visible y el PDF no.

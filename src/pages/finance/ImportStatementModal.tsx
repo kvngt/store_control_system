@@ -13,7 +13,7 @@ import type {
 } from '../../types/database';
 import { X, Upload, AlertTriangle } from 'lucide-react';
 import { AlertError } from '../../components/AlertError';
-import { moneySigned } from '../../lib/money';
+import { moneySigned, sumMoney } from '../../lib/money';
 
 interface Props {
   onClose: () => void;
@@ -144,8 +144,9 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
       : hasUnresolvedSelection
       ? `${uncategorized.length} ${t('finance.uncategorizedCount')}. ${t('finance.resolveCategoriesFirst')}`
       : '';
-  const totalIngresos = selectedRows.filter((r) => r.tipo === 'ingreso').reduce((s, r) => s + r.monto, 0);
-  const totalEgresos = selectedRows.filter((r) => r.tipo === 'egreso').reduce((s, r) => s + r.monto, 0);
+  // En centavos (sumMoney): cientos de movimientos sumados como flotantes no daban el total del banco.
+  const totalIngresos = sumMoney(selectedRows.filter((r) => r.tipo === 'ingreso').map((r) => r.monto));
+  const totalEgresos = sumMoney(selectedRows.filter((r) => r.tipo === 'egreso').map((r) => r.monto));
 
   const handleImport = async () => {
     if (!file || !user || selectedRows.length === 0 || hasUnresolvedSelection) return;

@@ -4,8 +4,9 @@
 // Marcas que entiende, escritas en el propio manual:
 //   <!-- rol: admin -->    debajo de un título: esa sección, hasta el siguiente título de su
 //   <!-- rol: tecnico -->  nivel o mayor, la ve solo ese rol. Sin marca, la ven todos.
-// Las imágenes apuntan a ../public/ayuda/<idioma>/NN.webp para que también se vean en el
-// repositorio; la app las sirve desde /ayuda/<idioma>/NN.webp.
+// Las imágenes apuntan a ../public/manual/<idioma>/NN.webp para que también se vean en el
+// repositorio; la app las sirve desde /manual/<idioma>/NN.webp. No van en /ayuda/: esa es la ruta de la pantalla de Ayuda,
+// y una carpeta real con ese nombre hacía que el servidor respondiera 403 al recargarla.
 
 export type HelpRole = 'admin' | 'tecnico';
 
@@ -99,7 +100,7 @@ export function prepareManual(markdown: string, role: HelpRole): string {
   const lines = markdown.replace(/\r\n/g, '\n').split('\n');
   return filterByRole(stripEditorialParts(lines), role)
     .join('\n')
-    .replace(/\]\(\.\.\/public\/ayuda\//g, '](/ayuda/')
+    .replace(/\]\(\.\.\/public\/manual\//g, '](/manual/')
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();

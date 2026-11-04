@@ -42,7 +42,7 @@ Para **por qué** está construido así: [radiografia.md](radiografia.md). Para
 | **Plan** | **Pro** desde el 30 de septiembre de 2026: respaldos diarios (Database → Backups). Los buckets siguen con 50 MB por archivo, que es lo que la app permite ([deployment.md §4.1](deployment.md#41-plan-y-límites-de-gasto)) |
 | **Postgres** | 17.6 |
 | **Tamaño de la base** | ~19 MB (29 de septiembre de 2026, recién limpiada) |
-| **Migraciones aplicadas** | 93 al 19/10/2026 (la última, `20261010000039_vehiculos_vin_y_placa_unicos`). `npm run db:check` dice si producción va al día |
+| **Migraciones aplicadas** | 93 al 03/11/2026 (la última, `20261010000039_vehiculos_vin_y_placa_unicos`; en el repositorio ya está la `040`, sin aplicar). `npm run db:check` dice si producción va al día |
 | **Max rows de la API** | 1.000 (valor por defecto; Project Settings → API). **No bajarlo**: `fetchAll` asume páginas de 1.000 |
 | **Enlace con este repositorio** | `supabase/.temp/project-ref` (lo crea `npx supabase link`) |
 | **Entornos** | Solo este. No hay staging: es la primera recomendación de [mantenimiento.md](mantenimiento.md#5-plan-priorizado) |
@@ -207,7 +207,7 @@ Qué hace cada trigger, por tabla: [radiografia.md §5](arquitectura.md#5-dónde
 
 Viven en `supabase/migrations/` y se aplican con `npx supabase db push --linked`. **No se
 cambia el esquema desde el panel**: lo que no está en una migración no existe en otro
-entorno y lo borra el próximo `db reset`. Historia de las primeras 54 (hoy son 93 migraciones, hasta `20261010000039`):
+entorno y lo borra el próximo `db reset`. Historia de las primeras 54 (hoy son 94 migraciones, hasta `20261010000040`):
 [evolucion.md §12](evolucion.md#12-todas-las-migraciones).
 
 Una función se reescribe entera en cada migración que la cambia. Para saber cuál es la
@@ -306,7 +306,7 @@ no valores).
 | `RESEND_API_KEY` | Nosotros | Enviar correos. Llave **de solo envío** |
 | `PUBLIC_SITE_URL` | Nosotros | Base de los enlaces en los correos (`https://restorifyauto.net` desde el 30/09/2026) |
 | `EMAIL_FROM_ADDRESS` | Nosotros | Remitente (`notificaciones@restorifyauto.net`) |
-| `SHOP_TIMEZONE` | Nosotros (puesto el 05/10/2026) | Zona de las fechas en los correos; sin ella, `America/Chicago`. El taller está en Maryland: `America/New_York`. Solo la usa `process-outbox`: **la base no la lee**; sus fechas salen de `sedes.zona_horaria` (`hoy_taller`, `20261010000017`) |
+| `SHOP_TIMEZONE` | Nosotros (puesto el 05/10/2026) | Zona de las fechas en los correos; sin ella, `America/New_York` (desde la revisión del 03/11/2026; antes, `America/Chicago`). El taller está en Maryland. Solo la usa `process-outbox`: **la base no la lee**; sus fechas salen de `sedes.zona_horaria` (`hoy_taller`, `20261010000017`) |
 | `GEMINI_API_KEY` | Nosotros (desde el 05/10/2026) | Traducción automática al inglés de los textos de la orden (`process-outbox`, canal `traduccion`). Usar una llave de un proyecto **con facturación**: en la capa gratuita Google puede usar los textos para mejorar sus productos y revisarlos personas |
 | `GEMINI_MODEL` | Opcional | Modelo de Gemini; sin él, `gemini-3.8-flash` (Google retiró el 2.5 para cuentas nuevas el 06/10/2026). Cuando Google retire un modelo, se cambia aquí sin desplegar |
 

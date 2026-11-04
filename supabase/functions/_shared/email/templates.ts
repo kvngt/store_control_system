@@ -173,7 +173,7 @@ interface Copy {
 }
 
 function copyEs(template: EmailTemplate, ctx: EmailContext): Copy | null {
-  const tz = ctx.timeZone || 'America/Chicago';
+  const tz = ctx.timeZone || 'America/New_York';
   const vehicle = ctx.vehiculo?.trim() || 'su vehículo';
   const shop = ctx.taller.nombre;
 
@@ -294,7 +294,7 @@ function copyEs(template: EmailTemplate, ctx: EmailContext): Copy | null {
 }
 
 function copyEn(template: EmailTemplate, ctx: EmailContext): Copy | null {
-  const tz = ctx.timeZone || 'America/Chicago';
+  const tz = ctx.timeZone || 'America/New_York';
   const vehicle = ctx.vehiculo?.trim() || 'your vehicle';
   const shop = ctx.taller.nombre;
 

@@ -248,7 +248,7 @@ async function sendEmail(job: OutboxJob): Promise<JobResult> {
       fechaEstimadaEntrega: ctx.orden.fecha_estimada_entrega,
     },
     vehiculo: ctx.vehiculo,
-    timeZone: Deno.env.get('SHOP_TIMEZONE') || 'America/Chicago',
+    timeZone: Deno.env.get('SHOP_TIMEZONE') || 'America/New_York',
     presupuesto: ctx.presupuesto
       ? {
           numero: ctx.presupuesto.numero,

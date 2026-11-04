@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Pencil, Trash2, Check, Clock } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { formatDurationMinutes } from '../../lib/dates';
+import { getErrorMessage } from '../../lib/errors';
 import type { LaborItem, LaborTimeEntry } from '../../types/database';
 
 interface LaborTimesModalProps {
@@ -78,13 +79,18 @@ export default function LaborTimesModal({
   const handleSaveEdit = async (tiempoId: string) => {
     if (!onCorrectTime) return;
     if (!inicioDraft.trim()) {
-      setError(language === 'es' ? 'La hora de inicio es requerida.' : 'Start time is required.');
+      setError(t('tasks.timeStartRequired'));
       return;
     }
     const inicioDate = new Date(inicioDraft);
     const finDate = finDraft.trim() ? new Date(finDraft) : null;
+    // Un campo a medio escribir (Safari lo deja pasar) da una fecha inválida y toISOString revienta.
+    if (Number.isNaN(inicioDate.getTime()) || (finDate && Number.isNaN(finDate.getTime()))) {
+      setError(t('tasks.timeInvalid'));
+      return;
+    }
     if (finDate && finDate.getTime() < inicioDate.getTime()) {
-      setError(language === 'es' ? 'El fin no puede ser anterior al inicio.' : 'End time cannot be earlier than start.');
+      setError(t('tasks.timeEndBeforeStart'));
       return;
     }
 
@@ -94,7 +100,7 @@ export default function LaborTimesModal({
       await onCorrectTime(tiempoId, inicioDate.toISOString(), finDate ? finDate.toISOString() : null);
       setEditingId(null);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t('tasks.timeError'));
+      setError(getErrorMessage(err, language));
     } finally {
       setBusy(false);
     }
@@ -109,7 +115,7 @@ export default function LaborTimesModal({
       await onDeleteTime(tiempoId);
       if (editingId === tiempoId) setEditingId(null);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t('tasks.timeError'));
+      setError(getErrorMessage(err, language));
     } finally {
       setBusy(false);
     }
@@ -164,12 +170,13 @@ export default function LaborTimesModal({
                         background: 'var(--color-bg-secondary)',
                       }}
                     >
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
                         <div>
-                          <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginBottom: 2 }}>
+                          <label htmlFor={`time-start-${entry.id}`} style={{ display: 'block', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginBottom: 2 }}>
                             {t('tasks.timeStart')}
                           </label>
                           <input
+                            id={`time-start-${entry.id}`}
                             type="datetime-local"
                             className="form-input"
                             value={inicioDraft}
@@ -178,10 +185,11 @@ export default function LaborTimesModal({
                           />
                         </div>
                         <div>
-                          <label style={{ display: 'block', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginBottom: 2 }}>
+                          <label htmlFor={`time-end-${entry.id}`} style={{ display: 'block', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginBottom: 2 }}>
                             {t('tasks.timeEnd')}
                           </label>
                           <input
+                            id={`time-end-${entry.id}`}
                             type="datetime-local"
                             className="form-input"
                             value={finDraft}

@@ -130,6 +130,8 @@ export function useNotifications(options: { onArrive?: (notification: AppNotific
     items: list.data ?? [],
     unreadCount: unread.data ?? 0,
     loading: list.isPending && !!userId,
+    // Sin red la lista no llega: no es lo mismo que no tener avisos.
+    failed: list.isError && !list.data,
     markRead,
     markAllRead,
     remove,

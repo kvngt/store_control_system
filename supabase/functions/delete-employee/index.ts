@@ -30,6 +30,17 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'No puedes eliminar tu propio usuario.' }, 400);
     }
 
+    // Que exista: un id de otra persona ya borrada (o mal copiado) respondía "ok" sin hacer nada.
+    const { data: perfil, error: perfilError } = await adminClient
+      .from('perfiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+    if (perfilError) throw perfilError;
+    if (!perfil) {
+      return jsonResponse({ error: 'Ese empleado ya no existe.' }, 404);
+    }
+
     // Work orders reference perfiles via creado_por / asignaciones. Deleting
     // the profile would cascade or null those out, so refuse while the
     // employee still has assigned work — the admin must reassign it first.
@@ -63,11 +74,27 @@ Deno.serve(async (req) => {
     // Los trabajos adicionales (hallazgos) que reportó o resolvió, y las comisiones que tiene, son
     // historia de la orden: borrar a la persona los rompería (la llave foránea no lo deja, y las
     // comisiones se irían en cascada). Antes salía el error crudo de Postgres (QA 19/10/2026).
-    const [reportados, resueltos, comisiones] = await Promise.all([
+    // Sus tareas (orden_labor.asignado_a, ON DELETE SET NULL) quedarían sin técnico y nadie cobraría
+    // su comisión; su reloj (orden_labor_tiempos, ON DELETE CASCADE) se borraría de los indicadores.
+    const [reportados, resueltos, comisiones, tareas, tiempos] = await Promise.all([
       adminClient.from('orden_hallazgos').select('id', { count: 'exact', head: true }).eq('reportado_por', userId),
       adminClient.from('orden_hallazgos').select('id', { count: 'exact', head: true }).eq('resuelto_por', userId),
       adminClient.from('comisiones').select('id', { count: 'exact', head: true }).eq('usuario_id', userId),
+      adminClient.from('orden_labor').select('id', { count: 'exact', head: true }).eq('asignado_a', userId),
+      adminClient.from('orden_labor_tiempos').select('id', { count: 'exact', head: true }).eq('usuario_id', userId),
     ]);
+    if ((tareas.count ?? 0) > 0) {
+      return jsonResponse(
+        { error: 'Esta persona tiene tareas asignadas en órdenes. Pásaselas a otro técnico antes de eliminarla.' },
+        409
+      );
+    }
+    if ((tiempos.count ?? 0) > 0) {
+      return jsonResponse(
+        { error: 'Esta persona tiene horas registradas con el reloj. Eliminarla borraría ese historial, así que no se puede eliminar.' },
+        409
+      );
+    }
     if ((reportados.count ?? 0) > 0 || (resueltos.count ?? 0) > 0) {
       return jsonResponse(
         { error: 'Esta persona reportó o resolvió trabajos adicionales de órdenes. Eliminarla borraría ese historial, así que no se puede eliminar.' },

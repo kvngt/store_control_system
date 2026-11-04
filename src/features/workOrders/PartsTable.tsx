@@ -249,10 +249,10 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
             )}
             <tr>
               <td className="desktop-only" colSpan={4} style={{ fontWeight: 700 }}>
-                Total {t('workOrders.parts')}
+                {t('workOrders.totalParts')}
               </td>
               <td
-                data-label={`Total ${t('workOrders.parts')}`}
+                data-label={t('workOrders.totalParts')}
                 style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-light)' }}
               >
                 {money(totalSale)}

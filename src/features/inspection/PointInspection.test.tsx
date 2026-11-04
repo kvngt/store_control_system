@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test/renderWithProviders';
-import type { OrderInspection } from '../../types/database';
+import type { OrderInspection, OrderMedia } from '../../types/database';
 
 const mocks = vi.hoisted(() => ({
   getForOrder: vi.fn(),
@@ -12,6 +12,13 @@ const mocks = vi.hoisted(() => ({
   complete: vi.fn(),
   publish: vi.fn(),
   showToast: vi.fn(),
+  signUrls: vi.fn(),
+}));
+
+// Las fotos viven en un bucket privado: el componente pide URLs firmadas, nunca usa la ruta.
+vi.mock('../../services/media.service', () => ({
+  SIGNED_URL_TTL_SECONDS: 3600,
+  mediaService: { signUrls: mocks.signUrls },
 }));
 
 vi.mock('../../services/inspection.service', () => ({
@@ -219,5 +226,74 @@ describe('PointInspection', () => {
 
     await userEvent.click(publishCheckbox);
     expect(mocks.publish).toHaveBeenCalledWith('insp-1', true);
+  });
+
+  // 20261010000040: publicada, la base rechaza la marca y la foto del técnico. Botones apagados y
+  // un aviso, en vez de un error al tocarlos.
+  it('a technician cannot change a published inspection, and is told why', async () => {
+    mocks.getForOrder.mockResolvedValueOnce({ ...sampleInspectionCompleted, publicada_en: '2026-10-10T12:00:00Z' });
+
+    renderWithProviders(
+      <PointInspection
+        orderId="ord-1"
+        orderSedeId="sede-1"
+        canEdit={true}
+        isAdmin={false}
+        isDelivered={false}
+        media={[]}
+        pendingUploads={[]}
+        onAddMedia={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByText(/El cliente ya ve esta inspección/)).toBeInTheDocument();
+    for (const b of screen.getAllByRole('button', { name: 'Bien' })) expect(b).toBeDisabled();
+    await userEvent.click(screen.getByText(/Desgaste crítico/));
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(mocks.markPoint).not.toHaveBeenCalled();
+  });
+
+  // Revisión 03/11/2026: la miniatura usaba la ruta privada tal cual y no se veía.
+  it('shows each point photo through a signed URL, never the raw storage path', async () => {
+    mocks.getForOrder.mockResolvedValueOnce(sampleInspectionPending);
+    mocks.signUrls.mockResolvedValue({ 'sede-1/ord-1/pt1-thumb.webp': 'https://firmada.example/pt1-thumb.webp?token=x' });
+    const photo = {
+      id: 'm-1',
+      orden_id: 'ord-1',
+      sede_id: 'sede-1',
+      avance_id: null,
+      inspeccion_punto_id: 'pt-1',
+      tipo: 'foto',
+      origen: 'inspeccion',
+      zona: null,
+      ruta: 'sede-1/ord-1/pt1.jpg',
+      ruta_miniatura: 'sede-1/ord-1/pt1-thumb.webp',
+      mime: 'image/jpeg',
+      bytes: 1024,
+      duracion_seg: null,
+      ancho: null,
+      alto: null,
+      visible_cliente: false,
+      proveedor: 'supabase',
+      subido_por: null,
+      creado_en: '2026-10-10T10:00:00Z',
+    } as unknown as OrderMedia;
+
+    renderWithProviders(
+      <PointInspection
+        orderId="ord-1"
+        orderSedeId="sede-1"
+        canEdit={true}
+        isAdmin={false}
+        isDelivered={false}
+        media={[photo]}
+        pendingUploads={[]}
+        onAddMedia={vi.fn()}
+      />
+    );
+
+    const img = await screen.findByAltText('Pastillas delanteras');
+    expect(img).toHaveAttribute('src', 'https://firmada.example/pt1-thumb.webp?token=x');
+    expect(mocks.signUrls).toHaveBeenCalledWith(['sede-1/ord-1/pt1-thumb.webp']);
   });
 });

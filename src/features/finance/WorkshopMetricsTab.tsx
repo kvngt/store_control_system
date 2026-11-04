@@ -153,7 +153,7 @@ export default function WorkshopMetricsTab({ sedeId }: WorkshopMetricsTabProps) 
         {user?.rol === 'admin' && allSedes && allSedes.length > 1 ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
             <label htmlFor="metrics-sede-select" className="form-label" style={{ margin: 0 }}>
-              Sede:
+              {t('metrics.sedeLabel')}
             </label>
             <select
               id="metrics-sede-select"

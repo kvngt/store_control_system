@@ -827,16 +827,6 @@ export const workOrdersService = {
     if (error) throw error;
   },
 
-  updateAssignmentStatus: async (id: string, estatus: 'pendiente' | 'en_curso' | 'completada') => {
-    const { data, error } = await supabase
-      .from('orden_asignaciones')
-      .update({ estatus_tarea: estatus })
-      .eq('id', id)
-      .select('id');
-    if (error) throw error;
-    assertAffected(data, 'la tarea');
-  },
-
   // ===== Progress updates ("Agregar Avance") =====
   // Una nota del técnico. Sus fotos, videos y notas de voz ya no viajan aquí:
   // entran a la cola de subida con el id de este avance y suben en segundo

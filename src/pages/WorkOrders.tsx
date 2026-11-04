@@ -442,7 +442,7 @@ export default function WorkOrders() {
   // and lose it.
   useEffect(() => {
     if (showCreateModal) {
-      setGuard(() => !form.isDirty || confirm(t('workOrders.confirmDiscard')));
+      setGuard(() => !form.isDirty || confirm(t('workOrders.confirmDiscard')), () => form.isDirty);
     } else {
       setGuard(null);
     }

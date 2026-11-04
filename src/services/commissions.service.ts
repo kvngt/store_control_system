@@ -7,6 +7,7 @@
 import { supabase } from '../lib/supabase';
 import type { Commission, CommissionBalance, CommissionEstimate, CommissionPayment, MyCommissionsSummary } from '../types/database';
 import { assertDeleted, fetchAll } from './support';
+import { sumMoney } from '../lib/money';
 
 const COMMISSION_SELECT = `
   *,
@@ -114,10 +115,14 @@ export const commissionsService = {
         balance = { usuario_id: c.usuario_id, usuario: c.usuario, total: 0, aceptado: 0, porRevisar: 0, items: [] };
         byUser.set(c.usuario_id, balance);
       }
-      balance.total += Number(c.monto);
-      if (accepted) balance.aceptado += Number(c.monto);
-      else balance.porRevisar += 1;
+      if (!accepted) balance.porRevisar += 1;
       balance.items.push(c);
+    }
+    // En centavos (sumMoney): sumados como flotantes, 0.1 + 0.2 no daba 0.3 y el saldo no cuadraba
+    // con lo que pay_commissions verifica.
+    for (const b of byUser.values()) {
+      b.total = sumMoney(b.items.map((c) => c.monto));
+      b.aceptado = sumMoney(b.items.filter((c) => c.estado === 'aceptada').map((c) => c.monto));
     }
     return [...byUser.values()].sort((a, b) => b.total - a.total);
   },

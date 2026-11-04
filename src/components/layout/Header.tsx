@@ -33,6 +33,8 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
   const [results, setResults] = useState<SearchResults>(EMPTY_RESULTS);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searching, setSearching] = useState(false);
+  // Una búsqueda que falló (sin red) no es "sin resultados": la persona creería que no existe.
+  const [searchFailed, setSearchFailed] = useState(false);
   const searchBoxRef = useRef<HTMLDivElement>(null);
 
   // M5 — en el teléfono la caja de búsqueda del encabezado estaba en
@@ -55,17 +57,34 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
   useEffect(() => {
     if (query.trim().length < 2) {
       setResults(EMPTY_RESULTS);
+      setSearchFailed(false);
+      setSearching(false);
       return;
     }
     setSearching(true);
+    // Solo cuenta la respuesta de lo último que se escribió: una lenta de antes no la pisa.
+    let current = true;
     const handle = setTimeout(() => {
       supabaseService
         .globalSearch(query, sedeId, { directory: isAdmin })
-        .then(setResults)
-        .catch(() => setResults(EMPTY_RESULTS))
-        .finally(() => setSearching(false));
+        .then((found) => {
+          if (!current) return;
+          setResults(found);
+          setSearchFailed(false);
+        })
+        .catch(() => {
+          if (!current) return;
+          setResults(EMPTY_RESULTS);
+          setSearchFailed(true);
+        })
+        .finally(() => {
+          if (current) setSearching(false);
+        });
     }, 300);
-    return () => clearTimeout(handle);
+    return () => {
+      current = false;
+      clearTimeout(handle);
+    };
   }, [query, sedeId, isAdmin]);
 
   // Close dropdowns on outside click
@@ -172,7 +191,8 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
           {searchOpen && query.trim().length >= 2 && (
             <div className="search-dropdown">
               {searching && <div className="search-dropdown-empty">{t('common.loading')}</div>}
-              {!searching && !hasResults && <div className="search-dropdown-empty">{t('common.noResults')}</div>}
+              {!searching && searchFailed && <div className="search-dropdown-empty" role="alert">{t('common.searchFailed')}</div>}
+              {!searching && !searchFailed && !hasResults && <div className="search-dropdown-empty">{t('common.noResults')}</div>}
               {!searching && results.orders.length > 0 && (
                 <div className="search-dropdown-group">
                   <div className="search-dropdown-label">{t('workOrders.title')}</div>

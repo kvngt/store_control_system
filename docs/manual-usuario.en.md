@@ -4,7 +4,7 @@ Management system for mechanical and auto body & paint repair shops.
 
 > **About this document.** This is the manual displayed by the app in **Help** (`/ayuda`). The Spanish
 > version is [manual-usuario.md](manual-usuario.md): both have the same headings and tags.
-> Screenshots are located in `public/ayuda/es/` and `public/ayuda/en/` (fictional sample data, never production data).
+> Screenshots are located in `public/manual/es/` and `public/manual/en/` (fictional sample data, never production data).
 > A comment `<!-- rol: admin -->` or `<!-- rol: tecnico -->` below a heading makes that section,
 > up to the next heading of equal or higher level, visible only to that role; with no tag, everyone sees it. The app does not
 > display this note or the table of contents.
@@ -48,7 +48,7 @@ whether you are on an office computer or on a phone on the shop floor.
 A single business can have **multiple workshops** (locations). Each workshop manages its
 own customers, vehicles, orders and finances separately.
 
-![Administrator dashboard.](../public/ayuda/en/01.webp)
+![Administrator dashboard.](../public/manual/en/01.webp)
 
 ---
 
@@ -109,7 +109,11 @@ page customers see.
 2. Enter your **Password**.
 3. Tap **Sign In**.
 
-![Sign-in screen.](../public/ayuda/en/02.webp)
+If you reached the sign-in page from a notification or an email that opened an order, signing in
+opens that order, not the dashboard. **Sign out** only signs out the device you are using: your phone
+and your computer are separate sessions.
+
+![Sign-in screen.](../public/manual/en/02.webp)
 
 **There is no public registration.** Accounts are created by an administrator in
 Settings or Employees. If you do not have an account, ask your system administrator.
@@ -134,7 +138,7 @@ administrator to add you in **Employees**.
 Each link works **only once** and expires quickly (one hour under standard settings). If you open it again or too late,
 the screen warns you that the link expired: return to the start and request another with **Back to sign in**.
 
-![Password recovery.](../public/ayuda/en/03.webp)
+![Password recovery.](../public/manual/en/03.webp)
 
 For security, the confirmation message is identical whether or not an account exists for
 that email, so no one can discover which emails are registered. If you
@@ -153,7 +157,7 @@ amounts.
 
 ## 4. How the screen is organized
 
-![Screen layout: (1) menu, (2) search, (3) workshop picker, (4) language, (5) notifications and (6) your profile.](../public/ayuda/en/04.webp)
+![Screen layout: (1) menu, (2) search, (3) workshop picker, (4) language, (5) notifications and (6) your profile.](../public/manual/en/04.webp)
 
 ### Sidebar (left)
 
@@ -190,7 +194,7 @@ It can be collapsed using the arrow to gain screen space.
 - Tables turn into cards, making them easier to tap with your finger.
 - Large forms (such as New Order) open full screen.
 
-![The work orders list on desktop (table) and mobile (cards).](../public/ayuda/en/05.webp)
+![The work orders list on desktop (table) and mobile (cards).](../public/manual/en/05.webp)
 
 ---
 
@@ -198,7 +202,7 @@ It can be collapsed using the arrow to gain screen space.
 
 This is the home screen. It summarizes shop activity.
 
-![Administrator dashboard on mobile.](../public/ayuda/en/06.webp)
+![Administrator dashboard on mobile.](../public/manual/en/06.webp)
 
 ### What an administrator sees
 <!-- rol: admin -->
@@ -207,6 +211,7 @@ This is the home screen. It summarizes shop activity.
   count for each and the orders they lead to:
   - **Additional work to review**: items reported by a technician that have not been quoted or
     discarded. Opens the order in Summary.
+  - **In progress or finished with nothing authorized: nothing would be charged**: orders in progress, on hold or finished that have no authorized job or part. A technician can start and finish an order without anyone authorizing it; if it is delivered like that, the total is $0. Opens the order in Work so you can quote it and record the authorization.
   - **Quoted work not yet authorized: send the estimate or record the authorization**: added jobs that have not been sent to the customer or authorized yet. Opens the order in Work.
   - **Quotes the customer has not answered**: sent estimates awaiting a customer response. Opens the order in Work.
   - **Jobs without a technician: nobody earns their commission**: nobody earns commission on these jobs until a technician is assigned. Opens the
@@ -214,8 +219,8 @@ This is the home screen. It summarizes shop activity.
   - **Finished jobs to review and mark ready for pickup**: orders where technicians finished the work, waiting for the office to inspect them and mark them ready for pickup.
   - **Next service suggestions to review**: what a technician proposed for the vehicle's next service. Opens the order in Billing & customer.
   - **Orders past their delivery date** (completed orders do not count).
-  - **Customer emails that failed (last 72 h)**: the **Review** button leads to
-    Settings, where they can be retried.
+  - **Emails that failed (last 72 h)**: customer emails and staff notifications for that shop. The
+    **Review** button leads to Settings, where they can be retried.
 
   If nothing is pending, it displays «All caught up: nothing is waiting on the office.» It updates automatically whenever someone modifies an order.
 - **Active Orders** and how many are **Completed this month**.
@@ -240,7 +245,7 @@ order due earliest comes first); at the end, those marked with **Waiting for aut
 you tap one, its order opens on the **Tasks** tab, where you can mark it **Done** and
 add updates. Completed tasks are not listed individually, only counted («N done on orders not yet delivered»).
 
-![Mechanic dashboard.](../public/ayuda/en/07.webp)
+![Mechanic dashboard.](../public/manual/en/07.webp)
 
 ---
 
@@ -252,7 +257,7 @@ add updates. Completed tasks are not listed individually, only counted («N done
 List of all customers registered at the workshop, with phone, email,
 vehicle count and number of generated orders.
 
-![Customers list.](../public/ayuda/en/08.webp)
+![Customers list.](../public/manual/en/08.webp)
 
 ### Registering a customer
 
@@ -286,7 +291,7 @@ The **View** button opens their full record (**Customer Profile**): their detail
 **Service History** showing the status of each order (the total is only visible to an
 administrator).
 
-![Customer profile, with registered vehicles and service history.](../public/ayuda/en/09.webp)
+![Customer profile, with registered vehicles and service history.](../public/manual/en/09.webp)
 
 ### Editing and deleting
 
@@ -304,7 +309,7 @@ customer has existing work orders, the system blocks deletion to preserve histor
 All vehicles registered at the workshop, showing make, model, year, VIN, plate,
 color and owner.
 
-![Vehicles list.](../public/ayuda/en/10.webp)
+![Vehicles list.](../public/manual/en/10.webp)
 
 ### Registering a vehicle
 
@@ -319,7 +324,7 @@ The form is designed to fill in almost entirely on its own from the VIN.
    if the format does not match that state's typical pattern, without preventing you from saving.
 7. **Create**.
 
-![Vehicle registration with decoded VIN.](../public/ayuda/en/11.webp)
+![Vehicle registration with decoded VIN.](../public/manual/en/11.webp)
 
 ### A vehicle is never duplicated
 
@@ -358,7 +363,7 @@ The system automatically remembers the last view you used on that device.
 **If you are an administrator**, you see all orders for the active workshop and their totals.
 **If you are a technician**, you see **My Work Orders**: only those assigned to you. Those of your coworkers do not appear in the list, on the board, or in search. If you open a link or notification for an order not assigned to you, the system alerts you: «That order isn't one of yours. If you should be working on it, ask an administrator to assign you.».
 
-![Mechanic work orders: only assigned ones.](../public/ayuda/en/12.webp)
+![Mechanic work orders: only assigned ones.](../public/manual/en/12.webp)
 
 At the top there is a search bar with the **Search...** field (filters by order number or customer name in both list and board views). In the list view, there are also status filters: **All**, **Intake**, **In Progress**, **Waiting for Approval**, **Completed**, **Delivered** and **Archived** (on the board these are not needed: the columns are the statuses). The **Archived** view gathers orders delivered more than 90 days ago or archived manually: it has its own search bar (**Search by order number or customer**), shows the delivery date, and lets you open the details of any order (the **Back to the board** button only appears for administrators).
 
@@ -377,7 +382,7 @@ Each order can display badges depending on its condition:
 |---|---|
 | **Intake** | The vehicle just arrived. Work has not started yet. |
 | **In Progress** | Work is actively underway on the vehicle. |
-| **Waiting for Approval** | The order is paused because the technician reported additional work or the office sent a quote awaiting customer response. It returns to In Progress automatically when the customer responds or when the finding is discarded. The technician cannot lift the pause on their own. |
+| **Waiting for Approval** | The order is paused because the technician reported additional work or the office sent a quote awaiting customer response. It returns to In Progress automatically when the customer responds or when the finding is discarded. The technician cannot lift the pause on their own. The customer link says «Waiting for your approval» only once an estimate has been sent; while the office prepares it, it says «Reviewing additional work». |
 | **Completed** | The technician finished the work. Progress automatically moves to 100% and the office receives a notification that work is finished. **The customer is not notified yet**: their link shows «Final inspection» and the order displays the **To review** badge. The technician cannot reopen it to In Progress; only an administrator can reopen it. |
 | ↳ **Ready for pickup** | A sub-status on Completed set **only by an administrator** using the **Mark ready for pickup** button. At that moment an email is dispatched to the customer letting them know their vehicle is ready, and their link displays «Ready for pickup». |
 | **Delivered** | The customer picked up the vehicle. **Only an administrator** sets this, through the delivery dialog. It records collection in Finance, books parts costs, freezes parking fees if applicable, and generates commissions (section 18). |
@@ -410,7 +415,7 @@ The **Previous** and **Next** buttons let you navigate between steps without los
 
 > This inspection is shop evidence if a customer later claims preexisting damage. Check-in photos and videos are the only media set to **Visible to customer** from the start. Intake voice notes remain **Internal** until an administrator chooses to publish them.
 
-![360° inspection at check-in, with four zones photographed.](../public/ayuda/en/13.webp)
+![360° inspection at check-in, with four zones photographed.](../public/manual/en/13.webp)
 
 **Step 3 — Jobs.**
 - **Work Type**: **Mechanical**, **Painting** or **Combined**.
@@ -424,7 +429,7 @@ The **Previous** and **Next** buttons let you navigate between steps without los
 
 Items quoted in this step start as **Not authorized** unless you checked the in-person acceptance box: they are charged only when the customer authorizes them through a quote or when the office records manual authorization. The check-in signature does not authorize quoted work.
 
-![Step 3 of creation, "Jobs", with the note that work is charged once the customer authorizes it.](../public/ayuda/en/14.webp)
+![Step 3 of creation, "Jobs", with the note that work is charged once the customer authorizes it.](../public/manual/en/14.webp)
 
 **Step 4 — Deposit.** The advance payment left by the customer (leave 0 if none). If the customer pays a deposit:
 - Select **How the customer paid** (Cash, Card, Zelle, Transfer, Check).
@@ -470,7 +475,7 @@ Mechanics and painters do not see the **New Order** button. Opening an order com
 
 This is the screen where daily work is tracked.
 
-![Work order details (administrator): tabs and quick actions.](../public/ayuda/en/15.webp)
+![Work order details (administrator): tabs and quick actions.](../public/manual/en/15.webp)
 
 #### Order header
 
@@ -542,14 +547,14 @@ When a mechanic or painter finds damage or worn components not in the original o
 4. They tap **Report and pause the order**.
 5. The order automatically moves to **Waiting for Approval** and a notification is sent to the office.
 
-![«Report additional work», from a mechanic's phone.](../public/ayuda/en/16.webp)
+![«Report additional work», from a mechanic's phone.](../public/manual/en/16.webp)
 
 On the dashboard (under **Needs attention**) and above the Summary and Work tabs on the order, the office sees the card **The shop reported additional work**:
 - **Quote the customer**: pre-populates a new job in Labor with the description and the technician who reported it. The office sets the price and then sends the quote to the customer.
 - **Discard…**: opens a dialog to discard it internally or check **Show it in the customer’s report** entering **Text for the customer**. In that case it appears on their link as a informational "Shop note", at no cost.
 - Once quoted or discarded, the order resumes from hold.
 
-![Additional work reported by the shop, to quote or discard.](../public/ayuda/en/17.webp)
+![Additional work reported by the shop, to quote or discard.](../public/manual/en/17.webp)
 
 #### Tracking reported additional work (technicians)
 <!-- rol: tecnico -->
@@ -615,14 +620,14 @@ If the repair is covered by an insurance company:
 - Check the **Insurance work** box, enter the **Insurance company** (such as State Farm or Geico) and the **Claim number**.
 - The order displays the **Insurance** badge and, if parking fees are enabled at the workshop, automatically applies the insurance profile rules.
 
-![«Edit insurance».](../public/ayuda/en/18.webp)
+![«Edit insurance».](../public/manual/en/18.webp)
 
 #### Your estimated commission (technicians)
 <!-- rol: tecnico -->
 
 Assigned technicians see the **Your estimated commission** card in their **Tasks** section. It displays each authorized personal task with its price. The rate and amount show **Pending** until the office accepts the commission, after the order is delivered; the card explains: «Your commission is confirmed when the office accepts it, after the order is delivered.» Once accepted, the calculation appears (*task price × rate*) along with its amount. If the employee is on salary, the card indicates that the order earns no commission.
 
-![The same order viewed by a mechanic, with the "Your estimated commission" card.](../public/ayuda/en/19.webp)
+![The same order viewed by a mechanic, with the "Your estimated commission" card.](../public/manual/en/19.webp)
 
 #### Assigned technicians
 
@@ -636,7 +641,7 @@ Only administrators can assign staff belonging to the order's workshop.
 
 A log where staff document work performed with text, photos, videos or voice notes. An entry can be linked to a specific job. If you try to leave the screen or close the order while leaving unsaved text or files in the form, the system warns you («There is an unsaved progress entry (note, photos or video). Leaving now will discard it. Leave anyway?») so you do not lose what you captured. A technician can delete their own updates as long as the order is not delivered and choose whether their own normal updates are shown to the customer (by checking **Visible to the customer** when adding one from a task or tapping the eye icon **Show to customer** / **Stop showing** in **Work Progress**). An administrator can delete any update and publish or hide both updates and individual files.
 
-![A progress entry with photos and a voice note.](../public/ayuda/en/20.webp)
+![A progress entry with photos and a voice note.](../public/manual/en/20.webp)
 
 #### Multi-point vehicle inspection
 
@@ -653,6 +658,7 @@ Allows conducting a comprehensive multi-point inspection (brakes, tires, fluids,
 
 - **How administration reviews, quotes, and publishes the inspection**:
   - Once the inspection is completed, administrators can turn on the **Show to customer** toggle to make it visible on the customer's portal link.
+  - Once published, the inspection is locked for the technician: points, notes and photos can no longer be changed, and their screen says «The customer can already see this inspection: if something changed, tell the office.». The office can still correct it, or tap **Hide from customer** so the technician can edit it again.
   - On every point marked **Attention** or **Urgent**, administration has two buttons to turn the finding into a quote:
     - **Quote**: opens the labor editor pre-filling the point's name and note, ready to assign a technician and set the price.
     - **From catalog**: opens the frequent job catalog picker to insert a predefined package with its labor lines and parts.
@@ -670,7 +676,7 @@ Captured by the office at the counter during intake. The customer signs with the
 
 When jobs or parts are quoted, they start as **Not authorized**. In the **Quote** section, the office has two alternatives:
 
-![Quote with unauthorized work.](../public/ayuda/en/21.webp)
+![Quote with unauthorized work.](../public/manual/en/21.webp)
 
 **A. Send quote to the customer.** Tap **Send quote to customer**. The customer receives an email with a link to their portal, where they review each item, individually check what they authorize, enter their name and confirm.
 - While awaiting a response, lines display **Waiting for customer** and the order moves to **Waiting for Approval**.
@@ -678,7 +684,7 @@ When jobs or parts are quoted, they start as **Not authorized**. In the **Quote*
 - If you add more work while waiting, tap **Add to quote and resend**.
 - If the customer has no email, you can share the link via WhatsApp from the Customer link card.
 
-![What the customer sees on their link: quote pending authorization.](../public/ayuda/en/22.webp)
+![What the customer sees on their link: quote pending authorization.](../public/manual/en/22.webp)
 
 **B. Record authorization.** If the customer responded by phone, in person or via WhatsApp:
 1. Tap **Record authorization**.
@@ -688,7 +694,7 @@ When jobs or parts are quoted, they start as **Not authorized**. In the **Quote*
 5. Enter **Authorized by** and add an optional **Note (optional)**.
 6. Tap **Record**. The customer receives a confirmation email receipt.
 
-![«Work authorized by the customer».](../public/ayuda/en/23.webp)
+![«Work authorized by the customer».](../public/manual/en/23.webp)
 
 Authorized work immediately adds to the order total and alerts technicians about which work to perform; unauthorized work is marked as **Do not do** and is neither charged nor performed. An order with a quote awaiting response cannot be delivered. In addition, the order automatically moves to **In Progress** upon the first authorization (whether from the portal, recorded manually, or accepted during intake), allowing technicians to start work without waiting for manual status updates.
 
@@ -711,7 +717,7 @@ The office must inspect the vehicle and verify accounts. To mark it ready, tap t
 
 When selecting the **Delivered** status or tapping **Deliver and charge** in quick actions, the delivery dialog opens:
 
-![Deliver and charge.](../public/ayuda/en/24.webp)
+![Deliver and charge.](../public/manual/en/24.webp)
 
 - It shows the **Authorized total** (including parking fees if applicable), amount **Already collected** and:
   - **Left to collect**: if a balance remains due. The button shows **Deliver and collect {monto}**.
@@ -731,7 +737,7 @@ When selecting the **Delivered** status or tapping **Deliver and charge** in qui
 
 If a customer decides to take their vehicle without performing the quoted repairs, tap the **Picked up without repair** button in the header:
 
-![Picked up without repair.](../public/ayuda/en/25.webp)
+![Picked up without repair.](../public/manual/en/25.webp)
 
 Under **What happened with the work?**, choose:
 1. **Everything was canceled**: nothing is charged and whatever deposit the customer left is refunded.
@@ -749,7 +755,7 @@ If the customer makes partial payments while the vehicle is being repaired (for 
 - Tap **Record advance payment**.
 - It is recorded immediately in Finance and adds to **Deposit and advance payments** on the order, reducing the balance due at final delivery.
 
-![Record advance payment, on mobile.](../public/ayuda/en/26.webp)
+![Record advance payment, on mobile.](../public/manual/en/26.webp)
 
 #### Discount
 <!-- rol: admin -->
@@ -766,7 +772,7 @@ Administrators only, on the **Billing & customer** tab → **Totals** → **Appl
 
 On the **History** tab (administrators only), an automatic audit log is maintained that cannot be edited or deleted. It details which user made each change, the exact date and time, and the before and after values: status changes, progress updates, signatures, added or deleted lines, technician reassignments, discounts, sent and answered quotes, and delivery or withdrawal records.
 
-![Order history.](../public/ayuda/en/27.webp)
+![Order history.](../public/manual/en/27.webp)
 
 #### Customer link and email updates
 <!-- rol: admin -->
@@ -776,7 +782,7 @@ Each order has a unique web link (`restorifyauto.net/r/...`) available right fro
 - They view status, progress, check-in, published photos and videos, quote pending authorization, and their account balance.
 - The portal features **collapsible sections** designed for mobile devices: work progress, next service and contact start open; intake check-in (with photo count), account details (with formatted balance) and shop observations start collapsed with visible summaries and expand upon tapping. If a quote is pending authorization, it starts open for review.
 - It allows them to call the shop directly or message via WhatsApp if the workshop has phone numbers configured.
-- On the **Customer link** card, administrators can: **Copy**, **Open**, **Send via WhatsApp**, **Change link** (invalidates the previous one) or **Turn off**.
+- On the **Customer link** card, administrators can: **Copy**, **Open** (see the link as the customer does; switching the language there does not change the language of their emails), **Send via WhatsApp**, **Change link** (invalidates the previous one) or **Turn off**.
 - The link remains active while the order is open and for up to 90 days after delivery.
 - **Automatic emails**:
   - «We received your vehicle»: sent when the intake check-in is signed (with tracking link).
@@ -797,7 +803,7 @@ Each order has a unique web link (`restorifyauto.net/r/...`) available right fro
 
 When a job is done (an oil change, a maintenance visit), administration can note when the vehicle should come back and print a sticker for the windshield. It is done from the order, in any status, including a delivered or archived order, for example to reprint a lost sticker (on a delivered order, from the **Next service** card, because the quick actions no longer appear).
 
-![The Next service card, with no service scheduled.](../public/ayuda/en/45.webp)
+![The Next service card, with no service scheduled.](../public/manual/en/45.webp)
 
 **Scheduling the next service**
 1. Open the order and tap **Service sticker** in the quick actions (if a service is already scheduled or suggested, it navigates directly to the card to view or reprint; if none exists, it opens the dialog to schedule it), or go to the **Billing & customer** tab → **Next service** card → **Schedule next service**.
@@ -814,11 +820,11 @@ When a job is done (an oil change, a maintenance visit), administration can note
 4. Choose the **Sticker language** (**Spanish** or **English**). The customer's language is selected by default. When printing, the note is automatically translated into the sticker language to match the printout; if translation is unavailable, it is printed as written.
 5. Tap **Save** (only records it) or **Save & print**.
 
-![The sticker dialog, with a preset selected.](../public/ayuda/en/46.webp)
+![The sticker dialog, with a preset selected.](../public/manual/en/46.webp)
 
 **What the sticker shows.** It is 62 × 50 mm, black and white: the workshop's name and phone, «NEXT SERVICE» with the date and the miles, the note, a QR code, and at the bottom the vehicle's year, make and model, the plate and the order number.
 
-![The 62 × 50 mm sticker.](../public/ayuda/en/51.webp)
+![The 62 × 50 mm sticker.](../public/manual/en/51.webp)
 
 **Printing.** A new tab opens with the sticker PDF; print from there. If the browser blocks the tab, the PDF is downloaded instead. With a Brother QL-810W and the 62 mm continuous roll (DK-4205), the recommended setup is:
 - **Windows**: **62 mm** continuous paper with a **50 mm** length (or a custom 62 × 50 size), scale **100 %** or *actual size*, with «fit to page» off.
@@ -826,7 +832,7 @@ When a job is done (an oil change, a maintenance visit), administration can note
 
 **What the customer sees when scanning the QR.** A simple page (`restorifyauto.net/s/…`) with the workshop, the vehicle and the next service with a traffic light: **Up to date** (more than 14 days left), **Due soon** (14 days or fewer) or **Overdue**. If there are only miles, it says «At N miles», with no traffic light. Below are the **Schedule via WhatsApp** and **Call the workshop** buttons, using the branch's phones. The customer can switch the page between Spanish and English, and that does not change anything stored. For privacy, this page **never shows the customer's name, the plate or the VIN**: the sticker sits in plain view on the windshield and anyone can scan it.
 
-![The page the customer sees when scanning the QR, on a phone.](../public/ayuda/en/50.webp)
+![The page the customer sees when scanning the QR, on a phone.](../public/manual/en/50.webp)
 
 The same next service also appears as the **Recommended next service** card in the report link the customer receives.
 
@@ -835,11 +841,11 @@ The same next service also appears as the **Recommended next service** card in t
 - **Print sticker**: prints it again as it is.
 - **Remove service**: deletes the service **and its code**, and asks for confirmation because the QR on stickers already printed stops working. As long as you only edit or reprint, the code is kept and stickers already on windshields keep working.
 
-![The Next service card with a scheduled service.](../public/ayuda/en/47.webp)
+![The Next service card with a scheduled service.](../public/manual/en/47.webp)
 
 **When a technician suggests a service.** The card shows **Technician's suggestion** with its date, miles and note, and two buttons: **Use suggestion** (opens the dialog with that data so you can review it, adjust it and print) or **Discard**. On the main dashboard it appears under **Needs attention** as **Next service suggestions to review**, and in the bell as «Next service suggested».
 
-![The technician's suggestion on the Next service card.](../public/ayuda/en/48.webp)
+![The technician's suggestion on the Next service card.](../public/manual/en/48.webp)
 
 #### Suggesting the next service
 <!-- rol: tecnico -->
@@ -852,7 +858,7 @@ If while working you see that the vehicle will need a service later on (the next
 
 You can only suggest on an order that is assigned to you and not yet delivered. If you suggest again, you replace your earlier suggestion. Once administration uses or discards it, it disappears.
 
-![«Suggest next service», from a technician's phone.](../public/ayuda/en/49.webp)
+![«Suggest next service», from a technician's phone.](../public/manual/en/49.webp)
 
 #### Archiving an order
 <!-- rol: admin -->
@@ -876,7 +882,7 @@ Only an administrator can delete an order. This deletes its media files, progres
 Each order has its own gallery. It is populated from the **360° Inspection** during order
 creation and from **Work Progress** later on.
 
-![Buttons to add photos, video and voice notes.](../public/ayuda/en/28.webp)
+![Buttons to add photos, video and voice notes.](../public/manual/en/28.webp)
 
 ### Capturing
 
@@ -898,7 +904,7 @@ deny it, the app explains how to enable it in settings.
 
 While files are uploading, a floating tray appears: «{done} of {total} files uploaded». Tap it to see each file and its progress.
 
-![Upload tray, with queued files.](../public/ayuda/en/29.webp)
+![Upload tray, with queued files.](../public/manual/en/29.webp)
 
 - **You can keep using the app** while files upload.
 - **If connection drops**, the tray displays «Offline» and uploads resume on their own
@@ -940,7 +946,7 @@ column per status. It is located inside **Work Orders**: at the top right, the
 whoever works on the board finds it when returning. The search bar also filters
 cards, and the order number on each card opens its details.
 
-![Work orders board.](../public/ayuda/en/30.webp)
+![Work orders board.](../public/manual/en/30.webp)
 
 At the top, **shop occupancy** is displayed: how many active orders exist relative to
 workshop capacity.
@@ -953,7 +959,7 @@ There are two ways to change an order's status:
 - **On phone**, each card has a **Move to** selector at the bottom. Columns
   are navigated by swiping sideways, one per screen.
 
-![Board card on mobile, with "Move to".](../public/ayuda/en/31.webp)
+![Board card on mobile, with "Move to".](../public/manual/en/31.webp)
 
 An administrator can move any order. A technician can only move orders assigned
 to them, and never a **Completed** or **Delivered** order: on those cards the
@@ -973,7 +979,7 @@ Moving an order to **Delivered** opens the same delivery dialog as on the order 
 The red number on the bell shows your unread notifications. They arrive **instantly**
 while the app is open, with a brief on-screen message.
 
-![Notification bell alerts, on a technician's phone.](../public/ayuda/en/32.webp)
+![Notification bell alerts, on a technician's phone.](../public/manual/en/32.webp)
 
 - Tap an alert to open its order; it is marked as read.
 - **Mark all read** clears the counter.
@@ -1015,7 +1021,7 @@ just like any other application.
 2. Tap **Enable on this device** and accept the permission prompt.
 3. Tap **Send test**: it should arrive in a few seconds.
 
-![Notifications on this device.](../public/ayuda/en/33.webp)
+![Notifications on this device.](../public/manual/en/33.webp)
 
 - Enabled **per device**: if you use a phone and a computer, enable it on both.
 - On **iPhone**, you must first install the app on your home screen
@@ -1034,7 +1040,7 @@ just like any other application.
 
 **Administrators only.** Records all money coming in and going out of the workshop.
 
-![Finance.](../public/ayuda/en/34.webp)
+![Finance.](../public/manual/en/34.webp)
 
 It has three views:
 
@@ -1099,7 +1105,7 @@ for that order.
 6. **Description**.
 7. **Create**.
 
-![New transaction.](../public/ayuda/en/35.webp)
+![New transaction.](../public/manual/en/35.webp)
 
 ### Deleting a transaction
 
@@ -1137,7 +1143,7 @@ typing them one by one.
 > are missing above it. The **Assign to uncategorized** bar applies a category
 > to all unassigned rows at once.
 
-![Reviewing a bank statement before importing, with a possible duplicate.](../public/ayuda/en/36.webp)
+![Reviewing a bank statement before importing, with a possible duplicate.](../public/manual/en/36.webp)
 
 ### If you import the same bank statement twice
 
@@ -1152,7 +1158,7 @@ expenses for that month**. The system protects you on three levels:
 3. **"Select all" excludes them.** If it truly is a separate transaction,
    check it manually.
 
-![Notice that this bank statement has already been imported.](../public/ayuda/en/37.webp)
+![Notice that this bank statement has already been imported.](../public/manual/en/37.webp)
 
 ### Reverting an import
 
@@ -1160,7 +1166,7 @@ In the list of imports, the **Revert import** button removes
 all transactions imported with that file in one step. This is the fix when something
 was imported in excess or categorized incorrectly: revert and import again.
 
-![Imported bank statements, with "Revert import".](../public/ayuda/en/38.webp)
+![Imported bank statements, with "Revert import".](../public/manual/en/38.webp)
 
 ---
 
@@ -1169,7 +1175,7 @@ was imported in excess or categorized incorrectly: revert and import again.
 Technicians earn commissions on labor for orders they deliver.
 Administration manages review, approval and payments from **Commissions**, while technicians check their earnings in **My commissions** and in the details of each order.
 
-![Commissions: outstanding balances per technician.](../public/ayuda/en/39.webp)
+![Commissions: outstanding balances per technician.](../public/manual/en/39.webp)
 
 ### How it is calculated
 
@@ -1235,7 +1241,7 @@ The general workshop rate is configured on the top card or in Settings → Works
 
 Technicians can check their earnings without seeing workshop finances:
 
-![My commissions, on a technician's phone.](../public/ayuda/en/40.webp)
+![My commissions, on a technician's phone.](../public/manual/en/40.webp)
 
 - Summary cards at top: **To be paid** (what the office already accepted and is ready for payment), **Paid this month** and **Paid in total**.
 - **Accepted, to be paid**: list of commissions approved by the office that have not been settled yet, showing **Order #**, task or job, rate (**%**) and **Amount**.
@@ -1256,7 +1262,7 @@ Allows managing who works at the shop, how they are paid, and recent activity:
   - **Salary amount**: amount and frequency. Informational (not recorded in Finance). If an employee switches to salary and has pending commissions, the system alerts you to the amount: upon switching to salary, pending commissions stop counting, so it is best to pay them first.
 - Below is staff administration: create accounts with **New User**, edit details, or remove employees.
 
-![Employee pay and assigned orders.](../public/ayuda/en/41.webp)
+![Employee pay and assigned orders.](../public/manual/en/41.webp)
 
 ---
 
@@ -1265,7 +1271,7 @@ Allows managing who works at the shop, how they are paid, and recent activity:
 
 **Administrators only.** Allows charging for parking or extended vehicle storage at the shop, distinguishing between private work and insurance claims.
 
-![Parking fee on a work order.](../public/ayuda/en/42.webp)
+![Parking fee on a work order.](../public/manual/en/42.webp)
 
 ### How it is configured per workshop
 
@@ -1345,7 +1351,7 @@ based on role.
   (section 11).
 - **Something not working?**: card with the **Report a problem** button to notify support if something failed or blocked you. When tapped, you describe **What happened**, can **Add a screenshot**, and tap **Send report**; the system securely attaches technical diagnostics and the last 30 seconds of screen activity (hiding private customer data and photos).
 
-![Technician settings.](../public/ayuda/en/43.webp)
+![Technician settings.](../public/manual/en/43.webp)
 
 ### Administrators only: workshops, staff and emails
 <!-- rol: admin -->
@@ -1374,7 +1380,7 @@ To create a user account from the users list:
 4. Choose the workshop under **Workshops**.
 5. Tap **Create**.
 
-![New user.](../public/ayuda/en/44.webp)
+![New user.](../public/manual/en/44.webp)
 
 To remove someone, tap **Remove employee** in their row. **If they have assigned orders, the system blocks removal**: that work must first be reassigned. **If commissions have already been paid to them, removal is also blocked**: their payment records form the accounting history of what was disbursed.
 

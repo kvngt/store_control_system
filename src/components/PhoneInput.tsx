@@ -42,8 +42,9 @@ export default function PhoneInput({ value, onChange, id, disabled, invalid, pla
   }, [value]);
 
   const emit = (nextIso: string, nextNational: string) => {
-    setParts({ iso: nextIso, national: nextNational });
     const next = toE164(nextIso, nextNational);
+    // Pegado con su "+": el selector toma el país del número y el campo se queda con el resto.
+    setParts(nextNational.trim().startsWith('+') ? parsePhone(next) : { iso: nextIso, national: nextNational });
     emitted.current = next;
     onChange(next);
   };

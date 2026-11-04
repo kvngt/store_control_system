@@ -167,8 +167,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"   # sec
 npx supabase secrets set RESEND_API_KEY=<llave de Resend de solo envío> \
   PUBLIC_SITE_URL=https://restorifyauto.net \
   EMAIL_FROM_ADDRESS=notificaciones@restorifyauto.net
-# opcional; por defecto America/Chicago
-npx supabase secrets set SHOP_TIMEZONE=America/Chicago
+# opcional; por defecto America/New_York (el taller está en Maryland)
+npx supabase secrets set SHOP_TIMEZONE=America/New_York
 ```
 
 La llave de Resend debe ser de **solo envío** y restringida a `restorifyauto.net`. La

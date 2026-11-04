@@ -163,10 +163,16 @@ export function parsePhone(value: string | null | undefined): { iso: string; nat
 
 /** `('MX', '55 1234 5678')` → `"+525512345678"`; sin número, cadena vacía. */
 export function toE164(iso: string, national: string): string {
-  const digits = (national ?? '').replace(/\D/g, '');
+  const raw = (national ?? '').trim();
+  const digits = raw.replace(/\D/g, '');
   if (!digits) return '';
+  // Pegado con su país ("+1 202 607 6126" de un contacto o un correo): ese país manda, no el
+  // del selector. Antes salía el "+1" dos veces y el número quedaba inservible.
+  if (raw.startsWith('+')) return `+${digits}`;
   const dial = countryByIso(iso)?.dial ?? '1';
-  return `+${dial}${digits}`;
+  // "1 202 607 6126" con +1 elegido: ese 1 es el de larga distancia, no parte del número.
+  const nacional = dial === '1' && digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
+  return `+${dial}${nacional}`;
 }
 
 /**
@@ -189,10 +195,15 @@ export function formatPhone(value: string | null | undefined): string {
   return `+${dial} ${national}`;
 }
 
-/** Un número de +1 tiene diez dígitos; con otra cantidad seguramente falta o sobra alguno. */
+/**
+ * Un número de +1 tiene diez dígitos; con otra cantidad seguramente falta o sobra alguno. Once que
+ * empiezan con 1, o uno pegado con su "+", están bien: toE164 los arregla.
+ */
 export function looksIncomplete(iso: string, national: string): boolean {
+  if ((national ?? '').trim().startsWith('+')) return false;
   const digits = (national ?? '').replace(/\D/g, '');
-  return countryByIso(iso)?.dial === '1' && digits.length > 0 && digits.length !== 10;
+  const completo = digits.length === 10 || (digits.length === 11 && digits.startsWith('1'));
+  return countryByIso(iso)?.dial === '1' && digits.length > 0 && !completo;
 }
 
 /**

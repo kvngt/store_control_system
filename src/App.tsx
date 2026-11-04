@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createQueryClient } from './lib/queryClient';
 import { LanguageProvider } from './context/LanguageContext';
@@ -9,7 +9,7 @@ import { useAuth } from './context/auth.context';
 import { ToastProvider } from './context/ToastContext';
 import { UnsavedChangesProvider } from './context/UnsavedChangesContext';
 import { isSupabaseConfigured } from './lib/supabase';
-import { STAFF_HOME } from './lib/staffHome';
+import { afterLoginPath, STAFF_HOME } from './lib/staffHome';
 import ErrorBoundary from './components/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
 import Login from './pages/Login';
@@ -33,9 +33,11 @@ const Help = lazy(() => import('./pages/Help'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { isAuthenticated, user } = useAuth();
+  const location = useLocation();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // Se recuerda a dónde iba (la orden de un correo o de un aviso) para volver ahí al entrar.
+    return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}${location.hash}` }} />;
   }
 
   if (adminOnly && user?.rol !== 'admin') {
@@ -47,6 +49,7 @@ function ProtectedRoute({ children, adminOnly = false }: { children: React.React
 
 function AppRoutes() {
   const { isAuthenticated, loading, passwordRecovery } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -68,7 +71,7 @@ function AppRoutes() {
       <Routes>
       <Route
         path="/login"
-        element={isAuthenticated ? <Navigate to={STAFF_HOME} replace /> : <Login />}
+        element={isAuthenticated ? <Navigate to={afterLoginPath(location.state)} replace /> : <Login />}
       />
       {/* La raíz solo llega a la app en la app instalada o al volver de un enlace de Supabase
           (landing/entry.ts); en el navegador es la página del taller. El panel vive en /panel. */}

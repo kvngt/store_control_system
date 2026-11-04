@@ -46,7 +46,7 @@ const STRINGS = {
       en_proceso: 'En Proceso',
       // Era "Espera de Repuestos", el nombre del estado antes de que F1 lo convirtiera en la
       // espera de la autorización del cliente. Dice lo mismo que el portal.
-      espera_autorizacion: 'Esperando su autorización',
+      espera_autorizacion: 'Esperando autorización',
       finalizado: 'Finalizado',
       entregado: 'Entregado',
       retirada: 'Retirado sin reparar',
@@ -105,7 +105,7 @@ const STRINGS = {
     status: {
       recepcion: 'Received',
       en_proceso: 'In progress',
-      espera_autorizacion: 'Awaiting your authorization',
+      espera_autorizacion: 'Awaiting authorization',
       finalizado: 'Completed',
       entregado: 'Delivered',
       retirada: 'Picked up without repair',
@@ -250,7 +250,9 @@ async function buildWorkOrderPdf(
   const lang: PdfLanguage = options.language ?? 'es';
   const S = STRINGS[lang];
   // En inglés, lo que el taller escribió en español sale traducido si ya hay traducción.
-  const tr = (text: string) => (lang === 'en' ? options.translations?.[text] ?? text : text);
+  // El diccionario se arma con el texto recortado (_textos_cliente hace trim), como en el portal:
+  // sin el trim, una descripción con un espacio al final salía sin traducir.
+  const tr = (text: string) => (lang === 'en' ? options.translations?.[text.trim()] ?? text : text);
   const urlsOf = (list: typeof photos.reception, limit: number) =>
     list
       .map((m) => urls[reportImagePath(m)])

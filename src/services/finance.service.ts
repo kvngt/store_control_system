@@ -54,7 +54,9 @@ export const financeService = {
     fetchAll<FinancialTransaction>((from, to) => {
       let query = supabase
         .from('finanzas_movimientos')
-        .select('*')
+        // El número de la orden viene con el movimiento: la lista de órdenes no trae las entregadas
+        // de hace más de 90 días ni las archivadas, y el CSV del contador las dejaba en blanco.
+        .select('*, orden:ordenes_trabajo(numero_orden)')
         .order('fecha', { ascending: false })
         .order('creado_en', { ascending: false })
         .order('id');
@@ -132,16 +134,17 @@ export const financeService = {
   },
 
   /** Every import for a sede, so an admin can review and undo one. */
-  getImportBatches: async (sedeId?: string) => {
-    let query = supabase
-      .from('finanzas_importaciones')
-      .select('*')
-      .order('fecha_importacion', { ascending: false });
-    if (sedeId) query = query.eq('sede_id', sedeId);
-    const { data, error } = await query;
-    if (error) throw error;
-    return (data || []) as BankStatementImport[];
-  },
+  // Un lote por estado de cuenta: crece cada mes y una consulta suelta se corta en 1.000 sin avisar.
+  getImportBatches: async (sedeId?: string) =>
+    fetchAll<BankStatementImport>((from, to) => {
+      let query = supabase
+        .from('finanzas_importaciones')
+        .select('*')
+        .order('fecha_importacion', { ascending: false })
+        .order('id');
+      if (sedeId) query = query.eq('sede_id', sedeId);
+      return query.range(from, to);
+    }),
 
   /**
    * El lote y todos sus movimientos en una sola transacción (`importar_estado_cuenta`).

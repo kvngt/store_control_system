@@ -73,6 +73,15 @@ function useFormatters(language: PortalLanguage) {
  * Pensado primero para el teléfono: una columna, lo más importante arriba (en qué
  * va su vehículo), y la multimedia pesada solo cuando la toca.
  */
+/** El personal abre el enlace desde la orden con ?vista=taller (CustomerLinkCard). */
+function isStaffPreview(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get('vista') === 'taller';
+  } catch {
+    return false;
+  }
+}
+
 export default function CustomerPortal({ token }: { token: string | null }) {
   const [language, setLanguage] = useState<PortalLanguage>(initialPortalLanguage);
   const s = portalStrings[language];
@@ -133,8 +142,9 @@ export default function CustomerPortal({ token }: { token: string | null }) {
     const next = language === 'es' ? 'en' : 'es';
     setLanguage(next);
     savePortalLanguage(next);
-    // Y los correos le llegan en ese idioma.
-    if (token) void setLanguagePreference(token, next).catch(() => undefined);
+    // Y los correos le llegan en ese idioma. No si es el personal viendo el enlace desde la orden
+    // (?vista=taller): cambiaba el idioma de los correos del cliente sin que nadie lo notara.
+    if (token && !isStaffPreview()) void setLanguagePreference(token, next).catch(() => undefined);
   };
 
   return (
@@ -315,6 +325,9 @@ function Report({
   // cliente sigue en proceso, con su propio texto ("En revisión final").
   const reviewing = orden.estatus === 'finalizado' && orden.lista_para_entregar === false;
   const shownStatus = reviewing ? 'en_proceso' : orden.estatus;
+  // En espera porque el técnico reportó algo y el taller todavía no manda el presupuesto: no hay nada
+  // que autorizar, y decir "le enviamos un presupuesto" lo mandaba a buscar uno que no existe.
+  const extraWorkReview = orden.estatus === 'espera_autorizacion' && !(report.presupuesto && report.presupuesto.lineas.length > 0);
   const vehicleTitle = [vehiculo.anio, vehiculo.marca, vehiculo.modelo].filter(Boolean).join(' ');
   // La confirmación de una respuesta vive aquí y no en la sección del presupuesto:
   // al responder, el presupuesto desaparece de la página.
@@ -339,6 +352,8 @@ function Report({
             <span className="badge badge-retirada">{s.withdrawnStatus}</span>
           ) : reviewing ? (
             <span className="badge badge-en_proceso">{s.finalReview}</span>
+          ) : extraWorkReview ? (
+            <span className="badge badge-espera_autorizacion">{s.extraWorkReview}</span>
           ) : (
             <span className={`badge badge-${orden.estatus}`}>{s.status[orden.estatus]}</span>
           )}
@@ -358,7 +373,9 @@ function Report({
         ) : (
           <>
             <StatusSteps status={shownStatus} s={s} />
-            <p className="portal-status-hint">{reviewing ? s.finalReviewHint : s.statusHint[orden.estatus]}</p>
+            <p className="portal-status-hint">
+              {reviewing ? s.finalReviewHint : extraWorkReview ? s.extraWorkReviewHint : s.statusHint[orden.estatus]}
+            </p>
           </>
         )}
 

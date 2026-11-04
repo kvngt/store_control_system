@@ -111,6 +111,11 @@ export default function CatalogPickerModal({
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.workOrderDetail(orderId) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.orderJobs(orderId) }),
+        // Lo agregado nace pendiente de autorizar y puede llevar técnico: cambia lo que falta
+        // cotizar, la comisión estimada y la lista de órdenes.
+        queryClient.invalidateQueries({ queryKey: queryKeys.quotes(orderId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.commissionEstimate(orderId) }),
+        queryClient.invalidateQueries({ queryKey: ['work-orders'] }),
       ]);
 
       showToast('success', t('catalog.jobAddedSuccess'));

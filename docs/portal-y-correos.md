@@ -322,8 +322,8 @@ panel: [supabase.md](supabase.md#7-secretos-y-variables).
 npx supabase secrets set RESEND_API_KEY=<llave de solo envío> \
   PUBLIC_SITE_URL=https://restorifyauto.net \
   EMAIL_FROM_ADDRESS=notificaciones@restorifyauto.net
-# Opcional (por defecto America/Chicago): zona horaria de las fechas del correo
-npx supabase secrets set SHOP_TIMEZONE=America/Chicago
+# Opcional (por defecto America/New_York, la del taller en Maryland): zona de las fechas del correo
+npx supabase secrets set SHOP_TIMEZONE=America/New_York
 ```
 
 La llave de Resend **nunca** va en un archivo del repositorio ni en

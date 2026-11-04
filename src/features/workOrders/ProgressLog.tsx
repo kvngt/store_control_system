@@ -80,7 +80,7 @@ export default function ProgressLog({
   dirtyRef.current = note.trim().length > 0 || drafts.length > 0;
 
   useEffect(
-    () => registerGuard(() => !dirtyRef.current || confirm(t('workOrders.confirmDiscardProgress'))),
+    () => registerGuard(() => !dirtyRef.current || confirm(t('workOrders.confirmDiscardProgress')), () => dirtyRef.current),
     [registerGuard, t],
   );
 

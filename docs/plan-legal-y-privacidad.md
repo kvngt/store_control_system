@@ -362,11 +362,11 @@ o evidencia, expandir antes de contraer, `db push` antes del push a `main`.
 
 ### Ajuste de configuración que no espera al plan
 
-Maryland está en la hora del **Este** (`America/New_York`). Los correos usan `SHOP_TIMEZONE`, que
-no está puesto, y su valor por defecto es `America/Chicago` ([supabase.md](supabase.md)): las
-horas de los correos salen una hora atrasadas. Se arregla con
-`npx supabase secrets set SHOP_TIMEZONE=America/New_York` (lo corre la persona responsable). La
-app del navegador ya usa la zona del teléfono o la computadora.
+Maryland está en la hora del **Este** (`America/New_York`). Los correos usan `SHOP_TIMEZONE`.
+**Resuelto:** el secreto se puso el 05/10/2026 ([supabase.md](supabase.md)) y, desde la revisión del
+03/11/2026, el valor por defecto del código también es `America/New_York` (antes era
+`America/Chicago` y, sin el secreto, las horas salían una hora atrasadas). La app del navegador usa
+la zona del teléfono o la computadora.
 
 ## 8. Orden de trabajo
 

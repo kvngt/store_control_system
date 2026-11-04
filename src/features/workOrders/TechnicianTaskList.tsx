@@ -24,7 +24,7 @@ interface TechnicianTaskListProps {
 }
 
 export default function TechnicianTaskList({ items, currentUserId, detail, reportRequest = 0 }: TechnicianTaskListProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { showToast } = useToast();
   const [addingProgressTo, setAddingProgressTo] = useState<LaborItem | null>(null);
   const [initialDrafts, setInitialDrafts] = useState<PreparedMedia[]>([]);
@@ -147,7 +147,7 @@ export default function TechnicianTaskList({ items, currentUserId, detail, repor
                       .slice(0, 3)
                       .map((u) => (
                         <li key={u.id}>
-                          <span className="task-updates-date">{new Date(u.creado_en).toLocaleDateString()}</span>{' '}
+                          <span className="task-updates-date">{new Date(u.creado_en).toLocaleDateString(language === 'es' ? 'es-US' : 'en-US', { day: 'numeric', month: 'short' })}</span>{' '}
                           {u.descripcion || t('workOrders.progressFilesOnly')}
                         </li>
                       ))}
@@ -155,7 +155,8 @@ export default function TechnicianTaskList({ items, currentUserId, detail, repor
                 </div>
               )}
 
-              {approved && (
+              {/* Entregada, o sin permiso de editarla: la base rechaza el reloj, la foto y la marca. */}
+              {approved && detail.canEdit && !detail.isDelivered && (
                 <TaskActions
                   task={task}
                   completed={completed}
@@ -370,8 +371,10 @@ function TaskProgressModal({
   const [note, setNote] = useState('');
   const [drafts, setDrafts] = useState<PreparedMedia[]>(initialDrafts);
   const [isVisible, setIsVisible] = useState(false);
+  // Un video que todavía se comprime no está en drafts: guardar ahí lo perdía sin aviso.
+  const [processing, setProcessing] = useState(false);
 
-  const canSubmit = !saving && (note.trim().length > 0 || drafts.length > 0);
+  const canSubmit = !saving && !processing && (note.trim().length > 0 || drafts.length > 0);
 
   return (
     <div className="modal-overlay" onClick={onCancel}>
@@ -400,7 +403,7 @@ function TaskProgressModal({
           </div>
 
           <DraftMediaStrip items={drafts} onRemove={(index) => setDrafts((prev) => prev.filter((_, i) => i !== index))} />
-          <MediaCaptureBar onAdd={(items) => setDrafts((prev) => [...prev, ...items])} disabled={saving} />
+          <MediaCaptureBar onAdd={(items) => setDrafts((prev) => [...prev, ...items])} disabled={saving} onBusyChange={setProcessing} />
 
           <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
             <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>

@@ -44,8 +44,6 @@ import {
   Mail,
 } from 'lucide-react';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
 export default function Settings() {
   const { t, language, setLanguage } = useLanguage();
   const { theme, setTheme } = useTheme();
@@ -59,10 +57,10 @@ export default function Settings() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  const profileDirty =
-    !!user &&
-    (profileForm.nombre_completo.trim() !== user.nombre_completo ||
-      profileForm.email.trim().toLowerCase() !== (user.email || '').toLowerCase());
+  // El correo no se edita aquí: es el del acceso (Auth) y solo lo cambia update-employee, desde
+  // Empleados. Antes este formulario lo guardaba solo en `perfiles` y la persona seguía entrando
+  // con el correo viejo.
+  const profileDirty = !!user && profileForm.nombre_completo.trim() !== user.nombre_completo;
 
   useEffect(() => {
     if (user) {
@@ -90,28 +88,16 @@ export default function Settings() {
   const handleSaveProfile = async () => {
     if (!user) return;
     const nombre = profileForm.nombre_completo.trim();
-    const email = profileForm.email.trim();
     setProfileError('');
 
     if (!nombre) {
       setProfileError(t('settings.nameRequired'));
       return;
     }
-    if (!EMAIL_RE.test(email)) {
-      setProfileError(t('settings.invalidEmail'));
-      return;
-    }
 
     setSavingProfile(true);
     try {
-      if (email.toLowerCase() !== (user.email || '').toLowerCase()) {
-        const taken = await usersService.isEmailTaken(email, user.id);
-        if (taken) {
-          setProfileError(t('settings.emailTaken'));
-          return;
-        }
-      }
-      await usersService.updateProfile(user.id, { nombre_completo: nombre, email });
+      await usersService.updateProfile(user.id, { nombre_completo: nombre });
       await refreshUser();
       showToast('success', t('settings.profileUpdated'));
     } catch (err) {
@@ -122,11 +108,14 @@ export default function Settings() {
   };
   const queryClient = useQueryClient();
 
-  // Not sede-scoped: this screen manages every workshop and everyone in them.
-  const sedesQuery = useQuery({ queryKey: queryKeys.sedes(), queryFn: () => sedesService.getSedes() });
+  // Not sede-scoped: this screen manages every workshop and everyone in them. Solo la sección de
+  // administración las usa: un técnico no las pide (un fallo de red le pintaba un error ajeno).
+  const isAdmin = user?.rol === 'admin';
+  const sedesQuery = useQuery({ queryKey: queryKeys.sedes(), queryFn: () => sedesService.getSedes(), enabled: isAdmin });
   const usersQuery = useQuery({
     queryKey: queryKeys.users(undefined),
     queryFn: () => usersService.getUsers(),
+    enabled: isAdmin,
   });
 
   const sedes = sedesQuery.data ?? emptyList<Sede>();
@@ -349,7 +338,7 @@ export default function Settings() {
       return;
     }
     if (hourlyRate !== null && (!Number.isFinite(hourlyRate) || hourlyRate < 0)) {
-      setActionError(language === 'es' ? 'La tarifa por hora debe ser un número positivo.' : 'Hourly rate must be a positive number.');
+      setActionError(t('settings.hourlyRateInvalid'));
       return;
     }
     setSavingSedeId(sedeId);
@@ -458,8 +447,12 @@ export default function Settings() {
               className="form-input"
               type="email"
               value={profileForm.email}
-              onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+              readOnly
+              aria-describedby="profile-email-hint"
             />
+            <p id="profile-email-hint" className="field-hint">
+              {t(user?.rol === 'admin' ? 'settings.emailChangeAdmin' : 'settings.emailChangeStaff')}
+            </p>
           </div>
           {profileError && <div className="alert-error">{profileError}</div>}
           <button
@@ -619,7 +612,7 @@ export default function Settings() {
                         </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                        <Users size={14} /> {sedeUsers.length} {language === 'es' ? 'empleados' : 'employees'}
+                        <Users size={14} /> {t('settings.employeesCount').replace('{n}', String(sedeUsers.length))}
                       </div>
                     </div>
 

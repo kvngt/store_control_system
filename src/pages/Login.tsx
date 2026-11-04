@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { supabaseService } from '../services/supabaseService';
@@ -9,12 +9,14 @@ import { ArrowLeft } from 'lucide-react';
 import PasswordInput from '../components/PasswordInput';
 import loginBg from '../assets/login-bg.webp';
 import logo from '../assets/restorify-logo.webp';
-import { STAFF_HOME } from '../lib/staffHome';
+import { afterLoginPath } from '../lib/staffHome';
+import { LANDING_ALIAS } from '../landing/entry';
 
 export default function Login() {
   const { t, language, setLanguage } = useLanguage();
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -33,7 +35,8 @@ export default function Login() {
     setLoading(false);
 
     if (result.success) {
-      navigate(STAFF_HOME);
+      // A la orden que se quería abrir (un correo o un aviso), o al panel.
+      navigate(afterLoginPath(location.state), { replace: true });
     } else {
       setError(getAuthErrorMessage(result.error, language));
     }
@@ -143,8 +146,8 @@ export default function Login() {
             )}
           </form>
 
-          {/* La raíz sin sesión es la página del taller para los clientes (src/landing). */}
-          <a className="login-link" href="/">
+          {/* /home y no /: en la app instalada, la raíz vuelve a abrir la app (este login). */}
+          <a className="login-link" href={LANDING_ALIAS}>
             <ArrowLeft size={14} /> {t('auth.backToSite')}
           </a>
 

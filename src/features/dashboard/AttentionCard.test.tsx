@@ -61,7 +61,7 @@ describe('AttentionCard', () => {
     expect(mocks.getAttention).toHaveBeenCalledWith('sede-1');
     expect(within(card).getByText(/Trabajo adicional por revisar/)).toHaveTextContent('5');
     expect(within(card).getByText(/Tareas sin técnico/)).toHaveTextContent('2');
-    expect(within(card).getByText(/Correos al cliente con error/)).toHaveTextContent('3');
+    expect(within(card).getByText(/Correos con error/)).toHaveTextContent('3');
     expect(within(card).queryByText(/Presupuestos sin respuesta/)).not.toBeInTheDocument();
     expect(within(card).queryByText(/entrega vencida/)).not.toBeInTheDocument();
   });
@@ -76,6 +76,18 @@ describe('AttentionCard', () => {
     expect(within(card).getByText(/Trabajos cotizados sin autorizar/)).toHaveTextContent('2');
     await user.click(within(card).getByRole('button', { name: 'OT-7' }));
     expect(screen.getByTestId('where')).toHaveTextContent('/work-orders?open=o7&tab=trabajos');
+  });
+
+  // 20261010000040: el técnico la pasó a "en proceso" o la terminó sin nada autorizado.
+  it('avisa del trabajo sin nada autorizado y abre Trabajos', async () => {
+    mocks.getAttention.mockResolvedValue({ ...SUMMARY, sin_autorizar: { total: 1, ordenes: [{ id: 'o8', numero_orden: 'OT-8' }] } });
+    const user = userEvent.setup();
+    renderCard();
+
+    const card = await screen.findByRole('region', { name: 'Requiere atención' });
+    expect(within(card).getByText(/sin nada autorizado/)).toHaveTextContent('1');
+    await user.click(within(card).getByRole('button', { name: 'OT-8' }));
+    expect(screen.getByTestId('where')).toHaveTextContent('/work-orders?open=o8&tab=trabajos');
   });
 
   it('nombra tres órdenes y cuenta el resto', async () => {

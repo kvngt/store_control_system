@@ -70,3 +70,37 @@ describe('UnsavedChanges: varios guardias a la vez', () => {
     expect(segundo).not.toHaveBeenCalled();
   });
 });
+
+describe('UnsavedChanges: aviso del navegador al cerrar la pestaña', () => {
+  /** Monta el contexto con un guardia y su revisión, y dispara beforeunload. */
+  function closeTab(isDirty?: () => boolean) {
+    const guard = vi.fn(() => true);
+    function Consumer() {
+      const ctx = useUnsavedChanges();
+      ctx.registerGuard(guard, isDirty);
+      return null;
+    }
+    render(
+      <UnsavedChangesProvider>
+        <Consumer />
+      </UnsavedChangesProvider>,
+    );
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+    return { prevented: event.defaultPrevented, guard };
+  }
+
+  it('con el formulario vacío no pregunta', () => {
+    expect(closeTab(() => false).prevented).toBe(false);
+  });
+
+  it('con algo escrito sí, sin abrir el confirm del guardia', () => {
+    const { prevented, guard } = closeTab(() => true);
+    expect(prevented).toBe(true);
+    expect(guard).not.toHaveBeenCalled();
+  });
+
+  it('un guardia sin revisión cuenta como sucio', () => {
+    expect(closeTab().prevented).toBe(true);
+  });
+});

@@ -306,6 +306,27 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
   estado**, sin importar mayúsculas ni espacios (`uq_vehiculos_vin`, `uq_vehiculos_placa`); un carro sin placa
   no cuenta. Un carro que cambia de dueño se edita, no se vuelve a crear. `getErrorMessage` reconoce las dos
   restricciones y dice qué hacer.
+- **Revisión del 03/11/2026** (`20261010000040`, [bitacora.md](bitacora.md)):
+  - **reescribir una función de varias ramas es copiar TODAS sus ramas:** la `037` reemitió
+    `trg_encolar_traduccion` para sumar `orden_proximo_servicio` y perdió la de `orden_hallazgos`; lo que
+    administración escribía para el cliente no se traducía y nada falló. Antes de dar por buena una
+    reescritura, compárala con la versión vigente (`npm run db:donde`) rama por rama;
+  - **`requiere_atencion` tiene el grupo `sin_autorizar`:** en proceso, en espera o terminada sin ninguna
+    línea `aprobado`. El técnico puede avanzar y terminar una orden sin que nadie autorice (es de diseño),
+    y al entregarla se cobraría $0. Los correos al personal con error cuentan en la sede de la persona;
+  - **las fotos de una inspección publicada son de administración** (`trg_guard_inspeccion_media`, 42501),
+    como sus puntos. En pantalla, el técnico ve la inspección bloqueada (`locked` en `PointInspection`).
+    Las miniaturas se firman con `useSignedUrls`: **una ruta de Storage nunca va directo a un `<img>`**;
+  - **el personal abre el enlace del cliente con `?vista=taller`** (`CustomerLinkCard`): ahí cambiar el
+    idioma no cambia el de los correos del cliente;
+  - **el correo del acceso no se edita en Mi Perfil** (solo lo cambia `update-employee`, desde Empleados);
+  - **las capturas del manual viven en `public/manual/`**, nunca en `public/ayuda/`: una carpeta con el
+    nombre de una ruta de la app hace que el servidor responda 403 al recargar esa ruta;
+  - **al iniciar sesión se vuelve a donde se iba** (`ProtectedRoute` guarda `state.from`, `afterLoginPath`
+    solo acepta rutas propias) y **cerrar sesión es solo en este aparato** (`signOut({ scope: 'local' })`);
+  - **la CLI de Supabase 3.0 rechaza el `config.toml` actual** (`[inbucket]`): para la base local usa
+    `npx supabase@2 …` hasta migrarlo, y **`supabase db reset` borra los datos de demostración locales**
+    (respáldalos antes; ver [pruebas.md](pruebas.md)).
 - **Índices e InitPlan** (`20261010000033`): toda clave foránea nueva lleva su índice, y toda
   llamada a un helper en una política va envuelta en `(SELECT …)`.
 - **Avisos y correos al personal.** El técnico se entera de lo no autorizado (`TechOrderStatus`)
@@ -341,7 +362,7 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
    `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca edites una migración
    ya aplicada ni cambies tablas desde el panel. **El nombre va después de la última
    migración, no de la fecha de hoy:** hay migraciones aplicadas con fecha futura (hoy la
-   última es `20261010000039`), y una con fecha anterior a la última aplicada no entra con
+   última es `20261010000040`), y una con fecha anterior a la última aplicada no entra con
    `db push` ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#4-base-de-datos), B-1).
 2. **Una función nueva en `public` es una RPC pública.** Postgres da `EXECUTE` a
    `PUBLIC` y Supabase a `anon` y `authenticated` al crearla. Revócala siempre:

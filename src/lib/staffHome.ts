@@ -7,3 +7,16 @@
  * public/sw.js repite esta dirección (no puede importar módulos): si cambia, cámbiala allá también.
  */
 export const STAFF_HOME = '/panel';
+
+/**
+ * A dónde volver después de iniciar sesión: la dirección que la persona quería abrir (un correo o un
+ * aviso con /work-orders?open=…) si ProtectedRoute la mandó al login, o el panel. Solo rutas de la
+ * propia app: nada que empiece con // (otro sitio) ni el login otra vez.
+ */
+export function afterLoginPath(state: unknown): string {
+  const from = (state as { from?: unknown } | null)?.from;
+  if (typeof from !== 'string' || !from.startsWith('/') || from.startsWith('//') || from.startsWith('/login')) {
+    return STAFF_HOME;
+  }
+  return from;
+}

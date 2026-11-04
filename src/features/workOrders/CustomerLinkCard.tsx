@@ -144,7 +144,8 @@ export default function CustomerLinkCard({ order, statusLabels }: CustomerLinkCa
           </div>
 
           <div className="customer-link-actions">
-            <a className="btn btn-secondary btn-sm" href={url ?? undefined} target="_blank" rel="noopener noreferrer">
+            {/* ?vista=taller: verlo desde aquí no cambia el idioma de los correos del cliente. */}
+            <a className="btn btn-secondary btn-sm" href={url ? `${url}?vista=taller` : undefined} target="_blank" rel="noopener noreferrer">
               <ExternalLink size={14} /> {t('customerLink.open')}
             </a>
             {sms && (

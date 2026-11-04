@@ -54,6 +54,18 @@ describe('país del teléfono', () => {
     expect(toE164('GT', '5123-4567')).toBe('+50251234567');
   });
 
+  it('no repite el +1: un 1 de larga distancia o un número pegado con su país', () => {
+    expect(toE164('US', '1 (202) 607-6126')).toBe('+12026076126');
+    expect(toE164('US', '+1 (202) 607-6126')).toBe('+12026076126');
+    // Pegado con otro país: manda el país pegado, no el del selector.
+    expect(toE164('US', '+52 55 1234 5678')).toBe('+525512345678');
+    // Fuera del +1, un 1 inicial sí es parte del número.
+    expect(toE164('MX', '1 55 1234 5678')).toBe('+5215512345678');
+    expect(looksIncomplete('US', '1 202 607 6126')).toBe(false);
+    expect(looksIncomplete('US', '+1 202 607 6126')).toBe(false);
+    expect(looksIncomplete('US', '202 607 612')).toBe(true);
+  });
+
   it('sin número no guarda un "+1" suelto', () => {
     // Un "+1" a solas pasaría el "requerido" del formulario sin haber teléfono.
     expect(toE164('US', '')).toBe('');

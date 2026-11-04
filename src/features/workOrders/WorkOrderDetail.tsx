@@ -79,6 +79,8 @@ import QuoteCard from './QuoteCard';
 import OrderHistory from './OrderHistory';
 import ReadyNotifyModal from './ReadyNotifyModal';
 import { isUnassignedTask, suggestedTechnicianFor, suggestedTechnicianId } from './tasks';
+import { assignmentStatus } from './assignmentStatus';
+import type { DamageMark } from '../../lib/vehicleDiagram';
 import SignatureCard from './SignatureCard';
 import MediaCaptureBar from '../media/MediaCaptureBar';
 import MediaGallery from '../media/MediaGallery';
@@ -194,6 +196,20 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, detail.requestedTab]);
 
+  // Las marcas de daños que el admin está poniendo y todavía no guarda. Sin este borrador el
+  // dibujo no respondía: el editor no guarda estado propio y avisa cada cambio por onChange
+  // (revisión del 30/10/2026). Se descarta al cambiar de orden o al guardar bien.
+  const [damageDraft, setDamageDraft] = useState<DamageMark[] | null>(null);
+  useEffect(() => setDamageDraft(null), [orderId]);
+
+  // El recuadro de error vive arriba de la orden: en el teléfono, quien tacha una tarea o guarda un
+  // avance al fondo de la página no lo ve y el botón parece no hacer nada. También sale como aviso.
+  const actionError = detail.error;
+  useEffect(() => {
+    if (actionError) showToast('error', t('common.error'), actionError);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actionError]);
+
   if (!order) return null;
 
   const selectTab = (id: string) => {
@@ -253,6 +269,11 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   // Trabajos de antes de la comisión por tarea, sin técnico: se reparten por especialidad entre
   // los asignados a mano (origen 'manual'). Solo entonces importa quién está "en el reparto".
   const hasInheritedLines = laborList.some((l) => !l.asignado_a && l.reparto_heredado !== false && l.estado !== 'rechazado');
+
+  const saveDamageMarks = async (marks: DamageMark[]) => {
+    await detail.updateDamageMarks(marks);
+    setDamageDraft(null);
+  };
 
   const addOperator = async () => {
     const op = operators.find((o) => o.id === addingOperatorId);
@@ -434,11 +455,12 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
 
         <div style={{ marginBottom: 'var(--space-4)' }}>
           <DamageDiagramEditor
-            marks={order.marcas_danos || []}
+            marks={damageDraft ?? order.marcas_danos ?? []}
             editable={detail.isAdmin && !order.firma_ruta}
             isLocked={Boolean(order.firma_ruta)}
             isSaving={detail.savingDamageMarks}
-            onSave={detail.updateDamageMarks}
+            onChange={setDamageDraft}
+            onSave={(marks) => saveDamageMarks(marks).catch(() => undefined)}
           />
         </div>
 
@@ -524,6 +546,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         items={laborList}
         orderId={order.id}
         orderSedeId={order.sede_id}
+        catalogAllowed={!detail.isDelivered}
         assignments={assignments}
         trabajos={order.trabajos}
         workType={order.tipo_trabajo}
@@ -704,7 +727,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
               <div>
                 <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>{a.usuario?.nombre_completo}</div>
                 <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
-                  {a.tipo_tarea === 'mecanica' ? t('workOrders.mechanical') : t('workOrders.painting')} · {t(`workOrders.status.${a.estatus_tarea}`)}
+                  {a.tipo_tarea === 'mecanica' ? t('workOrders.mechanical') : t('workOrders.painting')} · {t(`workOrders.status.${assignmentStatus(order.estatus, laborList, a.usuario_id)}`)}
                 </span>
                 {/* Quien entró por una tarea cobra solo sus tareas; quien se asignó a mano entra
                     además al reparto de los trabajos anteriores sin técnico (20261010000006). */}

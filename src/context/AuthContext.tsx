@@ -73,7 +73,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [forgetCachedData]);
 
   const refreshSedes = useCallback(async () => {
-    const { data: sedes } = await supabase.from('sedes').select('*').order('nombre');
+    const { data: sedes, error } = await supabase.from('sedes').select('*').order('nombre');
+    // Una relectura que falla (sin red) no es "no hay sedes": se conserva lo que había, como en
+    // loadProfileAndSedes. Antes dejaba el selector vacío y la sede actual en null (regla 10).
+    if (error) return;
     const sedesList = (sedes || []) as Sede[];
     setAllSedes(sedesList);
     setCurrentSedeState((prev) =>
@@ -150,7 +153,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut();
+    // Solo en este aparato: sin `scope: 'local'`, supabase-js cierra la sesión de la persona en
+    // todos lados (su teléfono, la app instalada) y, al llegar SIGNED_OUT allá, se borra el
+    // borrador del alta guardado en ese teléfono. El manual pide cerrar sesión en la tablet
+    // compartida; eso no debe sacarla de su propio teléfono (revisión del 30/10/2026).
+    await supabase.auth.signOut({ scope: 'local' });
     localStorage.removeItem('restorify_sede_id');
     setPasswordRecovery(false);
     forgetCachedData();

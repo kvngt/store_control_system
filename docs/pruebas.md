@@ -23,8 +23,8 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 1.076 pruebas, 140 archivos (19/10/2026) | ~30 s | Nada |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención", teléfonos de la sede, trabajo con seguro, cobro por parqueo, próximo servicio, autorización en recepción, marcas de daños, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, unicidad de VIN/placa y los hallazgos de la auditoría y del QA contra un Postgres real | 1.053 pruebas, 43 archivos (19/10/2026) | ~1 min | Docker |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 1.128 pruebas, 148 archivos (03/11/2026) | ~30 s | Nada |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención", teléfonos de la sede, trabajo con seguro, cobro por parqueo, próximo servicio, autorización en recepción, marcas de daños, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, unicidad de VIN/placa, la revisión del 03/11 (`sin_autorizar`, fotos de una inspección publicada, traducciones) y los hallazgos de la auditoría y del QA contra un Postgres real | 1.076 pruebas, 44 archivos (03/11/2026) | ~1 min | Docker |
 | **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, 77 casos (76 pasan, 1 se salta) | 2–5 min | Credenciales de prueba (**al 1/10/2026 no existen**: se borraron el 29/09) |
 | **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 202 casos (171 PASS + 31 SKIP al 19/10/2026), todos de solo lectura (los que escriben, escriben el valor que ya hay) | ~15 s | Nada; con cuentas de prueba cubre más |
 | **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
@@ -471,7 +471,7 @@ Las decisiones del taller del 05/10/2026 ([analisis-del-proceso-2026-10.md](hist
 
 - Unicidad de VIN (`uq_vehiculos_vin`) y de placa por estado (`uq_vehiculos_placa`) en `vehiculos` (`20261010000039`), ignorando mayúsculas, espacios y guiones.
 
-> **Estado (19 de octubre de 2026):** 1.053 pruebas en verde en los 43 archivos, con las 93 migraciones aplicadas desde cero (hasta `20261010000039_vehiculos_vin_y_placa_unicos`).
+> **Estado (3 de noviembre de 2026):** 1.076 pruebas en verde en los 44 archivos, con las 94 migraciones aplicadas desde cero (hasta `20261010000040_arreglos_revision_2026_11`). Se corrió con `npx supabase@2 test db --db-url <la base local>`: la CLI 3.0 rechaza el `[inbucket]` del `config.toml`. **Las pruebas viejas suponen una base vacía**: con los datos de demostración cargados fallan seis archivos (05, 08, 19, 26, 27 y 30) por `more than one row`; respalda los datos, haz `db reset` y vuelve a cargarlos.
 >
 > **Estado (11 de octubre de 2026):** 811 aserciones en verde en los 33 archivos, desde una
 > base vacía (de la 31 a la 33: teléfonos con tipo y WhatsApp, trabajo con seguro y cobro por

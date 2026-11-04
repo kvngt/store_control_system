@@ -140,7 +140,7 @@ egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
 |---|---|
 | Pantalla | `pages/Dashboard.tsx` |
 | Servicio | `dashboard.service.ts` → RPC `resumen_panel` (SECURITY INVOKER: un técnico recibe solo lo suyo) |
-| Requiere atención (admin, F7) | `features/dashboard/AttentionCard.tsx` → `dashboardService.getAttention` → RPC `requiere_atencion` (`20261010000012`): hallazgos sin decidir, presupuestos sin respuesta, tareas sin técnico, órdenes vencidas y correos con error, contados en la base, con las primeras órdenes de cada grupo |
+| Requiere atención (admin, F7) | `features/dashboard/AttentionCard.tsx` → `dashboardService.getAttention` → RPC `requiere_atencion` (`20261010000012`; vigente en `20261010000040`): hallazgos sin decidir, lo cotizado sin autorizar, trabajo en proceso o terminado sin nada autorizado (`sin_autorizar`), presupuestos sin respuesta, tareas sin técnico, terminadas por revisar, sugerencias de próximo servicio, órdenes vencidas y correos con error (los del personal, en la sede de la persona), contados en la base, con las primeras órdenes de cada grupo |
 | Mis tareas (técnico, F7) | `features/dashboard/MyTasksCard.tsx` → `workOrdersService.getMyTasks` (sus líneas de `orden_labor` en órdenes sin entregar) |
 | Pruebas | `services/dashboard.service.test.ts`, `features/dashboard/*.test.tsx`; pgTAP `08`, `10`, `23` |
 
@@ -250,8 +250,8 @@ La ven los clientes en la raíz (sin sesión del personal) y en `/home`. Paquete
 | Módulo | `features/inspection/PointInspection.tsx` (lista multipunto en el detalle de la orden), `features/inspection/InspectionTemplatesCard.tsx` y `features/inspection/InspectionTemplateModal.tsx` (plantillas por sede en Configuración) |
 | Servicio y tipos | `services/inspection.service.ts`, `types/domain/inspection.types.ts` |
 | Portal y PDF | `portal/CustomerPortal.tsx` (sección de inspección publicada con semáforo y fotos por punto), `lib/workOrderPdf.ts` |
-| Base | Tablas `inspeccion_plantillas`, `inspeccion_plantilla_puntos`, `orden_inspecciones`, `orden_inspeccion_puntos` (y `orden_media.inspeccion_punto_id`); trigger `trg_sede_sembrar_inspeccion`; RPCs `iniciar_inspeccion`, `marcar_punto_inspeccion`, `completar_inspeccion`, `publicar_inspeccion`, `plantillas_inspeccion`, `guardar_plantilla_inspeccion`, `borrar_plantilla_inspeccion` |
-| Pruebas | `services/inspection.service.test.ts`, `features/inspection/PointInspection.test.tsx`, `features/inspection/InspectionTemplatesCard.test.tsx`; pgTAP `39_inspeccion_por_puntos.test.sql`, `41_arreglos_del_qa.test.sql` |
+| Base | Tablas `inspeccion_plantillas`, `inspeccion_plantilla_puntos`, `orden_inspecciones`, `orden_inspeccion_puntos` (y `orden_media.inspeccion_punto_id`); triggers `trg_sede_sembrar_inspeccion` y `trg_guard_inspeccion_media` (publicada, sus fotos solo las cambia administración, `20261010000040`); RPCs `iniciar_inspeccion`, `marcar_punto_inspeccion`, `completar_inspeccion`, `publicar_inspeccion`, `plantillas_inspeccion`, `guardar_plantilla_inspeccion`, `borrar_plantilla_inspeccion` |
+| Pruebas | `services/inspection.service.test.ts`, `features/inspection/PointInspection.test.tsx`, `features/inspection/InspectionTemplatesCard.test.tsx`; pgTAP `39_inspeccion_por_puntos.test.sql`, `41_arreglos_del_qa.test.sql`, `44_revision_2026_11.test.sql` |
 
 ## Reloj, horas e indicadores del taller (`20261010000036`, `037`)
 
@@ -279,7 +279,7 @@ La ven los clientes en la raíz (sin sesión del personal) y en `/home`. Paquete
 |---|---|
 | Pantalla | `pages/Help.tsx` (ruta `/ayuda`; `/help` redirige), en el menú bajo «Sistema». Pinta el manual con `features/help/ManualContent.tsx` (elementos de React, sin HTML crudo) y lo prepara con `features/help/helpDoc.ts`: quita la nota del editor y el índice, deja las secciones del rol y arma el índice y la búsqueda |
 | Texto | [manual-usuario.md](manual-usuario.md) y [manual-usuario.en.md](manual-usuario.en.md): la app los importa como texto (`?raw`), así que se editan ahí. Una marca `<!-- rol: admin -->` o `<!-- rol: tecnico -->` debajo de un título esconde esa sección al otro rol. Si cambias una pantalla, pon al día los dos idiomas |
-| Capturas | `public/ayuda/es/` y `public/ayuda/en/` (WebP, datos inventados de una copia local, nunca de producción) |
+| Capturas | `public/manual/es/` y `public/manual/en/` (WebP, datos inventados de una copia local, nunca de producción) |
 | Pruebas | `features/help/helpDoc.test.ts`: filtro por rol, búsqueda, que cada imagen exista y que los dos manuales tengan la misma estructura (títulos, marcas e imágenes en el mismo orden) |
 | Base | Ninguna: esconder una sección del manual no es un permiso |
 

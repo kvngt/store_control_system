@@ -465,6 +465,9 @@ const CASES = [
   anon({ id: 'SEC-205', desc: 'Sin sesión no se consultan los indicadores del taller', method: 'POST', path: () => rpc('indicadores_taller'), body: { p_sede_id: ZERO_UUID, p_desde: '2026-10-01', p_hasta: '2026-10-31' }, expect: 'denied' }),
   admin({ id: 'SEC-206', desc: 'Ni un admin llama el tope interno del reloj como RPC', method: 'POST', path: () => rpc('_reloj_tope'), body: {}, expect: 'denied' }),
   admin({ id: 'SEC-207', desc: 'Ni un admin llama el trigger de origen de finanzas como RPC', method: 'POST', path: () => rpc('trg_finanzas_origen'), body: {}, expect: 'denied' }),
+  // Revisión del 03/11/2026 (20261010000040).
+  // (requiere_atencion, con su grupo nuevo, ya lo cubren SEC-113 y SEC-114.)
+  admin({ id: 'SEC-208', desc: 'Ni un admin llama el guardia de fotos de una inspección publicada como RPC', method: 'POST', path: () => rpc('trg_guard_inspeccion_media'), body: {}, expect: 'denied' }),
 ];
 
 function evaluate(expect, r) {

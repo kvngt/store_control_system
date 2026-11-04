@@ -32,6 +32,7 @@
 | Plan SaaS 17/10 | Comparación con los programas de pago de 2026, auditoría con skills (Supabase, Vercel, Trail of Bits) y plan por fases: cimientos, mensajes SMS, cobro con enlace, trabajos agrupados, inspección por puntos, citas, indicadores y plataforma para vender | **Decidido: solo Restorify, sin SMS.** Se programó la fase 0, la 1.1, la 1.4 y la parte de la fase 3 de abajo. [plan](plan-saas-2026-10.md) |
 | Plan 17/10 (G–M) | Fase 0 (`033`), trabajos agrupados y catálogo (`034`), inspección por puntos (`035`), horas, reloj e indicadores (`036`) | **Publicado** (verificado el 21/10/2026: `db:check` con 93 migraciones aplicadas). Gemini programó y Claude verificó y corrigió: `test:db` 40/1000 ✓, Vitest, lint, `tsc` y build ✓, y capturas. Orden de publicación en la [bitácora](#17102026--claude-code-plan-del-1710-fase-0-trabajos-y-catálogo-inspección-por-puntos-horas-reloj-e-indicadores) |
 | Página de inicio 26–27/10 | restorifyauto.net para los clientes, hecha con la tarjeta del taller (sus letras y su chevrón), su orden de trabajo y fotos reales: portada, trabajos, «¿Qué necesita su carro?», seguros, estudio de color en 3D, simulador del enlace del cliente, reseña, visítenos; bilingüe | **Hecho, sin commit ni publicar** (sin migración ni funciones). Antes de publicar, confirmar con el taller lo que dice la página. Ver la [bitácora](#27102026--claude-code-la-página-de-inicio-hecha-con-la-tarjeta-la-orden-de-trabajo-y-fotos-reales) |
+| Revisión 30/10–03/11 | Revisión completa del proyecto con seguimiento de las órdenes reales: ~30 errores de la app arreglados, migración `040` (traducciones, grupo «sin nada autorizado», fotos de una inspección publicada, indicadores, sticker, reloj), `delete-employee` más estricto, zona horaria de Maryland por defecto, `/ayuda` sin 403, documentación y Ayuda al día | **Hecho, sin commit ni publicar.** Orden de publicación y decisiones para el dueño en la [bitácora](#03112026--claude-code-revisión-completa-seguimiento-de-las-órdenes-reales-errores-docs-y-ayuda) |
 | QA 18–19/10 | Dos rondas de QA (migraciones `037` y `038`), VIN y placa únicos (`039`) y el alta que no se pierde con «atrás» | **Publicado** el 19/10/2026: commits `dda612f`, `80e345b`, `9c4b843` y `aaed9dc` en `main`; `db push` de la `038` y de la `039` (`db:check`: 93 migraciones aplicadas); `functions deploy` de `process-outbox` (sin verificación de JWT), `create-employee`, `update-employee` y `delete-employee`. `qa:security` contra producción: 171 PASS, 0 FAIL, 31 SKIP. Detalle en [qa-2026-10-18.md](qa-2026-10-18.md) y la [bitácora](#21102026--claude-code-publicación-de-la-qa-del-1819-y-qué-queda-pendiente) |
 
 Nada se publica sin que la persona responsable lo pida: cada `db push`, `functions deploy`,
@@ -50,6 +51,126 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 03/11/2026 — Claude Code (revisión completa: seguimiento de las órdenes reales, errores, docs y Ayuda)
+
+- **Pedido:** revisar el proyecto completo en busca de errores, seguir los movimientos de las órdenes reales,
+  poner al día `docs/` y la Ayuda, con Gemini 3.8 Flash como apoyo («una plataforma profesional para este
+  cliente»).
+- **Cómo:** Claude coordinó y verificó. Gemini 3.8 Flash (`agy`, modo de solo lectura, sobre una copia del
+  código) revisó órdenes, dinero y personal (G1 a G3), redactó la migración `040` y cruzó la documentación
+  contra el código. Unos agentes de Claude revisaron otras partes hasta que se acabó el límite de uso. **Cada
+  hallazgo se comprobó en el código antes de tocar nada**; los que no se sostuvieron están abajo.
+- **Las órdenes reales** (consultas de solo lectura, sin datos del cliente fuera de la base):
+  - el dinero cuadra en todas;
+  - **ORD-2026-005 y ORD-2026-010 están terminadas sin nada autorizado:** el técnico puede pasar una orden a
+    «en proceso» y terminarla sin que nadie autorice (es de diseño), y al entregarlas se cobraría $0. De ahí
+    sale el grupo nuevo de «Requiere atención»;
+  - borrar una orden entregada borra su dinero; el `confirm` lo avisa, así que quedó como decisión (abajo);
+  - todavía no hay hallazgos con texto para el cliente ni inspecciones publicadas, así que los dos errores
+    de traducción de abajo no le llegaron a ningún cliente.
+- **Arreglado en la app:**
+  - **las fotos de la inspección por puntos no se veían:** la ruta privada iba directo al `<img>`; ahora se
+    firman con `useSignedUrls`;
+  - **marcar daños en el dibujo no hacía nada:** el editor no tenía `onChange`; ahora lleva un borrador hasta
+    guardar;
+  - el estado de cada técnico asignado sale de sus tareas (`assignmentStatus`; `estatus_tarea` siempre decía
+    «pendiente»), y se quitó `updateAssignmentStatus`, que nadie usaba;
+  - **recargar `/ayuda` en producción daba 403:** la carpeta `public/ayuda` tapaba la ruta. Las capturas
+    pasaron a `public/manual/` (lo vigila `helpDoc.test.ts`);
+  - al entrar se vuelve a la orden que se quería abrir (`afterLoginPath`), cerrar sesión cierra solo este
+    aparato, el enlace «Ir a la página del taller» va a `/home` y un fallo al recargar las sedes ya no las
+    vacía;
+  - **Mi Perfil ya no edita el correo:** lo guardaba en el perfil y no en el acceso, así que la persona seguía
+    entrando con el viejo. Se cambia en Empleados, que también cambia el acceso (el manual ya lo decía así);
+  - un teléfono pegado con «+1» o escrito «1 202…» ya no queda con el +1 dos veces;
+  - el alta conserva el trabajo (`grupo`) de una línea editada; «Anterior» y los pasos de arriba avisan de un
+    trabajo escrito sin agregar, como «Siguiente»;
+  - guardar un avance mientras se procesa un video ya no lo pierde;
+  - el técnico ya no ve sus botones de tarea en una orden entregada, y un error al tachar una tarea sale
+    también como aviso (el recuadro quedaba arriba de la página);
+  - «Desde catálogo» no sale en una orden entregada (la base lo rechaza), y agregar del catálogo refresca el
+    presupuesto, la comisión estimada y la lista;
+  - reloj (`LaborTimesModal`): errores traducidos, una fecha a medio escribir ya no revienta, textos en i18n;
+  - la búsqueda y la campana distinguen «sin red» de «no hay nada»;
+  - **el enlace del cliente decía «Le enviamos un presupuesto» en espera aunque no hubiera ninguno:** ahora,
+    sin presupuesto enviado, dice «Revisando un trabajo adicional» (el PDF dice «Esperando autorización»);
+  - **abrir el enlace del cliente desde la orden y cambiar el idioma cambiaba el de sus correos:** «Abrir»
+    lleva `?vista=taller` y ahí el idioma no se guarda;
+  - el aviso del navegador al cerrar la pestaña sale solo si hay algo escrito;
+  - el PDF traduce aunque la descripción tenga espacios de más;
+  - Finanzas: el preview de la importación y los saldos de Nómina suman en centavos (`sumMoney`); el CSV del
+    contador trae el número de orden aunque la orden sea vieja o esté archivada (viene con el movimiento);
+    los lotes de importación se leen con `fetchAll`;
+  - Configuración no pide sedes ni personal para un técnico; la fila vacía de Nómina ocupa sus 8 columnas;
+    textos que faltaban en i18n (tarifa por hora, «N empleados», «Día N» del parqueo, «Sede:» de los
+    indicadores); fechas de los avances en el idioma de la app;
+  - la inspección publicada queda bloqueada para el técnico en pantalla, con un aviso (la base ya le
+    rechazaba las marcas desde la `037`; ahora también las fotos).
+- **Migración `20261010000040_arreglos_revision_2026_11`** (borrador de Gemini comparado función por función
+  contra la vigente; se quitaron un filtro de archivo redundante y una reescritura innecesaria):
+  - `trg_encolar_traduccion` recupera la rama de `orden_hallazgos` que perdió la `037`: lo que administración
+    escribía para el cliente nunca se encolaba para traducir;
+  - `_textos_cliente` suma la sección de los puntos de inspección (el portal ya la traducía, pero nunca llegaba
+    al diccionario);
+  - `requiere_atencion`: grupo `sin_autorizar` y los correos del personal con error en su sede;
+  - `indicadores_taller`: las tareas completadas cuentan solo las autorizadas;
+  - `datos_servicio`: la traducción de la nota es la del idioma del sticker;
+  - `corregir_tiempo`: dos relojes abiertos de la misma persona dan una frase, no el 23505;
+  - `trg_guard_inspeccion_media` (nueva): las fotos de una inspección publicada solo las cambia administración;
+  - `REVOKE` explícito de `trg_set_numero_orden` (no era un hueco: `CREATE OR REPLACE` conserva los permisos);
+  - pgTAP `44_revision_2026_11` (21 aserciones) y la `23` con la forma nueva; SEC-208 en `qa:security`.
+- **Edge functions (código, sin desplegar):** `delete-employee` responde 404 si el empleado no existe y 409 si
+  tiene tareas asignadas o horas de reloj (las tareas quedaban sin técnico y su reloj se borraba);
+  `process-outbox` y las plantillas usan `America/New_York` por defecto (antes Chicago; el secreto
+  `SHOP_TIMEZONE` ya estaba puesto, así que en producción no cambia nada).
+- **Descartado con prueba:**
+  - «el portal da 500 con el nombre vacío»: la RPC responde `nombre_requerido`;
+  - «el salario no se valida»: ya se valida, y dejarlo vacío es una decisión abierta
+    ([pagos-a-empleados.md](pagos-a-empleados.md));
+  - «`trg_set_numero_orden` está expuesta»: ver arriba;
+  - «`iniciar_reloj` de un admin queda a su nombre»: es de diseño, documentado en el QA del 18/10;
+  - el `colSpan` de la segunda tabla de Nómina ya era correcto.
+- **Documentación y Ayuda:**
+  - `ai-context.md` (bloque «Revisión del 03/11/2026»), `AGENTS.md` (última migración `040`),
+    `mapa-de-secciones.md`, `plan-de-pruebas.md` §7 (12 regresiones nuevas), `pruebas.md`, `radiografia.md`,
+    `supabase.md`, `mantenimiento.md`, `deployment.md`, `portal-y-correos.md`, `plan-legal-y-privacidad.md`
+    (zona horaria) y `arquitectura.md`/`planos.md` (nombre de la próxima migración);
+  - los dos manuales, con la misma estructura: volver a la orden al entrar, cerrar sesión por aparato, el
+    grupo nuevo de «Requiere atención», «Correos con error» (incluye los del personal), la inspección
+    publicada bloqueada para el técnico, «Revisando un trabajo adicional» y «Abrir» sin cambiar el idioma
+    del cliente;
+  - Gemini cruzó lo nuevo de la documentación contra el código: 13 de 15 afirmaciones confirmadas. Sus dos
+    «falsas» (que no existían `public/manual` ni esta entrada) venían de su copia, sincronizada antes de esos
+    cambios. Lo válido: la regresión de las miniaturas de la inspección no tenía prueba; ya la tiene
+    (`PointInspection.test.tsx`).
+- **Verificado:**
+  - `npm run lint`, `npx tsc -b`, `npm test` (148 archivos, 1.128 pruebas) y `npm run build`;
+  - `test:db` 44/1.076 en una base local recién reseteada.
+  - **Ojo con la base local:**
+    - la CLI 3.0 de Supabase (la que baja `npx supabase`) ya no acepta el `[inbucket]` del `config.toml`;
+      se usó `npx supabase@2 … --db-url postgresql://postgres:postgres@127.0.0.1:44322/postgres?sslmode=disable`
+      (el contenedor de esta máquina escucha en 44322);
+    - con los datos de demostración cargados, seis archivos viejos fallan por `more than one row`. Se
+      respaldaron, se hizo `db reset`, se corrieron las pruebas y se volvieron a cargar: las 40 tablas con
+      datos coinciden, y la base local ya tiene la `040`.
+- **Para publicar (lo pide la persona responsable), en este orden:**
+  1. `npx supabase@2 db push` de la `040`;
+  2. `npx supabase@2 functions deploy delete-employee process-outbox`;
+  3. commit y push a `main`, **después** del `db push` (si no, `SchemaDriftBanner` avisa que la base va
+     atrasada y el panel pide un grupo que no existe; la tarjeta lo tolera);
+  4. `npm run qa:security` (SEC-208 nueva).
+- **Decisiones para el dueño:**
+  - ¿el técnico puede seguir empezando y terminando órdenes sin autorización (ahora la oficina lo ve en
+    «Requiere atención»), o se bloquea? Mientras, revisar ORD-2026-005 y ORD-2026-010 antes de entregarlas;
+  - ¿borrar una orden entregada (y su dinero), o solo archivarla?;
+  - la página del taller: ¿se muestra el cobro de $100 del diagnóstico?, el emblema de Ferrari que sale en el
+    video, y el video original de 7,1 MB que ya no se usa (se puede borrar del repositorio).
+- **Quedó pendiente (no se hizo):**
+  - el correo `presupuesto_confirmacion` sale antes de que termine la traducción;
+  - una subida que termina después de entregar la orden falla sin un mensaje claro;
+  - la trampa del botón «atrás» en los diálogos del técnico (avance, hallazgo);
+  - migrar `supabase/config.toml` a la CLI 3.0 (`[local_smtp]`).
 
 ### 28/10/2026 — Claude Code (la raíz siempre es la página del taller; revisión responsiva con Gemini)
 

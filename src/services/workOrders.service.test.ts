@@ -103,7 +103,6 @@ describe('workOrdersService: borrar líneas y asignaciones', () => {
 const escritores: [string, () => Promise<unknown>, string][] = [
   ['updateWorkOrderStatus', () => workOrdersService.updateWorkOrderStatus('o1', 'en_proceso'), 'ordenes_trabajo'],
   ['updateWorkOrderProgress', () => workOrdersService.updateWorkOrderProgress('o1', 50), 'ordenes_trabajo'],
-  ['updateAssignmentStatus', () => workOrdersService.updateAssignmentStatus('a1', 'en_curso'), 'orden_asignaciones'],
   ['setProgressVisibility', () => workOrdersService.setProgressVisibility('v1', true), 'orden_avances'],
 ];
 

@@ -24,7 +24,7 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const { items, unreadCount, loading, markRead, markAllRead, remove, removeAll } = useNotifications({
+  const { items, unreadCount, loading, failed, markRead, markAllRead, remove, removeAll } = useNotifications({
     onArrive: (notification) => {
       const { title, body } = renderNotification(notification, t);
       showToast('success', title, body);
@@ -114,6 +114,8 @@ export default function NotificationBell() {
 
           {loading ? (
             <div className="search-dropdown-empty">{t('common.loading')}</div>
+          ) : failed ? (
+            <div className="search-dropdown-empty" role="alert">{t('notifications.loadError')}</div>
           ) : items.length === 0 ? (
             <div className="search-dropdown-empty">{t('notifications.empty')}</div>
           ) : (

@@ -186,7 +186,7 @@ SELECT is((SELECT v FROM t_res WHERE k = 'sur') - 'hallazgos',
   '{"presupuestos": {"total": 0, "ordenes": []}, "sin_tecnico": {"total": 0, "ordenes": []},
     "vencidas": {"total": 0, "ordenes": []}, "por_revisar": {"total": 0, "ordenes": []},
     "por_autorizar": {"total": 0, "ordenes": []}, "sugerencias_servicio": {"total": 0, "ordenes": []},
-    "correos": {"total": 1}}'::jsonb,
+    "sin_autorizar": {"total": 0, "ordenes": []}, "correos": {"total": 1}}'::jsonb,
   'Los grupos vacíos llegan en cero, con la misma forma');
 SELECT is((SELECT pg_temp.numeros(v->'hallazgos') FROM t_res WHERE k = 'sur'), pg_temp.de(ARRAY[6]),
   'Y la otra sede ve solo lo suyo');

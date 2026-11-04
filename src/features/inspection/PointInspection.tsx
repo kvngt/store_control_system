@@ -19,6 +19,7 @@ import { inspectionService } from '../../services/inspection.service';
 import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';
 import { prepareMediaFile } from '../media/prepareMedia';
+import { useSignedUrls } from '../media/useSignedUrls';
 import CatalogPickerModal from '../catalog/CatalogPickerModal';
 import type {
   InspectionPoint,
@@ -95,11 +96,20 @@ export default function PointInspection({
     return Array.from(map.entries()).map(([seccion, items]) => ({ seccion, items }));
   }, [puntos]);
 
+  // Las fotos viven en un bucket privado: la ruta sola no abre en el navegador, se firma como en
+  // MediaGallery (solo la miniatura, o la foto si no tiene).
+  const { urls: signedUrls } = useSignedUrls(
+    media.filter((m) => m.inspeccion_punto_id).map((m) => m.ruta_miniatura || (m.tipo === 'foto' ? m.ruta : null))
+  );
+
   const totalPoints = puntos.length;
   const reviewedPoints = puntos.filter((p) => p.estado !== 'pendiente').length;
   const pendingPoints = totalPoints - reviewedPoints;
   const isFinished = Boolean(inspection?.completada_en);
   const isPublished = Boolean(inspection?.publicada_en);
+  // Publicada, lo que ve el cliente solo lo cambia administración: la base rechaza la marca
+  // (marcar_punto_inspeccion) y la foto (trg_guard_inspeccion_media) del técnico.
+  const locked = !canEdit || isDelivered || (isPublished && !isAdmin);
 
   const handleStartInspection = async () => {
     setStarting(true);
@@ -115,7 +125,7 @@ export default function PointInspection({
   };
 
   const handleMarkPoint = async (point: InspectionPoint, targetState: InspectionPointState) => {
-    if (!canEdit || isDelivered) return;
+    if (locked) return;
     // Si se toca el estado actual, se revierte a 'pendiente'
     const nextState: InspectionPointState = point.estado === targetState ? 'pendiente' : targetState;
 
@@ -138,6 +148,7 @@ export default function PointInspection({
   };
 
   const handleOpenNote = (point: InspectionPoint) => {
+    if (locked) return;
     if (editingNoteId === point.id) {
       setEditingNoteId(null);
     } else {
@@ -294,6 +305,8 @@ export default function PointInspection({
         </div>
       </div>
 
+      {isPublished && !isAdmin && <p className="field-hint">{t('inspection.publishedLockedHint')}</p>}
+
       <div className="inspection-progress-bar">
         <div className="inspection-progress-fill" style={{ width: `${progressPercent}%` }} />
       </div>
@@ -319,7 +332,7 @@ export default function PointInspection({
                       type="button"
                       className={`inspection-btn is-bien ${point.estado === 'bien' ? 'is-active' : ''}`}
                       onClick={() => handleMarkPoint(point, 'bien')}
-                      disabled={!canEdit || isDelivered}
+                      disabled={locked}
                       title={t('inspection.states.bien')}
                       aria-pressed={point.estado === 'bien'}
                     >
@@ -331,7 +344,7 @@ export default function PointInspection({
                       type="button"
                       className={`inspection-btn is-atencion ${point.estado === 'atencion' ? 'is-active' : ''}`}
                       onClick={() => handleMarkPoint(point, 'atencion')}
-                      disabled={!canEdit || isDelivered}
+                      disabled={locked}
                       title={t('inspection.states.atencion')}
                       aria-pressed={point.estado === 'atencion'}
                     >
@@ -343,7 +356,7 @@ export default function PointInspection({
                       type="button"
                       className={`inspection-btn is-urgente ${point.estado === 'urgente' ? 'is-active' : ''}`}
                       onClick={() => handleMarkPoint(point, 'urgente')}
-                      disabled={!canEdit || isDelivered}
+                      disabled={locked}
                       title={t('inspection.states.urgente')}
                       aria-pressed={point.estado === 'urgente'}
                     >
@@ -355,7 +368,7 @@ export default function PointInspection({
                       type="button"
                       className={`inspection-btn is-na ${point.estado === 'no_aplica' ? 'is-active' : ''}`}
                       onClick={() => handleMarkPoint(point, 'no_aplica')}
-                      disabled={!canEdit || isDelivered}
+                      disabled={locked}
                       title={t('inspection.states.no_aplica')}
                       aria-pressed={point.estado === 'no_aplica'}
                     >
@@ -376,7 +389,7 @@ export default function PointInspection({
                       type="button"
                       className="inspection-icon-btn"
                       onClick={() => handleTriggerPhoto(point.id)}
-                      disabled={!canEdit || isDelivered}
+                      disabled={locked}
                       title={t('inspection.takePhoto')}
                       aria-label={t('inspection.takePhoto')}
                     >
@@ -432,14 +445,14 @@ export default function PointInspection({
                 {/* Miniaturas de fotos del punto */}
                 {hasMedia && (
                   <div className="inspection-point-media">
-                    {pointMedia.map((m) => (
-                      <img
-                        key={m.id}
-                        src={m.ruta_miniatura || m.ruta}
-                        alt={point.nombre}
-                        className="inspection-thumb"
-                      />
-                    ))}
+                    {pointMedia.map((m) => {
+                      const src = signedUrls[m.ruta_miniatura || m.ruta];
+                      return src ? (
+                        <img key={m.id} src={src} alt={point.nombre} className="inspection-thumb" loading="lazy" />
+                      ) : (
+                        <div key={m.id} className="inspection-thumb" aria-label={point.nombre} />
+                      );
+                    })}
                     {pointPending.map((p) => (
                       <div
                         key={p.id}
@@ -460,7 +473,8 @@ export default function PointInspection({
                 )}
 
                 {/* Acciones de administración en inspección terminada para puntos de atención o urgente */}
-                {isAdmin && isFinished && needsAction && (
+                {/* Una orden entregada ya no recibe trabajo (agregar_trabajo_del_catalogo la rechaza). */}
+                {isAdmin && isFinished && needsAction && !isDelivered && (
                   <div className="inspection-admin-actions">
                     <button
                       type="button"

@@ -264,7 +264,7 @@ export default function Finance() {
       categoryLabels[txn.categoria] || txn.categoria,
       txn.descripcion,
       txn.metodo_pago ? t('delivery.methods.' + txn.metodo_pago) : '',
-      txn.referencia_orden_id ? orders.find((o) => o.id === txn.referencia_orden_id)?.numero_orden ?? '' : '',
+      txn.referencia_orden_id ? txn.orden?.numero_orden ?? orders.find((o) => o.id === txn.referencia_orden_id)?.numero_orden ?? '' : '',
       txn.tipo === 'ingreso' ? Number(txn.monto) : -Number(txn.monto),
     ]),
   ];
@@ -538,7 +538,7 @@ export default function Finance() {
                       style={{ padding: '2px 6px', color: 'var(--color-primary-light)' }}
                       onClick={() => navigate(`/work-orders?open=${txn.referencia_orden_id}`)}
                     >
-                      {orders.find((o) => o.id === txn.referencia_orden_id)?.numero_orden || t('common.view')}
+                      {txn.orden?.numero_orden || orders.find((o) => o.id === txn.referencia_orden_id)?.numero_orden || t('common.view')}
                     </button>
                   ) : (
                     <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>

@@ -18,6 +18,8 @@ interface LaborTableProps {
   items: LaborItem[];
   orderId?: string;
   orderSedeId?: string;
+  /** Agregar un trabajo del catálogo. No en una orden entregada: la base lo rechaza (037). */
+  catalogAllowed?: boolean;
   assignments?: readonly Pick<OrderAssignment, 'usuario_id' | 'tipo_tarea'>[];
   trabajos?: readonly { id?: string; grupo?: string; titulo: string }[];
   canEdit: boolean;
@@ -84,6 +86,7 @@ export default function LaborTable({
   items,
   orderId,
   orderSedeId,
+  catalogAllowed = true,
   assignments,
   trabajos = [],
   canEdit,
@@ -509,7 +512,7 @@ export default function LaborTable({
             idPrefix="labor-new"
             prefill={prefill}
             extraActions={
-              orderId && orderSedeId ? (
+              orderId && orderSedeId && catalogAllowed ? (
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -521,7 +524,7 @@ export default function LaborTable({
               ) : undefined
             }
           />
-          {orderId && orderSedeId && (
+          {orderId && orderSedeId && catalogAllowed && (
             <CatalogPickerModal
               isOpen={catalogPickerOpen}
               onClose={() => setCatalogPickerOpen(false)}
