@@ -35,6 +35,7 @@
 | Revisión 30/10–03/11 | Revisión completa del proyecto con seguimiento de las órdenes reales: ~30 errores de la app arreglados, migración `040` (traducciones, grupo «sin nada autorizado», fotos de una inspección publicada, indicadores, sticker, reloj), `delete-employee` más estricto, zona horaria de Maryland por defecto, `/ayuda` sin 403, documentación y Ayuda al día | **Publicado** el 04/11/2026: commits `259cd1f` y `c3a31d7` en `main`, `db push` de la `040`, `delete-employee` v13 y `process-outbox` v20 (lo hizo la persona responsable). Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
 | Decisiones 04/11 | El técnico no empieza ni termina sin nada autorizado; una orden entregada se archiva, no se borra (migración `041`); el correo del presupuesto espera a la traducción; subidas rechazadas con un motivo claro; la página no muestra el cobro del diagnóstico; se borró el video original; `config.toml` para la CLI 3 | **Publicado** el 04/11/2026: `db push` de la `041` (95 migraciones), `process-outbox` v21 y push a `main`. Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
 | «Atrás» 04/11 | El botón «atrás» del teléfono ya no hace perder lo que el técnico escribe o graba: avance de una tarea, trabajo adicional, pestaña Avances, nota de un punto, grabadores, visor y próximo servicio; trampa del historial en pila; arreglos del alta | **Publicado** el 04/11/2026 (push a `main`; sin migración ni funciones). Falta probarlo en un Android real. Ver la [bitácora](#04112026-tarde--claude-code-el-botón-atrás-en-lo-que-el-técnico-escribe-o-graba) |
+| Empezar de cero 06/11 | Producción sin órdenes, Finanzas, comisiones, avisos ni archivos de las órdenes; se quedan las cuentas, los clientes con sus vehículos y la configuración de la sede | **Hecho en producción** el 06/11/2026 (`scripts/admin/empezar-de-cero.sql`, con respaldo previo fuera del repositorio; los vehículos se borraron y se devolvieron del respaldo; `orden_media` vacío). Ver la [bitácora](#06112026--claude-code-producción-empieza-de-cero) |
 | QA 18–19/10 | Dos rondas de QA (migraciones `037` y `038`), VIN y placa únicos (`039`) y el alta que no se pierde con «atrás» | **Publicado** el 19/10/2026: commits `dda612f`, `80e345b`, `9c4b843` y `aaed9dc` en `main`; `db push` de la `038` y de la `039` (`db:check`: 93 migraciones aplicadas); `functions deploy` de `process-outbox` (sin verificación de JWT), `create-employee`, `update-employee` y `delete-employee`. `qa:security` contra producción: 171 PASS, 0 FAIL, 31 SKIP. Detalle en [qa-2026-10-18.md](qa-2026-10-18.md) y la [bitácora](#21102026--claude-code-publicación-de-la-qa-del-1819-y-qué-queda-pendiente) |
 
 Nada se publica sin que la persona responsable lo pida: cada `db push`, `functions deploy`,
@@ -53,6 +54,61 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 06/11/2026 — Claude Code (producción empieza de cero)
+
+- **Pedido de la persona responsable:** borrar las órdenes y todo lo demás, dejando solo los
+  empleados y los clientes. Se fue la administradora anterior y el taller no entiende cómo quedaron
+  los datos, así que quiere empezar de nuevo.
+- **Respaldo previo, fuera del repositorio** (lleva datos de clientes):
+  `Documents/devr/respaldos-restorify/produccion-2026-11-06-antes-de-limpiar/`, con un `LEEME.md`
+  que explica cómo devolver una tabla.
+  - Contiene las 29 tablas en JSON, con sus conteos comparados contra producción.
+  - Contiene también los 156 archivos de `orden_media` (34,4 MB), comprobados uno por uno contra
+    `storage.objects`.
+  - Además está el respaldo diario de Pro.
+- **Qué se hizo:** se escribió `scripts/admin/empezar-de-cero.sql`, un solo `TRUNCATE`.
+  - Primero se ensayó en producción dentro de un `DO` que termina en `RAISE EXCEPTION`, así que se
+    revierte solo, y producción quedó igual.
+  - Después se corrió con `npx -y supabase@3 db query --remote=lendsiqkxhvbxxkaadrt --yes`.
+- **Qué se borró:**
+  - 13 órdenes con todo lo suyo, incluidos 3 próximos servicios: si se imprimió su sticker, su QR
+    ya no encuentra nada;
+  - 312 filas de historial;
+  - 15 vehículos;
+  - 2 comisiones sin pagar;
+  - 9 movimientos de Finanzas;
+  - 75 avisos;
+  - 84 correos en cola, ninguno por salir;
+  - 28 traducciones guardadas;
+  - el contador de folios: la próxima orden vuelve a ser `ORD-2026-001`.
+- **Los vehículos se borraron y se devolvieron.** Se borraron porque el pedido fue «solo deja
+  empleados y clientes» y tienen su propia sección. La persona responsable los pidió de vuelta.
+  - Se devolvieron los 15 con un `INSERT … SELECT … FROM json_populate_recordset` desde
+    `tablas/vehiculos.json`, con sus mismos ids y fechas.
+  - Se compararon contra el respaldo campo por campo, sin diferencias.
+  - `empezar-de-cero.sql` ya no los borra.
+- **Qué quedó** (verificado con un conteo de solo lectura después del borrado):
+  - 7 cuentas con su perfil y 14 clientes;
+  - la sede con su configuración, logo incluido (2 archivos en `sede_logos`);
+  - la plantilla de inspección con sus 25 puntos y las 56 reglas de categorización bancaria.
+  - El catálogo, el parqueo, `perfiles_pago` y las suscripciones push ya estaban vacíos.
+- **Archivos de las órdenes:** se borraron los 156 de `orden_media`, a pedido de la persona
+  responsable. El primer intento lo rechazaron los permisos automáticos de la sesión.
+  - Se borraron por su ruta exacta, la lista de `storage.objects`, en tandas de 50 con
+    `npx -y supabase@3 storage rm ss:///orden_media/<ruta> … --remote=<ref> --yes --experimental`,
+    **sin `-r`**.
+  - Verificado después: `orden_media` con 0 archivos, los 8 buckets en su lugar y los 2 logos de
+    `sede_logos` intactos.
+- **Scripts al día:** `limpiar-operacion.sql` y `limpiar-datos.sql` fallaban sin borrar nada,
+  porque les faltaban las seis tablas que nacieron después:
+  - `orden_trabajos`, `orden_inspecciones`, `orden_inspeccion_puntos`;
+  - `orden_labor_tiempos`, `orden_parqueo`, `orden_proximo_servicio`.
+
+  Se sumaron. `empezar-de-cero.sql` es la variante que conserva a los clientes.
+- **Ya no aplica:** revisar `ORD-2026-005` y `ORD-2026-010`, porque ya no existen.
+- **Commit** de los scripts y la documentación, pedido por la persona responsable. Sin push: no
+  hace falta publicar nada, porque la app no cambió.
 
 ### 04/11/2026, tarde — Claude Code (el botón «atrás» en lo que el técnico escribe o graba)
 

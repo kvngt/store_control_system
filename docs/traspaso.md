@@ -185,6 +185,7 @@ Reglas completas: [ai-context.md](ai-context.md) (sirven igual para personas).
 | **Exportar datos** | Finanzas → Exportar CSV; o `npx supabase db dump --linked --data-only -f datos.sql` (tiene datos personales: no a git) |
 | **Revisar la salud** | [salida-a-produccion.md §6](historico/salida-a-produccion.md#6-la-primera-semana) |
 | **Dejar la plataforma sin datos de prueba** | [scripts/admin/limpiar-datos.sql](../scripts/admin/limpiar-datos.sql): conserva los correos que indiques (al menos un admin) y las sedes; termina en `ROLLBACK` hasta que lo cambies. Después, vaciar los buckets **desde el panel**: `supabase storage rm -r ss:///<bucket>` borra también el bucket (pasó el 29/09/2026) |
+| **Empezar de cero conservando cuentas, clientes y vehículos** | [scripts/admin/empezar-de-cero.sql](../scripts/admin/empezar-de-cero.sql) (se usó el 06/11/2026): borra órdenes, Finanzas, comisiones y avisos; los archivos de las órdenes se borran aparte, por ruta. Antes, respaldo fuera del repositorio; el cómo y el ensayo que se revierte solo están en el encabezado del script y en la [bitácora](bitacora.md#06112026--claude-code-producción-empieza-de-cero) |
 | **Encontrar dónde cambiar una parte** | [mapa-de-secciones.md](mapa-de-secciones.md); para una función de la base, `npm run db:donde -- <nombre>` |
 | **Probar la plataforma a mano** | [manual-de-pruebas.md](manual-de-pruebas.md) (151 casos por sesiones) |
 

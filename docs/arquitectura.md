@@ -218,8 +218,9 @@ supabase/
 e2e/                             pruebas Playwright
 scripts/                         check-migrations (db:check), db-donde (db:donde),
                                  copy-pdf-worker, generate-pwa-icons, reset-test-data.sql
-  admin/                         limpiar-datos.sql y crear-primer-admin.sql (solo quien
-                                 administra, con su aprobación)
+  admin/                         limpiar-datos.sql, limpiar-operacion.sql, empezar-de-cero.sql
+                                 y crear-primer-admin.sql (solo quien administra, con su
+                                 aprobación)
   qa/api-security.mjs            npm run qa:security: seguridad contra la API desplegada
   qa/estado-orden.sql            todo lo que la base sabe de una orden (solo lectura)
 docs/                            esta documentación

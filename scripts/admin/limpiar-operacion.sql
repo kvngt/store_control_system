@@ -36,4 +36,7 @@ TRUNCATE
   orden_hallazgos, orden_media, orden_enlaces, presupuestos, historial_orden,
   comisiones, comision_pagos, finanzas_movimientos, finanzas_importaciones,
   notificaciones, cola_envios, traducciones,
-  ordenes_trabajo, vehiculos, clientes, numero_orden_contadores;
+  ordenes_trabajo, vehiculos, clientes, numero_orden_contadores,
+  -- Las de las migraciones 028 a 036 (06/11/2026: sin ellas el TRUNCATE fallaba).
+  orden_trabajos, orden_inspecciones, orden_inspeccion_puntos, orden_labor_tiempos,
+  orden_parqueo, orden_proximo_servicio;
