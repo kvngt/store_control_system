@@ -265,6 +265,13 @@ describe('generateWorkOrderPdf: idioma y cuenta', () => {
     expect(metodos).toContain('lines');
     expect(metodos).toContain('circle');
 
+    // 06/11/2026: el dibujo es un sedán con curvas, no líneas rectas. Lleva tramos curvos
+    // (seis números), rellenos (vidrios y llantas) y la escala de cada vista.
+    const lineas = llamadas.lista.filter(([m]) => m === 'lines').map(([, a]) => a);
+    expect(lineas.flatMap((a) => a[0] as number[][]).some((tramo) => tramo.length === 6)).toBe(true);
+    expect(lineas.some((a) => a[4] === 'FD')).toBe(true);
+    expect(lineas.some((a) => JSON.stringify(a[3]) === JSON.stringify([0.425, 0.425]))).toBe(true);
+
     // D4: El círculo de cada marca mide al menos 2.2 mm de radio y la letra 7 pt
     const circleCalls = llamadas.lista.filter(([m]) => m === 'circle');
     const markCircles = circleCalls.filter(([, args]) => (args as number[])[2] >= 2.2);

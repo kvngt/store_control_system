@@ -94,6 +94,9 @@ export const VehicleDiagram: React.FC<VehicleDiagramProps> = ({
                 onClick={(e) => handleSvgClick(view.id, e)}
               >
                 {view.shapes.map((shape, sIdx) => {
+                  // El grosor va en píxeles de pantalla (non-scaling-stroke): con el del
+                  // viewBox, la línea engordaba con el tamaño del dibujo.
+                  const className = `vehicle-diagram-shape vehicle-diagram-shape--${shape.tone ?? 'line'}`;
                   if (shape.kind === 'circle') {
                     return (
                       <circle
@@ -101,26 +104,13 @@ export const VehicleDiagram: React.FC<VehicleDiagramProps> = ({
                         cx={shape.cx}
                         cy={shape.cy}
                         r={shape.r}
-                        className="vehicle-diagram-shape"
-                      />
-                    );
-                  }
-                  const pointsStr = shape.points.map(([x, y]) => `${x},${y}`).join(' ');
-                  if (shape.closed) {
-                    return (
-                      <polygon
-                        key={sIdx}
-                        points={pointsStr}
-                        className="vehicle-diagram-shape"
+                        className={className}
+                        vectorEffect="non-scaling-stroke"
                       />
                     );
                   }
                   return (
-                    <polyline
-                      key={sIdx}
-                      points={pointsStr}
-                      className="vehicle-diagram-shape"
-                    />
+                    <path key={sIdx} d={shape.d} className={className} vectorEffect="non-scaling-stroke" />
                   );
                 })}
 

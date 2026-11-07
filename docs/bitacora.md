@@ -35,6 +35,7 @@
 | Revisión 30/10–03/11 | Revisión completa del proyecto con seguimiento de las órdenes reales: ~30 errores de la app arreglados, migración `040` (traducciones, grupo «sin nada autorizado», fotos de una inspección publicada, indicadores, sticker, reloj), `delete-employee` más estricto, zona horaria de Maryland por defecto, `/ayuda` sin 403, documentación y Ayuda al día | **Publicado** el 04/11/2026: commits `259cd1f` y `c3a31d7` en `main`, `db push` de la `040`, `delete-employee` v13 y `process-outbox` v20 (lo hizo la persona responsable). Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
 | Decisiones 04/11 | El técnico no empieza ni termina sin nada autorizado; una orden entregada se archiva, no se borra (migración `041`); el correo del presupuesto espera a la traducción; subidas rechazadas con un motivo claro; la página no muestra el cobro del diagnóstico; se borró el video original; `config.toml` para la CLI 3 | **Publicado** el 04/11/2026: `db push` de la `041` (95 migraciones), `process-outbox` v21 y push a `main`. Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
 | «Atrás» 04/11 | El botón «atrás» del teléfono ya no hace perder lo que el técnico escribe o graba: avance de una tarea, trabajo adicional, pestaña Avances, nota de un punto, grabadores, visor y próximo servicio; trampa del historial en pila; arreglos del alta | **Publicado** el 04/11/2026 (push a `main`; sin migración ni funciones). Falta probarlo en un Android real. Ver la [bitácora](#04112026-tarde--claude-code-el-botón-atrás-en-lo-que-el-técnico-escribe-o-graba) |
+| Dibujo del vehículo 06/11 | El dibujo para marcar daños pasa de líneas rectas a un sedán moderno con curvas, en sus cinco vistas: la app, el enlace del cliente y el PDF | **Hecho, con commit y sin push** (sin migración ni funciones; sale al publicar `main`). Ver la [bitácora](#06112026-tarde--claude-code-el-dibujo-del-vehículo-es-un-sedán-moderno) |
 | Empezar de cero 06/11 | Producción sin órdenes, Finanzas, comisiones, avisos ni archivos de las órdenes; se quedan las cuentas, los clientes con sus vehículos y la configuración de la sede | **Hecho en producción** el 06/11/2026 (`scripts/admin/empezar-de-cero.sql`, con respaldo previo fuera del repositorio; los vehículos se borraron y se devolvieron del respaldo; `orden_media` vacío). Ver la [bitácora](#06112026--claude-code-producción-empieza-de-cero) |
 | QA 18–19/10 | Dos rondas de QA (migraciones `037` y `038`), VIN y placa únicos (`039`) y el alta que no se pierde con «atrás» | **Publicado** el 19/10/2026: commits `dda612f`, `80e345b`, `9c4b843` y `aaed9dc` en `main`; `db push` de la `038` y de la `039` (`db:check`: 93 migraciones aplicadas); `functions deploy` de `process-outbox` (sin verificación de JWT), `create-employee`, `update-employee` y `delete-employee`. `qa:security` contra producción: 171 PASS, 0 FAIL, 31 SKIP. Detalle en [qa-2026-10-18.md](qa-2026-10-18.md) y la [bitácora](#21102026--claude-code-publicación-de-la-qa-del-1819-y-qué-queda-pendiente) |
 
@@ -54,6 +55,37 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 06/11/2026, tarde — Claude Code (el dibujo del vehículo es un sedán moderno)
+
+- **Pedido de la persona responsable:** cambiar el dibujo de la sección para marcar golpes. Se veían
+  líneas muy rectas y un dibujo tosco que no le gustó al cliente, y lo quieren como un sedán moderno.
+- **Qué se hizo:** `src/lib/vehicleDiagram.ts` se redibujó entero.
+  - Las proporciones son de un sedán mediano de 2024 (4,9 m, rines de 19").
+  - Los lados tienen techo que cae hacia atrás, cajuela corta con remate y vidrio de una pieza
+    con pilares negros. También llevan espejo, manijas, cortes de puertas, línea de hombro y
+    arcos que rodean llantas con rin de cinco rayos.
+  - El frente y atrás llevan faros y calaveras delgados, parrilla, placa, barra de luz y espejos.
+  - Arriba se ven cofre, parabrisas, techo, medallón y cajuela.
+- **Cómo funciona:**
+  - Las formas son trazos de SVG con comandos absolutos M, L, Q, C y Z, más cinco tonos
+    (contorno, detalle, vidrio, oscuro y sólido).
+  - El componente los pinta con grosor fijo en pantalla (`non-scaling-stroke`): con el grosor
+    del viewBox, la línea engordaba con el tamaño.
+  - El PDF los convierte a `jsPDF.lines`, que dibuja Bézier.
+  - El frente, atrás y arriba se arman con su mitad y su reflejo; el lado derecho es el izquierdo
+    reflejado.
+  - Los tamaños de las vistas son los mismos, así que las marcas guardadas no se mueven.
+- **Verificado:**
+  - capturas del componente real en claro y oscuro, en 960 y 390 px, con marcas;
+  - el PDF real pintado con pdf.js;
+  - lint, `tsc` y build ✓;
+  - Vitest con 152 archivos y 1.166 pruebas ✓. Hay 10 pruebas nuevas: los trazos y el reflejo, la
+    simetría, los límites con los puntos de control, que el componente pinte cada forma con su
+    tono y que el PDF dibuje curvas y rellenos.
+- **No cambia:** el manual, porque ninguna captura muestra el dibujo; tampoco la base ni las
+  funciones.
+- **Falta:** publicarlo con un push a `main` y verlo en un teléfono real.
 
 ### 06/11/2026 — Claude Code (producción empieza de cero)
 

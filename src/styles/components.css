@@ -6524,12 +6524,37 @@ button.intake-step-button:hover:not(:disabled) {
   cursor: crosshair;
 }
 
+/* El dibujo (lib/vehicleDiagram.ts): el grosor es en píxeles de pantalla
+   (vector-effect: non-scaling-stroke en cada forma). */
 .vehicle-diagram-shape {
   stroke: currentColor;
-  stroke-width: 1.5;
+  stroke-width: 1.5px;
   stroke-linecap: round;
   stroke-linejoin: round;
   fill: none;
+}
+
+.vehicle-diagram-shape--detail {
+  stroke-width: 1px;
+  stroke-opacity: 0.7;
+}
+
+.vehicle-diagram-shape--glass {
+  stroke-width: 1px;
+  fill: currentColor;
+  fill-opacity: 0.14;
+}
+
+.vehicle-diagram-shape--dark {
+  stroke-width: 1px;
+  fill: currentColor;
+  fill-opacity: 0.72;
+}
+
+/* Tapa lo que queda debajo (el rin sobre la llanta, la placa sobre la parrilla). */
+.vehicle-diagram-shape--solid {
+  stroke-width: 1px;
+  fill: var(--color-bg-tertiary);
 }
 
 .vehicle-diagram-mark {

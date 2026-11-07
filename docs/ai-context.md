@@ -222,7 +222,16 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
   - el técnico no lo toca (lista blanca del guardia);
   - `datos_portal` lo arma marca por marca;
   - la geometría de las vistas vive en `src/lib/vehicleDiagram.ts` y la usan la app, el portal y
-    el PDF.
+    el PDF;
+  - **el dibujo es un sedán moderno hecho de trazos** (06/11/2026: el de líneas rectas no le gustó
+    al cliente). Cada forma es un círculo o un trazo de SVG **solo con comandos absolutos M, L,
+    Q, C y Z**. `parsePathData` rechaza lo demás, porque el PDF no sabría dibujarlo
+    (`pathSubpaths` lo convierte a `jsPDF.lines`). Cada forma lleva su tono (`line`, `detail`,
+    `glass`, `dark`, `solid`), con su clase en `components.css` y su color en `DIAGRAM_TONES`
+    del PDF;
+  - **el tamaño de cada vista no se cambia** (200 × 80, 100 × 80, 200 × 90): una marca se guarda de
+    0 a 1 sobre su vista, y con otro tamaño las ya guardadas caerían en otro lugar. El lado derecho
+    es el izquierdo reflejado (`mirrorShape`).
 - **Enlace, autorización y tareas** (`20261010000032`):
   - **el enlace del cliente nace con la orden** (`trg_order_link_on_create`). El correo de
     recepción sigue saliendo al firmar, y el aviso automático «en proceso» no sale antes de la

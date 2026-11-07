@@ -5,7 +5,25 @@ import { money } from './money';
 import { brandColors } from './brandColor';
 import { formatPhone, sedePhoneLine } from './phone';
 import { translateVehicleColor } from './vehicleColor';
-import { DAMAGE_VIEWS, DAMAGE_TYPES, sanitizeDamageMarks, type DamageView } from './vehicleDiagram';
+import {
+  DAMAGE_VIEWS,
+  DAMAGE_TYPES,
+  pathSubpaths,
+  sanitizeDamageMarks,
+  type DamageView,
+  type DiagramTone,
+} from './vehicleDiagram';
+
+type Rgb = [number, number, number];
+
+/** Los tonos del dibujo del vehículo en el papel: los mismos papeles que en la pantalla. */
+const DIAGRAM_TONES: Record<DiagramTone, { stroke: Rgb; width: number; fill?: Rgb }> = {
+  line: { stroke: [95, 99, 110], width: 0.3 },
+  detail: { stroke: [150, 154, 163], width: 0.18 },
+  glass: { stroke: [150, 154, 163], width: 0.18, fill: [233, 237, 243] },
+  dark: { stroke: [70, 72, 80], width: 0.18, fill: [92, 95, 104] },
+  solid: { stroke: [150, 154, 163], width: 0.18, fill: [255, 255, 255] },
+};
 import { withSafeText } from './pdfText';
 
 export type PdfLanguage = 'es' | 'en';
@@ -556,23 +574,26 @@ async function buildWorkOrderPdf(
 
     const shapesY = vy + 2;
 
-    // Outline shapes
-    doc.setDrawColor(120, 120, 130);
-    doc.setLineWidth(0.25);
+    // El dibujo, con el tono de cada forma como en la pantalla (curvas incluidas).
     for (const shape of viewDef.shapes) {
+      const tone = DIAGRAM_TONES[shape.tone ?? 'line'];
+      doc.setDrawColor(...tone.stroke);
+      doc.setLineWidth(tone.width);
+      if (tone.fill) doc.setFillColor(...tone.fill);
+      const filled = tone.fill ? 'FD' : 'S';
       if (shape.kind === 'circle') {
-        doc.circle(vx + shape.cx * scale, shapesY + shape.cy * scale, shape.r * scale, 'S');
-      } else if (shape.kind === 'poly' && shape.points.length > 0) {
-        const startX = vx + shape.points[0][0] * scale;
-        const startY = shapesY + shape.points[0][1] * scale;
-        const deltas: [number, number][] = [];
-        for (let i = 1; i < shape.points.length; i++) {
-          deltas.push([
-            (shape.points[i][0] - shape.points[i - 1][0]) * scale,
-            (shape.points[i][1] - shape.points[i - 1][1]) * scale,
-          ]);
-        }
-        doc.lines(deltas, startX, startY, [1, 1], 'S', shape.closed);
+        doc.circle(vx + shape.cx * scale, shapesY + shape.cy * scale, shape.r * scale, filled);
+        continue;
+      }
+      for (const sub of pathSubpaths(shape.d)) {
+        doc.lines(
+          sub.segments,
+          vx + sub.start[0] * scale,
+          shapesY + sub.start[1] * scale,
+          [scale, scale],
+          sub.closed ? filled : 'S',
+          sub.closed
+        );
       }
     }
 

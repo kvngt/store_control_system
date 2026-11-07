@@ -2,7 +2,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { VehicleDiagram, type VehicleDiagramLabels } from './VehicleDiagram';
-import type { DamageMark } from '../lib/vehicleDiagram';
+import { DAMAGE_VIEWS, type DamageMark } from '../lib/vehicleDiagram';
 
 describe('VehicleDiagram', () => {
   const labels: VehicleDiagramLabels = {
@@ -155,5 +155,22 @@ describe('VehicleDiagram', () => {
 
     fireEvent.click(removeBtns[1]);
     expect(onRemove).toHaveBeenCalledWith(1);
+  });
+
+  // 06/11/2026: el dibujo es un sedán hecho de trazos con curvas y tonos.
+  it('pinta cada forma de cada vista con su tono y con grosor fijo en pantalla', () => {
+    render(<VehicleDiagram marks={[]} labels={labels} />);
+    for (const view of DAMAGE_VIEWS) {
+      const svg = screen.getByRole('img', { name: labels.views[view.id] });
+      const shapes = svg.querySelectorAll('.vehicle-diagram-shape');
+      expect(shapes).toHaveLength(view.shapes.length);
+      view.shapes.forEach((shape, i) => {
+        const el = shapes[i];
+        expect(el.tagName.toLowerCase()).toBe(shape.kind);
+        expect(el).toHaveClass(`vehicle-diagram-shape--${shape.tone ?? 'line'}`);
+        expect(el.getAttribute('vector-effect')).toBe('non-scaling-stroke');
+        if (shape.kind === 'path') expect(el.getAttribute('d')).toBe(shape.d);
+      });
+    }
   });
 });
