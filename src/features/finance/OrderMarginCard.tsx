@@ -99,7 +99,7 @@ export default function OrderMarginCard({ sedeId }: { sedeId?: string }) {
                   </tr>
                 ))}
                 <tr className="order-margin-total">
-                  <td className="desktop-only" colSpan={2}>{t('orderBalance.monthTotal').replace('{n}', String(data.total_filas))}</td>
+                  <td className="desktop-only" colSpan={2}>{data.total_filas === 1 ? t('orderBalance.monthTotalOne') : t('orderBalance.monthTotal').replace('{n}', String(data.total_filas))}</td>
                   <td data-label={t('orderBalance.collected')} style={{ textAlign: 'right' }}>{money(Number(data.sumas.cobrado))}</td>
                   <td data-label={t('orderBalance.parts')} style={{ textAlign: 'right' }}>{money(Number(data.sumas.costo_repuestos))}</td>
                   <td data-label={t('orderBalance.commissions')} style={{ textAlign: 'right' }}>{money(Number(data.sumas.comisiones))}</td>

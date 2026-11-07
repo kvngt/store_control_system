@@ -15,6 +15,7 @@ import CustomerPicker from '../components/CustomerPicker';
 import type { NewCustomerDraft } from '../components/CustomerPicker';
 import type { Vehicle, Customer } from '../types/database';
 import { money } from '../lib/money';
+import { workTypeKey } from '../lib/workType';
 
 // The vehicle half of the form lives in `VehicleFields`, shared with the order
 // intake dialog; this screen adds only the owner.
@@ -22,6 +23,13 @@ const EMPTY_FORM = { cliente_id: '', ...EMPTY_VEHICLE_FIELDS };
 
 export default function Vehicles() {
   const { t, language } = useLanguage();
+  const statusLabels: Record<string, string> = {
+    recepcion: t('workOrders.intake'),
+    en_proceso: t('workOrders.inProgress'),
+    espera_autorizacion: t('workOrders.waitingAuthorization'),
+    finalizado: t('workOrders.completed'),
+    entregado: t('workOrders.delivered'),
+  };
   const { user, currentSede } = useAuth();
   const isAdmin = user?.rol === 'admin';
   // Strict isolation: only ever the active sede's vehicles and customers.
@@ -249,8 +257,8 @@ export default function Vehicles() {
                               {o.numero_orden}
                             </button>
                           </td>
-                          <td data-label={t('common.type')}><span className={`badge badge-${o.tipo_trabajo}`}>{o.tipo_trabajo}</span></td>
-                          <td data-label={t('common.status')}><span className={`badge badge-${o.estatus}`}>{o.estatus}</span></td>
+                          <td data-label={t('common.type')}><span className={`badge badge-${o.tipo_trabajo}`}>{t(workTypeKey(o.tipo_trabajo))}</span></td>
+                          <td data-label={t('common.status')}><span className={`badge badge-${o.estatus}`}>{statusLabels[o.estatus] ?? o.estatus}</span></td>
                           <td data-label={t('common.date')}>{new Date(o.creado_en).toLocaleDateString(language === 'es' ? 'es' : 'en')}</td>
                           {isAdmin && (
                             <td data-label={t('common.total')} style={{ fontWeight: 600 }}>

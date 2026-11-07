@@ -18,7 +18,7 @@ import { useToast } from '../context/toast.context';
 import { commissionsService, sedesService, workOrdersService } from '../services/supabaseService';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
-import { todayLocal } from '../lib/dates';
+import { formatDay, todayLocal } from '../lib/dates';
 import { getErrorMessage } from '../lib/errors';
 import type { Commission, CommissionBalance, CommissionPayment } from '../types/database';
 import { AlertError } from '../components/AlertError';
@@ -148,6 +148,7 @@ export default function Payroll() {
 
   // ----- settling a balance --------------------------------------------------
   const [payTarget, setPayTarget] = useState<CommissionBalance | null>(null);
+  const acceptedCount = payTarget ? payTarget.items.filter((c) => c.estado === 'aceptada').length : 0;
   const [payForm, setPayForm] = useState({
     fecha_pago: todayLocal(),
     metodo: 'cheque',
@@ -342,10 +343,10 @@ export default function Payroll() {
                       <span>
                         <span style={{ fontWeight: 600 }}>{balance.usuario?.nombre_completo}</span>
                         <span style={{ marginLeft: 8, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', textTransform: 'capitalize' }}>
-                          {balance.usuario?.rol}
+                          {balance.usuario?.rol ? t(`employees.roles.${balance.usuario.rol}`) : ''}
                         </span>
                         <span style={{ display: 'block', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
-                          {balance.items.length} {t('payroll.ordersCount')}
+                          {balance.items.length} {t(balance.items.length === 1 ? 'payroll.ordersCountOne' : 'payroll.ordersCount')}
                           {balance.porRevisar > 0 && (
                             <span className="badge badge-waiting-auth payroll-review-badge">
                               {t('payroll.toReview').replace('{count}', String(balance.porRevisar))}
@@ -508,10 +509,10 @@ export default function Payroll() {
                   <td data-label={t('payroll.employee')}>{p.usuario?.nombre_completo}</td>
                   <td data-label={t('payroll.payDate')}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--font-size-sm)' }}>
-                      <Calendar size={12} style={{ color: 'var(--color-text-tertiary)' }} /> {p.fecha_pago}
+                      <Calendar size={12} style={{ color: 'var(--color-text-tertiary)' }} /> {formatDay(p.fecha_pago, language)}
                     </div>
                   </td>
-                  <td data-label={t('payroll.method')} style={{ textTransform: 'capitalize' }}>{p.metodo}</td>
+                  <td data-label={t('payroll.method')}>{p.metodo ? t('delivery.methods.' + p.metodo) : '—'}</td>
                   <td data-label={t('payroll.chequeNumber')}>{p.numero_cheque || '—'}</td>
                   <td data-label={t('payroll.amount')} style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-light)' }}>
                     {money(Number(p.monto))}
@@ -571,7 +572,7 @@ export default function Payroll() {
                 </div>
               </div>
               <p className="field-hint">
-                {payTarget.items.filter((c) => c.estado === 'aceptada').length} {t('payroll.ordersCount')} · {t('payroll.amountIsServerSide')}
+                {acceptedCount} {t(acceptedCount === 1 ? 'payroll.ordersCountOne' : 'payroll.ordersCount')} · {t('payroll.amountIsServerSide')}
               </p>
               {payTarget.porRevisar > 0 && (
                 <p className="field-hint">{t('payroll.unreviewedNotPaid').replace('{count}', String(payTarget.porRevisar))}</p>

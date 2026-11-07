@@ -6,6 +6,7 @@ import { useLanguage } from '../../context/language.context';
 import { workOrdersService } from '../../services/workOrders.service';
 import { queryKeys } from '../../lib/queryClient';
 import { orderDueState } from '../../lib/orderDue';
+import { formatDay } from '../../lib/dates';
 import type { MyTask } from '../../types/database';
 
 /**
@@ -17,7 +18,7 @@ import type { MyTask } from '../../types/database';
  * no autoriza salen al final con su aviso, porque aún no se pueden hacer.
  */
 export default function MyTasksCard({ userId }: { userId: string }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   const query = useQuery({
     queryKey: queryKeys.myTasks(userId),
@@ -82,7 +83,7 @@ export default function MyTasksCard({ userId }: { userId: string }) {
                         </>
                       )}
                       {task.orden.fecha_estimada_entrega && (
-                        <span className={due ? `due-${due}` : undefined}> · {task.orden.fecha_estimada_entrega}</span>
+                        <span className={due ? `due-${due}` : undefined}> · {formatDay(task.orden.fecha_estimada_entrega, language)}</span>
                       )}
                     </span>
                     {!approved && <span className="badge badge-waiting-auth">{t('quotes.waitingBadge')}</span>}

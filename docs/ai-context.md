@@ -48,9 +48,11 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
   (`en_proceso`, `espera_autorizacion`, `finalizado`) y avance (`trg_guard_order_technician`).
   **No la pasa a `en_proceso` ni a `finalizado` si no hay ninguna línea `aprobado`** (decisión del
   dueño, `20261010000041`): la primera autorización la pasa sola a `en_proceso`, y administración sí
-  puede moverla sin nada autorizado. La firma de recepción, devolver a recepción, reabrir una
-  finalizada y entregar son de administración. **Si agregas una acción de técnico que cambie otra
-  columna de `ordenes_trabajo`, añádela a la lista permitida de ese trigger en una migración nueva.**
+  puede moverla sin nada autorizado. **Con la orden `finalizado`, tampoco desmarca una tarea hecha**
+  (`marcar_labor_completada`, `20261010000042`): la orden quedaba terminada con trabajo sin hacer.
+  La firma de recepción, devolver a recepción, reabrir una finalizada y entregar son de
+  administración. **Si agregas una acción de técnico que cambie otra columna de `ordenes_trabajo`,
+  añádela a la lista permitida de ese trigger en una migración nueva.**
 - **Abrir una orden y asignar a alguien (alta, edición y baja) son solo de admin**
   (`ordenes_trabajo_insert`, `orden_asignaciones_*`). Asignar es dinero, no una etiqueta: reparte
   la comisión de las líneas heredadas. [arquitectura.md §6](arquitectura.md#6-seguridad-y-permisos).
@@ -411,7 +413,7 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
    `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca edites una migración
    ya aplicada ni cambies tablas desde el panel. **El nombre va después de la última
    migración, no de la fecha de hoy:** hay migraciones aplicadas con fecha futura (hoy la
-   última es `20261010000041`), y una con fecha anterior a la última aplicada no entra con
+   última es `20261010000042`), y una con fecha anterior a la última aplicada no entra con
    `db push` ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#4-base-de-datos), B-1).
 2. **Una función nueva en `public` es una RPC pública.** Postgres da `EXECUTE` a
    `PUBLIC` y Supabase a `anon` y `authenticated` al crearla. Revócala siempre:

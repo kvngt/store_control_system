@@ -87,6 +87,7 @@ import MediaGallery from '../media/MediaGallery';
 import PointInspection from '../inspection/PointInspection';
 import type { WorkOrderDetailApi } from './useWorkOrderDetail';
 import { money } from '../../lib/money';
+import { workTypeKey } from '../../lib/workType';
 
 interface WorkOrderDetailProps {
   detail: WorkOrderDetailApi;
@@ -789,7 +790,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
               {operators
                 .filter((op) => op.sede_id === order.sede_id && !assignments.some((a) => a.usuario_id === op.id && a.origen !== 'tarea'))
                 .map((op) => (
-                  <option key={op.id} value={op.id}>{op.nombre_completo} ({op.rol})</option>
+                  <option key={op.id} value={op.id}>{op.nombre_completo} ({t(`tasks.trade.${op.rol}`)})</option>
                 ))}
             </select>
             <button type="button" className="btn btn-secondary" onClick={addOperator} disabled={!addingOperatorId}>
@@ -1114,7 +1115,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
             ) : (
               <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
             )}
-            <span className={`badge badge-${order.tipo_trabajo}`}>{order.tipo_trabajo}</span>
+            <span className={`badge badge-${order.tipo_trabajo}`}>{t(workTypeKey(order.tipo_trabajo))}</span>
             {order.con_seguro && (
               <span className="badge badge-insurance">{t('workOrders.insuranceBadge')}</span>
             )}
@@ -1173,10 +1174,11 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
                     </select>
                   </span>
                   {/* Enviar reporte: comparte el enlace web del cliente (correo desde el
-                      sistema o WhatsApp). El PDF de al lado es solo para imprimir. */}
+                      sistema o WhatsApp). El PDF de al lado es solo para imprimir. Secundario:
+                      el botón principal de cada estado está en las acciones rápidas. */}
                   <button
                     type="button"
-                    className="btn btn-primary btn-sm"
+                    className="btn btn-secondary btn-sm"
                     onClick={detail.shareReport}
                     disabled={detail.preparingShare}
                     title={t('workOrders.shareReport')}

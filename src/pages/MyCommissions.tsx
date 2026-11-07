@@ -9,6 +9,7 @@ import { getErrorMessage } from '../lib/errors';
 import { money } from '../lib/money';
 import { AlertError } from '../components/AlertError';
 import type { Commission, CommissionPayment, MyCommissionsSummary } from '../types/database';
+import { formatDay } from '../lib/dates';
 
 /** La app nueva publicada antes que su migración: sin totales en vez de un error. */
 function isMissingFunction(err: unknown): boolean {
@@ -148,7 +149,7 @@ export default function MyCommissions() {
                 <li key={p.id} className="my-commissions-payment">
                   <div className="my-commissions-payment-head">
                     <span className="my-commissions-payment-date">
-                      <CheckCircle2 size={14} aria-hidden="true" /> {p.fecha_pago}
+                      <CheckCircle2 size={14} aria-hidden="true" /> {formatDay(p.fecha_pago, language)}
                     </span>
                     <strong>{money(Number(p.monto))}</strong>
                   </div>

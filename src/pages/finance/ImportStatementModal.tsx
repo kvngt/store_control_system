@@ -14,6 +14,7 @@ import type {
 import { X, Upload, AlertTriangle } from 'lucide-react';
 import { AlertError } from '../../components/AlertError';
 import { moneySigned, sumMoney } from '../../lib/money';
+import { formatDay } from '../../lib/dates';
 
 interface Props {
   onClose: () => void;
@@ -341,7 +342,7 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
                                 onChange={(e) => updateRow(row.rowId, { incluir: e.target.checked })}
                               />
                             </td>
-                            <td style={{ whiteSpace: 'nowrap', fontSize: 'var(--font-size-sm)' }}>{row.fecha}</td>
+                            <td style={{ whiteSpace: 'nowrap', fontSize: 'var(--font-size-sm)' }}>{formatDay(row.fecha, language)}</td>
                             <td>
                               <input
                                 className="form-input"

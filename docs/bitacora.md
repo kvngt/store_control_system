@@ -35,7 +35,8 @@
 | Revisión 30/10–03/11 | Revisión completa del proyecto con seguimiento de las órdenes reales: ~30 errores de la app arreglados, migración `040` (traducciones, grupo «sin nada autorizado», fotos de una inspección publicada, indicadores, sticker, reloj), `delete-employee` más estricto, zona horaria de Maryland por defecto, `/ayuda` sin 403, documentación y Ayuda al día | **Publicado** el 04/11/2026: commits `259cd1f` y `c3a31d7` en `main`, `db push` de la `040`, `delete-employee` v13 y `process-outbox` v20 (lo hizo la persona responsable). Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
 | Decisiones 04/11 | El técnico no empieza ni termina sin nada autorizado; una orden entregada se archiva, no se borra (migración `041`); el correo del presupuesto espera a la traducción; subidas rechazadas con un motivo claro; la página no muestra el cobro del diagnóstico; se borró el video original; `config.toml` para la CLI 3 | **Publicado** el 04/11/2026: `db push` de la `041` (95 migraciones), `process-outbox` v21 y push a `main`. Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
 | «Atrás» 04/11 | El botón «atrás» del teléfono ya no hace perder lo que el técnico escribe o graba: avance de una tarea, trabajo adicional, pestaña Avances, nota de un punto, grabadores, visor y próximo servicio; trampa del historial en pila; arreglos del alta | **Publicado** el 04/11/2026 (push a `main`; sin migración ni funciones). Falta probarlo en un Android real. Ver la [bitácora](#04112026-tarde--claude-code-el-botón-atrás-en-lo-que-el-técnico-escribe-o-graba) |
-| Dibujo del vehículo 06/11 | El dibujo para marcar daños pasa de líneas rectas a un sedán moderno con curvas, en sus cinco vistas: la app, el enlace del cliente y el PDF | **Hecho, con commit y sin push** (sin migración ni funciones; sale al publicar `main`). Ver la [bitácora](#06112026-tarde--claude-code-el-dibujo-del-vehículo-es-un-sedán-moderno) |
+| Revisión desde cero 06/11 | La primera orden recorrida como el taller y revisión de código con Gemini: el técnico ya no desmarca tareas de una orden terminada (migración `042`), textos y fechas sin traducir, alerta de avance bajo, plurales, tablas vacías y el alta más rápida | Ver la [bitácora](#06112026-noche--claude-code-revisión-con-la-primera-orden-desde-cero-migración-042) para el estado de la publicación |
+| Dibujo del vehículo 06/11 | El dibujo para marcar daños pasa de líneas rectas a un sedán moderno con curvas, en sus cinco vistas: la app, el enlace del cliente y el PDF | **Publicado** el 06/11/2026 (push a `main`; sin migración ni funciones). Ver la [bitácora](#06112026-tarde--claude-code-el-dibujo-del-vehículo-es-un-sedán-moderno) |
 | Empezar de cero 06/11 | Producción sin órdenes, Finanzas, comisiones, avisos ni archivos de las órdenes; se quedan las cuentas, los clientes con sus vehículos y la configuración de la sede | **Hecho en producción** el 06/11/2026 (`scripts/admin/empezar-de-cero.sql`, con respaldo previo fuera del repositorio; los vehículos se borraron y se devolvieron del respaldo; `orden_media` vacío). Ver la [bitácora](#06112026--claude-code-producción-empieza-de-cero) |
 | QA 18–19/10 | Dos rondas de QA (migraciones `037` y `038`), VIN y placa únicos (`039`) y el alta que no se pierde con «atrás» | **Publicado** el 19/10/2026: commits `dda612f`, `80e345b`, `9c4b843` y `aaed9dc` en `main`; `db push` de la `038` y de la `039` (`db:check`: 93 migraciones aplicadas); `functions deploy` de `process-outbox` (sin verificación de JWT), `create-employee`, `update-employee` y `delete-employee`. `qa:security` contra producción: 171 PASS, 0 FAIL, 31 SKIP. Detalle en [qa-2026-10-18.md](qa-2026-10-18.md) y la [bitácora](#21102026--claude-code-publicación-de-la-qa-del-1819-y-qué-queda-pendiente) |
 
@@ -55,6 +56,65 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 06/11/2026, noche — Claude Code (revisión con la primera orden desde cero, migración 042)
+
+- **Pedido de la persona responsable:** publicar el dibujo nuevo y aprovechar el arranque desde cero
+  para revisar la plataforma, encontrar errores y puntos de mejora, y corregirlos. Pidió usar a Gemini
+  para ahorrar tokens.
+- **Publicado:** el dibujo (push a `main`); el CSS nuevo se sirve en restorifyauto.net.
+- **Cómo se revisó:**
+  - **Recorrido en local, como el taller:**
+    - se respaldaron los datos locales y se crearon cuentas de prueba (`qa.local/crear-usuarios.mjs`);
+    - se corrió `empezar-de-cero.sql` en local y se compiló la app contra el Supabase local (puerto
+      44321);
+    - se recorrió con Playwright (`qa.local/r1` a `r11`) la primera orden completa: panel vacío,
+      alta, firma, autorización, técnico en su teléfono, «lista para entregar», entrega con cobro,
+      Finanzas y Comisiones;
+    - al final se restauraron los datos locales.
+  - **Revisión de código con Gemini 3.8 Flash** (solo lectura, sobre una copia sin secretos):
+    - dio 23 hallazgos, verificados uno por uno;
+    - se descartaron los de fechas con hora (`creado_en`, `expira_en`): `formatDay` corta la fecha en
+      UTC y movería el día en la noche;
+    - también se descartaron los de mano de obra y repuestos vacíos: ya se pliegan con su contador.
+- **Arreglado:**
+  - **en la base (`20261010000042`, pgTAP 46 con 8 aserciones):** con la orden `finalizado`, el técnico
+    desmarcaba una tarea hecha y la orden quedaba terminada con trabajo sin hacer, aun con el cliente
+    avisado. Ahora `marcar_labor_completada` lo rechaza (42501), y en pantalla «Reabrir tarea» ya no
+    sale. La razón está en inglés en `SHOP_REASONS_EN`, y el manual lo dice en los dos idiomas;
+  - **el tipo de trabajo salía «mecanica»** en el detalle de la orden y en los historiales de cliente y
+    vehículo. Ahora usa `lib/workType.ts`;
+  - **el estado salía crudo** en el historial del vehículo;
+  - **los roles salían crudos** en Comisiones, Configuración y el selector de técnicos;
+  - **el método de pago salía crudo** en los pagos de comisiones;
+  - **fechas crudas (AAAA-MM-DD) pasadas a `formatDay`:**
+    - «Mis tareas», las alertas del panel, el tablero y la lista de órdenes;
+    - Finanzas, el estado de cuenta a importar, los pagos de comisiones y «Mis comisiones»;
+    - el cobro por parqueo;
+  - **la alerta «Avance bajo»** salía con cada orden recién autorizada. Ahora solo sale con menos del
+    30 % y a un día o menos de la entrega estimada;
+  - **plurales:** «1 transacciones», «1 órdenes» y «(1 órdenes)»;
+  - **tablas vacías sin mensaje:** la lista de clientes, las órdenes del perfil de un cliente (después de
+    empezar de cero, los 14) y Finanzas;
+  - **un texto sin traducir** en el simulador de parqueo;
+  - **en el alta:**
+    - los clientes van en orden alfabético;
+    - si el cliente tiene un solo vehículo, queda elegido (un toque menos en el mostrador);
+  - **«Enviar reporte» pasa a secundario:** la orden recién creada tenía tres botones amarillos, y la
+    regla es uno por estado.
+- **Verificado:**
+  - lint, `tsc`, build y Vitest ✓;
+  - pgTAP 03, 19, 21, 26, 40 y 46 ✓. La 19 y la 26 fallan solo con los datos de demostración en la
+    base (cuentan avisos y órdenes que ya estaban); con la base vacía pasan;
+  - capturas del build local con los arreglos.
+- **Visto y no cambiado** (siguiente paso, a decidir):
+  - la mayoría de los diálogos no se cierra con Escape;
+  - el selector de país del teléfono se corta («us +1 Estad») en el alta;
+  - «Registrar autorización…» del Resumen lleva a la sección y ahí hay que volver a tocar;
+  - las gráficas sin datos pintan pastillas de cero;
+  - `iniciar_reloj` deja correr el reloj en una orden finalizada;
+  - el alta no tiene búsqueda de clientes por nombre o teléfono (con 14 basta la lista);
+  - el catálogo de trabajos de producción está vacío, y vale la pena llenarlo para agilizar el alta.
 
 ### 06/11/2026, tarde — Claude Code (el dibujo del vehículo es un sedán moderno)
 

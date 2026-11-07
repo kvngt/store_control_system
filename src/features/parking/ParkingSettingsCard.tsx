@@ -624,7 +624,7 @@ export default function ParkingSettingsCard() {
                 </div>
               ) : (
                 <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
-                  Sin cálculo disponible para estos parámetros.
+                  {t('parking.noPreview')}
                 </span>
               )}
             </div>

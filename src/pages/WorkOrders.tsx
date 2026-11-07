@@ -20,7 +20,7 @@ import { firstStepWithErrors } from '../features/workOrders/workOrderForm.schema
 import { useWorkOrderDetail } from '../features/workOrders/useWorkOrderDetail';
 import LazyModal from '../components/LazyModal';
 import { getErrorMessage } from '../lib/errors';
-import { daysFromTodayLocal } from '../lib/dates';
+import { daysFromTodayLocal, formatDay } from '../lib/dates';
 import { orderDueState, type DueState } from '../lib/orderDue';
 import ArchivedOrders from '../features/workOrders/ArchivedOrders';
 import FindingsAlert from '../features/workOrders/FindingsAlert';
@@ -764,7 +764,7 @@ export default function WorkOrders() {
               <div className="workorder-card-footer">
                 <span className={dueClass(order)} title={dueTitle(order)}>
                   <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-                  {order.fecha_estimada_entrega}
+                  {formatDay(order.fecha_estimada_entrega, language)}
                 </span>
                 {/* `montos` es null para un técnico: la base no se lo devuelve. */}
                 {order.montos && (
@@ -854,7 +854,7 @@ export default function WorkOrders() {
                   </td>
                   <td style={{ fontSize: 'var(--font-size-sm)' }} className={dueClass(order)} title={dueTitle(order)}>
                     <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-                    {order.fecha_estimada_entrega}
+                    {formatDay(order.fecha_estimada_entrega, language)}
                   </td>
                   {isAdmin && (
                     <td style={{ fontWeight: 600 }}>{money(order.montos?.total_general)}</td>

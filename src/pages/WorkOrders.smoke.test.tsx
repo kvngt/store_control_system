@@ -669,9 +669,14 @@ describe('WorkOrders — intake validation', () => {
 
     await next(user, dialog);
     await waitFor(() => expect(currentStep(dialog)).toMatch(/Vehículo/));
+    // Su único vehículo llega elegido; quien lo vacía a propósito ve el aviso.
+    const vehicle = document.getElementById('intake-vehicle') as HTMLSelectElement;
+    await waitFor(() => expect(vehicle.value).toBe(VEHICLE.id));
+    await user.selectOptions(vehicle, '');
     await next(user, dialog);
     expect(await within(dialog).findByText(/Selecciona un veh[íi]culo/i)).toBeInTheDocument();
     expect(currentStep(dialog)).toMatch(/Vehículo/);
+    expect(vehicle.value).toBe('');
     expect(mocks.createWorkOrder).not.toHaveBeenCalled();
   });
 

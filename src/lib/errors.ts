@@ -77,6 +77,7 @@ const SHOP_REASONS_EN: [RegExp, string][] = [
   [/^Una orden entregada no se borra/, "A delivered order cannot be deleted: it holds the payment, the parts cost and the commissions. Archive it to take it off the list."],
   [/^La inspección ya está publicada para el cliente/, "The customer can already see this inspection. Only the office can change its photos."],
   [/^La orden ya fue entregada/, "The order was already delivered. Only an administrator can change it."],
+  [/^La orden ya está terminada/, "The order is already finished. If something is missing, ask the office to reopen it."],
   [/^La orden ya está finalizada/, "The order is already finished. Only an administrator can reopen it."],
 ];
 

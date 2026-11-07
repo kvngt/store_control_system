@@ -67,7 +67,7 @@ describe('OrderMarginCard', () => {
     renderWithProviders(<OrderMarginCard sedeId="sede-centro" />);
 
     expect(await screen.findByText('ORD-2026-001')).toBeInTheDocument();
-    expect(screen.getByText('Total del mes (1 órdenes)')).toBeInTheDocument();
+    expect(screen.getByText('Total del mes (1 orden)')).toBeInTheDocument();
     const call = mocks.getOrderMargins.mock.calls[0][0];
     expect(call).toMatchObject({ sedeId: 'sede-centro', limit: 25, offset: 0 });
     expect(call.desde).toMatch(/^\d{4}-\d{2}-01$/);

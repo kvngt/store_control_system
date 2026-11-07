@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BookOpen, Camera, Check, CheckCircle2, ChevronLeft, ChevronRight, Pencil, Trash2, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
@@ -77,7 +77,7 @@ export default function WorkOrderCreateModal({
   onSubmit,
   onClose,
 }: WorkOrderCreateModalProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { showToast } = useToast();
   const { register, formState, watch, setValue } = form.form;
   const { errors } = formState;
@@ -130,6 +130,27 @@ export default function WorkOrderCreateModal({
       setValue('authorizedAtIntake', false);
     }
   }, [hasLines, setValue]);
+
+  // Los clientes en orden alfabético: la lista venía por fecha de alta y, con decenas, había que
+  // leerla entera para encontrar a alguien (06/11/2026).
+  const sortedCustomers = useMemo(
+    () => [...customers].sort((a, b) => a.nombre.localeCompare(b.nombre, language, { sensitivity: 'base' })),
+    [customers, language]
+  );
+
+  // Un cliente con un solo vehículo casi siempre trae ese: queda elegido (se cambia en el mismo
+  // selector). Es un toque menos en el mostrador; recibir un carro debe tomar menos de 60 s.
+  const selectedVehicle = watch('selectedVehicle');
+  const onlyVehicleId = vehiclesForCustomer.length === 1 ? vehiclesForCustomer[0].id : null;
+  const { selectVehicle, vehicleMode, selectedCustomer } = form;
+  useEffect(() => {
+    if (onlyVehicleId && selectedCustomer && vehicleMode === 'existing' && !selectedVehicle) {
+      selectVehicle(onlyVehicleId);
+    }
+    // Solo al cambiar de cliente (o al llegar su lista): si alguien deja el selector vacío a
+    // propósito, no se lo vuelve a llenar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCustomer, onlyVehicleId]);
 
   const FieldError = ({ messageKey }: { messageKey?: string }) =>
     messageKey ? (
@@ -212,7 +233,7 @@ export default function WorkOrderCreateModal({
           >
             <option value="">{t('intake.selectCustomer')}</option>
             <option value="__new__">+ {t('customers.newCustomer')}</option>
-            {customers.map((c) => (
+            {sortedCustomers.map((c) => (
               <option key={c.id} value={c.id}>{c.nombre}</option>
             ))}
           </select>

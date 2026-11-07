@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { commissionsService, dashboardService, financeService, workOrdersService } from '../services/supabaseService';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
-import { monthLabel, todayLocal } from '../lib/dates';
+import { formatDay, monthLabel, todayLocal } from '../lib/dates';
 import { openInNewTab } from '../lib/openInNewTab';
 import { getErrorMessage } from '../lib/errors';
 import type { FinancialTransaction, TransactionType, TransactionCategory, DashboardStats, WorkOrder, BankStatementImport, StatementSummary } from '../types/database';
@@ -290,7 +290,7 @@ export default function Finance() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{t('finance.title')}</h1>
-          {view === 'app' && <p className="page-subtitle">{filtered.length} {t('finance.transactions').toLowerCase()}</p>}
+          {view === 'app' && <p className="page-subtitle">{filtered.length} {t(filtered.length === 1 ? 'finance.transactionOne' : 'finance.transactions').toLowerCase()}</p>}
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
           {view === 'app' ? (
@@ -494,9 +494,16 @@ export default function Finance() {
             </tr>
           </thead>
           <tbody>
+            {sortedTransactions.length === 0 && (
+              <tr>
+                <td colSpan={user?.rol === 'admin' ? 7 : 6} style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
+                  {t('finance.noTransactionsYet')}
+                </td>
+              </tr>
+            )}
             {sortedTransactions.map((txn) => (
               <tr key={txn.id}>
-                <td data-label={t('common.date')} style={{ whiteSpace: 'nowrap' }}>{txn.fecha}</td>
+                <td data-label={t('common.date')} style={{ whiteSpace: 'nowrap' }}>{formatDay(txn.fecha, language)}</td>
                 <td data-label={t('common.type')}>
                   <span className={`badge badge-${txn.tipo}`}>
                     {txn.tipo === 'ingreso' ? (

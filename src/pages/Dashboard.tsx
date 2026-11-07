@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardService, workOrdersService } from '../services/supabaseService';
 import { DEFAULT_CAPACITY } from '../services/dashboard.service';
-import { monthLabel } from '../lib/dates';
+import { daysFromTodayLocal, formatDay, monthLabel } from '../lib/dates';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
@@ -93,7 +93,12 @@ export default function Dashboard() {
   };
 
   const waitingOrders = visibleOrders.filter((o) => o.estatus === 'espera_autorizacion').slice(0, MAX_ALERT_ROWS);
-  const laggingOrders = visibleOrders.filter((o) => o.estatus === 'en_proceso' && o.porcentaje_avance < 30).slice(0, MAX_ALERT_ROWS);
+  // Avance bajo: en proceso, con menos del 30 % y a un día o menos de su entrega estimada. Con
+  // solo «menos del 30 %», cada orden recién autorizada salía como alerta (06/11/2026).
+  const dueSoon = daysFromTodayLocal(1);
+  const laggingOrders = visibleOrders
+    .filter((o) => o.estatus === 'en_proceso' && o.porcentaje_avance < 30 && o.fecha_estimada_entrega <= dueSoon)
+    .slice(0, MAX_ALERT_ROWS);
 
   if (loading) {
     return <div className="loading-state"><div className="spinner" /></div>;
@@ -277,7 +282,7 @@ export default function Dashboard() {
                     {order.cliente?.nombre} — {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
                   </div>
                   <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-                    {t('workOrders.estimatedDelivery')}: {order.fecha_estimada_entrega}
+                    {t('workOrders.estimatedDelivery')}: {order.fecha_estimada_entrega ? formatDay(order.fecha_estimada_entrega, language) : '—'}
                   </div>
                 </div>
                 <ChevronRight size={16} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />

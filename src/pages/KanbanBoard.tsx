@@ -11,6 +11,7 @@ import { getErrorMessage } from '../lib/errors';
 import type { OrderStatus, WorkOrder } from '../types/database';
 import DeliveryModal from '../features/workOrders/DeliveryModal';
 import { orderDueState, type DueState } from '../lib/orderDue';
+import { formatDay } from '../lib/dates';
 import { matchesOrderSearch } from '../features/workOrders/orderSearch';
 import { Archive, Calendar, Gauge } from 'lucide-react';
 
@@ -450,7 +451,7 @@ export default function KanbanBoard({ embedded = false, search = '', onOpen }: K
                           title={orderDueState(order) ? dueLabel(orderDueState(order)!) : undefined}
                         >
                           <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-                          {order.fecha_estimada_entrega}
+                          {formatDay(order.fecha_estimada_entrega, language)}
                         </div>
                       </div>
                     </div>

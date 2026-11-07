@@ -122,6 +122,7 @@ const translations: Record<Language, Translations> = {
     },
     // Customers
     customers: {
+      noOrdersYet: 'Este cliente todavía no tiene órdenes.',
       title: 'Clientes',
       newCustomer: 'Nuevo Cliente',
       editCustomer: 'Editar Cliente',
@@ -436,6 +437,7 @@ const translations: Record<Language, Translations> = {
       customer: 'Cliente',
       noneInMonth: 'No se entregaron órdenes en este mes.',
       monthTotal: 'Total del mes ({n} órdenes)',
+      monthTotalOne: 'Total del mes (1 orden)',
       page: 'Página {page} de {pages}',
       marginHint: 'Margen = cobrado − repuestos − comisiones generadas (pagadas o no). Las órdenes cuentan en el mes en que se entregaron.',
     },
@@ -1175,11 +1177,13 @@ const translations: Record<Language, Translations> = {
     },
     // Finance
     finance: {
+      noTransactionsYet: 'Todavía no hay movimientos en este periodo.',
       title: 'Control Financiero',
       deleteTransactionConfirm: '¿Eliminar la transacción de {monto}?',
       transactionDeleted: 'Transacción eliminada',
       systemEntry: 'Lo asentó el sistema (un cobro, un costo o un pago). Se corrige desde la orden o el pago, no aquí.',
       transactions: 'Transacciones',
+      transactionOne: 'Transacción',
       newTransaction: 'Nueva Transacción',
       income: 'Ingresos',
       expense: 'Egresos',
@@ -1281,6 +1285,7 @@ const translations: Record<Language, Translations> = {
       tabPayments: 'Pagos realizados',
       noPending: 'No hay comisiones pendientes de pago.',
       ordersCount: 'órdenes',
+      ordersCountOne: 'orden',
       payBalance: 'Pagar saldo',
       confirmPayment: 'Registrar pago',
       paymentRecorded: 'Pago registrado. Se descontó del saldo y se registró como egreso en Finanzas.',
@@ -1672,6 +1677,7 @@ const translations: Record<Language, Translations> = {
       saveSuccess: 'Configuración de parqueo guardada',
       saveError: 'Error al guardar la configuración de parqueo',
       orderParkingTitle: 'Cobro de Parqueo',
+      noPreview: 'Sin cálculo disponible para estos parámetros.',
       states: {
         inactivo: 'Inactivo',
         esperando: 'Esperando que la orden se marque lista para entregar',
@@ -2013,6 +2019,7 @@ const translations: Record<Language, Translations> = {
       days: 'days',
     },
     customers: {
+      noOrdersYet: 'This customer has no orders yet.',
       title: 'Customers',
       newCustomer: 'New Customer',
       editCustomer: 'Edit Customer',
@@ -2323,6 +2330,7 @@ const translations: Record<Language, Translations> = {
       customer: 'Customer',
       noneInMonth: 'No orders were delivered this month.',
       monthTotal: 'Month total ({n} orders)',
+      monthTotalOne: 'Month total (1 order)',
       page: 'Page {page} of {pages}',
       marginHint: 'Margin = collected − parts − commissions earned (paid or not). Orders count in the month they were delivered.',
     },
@@ -3043,11 +3051,13 @@ const translations: Record<Language, Translations> = {
       loadError: 'Could not load your jobs.',
     },
     finance: {
+      noTransactionsYet: 'No transactions in this period yet.',
       title: 'Financial Control',
       deleteTransactionConfirm: 'Delete the transaction of {monto}?',
       transactionDeleted: 'Transaction deleted',
       systemEntry: 'Booked by the system (a payment, a cost or a payout). Fix it from the order or the payout, not here.',
       transactions: 'Transactions',
+      transactionOne: 'Transaction',
       newTransaction: 'New Transaction',
       income: 'Income',
       expense: 'Expenses',
@@ -3148,6 +3158,7 @@ const translations: Record<Language, Translations> = {
       tabPayments: 'Payments made',
       noPending: 'No commissions are awaiting payment.',
       ordersCount: 'orders',
+      ordersCountOne: 'order',
       payBalance: 'Pay balance',
       confirmPayment: 'Record payment',
       paymentRecorded: 'Payment recorded. It cleared the balance and was booked as an expense in Finance.',
@@ -3534,6 +3545,7 @@ const translations: Record<Language, Translations> = {
       saveSuccess: 'Parking configuration saved',
       saveError: 'Error saving parking configuration',
       orderParkingTitle: 'Parking Fee',
+      noPreview: 'No estimate for these settings.',
       states: {
         inactivo: 'Inactive',
         esperando: 'Waiting for order to be marked ready for delivery',

@@ -10,6 +10,7 @@ import { getErrorMessage } from '../../lib/errors';
 import { money } from '../../lib/money';
 import type { WorkOrder } from '../../types/database';
 import type { OrderParkingAdjustments } from '../../types/domain/parking.types';
+import { formatDay } from '../../lib/dates';
 
 interface ParkingCardProps {
   order: Pick<WorkOrder, 'id' | 'sede_id' | 'con_seguro'>;
@@ -114,13 +115,13 @@ export default function ParkingCard({ order }: ParkingCardProps) {
       case 'esperando':
         return t('parking.states.esperando');
       case 'por_empezar':
-        return t('parking.states.por_empezar').replace('{date}', parking.inicio_cobro ?? '—');
+        return t('parking.states.por_empezar').replace('{date}', parking.inicio_cobro ? formatDay(parking.inicio_cobro, language) : '—');
       case 'orden_previa':
         return t('parking.states.orden_previa');
       case 'sin_cobro':
         return t('parking.states.sin_cobro');
       case 'acumulando':
-        return t('parking.states.acumulando').replace('{date}', parking.inicio_cobro ?? '—');
+        return t('parking.states.acumulando').replace('{date}', parking.inicio_cobro ? formatDay(parking.inicio_cobro, language) : '—');
       case 'cerrado':
         return t('parking.states.cerrado');
       default:

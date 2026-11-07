@@ -314,16 +314,20 @@ function TaskActions({
           </button>
         )
       )}
-      <button
-        type="button"
-        className={`btn ${completed ? 'btn-secondary' : 'btn-success'}`}
-        style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}
-        onClick={() => detail.toggleLaborComplete(task)}
-        disabled={detail.busy}
-      >
-        {completed ? <Circle size={16} /> : <CheckCircle2 size={16} />}
-        {completed ? t('tasks.reopen') : t('tasks.markDone')}
-      </button>
+      {/* Con la orden terminada, el técnico ya no desmarca su tarea: la base lo rechaza
+          (20261010000042) y la orden quedaría terminada con trabajo sin hacer. */}
+      {!(completed && !detail.isAdmin && detail.order?.estatus === 'finalizado') && (
+        <button
+          type="button"
+          className={`btn ${completed ? 'btn-secondary' : 'btn-success'}`}
+          style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}
+          onClick={() => detail.toggleLaborComplete(task)}
+          disabled={detail.busy}
+        >
+          {completed ? <Circle size={16} /> : <CheckCircle2 size={16} />}
+          {completed ? t('tasks.reopen') : t('tasks.markDone')}
+        </button>
+      )}
       <button
         type="button"
         className="btn btn-primary"

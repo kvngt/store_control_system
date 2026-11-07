@@ -423,7 +423,7 @@ export default function Settings() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                 <Shield size={14} style={{ color: 'var(--color-primary-light)' }} />
-                <span style={{ color: 'var(--color-primary-light)', fontWeight: 500, textTransform: 'capitalize' }}>{user?.rol}</span>
+                <span style={{ color: 'var(--color-primary-light)', fontWeight: 500, }}>{user?.rol ? t(`employees.roles.${user.rol}`) : ''}</span>
               </div>
               <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 4 }}>
                 {t('settings.changePhoto')}
@@ -755,7 +755,7 @@ export default function Settings() {
                             color: 'var(--color-text-secondary)',
                           }}
                         >
-                          {u.nombre_completo.split(' ')[0]} · <span style={{ textTransform: 'capitalize' }}>{u.rol}</span>
+                          {u.nombre_completo.split(' ')[0]} · <span>{t(`employees.roles.${u.rol}`)}</span>
                         </div>
                       ))}
                     </div>

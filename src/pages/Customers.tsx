@@ -28,6 +28,7 @@ import { AlertError } from '../components/AlertError';
 import { money } from '../lib/money';
 import PhoneInput from '../components/PhoneInput';
 import { formatPhone } from '../lib/phone';
+import { workTypeKey } from '../lib/workType';
 
 const digitsOf = (v: string) => (v || '').replace(/\D/g, '');
 
@@ -335,10 +336,17 @@ export default function Customers() {
                     </tr>
                   </thead>
                   <tbody>
+                    {orders.length === 0 && (
+                      <tr>
+                        <td colSpan={isAdmin ? 4 : 3} style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-4) 0' }}>
+                          {t('customers.noOrdersYet')}
+                        </td>
+                      </tr>
+                    )}
                     {orders.map((o) => (
                       <tr key={o.id}>
                         <td data-label={t('workOrders.orderNumber')} style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>{o.numero_orden}</td>
-                        <td data-label={t('common.type')}><span className={`badge badge-${o.tipo_trabajo}`}>{o.tipo_trabajo}</span></td>
+                        <td data-label={t('common.type')}><span className={`badge badge-${o.tipo_trabajo}`}>{t(workTypeKey(o.tipo_trabajo))}</span></td>
                         <td data-label={t('common.status')}><span className={`badge badge-${o.estatus}`}>{statusLabels[o.estatus]}</span></td>
                         {isAdmin && (
                           <td data-label={t('common.total')} style={{ fontWeight: 600 }}>
@@ -402,6 +410,13 @@ export default function Customers() {
               </tr>
             </thead>
             <tbody>
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
+                    {t('common.noResults')}
+                  </td>
+                </tr>
+              )}
               {filtered.map((customer) => (
                 <tr key={customer.id}>
                   <td data-label={t('common.name')}>

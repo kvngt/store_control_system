@@ -53,7 +53,7 @@ describe('ParkingCard', () => {
     renderWithProviders(<ParkingCard order={ORDER} />);
 
     expect(await screen.findByText('Sin seguro (Particular)')).toBeInTheDocument();
-    expect(screen.getByText('Acumulando desde el 2026-10-01')).toBeInTheDocument();
+    expect(screen.getByText('Acumulando desde el 1 oct 2026')).toBeInTheDocument();
     expect(screen.getByText('5 días')).toBeInTheDocument();
     expect(screen.getAllByText('$200.00').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Tope aplicado')).toBeInTheDocument();
@@ -106,6 +106,6 @@ describe('ParkingCard', () => {
     });
     renderWithProviders(<ParkingCard order={ORDER} />);
 
-    expect(await screen.findByText('Empieza el 2026-10-15')).toBeInTheDocument();
+    expect(await screen.findByText('Empieza el 15 oct 2026')).toBeInTheDocument();
   });
 });
