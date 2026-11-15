@@ -24,3 +24,12 @@ export function serviceTokenFromPath(pathname: string): string | null {
   const token = pathname.slice(SERVICE_PATH_PREFIX.length).split('/')[0];
   return /^[0-9a-f]{64}$/.test(token) ? token : null;
 }
+
+/** El personal abre el enlace desde la orden con ?vista=taller (CustomerLinkCard). */
+export function isStaffPreview(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get('vista') === 'taller';
+  } catch {
+    return false;
+  }
+}

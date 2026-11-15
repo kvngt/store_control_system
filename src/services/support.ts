@@ -1,4 +1,5 @@
 // Cross-cutting helpers shared by the domain services.
+import { supabase } from '../lib/supabase';
 
 /**
  * Filas por página al leer listas completas. Es el máximo que devuelve la API de
@@ -55,4 +56,32 @@ export function assertDeleted(rows: { id: string }[] | null, entity: string) {
       { code: '42501' }
     );
   }
+}
+
+/**
+ * Devuelve un token de sesión vigente; si falta o ya venció, intenta renovar
+ * una vez con `refreshSession` antes de fallar con `session_expired`.
+ *
+ * `getSession()` puede devolver `null` dentro del margen de 90 s antes del
+ * vencimiento cuando el refresco automático falló y su enfriamiento de 60 s
+ * sigue corriendo; con la clave pública de formato nuevo la petición salía sin
+ * cabecera `Authorization`, y por eso se refresca explícitamente una vez.
+ */
+export async function getValidAccessToken(): Promise<string> {
+  const { data } = await supabase.auth.getSession();
+  const session = data.session;
+  const expired =
+    typeof session?.expires_at === 'number' && session.expires_at * 1000 <= Date.now();
+  let token = expired ? undefined : session?.access_token;
+  if (!token) {
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    token = refreshed.session?.access_token;
+  }
+  if (!token) {
+    throw Object.assign(new Error('La sesión expiró. Vuelve a iniciar sesión.'), {
+      status: 401,
+      code: 'session_expired',
+    });
+  }
+  return token;
 }

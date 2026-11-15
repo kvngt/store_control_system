@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Eye } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import Modal from '../../components/Modal';
 import type { OrderProgressUpdate } from '../../types/database';
 
 const MAX_MESSAGE = 1000;
@@ -28,39 +29,17 @@ export default function PublishProgressModal({ entry, saving, onCancel, onConfir
   const [texto, setTexto] = useState(entry.descripcion ?? '');
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div
-        className="modal"
-        style={{ maxWidth: 520 }}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('workOrders.publishProgressTitle')}
-      >
-        <div className="modal-header">
-          <h2 className="modal-title">
-            <Eye size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
-            {t('workOrders.publishProgressTitle')}
-          </h2>
-        </div>
-        <div className="modal-body">
-          <div className="alert-warn">{t('workOrders.publishProgressWarning')}</div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="publish-progress-text">
-              {t('workOrders.publishProgressLabel')}
-            </label>
-            <textarea
-              id="publish-progress-text"
-              className="form-input form-textarea"
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              maxLength={MAX_MESSAGE}
-              rows={4}
-            />
-          </div>
-          <p className="field-hint">{t('workOrders.publishProgressHint')}</p>
-        </div>
-        <div className="modal-footer">
+    <Modal
+      onClose={onCancel}
+      style={{ maxWidth: 520 }}
+      title={
+        <>
+          <Eye size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
+          {t('workOrders.publishProgressTitle')}
+        </>
+      }
+      footer={
+        <>
           <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={saving}>
             {t('common.cancel')}
           </button>
@@ -73,8 +52,24 @@ export default function PublishProgressModal({ entry, saving, onCancel, onConfir
           >
             {saving ? t('common.loading') : t('workOrders.publishProgressConfirm')}
           </button>
-        </div>
+        </>
+      }
+    >
+      <div className="alert-warn">{t('workOrders.publishProgressWarning')}</div>
+      <div className="form-group">
+        <label className="form-label" htmlFor="publish-progress-text">
+          {t('workOrders.publishProgressLabel')}
+        </label>
+        <textarea
+          id="publish-progress-text"
+          className="form-input form-textarea"
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          maxLength={MAX_MESSAGE}
+          rows={4}
+        />
       </div>
-    </div>
+      <p className="field-hint">{t('workOrders.publishProgressHint')}</p>
+    </Modal>
   );
 }

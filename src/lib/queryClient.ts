@@ -77,6 +77,52 @@ export const queryKeys = {
 };
 
 /**
+ * Invalida las consultas que la base recalcula cuando cambia una orden
+ * (estado, trabajos, presupuestos, cobros, movimientos de finanzas o comisiones).
+ */
+export function invalidateOrderEffects(
+  queryClient: QueryClient,
+  { orderId, sedeId }: { orderId?: string; sedeId?: string } = {}
+): Promise<void[]> {
+  const scoped = (family: string) => (sedeId ? ([family, sedeId] as const) : ([family] as const));
+  const invalidations: Promise<void>[] = [
+    queryClient.invalidateQueries({ queryKey: scoped('work-orders') }),
+    queryClient.invalidateQueries({ queryKey: scoped('dashboard-stats') }),
+    queryClient.invalidateQueries({ queryKey: scoped('attention') }),
+    queryClient.invalidateQueries({ queryKey: scoped('transactions') }),
+    queryClient.invalidateQueries({ queryKey: scoped('order-margins') }),
+    queryClient.invalidateQueries({ queryKey: scoped('commissions') }),
+    queryClient.invalidateQueries({ queryKey: scoped('commission-payments') }),
+    queryClient.invalidateQueries({ queryKey: ['my-commissions'] }),
+    queryClient.invalidateQueries({ queryKey: ['my-tasks'] }),
+    queryClient.invalidateQueries({ queryKey: scoped('workshop-metrics') }),
+  ];
+
+  if (orderId) {
+    invalidations.push(
+      queryClient.invalidateQueries({ queryKey: queryKeys.workOrderDetail(orderId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.orderBalance(orderId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.orderFinancialBalance(orderId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.commissionEstimate(orderId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.paidCommissions(orderId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.orderJobs(orderId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.quotes(orderId) })
+    );
+  } else {
+    invalidations.push(
+      queryClient.invalidateQueries({ queryKey: ['order-balance'] }),
+      queryClient.invalidateQueries({ queryKey: ['order-financial-balance'] }),
+      queryClient.invalidateQueries({ queryKey: ['commission-estimate'] }),
+      queryClient.invalidateQueries({ queryKey: ['paid-commissions'] }),
+      queryClient.invalidateQueries({ queryKey: ['order-jobs'] }),
+      queryClient.invalidateQueries({ queryKey: ['quotes'] })
+    );
+  }
+
+  return Promise.all(invalidations);
+}
+
+/**
  * Builds the app's query client.
  *
  * A factory rather than a module-level singleton so each test gets its own

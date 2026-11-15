@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   getPendingWork: vi.fn(),
 }));
 
-vi.mock('../../services/supabaseService', () => ({
+vi.mock('../../services/workOrders.service', () => ({
   workOrdersService: {
     getPendingWork: mocks.getPendingWork,
   },

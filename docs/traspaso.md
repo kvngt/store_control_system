@@ -71,7 +71,7 @@ Esto no se recupera clonando el repositorio. Si se pierde, hay que regenerarlo.
 | Qué | Dónde vive | Si se pierde |
 |---|---|---|
 | `.env.local` (URL y clave anónima de Supabase, llave pública VAPID, DSN de Sentry) | Máquina de desarrollo | Todo se vuelve a leer del panel de Supabase (Project Settings → API Keys) salvo la llave pública VAPID, que también está en `supabase/.env.secrets.local` |
-| `.env.test.local` (cuentas para pruebas e2e y `qa:security`) | Máquina de desarrollo. **Las cuentas que nombra se borraron el 29/09/2026** con la limpieza del proyecto: hay que crearlas de nuevo, idealmente en un proyecto de staging | Crear cuentas de prueba nuevas ([plan-de-pruebas.md §2.2](plan-de-pruebas.md#22-cuentas)) |
+| `.env.test.local` (cuentas para `qa:security` y `test:e2e` remoto) | Máquina de desarrollo. **Las cuentas que nombra se borraron el 29/09/2026** en producción; las pruebas E2E locales (`npm run test:e2e:local` con Docker) crean sus propias cuentas temporales `e2e-*@restorify.test` y no necesitan `.env.test.local` | Para `qa:security` autenticado, crear cuentas de prueba nuevas ([plan-de-pruebas.md §2.2](plan-de-pruebas.md#22-cuentas)) |
 | `supabase/.env.secrets.local` (secreto de funciones internas, par VAPID) | Máquina de desarrollo y, sin forma de leerlos de vuelta, en Supabase → Edge Functions → Secrets | Generar un juego nuevo ([deployment.md §7](deployment.md#7-rotar-secretos-y-llaves)): nuevo secreto en Supabase **y** en Vault; nuevo par VAPID en los secretos **y** en `VITE_VAPID_PUBLIC_KEY`, recompilar. Cada persona vuelve a activar el push en su teléfono |
 | Llave de Resend | Solo en Supabase → Edge Functions → Secrets | Crear otra en Resend y cargarla con `npx supabase secrets set` |
 | Configuración de Auth del proyecto real (registro apagado, SMTP, URL del sitio, largo de contraseña) | Panel de Supabase | `supabase/config.toml` describe la local, **no** la real. Ver [supabase.md §8](supabase.md#8-auth) |
@@ -104,14 +104,16 @@ npm run dev                          # http://localhost:5173
 
 ```bash
 npm run lint && npx tsc -b && npm test && npm run build
-npx supabase start && npm run test:db && npx supabase stop
-npm run qa:security      # necesita las cuentas de .env.test.local (ver sección 3)
+npm run test:functions   # edge functions con Deno 2
+npx supabase start && npm run test:db && npm run test:e2e:local && npx supabase stop
+npm run qa:security      # contra el proyecto remoto (necesita cuentas en .env.test.local para probar como usuario)
 ```
 
 Si todo pasa, la máquina está lista.
 
-> `npm run dev` usa el proyecto **real** de `.env.local`. No hay staging: lo que crees
-> desde tu máquina aparece en el taller. Usa el prefijo `PRUEBA` y bórralo después.
+> `npm run dev` usa el proyecto **remoto** de `.env.local` (no hay staging en la nube: lo que
+> crees desde la app en desarrollo aparece en el taller). Las baterías `test:db` y
+> `test:e2e:local` sí corren contra Supabase local en Docker sin tocar producción.
 
 ---
 
@@ -151,10 +153,11 @@ Si todo pasa, la máquina está lista.
    necesario. Si es `SECURITY DEFINER`: `SET search_path = public` y validar rol por dentro.
 3. Si protege algo, protegerlo en `INSERT` **y** en `UPDATE`.
 4. Prueba pgTAP en `supabase/tests/database/`.
-5. `npx supabase start && npm run test:db`.
+5. `npx supabase start && npm run test:db` y `npm run db:types` para regenerar `src/types/supabase.gen.ts` (y revisar `src/types/domain/schema.contract.ts`).
 6. Si agrega una RPC o función interna que no debe ser pública, sumar su caso a
    `scripts/qa/api-security.mjs`.
-7. Si borra o renombra algo que usa la app, en dos pasos (expandir y contraer), y respaldo
+7. Si toca edge functions, prueba con `npm run test:functions` (Deno 2).
+8. Si borra o renombra algo que usa la app, en dos pasos (expandir y contraer), y respaldo
    antes de aplicar: [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación).
 
 ### Un cambio en el frontend

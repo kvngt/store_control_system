@@ -6,10 +6,10 @@ import { useToast } from '../../context/toast.context';
 import { getErrorMessage } from '../../lib/errors';
 import { isValidEmail } from '../../lib/email';
 import { canOpenSms, smsUrl, whatsAppUrl } from '../../lib/phone';
+import { buildCustomerShareMessage, staffPortalUrl } from '../../lib/portalShare';
 import { queryKeys } from '../../lib/queryClient';
 import { relativeTime } from '../notifications/renderNotification';
 import { customerPortalService } from '../../services/customerPortal.service';
-import { getTranslation } from '../../i18n/translations';
 import type { CustomerEmail, WorkOrder } from '../../types/database';
 
 interface CustomerLinkCardProps {
@@ -101,14 +101,7 @@ export default function CustomerLinkCard({ order, statusLabels }: CustomerLinkCa
       else showToast('error', t('customerLink.notifyNoEmail'));
     }, 'customerLink.notifyError');
 
-  const clientLang = customer?.idioma === 'es' ? 'es' : 'en';
-  const whatsAppMessage = url
-    ? getTranslation(clientLang, 'customerLink.whatsappMessage')
-        .replace('{nombre}', customer?.nombre?.split(' ')[0] || '')
-        .replace('{numero}', order.numero_orden)
-        .replace('{url}', url)
-        .replace(/\s+,/, ',')
-    : '';
+  const whatsAppMessage = url ? buildCustomerShareMessage(order, url) : '';
 
   const emailLabel = (email: CustomerEmail) => {
     const template = t(`customerLink.template.${email.plantilla}`);
@@ -145,7 +138,7 @@ export default function CustomerLinkCard({ order, statusLabels }: CustomerLinkCa
 
           <div className="customer-link-actions">
             {/* ?vista=taller: verlo desde aquí no cambia el idioma de los correos del cliente. */}
-            <a className="btn btn-secondary btn-sm" href={url ? `${url}?vista=taller` : undefined} target="_blank" rel="noopener noreferrer">
+            <a className="btn btn-secondary btn-sm" href={url ? staffPortalUrl(url) : undefined} target="_blank" rel="noopener noreferrer">
               <ExternalLink size={14} /> {t('customerLink.open')}
             </a>
             {sms && (

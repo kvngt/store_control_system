@@ -1,6 +1,7 @@
 // Profiles, staff administration and password recovery.
 import { supabase } from '../lib/supabase';
 import type { UserProfile, UserRole } from '../types/database';
+import { getValidAccessToken } from './support';
 
 /** Motivo de un rechazo de una edge function: texto y, si lo hay, un código. */
 interface FunctionFailure {
@@ -31,34 +32,6 @@ const CODE_BY_STATUS: Record<number, string> = {
 };
 
 /**
- * El token de quien llama, renovando una vez si hace falta.
- *
- * supabase-js resuelve el token por petición, y `getSession()` devuelve `null`
- * dentro del margen de 90 s previo al vencimiento cuando el refresco automático
- * falló y su enfriamiento de 60 s sigue corriendo. Como la clave pública es del
- * formato nuevo (`sb_publishable_…`), la librería tampoco usa la clave anónima
- * como respaldo: la petición salía **sin cabecera `Authorization`** y la función
- * respondía "No autorizado." a un administrador con la sesión abierta. Un
- * refresco explícito es la diferencia entre ese mensaje y hacer el trabajo.
- *
- * Mismo patrón que `accessToken` en `media.service.ts`.
- */
-async function adminAccessToken(): Promise<string> {
-  const { data } = await supabase.auth.getSession();
-  let token = data.session?.access_token;
-  if (!token) {
-    const { data: refreshed } = await supabase.auth.refreshSession();
-    token = refreshed.session?.access_token;
-  }
-  if (!token) {
-    throw Object.assign(new Error('La sesión expiró. Vuelve a iniciar sesión.'), {
-      code: 'session_expired',
-    });
-  }
-  return token;
-}
-
-/**
  * Llama una edge function de empleados y devuelve su motivo cuando la rechaza.
  *
  * Con un 4xx, `functions.invoke` no entrega el cuerpo: da un error cuyo mensaje es
@@ -69,7 +42,7 @@ async function adminAccessToken(): Promise<string> {
 export async function invokeAdminFunction<T>(name: string, body: Record<string, unknown>): Promise<T> {
   // Resolver el token aquí, y mandarlo explícito, quita de en medio la resolución
   // automática del SDK: o va firmada, o ni siquiera sale.
-  const token = await adminAccessToken();
+  const token = await getValidAccessToken();
   const { data, error } = await supabase.functions.invoke(name, {
     body,
     headers: { Authorization: `Bearer ${token}` },

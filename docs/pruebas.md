@@ -23,10 +23,11 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 1.156 pruebas, 152 archivos (04/11/2026) | ~30 s | Nada |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención", teléfonos de la sede, trabajo con seguro, cobro por parqueo, próximo servicio, autorización en recepción, marcas de daños, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, unicidad de VIN/placa, la revisión del 03/11 (`sin_autorizar`, fotos de una inspección publicada, traducciones), las decisiones del dueño del 04/11 (el técnico sin nada autorizado, la orden entregada que no se borra) y los hallazgos de la auditoría y del QA contra un Postgres real | 1.093 pruebas, 45 archivos (04/11/2026) | ~1 min | Docker |
-| **End-to-end** | Playwright | Flujos en un navegador real contra Supabase | 8 archivos, 77 casos (76 pasan, 1 se salta) | 2–5 min | Credenciales de prueba (**al 1/10/2026 no existen**: se borraron el 29/09) |
-| **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 202 casos (171 PASS + 31 SKIP al 19/10/2026), todos de solo lectura (los que escriben, escriben el valor que ya hay) | ~15 s | Nada; con cuentas de prueba cubre más |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 1.263 pruebas, 174 archivos (15/11/2026) | ~30 s | Nada |
+| **Edge functions** | Deno 2 (`npm run test:functions`) | `handler.ts` y helpers `_shared/*` (`http`, `resend`, `gemini`, `email/`, etc.) con dobles | 102 pruebas (15/11/2026) | ~10 s | Deno 2 |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención", teléfonos de la sede, trabajo con seguro, cobro por parqueo, próximo servicio, autorización en recepción, marcas de daños, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, unicidad de VIN/placa, la revisión del 03/11 (`sin_autorizar`, fotos de una inspección publicada, traducciones), las decisiones del dueño del 04/11 y los arreglos de auditoría `042`–`044` (13–15/11/2026) contra un Postgres real | 1.181 pruebas, 48 archivos (15/11/2026) | ~1 min | Docker |
+| **End-to-end** | Playwright (`npm run test:e2e:local`) | Flujos en un navegador real contra Supabase local | 77 casos (77 en verde al 15/11/2026) | 2–5 min | Docker (`supabase start`) |
+| **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 209 casos (178 PASS + 31 SKIP al 15/11/2026), todos de solo lectura (los que escriben, escriben el valor que ya hay) | ~15 s | Nada; con cuentas de prueba cubre más |
 | **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
 
 Por qué hacen falta todas: **Vitest simula la base**, así que no puede detectar una
@@ -38,8 +39,10 @@ reciba push. Eso queda para el plan manual.
 
 ```bash
 npm test                 # Vitest
+npm run test:functions   # Deno 2 (edge functions)
 npm run test:db          # pgTAP  (antes: npx supabase start)
-npm run test:e2e         # Playwright
+npm run test:e2e:local   # Playwright contra Supabase local (Docker)
+npm run test:e2e         # Playwright contra .env.local / .env.test.local
 npm run test:e2e:ui      # Playwright interactivo, para depurar
 npm run qa:security      # seguridad contra la API del proyecto de .env.local
 ```
@@ -373,7 +376,8 @@ Desde la fase 5, sin autorización no hay nada que cobrar ni comisión que gener
   toda alta o edición de mano de obra y repuestos) y encola **una** traducción pendiente por
   orden, solo cuando cambia un texto que ve el cliente (no el precio, no un avance interno).
 - `traducciones_orden`: admin y técnico asignado sí, otro técnico recibe `{}`; nadie lee la
-  tabla directo. `traducciones_portal`: con enlace vigente sí, revocado o inexistente no.
+  tabla directo. `traducciones_portal`: con enlace vigente sí, revocado o inexistente no
+  (desde `20261010000043` solo la ejecuta `service_role`).
 - Ninguna función interna es una RPC. Reescrita el 05/10/2026: la versión de la `013` insertaba
   en columnas que no existen y nunca corrió.
 
@@ -471,6 +475,8 @@ Las decisiones del taller del 05/10/2026 ([analisis-del-proceso-2026-10.md](hist
 
 - Unicidad de VIN (`uq_vehiculos_vin`) y de placa por estado (`uq_vehiculos_placa`) en `vehiculos` (`20261010000039`), ignorando mayúsculas, espacios y guiones.
 
+> **Estado (15 de noviembre de 2026):** **1.181 pruebas en verde en los 48 archivos**, con las 98 migraciones aplicadas desde cero (hasta `20261010000044_auditoria_2026_11_b`; aplicadas `043` y `044` en producción).
+>
 > **Estado (4 de noviembre de 2026):** 1.093 pruebas en verde en los 45 archivos, con las 95 migraciones aplicadas desde cero (hasta `20261010000041_decisiones_del_dueno_2026_11`). `npm run test:db` usa `npx -y supabase@3 test db`; el `config.toml` es de la CLI 3 y la CLI 2 necesita la 2.122 o más nueva. Contra una base local en otro puerto: `npx supabase@3 test db --remote="postgresql://postgres:postgres@127.0.0.1:<puerto>/postgres?sslmode=disable" --yes`. **Las pruebas viejas suponen una base vacía**: con los datos de demostración cargados fallan seis archivos (05, 08, 19, 26, 27 y 30) por `more than one row`; respalda los datos, haz `db reset` y vuelve a cargarlos.
 >
 > **Estado (11 de octubre de 2026):** 811 aserciones en verde en los 33 archivos, desde una
@@ -508,28 +514,49 @@ Al agregar una migración que toque permisos o dinero, agrega aquí la prueba.
 
 ### 2.3 End-to-end (Playwright)
 
+**La forma normal desde el 15/11/2026: contra la base local.**
+
 ```bash
-cp .env.test.example .env.test.local     # y completa credenciales
+npx supabase start            # o el stack local que ya tengas
+npm run test:e2e:local        # toda la suite; argumentos extra van a Playwright
+E2E_SUPABASE_URL=http://127.0.0.1:44321 npm run test:e2e:local   # si tu stack usa otro puerto
+```
+
+`scripts/e2e-local.mjs`:
+
+- toma la URL y las llaves de `supabase status` y **se niega a seguir si la URL no es de esta
+  máquina**;
+- crea o pone al día cuatro cuentas (`e2e-*@restorify.test`: admin, mecánico, pintor y un admin
+  de otra sede) con una contraseña nueva en cada corrida, que no se guarda;
+- levanta la app con Vite apuntando a la base local en el puerto 5174 (nunca reutiliza un
+  servidor que ya esté corriendo: ese podría apuntar al proyecto real) y corre Playwright con
+  `E2E_LOCAL_STACK=1`.
+
+El 15/11/2026: 77 de 77. Los 12 que fallaban eran pruebas viejas (el técnico ya no ve las órdenes
+de otros desde el 07/10, el alta de empleados vive en `/employees`, importar está en la vista de
+estados de cuenta de Finanzas, el panel está en `/panel`, Vehículos es de administración).
+
+**Una prueba que entrega órdenes, cobra o paga comisiones** va con
+`test.skip(!isLocalStack, 'Solo contra la base local')` (`e2e/fixtures.ts`): así nunca corre
+contra el proyecto real con `npm run test:e2e`.
+
+La forma anterior (`npm run test:e2e`) apunta al proyecto de `.env.local` (hoy producción) y exige `.env.test.local`; conviene evitarla en producción salvo necesidad puntual:
+
+```bash
+cp .env.test.example .env.test.local     # solo si vas a correr npm run test:e2e contra remoto
 npm run test:e2e
 ```
 
-> **Siempre contra un servidor local.** La suite escribe en el proyecto de Supabase
-> real (no hay staging todavía), así que apuntar además el navegador al sitio
-> publicado significa manejar producción con una orden de `npm`. Desde ahora
-> `playwright.config.ts` **rechaza** un `E2E_BASE_URL` que no sea `localhost`, salvo
-> que se defina también `E2E_ALLOW_REMOTE=1`; y solo levanta `npm run dev` cuando es
-> local. Antes, con `E2E_BASE_URL=https://reinventa.shop`, `reuseExistingServer` veía
-> que el sitio respondía y nadie se enteraba.
+> **Protecciones cuando se usa `npm run test:e2e` (remoto):** `playwright.config.ts`
+> **rechaza** un `E2E_BASE_URL` que no sea `localhost` salvo que se defina
+> `E2E_ALLOW_REMOTE=1`, y solo levanta el servidor local. Para desarrollo diario y CI local,
+> usa `npm run test:e2e:local`: corre contra Docker sin tocar producción y genera sus propias
+> cuentas temporales `e2e-*@restorify.test`.
 
-> **Las cuentas de prueba son datos reales.** Si alguien borra un empleado desde
-> Empleados, las credenciales de `.env.test.local` dejan de servir y la mitad de
-> la suite falla en el login, lo que se lee como un fallo del producto. Comprueba las
-> cuentas antes de creer en una tanda roja. **El 29 de septiembre de 2026 se borraron todas**
-> con la limpieza del proyecto: hasta que se creen de nuevo (mejor en un proyecto de
-> staging), las pruebas que necesitan sesión se saltan.
-`playwright.config.ts` levanta `npm run dev` y corre en Chromium. Las pruebas que
-necesitan sesión **se saltan solas** si faltan credenciales:
-`E2E_ADMIN_EMAIL/PASSWORD`, `E2E_MECHANIC_EMAIL/PASSWORD`, `E2E_PAINTER_EMAIL/PASSWORD`.
+En `playwright.config.ts` (modo remoto), las pruebas que necesitan sesión **se saltan solas**
+si faltan credenciales en `.env.test.local` (`E2E_ADMIN_EMAIL/PASSWORD`,
+`E2E_MECHANIC_EMAIL/PASSWORD`, `E2E_PAINTER_EMAIL/PASSWORD`; en producción esas cuentas de
+prueba se borraron el 29/09/2026).
 
 | Archivo | Casos | Cubre |
 |---|---|---|
@@ -546,17 +573,18 @@ Los identificadores de esta tabla (AUTH-, RBAC-, WORK-, FIN-, CFG-…) son los d
 de las pruebas e2e; no son los casos de [plan-de-pruebas.md](plan-de-pruebas.md), aunque
 algunos prefijos coincidan.
 
-> **Cuidado: corren contra el proyecto de `.env.local`**, que hoy es producción.
+> **Con `npm run test:e2e` corren contra el proyecto de `.env.local`**, que hoy es producción.
 > Las que crean datos usan el prefijo `PWTEST` y los borran; si una falla a medias,
-> busca `PWTEST` y limpia a mano. No agregues pruebas que entreguen órdenes o paguen
-> comisiones hasta que exista staging ([deployment.md](deployment.md#2-entornos)).
+> busca `PWTEST` y limpia a mano. Las que entregan órdenes o pagan comisiones se saltan ahí
+> (`isLocalStack`) y solo corren con `npm run test:e2e:local`.
 
 Las pruebas **PAY-01/02** anteriores probaban la nómina por salario, eliminada en
 la migración `20260912000000`; fueron reemplazadas por las de comisiones.
 
-**Pendiente de cubrir con e2e** (cuando haya staging): técnico sin precios en el
-detalle, multimedia con archivos de prueba, campana en tiempo real, el diálogo de entrega,
-Empleados y que un técnico solo vea sus órdenes.
+**Pendiente de cubrir con e2e** (ya se puede, con `test:e2e:local`): técnico sin precios en el
+detalle, multimedia con archivos de prueba, campana en tiempo real, el diálogo de entrega y el
+alta completa con depósito (hoy los cubre el recorrido `qa.local/r13.mjs`, que no es parte de la
+suite). Que un técnico solo vea sus órdenes ya lo cubren `login.spec.ts` y RBAC-30.
 
 ### 2.4 ¿Para qué hace falta Docker?
 
@@ -621,8 +649,8 @@ había pensado en llamarlas desde fuera ([auditoria-2026-09.md](historico/audito
 - **Sin cuentas** corre los 23 casos sin sesión, incluidos SEC-17 (las 7 edge functions responden, no 404) y SEC-18 (el registro público está apagado).
 - **Con cuentas** (`E2E_ADMIN_*` y `E2E_MECHANIC_*` de `.env.test.local`, o `QA_TECH_*` /
   `QA_ADMIN_*`) inicia sesión, busca una orden asignada al técnico y una entregada con su
-  sesión, y una ajena con la del admin (el técnico ya no la ve), y corre los 202 casos (171 PASS + 31 SKIP al 19/10/2026).
-- **Hoy no hay cuentas de prueba** (se borraron el 29/09/2026): corre solo los 23 sin sesión.
+  sesión, y una ajena con la del admin (el técnico ya no la ve), y corre los 209 casos (178 PASS + 31 SKIP contra producción el 15/11/2026; los SKIP necesitan órdenes de prueba que producción no tiene).
+- Las cuentas de prueba de producción se borraron el 29/09/2026; las que usa hoy `.env.test.local` no se crean desde la app del taller. Para correrla contra la base local, ver el recuadro de abajo.
 - Lo que no puede preparar lo marca **SKIP**. Termina con código 1 si hay un **FAIL**.
 
 > Solo contra datos de prueba: si la base tiene un hueco, la petición que lo demuestra
@@ -635,6 +663,22 @@ había pensado en llamarlas desde fuera ([auditoria-2026-09.md](historico/audito
 > usan dan un FAIL falso (204 sin filas).
 
 Lista de casos: [plan-de-pruebas.md §5](plan-de-pruebas.md#5-seguridad-contra-la-api-sec).
+
+### 2.6 Edge functions (Deno)
+
+```bash
+npm run test:functions   # npx -y deno@2 test --allow-env --no-check=remote --node-modules-dir=none --no-lock supabase/functions
+```
+
+Las pruebas unitarias (`supabase/functions/*/index.test.ts`) ejecutan el `handler` exportado de cada una de las 7 Edge Functions con dobles locales escritos a mano (`supabase/functions/_shared/test_doubles.ts`) para el cliente de Supabase, `fetch` y variables de entorno. **No tocan la red, no llaman a Resend ni a Gemini, y no escriben ni leen ninguna base de datos** (no requieren Docker ni `.env.local`).
+
+Cubren:
+
+- Respuestas `OPTIONS` / CORS y rechazo `400` ante JSON inválido, `null` o arreglo (en las 5 funciones HTTP públicas/admin).
+- Autenticación y permisos (`401`, `403`, `503`) y validaciones previas a Auth Admin API o Gemini en `create-employee`, `update-employee`, `delete-employee` y `traducir-texto` (incluyendo rollback ante fallos).
+- Verificación de `x-restorify-secret` en `cleanup-storage` y `process-outbox`.
+- Validación de token (`404`), carga y firma de multimedia (`datos_portal`) y acciones `POST` (`preferencia_correos`, `preferencia_idioma`, `responder_presupuesto`, acción desconocida `400`) en `portal`.
+- Reglas de `process-outbox`: `datos_correo` nulo o correo inválido (`omitido`), reintentos ante errores de Resend, plantilla `retirada_sin_reparar` hacia `renderEmail`, y espera de traducción pendiente hasta dos intentos.
 
 ---
 

@@ -3,11 +3,13 @@ import { HandCoins } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { AlertError } from '../../components/AlertError';
-import { workOrdersService } from '../../services/supabaseService';
+import Modal from '../../components/Modal';
+import { workOrdersService } from '../../services/workOrders.service';
 import { getErrorMessage } from '../../lib/errors';
 import { money } from '../../lib/money';
 import type { PaymentMethod, WorkOrder } from '../../types/database';
 import PaymentFields from './PaymentFields';
+import { paymentFields, paymentProblem, withReceipt } from './paymentReceipt';
 
 interface AdvancePaymentModalProps {
   order: Pick<WorkOrder, 'id' | 'numero_orden' | 'sede_id'>;
@@ -42,54 +44,59 @@ export default function AdvancePaymentModal({ order, onCancel, onDone }: Advance
       setError(t('advance.amountRequired'));
       return;
     }
-    if (!metodo) {
-      setError(t('delivery.methodRequired'));
+    const problem = paymentProblem({ needsMethod: true, metodo, numeroCheque, file });
+    if (problem) {
+      setError(t(problem));
       return;
     }
-    if (metodo === 'cheque' && !numeroCheque.trim() && !file) {
-      setError(t('delivery.checkRequired'));
-      return;
-    }
+    const payment = paymentFields({ needsMethod: true, metodo, numeroCheque });
+    if (!payment.metodo) return;
+    const paymentMethod = payment.metodo;
     setError('');
     setSaving(true);
-    let uploaded: string | null = null;
     try {
-      if (file) uploaded = await workOrdersService.uploadReceipt(order.sede_id, order.numero_orden, file);
-      await workOrdersService.registerAdvance({
-        orderId: order.id,
-        monto,
-        metodo,
-        numeroCheque: metodo === 'cheque' ? numeroCheque.trim() || null : null,
-        comprobanteRuta: uploaded,
-      });
+      await withReceipt(
+        { needsMethod: true, file, sedeId: order.sede_id, numeroOrden: order.numero_orden },
+        (comprobanteRuta) =>
+          workOrdersService.registerAdvance({
+            orderId: order.id,
+            monto,
+            metodo: paymentMethod,
+            numeroCheque: payment.numeroCheque,
+            comprobanteRuta,
+          })
+      );
       showToast('success', t('advance.done').replace('{monto}', money(monto)));
       await onDone();
     } catch (err) {
-      // Sin anticipo no hay a qué colgar el comprobante: se borra en vez de dejarlo huérfano.
-      if (uploaded) void workOrdersService.removeDeliveryReceipt(uploaded).catch(() => {});
       setError(getErrorMessage(err, language));
       setSaving(false);
     }
   };
 
   return (
-    <div className="modal-overlay" onClick={saving ? undefined : onCancel}>
-      <div
-        className="modal"
-        style={{ maxWidth: 480 }}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('advance.title').replace('{numero}', order.numero_orden)}
-      >
-        <div className="modal-header">
-          <h2 className="modal-title">
-            <HandCoins size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
-            {t('advance.title').replace('{numero}', order.numero_orden)}
-          </h2>
-        </div>
-        <div className="modal-body">
-          <AlertError message={error} />
+    <Modal
+      onClose={onCancel}
+      closeDisabled={saving}
+      style={{ maxWidth: 480 }}
+      title={
+        <>
+          <HandCoins size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
+          {t('advance.title').replace('{numero}', order.numero_orden)}
+        </>
+      }
+      footer={
+        <>
+          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={saving}>
+            {t('common.cancel')}
+          </button>
+          <button type="button" className="btn btn-primary" id="advance-submit" onClick={() => void submit()} disabled={saving}>
+            {saving ? t('common.loading') : monto > 0 ? t('advance.submit').replace('{monto}', money(monto)) : t('advance.action')}
+          </button>
+        </>
+      }
+    >
+      <AlertError message={error} />
           <p className="field-hint" style={{ marginTop: 0 }}>{t('advance.explain')}</p>
           <div className="form-group">
             <label className="form-label" htmlFor="advance-amount">{t('advance.amount')}</label>
@@ -113,16 +120,6 @@ export default function AdvancePaymentModal({ order, onCancel, onDone }: Advance
             onChangeFile={setFile}
             disabled={saving}
           />
-        </div>
-        <div className="modal-footer">
-          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={saving}>
-            {t('common.cancel')}
-          </button>
-          <button type="button" className="btn btn-primary" id="advance-submit" onClick={() => void submit()} disabled={saving}>
-            {saving ? t('common.loading') : monto > 0 ? t('advance.submit').replace('{monto}', money(monto)) : t('advance.action')}
-          </button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

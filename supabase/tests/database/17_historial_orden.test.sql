@@ -102,7 +102,7 @@ END $do$;
 -- ------------------------------------------------------------------------------------
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
 
-UPDATE ordenes_trabajo SET estatus = 'en_proceso', fecha_finalizacion = NULL WHERE id = (SELECT id FROM t_orden);
+UPDATE ordenes_trabajo SET estatus = 'en_proceso' WHERE id = (SELECT id FROM t_orden);
 UPDATE ordenes_trabajo SET porcentaje_avance = 40 WHERE id = (SELECT id FROM t_orden);
 
 SELECT is(

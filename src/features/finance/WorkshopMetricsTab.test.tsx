@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders, authValue, ADMIN_USER, SEDE_CENTRO } from '../../test/renderWithProviders';
 import WorkshopMetricsTab from './WorkshopMetricsTab';
-import { metricsService } from '../../services/supabaseService';
+import { metricsService } from '../../services/metrics.service';
 import type { WorkshopMetrics } from '../../types/database';
 
 vi.mock('../../context/auth.context', async (importOriginal) => {
@@ -14,8 +14,8 @@ vi.mock('../../context/auth.context', async (importOriginal) => {
   };
 });
 
-vi.mock('../../services/supabaseService', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../services/supabaseService')>();
+vi.mock('../../services/metrics.service', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../services/metrics.service')>();
   return {
     ...actual,
     metricsService: {
@@ -65,7 +65,7 @@ describe('WorkshopMetricsTab', () => {
 
     // Verificar títulos de las 8 fichas
     expect(await screen.findByText('Carros entregados')).toBeInTheDocument();
-    expect(screen.getByText('Ticket promedio (ARO)')).toBeInTheDocument();
+    expect(screen.getByText('Promedio por carro')).toBeInTheDocument();
     expect(screen.getByText('Tarifa efectiva / h')).toBeInTheDocument();
     expect(screen.getByText('Horas por orden')).toBeInTheDocument();
     expect(screen.getByText('Margen de mano de obra')).toBeInTheDocument();

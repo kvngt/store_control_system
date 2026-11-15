@@ -21,11 +21,11 @@ la base sin comprometer la operación: [mantenimiento.md §4](mantenimiento.md#4
 | Módulo | `features/<dominio>/` | Componentes, hooks y lógica de una parte de la app |
 | Datos | `services/<dominio>.service.ts` | **Todas** las consultas a Supabase. Ninguna pantalla llama a `supabase` directo |
 | Lógica sin React | `lib/` | Fechas, dinero, teléfono, PDF, multimedia, errores. Probada sin navegador |
-| Tipos | `types/domain/*.types.ts` | Un archivo por dominio; `types/database.ts` los reexporta |
+| Tipos | `types/supabase.gen.ts`, `types/domain/*.types.ts` | Tipos generados (`npm run db:types`), contrato `schema.contract.ts` y un archivo por dominio; `types/database.ts` los reexporta |
 | Textos | `i18n/translations.ts` | Español e inglés, por espacio de nombres (`workOrders.*`, `delivery.*`…) |
 | Estilos | `styles/components.css` | Por bloques con un comentario de título (`/* ----- Empleados ----- */`) |
 | Reglas y dinero | `supabase/migrations/` | RLS, triggers y RPC. La lógica que **tiene** que cumplirse |
-| Servidor | `supabase/functions/` | Edge functions (Deno): portal, correos y push, empleados |
+| Servidor | `supabase/functions/` | Edge functions (Deno 2): cada una con `handler.ts` + `index.ts` mínimo y helpers en `_shared/` |
 
 ---
 
@@ -36,12 +36,12 @@ la base sin comprometer la operación: [mantenimiento.md §4](mantenimiento.md#4
 
 | | |
 |---|---|
-| Pantalla | `pages/WorkOrders.tsx` (lista y archivo; para un técnico, solo "Mis órdenes"). Desde F7, dos vistas con la misma búsqueda (`features/workOrders/orderSearch.ts`): **Lista** y **Tablero** (`KanbanBoard` con `embedded`). La vista va en la URL y se recuerda en el navegador (`restorify_orders_view`) |
-| Detalle | `features/workOrders/WorkOrderDetail.tsx` (dibuja) y `useWorkOrderDetail.ts` (estado, permisos derivados como `canEdit`, `canSign`, `canDeliver`, y todas las acciones). En escritorio, pestañas (`components/Tabs.tsx`) bajo un encabezado fijo: admin Resumen/Trabajos/Fotos y avances/Cobro y cliente/Historial; técnico Tareas/Orden/Avances. Cada pestaña se monta al abrirla y después solo se esconde. Cada tarjeta es una sección plegable (`components/CollapsibleSection.tsx`), **cerrada al entrar**, en escritorio y en el teléfono (ahí apiladas, en el orden de las pestañas). Qué sección va en cada pestaña: `TAB_SECTIONS`; la que abre un enlace: `LINKED_SECTION`. Enlace directo a una pestaña: `/work-orders?open=<id>&tab=<id de la pestaña>`. Inspección 360° incluye el diagrama de daños (`DamageDiagramEditor`, `VehicleDiagram`, `lib/vehicleDiagram.ts`) |
+| Pantalla | `pages/WorkOrders.tsx` (`features/workOrders/list/OrderList.tsx` para la lista y `ArchivedOrders.tsx` para el archivo; para un técnico, solo "Mis órdenes"). Desde F7, dos vistas con la misma búsqueda (`features/workOrders/orderSearch.ts`): **Lista** y **Tablero** (`KanbanBoard` con `embedded`). La vista va en la URL y se recuerda en el navegador (`restorify_orders_view`) |
+| Detalle | `features/workOrders/WorkOrderDetail.tsx` (pestañas, `TAB_SECTIONS`, `LINKED_SECTION`; compone) y `useWorkOrderDetail.ts` (misma API, `WorkOrderDetailApi`, armada con los subhooks de `features/workOrders/detail/`: `useOrderTransitions`, `useOrderMoney`, `useOrderLines`, `useOrderMediaProgress`, `useOrderFollowUp`, `useOrderParking`). Los permisos de pantalla (`canEdit`, `canSign`, `canDeliver`…) salen de `detail/permissions.ts` (puro, con pruebas); cada sección va en `detail/sections/` y los diálogos en `detail/OrderDialogs.tsx`, junto con `OrderHeader.tsx`, `OrderTabTop.tsx` y `OrderQuickActions.tsx`. En escritorio, pestañas (`components/Tabs.tsx`) bajo un encabezado fijo: admin Resumen/Trabajos/Fotos y avances/Cobro y cliente/Historial; técnico Tareas/Orden/Avances. Cada pestaña se monta al abrirla y después solo se esconde. Cada tarjeta es una sección plegable (`components/CollapsibleSection.tsx`), **cerrada al entrar**, en escritorio y en el teléfono (ahí apiladas, en el orden de las pestañas). Qué sección va en cada pestaña: `TAB_SECTIONS`; la que abre un enlace: `LINKED_SECTION`. Enlace directo a una pestaña: `/work-orders?open=<id>&tab=<id de la pestaña>`. Inspección 360° incluye el diagrama de daños (`DamageDiagramEditor`, `VehicleDiagram`, `lib/vehicleDiagram.ts`) |
 | Historial de la orden | Tabla `historial_orden` (trigger `trg_historial`, `20261010000004`, `20261010000031` para `marcas_danos`); `workOrdersService.getHistory`; `features/workOrders/OrderHistory.tsx` y `historyFormat.ts` (convierte cada fila en una frase); pruebas `17_historial_orden.test.sql` y `historyFormat.test.ts` |
-| Alta | `features/workOrders/WorkOrderCreateModal.tsx`, `useWorkOrderForm.ts`, `workOrderForm.schema.ts`, `features/workOrders/intakeDraft.ts` (borrador automático en `localStorage`, por persona), `components/ChoiceDialog.tsx` y `lib/backButtonTrap.ts` (`useBackButtonTrap`, protección del botón «atrás» del teléfono). Cuatro pasos (F4): Cliente, Vehículo y recepción (con `DamageDiagramEditor`), Trabajos (con casilla de autorización en recepción `autorizado_en_recepcion`, migración `20261010000030_autorizar_en_recepcion.sql`, y selector de catálogo `CatalogPickerModal`), Depósito. Qué campo va en qué paso: `INTAKE_STEPS` (un error al crear abre su paso, `firstStepWithErrors`). Las tareas con `TaskEditor`; el depósito con `PaymentFields`. Lo envía `submitOrder` en `pages/WorkOrders.tsx` |
-| Tarjetas del detalle | `LaborTable` (con `TaskEditor`, `TechnicianSelect`, `TradeMismatchDialog` y las reglas de `tasks.ts`), `PartsTable`, `PartsSummaryCard`, `SignatureCard`, `ProgressLog`, `QuoteCard`, `CustomerLinkCard`, `CommissionEstimateCard`, `DeliveryModal`, `ShareReportModal`, `ReadyNotifyModal` (aviso SMS/WhatsApp sin correo al marcar listo), `DamageDiagramEditor`, `ArchivedOrders`; del técnico, `TechnicianTaskList` (Mis tareas, F5; acción rápida principal con `techNextStep.ts`) y `ReportFindingModal`; de administración, `FindingsCard` (con `DiscardFindingModal`; reglas en `findings.ts`) |
-| Servicio | `services/workOrders.service.ts` |
+| Alta | `features/workOrders/intake/` (`IntakeFlow.tsx`, `IntakeStepper.tsx`, `FieldError.tsx`, `intakeUtils.ts`, `steps/CustomerStep.tsx`, `VehicleStep.tsx`, `WorkStep.tsx`, `WorkPartsSection.tsx`, `DepositStep.tsx`, `useIntake.ts`, `useIntakeRecords.ts`, `useIntakeSubmit.ts`) con el cascarón en `WorkOrderCreateModal.tsx`, `useWorkOrderForm.ts`, `workOrderForm.schema.ts`, `intakeDraft.ts` (borrador automático en `localStorage`, por persona), `components/ChoiceDialog.tsx` y `lib/backButtonTrap.ts` (`useBackButtonTrap`, protección del botón «atrás» del teléfono). Cuatro pasos (F4): Cliente, Vehículo y recepción (con `DamageDiagramEditor`), Trabajos (con casilla de autorización en recepción `autorizado_en_recepcion`, migración `20261010000030_autorizar_en_recepcion.sql`, y selector de catálogo `CatalogPickerModal`), Depósito. Qué campo va en qué paso: `INTAKE_STEPS` (un error al crear abre su paso, `firstStepWithErrors`). El cheque acepta número o foto del comprobante en el alta, anticipos, entrega y retirada sin reparar (`paymentReceipt.ts`: `paymentProblem`, `paymentFields`, `withReceipt`), y la foto de comprobante sirve para cualquier método de pago |
+| Tarjetas del detalle | `LaborTable` (con `TaskEditor`, `TechnicianSelect`, `TradeMismatchDialog` y las reglas de `tasks.ts`), `PartsTable`, `PartsSummaryCard`, `SignatureCard`, `ProgressLog`, `QuoteCard`, `CustomerLinkCard`, `CommissionEstimateCard`, `DeliveryModal`, `ShareReportModal`, `ReadyNotifyModal` (aviso SMS/WhatsApp sin correo al marcar listo), `DamageDiagramEditor`, `ArchivedOrders`; del técnico, `TechnicianTaskList` (Mis tareas, F5; acción rápida principal con `techNextStep.ts`) y `ReportFindingModal`; de administración, `FindingsCard` (con `DiscardFindingModal`; reglas en `findings.ts`). Los diálogos usan `components/Modal.tsx` (`role="dialog"`, foco y Escape solo a la capa superior con `components/escapeLayer.ts`) |
+| Servicio | `services/workOrders.service.ts` (compone `workOrdersService` desde `services/workOrders/`: `queries`, `orders`, `lines`, `money`, `followUp`, `team`, `clock`, `realtime` con `ORDER_TABLES`) |
 | Tablas | `ordenes_trabajo` (con `marcas_danos`, `trg_marcas_danos_firmadas` y `trg_order_link_on_create`; 24 triggers al 11/10/2026 más los 2 de `031` y `032`), `orden_montos`, `orden_labor`, `orden_repuestos`, `orden_asignaciones`, `orden_avances`, `orden_hallazgos` (F6), `orden_trabajos` (`034`), `orden_labor_tiempos` (`036`) |
 | RPC | `create_work_order`, `repuestos_de_orden`, `marcar_labor_completada`, `mis_ordenes_asignadas`; hallazgos: `reportar_hallazgo`, `cotizar_hallazgo`, `descartar_hallazgo` (y `_salir_de_espera`, interna) |
 | Pruebas | `pages/WorkOrders.smoke.test.tsx`, `features/workOrders/*.test.tsx`, `features/workOrders/intakeDraft.test.ts`, `lib/backButtonTrap.test.tsx`, `techNextStep.test.ts`, `VehicleDiagram.test.tsx`, `vehicleDiagram.test.ts`, `ReadyNotifyModal.test.tsx`; pgTAP `01`, `03`, `07`, `09`, `10`, `21`, `22` (hallazgos), `35_autorizar_en_recepcion.test.sql`, `36_marcas_de_danos.test.sql`, `37_enlace_autorizacion_y_tareas.test.sql`, `41_arreglos_del_qa.test.sql`, `45_decisiones_del_dueno.test.sql`; `TechOrderStatus.test.tsx` |
@@ -95,7 +95,7 @@ Desde F7 es la vista **Tablero** de Órdenes, no una ruta aparte (`/kanban` redi
 
 | | |
 |---|---|
-| Frontend | `features/workOrders/QuoteCard.tsx`, `LineStateBadge.tsx`, `lineState.ts`; en el portal, `QuoteSection` dentro de `portal/CustomerPortal.tsx` |
+| Frontend | `features/workOrders/QuoteCard.tsx`, `LineStateBadge.tsx`, `lineState.ts`; en el portal, `portal/components/QuoteSection.tsx` |
 | Servicio | `services/quotes.service.ts` |
 | Base | tabla `presupuestos`; RPC `enviar_presupuesto`, `registrar_autorizacion`, `cancelar_presupuesto`; internas `_resolver_presupuesto`, `responder_presupuesto_portal`; guardia `trg_guard_linea_presupuesto` |
 | Pruebas | `QuoteCard.test.tsx`, `LaborTable.test.tsx`; pgTAP `05` |
@@ -144,7 +144,7 @@ Decisiones en [analisis-del-proceso-2026-10.md](historico/analisis-del-proceso-2
 
 **El dinero automático** (depósito, pago final, costo de repuestos, ajustes, reversiones,
 egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
-[radiografia.md §5](arquitectura.md#5-dónde-vive-la-lógica-de-negocio).
+[arquitectura.md §5](arquitectura.md#5-dónde-vive-la-lógica-de-negocio).
 
 ## Panel
 
@@ -194,11 +194,11 @@ egresos de comisión) lo escriben triggers y RPC, nunca la pantalla. Lista en
 
 | | |
 |---|---|
-| Portal | `portal/` (`CustomerPortal.tsx`, `ServicePage.tsx`; paquete aparte: no importa nada de la app, usa `lib/vehicleColor.ts` para traducir color al idioma del cliente) |
+| Portal | `portal/` (`CustomerPortal.tsx` carga el token y elige la vista; secciones en `portal/components/`: `Report`, `QuoteSection`, `AccountSection`, `PortalMedia`, `InspectionSection`, `EmailPreference`, `ContactPhones`, `Unavailable`, `StatusSteps`, `ShopHeader`; formatos en `portal/format.ts`, teléfonos en `portal/shopPhones.ts`, rutas en `portal/path.ts`; `ServicePage.tsx`; paquete aparte: no importa nada de la app, usa `lib/vehicleColor.ts` para traducir color al idioma del cliente) |
 | Tarjeta del admin | `features/workOrders/CustomerLinkCard.tsx`, `ShareReportModal.tsx` |
 | Servicio | `customerPortal.service.ts`, `reports.service.ts` |
 | Base | `orden_enlaces`, `cola_envios`; `datos_portal` (**todo dato nuevo que ve el cliente se agrega a mano aquí**), `encolar_correo_cliente`, `trg_portal_on_order_change` |
-| Edge functions | `portal`, `process-outbox`; plantillas en `supabase/functions/_shared/email/templates.ts` |
+| Edge functions | `portal` (`handler.ts` + `index.ts`), `process-outbox` (`handler.ts` + `index.ts`); helpers y plantillas en `supabase/functions/_shared/` (`email/templates.ts`) |
 | Pruebas | `portal/CustomerPortal.test.tsx`, `CustomerLinkCard.test.tsx`; pgTAP `04`, `06` |
 | Documento | [portal-y-correos.md](portal-y-correos.md) |
 
@@ -228,7 +228,7 @@ La ven los clientes en la raíz (sin sesión del personal) y en `/home`. Paquete
 | Módulo | `features/parking/ParkingSettingsCard.tsx` (configuración por sede), `features/parking/ParkingCard.tsx` (tarjeta en detalle de orden, pestaña Cobro) |
 | Servicio | `services/parking.service.ts` |
 | Tipos | `types/domain/parking.types.ts` |
-| Portal y PDF | `portal/CustomerPortal.tsx` (desglose y avisos), `lib/workOrderPdf.ts` (línea en resumen de totales) |
+| Portal y PDF | `portal/components/AccountSection.tsx` (desglose y avisos), `lib/workOrderPdf.ts` (línea en resumen de totales) |
 | Base | Tablas `parqueo_config`, `parqueo_perfiles`, `parqueo_tramos`, `orden_parqueo`; cálculo puro `_parqueo_calculo`; RPCs `parqueo_config_sede`, `guardar_config_parqueo`, `vista_previa_parqueo`, `parqueo_de_orden`, `ajustar_parqueo_orden`; cron horario `recalcular_parqueo_pendiente` |
 | Pruebas | `services/parking.service.test.ts`, `features/parking/ParkingSettingsCard.test.tsx`, `features/parking/ParkingCard.test.tsx`; pgTAP `33_parqueo.test.sql`; `scripts/qa/api-security.mjs` (SEC-142..160) |
 | Documento | [parqueo.md](parqueo.md) |
@@ -242,7 +242,7 @@ La ven los clientes en la raíz (sin sesión del personal) y en `/home`. Paquete
 | Servicio y tipos | `services/nextService.service.ts`, `services/translation.service.ts` (llama a la edge function `traducir-texto`), `types/domain/nextService.types.ts` |
 | Generador de sticker | `lib/serviceStickerPdf.ts` (PDF 62 × 50 mm para impresora térmica de etiquetas con QR vectorizado) |
 | Portal y página pública | `portal/ServicePage.tsx` (página pública `/s/<token>` con semáforo y agendamiento por WhatsApp, sin PII), `portal/serviceStatus.ts`, tarjeta en `portal/CustomerPortal.tsx` |
-| Base | Tabla `orden_proximo_servicio` (con columna `idioma` en `038`); RPCs `programar_proximo_servicio`, `quitar_proximo_servicio`, `sugerir_proximo_servicio`, `descartar_sugerencia_proximo_servicio`, `datos_servicio`; trigger `trg_orden_proximo_servicio_traducir` (`037`); edge function `supabase/functions/traducir-texto/index.ts`; migraciones `20261010000029_proximo_servicio.sql`, `032`, `037`, `038` |
+| Base | Tabla `orden_proximo_servicio` (con columna `idioma` en `038`); RPCs `programar_proximo_servicio`, `quitar_proximo_servicio`, `sugerir_proximo_servicio`, `descartar_sugerencia_proximo_servicio`, `datos_servicio`; trigger `trg_orden_proximo_servicio_traducir` (`037`); edge function `supabase/functions/traducir-texto/handler.ts` (`index.ts` mínimo); migraciones `20261010000029_proximo_servicio.sql`, `032`, `037`, `038` |
 | Pruebas | `services/nextService.service.test.ts`, `services/translation.service.test.ts`, `features/workOrders/nextService.test.ts`, `features/workOrders/stickerNote.test.ts`, `features/workOrders/NextService.smoke.test.tsx`, `lib/serviceStickerPdf.test.ts`, `lib/pdfText.test.ts`, `portal/serviceStatus.test.ts`, `portal/ServicePage.test.tsx`, `portal/CustomerPortal.test.tsx`; pgTAP `34_proximo_servicio.test.sql`, `41_arreglos_del_qa.test.sql`, `42_arreglos_segunda_ronda.test.sql`; API Security SEC-162..171 en `scripts/qa/api-security.mjs` |
 
 ## Catálogo y trabajos agrupados (`20261010000034`, `037`)
@@ -251,7 +251,7 @@ La ven los clientes en la raíz (sin sesión del personal) y en `/home`. Paquete
 |---|---|
 | Módulo | `features/catalog/JobCatalogCard.tsx` (tarjeta en Configuración), `features/catalog/CatalogJobModal.tsx` (crear/editar plantilla), `features/catalog/CatalogPickerModal.tsx` (selector en el alta y en Trabajos), `features/workOrders/OrderJobsList.tsx` (trabajos agrupados en el detalle de la orden) |
 | Servicio y tipos | `services/catalog.service.ts`, `types/domain/catalog.types.ts` |
-| Portal y PDF | `portal/CustomerPortal.tsx` (autorización por trabajo completo con precio cerrado), `lib/workOrderPdf.ts` |
+| Portal y PDF | `portal/components/QuoteSection.tsx` (autorización por trabajo completo con precio cerrado), `lib/workOrderPdf.ts` |
 | Base | Tablas `catalogo_trabajos`, `catalogo_trabajo_lineas`, `orden_trabajos` (y `trabajo_id` opcional en `orden_labor` y `orden_repuestos`); RPCs `catalogo_de_trabajos`, `guardar_trabajo_catalogo`, `borrar_trabajo_catalogo`, `agregar_trabajo_del_catalogo`, `quitar_trabajo`, `renombrar_trabajo`, `trabajos_de_orden` |
 | Pruebas | `services/catalog.service.test.ts`, `features/catalog/CatalogPickerModal.test.tsx`, `features/catalog/JobCatalogCard.test.tsx`; pgTAP `38_trabajos_y_catalogo.test.sql`, `41_arreglos_del_qa.test.sql` |
 
@@ -261,7 +261,7 @@ La ven los clientes en la raíz (sin sesión del personal) y en `/home`. Paquete
 |---|---|
 | Módulo | `features/inspection/PointInspection.tsx` (lista multipunto en el detalle de la orden), `features/inspection/InspectionTemplatesCard.tsx` y `features/inspection/InspectionTemplateModal.tsx` (plantillas por sede en Configuración) |
 | Servicio y tipos | `services/inspection.service.ts`, `types/domain/inspection.types.ts` |
-| Portal y PDF | `portal/CustomerPortal.tsx` (sección de inspección publicada con semáforo y fotos por punto), `lib/workOrderPdf.ts` |
+| Portal y PDF | `portal/components/InspectionSection.tsx` (sección de inspección publicada con semáforo y fotos por punto), `lib/workOrderPdf.ts` |
 | Base | Tablas `inspeccion_plantillas`, `inspeccion_plantilla_puntos`, `orden_inspecciones`, `orden_inspeccion_puntos` (y `orden_media.inspeccion_punto_id`); triggers `trg_sede_sembrar_inspeccion` y `trg_guard_inspeccion_media` (publicada, sus fotos solo las cambia administración, `20261010000040`); RPCs `iniciar_inspeccion`, `marcar_punto_inspeccion`, `completar_inspeccion`, `publicar_inspeccion`, `plantillas_inspeccion`, `guardar_plantilla_inspeccion`, `borrar_plantilla_inspeccion` |
 | Pruebas | `services/inspection.service.test.ts`, `features/inspection/PointInspection.test.tsx`, `features/inspection/InspectionTemplatesCard.test.tsx`; pgTAP `39_inspeccion_por_puntos.test.sql`, `41_arreglos_del_qa.test.sql`, `44_revision_2026_11.test.sql` |
 
@@ -280,7 +280,7 @@ La ven los clientes en la raíz (sin sesión del personal) y en `/home`. Paquete
 
 | | |
 |---|---|
-| Pantalla | `pages/Settings.tsx` (perfil, idioma, tema, push; sedes para administración). Los teléfonos de la sede, en `features/settings/SedePhonesEditor.tsx` (reglas en `sedePhones.ts`) |
+| Pantalla | `pages/Settings.tsx` (decide qué tarjetas ve cada rol); cada tarjeta con su estado en `features/settings/` (`ProfileCard`, `LanguageCard`, `ThemeCard`, `SedesCard` con `SedeItem`, `CreateSedeModal` y `DeleteSedeModal`, `EmployeesLinkCard`). Los teléfonos de la sede, en `features/settings/SedePhonesEditor.tsx` (reglas en `sedePhones.ts`) |
 | Colores | Paleta por defecto en `styles/index.css` (tema oscuro y claro, del logo: amarillo `#EBC334`, grises puros). El color propio de una sede la reemplaza en tiempo real con `lib/branding.ts`; el PDF usa `lib/brandColor.ts` y los correos su propio valor por defecto |
 | Servicios | `sedes.service.ts`, `users.service.ts` |
 | Base | `sedes`, `perfiles` (guardia `trg_perfil_privilegios`), buckets `sede_logos` y `avatares` |

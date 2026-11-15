@@ -4,8 +4,11 @@ import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { useToast } from '../context/toast.context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { commissionsService, dashboardService, financeService, workOrdersService } from '../services/supabaseService';
-import { queryKeys } from '../lib/queryClient';
+import { commissionsService } from '../services/commissions.service';
+import { dashboardService } from '../services/dashboard.service';
+import { financeService } from '../services/finance.service';
+import { workOrdersService } from '../services/workOrders.service';
+import { invalidateOrderEffects, queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { formatDay, monthLabel, todayLocal } from '../lib/dates';
 import { openInNewTab } from '../lib/openInNewTab';
@@ -20,6 +23,7 @@ import LazyModal from '../components/LazyModal';
 import OrderMarginCard from '../features/finance/OrderMarginCard';
 import WorkshopMetricsTab from '../features/finance/WorkshopMetricsTab';
 import { AlertError } from '../components/AlertError';
+import Modal from '../components/Modal';
 import {
   DollarSign,
   TrendingUp,
@@ -29,12 +33,19 @@ import {
   Plus,
   Download,
   FileUp,
-  X,
   Trash2,
   Lock,
   Paperclip,
 } from 'lucide-react';
 import { money, moneySigned } from '../lib/money';
+
+const INCOME_CATEGORIES: TransactionCategory[] = ['pago_cliente'];
+const EXPENSE_CATEGORIES: TransactionCategory[] = [
+  'compra_repuesto',
+  'planilla',
+  'gasto_operativo',
+  'comision_bancaria',
+];
 
 export default function Finance() {
   const { t, language } = useLanguage();
@@ -98,14 +109,16 @@ export default function Finance() {
     ordersQuery.isPending ||
     importsQuery.isPending;
   const loadError =
-    transactionsQuery.error ?? statsQuery.error ?? ordersQuery.error ?? importsQuery.error;
+    transactionsQuery.error ??
+    statsQuery.error ??
+    ordersQuery.error ??
+    importsQuery.error ??
+    summariesQuery.error;
 
-  // Money moving changes the KPI cards and the import list, but not the orders.
   // Las sumas de los estados de cuenta cuelgan de la misma clave de importaciones.
-  const loadData = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.transactions(sedeId) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.dashboardStats(sedeId, currentSede?.capacidad) });
+  const loadData = (orderId?: string) => {
     queryClient.invalidateQueries({ queryKey: queryKeys.importBatches(sedeId) });
+    void invalidateOrderEffects(queryClient, { orderId, sedeId });
   };
 
   const [saving, setSaving] = useState(false);
@@ -124,6 +137,7 @@ export default function Finance() {
   // Scoped to the dialog: the page-level `error` renders above the table and
   // therefore behind the modal overlay, where nobody can read it.
   const [modalError, setModalError] = useState('');
+  const [dateInvalid, setDateInvalid] = useState(false);
   const [revertingId, setRevertingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -210,7 +224,7 @@ export default function Finance() {
     try {
       await financeService.deleteTransaction(txn.id);
       showToast('success', t('finance.transactionDeleted'));
-      loadData();
+      loadData(txn.referencia_orden_id || undefined);
     } catch (err) {
       showToast('error', getErrorMessage(err, language));
     } finally {
@@ -224,12 +238,19 @@ export default function Finance() {
       setModalError(t('finance.amountRequired'));
       return;
     }
+    if (!form.fecha.trim()) {
+      setDateInvalid(true);
+      setModalError(t('finance.dateRequired'));
+      return;
+    }
     if (!form.descripcion.trim()) {
       setModalError(t('finance.descriptionRequired'));
       return;
     }
     if (!user) return;
 
+    const linkedOrderId = form.referencia_orden_id || undefined;
+    setDateInvalid(false);
     setModalError('');
     setSaving(true);
     try {
@@ -247,7 +268,7 @@ export default function Finance() {
       setShowModal(false);
       setForm(EMPTY_FORM);
       showToast('success', t('finance.transactionCreated'));
-      loadData();
+      loadData(linkedOrderId);
     } catch (err) {
       setModalError(getErrorMessage(err, language));
     } finally {
@@ -395,7 +416,7 @@ export default function Finance() {
           <div className="stat-content">
             <div className="stat-label">{t('finance.income')}</div>
             <div className="stat-value" style={{ color: 'var(--color-success)' }}>
-              {money(totalIncome)}
+              {statsQuery.error && !stats ? '—' : money(totalIncome)}
             </div>
           </div>
         </div>
@@ -407,7 +428,7 @@ export default function Finance() {
           <div className="stat-content">
             <div className="stat-label">{t('finance.expense')}</div>
             <div className="stat-value" style={{ color: 'var(--color-danger)' }}>
-              {money(totalExpense)}
+              {statsQuery.error && !stats ? '—' : money(totalExpense)}
             </div>
           </div>
         </div>
@@ -419,7 +440,7 @@ export default function Finance() {
           <div className="stat-content">
             <div className="stat-label">{t('finance.balance')}</div>
             <div className="stat-value" style={{ color: balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
-              {moneySigned(balance, balance >= 0)}
+              {statsQuery.error && !stats ? '—' : moneySigned(balance, balance >= 0)}
             </div>
           </div>
         </div>
@@ -588,14 +609,20 @@ export default function Finance() {
 
       {/* New Transaction Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">{t('finance.newTransaction')}</h3>
-              <button className="modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
-            </div>
-            <div className="modal-body">
-              <AlertError message={modalError} />
+        <Modal
+          onClose={() => setShowModal(false)}
+          closeDisabled={saving}
+          title={t('finance.newTransaction')}
+          footer={
+            <>
+              <button className="btn btn-secondary" disabled={saving} onClick={() => setShowModal(false)}>{t('common.cancel')}</button>
+              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+                {saving ? t('common.loading') : t('common.create')}
+              </button>
+            </>
+          }
+        >
+          <AlertError message={modalError} />
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label" htmlFor="txn-type">{t('common.type')}</label>
@@ -603,7 +630,14 @@ export default function Finance() {
                     className="form-input form-select"
                     id="txn-type"
                     value={form.tipo}
-                    onChange={(e) => setForm({ ...form, tipo: e.target.value as TransactionType })}
+                    onChange={(e) => {
+                      const nextType = e.target.value as TransactionType;
+                      setForm({
+                        ...form,
+                        tipo: nextType,
+                        categoria: nextType === 'egreso' ? 'gasto_operativo' : 'pago_cliente',
+                      });
+                    }}
                   >
                     <option value="ingreso">{t('finance.income')}</option>
                     <option value="egreso">{t('finance.expense')}</option>
@@ -617,11 +651,9 @@ export default function Finance() {
                     value={form.categoria}
                     onChange={(e) => setForm({ ...form, categoria: e.target.value as TransactionCategory })}
                   >
-                    <option value="pago_cliente">{t('finance.clientPayment')}</option>
-                    <option value="compra_repuesto">{t('finance.partsPurchase')}</option>
-                    <option value="planilla">{t('finance.payroll')}</option>
-                    <option value="gasto_operativo">{t('finance.operatingExpense')}</option>
-                    <option value="comision_bancaria">{t('finance.bankFees')}</option>
+                    {(form.tipo === 'ingreso' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map((cat) => (
+                      <option key={cat} value={cat}>{categoryLabels[cat]}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -646,7 +678,11 @@ export default function Finance() {
                     id="txn-date"
                     type="date"
                     value={form.fecha}
-                    onChange={(e) => setForm({ ...form, fecha: e.target.value })}
+                    aria-invalid={dateInvalid || undefined}
+                    onChange={(e) => {
+                      setDateInvalid(false);
+                      setForm({ ...form, fecha: e.target.value });
+                    }}
                   />
                 </div>
               </div>
@@ -677,15 +713,7 @@ export default function Finance() {
                   onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
                 />
               </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowModal(false)}>{t('common.cancel')}</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-                {saving ? t('common.loading') : t('common.create')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {showImportModal && (

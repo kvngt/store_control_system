@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import BodyPortal from './BodyPortal';
+import { useEscapeLayer } from './escapeLayer';
 
 export interface ChoiceAction {
   label: string;
@@ -28,24 +29,19 @@ interface ChoiceDialogProps {
  * recomienda es la primera de la lista y es donde cae el foco.
  */
 export default function ChoiceDialog({ title, body, actions, onDismiss, zIndex = 'calc(var(--z-modal) + 10)' }: ChoiceDialogProps) {
+  const overlay = useRef<HTMLDivElement>(null);
   const first = useRef<HTMLButtonElement>(null);
+
+  useEscapeLayer(overlay, onDismiss);
 
   useEffect(() => {
     first.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onDismiss();
-      }
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, [onDismiss]);
+  }, []);
 
   return (
     <BodyPortal>
       {/* El clic no sube al diálogo de abajo (React propaga por el árbol aunque esté en el body). */}
-      <div className="modal-overlay" style={{ zIndex }} onClick={(e) => { e.stopPropagation(); onDismiss(); }}>
+      <div ref={overlay} className="modal-overlay" style={{ zIndex }} onClick={(e) => { e.stopPropagation(); onDismiss(); }}>
         <div
           className="modal"
           // En el teléfono `.modal` ocupa toda la pantalla: una pregunta es una tarjeta del tamaño de su texto.

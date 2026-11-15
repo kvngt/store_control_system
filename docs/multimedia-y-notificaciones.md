@@ -176,8 +176,8 @@ Settings → Usage después del primer mes.
 | Pieza | Rol |
 |---|---|
 | `supabase/migrations/20260920000000_notifications_and_push.sql` | Tablas, RLS, `notificar()`, triggers de eventos, cola, cron |
-| `supabase/functions/process-outbox` | Envía la cola. Push hoy; correo en la fase 4 |
-| `supabase/functions/cleanup-storage` | Limpieza diaria de archivos huérfanos |
+| `supabase/functions/process-outbox/` | `handler.ts` + `index.ts` mínimo (`_shared/http.ts`, `_shared/resend.ts`, `_shared/gemini.ts`). Envía la cola (push, correo y traducciones) |
+| `supabase/functions/cleanup-storage/` | `handler.ts` + `index.ts` mínimo. Limpieza diaria de archivos huérfanos |
 | `supabase/functions/_shared/internal.ts` | Autenticación por secreto compartido |
 | `src/features/notifications/NotificationBell.tsx` | Campana, conteo, toast |
 | `src/features/notifications/useNotifications.ts` | Lista + conteo + Realtime |

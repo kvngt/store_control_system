@@ -4,12 +4,14 @@ import { CarFront } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { AlertError } from '../../components/AlertError';
-import { workOrdersService } from '../../services/supabaseService';
+import Modal from '../../components/Modal';
+import { workOrdersService } from '../../services/workOrders.service';
 import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';
 import { money } from '../../lib/money';
 import type { PaymentMethod, WorkOrder } from '../../types/database';
 import PaymentFields from './PaymentFields';
+import { paymentFields, paymentProblem, withReceipt } from './paymentReceipt';
 
 /** Una línea autorizada de la orden: lo que se puede marcar como hecho y cobrado. */
 export interface WithdrawalLine {
@@ -105,35 +107,31 @@ export default function WithdrawalModal({ order, lines, onCancel, onDone }: With
       setError(t('withdrawal.pickJobs'));
       return;
     }
-    if (needsMethod && !metodo) {
-      setError(t('delivery.methodRequired'));
+    const problem = paymentProblem({ needsMethod, metodo, numeroCheque, file });
+    if (problem) {
+      setError(t(problem));
       return;
     }
-    if (metodo === 'cheque' && !numeroCheque.trim() && !file) {
-      setError(t('delivery.checkRequired'));
-      return;
-    }
-    if (!confirm(t('withdrawal.confirm'))) return;
+    const payment = paymentFields({ needsMethod, metodo, numeroCheque });
     setError('');
     setSaving(true);
-    let uploaded: string | null = null;
     try {
-      if (needsMethod && file) {
-        uploaded = await workOrdersService.uploadReceipt(order.sede_id, order.numero_orden, file);
-      }
-      await workOrdersService.withdrawWithoutRepair({
-        orderId: order.id,
-        cobro: extra,
-        concepto: extra > 0 ? concepto.trim() || null : null,
-        metodo: needsMethod ? (metodo as PaymentMethod) : null,
-        numeroCheque: needsMethod && metodo === 'cheque' ? numeroCheque.trim() || null : null,
-        comprobanteRuta: uploaded,
-        conservar,
-      });
+      await withReceipt(
+        { needsMethod, file, sedeId: order.sede_id, numeroOrden: order.numero_orden },
+        (comprobanteRuta) =>
+          workOrdersService.withdrawWithoutRepair({
+            orderId: order.id,
+            cobro: extra,
+            concepto: extra > 0 ? concepto.trim() || null : null,
+            metodo: payment.metodo,
+            numeroCheque: payment.numeroCheque,
+            comprobanteRuta,
+            conservar,
+          })
+      );
       showToast('success', t('withdrawal.done'));
       await onDone();
     } catch (err) {
-      if (uploaded) void workOrdersService.removeDeliveryReceipt(uploaded).catch(() => {});
       setError(getErrorMessage(err, language));
       setSaving(false);
     }
@@ -150,24 +148,34 @@ export default function WithdrawalModal({ order, lines, onCancel, onDone }: With
   const OUTCOMES: Outcome[] = ['cancelar', 'revision', 'parcial'];
 
   return (
-    <div className="modal-overlay" onClick={saving ? undefined : onCancel}>
-      <div
-        className="modal"
-        style={{ maxWidth: 560 }}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('withdrawal.title').replace('{numero}', order.numero_orden)}
-      >
-        <div className="modal-header">
-          <h2 className="modal-title">
-            <CarFront size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
-            {t('withdrawal.title').replace('{numero}', order.numero_orden)}
-          </h2>
-        </div>
-
-        <div className="modal-body">
-          <AlertError message={error} />
+    <Modal
+      onClose={onCancel}
+      closeDisabled={saving}
+      style={{ maxWidth: 560 }}
+      title={
+        <>
+          <CarFront size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
+          {t('withdrawal.title').replace('{numero}', order.numero_orden)}
+        </>
+      }
+      footer={
+        <>
+          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={saving}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="button"
+            className="btn btn-danger"
+            id="withdrawal-submit"
+            onClick={() => void submit()}
+            disabled={saving || settling}
+          >
+            {saving ? t('common.loading') : confirmLabel}
+          </button>
+        </>
+      }
+    >
+      <AlertError message={error} />
 
           <fieldset className="withdrawal-outcomes">
             <legend className="form-label">{t('withdrawal.whatHappened')}</legend>
@@ -293,23 +301,6 @@ export default function WithdrawalModal({ order, lines, onCancel, onDone }: With
               <p className="field-hint">{t('withdrawal.explain')}</p>
             </>
           )}
-        </div>
-
-        <div className="modal-footer">
-          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={saving}>
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            className="btn btn-danger"
-            id="withdrawal-submit"
-            onClick={() => void submit()}
-            disabled={saving || settling}
-          >
-            {saving ? t('common.loading') : confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

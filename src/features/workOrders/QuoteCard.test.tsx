@@ -8,6 +8,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test/renderWithProviders';
 import type { Quote, WorkOrder } from '../../types/database';
+import * as queryClientLib from '../../lib/queryClient';
 
 const mocks = vi.hoisted(() => ({
   listQuotes: vi.fn(),
@@ -15,16 +16,28 @@ const mocks = vi.hoisted(() => ({
   cancelQuote: vi.fn(),
   registerAuthorization: vi.fn(),
 }));
+const portalMocks = vi.hoisted(() => ({
+  getActiveLink: vi.fn(),
+}));
 
 vi.mock('../../services/quotes.service', () => ({ quotesService: mocks }));
+vi.mock('../../services/customerPortal.service', () => ({
+  customerPortalService: {
+    ...portalMocks,
+    portalUrl: (token: string) => `https://restorifyauto.net/r/${token}`,
+  },
+}));
 
 const { default: QuoteCard } = await import('./QuoteCard');
 
-function order(lines: { id: string; descripcion: string; costo: number; estado: string; presupuesto_id?: string }[]): WorkOrder {
+function order(
+  lines: { id: string; descripcion: string; costo: number; estado: string; presupuesto_id?: string }[],
+  customer: Partial<NonNullable<WorkOrder['cliente']>> = { nombre: 'Marta Ruiz', telefono: '512-555-0100', email: 'marta@example.com', idioma: 'es', acepta_correos: true }
+): WorkOrder {
   return {
     id: 'ord-1',
     numero_orden: 'ORD-2026-014',
-    cliente: { nombre: 'Marta Ruiz' },
+    cliente: customer,
     labor_items: lines.map((l, i) => ({ ...l, orden_id: 'ord-1', creado_en: `2026-09-12T10:0${i}:00Z` })),
     repuestos: [],
   } as unknown as WorkOrder;
@@ -40,6 +53,7 @@ const RESPONDED: Quote = {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.listQuotes.mockResolvedValue([]);
+  portalMocks.getActiveLink.mockResolvedValue(null);
 });
 
 describe('QuoteCard', () => {
@@ -50,6 +64,7 @@ describe('QuoteCard', () => {
   });
 
   it('con borradores, envía el presupuesto al cliente tras confirmar', async () => {
+    const spy = vi.spyOn(queryClientLib, 'invalidateOrderEffects');
     mocks.sendQuote.mockResolvedValue({ presupuesto_id: 'q2', numero: 2, lineas: 1, total: 500, correo: 'encolado' });
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderWithProviders(<QuoteCard order={order([{ id: 'l1', descripcion: 'Pintura', costo: 500, estado: 'borrador' }])} />);
@@ -59,15 +74,70 @@ describe('QuoteCard', () => {
 
     expect(mocks.sendQuote).toHaveBeenCalledWith('ord-1', true);
     expect(await screen.findByText(/Presupuesto enviado/)).toBeInTheDocument();
+    expect(spy).toHaveBeenCalledWith(expect.anything(), { orderId: 'ord-1' });
   });
 
-  it('avisa que el cliente no tiene correo para que comparta el enlace', async () => {
+  it('sin correo adapta la confirmación y avisa como información', async () => {
     mocks.sendQuote.mockResolvedValue({ presupuesto_id: 'q2', numero: 2, lineas: 1, total: 500, correo: 'sin_correo' });
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    renderWithProviders(<QuoteCard order={order([{ id: 'l1', descripcion: 'Pintura', costo: 500, estado: 'borrador' }])} />);
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const user = userEvent.setup();
+    renderWithProviders(
+      <QuoteCard
+        order={order(
+          [{ id: 'l1', descripcion: 'Pintura', costo: 500, estado: 'borrador' }],
+          { nombre: 'Marta Ruiz', telefono: '512-555-0100', email: '', idioma: 'es', acepta_correos: true }
+        )}
+      />
+    );
 
-    await userEvent.click(await screen.findByRole('button', { name: /Enviar presupuesto al cliente/ }));
-    expect(await screen.findByText(/no tiene correo/)).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: /Enviar presupuesto al cliente/ }));
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/no tiene correo.*WhatsApp/i));
+
+    const toast = await screen.findByRole('status');
+    expect(toast).toHaveTextContent(/no tiene correo/);
+    expect(toast).toHaveClass('toast-info');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('con presupuesto enviado y cliente sin correo muestra WhatsApp y copiar enlace al cargar', async () => {
+    mocks.listQuotes.mockResolvedValue([{ ...RESPONDED, id: 'q2', numero: 2, estado: 'enviado', respondido_via: null, respondido_en: null }]);
+    portalMocks.getActiveLink.mockResolvedValue({ id: 'lnk-1', token: 'tok-quote' });
+    const user = userEvent.setup();
+    const writeSpy = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+
+    renderWithProviders(
+      <QuoteCard
+        order={order(
+          [{ id: 'l1', descripcion: 'Pintura', costo: 500, estado: 'pendiente', presupuesto_id: 'q2' }],
+          { nombre: 'Marta Ruiz', telefono: '512-555-0100', email: '', idioma: 'es', acepta_correos: true }
+        )}
+      />
+    );
+
+    const wa = await screen.findByRole('link', { name: /Enviar por WhatsApp/ });
+    expect(wa.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/15125550100\?text=/);
+    expect(decodeURIComponent(wa.getAttribute('href')!)).toContain('https://restorifyauto.net/r/tok-quote');
+
+    await user.click(screen.getByRole('button', { name: /Copiar enlace/ }));
+    expect(writeSpy).toHaveBeenCalledWith('https://restorifyauto.net/r/tok-quote');
+  });
+
+  it('con presupuesto enviado y cliente sin correo no muestra botones si no hay enlace activo', async () => {
+    mocks.listQuotes.mockResolvedValue([{ ...RESPONDED, id: 'q2', numero: 2, estado: 'enviado', respondido_via: null, respondido_en: null }]);
+    portalMocks.getActiveLink.mockResolvedValue(null);
+
+    renderWithProviders(
+      <QuoteCard
+        order={order(
+          [{ id: 'l1', descripcion: 'Pintura', costo: 500, estado: 'pendiente', presupuesto_id: 'q2' }],
+          { nombre: 'Marta Ruiz', telefono: '512-555-0100', email: '', idioma: 'es', acepta_correos: false }
+        )}
+      />
+    );
+
+    await waitFor(() => expect(portalMocks.getActiveLink).toHaveBeenCalledWith('ord-1'));
+    expect(screen.queryByRole('link', { name: /Enviar por WhatsApp/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Copiar enlace/ })).not.toBeInTheDocument();
   });
 
   it('registra una autorización por teléfono: lo desmarcado queda rechazado', async () => {

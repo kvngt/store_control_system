@@ -1,11 +1,11 @@
 import { useEffect, useMemo } from 'react';
-import { Check, Mic, RotateCcw, Square, X } from 'lucide-react';
+import { Check, Mic, RotateCcw, Square } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { MAX_MEDIA_SECONDS } from '../../lib/media/constants';
 import { formatDuration } from '../../lib/media/mime';
 import type { PreparedMedia } from '../../types/database';
 import { useMediaRecorder } from './useMediaRecorder';
-import BodyPortal from '../../components/BodyPortal';
+import Modal from '../../components/Modal';
 import { useDiscardGuard } from '../../components/useDiscardGuard';
 
 interface AudioRecorderModalProps {
@@ -71,43 +71,16 @@ export default function AudioRecorderModal({ onDone, onClose }: AudioRecorderMod
   // (y de su formulario), y una capa fija anidada queda a merced de los estilos de sus
   // ancestros (ver `BodyPortal`).
   return (
-    <BodyPortal>
-    <div className="modal-overlay" onClick={guard.requestClose}>
-      <div
-        className="modal audio-recorder"
+    <>
+      <Modal
+        usePortal
+        onClose={guard.requestClose}
+        title={t('media.recordAudio')}
+        className="audio-recorder"
         style={{ maxWidth: 420 }}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('media.recordAudio')}
-      >
-        <div className="modal-header">
-          <h2 className="modal-title">{t('media.recordAudio')}</h2>
-          <button type="button" className="modal-close" onClick={guard.requestClose} aria-label={t('common.close')}>
-            <X size={18} />
-          </button>
-        </div>
-        <div className="modal-body audio-recorder-body">
-          {state === 'recorded' && playbackUrl ? (
-            <audio src={playbackUrl} controls style={{ width: '100%' }} />
-          ) : (
-            <>
-              <div className={micClass}>
-                <Mic size={36} />
-              </div>
-              <div className={timerClass}>
-                {formatDuration(elapsed)} / {formatDuration(MAX_MEDIA_SECONDS)}
-              </div>
-            </>
-          )}
-
-          {state === 'starting' && <p className="field-hint">{t('media.micStarting')}</p>}
-          {state === 'error' && recorder.error && (
-            <p className="field-hint field-hint-error">{t('media.errors.' + recorder.error.code)}</p>
-          )}
-        </div>
-        <div className="modal-footer">
-          {state === 'recorded' ? (
+        bodyClassName="audio-recorder-body"
+        footer={
+          state === 'recorded' ? (
             <>
               <button type="button" className="btn btn-secondary" onClick={retake}>
                 <RotateCcw size={16} /> {t('media.retake')}
@@ -124,11 +97,28 @@ export default function AudioRecorderModal({ onDone, onClose }: AudioRecorderMod
             <button type="button" className="btn btn-primary" onClick={recorder.start} disabled={state !== 'ready'}>
               <Mic size={16} /> {t('media.record')}
             </button>
-          )}
-        </div>
-      </div>
-    </div>
-    {guard.dialog}
-    </BodyPortal>
+          )
+        }
+      >
+        {state === 'recorded' && playbackUrl ? (
+          <audio src={playbackUrl} controls style={{ width: '100%' }} />
+        ) : (
+          <>
+            <div className={micClass}>
+              <Mic size={36} />
+            </div>
+            <div className={timerClass}>
+              {formatDuration(elapsed)} / {formatDuration(MAX_MEDIA_SECONDS)}
+            </div>
+          </>
+        )}
+
+        {state === 'starting' && <p className="field-hint">{t('media.micStarting')}</p>}
+        {state === 'error' && recorder.error && (
+          <p className="field-hint field-hint-error">{t('media.errors.' + recorder.error.code)}</p>
+        )}
+      </Modal>
+      {guard.dialog}
+    </>
   );
 }

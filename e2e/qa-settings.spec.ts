@@ -114,7 +114,8 @@ test.describe('CFG-11 | Modal de nuevo empleado: abre y valida', () => {
   // Helper to open the employee modal
   async function openEmployeeModal(page: Page) {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
-    await page.goto('/settings');
+    // El alta de empleados vive en /employees (UsersCard), no en Configuración.
+    await page.goto('/employees');
     // The button is t('settings.newUser') — match the id, not the label, so a
     // wording change doesn't read as a broken screen.
     await page.waitForSelector('#new-user-btn', { timeout: 12000 });

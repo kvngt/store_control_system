@@ -3,7 +3,7 @@
 > **Restaurado el 11/10/2026.** Este documento se perdió en la limpieza automática del 06/10/2026
 > (commit `1955f30`, que fusionó la arquitectura y los planos en uno más corto, y `ec689da`, que
 > lo reemplazó por [radiografia.md](radiografia.md)). Se recuperó tal como estaba el 05/10/2026.
-> Puesto al día el 19/10/2026 con las migraciones hasta `20261010000039` (historial, comisión por tarea, hallazgos, pago mixto, listo para entregar, idioma del cliente, teléfonos por sede, seguro, parqueo, próximo servicio y sticker, autorización en recepción, marcas de daños, enlace al crear la orden, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, origen de movimientos en finanzas y unicidad de VIN/placa).
+> Puesto al día el 15/11/2026 con las migraciones hasta `20261010000044` (incluidas `029`–`039`: historial, comisión por tarea, hallazgos, pago mixto, listo para entregar, idioma del cliente, teléfonos por sede, seguro, parqueo, próximo servicio y sticker, autorización en recepción, marcas de daños, enlace al crear la orden, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, origen de movimientos en finanzas y unicidad de VIN/placa; y `040`–`044`: reglas de auditoría del 13–15/11/2026), además de la división modular de `src/` y `supabase/functions/`.
 > Donde no coincida, mandan [ai-context.md](ai-context.md) y
 > [mapa-de-secciones.md](mapa-de-secciones.md); lo pendiente de actualizar está en la
 > [bitácora](bitacora.md#bitácora-de-traspaso-entre-agentes).
@@ -47,7 +47,7 @@ avisos), el complemento es [reglas-de-negocio.md](reglas-de-negocio.md).
 | **Correo** | Resend (dominio `restorifyauto.net` verificado): avisos automáticos al cliente (en su idioma) y correos al técnico (`20261010000023`) |
 | **Portal del cliente** | Paquete aparte en `/r/<token>`, sin cuenta; datos por una edge function pública (`portal`). Muestra traducciones automáticas (`20261010000022`), teléfonos de la sede (`20261010000025`, `20261010000026`) y cobro por parqueo (`20261010000028`) |
 | **Presupuestos** | Estado por línea (borrador → pendiente → aprobado/rechazado); solo lo aprobado se cobra. La firma de recepción ya no autoriza lo cotizado (`20261010000022`) |
-| **Pruebas** | Vitest (unitarias y componentes), pgTAP (base de datos), Playwright (e2e) |
+| **Pruebas** | Vitest (unitarias y componentes), Deno 2 (`npm run test:functions` en edge functions), pgTAP (`npm run test:db` en base de datos), Playwright (`npm run test:e2e:local` contra la base local) |
 | **Hosting** | Sitio estático en Hostinger, dominio `restorifyauto.net`; Hostinger compila y publica desde GitHub en cada push. El diseño es la rama `produccion`; hoy publica `main` ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#5-operación-y-despliegue)) |
 
 Las cifras al día (migraciones, tablas, funciones, pruebas) están en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto).
@@ -114,7 +114,7 @@ src/
 
   portal/                        reporte web del cliente (paquete aparte, sin Supabase JS)
     start.tsx                    metas de privacidad, tema claro, render
-    CustomerPortal.tsx           la página; strings.ts (es/en), portal.api.ts, portal.css
+    CustomerPortal.tsx           carga el token y elige la vista; sections en `components/`, `format.ts`, `shopPhones.ts`, `path.ts`, `strings.ts` (es/en), `portal.api.ts`, `portal.css`
 
   landing/                       página del taller para el público (paquete aparte, sin Supabase JS)
     entry.ts                     qué paquete arranca en cada dirección (lo usa main.tsx)
@@ -126,22 +126,26 @@ src/
     Login.tsx, ResetPassword.tsx acceso y recuperación de contraseña
     Dashboard.tsx                panel principal
     Customers.tsx, Vehicles.tsx  clientes y vehículos (VIN, placa); solo administración
-    WorkOrders.tsx               lista de órdenes y tablero Kanban en una página (?vista=lista|tablero) + alta
+    WorkOrders.tsx               lista (`features/workOrders/list/OrderList.tsx`) y tablero Kanban en una página (?vista=lista|tablero)
     KanbanBoard.tsx              tablero por estado (embebido en WorkOrders.tsx; /kanban redirige)
     Finance.tsx                  movimientos, margen por orden e importación bancaria
       finance/ImportStatementModal.tsx
     Payroll.tsx                  comisiones y pagos (ruta /payroll)
-    Employees.tsx                pago de cada empleado y alta del personal (ruta /employees)
-    Settings.tsx                 perfil, idioma, tema, push, sedes
+    Employees.tsx                pago y alta de empleados (ruta /employees)
+    Settings.tsx                 decide qué tarjetas ve cada rol (tarjetas en `features/settings/`)
     MyCommissions.tsx            comisiones aprobadas y pagadas del técnico (ruta /mis-comisiones)
     Help.tsx                     manual de usuario por rol en es/en (ruta /ayuda)
 
   features/                      módulos con estado propio, extraídos de las páginas
-    workOrders/                  detalle de orden (pestañas y tarjetas plegables), alta (4 pasos),
+    workOrders/                  detalle en `detail/` (`useOrderTransitions`, `useOrderMoney`, `useOrderLines`,
+                                 `useOrderMediaProgress`, `useOrderFollowUp`, `useOrderParking`, `permissions.ts`,
+                                 `sections/`, `OrderDialogs`, `OrderHeader`, `OrderTabTop`, `OrderQuickActions`),
+                                 alta en `intake/` (`useIntake`, `useIntakeRecords`, `useIntakeSubmit`, `IntakeFlow`,
+                                 `IntakeStepper`, `steps/`), lista (`list/OrderList.tsx`), `paymentReceipt.ts`,
                                  tablas de labor y repuestos, firma, bitácora de avances, reporte,
-                                 comisión estimada, entrega (DeliveryModal), enlace del cliente
-                                 (CustomerLinkCard), presupuesto (QuoteCard), hallazgos (FindingsCard,
-                                 ReportFindingModal), historial (OrderHistory), seguro (OrderInsuranceModal)
+                                 comisión estimada, entrega (`DeliveryModal`), enlace del cliente
+                                 (`CustomerLinkCard`), presupuesto (`QuoteCard`), hallazgos (`FindingsCard`,
+                                 `ReportFindingModal`), historial (`OrderHistory`), seguro (`OrderInsuranceModal`)
                                  e insignia de estado de línea
     dashboard/                   tarjetas del panel: Requiere atención (admin, RPC requiere_atencion,
                                  20261010000012) y Mis tareas (técnico)
@@ -157,10 +161,13 @@ src/
                                  CatalogPickerModal, 034)
     inspection/                  inspección por puntos y plantillas (PointInspection,
                                  InspectionTemplatesCard, InspectionTemplateModal, 035)
-    settings/                    tarjeta de usuarios (se usa en Empleados)
+    settings/                    tarjetas de Configuración (`ProfileCard`, `LanguageCard`, `ThemeCard`,
+                                 `SedesCard`, `SedeItem`, `CreateSedeModal`, `DeleteSedeModal`,
+                                 `EmployeesLinkCard`, más tarjetas operativas) y usuarios en Empleados
 
   components/
     layout/                      AppLayout (monta la cola de subidas), Sidebar, Header, BottomNav
+    Modal.tsx, escapeLayer.ts    diálogos accesibles (`role=dialog`, foco y Escape solo a la capa superior)
     SchemaDriftBanner.tsx        avisa si la base está atrasada respecto al build
     BodyPortal.tsx               capas de pantalla completa fuera de las tarjetas
     CollapsibleSection.tsx       pliega una tarjeta (detalle de la orden, cerradas al entrar)
@@ -176,8 +183,6 @@ src/
     workOrders, customers, vehicles, finance, commissions, employees, dashboard,
     media, notifications, customerPortal, quotes, reports, search, sedes, users, parking, nextService, catalog, inspection, metrics, translation
     support.ts                   fetchAll, assertAffected, assertDeleted
-    supabaseService.ts           fachada que re-exporta los anteriores (compatibilidad;
-                                 se propone retirarla, mantenimiento.md P1-3)
 
   lib/                           lógica sin React
     media/                       compresión, formatos, cola de subida, video de galería
@@ -191,7 +196,7 @@ src/
     email.ts (formato de correo), reportMedia.ts (qué fotos lleva el PDF),
     staleChunk.ts (recarga sola si una página es de una versión anterior)
 
-  types/                         database.ts reexporta domain/*.types.ts
+  types/                         `supabase.gen.ts` (`npm run db:types`), contrato `domain/schema.contract.ts` y `database.ts` que reexporta `domain/*.types.ts`
   i18n/translations.ts           español e inglés
   styles/                        index.css (variables, temas) + components.css
   test/                          utilidades de prueba (proveedores, matchMedia)
@@ -205,18 +210,20 @@ public/
 supabase/
   migrations/                    las migraciones, en orden cronológico (historia en evolucion.md;
                                  la versión vigente de una función: npm run db:donde)
-  functions/                     edge functions (Deno)
+  functions/                     edge functions (Deno 2; cada una con `handler.ts` + `index.ts` mínimo)
     create-employee, update-employee, delete-employee   con clave de servicio
     process-outbox, cleanup-storage                     internas, llamadas por la base
-    portal                                              pública: el reporte del cliente y /s/<código>
+    portal                                              pública: el reporte del cliente, /s/<código> y baja por enlace vencido
     traducir-texto                                      admin: traduce la nota del sticker con Gemini
-    _shared/internal.ts                                 autenticación de las internas
-    _shared/email/templates.ts                          plantillas de correo (TS puro)
+    _shared/                                            `http.ts` (`fetchConTope`), `resend.ts` (`enviarPorResend`),
+                                                        `gemini.ts` (`pedirJsonAGemini`, `DEFAULT_GEMINI_MODEL`),
+                                                        `internal.ts`, `caller.ts`, `test_doubles.ts`, `email/templates.ts`
   tests/database/                pruebas pgTAP
   config.toml
 
 e2e/                             pruebas Playwright
 scripts/                         check-migrations (db:check), db-donde (db:donde),
+                                 db-types.mjs (db:types), e2e-local.mjs (test:e2e:local),
                                  copy-pdf-worker, generate-pwa-icons, reset-test-data.sql
   admin/                         limpiar-datos.sql, limpiar-operacion.sql, empezar-de-cero.sql
                                  y crear-primer-admin.sql (solo quien administra, con su
@@ -230,8 +237,8 @@ docs/                            esta documentación
 
 **Ninguna pantalla llama a Supabase directamente.** Todo pasa por un módulo de
 `services/`. Mantiene las consultas en un solo lugar y permite probar pantallas
-simulando un solo módulo. Código nuevo importa el servicio del dominio
-(`workOrdersService`), no la fachada `supabaseService`.
+simulando solo el módulo que importan. Cada archivo importa su servicio del dominio
+(`workOrdersService`); la fachada heredada `supabaseService.ts` se retiró el 14/11/2026.
 
 **`lib/` no sabe que existe React** (salvo `useMediaQuery`). Entra un dato, sale
 otro. Por eso está bien cubierto por pruebas rápidas.
@@ -629,10 +636,9 @@ Lo privado se ve con URLs firmadas (1 hora para galerías, 10 minutos para el PD
   verificación de JWT y exigen el secreto compartido `x-restorify-secret`. `process-outbox`
   despacha notificaciones push, correos (al cliente y al técnico, `20261010000023`) y
   traducción de textos con la API de Google Gemini (`canal = 'traduccion'`, `20261010000013`, `15`).
-- `portal` — **pública** (sin JWT): la protege el token de 64 hexadecimales. Solo
-  llama `datos_portal`, `_diccionario_traducciones`, `preferencia_idioma_portal` y
-  `preferencia_correos_portal`, que están concedidas únicamente a `service_role` y arman la
-  respuesta campo por campo.
+- `portal` — **pública** (sin JWT): la protege el token de 64 hexadecimales (además de baja por enlace vencido en `044`). Solo
+  llama `datos_portal`, `_diccionario_traducciones`, `preferencia_idioma_portal`,
+  `preferencia_correos_portal` (que desde la `044` acepta la baja de correos aunque el enlace haya vencido), concedidas únicamente a `service_role`.
 - `traducir-texto` — traduce al instante la nota del sticker de próximo servicio con la API de Google Gemini (`20261010000032`); exige JWT de admin y no toca la base.
 
 Todas corren con la clave de servicio y **saltan RLS**: cada una valida permisos
@@ -722,7 +728,7 @@ crudos y se traducen al pintar: cambiar de idioma no vuelve a consultar nada.
 `useOrderSync` escucha por Realtime las tablas de la orden y vuelve a leer la que cambió.
 El evento es una señal, no los datos: nunca pintes su contenido. Una tabla hija nueva
 que otra persona necesite ver al momento va en la publicación (migración) y en
-`ORDER_TABLES` de `workOrders.service.ts`; **toda tabla publicada lleva RLS**, porque
+`ORDER_TABLES` de `services/workOrders/realtime.ts`; **toda tabla publicada lleva RLS**, porque
 Realtime manda cada fila a quien su política deje leerla (`15_tiempo_real.test.sql`).
 
 ### Guardias de ruta
@@ -843,7 +849,7 @@ npx supabase db push --linked             # aplicar
 Antes de aplicar a producción: respaldo, staging y orden de publicación en
 [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación).
 
-Nombre: `AAAAMMDDHHMMSS_descripcion.sql`, **posterior a la última que haya en `supabase/migrations/` (hoy `20261010000041`)**, no según la fecha de hoy. Hay migraciones aplicadas con marcas de tiempo futuras: si se nombra una migración con la fecha de hoy quedaría antes de la última y `db push` no la aplicaría sin `--include-all`. El número total de migraciones vigentes se consulta en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto). El build estampa la migración más nueva (`__SCHEMA_VERSION__`) y la app la compara con `app_schema_version()`: si la base está atrasada, `SchemaDriftBanner` lo dice en pantalla.
+Nombre: `AAAAMMDDHHMMSS_descripcion.sql`, **posterior a la última que haya en `supabase/migrations/` (hoy `20261010000044`)**, no según la fecha de hoy. Hay migraciones aplicadas con marcas de tiempo futuras: si se nombra una migración con la fecha de hoy quedaría antes de la última y `db push` no la aplicaría sin `--include-all`. El número total de migraciones vigentes se consulta en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto). El build estampa la migración más nueva (`__SCHEMA_VERSION__`) y la app la compara con `app_schema_version()`: si la base está atrasada, `SchemaDriftBanner` lo dice en pantalla.
 
 ### Cómo escribirlas
 
@@ -888,15 +894,19 @@ no salen de `.env.local` sino del panel de Hostinger, que compila la rama config
 ([deployment.md §3](deployment.md#3-variables-del-frontend)).
 
 ```bash
-npm run build     # tsc -b && vite build → dist/
-npm run lint      # oxlint
-npm test          # Vitest
-npm run test:db   # pgTAP (requiere `npx supabase start`, con Docker)
-npm run test:e2e  # Playwright
+npm run build           # tsc -b && vite build → dist/
+npm run lint            # oxlint
+npm test                # Vitest
+npm run test:functions  # edge functions con Deno 2
+npm run test:db         # pgTAP (requiere `npx supabase start`, con Docker)
+npm run test:e2e:local  # Playwright contra la base local (Docker)
+npm run test:e2e        # Playwright contra la URL configurada
+npm run db:types        # regenera src/types/supabase.gen.ts desde la base local
 ```
 
-Hoy se trabaja contra el proyecto alojado; Supabase local requiere Docker. Ver
-[pruebas.md](pruebas.md) para cuándo conviene cada uno.
+Para desarrollo diario suele apuntarse al proyecto alojado en `.env.local`; las pruebas
+pgTAP, `db:types` y `test:e2e:local` usan Supabase local con Docker. Ver [pruebas.md](pruebas.md)
+para cuándo conviene cada uno.
 
 ---
 
@@ -1004,5 +1014,5 @@ aceptarla (`aprobar_comision` o `aprobar_comisiones`) antes de que el proceso de
 
 ---
 
-*Última revisión: 19 de octubre de 2026 (migraciones hasta `20261010000039`).*
+*Última revisión: 15 de noviembre de 2026 (migraciones hasta `20261010000044`).*
 

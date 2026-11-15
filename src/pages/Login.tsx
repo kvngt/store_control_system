@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
-import { supabaseService } from '../services/supabaseService';
+import { usersService } from '../services/users.service';
 import { getAuthErrorMessage, getRecoveryErrorMessage } from '../lib/errors';
 import { getPasswordResetRedirect } from '../lib/siteUrl';
 import { ArrowLeft } from 'lucide-react';
@@ -47,7 +47,7 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      await supabaseService.requestPasswordReset(email, getPasswordResetRedirect());
+      await usersService.requestPasswordReset(email, getPasswordResetRedirect());
       // Deliberately the same message whether or not the account exists — a
       // different one would let anyone probe which emails are registered.
       setNotice(t('auth.recoverySent'));

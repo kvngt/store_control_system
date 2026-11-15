@@ -131,11 +131,10 @@ Cuenta: el administrador. Dispositivo: computadora.
 | A-16 | ⚪ | Pide el enlace dos veces seguidas en menos de un minuto | La segunda vez puede decir "Ya se envió un correo hace poco…". No debe decir "revisa tu conexión" |
 | A-17 | ⚪ | Cambia el idioma a **English** en el login | Todo el login en inglés; al recargar se recuerda |
 
-> **Si el correo de A-08 no llega.** El correo de recuperación lo manda Supabase, no Resend.
-> Con el servidor de correo que trae Supabase de fábrica se envían muy pocos por hora y
-> solo a correos del equipo del proyecto en Supabase. Si te llega a ti pero no al mecánico
-> (sesión B), no es un fallo de la app: falta configurar un SMTP propio
-> ([salida-a-produccion.md](historico/salida-a-produccion.md), PRD-05). Anótalo como ⏭️ con ese motivo.
+> **Si el correo de A-08 no llega.** El correo de recuperación lo manda Supabase Auth
+> (usando el SMTP propio con Resend configurado desde el 30/09/2026). Si falla en otro
+> entorno sin SMTP propio, solo envía pocos por hora y a miembros del equipo del proyecto;
+> revisa Authentication → Logs y la configuración SMTP en Supabase ([deployment.md §4.2](deployment.md#42-auth)).
 
 ---
 

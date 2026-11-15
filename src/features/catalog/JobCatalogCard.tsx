@@ -6,7 +6,7 @@ import { useAuth } from '../../context/auth.context';
 import { useToast } from '../../context/toast.context';
 import { AlertError } from '../../components/AlertError';
 import { catalogService } from '../../services/catalog.service';
-import { sedesService } from '../../services/supabaseService';
+import { sedesService } from '../../services/sedes.service';
 import { emptyList } from '../../lib/emptyList';
 import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';

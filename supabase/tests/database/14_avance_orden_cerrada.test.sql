@@ -75,7 +75,7 @@ END $do$;
 SET LOCAL request.jwt.claim.sub = 'a0000000-0000-0000-0000-000000000002';
 
 SELECT lives_ok(
-  $$ UPDATE ordenes_trabajo SET estatus = 'en_proceso', fecha_finalizacion = NULL
+  $$ UPDATE ordenes_trabajo SET estatus = 'en_proceso'
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
   'La mecánica asignada pone la orden en proceso'
 );
@@ -87,7 +87,7 @@ SELECT lives_ok(
 SELECT is((SELECT porcentaje_avance FROM t_orden), 80, 'En proceso el avance es el que ella eligió');
 
 SELECT lives_ok(
-  $$ UPDATE ordenes_trabajo SET estatus = 'finalizado', fecha_finalizacion = NOW()
+  $$ UPDATE ordenes_trabajo SET estatus = 'finalizado'
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
   'La finaliza'
 );
@@ -120,7 +120,7 @@ SELECT is((SELECT porcentaje_avance FROM t_orden), 100, 'Finalizada sigue en 100
 -- 3. Reabrir conserva el 100, y el avance vuelve a ser de quien trabaja la orden
 -- ------------------------------------------------------------------------------------
 SELECT throws_ok(
-  $$ UPDATE ordenes_trabajo SET estatus = 'en_proceso', fecha_finalizacion = NULL
+  $$ UPDATE ordenes_trabajo SET estatus = 'en_proceso'
      WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
   '42501', NULL,
   'La mecánica NO reabre la orden (desde el 05/10/2026 solo administración)'

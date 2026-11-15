@@ -37,17 +37,19 @@ export const searchService = {
       .limit(5);
     if (sedeId) orderQuery = orderQuery.eq('sede_id', sedeId);
 
-    const none = Promise.resolve({ data: [] as unknown[] });
-    const [{ data: customers }, { data: vehicles }, { data: orders }] = await Promise.all([
+    const none = Promise.resolve({ data: [] as unknown[], error: null as unknown });
+    const [customersRes, vehiclesRes, ordersRes] = await Promise.all([
       directory ? customerQuery : none,
       directory ? vehicleQuery : none,
       orderQuery,
     ]);
+    const error = customersRes.error ?? vehiclesRes.error ?? ordersRes.error;
+    if (error) throw error;
 
     return {
-      customers: (customers || []) as { id: string; nombre: string; telefono: string }[],
-      vehicles: (vehicles || []) as unknown as { id: string; marca: string; modelo: string; placa: string; vin: string; cliente?: { nombre: string } }[],
-      orders: (orders || []) as unknown as { id: string; numero_orden: string; estatus: OrderStatus; cliente?: { nombre: string } }[],
+      customers: (customersRes.data || []) as { id: string; nombre: string; telefono: string }[],
+      vehicles: (vehiclesRes.data || []) as unknown as { id: string; marca: string; modelo: string; placa: string; vin: string; cliente?: { nombre: string } }[],
+      orders: (ordersRes.data || []) as unknown as { id: string; numero_orden: string; estatus: OrderStatus; cliente?: { nombre: string } }[],
     };
   },
 };

@@ -2,11 +2,13 @@
 
 Este análisis revisa cómo están organizadas las pantallas de Restorify. Su objetivo es detectar pantallas saturadas, datos desordenados y botones fuera de lugar para ayudar al taller a trabajar más rápido, especialmente desde el teléfono.
 
-> **Cómo se hizo (12/10/2026).** Leyendo el código de cada pantalla, no con capturas: lo marcado
+> **Cómo se hizo (12/10/2026; referencias previas a la división modular del 15/11/2026).** Leyendo el código de cada pantalla, no con capturas: lo marcado
 > "(verificar con captura)" depende de cómo se ve y se confirma al tomar las capturas del manual.
 > Lo redactó Gemini a partir de un mapa de los textos de cada pantalla sacado del código; Claude Code
 > comprobó las referencias y las observaciones principales contra el código y corrigió lo que no
-> coincidía. Sigue al [análisis del 11/10/2026](historico/comparativa-comercial-y-ux-2026-10.md#3-el-orden-de-la-interfaz-confunde-o-satura).
+> coincidía. Las rutas y tamaños citados en este análisis reflejan la foto del 12/10/2026 (antes de
+> dividir `WorkOrders.tsx`, `Settings.tsx`, `CustomerPortal.tsx`, `WorkOrderDetail.tsx` y
+> `WorkOrderCreateModal.tsx`). Sigue al [análisis del 11/10/2026](historico/comparativa-comercial-y-ux-2026-10.md#3-el-orden-de-la-interfaz-confunde-o-satura).
 > No propone cambios de reglas de negocio ni de permisos, solo de cómo se ubica y se presenta lo que ya existe.
 
 ---

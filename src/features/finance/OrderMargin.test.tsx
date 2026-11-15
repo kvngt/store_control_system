@@ -10,7 +10,7 @@ import { renderWithProviders } from '../../test/renderWithProviders';
 import type { OrderMarginPage } from '../../types/database';
 
 const mocks = vi.hoisted(() => ({ getOrderBalance: vi.fn(), getOrderMargins: vi.fn() }));
-vi.mock('../../services/supabaseService', () => ({ financeService: mocks }));
+vi.mock('../../services/finance.service', () => ({ financeService: mocks }));
 
 const { default: OrderBalanceCard } = await import('./OrderBalanceCard');
 const { default: OrderMarginCard } = await import('./OrderMarginCard');

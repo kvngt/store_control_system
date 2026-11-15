@@ -90,9 +90,12 @@ cerrada se borra su fecha de finalización y el avance se conserva.
   `deposito_comprobante_ruta` (`20261010000007`); una clave con otro nombre **se ignora sin error**
   (del 04/10/2026 hasta el arreglo, el alta mandaba `deposito_cheque`/`deposito_comprobante` y el
   número de cheque y comprobante se perdían; fijado en `workOrders.service.test.ts`). El alta va en
-  cuatro pasos (`INTAKE_STEPS` en `workOrderForm.schema.ts`: cliente, vehículo, trabajos, depósito;
-  el cliente y el vehículo nuevos se guardan al salir de su paso y al cancelar, `onLeaveStep`); todo
-  campo nuevo del formulario va en uno de ellos (lo exige `workOrderForm.schema.test.ts`).
+  cuatro pasos (`INTAKE_STEPS` en `workOrderForm.schema.ts` y componentes en
+  `features/workOrders/intake/`: cliente, vehículo, trabajos, depósito; el cliente y el vehículo
+  nuevos se guardan al salir de su paso y al cancelar, `onLeaveStep`); todo campo nuevo del
+  formulario va en uno de ellos (lo exige `workOrderForm.schema.test.ts`). Si el anticipo es con
+  cheque, se acepta con su número o con la foto del comprobante (`features/workOrders/paymentReceipt.ts`),
+  y el comprobante sirve para cualquier método de pago.
 - Lo que un admin cotiza al crear la orden nace **sin autorizar** y se autoriza
   solo mediante un presupuesto o registrando la autorización manualmente (sección 8).
 - **El enlace del cliente se crea de inmediato con la orden** (`trg_order_link_on_create`, `20261010000032`), sin esperar a la firma, para poder compartirlo de inmediato (p. ej. por WhatsApp). El correo de recepción al cliente sale al firmar (`firma_ruta`), y si la orden pasa a en proceso antes de firmar, el aviso de en proceso espera a que exista firma.
@@ -207,7 +210,8 @@ total autorizado − lo cobrado neto) y `entregar_orden` hace todo en una transa
 
 - Si **falta cobrar**, asienta el "Pago final" por el saldo con el **método** que se eligió,
   el número de cheque y la foto del comprobante (bucket privado `comprobantes`, carpeta de
-  la sede). Un cheque exige número o foto.
+  la sede). Un cheque exige número o foto (`features/workOrders/paymentReceipt.ts`), y el
+  comprobante sirve para cualquier método de pago.
 - Si el depósito **supera** el total, asienta la **devolución** al cliente como egreso, con
   su método.
 - Si no hay nada pendiente, no asienta nada y no pide método.
@@ -768,6 +772,6 @@ Módulo para programar el siguiente mantenimiento recomendado para el vehículo 
 
 - **Horas facturadas:** cada sede define su `tarifa_hora` (opcional) y cada línea de mano de obra puede llevar `horas`; en la pantalla, escribir horas o tarifa calcula `horas × tarifa = monto` (`lib/laborHours.ts`), pero el monto sigue siendo editable y es la base de los totales y comisiones.
 - **Reloj por tarea:** el técnico asignado a la tarea (o un admin) inicia y pausa el reloj en `orden_labor_tiempos` (`iniciar_reloj`, `detener_reloj`). Iniciar una tarea detiene cualquier otra sesión abierta de ese técnico; marcar la tarea como completada cierra su reloj (`trg_labor_cerrar_reloj`); no se permite iniciar el reloj en órdenes finalizadas o entregadas. Las sesiones abiertas que superen 12 h se acotan a 12 h al cerrar o al calcular indicadores (`037`). Solo administración corrige o borra intervalos (`corregir_tiempo`, `borrar_tiempo`).
-- **Indicadores del taller:** en Finanzas → **Indicadores del taller**, la RPC `indicadores_taller` (solo admin) calcula en la base las órdenes entregadas, ingresos, ticket promedio, horas facturadas, horas reales trabajadas, eficiencia (`horas_facturadas / horas_reales`) e ingresos por hora del periodo, global y por técnico.
+- **Indicadores del taller:** en Finanzas → **Indicadores del taller**, la RPC `indicadores_taller` (solo admin) calcula en la base las órdenes entregadas, ingresos, promedio por carro, horas facturadas, horas reales trabajadas, eficiencia (`horas_facturadas / horas_reales`) e ingresos por hora del periodo, global y por técnico.
 - **Asignación automática de tareas sin técnico (`20261010000032`):** al asignar a alguien a mano en `orden_asignaciones`, `trg_assignment_takes_tasks` le pasa las tareas de `orden_labor` que no son heredadas, no tienen técnico y son de su oficio. Asignar sigue siendo dinero: esas tareas le pagan a él.
 

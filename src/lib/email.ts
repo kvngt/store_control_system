@@ -3,8 +3,11 @@
  * algo@algo.algo, sin espacios. No pretende validar que el buzón exista, solo
  * atrapar el error de dedo antes de que la base lo rechace.
  */
+/** Expresión única para validar correos electrónicos en la aplicación. */
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 export function isValidEmail(value: string | null | undefined): boolean {
-  return !!value && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
+  return !!value && EMAIL_RE.test(value.trim());
 }
 
 /** Vacío es válido (el correo es opcional); si hay algo, tiene que tener forma de correo. */

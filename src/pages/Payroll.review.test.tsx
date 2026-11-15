@@ -22,25 +22,23 @@ vi.mock('../context/auth.context', () => ({
   useAuth: () => mocks.auth.current,
 }));
 
-vi.mock('../services/supabaseService', async () => {
+vi.mock('../services/commissions.service', async () => {
   const actual = await vi.importActual<typeof import('../services/commissions.service')>('../services/commissions.service');
-  const commissions = {
-    getCommissions: mocks.getCommissions,
-    getPayments: mocks.getPayments,
-    approveMany: mocks.approveMany,
-    payCommissions: mocks.payCommissions,
-    buildBalances: actual.commissionsService.buildBalances,
-    uploadComprobante: vi.fn(),
-    deletePayment: vi.fn(),
-    signComprobante: vi.fn(),
-  };
-  const workOrders = { approveCommission: mocks.approveCommission };
   return {
-    commissionsService: commissions,
-    workOrdersService: workOrders,
-    sedesService: { updateSede: vi.fn() },
+    commissionsService: {
+      getCommissions: mocks.getCommissions,
+      getPayments: mocks.getPayments,
+      approveMany: mocks.approveMany,
+      payCommissions: mocks.payCommissions,
+      buildBalances: actual.commissionsService.buildBalances,
+      uploadComprobante: vi.fn(),
+      deletePayment: vi.fn(),
+      signComprobante: vi.fn(),
+    },
   };
 });
+vi.mock('../services/workOrders.service', () => ({ workOrdersService: { approveCommission: mocks.approveCommission } }));
+vi.mock('../services/sedes.service', () => ({ sedesService: { updateSede: vi.fn() } }));
 
 const { default: Payroll } = await import('./Payroll');
 

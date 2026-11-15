@@ -22,6 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // esto, quien entraba después veía por un momento las órdenes y los montos que cargó
   // la persona anterior (un admin), hasta que llegaba su propia consulta.
   const cacheOwner = useRef<string | null>(null);
+  const hasSedesRef = useRef(false);
 
   const forgetCachedData = useCallback(() => {
     queryClient.clear();
@@ -47,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!perfil) {
       setUser(null);
+      hasSedesRef.current = false;
       setAllSedes([]);
       setCurrentSedeState(null);
       // Una sesión sin perfil no sirve para nada y se quedaba guardada en el navegador.
@@ -54,15 +56,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const { data: sedes, error: sedesError } = await supabase.from('sedes').select('*').order('nombre');
-    // Igual que arriba: sin respuesta se conservan las sedes que ya había.
+    let sedesResult = await supabase.from('sedes').select('*').order('nombre');
+    for (let attempt = 0; attempt < 2 && sedesResult.error; attempt++) {
+      await new Promise((r) => setTimeout(r, 150));
+      sedesResult = await supabase.from('sedes').select('*').order('nombre');
+    }
+    const { data: sedes, error: sedesError } = sedesResult;
     if (sedesError) {
-      setUser(perfil as UserProfile);
+      // Igual que con el perfil: si ya había sedes en memoria se conservan, pero en
+      // arranque en frío no dejamos una sesión a medias con currentSede = null.
+      if (hasSedesRef.current) setUser(perfil as UserProfile);
       return;
     }
     const sedesList = (sedes || []) as Sede[];
 
     setUser(perfil as UserProfile);
+    hasSedesRef.current = sedesList.length > 0;
     setAllSedes(sedesList);
 
     const savedSedeId = localStorage.getItem('restorify_sede_id');
@@ -78,6 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // loadProfileAndSedes. Antes dejaba el selector vacío y la sede actual en null (regla 10).
     if (error) return;
     const sedesList = (sedes || []) as Sede[];
+    hasSedesRef.current = sedesList.length > 0;
     setAllSedes(sedesList);
     setCurrentSedeState((prev) =>
       prev ? sedesList.find((s) => s.id === prev.id) || sedesList[0] || null : prev
@@ -119,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loadProfileAndSedes(session.user.id);
       } else {
         setUser(null);
+        hasSedesRef.current = false;
         setAllSedes([]);
         setCurrentSedeState(null);
         forgetCachedData();

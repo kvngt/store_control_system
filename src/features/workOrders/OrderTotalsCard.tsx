@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { HandCoins, Percent, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
-import { workOrdersService } from '../../services/supabaseService';
+import { workOrdersService } from '../../services/workOrders.service';
 import { queryKeys } from '../../lib/queryClient';
 import { money } from '../../lib/money';
 import type { OrderAmounts, WorkOrder } from '../../types/database';

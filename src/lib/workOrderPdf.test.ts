@@ -282,4 +282,46 @@ describe('generateWorkOrderPdf: idioma y cuenta', () => {
       .map(([, args]) => (args as unknown[])[0]);
     expect(fontSizes).toContain(7);
   });
+
+  it('formatea fecha de ingreso y firma con la zona horaria de la sede y las millas con separador de miles', async () => {
+    const iso = '2026-09-02T03:00:00Z';
+    const expectedNy = new Date(iso).toLocaleDateString('es-US', { timeZone: 'America/New_York' });
+    const expectedTokyo = new Date(iso).toLocaleDateString('es-US', { timeZone: 'Asia/Tokyo' });
+    expect(expectedNy).not.toBe(expectedTokyo);
+
+    const ordenConFirma = {
+      ...orden('en_proceso'),
+      fecha_ingreso: iso,
+      millas_ingreso: 108500,
+      firma_ruta: 'firmas/o1.png',
+      firma_fecha: iso,
+    } as unknown as WorkOrder;
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob() }));
+    vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({ width: 100, height: 50, close: vi.fn() }));
+    vi.stubGlobal('document', {
+      createElement: () => ({
+        width: 0,
+        height: 0,
+        getContext: () => ({ drawImage: vi.fn() }),
+        toDataURL: () => 'data:image/png;base64,AA==',
+      }),
+    });
+
+    try {
+      await generateWorkOrderPdf(ordenConFirma, { ...SEDE, zona_horaria: 'Asia/Tokyo' }, { 'firmas/o1.png': 'https://cdn.test/firma.png' });
+      const textoTokyo = textoPintado();
+      expect(textoTokyo).toContain('108,500');
+      expect(textoTokyo).toContain(expectedTokyo);
+      expect(textoTokyo).toContain(`Firmado: ${expectedTokyo}`);
+
+      llamadas.lista = [];
+      await generateWorkOrderPdf(ordenConFirma, SEDE, { 'firmas/o1.png': 'https://cdn.test/firma.png' });
+      const textoDefaultNy = textoPintado();
+      expect(textoDefaultNy).toContain(expectedNy);
+      expect(textoDefaultNy).toContain(`Firmado: ${expectedNy}`);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

@@ -5,10 +5,12 @@ import { ClipboardList, MessageSquare, UserCog } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { AlertError } from '../../components/AlertError';
+import Modal from '../../components/Modal';
 import { employeesService } from '../../services/employees.service';
 import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';
 import { money } from '../../lib/money';
+import { orderStatusKey } from '../../lib/workType';
 import type { PayKind, PayScheme, SalaryPeriod, Sede, UserProfile } from '../../types/database';
 
 interface EmployeeDetailModalProps {
@@ -16,6 +18,8 @@ interface EmployeeDetailModalProps {
   sede?: Sede;
   /** Su fila en `perfiles_pago`; ausente = comisión al porcentaje de la sede. */
   scheme?: PayScheme;
+  /** Aviso opcional de una línea (ej. al abrir justo después de crear al empleado). */
+  notice?: string;
   onClose: () => void;
 }
 
@@ -28,7 +32,7 @@ const PERIODS: SalaryPeriod[] = ['semanal', 'quincenal', 'mensual'];
  * donde ver a cada empleado. El porcentaje vacío es "el de la sede", no cero: así un cambio
  * del porcentaje del taller le sigue llegando a quien no tiene uno propio.
  */
-export default function EmployeeDetailModal({ employee, sede, scheme, onClose }: EmployeeDetailModalProps) {
+export default function EmployeeDetailModal({ employee, sede, scheme, notice, onClose }: EmployeeDetailModalProps) {
   const { t, language } = useLanguage();
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -102,32 +106,34 @@ export default function EmployeeDetailModal({ employee, sede, scheme, onClose }:
   };
 
   const openOrder = (orderId: string) => navigate(`/work-orders?open=${orderId}`);
-  const statusLabels: Record<string, string> = {
-    recepcion: t('workOrders.intake'),
-    en_proceso: t('workOrders.inProgress'),
-    espera_autorizacion: t('workOrders.waitingAuthorization'),
-    finalizado: t('workOrders.completed'),
-    entregado: t('workOrders.delivered'),
-  };
 
   return (
-    <div className="modal-overlay" onClick={saving ? undefined : onClose}>
-      <div
-        className="modal"
-        style={{ maxWidth: 640 }}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={employee.nombre_completo}
-      >
-        <div className="modal-header">
-          <h2 className="modal-title">
-            <UserCog size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
-            {employee.nombre_completo}
-          </h2>
-        </div>
-
-        <div className="modal-body">
+    <Modal
+      onClose={onClose}
+      closeDisabled={saving}
+      style={{ maxWidth: 640 }}
+      title={
+        <>
+          <UserCog size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
+          {employee.nombre_completo}
+        </>
+      }
+      footer={
+        <>
+          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={saving}>
+            {t('common.close')}
+          </button>
+          <button type="button" className="btn btn-primary" onClick={() => void save()} disabled={saving} id="employee-save">
+            {saving ? t('common.loading') : t('common.save')}
+          </button>
+        </>
+      }
+    >
+      {notice && (
+            <p className="employee-pay-notice" role="status">
+              {notice}
+            </p>
+          )}
           <AlertError message={error} />
 
           {/* Lo que se le debe y lo que ha trabajado. Las sumas vienen de la base. */}
@@ -237,7 +243,7 @@ export default function EmployeeDetailModal({ employee, sede, scheme, onClose }:
                     {a.orden?.numero_orden ?? '—'}
                   </button>
                   <span>{a.tipo_tarea === 'pintura' ? t('workOrders.painting') : t('workOrders.mechanical')}</span>
-                  <span className="employee-recent-meta">{a.orden ? statusLabels[a.orden.estatus] ?? a.orden.estatus : ''}</span>
+                  <span className="employee-recent-meta">{a.orden ? t(orderStatusKey(a.orden.estatus)) : ''}</span>
                 </li>
               ))}
             </ul>
@@ -263,17 +269,6 @@ export default function EmployeeDetailModal({ employee, sede, scheme, onClose }:
               ))}
             </ul>
           )}
-        </div>
-
-        <div className="modal-footer">
-          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={saving}>
-            {t('common.close')}
-          </button>
-          <button type="button" className="btn btn-primary" onClick={() => void save()} disabled={saving} id="employee-save">
-            {saving ? t('common.loading') : t('common.save')}
-          </button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

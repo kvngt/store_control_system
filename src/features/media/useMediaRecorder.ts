@@ -32,6 +32,8 @@ export function useMediaRecorder(kind: 'video' | 'audio') {
   const startedAtRef = useRef(0);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const mountedRef = useRef(true);
+  const requestIdRef = useRef(0);
 
   const stopTicking = () => {
     if (tickRef.current) clearInterval(tickRef.current);
@@ -39,6 +41,7 @@ export function useMediaRecorder(kind: 'video' | 'audio') {
   };
 
   const release = useCallback(() => {
+    requestIdRef.current += 1;
     stopTicking();
     if (recorderRef.current && recorderRef.current.state !== 'inactive') {
       recorderRef.current.onstop = null;
@@ -52,11 +55,18 @@ export function useMediaRecorder(kind: 'video' | 'audio') {
 
   // La cámara no puede quedar encendida al cerrar el diálogo: en un teléfono es
   // la luz verde encendida y la batería gastándose.
-  useEffect(() => release, [release]);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      release();
+    };
+  }, [release]);
 
   const openDevice = useCallback(
     async (facingMode: 'environment' | 'user' = 'environment') => {
       release();
+      const requestId = ++requestIdRef.current;
       setError(null);
       setState('starting');
       if (!navigator.mediaDevices?.getUserMedia) {
@@ -78,10 +88,17 @@ export function useMediaRecorder(kind: 'video' | 'audio') {
               }
             : { audio: { echoCancellation: true, noiseSuppression: true } };
         const media = await navigator.mediaDevices.getUserMedia(constraints);
+        // Si el diálogo se cerró o se pidió otra cámara mientras getUserMedia seguía
+        // pendiente, liberamos las pistas recién abiertas para no dejar hardware activo.
+        if (!mountedRef.current || requestId !== requestIdRef.current) {
+          media.getTracks().forEach((track) => track.stop());
+          return;
+        }
         streamRef.current = media;
         setStream(media);
         setState('ready');
       } catch (err) {
+        if (!mountedRef.current || requestId !== requestIdRef.current) return;
         setError(fromGetUserMediaError(err));
         setState('error');
       }

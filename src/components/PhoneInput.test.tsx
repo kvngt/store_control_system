@@ -113,4 +113,16 @@ describe('PhoneInput', () => {
     await user.tab();
     expect(screen.getByText(/tiene 10 dígitos/)).toBeInTheDocument();
   });
+
+  it('muestra solo bandera y prefijo cuando está cerrado sin cortar el nombre del país', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Campo />);
+
+    const display = document.querySelector('.phone-input-country-display') as HTMLElement;
+    expect(display).toHaveTextContent('🇺🇸 +1');
+    expect(display).not.toHaveTextContent(/Estados Unidos/);
+
+    await user.selectOptions(pais(), 'MX');
+    expect(display).toHaveTextContent('🇲🇽 +52');
+  });
 });

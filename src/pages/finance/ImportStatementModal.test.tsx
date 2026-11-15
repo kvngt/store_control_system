@@ -36,8 +36,8 @@ vi.mock('../../lib/bankStatementParser', () => ({
   parseWellsFargoStatement: mocks.parse,
 }));
 
-vi.mock('../../services/supabaseService', () => ({
-  supabaseService: {
+vi.mock('../../services/finance.service', () => ({
+  financeService: {
     getCategorizationRules: mocks.getCategorizationRules,
     findPossibleDuplicates: mocks.findPossibleDuplicates,
     uploadStatement: mocks.uploadStatement,

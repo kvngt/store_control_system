@@ -5,6 +5,7 @@ import type { PreparedMedia } from '../../types/database';
 import DraftMediaStrip from '../media/DraftMediaStrip';
 import MediaCaptureBar from '../media/MediaCaptureBar';
 import { useDiscardGuard } from '../../components/useDiscardGuard';
+import Modal from '../../components/Modal';
 
 const MAX_TEXT = 1000;
 
@@ -39,62 +40,59 @@ export default function ReportFindingModal({ saving, onCancel, onConfirm }: Repo
   });
 
   return (
-    <div className="modal-overlay" onClick={guard.requestClose}>
-      <div
-        className="modal"
+    <>
+      <Modal
+        onClose={guard.requestClose}
+        closeDisabled={saving}
         style={{ maxWidth: 520 }}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('findings.reportTitle')}
-      >
-        <div className="modal-header">
-          <h2 className="modal-title">
+        title={
+          <>
             <AlertTriangle size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
             {t('findings.reportTitle')}
-          </h2>
-        </div>
-        <div className="modal-body">
-          <p className="field-hint">{t('findings.reportHint')}</p>
-          <div className="form-group">
-            <label className="form-label" htmlFor="finding-description">
-              {t('findings.reportLabel')}
-            </label>
-            <textarea
-              id="finding-description"
-              className="form-input form-textarea"
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              placeholder={t('findings.reportPlaceholder')}
-              maxLength={MAX_TEXT}
-              rows={4}
-              disabled={saving}
-              autoFocus
-            />
-          </div>
-          <DraftMediaStrip items={drafts} onRemove={(index) => setDrafts((prev) => prev.filter((_, i) => i !== index))} />
-          <MediaCaptureBar
-            onAdd={(items) => setDrafts((prev) => [...prev, ...items])}
+          </>
+        }
+        footer={
+          <>
+            <button type="button" className="btn btn-secondary" onClick={guard.requestClose} disabled={saving}>
+              {t('common.cancel')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => void onConfirm(texto.trim(), drafts)}
+              disabled={!canSubmit}
+            >
+              {saving ? t('common.loading') : t('findings.reportConfirm')}
+            </button>
+          </>
+        }
+      >
+        <p className="field-hint">{t('findings.reportHint')}</p>
+        <div className="form-group">
+          <label className="form-label" htmlFor="finding-description">
+            {t('findings.reportLabel')}
+          </label>
+          <textarea
+            id="finding-description"
+            className="form-input form-textarea"
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            placeholder={t('findings.reportPlaceholder')}
+            maxLength={MAX_TEXT}
+            rows={4}
             disabled={saving}
-            onBusyChange={setProcessing}
+            autoFocus
           />
-          <p className="field-hint">{t('findings.reportInternal')}</p>
         </div>
-        <div className="modal-footer">
-          <button type="button" className="btn btn-secondary" onClick={guard.requestClose} disabled={saving}>
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => void onConfirm(texto.trim(), drafts)}
-            disabled={!canSubmit}
-          >
-            {saving ? t('common.loading') : t('findings.reportConfirm')}
-          </button>
-        </div>
-      </div>
+        <DraftMediaStrip items={drafts} onRemove={(index) => setDrafts((prev) => prev.filter((_, i) => i !== index))} />
+        <MediaCaptureBar
+          onAdd={(items) => setDrafts((prev) => [...prev, ...items])}
+          disabled={saving}
+          onBusyChange={setProcessing}
+        />
+        <p className="field-hint">{t('findings.reportInternal')}</p>
+      </Modal>
       {guard.dialog}
-    </div>
+    </>
   );
 }

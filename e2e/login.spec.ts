@@ -48,22 +48,16 @@ test.describe('mechanic/painter session', () => {
     await expect(page).toHaveURL('/panel');
   });
 
-  test('work orders open on "my orders", with the rest of the board collapsed', async ({ page }) => {
+  test('work orders show only "my orders"', async ({ page }) => {
     await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
     await page.goto('/work-orders');
 
-    // Their own orders come first; the colleagues' section is present but shut.
+    // Desde 20261007000000 un técnico solo ve las órdenes que tiene asignadas: ya no hay una
+    // sección plegada con las de sus compañeros.
     const sections = page.locator('.orders-section');
-    await expect(sections).toHaveCount(2);
+    await expect(sections).toHaveCount(1);
     await expect(sections.first()).toContainText(/Mis Órdenes de Trabajo|My Work Orders/);
-
-    const toggle = page.locator('.orders-section-toggle');
-    await expect(toggle).toContainText(/Otras Órdenes de Trabajo|Other Work Orders/);
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(page.locator('.orders-section-hint')).toBeVisible();
+    await expect(page.locator('.orders-section-toggle')).toHaveCount(0);
   });
 
   test('mechanic gets no delete button on customers or vehicles', async ({ page }) => {
@@ -73,9 +67,10 @@ test.describe('mechanic/painter session', () => {
     await expect(page.locator('.page-title')).toBeVisible();
     await expect(page.locator('.table-actions button[title="Eliminar"], .table-actions button[title="Delete"]')).toHaveCount(0);
 
+    // Vehículos es de administración (crear o editar un vehículo es de admin): el técnico vuelve al panel.
     await page.goto('/vehicles');
-    await expect(page.locator('#new-vehicle-btn')).toBeVisible();
-    await expect(page.locator('.table-actions button[title="Eliminar"], .table-actions button[title="Delete"]')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/panel$/, { timeout: 10000 });
+    await expect(page.locator('#new-vehicle-btn')).toHaveCount(0);
   });
 
 });

@@ -4,7 +4,7 @@ import { Search, Menu, Building2, ClipboardList, Users, Car, X } from 'lucide-re
 import { useLanguage } from '../../context/language.context';
 import { useAuth } from '../../context/auth.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
-import { supabaseService } from '../../services/supabaseService';
+import { searchService } from '../../services/search.service';
 import NotificationBell from '../../features/notifications/NotificationBell';
 import { formatPhone } from '../../lib/phone';
 
@@ -65,7 +65,7 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
     // Solo cuenta la respuesta de lo último que se escribió: una lenta de antes no la pisa.
     let current = true;
     const handle = setTimeout(() => {
-      supabaseService
+      searchService
         .globalSearch(query, sedeId, { directory: isAdmin })
         .then((found) => {
           if (!current) return;
@@ -74,7 +74,7 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
         })
         .catch(() => {
           if (!current) return;
-          setResults(EMPTY_RESULTS);
+          // Conserva los resultados previos visibles junto al aviso de error.
           setSearchFailed(true);
         })
         .finally(() => {

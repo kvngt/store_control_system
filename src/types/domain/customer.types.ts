@@ -5,7 +5,7 @@ export interface Customer {
   telefono: string;
   email: string;
   direccion: string;
-  notas_crm: string;
+  notas_crm: string | null;
   /** Recepción y cambios de estado por correo. El cliente puede darse de baja desde su enlace. */
   acepta_correos?: boolean;
   /**
@@ -24,7 +24,7 @@ export interface CustomerInput {
   telefono: string;
   email: string;
   direccion: string;
-  notas_crm: string;
+  notas_crm: string | null;
   acepta_correos?: boolean;
   idioma?: 'es' | 'en';
   sede_id: string;

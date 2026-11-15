@@ -14,13 +14,16 @@
     "lint": "oxlint",
     "db:check": "node scripts/check-migrations.mjs",
     "db:donde": "node scripts/db-donde.mjs",
+    "db:types": "node scripts/db-types.mjs",
     "qa:security": "node scripts/qa/api-security.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:functions": "npx -y deno@2 test --allow-env --no-check=remote --node-modules-dir=none --no-lock supabase/functions",
     "test:db": "npx -y supabase@3 test db",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:local": "node scripts/e2e-local.mjs",
     "postinstall": "node scripts/copy-pdf-worker.mjs"
   },
   "dependencies": {

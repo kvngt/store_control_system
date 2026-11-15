@@ -5,6 +5,10 @@ import { reportError } from '../lib/monitoring';
 
 interface Props {
   children: ReactNode;
+  /** Cuando va dentro del layout, ofrece reintentar sin ocupar toda la pantalla. */
+  inline?: boolean;
+  retryLabel?: string;
+  onRetry?: () => void;
 }
 
 interface State {
@@ -33,10 +37,16 @@ export default class ErrorBoundary extends Component<Props, State> {
     reportError(error, { componentStack: info.componentStack });
   }
 
+  private handleRetry = () => {
+    this.props.onRetry?.();
+    this.setState({ hasError: false, message: '', reloading: false });
+  };
+
   render() {
+    const minHeight = this.props.inline ? 320 : '100vh';
     if (this.state.reloading) {
       return (
-        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-primary)' }}>
+        <div style={{ minHeight, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-primary)' }}>
           <div className="spinner" />
         </div>
       );
@@ -45,7 +55,7 @@ export default class ErrorBoundary extends Component<Props, State> {
       return (
         <div
           style={{
-            minHeight: '100vh',
+            minHeight,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -65,7 +75,16 @@ export default class ErrorBoundary extends Component<Props, State> {
             Ocurrió un error inesperado. Intenta recargar la página; si el problema
             continúa, contacta a soporte.
           </p>
-          <button className="btn btn-primary" onClick={() => window.location.reload()}>
+          {this.props.inline ? (
+            <button type="button" className="btn btn-primary" onClick={this.handleRetry}>
+              {this.props.retryLabel ?? 'Reintentar'}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className={this.props.inline ? 'btn btn-secondary' : 'btn btn-primary'}
+            onClick={() => window.location.reload()}
+          >
             Recargar página
           </button>
         </div>

@@ -1,14 +1,13 @@
-import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, Clock, FileWarning, Send, XCircle } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
-import { useToast } from '../../context/toast.context';
-import { getErrorMessage } from '../../lib/errors';
 import { money, sumMoney } from '../../lib/money';
 import { queryKeys } from '../../lib/queryClient';
 import { quotesService } from '../../services/quotes.service';
 import { relativeTime } from '../notifications/renderNotification';
 import type { LineState, WorkOrder } from '../../types/database';
+import { QuoteShareActions } from './QuoteShareActions';
+import { useQuoteSend, useQuoteShareUrl } from './useQuoteSend';
 
 interface Line {
   descripcion: string;
@@ -40,9 +39,7 @@ function linesOf(order: WorkOrder): Line[] {
  */
 export default function AuthorizationPanel({ order, onOpenQuote }: { order: WorkOrder; onOpenQuote: () => void }) {
   const { t, language } = useLanguage();
-  const { showToast } = useToast();
-  const queryClient = useQueryClient();
-  const [sending, setSending] = useState(false);
+  const { sending, sendQuote } = useQuoteSend(order);
 
   const quotesQuery = useQuery({
     queryKey: queryKeys.quotes(order.id),
@@ -54,6 +51,7 @@ export default function AuthorizationPanel({ order, onOpenQuote }: { order: Work
   const pending = lines.filter((l) => l.estado === 'pendiente');
   const quotes = quotesQuery.data ?? [];
   const open = quotes.find((q) => q.estado === 'enviado') ?? null;
+  const shareUrl = useQuoteShareUrl(order, Boolean(open));
   const lastAnswered = quotes.find((q) => q.estado === 'respondido') ?? null;
   const answeredLines = lastAnswered ? lines.filter((l) => l.presupuestoId === lastAnswered.id) : [];
   const approved = answeredLines.filter((l) => l.estado === 'aprobado');
@@ -61,25 +59,6 @@ export default function AuthorizationPanel({ order, onOpenQuote }: { order: Work
   const sum = (list: Line[]) => sumMoney(list.map((l) => l.monto));
 
   if (order.estatus === 'entregado' || (drafts.length === 0 && !open && !lastAnswered)) return null;
-
-  const send = async () => {
-    if (!confirm(t('quotes.sendConfirm'))) return;
-    setSending(true);
-    try {
-      const result = await quotesService.sendQuote(order.id, true);
-      showToast(result.correo === 'sin_correo' ? 'error' : 'success', t(result.correo === 'sin_correo' ? 'quotes.sentNoEmail' : 'quotes.sent'));
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.workOrderDetail(order.id) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.quotes(order.id) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.customerEmails(order.id) }),
-        queryClient.invalidateQueries({ queryKey: ['work-orders'] }),
-      ]);
-    } catch (err) {
-      showToast('error', t('quotes.sendError'), getErrorMessage(err, language));
-    } finally {
-      setSending(false);
-    }
-  };
 
   return (
     <div className="authorization-panel" role="region" aria-label={t('authorization.title')}>
@@ -93,7 +72,7 @@ export default function AuthorizationPanel({ order, onOpenQuote }: { order: Work
             <span>{t('authorization.notSentHint')}</span>
           </div>
           <div className="authorization-row-actions">
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => void send()} disabled={sending}>
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => void sendQuote()} disabled={sending}>
               <Send size={14} /> {sending ? t('common.loading') : t('authorization.send')}
             </button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={onOpenQuote}>
@@ -121,6 +100,8 @@ export default function AuthorizationPanel({ order, onOpenQuote }: { order: Work
           </div>
         </div>
       )}
+
+      {open && <QuoteShareActions order={order} url={shareUrl} />}
 
       {lastAnswered && (approved.length > 0 || rejected.length > 0) && (
         <div className={`authorization-row ${rejected.length > 0 && approved.length === 0 ? 'is-rejected' : 'is-approved'}`}>

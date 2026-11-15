@@ -146,12 +146,12 @@ adicional" y el costo del repuesto, como cualquier corrección de una orden entr
 | Pieza | Dónde |
 |---|---|
 | Migración | `supabase/migrations/20260924000000_quotes_and_authorization.sql` |
-| Respuesta del cliente | `supabase/functions/portal/index.ts` (`responder_presupuesto`) |
+| Respuesta del cliente | `supabase/functions/portal/handler.ts` (`index.ts` mínimo; `responder_presupuesto`) |
 | Correos `presupuesto` y `presupuesto_confirmacion` | `supabase/functions/_shared/email/templates.ts`, `process-outbox` |
 | Tarjeta del admin y diálogo "Trabajos autorizados por el cliente" | `src/features/workOrders/QuoteCard.tsx` |
 | Insignia de estado | `src/features/workOrders/LineStateBadge.tsx`, `lineState.ts` |
 | Tablas | `LaborTable.tsx`, `PartsTable.tsx`, `PartsSummaryCard.tsx` |
-| Sección del portal | `src/portal/CustomerPortal.tsx` (`QuoteSection`) |
+| Sección del portal | `src/portal/components/QuoteSection.tsx` (desde `CustomerPortal.tsx`) |
 | Servicio | `src/services/quotes.service.ts` |
 | Pruebas | `supabase/tests/database/05_presupuestos.test.sql` (31), `src/features/workOrders/QuoteCard.test.tsx`, `LaborTable.test.tsx`, `src/portal/CustomerPortal.test.tsx`, `src/lib/emailTemplates.test.ts` |
 

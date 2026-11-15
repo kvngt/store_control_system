@@ -1,6 +1,7 @@
 import { Component, Suspense, type ErrorInfo, type ReactNode } from 'react';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../context/language.context';
+import Modal from './Modal';
 
 // Wrapper for modals that are code-split with React.lazy().
 //
@@ -42,25 +43,23 @@ class LazyModalBoundary extends Component<Props & { label: string; hint: string;
     if (!this.state.hasError) return this.props.children;
 
     return (
-      <div className="modal-overlay" onClick={this.props.onClose}>
-        <div className="modal" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
-          <div className="modal-header">
-            <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-              <AlertTriangle size={18} style={{ color: 'var(--color-warning)' }} />
-              {this.props.label}
-            </h3>
-            <button className="modal-close" onClick={this.props.onClose}><X size={20} /></button>
-          </div>
-          <div className="modal-body">
-            <p role="alert" style={{ color: 'var(--color-text-secondary)' }}>{this.props.hint}</p>
-          </div>
-          <div className="modal-footer">
-            <button className="btn btn-primary" onClick={() => window.location.reload()}>
-              {this.props.reload}
-            </button>
-          </div>
-        </div>
-      </div>
+      <Modal
+        onClose={this.props.onClose}
+        style={{ maxWidth: 460 }}
+        title={
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <AlertTriangle size={18} style={{ color: 'var(--color-warning)' }} />
+            {this.props.label}
+          </span>
+        }
+        footer={
+          <button className="btn btn-primary" onClick={() => window.location.reload()}>
+            {this.props.reload}
+          </button>
+        }
+      >
+        <p role="alert" style={{ color: 'var(--color-text-secondary)' }}>{this.props.hint}</p>
+      </Modal>
     );
   }
 }

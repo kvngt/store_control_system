@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, TrendingUp } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
-import { financeService } from '../../services/supabaseService';
+import { financeService } from '../../services/finance.service';
 import { shopTimeZone } from '../../services/dashboard.service';
 import { queryKeys } from '../../lib/queryClient';
 import { monthRange, todayLocal } from '../../lib/dates';

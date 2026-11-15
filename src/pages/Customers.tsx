@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { customersService } from '../services/supabaseService';
+import { customersService } from '../services/customers.service';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
@@ -14,7 +14,6 @@ import {
   Eye,
   Edit3,
   Trash2,
-  X,
   Car,
   ClipboardList,
   Phone,
@@ -25,10 +24,11 @@ import {
 } from 'lucide-react';
 import type { Customer } from '../types/database';
 import { AlertError } from '../components/AlertError';
+import Modal from '../components/Modal';
 import { money } from '../lib/money';
 import PhoneInput from '../components/PhoneInput';
 import { formatPhone } from '../lib/phone';
-import { workTypeKey } from '../lib/workType';
+import { workTypeKey, orderStatusKey } from '../lib/workType';
 
 const digitsOf = (v: string) => (v || '').replace(/\D/g, '');
 
@@ -48,6 +48,7 @@ export default function Customers() {
     nombre: string; telefono: string; email: string; direccion: string; notas_crm: string; acepta_correos: boolean; idioma: 'es' | 'en';
   }>({ nombre: '', telefono: '', email: '', direccion: '', notas_crm: '', acepta_correos: true, idioma: 'en' });
   const [formError, setFormError] = useState<string | null>(null);
+  const [invalidField, setInvalidField] = useState<'nombre' | 'telefono' | null>(null);
 
   const isAdmin = user?.rol === 'admin';
   const sedeId = isAdmin ? currentSede?.id : user?.sede_id;
@@ -59,11 +60,15 @@ export default function Customers() {
     queryFn: () => customersService.getCustomers(sedeId),
   });
 
-  const loadCustomers = () => {
+  const loadCustomers = (customerId?: string) => {
     queryClient.invalidateQueries({ queryKey: queryKeys.customers(sedeId) });
     // The counts on each row come from vehicles and orders, so a customer
-    // going away changes what those screens show too.
+    // going away or changing name/phone changes those screens too.
     queryClient.invalidateQueries({ queryKey: queryKeys.vehicles(sedeId) });
+    queryClient.invalidateQueries({
+      queryKey: customerId ? queryKeys.customerDetail(customerId) : ['customer'],
+    });
+    queryClient.invalidateQueries({ queryKey: queryKeys.workOrders(sedeId) });
   };
 
   // Deep link from the global header search: /customers?open=<id>
@@ -108,6 +113,7 @@ export default function Customers() {
     setSelectedCustomer(null);
     setForm({ nombre: '', telefono: '', email: '', direccion: '', notas_crm: '', acepta_correos: true, idioma: 'en' });
     setFormError(null);
+    setInvalidField(null);
     setShowModal(true);
   };
 
@@ -123,11 +129,22 @@ export default function Customers() {
       idioma: customer.idioma === 'es' ? 'es' : 'en',
     });
     setFormError(null);
+    setInvalidField(null);
     setShowModal(true);
   };
 
   const handleSave = async () => {
-    if (!form.nombre.trim() || !form.telefono.trim()) return;
+    if (!form.nombre.trim()) {
+      setInvalidField('nombre');
+      setFormError(t('workOrders.validation.customerName'));
+      return;
+    }
+    if (!form.telefono.trim()) {
+      setInvalidField('telefono');
+      setFormError(t('workOrders.validation.customerPhone'));
+      return;
+    }
+    setInvalidField(null);
     // Un correo mal escrito no avisa nada: los correos automáticos se pierden sin
     // que nadie se entere. Mejor atraparlo aquí que en la base.
     if (!isOptionalEmailValid(form.email)) {
@@ -142,13 +159,15 @@ export default function Customers() {
     const currentLanguage = selectedCustomer ? (selectedCustomer.idioma ?? 'en') : 'en';
     const payload = { ...rest, email: form.email.trim(), ...(idioma !== currentLanguage ? { idioma } : {}) };
     try {
+      let savedId = selectedCustomer?.id;
       if (selectedCustomer) {
         await customersService.updateCustomer(selectedCustomer.id, payload);
       } else {
-        await customersService.createCustomer({ ...payload, sede_id: sedeId || currentSede?.id || '' });
+        const created = await customersService.createCustomer({ ...payload, sede_id: sedeId || currentSede?.id || '' });
+        savedId = created?.id;
       }
       setShowModal(false);
-      loadCustomers();
+      loadCustomers(savedId);
     } catch (err) {
       // Dentro del diálogo: el recuadro de la página queda tapado por el modal.
       setFormError(getErrorMessage(err, language));
@@ -168,18 +187,10 @@ export default function Customers() {
     if (!confirm(`${t('common.delete')}: ${customer.nombre}?`)) return;
     try {
       await customersService.deleteCustomer(customer.id);
-      loadCustomers();
+      loadCustomers(customer.id);
     } catch (err) {
       setActionError(getErrorMessage(err, language));
     }
-  };
-
-  const statusLabels: Record<string, string> = {
-    recepcion: t('workOrders.intake'),
-    en_proceso: t('workOrders.inProgress'),
-    espera_autorizacion: t('workOrders.waitingAuthorization'),
-    finalizado: t('workOrders.completed'),
-    entregado: t('workOrders.delivered'),
   };
 
   // Profile view
@@ -347,7 +358,7 @@ export default function Customers() {
                       <tr key={o.id}>
                         <td data-label={t('workOrders.orderNumber')} style={{ color: 'var(--color-primary-light)', fontWeight: 600 }}>{o.numero_orden}</td>
                         <td data-label={t('common.type')}><span className={`badge badge-${o.tipo_trabajo}`}>{t(workTypeKey(o.tipo_trabajo))}</span></td>
-                        <td data-label={t('common.status')}><span className={`badge badge-${o.estatus}`}>{statusLabels[o.estatus]}</span></td>
+                        <td data-label={t('common.status')}><span className={`badge badge-${o.estatus}`}>{t(orderStatusKey(o.estatus))}</span></td>
                         {isAdmin && (
                           <td data-label={t('common.total')} style={{ fontWeight: 600 }}>
                             {money(o.montos?.total_general)}
@@ -489,26 +500,46 @@ export default function Customers() {
 
       {/* Create/Edit Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">
-                {selectedCustomer ? t('customers.editCustomer') : t('customers.newCustomer')}
-              </h3>
-              <button className="modal-close" onClick={() => setShowModal(false)}>
-                <X size={20} />
+        <Modal
+          onClose={() => setShowModal(false)}
+          title={selectedCustomer ? t('customers.editCustomer') : t('customers.newCustomer')}
+          footer={
+            <>
+              <button className="btn btn-secondary" onClick={() => setShowModal(false)}>
+                {t('common.cancel')}
               </button>
-            </div>
-            <div className="modal-body">
-              <AlertError message={formError} />
+              <button className="btn btn-primary" onClick={handleSave} disabled={saving} id="customer-save">
+                {saving ? t('common.loading') : selectedCustomer ? t('common.update') : t('common.create')}
+              </button>
+            </>
+          }
+        >
+          <AlertError message={formError} />
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label" htmlFor="customer-name">{t('common.name')}</label>
-                  <input className="form-input" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} id="customer-name" />
+                  <input
+                    className="form-input"
+                    value={form.nombre}
+                    onChange={(e) => {
+                      if (invalidField === 'nombre') setInvalidField(null);
+                      setForm({ ...form, nombre: e.target.value });
+                    }}
+                    id="customer-name"
+                    aria-invalid={invalidField === 'nombre' || undefined}
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label" htmlFor="customer-phone">{t('common.phone')}</label>
-                  <PhoneInput value={form.telefono} onChange={(telefono) => setForm({ ...form, telefono })} id="customer-phone" />
+                  <PhoneInput
+                    value={form.telefono}
+                    onChange={(telefono) => {
+                      if (invalidField === 'telefono') setInvalidField(null);
+                      setForm({ ...form, telefono });
+                    }}
+                    id="customer-phone"
+                    invalid={invalidField === 'telefono'}
+                  />
                 </div>
               </div>
               <div className="form-row">
@@ -552,17 +583,7 @@ export default function Customers() {
                 <label className="form-label" htmlFor="customer-notes">{t('customers.crmNotes')}</label>
                 <textarea className="form-input form-textarea" value={form.notas_crm} onChange={(e) => setForm({ ...form, notas_crm: e.target.value })} id="customer-notes" />
               </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowModal(false)}>
-                {t('common.cancel')}
-              </button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={saving} id="customer-save">
-                {saving ? t('common.loading') : selectedCustomer ? t('common.update') : t('common.create')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

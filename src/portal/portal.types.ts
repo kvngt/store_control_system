@@ -230,6 +230,10 @@ export interface PortalReport {
 export interface PortalUnavailable {
   estado_enlace: Exclude<PortalLinkState, 'ok'>;
   taller?: PortalShop;
+  cliente?: {
+    tiene_correo: boolean;
+    acepta_correos: boolean;
+  };
 }
 
 export type PortalResponse = PortalReport | PortalUnavailable;

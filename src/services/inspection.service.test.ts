@@ -1,11 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { inspectionService } from './inspection.service';
-import { supabase } from '../lib/supabase';
+
+const { fromMock, rpcMock } = vi.hoisted(() => ({
+  fromMock: vi.fn(),
+  rpcMock: vi.fn(),
+}));
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
-    from: vi.fn(),
-    rpc: vi.fn(),
+    from: fromMock,
+    rpc: rpcMock,
   },
 }));
 
@@ -32,11 +36,11 @@ describe('inspectionService', () => {
         eq: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: mockData, error: null }),
       };
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      fromMock.mockReturnValue(mockQuery);
 
       const result = await inspectionService.getForOrder('ord-123');
 
-      expect(supabase.from).toHaveBeenCalledWith('orden_inspecciones');
+      expect(fromMock).toHaveBeenCalledWith('orden_inspecciones');
       expect(mockQuery.select).toHaveBeenCalledWith('*, puntos:orden_inspeccion_puntos(*)');
       expect(mockQuery.eq).toHaveBeenCalledWith('orden_id', 'ord-123');
       expect(result).not.toBeNull();
@@ -50,7 +54,7 @@ describe('inspectionService', () => {
         eq: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      fromMock.mockReturnValue(mockQuery);
 
       const result = await inspectionService.getForOrder('ord-none');
       expect(result).toBeNull();
@@ -63,7 +67,7 @@ describe('inspectionService', () => {
         eq: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: null, error: mockError }),
       };
-      vi.mocked(supabase.from).mockReturnValue(mockQuery as any);
+      fromMock.mockReturnValue(mockQuery);
 
       await expect(inspectionService.getForOrder('ord-err')).rejects.toThrow('Database error');
     });
@@ -71,11 +75,11 @@ describe('inspectionService', () => {
 
   describe('start', () => {
     it('llama a iniciar_inspeccion con orderId y templateId', async () => {
-      vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: 'new-insp-uuid', error: null } as any);
+      rpcMock.mockResolvedValueOnce({ data: 'new-insp-uuid', error: null });
 
       const result = await inspectionService.start('ord-1', 'tpl-1');
 
-      expect(supabase.rpc).toHaveBeenCalledWith('iniciar_inspeccion', {
+      expect(rpcMock).toHaveBeenCalledWith('iniciar_inspeccion', {
         p_orden_id: 'ord-1',
         p_plantilla_id: 'tpl-1',
       });
@@ -83,11 +87,11 @@ describe('inspectionService', () => {
     });
 
     it('llama a iniciar_inspeccion con null si no se especifica templateId', async () => {
-      vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: 'new-insp-uuid', error: null } as any);
+      rpcMock.mockResolvedValueOnce({ data: 'new-insp-uuid', error: null });
 
       const result = await inspectionService.start('ord-1');
 
-      expect(supabase.rpc).toHaveBeenCalledWith('iniciar_inspeccion', {
+      expect(rpcMock).toHaveBeenCalledWith('iniciar_inspeccion', {
         p_orden_id: 'ord-1',
         p_plantilla_id: null,
       });
@@ -97,11 +101,11 @@ describe('inspectionService', () => {
 
   describe('markPoint', () => {
     it('llama a marcar_punto_inspeccion con los parámetros correctos', async () => {
-      vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: null } as any);
+      rpcMock.mockResolvedValueOnce({ data: null, error: null });
 
       await inspectionService.markPoint('pt-1', 'urgente', 'Desgaste crítico');
 
-      expect(supabase.rpc).toHaveBeenCalledWith('marcar_punto_inspeccion', {
+      expect(rpcMock).toHaveBeenCalledWith('marcar_punto_inspeccion', {
         p_punto_id: 'pt-1',
         p_estado: 'urgente',
         p_nota: 'Desgaste crítico',
@@ -111,11 +115,11 @@ describe('inspectionService', () => {
 
   describe('complete', () => {
     it('llama a completar_inspeccion con el id de inspección', async () => {
-      vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: null } as any);
+      rpcMock.mockResolvedValueOnce({ data: null, error: null });
 
       await inspectionService.complete('insp-1');
 
-      expect(supabase.rpc).toHaveBeenCalledWith('completar_inspeccion', {
+      expect(rpcMock).toHaveBeenCalledWith('completar_inspeccion', {
         p_inspeccion_id: 'insp-1',
       });
     });
@@ -123,22 +127,22 @@ describe('inspectionService', () => {
 
   describe('publish', () => {
     it('llama a publicar_inspeccion con publicar = true', async () => {
-      vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: null } as any);
+      rpcMock.mockResolvedValueOnce({ data: null, error: null });
 
       await inspectionService.publish('insp-1', true);
 
-      expect(supabase.rpc).toHaveBeenCalledWith('publicar_inspeccion', {
+      expect(rpcMock).toHaveBeenCalledWith('publicar_inspeccion', {
         p_inspeccion_id: 'insp-1',
         p_publicar: true,
       });
     });
 
     it('llama a publicar_inspeccion con publicar = false', async () => {
-      vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: null } as any);
+      rpcMock.mockResolvedValueOnce({ data: null, error: null });
 
       await inspectionService.publish('insp-1', false);
 
-      expect(supabase.rpc).toHaveBeenCalledWith('publicar_inspeccion', {
+      expect(rpcMock).toHaveBeenCalledWith('publicar_inspeccion', {
         p_inspeccion_id: 'insp-1',
         p_publicar: false,
       });
@@ -150,11 +154,11 @@ describe('inspectionService', () => {
       const mockTemplates = [
         { id: 'tpl-1', nombre: 'General', puntos: [] },
       ];
-      vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: mockTemplates, error: null } as any);
+      rpcMock.mockResolvedValueOnce({ data: mockTemplates, error: null });
 
       const result = await inspectionService.listTemplates('sede-1');
 
-      expect(supabase.rpc).toHaveBeenCalledWith('plantillas_inspeccion', {
+      expect(rpcMock).toHaveBeenCalledWith('plantillas_inspeccion', {
         p_sede_id: 'sede-1',
       });
       expect(result).toEqual(mockTemplates);
@@ -163,7 +167,7 @@ describe('inspectionService', () => {
 
   describe('saveTemplate', () => {
     it('llama a guardar_plantilla_inspeccion formateando puntos con posición', async () => {
-      vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: 'tpl-saved-id', error: null } as any);
+      rpcMock.mockResolvedValueOnce({ data: 'tpl-saved-id', error: null });
 
       const result = await inspectionService.saveTemplate({
         id: 'tpl-1',
@@ -177,7 +181,7 @@ describe('inspectionService', () => {
         ],
       });
 
-      expect(supabase.rpc).toHaveBeenCalledWith('guardar_plantilla_inspeccion', {
+      expect(rpcMock).toHaveBeenCalledWith('guardar_plantilla_inspeccion', {
         p_id: 'tpl-1',
         p_sede_id: 'sede-1',
         p_nombre: 'Inspección Rápida',
@@ -194,11 +198,11 @@ describe('inspectionService', () => {
 
   describe('deleteTemplate', () => {
     it('llama a borrar_plantilla_inspeccion', async () => {
-      vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: null } as any);
+      rpcMock.mockResolvedValueOnce({ data: null, error: null });
 
       await inspectionService.deleteTemplate('tpl-1');
 
-      expect(supabase.rpc).toHaveBeenCalledWith('borrar_plantilla_inspeccion', {
+      expect(rpcMock).toHaveBeenCalledWith('borrar_plantilla_inspeccion', {
         p_id: 'tpl-1',
       });
     });

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Calendar, Printer, Send, Tag, X } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Calendar, Printer, Send, Tag } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { AlertError } from '../../components/AlertError';
 import { getErrorMessage } from '../../lib/errors';
@@ -7,6 +7,7 @@ import { formatDay, todayLocal } from '../../lib/dates';
 import type { NextServiceInput, WorkOrder } from '../../types/database';
 import { presetsFor, validateNextService, type ServicePreset } from './nextService';
 import { useDiscardGuard } from '../../components/useDiscardGuard';
+import Modal from '../../components/Modal';
 
 interface ServiceStickerModalProps {
   mode: 'admin' | 'tecnico';
@@ -65,6 +66,7 @@ export default function ServiceStickerModal({
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
 
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<{ fecha?: string; millas?: string; nota?: string }>({});
 
@@ -100,6 +102,7 @@ export default function ServiceStickerModal({
   };
 
   const executeAction = async (andPrint: boolean) => {
+    if (savingRef.current || saving) return;
     setError('');
     let numMillas: number | null = null;
     if (hasIntakeMiles) {
@@ -111,8 +114,13 @@ export default function ServiceStickerModal({
         }
         numMillas = order.millas_ingreso! + extra;
       }
-    } else {
-      numMillas = millas.trim() === '' ? null : parseInt(millas, 10);
+    } else if (millas.trim() !== '') {
+      const parsed = Number(millas.trim());
+      if (!Number.isInteger(parsed)) {
+        setFieldErrors({ millas: t('nextService.errors.milesInvalid') });
+        return;
+      }
+      numMillas = parsed;
     }
     const trimmedNota = nota.trim() || null;
     const finalFecha = fecha.trim() || null;
@@ -139,6 +147,7 @@ export default function ServiceStickerModal({
       nota: trimmedNota,
     };
 
+    savingRef.current = true;
     setSaving(true);
     try {
       if (mode === 'admin') {
@@ -154,6 +163,7 @@ export default function ServiceStickerModal({
     } catch (err) {
       setError(getErrorMessage(err, language));
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -161,34 +171,67 @@ export default function ServiceStickerModal({
   const isTechnician = mode === 'tecnico';
 
   return (
-    // Mientras guarda o traduce no se cierra: el trabajo seguiría en el aire sin que se viera cómo terminó.
-    <div className="modal-overlay" onClick={guard.requestClose}>
-      <div
-        className="modal"
+    <>
+      {/* Mientras guarda o traduce no se cierra: el trabajo seguiría en el aire sin que se viera cómo terminó. */}
+      <Modal
+        onClose={guard.requestClose}
+        closeDisabled={saving}
         style={{ maxWidth: '520px' }}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="service-sticker-modal-title"
-      >
-        <div className="modal-header">
-          <h2 className="modal-title" id="service-sticker-modal-title">
+        titleId="service-sticker-modal-title"
+        as="form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void executeAction(false);
+        }}
+        bodyStyle={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}
+        footerStyle={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}
+        title={
+          <>
             <Tag size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
             {isTechnician ? t('nextService.suggestTitle') : t('nextService.modalTitle')}
-          </h2>
-          <button type="button" className="modal-close" onClick={guard.requestClose} disabled={saving} aria-label={t('common.close')}>
-            <X size={20} />
-          </button>
-        </div>
+          </>
+        }
+        footer={
+          <>
+            <button type="button" className="btn btn-secondary" onClick={guard.requestClose} disabled={saving}>
+              {t('common.cancel')}
+            </button>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void executeAction(false);
-          }}
-        >
-          <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            <AlertError message={error} />
+            {isTechnician ? (
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={saving}
+                id="btn-suggest-service"
+              >
+                <Send size={14} /> {saving ? t('common.loading') : t('nextService.sendSuggestion')}
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={saving}
+                  onClick={() => void executeAction(false)}
+                  id="btn-save-service"
+                >
+                  {saving ? t('common.loading') : t('common.save')}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={saving}
+                  onClick={() => void executeAction(true)}
+                  id="btn-save-and-print-service"
+                >
+                  <Printer size={14} /> {saving ? t('common.loading') : t('nextService.saveAndPrint')}
+                </button>
+              </>
+            )}
+          </>
+        }
+      >
+        <AlertError message={error} />
 
             {/* Presets de un toque */}
             <div>
@@ -323,48 +366,8 @@ export default function ServiceStickerModal({
                 <span className="field-hint">{t('nextService.stickerLanguageHint')}</span>
               </div>
             )}
-          </div>
-
-          <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
-            <button type="button" className="btn btn-secondary" onClick={guard.requestClose} disabled={saving}>
-              {t('common.cancel')}
-            </button>
-
-            {isTechnician ? (
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={saving}
-                id="btn-suggest-service"
-              >
-                <Send size={14} /> {saving ? t('common.loading') : t('nextService.sendSuggestion')}
-              </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  disabled={saving}
-                  onClick={() => void executeAction(false)}
-                  id="btn-save-service"
-                >
-                  {saving ? t('common.loading') : t('common.save')}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={saving}
-                  onClick={() => void executeAction(true)}
-                  id="btn-save-and-print-service"
-                >
-                  <Printer size={14} /> {saving ? t('common.loading') : t('nextService.saveAndPrint')}
-                </button>
-              </>
-            )}
-          </div>
-        </form>
-      </div>
+      </Modal>
       {guard.dialog}
-    </div>
+    </>
   );
 }

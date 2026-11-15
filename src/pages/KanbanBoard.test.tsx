@@ -20,6 +20,7 @@ import {
   SEDE_CENTRO,
 } from '../test/renderWithProviders';
 import type { WorkOrder } from '../types/database';
+import * as queryClientLib from '../lib/queryClient';
 
 const mocks = vi.hoisted(() => ({
   auth: { current: null as ReturnType<typeof import('../test/renderWithProviders').authValue> | null },
@@ -32,10 +33,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../context/auth.context', () => ({ useAuth: () => mocks.auth.current }));
 
-// The page imports the narrow `workOrdersService`; `supabaseService` stays
-// mocked too so the module's shape still matches what other callers expect.
-vi.mock('../services/supabaseService', () => {
-  const workOrders = {
+vi.mock('../services/workOrders.service', () => ({
+  workOrdersService: {
     getWorkOrders: mocks.getWorkOrders,
     updateWorkOrderStatus: mocks.updateWorkOrderStatus,
     setArchived: mocks.setArchived,
@@ -43,9 +42,13 @@ vi.mock('../services/supabaseService', () => {
     deliver: mocks.deliver,
     uploadReceipt: vi.fn(),
     removeDeliveryReceipt: vi.fn(),
-  };
-  return { workOrdersService: workOrders, supabaseService: workOrders };
-});
+  },
+}));
+vi.mock('../services/commissions.service', () => ({
+  commissionsService: {
+    getEstimate: vi.fn().mockResolvedValue({ sin_asignar: [] }),
+  },
+}));
 
 // El diálogo de entrega pide el parqueo a su servicio. Sin esto la prueba llamaba al Supabase de
 // `.env.local` (producción) y fallaba según la red.
@@ -345,6 +348,38 @@ describe('Archivar desde el tablero', () => {
     await screen.findByText('ORD-2026-INS');
 
     expect(screen.getByText('Seguro')).toBeInTheDocument();
+  });
+
+  it('invalida las cachés derivadas al mover una orden y al entregarla', async () => {
+    mocks.auth.current = authValue(ADMIN_USER);
+    const listo = order({ id: 'ord-ready', numero_orden: 'ORD-2026-010', estatus: 'finalizado' });
+    mocks.getWorkOrders.mockResolvedValue([MINE, listo]);
+    mocks.updateWorkOrderStatus.mockResolvedValue({});
+    mocks.getBalance.mockResolvedValue({
+      total: 500,
+      cobrado: 0,
+      saldo: 500,
+    });
+    mocks.deliver.mockResolvedValue({ saldo: 500, tipo: 'ingreso', movimiento_id: 'mov-1' });
+    const spy = vi.spyOn(queryClientLib, 'invalidateOrderEffects');
+    const user = userEvent.setup();
+
+    renderWithProviders(<KanbanBoard />);
+    await screen.findByText('ORD-2026-001');
+
+    await user.selectOptions(moveSelectFor('ORD-2026-001')!, 'en_proceso');
+    await waitFor(() =>
+      expect(spy).toHaveBeenCalledWith(expect.anything(), { orderId: MINE.id, sedeId: SEDE_CENTRO.id })
+    );
+
+    spy.mockClear();
+    await user.selectOptions(moveSelectFor('ORD-2026-010')!, 'entregado');
+    await user.selectOptions(await screen.findByLabelText('Cómo pagó el cliente'), 'efectivo');
+    await user.click(screen.getByRole('button', { name: /Entregar y cobrar/ }));
+
+    await waitFor(() =>
+      expect(spy).toHaveBeenCalledWith(expect.anything(), { orderId: listo.id, sedeId: SEDE_CENTRO.id })
+    );
   });
 });
 

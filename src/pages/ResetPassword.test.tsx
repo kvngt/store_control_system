@@ -18,8 +18,8 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../context/auth.context', () => ({ useAuth: () => mocks.auth }));
-vi.mock('../services/supabaseService', () => ({
-  supabaseService: { updatePassword: mocks.updatePassword },
+vi.mock('../services/users.service', () => ({
+  usersService: { updatePassword: mocks.updatePassword },
 }));
 
 const { default: ResetPassword } = await import('./ResetPassword');

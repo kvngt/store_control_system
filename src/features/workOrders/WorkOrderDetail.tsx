@@ -1,93 +1,35 @@
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
-import {
-  AlertTriangle,
-  Archive,
-  ArchiveRestore,
-  Camera,
-  Car,
-  CarFront,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronsDownUp,
-  ChevronsUpDown,
-  DollarSign,
-  FileDown,
-  FileSignature,
-  Fuel,
-  History,
-  Link2,
-  MessageSquarePlus,
-  Package,
-  Send,
-  Paintbrush,
-  PenLine,
-  Plus,
-  Receipt,
-  Scale,
-  Tag,
-  User,
-  Wallet,
-  Wrench,
-  X,
-  Banknote,
-  PackageCheck,
-} from 'lucide-react';
-import CollapsibleSection from '../../components/CollapsibleSection';
+import { ChevronLeft, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
 import Tabs, { TabPanel, type TabItem } from '../../components/Tabs';
 import { useAuth } from '../../context/auth.context';
 import { useLanguage } from '../../context/language.context';
-import { getErrorMessage } from '../../lib/errors';
 import { useToast } from '../../context/toast.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import { useIsMobile } from '../../lib/useMediaQuery';
-import type { NextServiceInput, OrderStatus } from '../../types/database';
-import { nextServiceService } from '../../services/nextService.service';
-import { hasNextService, openStickerWindow } from './nextService';
-import { noteForSticker } from './stickerNote';
-import NextServiceCard from './NextServiceCard';
-import ServiceStickerModal from './ServiceStickerModal';
-import LaborTable from './LaborTable';
-import OrderJobsList from './OrderJobsList';
-import PartsTable from './PartsTable';
-import PartsSummaryCard from './PartsSummaryCard';
-import CommissionEstimateCard from './CommissionEstimateCard';
-import TechnicianTaskList from './TechnicianTaskList';
-import TechOrderStatus from './TechOrderStatus';
-import AuthorizationPanel from './AuthorizationPanel';
-import QuickActions, { type QuickAction } from './QuickActions';
-import { buildTechActions } from './techNextStep';
-import ProgressLog from './ProgressLog';
-import ShareReportModal from './ShareReportModal';
-import FindingsCard from './FindingsCard';
 import { findingsToReview } from './findings';
-import DeliveryModal from './DeliveryModal';
-import DamageDiagramEditor from './DamageDiagramEditor';
-import WithdrawalModal, { type WithdrawalLine } from './WithdrawalModal';
-import AdvancePaymentModal from './AdvancePaymentModal';
-import OrderTotalsCard from './OrderTotalsCard';
-import OrderInsuranceModal from './OrderInsuranceModal';
-import ParkingCard from '../parking/ParkingCard';
-import { parkingService } from '../../services/parking.service';
-import { queryKeys } from '../../lib/queryClient';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import PendingWorkNotice from './PendingWorkNotice';
-import { isApproved } from './lineState';
-import OrderBalanceCard from '../finance/OrderBalanceCard';
-import PublishProgressModal from './PublishProgressModal';
-import CustomerLinkCard from './CustomerLinkCard';
-import QuoteCard from './QuoteCard';
-import OrderHistory from './OrderHistory';
-import ReadyNotifyModal from './ReadyNotifyModal';
-import { isUnassignedTask, suggestedTechnicianFor, suggestedTechnicianId } from './tasks';
-import { assignmentStatus } from './assignmentStatus';
-import type { DamageMark } from '../../lib/vehicleDiagram';
-import SignatureCard from './SignatureCard';
-import MediaCaptureBar from '../media/MediaCaptureBar';
-import MediaGallery from '../media/MediaGallery';
-import PointInspection from '../inspection/PointInspection';
+import { isUnassignedTask } from './tasks';
 import type { WorkOrderDetailApi } from './useWorkOrderDetail';
-import { money } from '../../lib/money';
-import { workTypeKey } from '../../lib/workType';
+import type { LaborPrefill, SectionStateProps, StickerModalState } from './detail/detailTypes';
+import OrderDialogs from './detail/OrderDialogs';
+import OrderHeader from './detail/OrderHeader';
+import OrderTabTop from './detail/OrderTabTop';
+import BalanceSection from './detail/sections/BalanceSection';
+import CommissionSection from './detail/sections/CommissionSection';
+import CustomerLinkSection from './detail/sections/CustomerLinkSection';
+import HistorySection from './detail/sections/HistorySection';
+import InspectionSection from './detail/sections/InspectionSection';
+import LaborSection from './detail/sections/LaborSection';
+import NextServiceSection from './detail/sections/NextServiceSection';
+import ParkingSection from './detail/sections/ParkingSection';
+import { useOrderParking } from './detail/useOrderParking';
+import PartsSection from './detail/sections/PartsSection';
+import ProgressSection from './detail/sections/ProgressSection';
+import QuoteSection from './detail/sections/QuoteSection';
+import SignatureSection from './detail/sections/SignatureSection';
+import TechLaborSection from './detail/sections/TechLaborSection';
+import TechniciansSection from './detail/sections/TechniciansSection';
+import TotalsSection from './detail/sections/TotalsSection';
+import VehicleSection from './detail/sections/VehicleSection';
 
 interface WorkOrderDetailProps {
   detail: WorkOrderDetailApi;
@@ -128,26 +70,20 @@ const LINKED_SECTION: Record<string, string> = { trabajos: 'mano_obra', tareas: 
  * tarjeta es una sección plegable (`CollapsibleSection`), cerrada al entrar, también en
  * escritorio: se ven los títulos y se abre lo que se necesita.
  *
- * It composes the cards and holds only what is genuinely local to the layout —
- * the open tab and the assignment picker. Every mutation belongs to
- * `useWorkOrderDetail`, and each card owns its own row drafts, so this file
- * stays a layout and not a second god component.
+ * It composes the section components, header, quick actions and dialogs under `./detail/`,
+ * and holds only layout state — the open tab and open sections. Every mutation belongs to
+ * `useWorkOrderDetail`.
  */
 export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOrderDetailProps) {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const { confirmNavigation } = useUnsavedChanges();
   const { user, currentSede, allSedes } = useAuth();
   const { showToast } = useToast();
-  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
-  const [addingOperatorId, setAddingOperatorId] = useState('');
   // El idioma del PDF que se descarga: lo elige administración (05/10/2026).
   const [pdfLanguage, setPdfLanguage] = useState<'es' | 'en'>('es');
   const [showInsuranceModal, setShowInsuranceModal] = useState(false);
-  const [stickerModal, setStickerModal] = useState<{
-    open: boolean;
-    initialData?: { fecha?: string | null; millas?: number | null; nota?: string | null } | null;
-  }>({ open: false });
+  const [stickerModal, setStickerModal] = useState<StickerModalState>({ open: false });
 
   const isAdmin = user?.rol === 'admin';
   const tabIds: readonly string[] = isAdmin ? ADMIN_TABS : TECH_TABS;
@@ -158,34 +94,15 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
 
   const order = detail.order;
   const orderId = order?.id;
+  // La sección de parqueo solo existe con el cobro encendido: si no, no cuenta para las pestañas ni
+  // para «Desplegar todo». La consulta es la misma que hace la sección (se comparte la caché).
+  const { isParkingEnabled } = useOrderParking(orderId, order?.sede_id, isAdmin);
   // La tarea que se precarga al cotizar un hallazgo (F6).
   // "Reportar trabajo adicional" desde las acciones rápidas abre el diálogo de la lista de tareas.
   const [reportRequest, setReportRequest] = useState(0);
-  const [prefill, setPrefill] = useState<{ text: string; nonce: number; technicianId?: string | null } | null>(null);
+  const [prefill, setPrefill] = useState<LaborPrefill | null>(null);
   // Qué secciones están abiertas: ninguna al entrar a una orden, salvo la que pide un enlace.
   const [openSections, setOpenSections] = useState<ReadonlySet<string>>(() => new Set());
-
-  const parkingConfigQuery = useQuery({
-    queryKey: queryKeys.parkingConfig(order?.sede_id ?? ''),
-    queryFn: () => parkingService.getConfig(order?.sede_id ?? ''),
-    enabled: isAdmin && !!order?.sede_id,
-  });
-  const isParkingEnabled = !!parkingConfigQuery.data?.habilitado;
-
-  const parkingQuery = useQuery({
-    queryKey: queryKeys.orderParking(order?.id ?? ''),
-    queryFn: () => parkingService.getOrderParking(order?.id ?? ''),
-    enabled: isAdmin && isParkingEnabled && !!order?.id,
-  });
-  const parkingAmount = parkingQuery.data?.monto ?? 0;
-
-  // La misma consulta que `NextServiceCard`: la acción rápida del sticker lleva al que ya existe.
-  const nextServiceQuery = useQuery({
-    queryKey: queryKeys.nextService(order?.id ?? ''),
-    queryFn: () => nextServiceService.getNextService(order?.id ?? ''),
-    enabled: !!order?.id,
-  });
-  const serviceExists = hasNextService(nextServiceQuery.data);
 
   useEffect(() => {
     const next = detail.requestedTab && tabIds.includes(detail.requestedTab) ? detail.requestedTab : tabIds[0];
@@ -196,12 +113,6 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     // `tabIds` cambia solo con el rol, que no cambia con la orden abierta.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, detail.requestedTab]);
-
-  // Las marcas de daños que el admin está poniendo y todavía no guarda. Sin este borrador el
-  // dibujo no respondía: el editor no guarda estado propio y avisa cada cambio por onChange
-  // (revisión del 30/10/2026). Se descarta al cambiar de orden o al guardar bien.
-  const [damageDraft, setDamageDraft] = useState<DamageMark[] | null>(null);
-  useEffect(() => setDamageDraft(null), [orderId]);
 
   // El recuadro de error vive arriba de la orden: en el teléfono, quien tacha una tarea o guarda un
   // avance al fondo de la página no lo ve y el botón parece no hacer nada. También sale como aviso.
@@ -220,7 +131,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
 
   const openSection = (id: string) => setOpenSections((prev) => new Set(prev).add(id));
   // Lo que recibe cada `CollapsibleSection`: si está abierta y cómo se abre o se cierra.
-  const sectionState = (id: string) => ({
+  const sectionState = (id: string): SectionStateProps => ({
     sectionId: id,
     open: openSections.has(id),
     onToggle: () =>
@@ -231,35 +142,12 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
       }),
   });
 
-  const customer = order.cliente;
-  const vehicle = order.vehiculo;
-  const assignments = order.asignaciones || [];
   const laborList = order.labor_items || [];
   const partsList = order.repuestos || [];
   const progressEntries = order.avances || [];
-  // Los avances donde cayeron las fotos de un trabajo adicional reportado (F6).
-  const findingEntryIds = new Set((order.hallazgos || []).flatMap((h) => (h.avance_id ? [h.avance_id] : [])));
   const receptionMedia = (order.media || []).filter((m) => m.origen === 'recepcion');
-  const receptionPending = detail.pendingUploads.filter((p) => p.origen === 'recepcion');
   // Null para mecánicos y pintores: `orden_montos` es solo admin.
   const amounts = order.montos ?? null;
-  // Lo autorizado de la orden: lo que se puede marcar como hecho al retirarla sin reparar.
-  const withdrawalLines: WithdrawalLine[] = [
-    ...laborList.filter(isApproved).map((l) => ({
-      id: l.id, tipo: 'mano_obra' as const, descripcion: l.descripcion, monto: Number(l.costo), hecho: !!l.completado_en,
-    })),
-    ...partsList.filter(isApproved).map((p) => ({
-      id: p.id, tipo: 'repuesto' as const, descripcion: p.descripcion, monto: Number(p.subtotal),
-    })),
-  ];
-  // Una pieza pedida que no ha llegado. Administración lo lee de sus repuestos; el técnico, del
-  // resumen sin precios (`repuestos_de_orden`).
-  const waitingParts = [...partsList, ...(order.repuestos_resumen || [])].some(
-    (p) => p.estado_pedido === 'pedido' && p.estado !== 'rechazado'
-  );
-  // Con la casilla vacía (borrada para escribir otro número) el control muestra lo guardado.
-  const draftProgress = parseInt(detail.progressDraft, 10);
-  const sliderProgress = Number.isNaN(draftProgress) ? order.porcentaje_avance : draftProgress;
   // Algo cotizado que el cliente todavía no autorizó: no se cobra ni genera comisión.
   const hasUnauthorized = [...laborList, ...partsList].some((l) => l.estado === 'borrador');
   // Algo autorizado (mano de obra o repuesto). Sin eso, el técnico no empieza ni termina la orden
@@ -269,23 +157,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   // Tareas sin técnico (no heredadas, no rechazadas): nadie cobrará su comisión hasta asignarlas
   // (20261010000006). Se cuentan líneas, no se suma dinero.
   const unassignedCount = laborList.filter((l) => isUnassignedTask(l) && l.estado !== 'rechazado').length;
-  // Personal de la sede DE LA ORDEN (no de la elegida arriba): lo carga el hook.
-  const operators = detail.orderOperators;
-  // Trabajos de antes de la comisión por tarea, sin técnico: se reparten por especialidad entre
-  // los asignados a mano (origen 'manual'). Solo entonces importa quién está "en el reparto".
-  const hasInheritedLines = laborList.some((l) => !l.asignado_a && l.reparto_heredado !== false && l.estado !== 'rechazado');
-
-  const saveDamageMarks = async (marks: DamageMark[]) => {
-    await detail.updateDamageMarks(marks);
-    setDamageDraft(null);
-  };
-
-  const addOperator = async () => {
-    const op = operators.find((o) => o.id === addingOperatorId);
-    if (!op) return;
-    await detail.addAssignment(op);
-    setAddingOperatorId('');
-  };
+  const findings = isAdmin ? findingsToReview(order.hallazgos) : [];
 
   // Volver es la salida más usada del detalle, y descartaba un avance a medias
   // sin preguntar. Pasa por los mismos guardias que la navegación del menú.
@@ -295,628 +167,53 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
 
   const orderSede = (order && allSedes?.find((s) => s.id === order.sede_id)) || currentSede;
 
-  const handleSaveNextService = async (data: NextServiceInput, lang: 'es' | 'en') => {
-    if (!order) return;
-    await nextServiceService.program(order.id, data, lang);
-    await queryClient.invalidateQueries({ queryKey: queryKeys.nextService(order.id) });
-    await queryClient.invalidateQueries({ queryKey: queryKeys.workOrderDetail(order.id) });
-    showToast('success', t('nextService.programmedSuccess'));
-  };
-
-  const handleSaveAndPrintNextService = async (data: NextServiceInput, lang: 'es' | 'en') => {
-    if (!order) return;
-    // La ventana se abre aquí, todavía dentro del clic: después del primer `await` el iPhone la
-    // bloquea. El PDF llega a ella cuando termina de guardar.
-    const printWindow = openStickerWindow();
-    let row;
-    try {
-      row = await nextServiceService.program(order.id, data, lang);
-    } catch (err) {
-      printWindow?.close();
-      throw err;
-    }
-    await queryClient.invalidateQueries({ queryKey: queryKeys.nextService(order.id) });
-    await queryClient.invalidateQueries({ queryKey: queryKeys.workOrderDetail(order.id) });
-    showToast('success', t('nextService.programmedSuccess'));
-    if (!row?.token) {
-      printWindow?.close();
-      return;
-    }
-    // Lo que falle de aquí en adelante (el import del PDF, el PDF mismo) ya no es un error de guardar:
-    // el servicio quedó guardado. Se cierra la ventana en blanco y se avisa con un aviso aparte; si
-    // se dejara subir, el diálogo diría que no se guardó y la persona lo guardaría otra vez.
-    try {
-      const { nota: noteForPdf, fallo } = await noteForSticker(row.nota, lang);
-      if (fallo) {
-        showToast('error', t('nextService.noteNotTranslated'));
-      }
-      const { printServiceSticker } = await import('../../lib/serviceStickerPdf');
-      await printServiceSticker(
-        {
-          taller: {
-            nombre: orderSede?.nombre || '',
-            telefono: orderSede?.telefono || null,
-          },
-          vehiculo: {
-            anio: order.vehiculo?.anio || 0,
-            marca: order.vehiculo?.marca || '',
-            modelo: order.vehiculo?.modelo || '',
-            placa: order.vehiculo?.placa || '',
-          },
-          servicio: {
-            fecha: row.fecha,
-            millas: row.millas,
-            nota: noteForPdf,
-            token: row.token,
-          },
-          numero_orden: order.numero_orden,
-        },
-        lang,
-        printWindow
-      );
-    } catch (err) {
-      printWindow?.close();
-      showToast('error', t('nextService.printAfterSaveError'), getErrorMessage(err, language));
-    }
-  };
-
-  const handleSuggestNextService = async (data: NextServiceInput) => {
-    if (!order) return;
-    await nextServiceService.suggest(order.id, data);
-    await queryClient.invalidateQueries({ queryKey: queryKeys.nextService(order.id) });
-    await queryClient.invalidateQueries({ queryKey: queryKeys.workOrderDetail(order.id) });
-    showToast('success', t('nextService.suggestedSuccess'));
-  };
-
-  // ----- las secciones ---------------------------------------------------------
-  // Cada una envuelta en su `CollapsibleSection`, cerrada al entrar. Se arman una vez y se
-  // acomodan abajo (`TAB_SECTIONS`): en pestañas (escritorio) o apiladas (teléfono).
-
-  const vehicleSection = (
-    <CollapsibleSection {...sectionState('vehiculo')} title={t('workOrders.vehicleInfo')} icon={<Car size={18} />} summary={vehicle?.placa || undefined}>
-      <div className="card">
-        <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>
-          <Car size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
-          {t('workOrders.vehicleInfo')}
-        </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
-          {[
-            [t('vehicles.brand'), `${vehicle?.marca} ${vehicle?.modelo}`],
-            [t('vehicles.year'), vehicle?.anio],
-            [t('vehicles.vin'), vehicle?.vin || '—'],
-            [t('vehicles.plate'), vehicle?.placa],
-            [t('vehicles.color'), vehicle?.color],
-            [t('workOrders.milesIn'), order.millas_ingreso.toLocaleString()],
-          ].map(([label, value], i) => (
-            <div key={i} style={{ padding: 'var(--space-2) 0' }}>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginBottom: 2 }}>{label}</div>
-              <div style={{ fontWeight: 500 }}>{value}</div>
-            </div>
-          ))}
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: 'var(--space-2) 0',
-            marginTop: 'var(--space-2)',
-            borderTop: '1px solid var(--color-surface-border)',
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginBottom: 2 }}>
-              {t('workOrders.insurance')}
-            </div>
-            <div style={{ fontWeight: 500 }}>
-              {order.con_seguro
-                ? `${t('common.yes')}${order.aseguradora || order.numero_reclamo ? ` (${[order.aseguradora, order.numero_reclamo ? `#${order.numero_reclamo}` : ''].filter(Boolean).join(' · ')})` : ''}`
-                : t('common.no')}
-            </div>
-          </div>
-          {detail.isAdmin && (
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => setShowInsuranceModal(true)}
-              id="edit-insurance-btn"
-            >
-              {t('common.edit')}
-            </button>
-          )}
-        </div>
-        <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-4)', padding: 'var(--space-3)', background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <Fuel size={16} style={{ color: 'var(--color-warning)' }} />
-            <div>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>{t('workOrders.fuelLevel')}</div>
-              <div style={{ fontWeight: 600 }}>{order.nivel_gasolina}</div>
-            </div>
-          </div>
-          {amounts && (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-              <DollarSign size={16} style={{ color: 'var(--color-success)' }} />
-              <div>
-                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>{t('workOrders.deposit')}</div>
-                <div style={{ fontWeight: 600 }}>{money(amounts.deposito_inicial)}</div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </CollapsibleSection>
-  );
-
-  const inspectionSection = (
-    <CollapsibleSection {...sectionState('inspeccion')} title={t('workOrders.inspection360')} icon={<Camera size={18} />} summary={receptionMedia.length || undefined}>
-      <div className="card">
-        <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>
-          <Camera size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
-          {t('workOrders.inspection360')}
-        </h3>
-        <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-4)', lineHeight: 1.6 }}>
-          {order.inspeccion_360_notas}
-        </p>
-
-        <div style={{ marginBottom: 'var(--space-4)' }}>
-          <DamageDiagramEditor
-            marks={damageDraft ?? order.marcas_danos ?? []}
-            editable={detail.isAdmin && !order.firma_ruta}
-            isLocked={Boolean(order.firma_ruta)}
-            isSaving={detail.savingDamageMarks}
-            onChange={setDamageDraft}
-            onSave={(marks) => saveDamageMarks(marks).catch(() => undefined)}
-          />
-        </div>
-
-        {/* La recepción es lo que el cliente firma: nace visible para él, salvo la nota de
-            voz, que es el taller hablando y la publica un admin (20261010000003). Aquí
-            también se puede sumar un video de recorrido o una nota de voz
-            sobre el estado en que llegó el vehículo. */}
-        <MediaGallery
-          media={receptionMedia}
-          pending={receptionPending}
-          canManage={detail.isAdmin}
-          canDeleteOwn={detail.canEdit}
-          currentUserId={detail.userId}
-          onToggleVisibility={detail.toggleMediaVisibility}
-          onDelete={detail.deleteMedia}
-          emptyLabel={t('media.empty')}
-        />
-        {detail.canEdit && (
-          <div style={{ marginTop: 'var(--space-3)' }}>
-            <MediaCaptureBar onAdd={detail.addReceptionMedia} disabled={detail.busy} />
-          </div>
-        )}
-
-        <PointInspection
-          orderId={order.id}
-          orderSedeId={order.sede_id}
-          isAdmin={detail.isAdmin}
-          canEdit={detail.canEdit}
-          isDelivered={detail.isDelivered}
-          media={order.media || []}
-          pendingUploads={detail.pendingUploads}
-          technicians={detail.technicians}
-          assignments={assignments}
-          onQuotePoint={(point) => {
-            const text = point.nota ? `${point.nombre} — ${point.nota}` : point.nombre;
-            setPrefill({
-              text,
-              nonce: Date.now(),
-              technicianId: suggestedTechnicianId(assignments.map((a) => a.usuario_id), detail.technicians),
-            });
-            openSection('mano_obra');
-            selectTab('trabajos');
-          }}
-          onRefreshOrder={detail.refresh}
-          onAddMedia={(puntoId, items) => {
-            detail.enqueueMedia(items, {
-              origen: 'inspeccion',
-              inspeccionPuntoId: puntoId,
-            });
-          }}
-        />
-      </div>
-    </CollapsibleSection>
-  );
-
-  const signatureSection = (
-    <CollapsibleSection {...sectionState('firma')}
-      title={t('workOrders.customerSignature')}
-      icon={<PenLine size={18} />}
-      summary={order.firma_ruta ? <CheckCircle2 size={16} style={{ color: 'var(--color-success)', verticalAlign: 'middle' }} /> : undefined}
-    >
-      <SignatureCard
-        signaturePath={order.firma_ruta}
-        signedAt={order.firma_fecha}
-        customerName={customer?.nombre}
-        canSign={detail.canSign}
-        canResign={detail.canResign}
-        saving={detail.savingSignature}
-        onSave={detail.saveSignature}
-      />
-    </CollapsibleSection>
-  );
-
-  // "Mano de obra" para administración (y el cliente); "Tareas" para el técnico.
-  const laborTitle = isAdmin ? t('workOrders.laborDescription') : t('workOrders.tasks');
-  const laborSection = (
-    <CollapsibleSection {...sectionState('mano_obra')} title={laborTitle} icon={<Wrench size={18} />} summary={laborList.length || undefined}>
-      {isAdmin && (order.trabajos?.length ?? 0) > 0 && (
-        <OrderJobsList orderId={order.id} onRefresh={detail.refresh} />
-      )}
-      <LaborTable
-        title={laborTitle}
-        items={laborList}
-        orderId={order.id}
-        orderSedeId={order.sede_id}
-        catalogAllowed={!detail.isDelivered}
-        assignments={assignments}
-        trabajos={order.trabajos}
-        workType={order.tipo_trabajo}
-        canEdit={detail.canEditLines}
-        busy={detail.busy}
-        onAdd={detail.addLabor}
-        onUpdate={detail.updateLabor}
-        onRemove={detail.removeLabor}
-        canComplete={detail.canCompleteLaborItem}
-        onToggleComplete={detail.toggleLaborComplete}
-        technicians={detail.technicians}
-        onAssign={detail.canEditLines ? detail.assignLaborTechnician : undefined}
-        onChangeSpecialty={detail.canEditLines ? detail.changeLaborSpecialty : undefined}
-        lockedIds={detail.lockedLaborIds}
-        paidPools={detail.paidPools}
-        prefill={prefill}
-        // Un trabajo que agrega administración: el único técnico de la orden, o nadie si hay
-        // varios, para que se elija a quién va (06/10/2026).
-        suggestedTechnicianId={suggestedTechnicianId(assignments.map((a) => a.usuario_id), detail.technicians)}
-        defaultTechnicianFor={(s) => suggestedTechnicianFor(s, assignments, detail.technicians)}
-        laborTimes={detail.laborTimes}
-        onCorrectTime={detail.correctTime}
-        onDeleteTime={detail.deleteTime}
-      />
-    </CollapsibleSection>
-  );
-
-  const techLaborSection = !isAdmin && (
-    <CollapsibleSection {...sectionState('tareas')} title={t('workOrders.tasks')} icon={<Wrench size={18} />} summary={laborList.length || undefined}>
-      <TechnicianTaskList items={laborList} currentUserId={detail.userId ?? ''} detail={detail} reportRequest={reportRequest} />
-    </CollapsibleSection>
-  );
-
-  // Un técnico no ve precios de repuestos: la tabla con montos es solo admin (y la base no se
-  // la devuelve). Ve qué piezas lleva la orden, que es lo que necesita para hacer el trabajo.
-  const partsSection = (
-    <CollapsibleSection {...sectionState('repuestos')}
-      title={t('workOrders.partsDescription')}
-      icon={isAdmin ? <Paintbrush size={18} /> : <Package size={18} />}
-      summary={(isAdmin ? partsList.length : (order.repuestos_resumen || []).length) || undefined}
-    >
-      {isAdmin ? (
-        <PartsTable
-          items={partsList}
-          trabajos={order.trabajos}
-          canEdit={detail.canEditLines}
-          busy={detail.busy}
-          onAdd={detail.addPart}
-          onUpdate={detail.updatePart}
-          onRemove={detail.removePart}
-          onSetOrderState={detail.setPartOrderState}
-        />
-      ) : (
-        <PartsSummaryCard items={order.repuestos_resumen || []} />
-      )}
-    </CollapsibleSection>
-  );
-
-  // Presupuesto: lo que falta autorizar y lo que espera al cliente. Solo admin.
-  const quoteSection = isAdmin && (
-    <CollapsibleSection {...sectionState('presupuesto')} title={t('quotes.title')} icon={<FileSignature size={18} />}>
-      <QuoteCard order={order} />
-    </CollapsibleSection>
-  );
-
-  // Cuánto dejó el trabajo: solo tiene sentido ya entregado, y es de administración.
-  const balanceSection = isAdmin && detail.isDelivered && (
-    <CollapsibleSection {...sectionState('balance')} title={t('orderBalance.title')} icon={<Scale size={18} />}>
-      <OrderBalanceCard orderId={order.id} />
-    </CollapsibleSection>
-  );
-
-  const commissionSection = detail.commissionEstimate && (
-    <CollapsibleSection {...sectionState('comision')}
-      title={isAdmin ? t('commission.splitTitle') : t('workOrders.estimatedCommission')}
-      icon={<Wallet size={18} />}
-    >
-      <CommissionEstimateCard
-        estimate={detail.commissionEstimate}
-        isAdmin={isAdmin}
-        userId={detail.userId}
-        names={{
-          // Quien tiene una tarea ya está entre los asignados (la base lo agrega); el nombre
-          // embebido en la línea cubre al que no, por si acaso.
-          ...Object.fromEntries(laborList.flatMap((l) => (l.tecnico ? [[l.tecnico.id, l.tecnico.nombre_completo]] : []))),
-          ...Object.fromEntries((order.asignaciones || []).map((a) => [a.usuario_id, a.usuario?.nombre_completo ?? '—'])),
-        }}
-        onApproveCommission={detail.approveCommission}
-      />
-    </CollapsibleSection>
-  );
-
-  // Totales — solo cuando la base devolvió los montos (admin). Todas las cifras son de la base.
-  const totalsSection = amounts && (
-    <CollapsibleSection {...sectionState('totales')}
-      title={t('workOrders.totalsTitle')}
-      icon={<Receipt size={18} />}
-      summary={money(Number(amounts.total_general))}
-    >
-      <OrderTotalsCard
-        order={order}
-        amounts={amounts}
-        parkingAmount={parkingAmount}
-        canDiscount={detail.canEditLines}
-        onApplyDiscount={detail.applyDiscount}
-        onRegisterAdvance={detail.canRegisterAdvance ? detail.startAdvance : undefined}
-      />
-    </CollapsibleSection>
-  );
-
-  const parkingSection = isAdmin && isParkingEnabled && (
-    <CollapsibleSection
-      {...sectionState('parqueo')}
-      title={t('parking.orderCard.title')}
-      icon={<Car size={18} />}
-      summary={parkingAmount > 0 ? money(parkingAmount) : undefined}
-    >
-      <ParkingCard order={order} />
-    </CollapsibleSection>
-  );
-
-  // El enlace abre precios y totales: solo administración lo comparte.
-  const customerLinkSection = isAdmin && (
-    <CollapsibleSection {...sectionState('enlace')} title={t('customerLink.title')} icon={<Link2 size={18} />}>
-      <CustomerLinkCard order={order} statusLabels={statusLabels} />
-    </CollapsibleSection>
-  );
-
-  const nextServiceSection = (
-    <CollapsibleSection
-      {...sectionState('proximo_servicio')}
-      title={t('nextService.sectionTitle')}
-      icon={<Tag size={18} />}
-    >
-      <NextServiceCard
-        order={order}
-        isAdmin={detail.isAdmin}
-        canSuggest={detail.canSuggestNextService}
-        sede={orderSede}
-        onOpenModal={(data) => setStickerModal({ open: true, initialData: data })}
-      />
-    </CollapsibleSection>
-  );
-
-  const techniciansSection = (
-    <CollapsibleSection {...sectionState('tecnicos')} title={t('workOrders.assignedTechnician')} icon={<User size={18} />} summary={assignments.length || undefined}>
-      <div className="card" style={{ marginTop: 'var(--space-4)' }}>
-        <h3 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>
-          <User size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
-          {t('workOrders.assignedTechnician')}
-        </h3>
-        <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
-          {assignments.length === 0 && (
-            <p style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)' }}>{t('common.noResults')}</p>
-          )}
-          {assignments.map((a) => (
-            <div
-              key={a.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 'var(--space-3)',
-                padding: 'var(--space-3) var(--space-4)',
-                background: 'var(--color-bg-tertiary)',
-                borderRadius: 'var(--radius-lg)',
-                border: '1px solid var(--color-surface-border)',
-              }}
-            >
-              <div style={{
-                width: 36, height: 36, borderRadius: '50%',
-                background: a.tipo_tarea === 'mecanica'
-                  ? 'var(--color-info-bg)' : 'rgba(236, 72, 153, 0.15)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: a.tipo_tarea === 'mecanica' ? 'var(--color-info)' : '#F472B6',
-              }}>
-                {a.tipo_tarea === 'mecanica' ? <Wrench size={16} /> : <Paintbrush size={16} />}
-              </div>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>{a.usuario?.nombre_completo}</div>
-                <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
-                  {a.tipo_tarea === 'mecanica' ? t('workOrders.mechanical') : t('workOrders.painting')} · {t(`workOrders.status.${assignmentStatus(order.estatus, laborList, a.usuario_id)}`)}
-                </span>
-                {/* Quien entró por una tarea cobra solo sus tareas; quien se asignó a mano entra
-                    además al reparto de los trabajos anteriores sin técnico (20261010000006). */}
-                {(a.origen === 'tarea' || hasInheritedLines) && (
-                  <div className="assignment-origin">
-                    <span
-                      className={`badge assignment-origin-badge${a.origen === 'tarea' ? ' is-task' : ''}`}
-                      title={a.origen === 'tarea' ? t('tasks.byTaskHint') : t('tasks.inSplitHint')}
-                    >
-                      {a.origen === 'tarea' ? t('tasks.byTask') : t('tasks.inSplit')}
-                    </span>
-                    {isAdmin && hasInheritedLines && (
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm assignment-split-toggle"
-                        onClick={() => void detail.setAssignmentInSplit(a, a.origen === 'tarea')}
-                        disabled={detail.busy || detail.paidPools.has(a.tipo_tarea)}
-                        title={detail.paidPools.has(a.tipo_tarea) ? t('tasks.splitPaid') : undefined}
-                      >
-                        {a.origen === 'tarea' ? t('tasks.joinSplit') : t('tasks.leaveSplit')}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-              {isAdmin && (
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm btn-icon"
-                  onClick={() => detail.removeAssignment(a.id, a.usuario?.nombre_completo || '')}
-                  style={{ marginLeft: 'var(--space-2)' }}
-                  title={t('common.delete')}
-                >
-                  <X size={14} style={{ color: 'var(--color-danger)' }} />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-        {isAdmin ? (
-          <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
-            <select
-              className="form-input form-select"
-              style={{ maxWidth: 280 }}
-              aria-label={t('workOrders.assignedTechnician')}
-              value={addingOperatorId}
-              onChange={(e) => setAddingOperatorId(e.target.value)}
-            >
-              <option value="">-- {t('workOrders.assignedTechnician')} --</option>
-              {/* Solo personal de la sede de la orden: la lista viene de la sede
-                  elegida arriba, y una orden abierta desde un aviso puede ser de
-                  otra. Asignar a alguien de otro taller le repartía la comisión. */}
-              {/* Quien ya está solo por una tarea sí se ofrece: agregarlo a mano lo mete al
-                  reparto (el hook cambia el origen de su fila en vez de duplicarla). */}
-              {operators
-                .filter((op) => op.sede_id === order.sede_id && !assignments.some((a) => a.usuario_id === op.id && a.origen !== 'tarea'))
-                .map((op) => (
-                  <option key={op.id} value={op.id}>{op.nombre_completo} ({t(`tasks.trade.${op.rol}`)})</option>
-                ))}
-            </select>
-            <button type="button" className="btn btn-secondary" onClick={addOperator} disabled={!addingOperatorId}>
-              <Plus size={16} /> {t('common.add')}
-            </button>
-          </div>
-        ) : (
-          // Aquí estaba "Unirme a la orden". Asignarse reparte la comisión
-          // (`sync_order_commissions` divide la mano de obra entre los asignados), así que
-          // es de administración y la base lo rechaza. Se deja la frase en su lugar: una
-          // tarjeta que solo lista nombres, sin decir quién los pone, se lee como un botón
-          // que falta.
-          <p className="field-hint" style={{ marginTop: 'var(--space-4)' }}>
-            {t('workOrders.assignedByAdmin')}
-          </p>
-        )}
-      </div>
-    </CollapsibleSection>
-  );
-
-  const progressSection = (
-    <CollapsibleSection {...sectionState('avances')}
-      title={t('workOrders.progressLog')}
-      icon={<MessageSquarePlus size={18} />}
-      summary={progressEntries.length || undefined}
-    >
-      <ProgressLog
-        entries={progressEntries}
-        media={order.media || []}
-        pending={detail.pendingUploads}
-        canEdit={detail.canEdit}
-        busy={detail.busy}
-        isAdmin={detail.isAdmin}
-        userId={detail.userId}
-        onAdd={detail.addProgressUpdate}
-        onRemove={detail.removeProgressUpdate}
-        onToggleVisibility={detail.toggleMediaVisibility}
-        onToggleEntryVisibility={detail.toggleProgressVisibility}
-        onDeleteMedia={detail.deleteMedia}
-        findingEntryIds={findingEntryIds}
-        // Un avance puede ser de una tarea (06/10/2026): el técnico elige entre las suyas
-        // autorizadas; administración, entre todas las autorizadas.
-        tasks={laborList
-          .filter((l) => (l.estado ?? 'aprobado') === 'aprobado' && (isAdmin || l.asignado_a === detail.userId))
-          .map((l) => ({ id: l.id, descripcion: l.descripcion }))}
-        taskNames={Object.fromEntries(laborList.map((l) => [l.id, l.descripcion]))}
-      />
-    </CollapsibleSection>
-  );
-
-  // El historial es de administración. Se monta solo cuando se abre (ver `visited`).
-  const historySection = isAdmin && (
-    <CollapsibleSection {...sectionState('historial')} title={t('history.title')} icon={<History size={18} />}>
-      <OrderHistory orderId={order.id} statusLabels={statusLabels} />
-    </CollapsibleSection>
-  );
-
-  // F6: lo que reportó el taller y administración tiene que decidir. Arriba de Resumen y de
-  // Trabajos; en el teléfono las dos pestañas están apiladas, así que va una sola vez.
-  const findings = isAdmin ? findingsToReview(order.hallazgos) : [];
-  const findingsSection = findings.length > 0 && (
-    <FindingsCard
-      findings={findings}
-      names={Object.fromEntries(assignments.map((a) => [a.usuario_id, a.usuario?.nombre_completo ?? '—']))}
-      mediaCount={(order.media || []).reduce<Record<string, number>>((acc, m) => {
-        if (m.avance_id) acc[m.avance_id] = (acc[m.avance_id] ?? 0) + 1;
-        return acc;
-      }, {})}
-      busy={detail.busy}
-      onQuote={async (h) => {
-        const text = await detail.quoteFinding(h.id);
-        if (text == null) return;
-        // Va a quien lo reportó; si no puede recibirla, al único técnico de la orden (06/10/2026).
-        setPrefill({
-          text,
-          nonce: Date.now(),
-          technicianId: suggestedTechnicianId(assignments.map((a) => a.usuario_id), detail.technicians, h.reportado_por),
-        });
-        // La tarea precargada está en Mano de obra: se abre para que se vea.
-        openSection('mano_obra');
-        selectTab('trabajos');
-      }}
-      onDiscard={(h, enReporte, texto) => detail.discardFinding(h.id, enReporte, texto)}
-    />
-  );
-
-  // Aviso de tareas sin técnico, arriba del Resumen: es dinero que no le llega a nadie.
-  const unassignedNotice = isAdmin && unassignedCount > 0 && (
-    <div className="alert-warn order-notice" role="note">
-      <AlertTriangle size={16} aria-hidden="true" />
-      <span>{t('tasks.unassignedNotice').replace('{n}', String(unassignedCount))}</span>
-      {!isMobile && (
-        <button
-          type="button"
-          className="btn btn-ghost btn-sm"
-          onClick={() => {
-            openSection('mano_obra');
-            selectTab('trabajos');
-          }}
-        >
-          {t('tasks.goToWork')}
-        </button>
-      )}
-    </div>
-  );
-
   // ----- qué va en cada pestaña --------------------------------------------------
 
   const sectionNodes: Record<string, ReactNode> = {
-    vehiculo: vehicleSection,
-    firma: signatureSection,
-    tecnicos: techniciansSection,
-    mano_obra: laborSection,
-    tareas: techLaborSection,
-    repuestos: partsSection,
-    presupuesto: quoteSection,
-    comision: commissionSection,
-    inspeccion: inspectionSection,
-    avances: progressSection,
-    totales: totalsSection,
-    parqueo: parkingSection,
-    proximo_servicio: nextServiceSection,
-    balance: balanceSection,
-    enlace: customerLinkSection,
-    historial: historySection,
+    vehiculo: (
+      <VehicleSection
+        order={order}
+        isAdmin={detail.isAdmin}
+        sectionProps={sectionState('vehiculo')}
+        onEditInsurance={() => setShowInsuranceModal(true)}
+      />
+    ),
+    firma: <SignatureSection order={order} detail={detail} sectionProps={sectionState('firma')} />,
+    tecnicos: <TechniciansSection order={order} detail={detail} isAdmin={isAdmin} sectionProps={sectionState('tecnicos')} />,
+    mano_obra: <LaborSection order={order} detail={detail} isAdmin={isAdmin} prefill={prefill} sectionProps={sectionState('mano_obra')} />,
+    tareas: !isAdmin ? <TechLaborSection order={order} detail={detail} reportRequest={reportRequest} sectionProps={sectionState('tareas')} /> : null,
+    repuestos: <PartsSection order={order} detail={detail} isAdmin={isAdmin} sectionProps={sectionState('repuestos')} />,
+    presupuesto: isAdmin ? <QuoteSection order={order} sectionProps={sectionState('presupuesto')} /> : null,
+    comision: detail.commissionEstimate ? <CommissionSection order={order} detail={detail} isAdmin={isAdmin} sectionProps={sectionState('comision')} /> : null,
+    inspeccion: (
+      <InspectionSection
+        order={order}
+        detail={detail}
+        sectionProps={sectionState('inspeccion')}
+        onQuotePointPrefill={(nextPrefill) => {
+          setPrefill(nextPrefill);
+          openSection('mano_obra');
+          selectTab('trabajos');
+        }}
+      />
+    ),
+    avances: <ProgressSection order={order} detail={detail} isAdmin={isAdmin} sectionProps={sectionState('avances')} />,
+    totales: amounts ? <TotalsSection order={order} detail={detail} isAdmin={isAdmin} sectionProps={sectionState('totales')} /> : null,
+    parqueo: isAdmin && isParkingEnabled ? <ParkingSection order={order} isAdmin={isAdmin} sectionProps={sectionState('parqueo')} /> : null,
+    proximo_servicio: (
+      <NextServiceSection
+        order={order}
+        detail={detail}
+        orderSede={orderSede}
+        sectionProps={sectionState('proximo_servicio')}
+        onOpenStickerModal={(data) => setStickerModal({ open: true, initialData: data })}
+      />
+    ),
+    balance: isAdmin && detail.isDelivered ? <BalanceSection order={order} sectionProps={sectionState('balance')} /> : null,
+    enlace: isAdmin ? <CustomerLinkSection order={order} statusLabels={statusLabels} sectionProps={sectionState('enlace')} /> : null,
+    historial: isAdmin ? <HistorySection order={order} statusLabels={statusLabels} sectionProps={sectionState('historial')} /> : null,
   };
+
   // Las que esta orden y este rol de verdad tienen (el balance solo entregada, el presupuesto
   // solo para administración…).
   const sectionsOf = (tabId: string) => (TAB_SECTIONS[tabId] ?? []).filter((id) => sectionNodes[id]);
@@ -958,96 +255,32 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     }, 60);
   };
 
-  // Los atajos de cada rol (pedido del taller, 06/10/2026). Lo que toca ahora va resaltado.
-  const hasLabor = laborList.length > 0;
-  const isFinalizadoPendingReview = order.estatus === 'finalizado' && !order.lista_para_entregar_en && !order.retirada_sin_reparar;
-  const adminActions: QuickAction[] = isAdmin && !detail.isDelivered
-    ? [
-        ...(isFinalizadoPendingReview
-          ? [{ key: 'markReady', icon: CheckCircle2, label: 'workOrders.markReady', onClick: () => void detail.markReadyForPickup(), primary: true }]
-          : []),
-        ...(detail.isReadyForPickup && detail.canDeliver
-          ? [{ key: 'deliver', icon: PackageCheck, label: 'quickActions.deliver', onClick: detail.startDelivery, primary: true }]
-          : []),
-        { key: 'work', icon: Plus, label: 'quickActions.addWork', onClick: () => goTo('trabajos', 'mano_obra'), primary: !hasLabor && !isFinalizadoPendingReview },
-        ...(!order.firma_ruta && detail.canSign
-          ? [{ key: 'sign', icon: PenLine, label: 'quickActions.sign', onClick: () => goTo('resumen', 'firma'), primary: order.estatus === 'recepcion' && hasLabor }]
-          : []),
-        { key: 'progress', icon: MessageSquarePlus, label: 'quickActions.progress', onClick: () => goTo('fotos', 'avances') },
-        {
-          key: 'serviceSticker',
-          icon: Tag,
-          label: 'quickActions.serviceSticker',
-          onClick: () => {
-            if (serviceExists) {
-              goTo('cobro', 'proximo_servicio');
-            } else {
-              setStickerModal({ open: true, initialData: null });
-            }
-          },
-        },
-        ...(detail.canRegisterAdvance
-          ? [{ key: 'advance', icon: Banknote, label: 'quickActions.advance', onClick: detail.startAdvance }]
-          : []),
-        { key: 'payments', icon: Receipt, label: 'quickActions.payments', onClick: () => goTo('cobro', 'totales') },
-      ]
-    : [];
-  const techActions: QuickAction[] = !isAdmin && detail.canEdit && detail.userId
-    ? buildTechActions({
-        order,
-        laborList,
-        userId: detail.userId,
-        canEdit: detail.canEdit,
-        busy: detail.busy,
-        canSuggestNextService: detail.canSuggestNextService,
-        changeStatus: detail.changeStatus,
-        goTo,
-        // El diálogo vive en la lista de tareas: con «Tareas» plegada se abría invisible (y desde el
-        // 04/11/2026 su trampa se habría comido el «atrás»). Primero se abre la sección.
-        onReportFinding: () => {
-          goTo('tareas', 'tareas');
-          setReportRequest((n) => n + 1);
-        },
-        onSuggestService: () => {
-          if (serviceExists) {
-            goTo('orden', 'proximo_servicio');
-          } else {
-            setStickerModal({ open: true, initialData: null });
-          }
-        },
-      })
-    : [];
-
-  // Los avisos van arriba de las secciones y no se pliegan: son lo que hay que atender.
-  const tabTop: Record<string, ReactNode> = {
-    resumen: (
-      <>
-        <QuickActions actions={adminActions} />
-        {isAdmin && <AuthorizationPanel order={order} onOpenQuote={() => goTo('trabajos', 'presupuesto')} />}
-        {findingsSection}
-        {unassignedNotice}
-        {/* Lo que el cliente dejó pendiente en otras visitas: el momento de ofrecerlo es ahora. */}
-        {isAdmin && !detail.isDelivered && <PendingWorkNotice vehicleId={order.vehiculo_id} excludeOrderId={order.id} />}
-      </>
-    ),
-    trabajos: !isMobile && findingsSection,
-    // El técnico ve primero en qué va la orden y qué de lo suyo está autorizado (06/10/2026).
-    tareas: !isAdmin && (
-      <>
-      <QuickActions actions={techActions} />
-      <TechOrderStatus
-        order={order}
-        myTasks={laborList.filter((l) => l.asignado_a === detail.userId)}
-        statusLabel={statusLabels[order.estatus] ?? order.estatus}
-        waitingAuthorization={techWaitsAuthorization}
-      />
-      </>
-    ),
-  };
+  const openEmptyStickerModal = () => setStickerModal({ open: true, initialData: null });
 
   const renderTab = (tabId: string) => (
     <>
-      {tabTop[tabId]}
+      <OrderTabTop
+        tabId={tabId}
+        order={order}
+        detail={detail}
+        statusLabels={statusLabels}
+        isAdmin={isAdmin}
+        isMobile={isMobile}
+        findings={findings}
+        unassignedCount={unassignedCount}
+        techWaitsAuthorization={techWaitsAuthorization}
+        goTo={goTo}
+        onOpenSection={openSection}
+        onSelectTab={selectTab}
+        onOpenStickerModal={openEmptyStickerModal}
+        onSetPrefill={setPrefill}
+        // El diálogo vive en la lista de tareas: con «Tareas» plegada se abría invisible (y desde el
+        // 04/11/2026 su trampa se habría comido el «atrás»). Primero se abre la sección.
+        onReportFinding={() => {
+          goTo('tareas', 'tareas');
+          setReportRequest((n) => n + 1);
+        }}
+      />
       {!isMobile && sectionTools(sectionsOf(tabId))}
       {sectionsOf(tabId).map((id) => (
         <Fragment key={id}>{sectionNodes[id]}</Fragment>
@@ -1106,206 +339,18 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
       {/* El encabezado: en escritorio queda fijo arriba con las pestañas, para cambiar de
           sección o de estado sin volver a subir. */}
       <div className="order-detail-top">
-      <div className="order-detail-header">
-        <div className="order-detail-heading">
-          <h1 className="page-title order-detail-title">
-            {order.numero_orden}
-            {order.retirada_sin_reparar ? (
-              <span className="badge badge-retirada">{t('withdrawal.status')}</span>
-            ) : (
-              <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
-            )}
-            <span className={`badge badge-${order.tipo_trabajo}`}>{t(workTypeKey(order.tipo_trabajo))}</span>
-            {order.con_seguro && (
-              <span className="badge badge-insurance">{t('workOrders.insuranceBadge')}</span>
-            )}
-            {/* Finalizada: o falta que administración la revise, o ya está lista para el cliente. */}
-            {order.estatus === 'finalizado' && !order.retirada_sin_reparar && (
-              order.lista_para_entregar_en
-                ? <span className="badge badge-success">{t('workOrders.readyForPickup')}</span>
-                : <span className="badge badge-waiting-auth">{t('workOrders.pendingReview')}</span>
-            )}
-            {waitingParts && !detail.isDelivered && (
-              <span className="badge badge-waiting-parts">{t('parts.waitingBadge')}</span>
-            )}
-            {[...laborList, ...partsList, ...(order.repuestos_resumen || [])].some((l) => l.estado === 'pendiente') && (
-              <span className="badge badge-waiting-auth">{t('quotes.waitingBadge')}</span>
-            )}
-            {detail.isArchived && <span className="badge badge-archived">{t('workOrders.archivedBadge')}</span>}
-          </h1>
-          <p className="page-subtitle">{customer?.nombre} — {vehicle?.anio} {vehicle?.marca} {vehicle?.modelo}</p>
-          {(detail.canSendReport || detail.canArchive || detail.canWithdraw || detail.canMarkReady) && (
-            <div className="order-detail-actions">
-              {/* Lo termina el técnico; administración lo revisa y confirma. Ahí sale el correo. */}
-              {detail.canMarkReady && (
-                <button
-                  type="button"
-                  className="btn btn-success btn-sm"
-                  onClick={() => void detail.markReadyForPickup()}
-                  disabled={detail.busy}
-                  id="order-mark-ready"
-                >
-                  <CheckCircle2 size={14} /> {t('workOrders.markReady')}
-                </button>
-              )}
-              {/* Solo administración: el reporte lleva precios y totales, y el
-                  cliente pidió que los técnicos no lo manden desde su perfil. */}
-              {detail.canSendReport && (
-                <>
-                  {/* El PDF sale en el idioma que elija administración (05/10/2026). */}
-                  <span className="pdf-download">
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => void detail.generatePdf(pdfLanguage)}
-                      disabled={detail.generatingPdf}
-                      title={t('workOrders.generatePdf')}
-                    >
-                      <FileDown size={14} /> {detail.generatingPdf ? t('common.loading') : t('workOrders.generatePdf')}
-                    </button>
-                    <select
-                      className="form-input form-select form-input-sm pdf-language"
-                      aria-label={t('workOrders.pdfLanguage')}
-                      value={pdfLanguage}
-                      onChange={(e) => setPdfLanguage(e.target.value as 'es' | 'en')}
-                    >
-                      <option value="es">ES</option>
-                      <option value="en">EN</option>
-                    </select>
-                  </span>
-                  {/* Enviar reporte: comparte el enlace web del cliente (correo desde el
-                      sistema o WhatsApp). El PDF de al lado es solo para imprimir. Secundario:
-                      el botón principal de cada estado está en las acciones rápidas. */}
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={detail.shareReport}
-                    disabled={detail.preparingShare}
-                    title={t('workOrders.shareReport')}
-                  >
-                    <Send size={14} /> {detail.preparingShare ? t('common.loading') : t('workOrders.shareReport')}
-                  </button>
-                </>
-              )}
-              {detail.canArchive && (
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => void detail.toggleArchived()}
-                  disabled={detail.busy}
-                  id="order-archive-toggle"
-                >
-                  {detail.isArchived ? <ArchiveRestore size={14} /> : <Archive size={14} />}{' '}
-                  {detail.isArchived ? t('workOrders.unarchive') : t('workOrders.archive')}
-                </button>
-              )}
-              {/* Cerrar sin hacer el trabajo: devuelve el depósito o cobra el diagnóstico. */}
-              {detail.canWithdraw && (
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={detail.startWithdrawal}
-                  disabled={detail.busy}
-                  id="order-withdraw"
-                >
-                  <CarFront size={14} /> {t('withdrawal.action')}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="order-detail-controls">
-          {/* `key` con `statusEpoch`: al cancelar el confirm no cambia ningún
-              estado, así que React no re-renderiza y el <select> se quedaba
-              mostrando la opción elegida sobre una orden que no se movió.
-              Remontarlo es lo único que lo devuelve al valor real. */}
-          <select
-            key={detail.statusEpoch}
-            className="form-input form-select"
-            aria-label={t('common.status')}
-            value={order.estatus}
-            onChange={(e) => detail.changeStatus(e.target.value as OrderStatus)}
-            // F6: la pausa la quita administración (al cotizar, descartar o con la respuesta del
-            // cliente); el técnico no la levanta por su cuenta.
-            // Una finalizada solo la reabre administración (05/10/2026).
-            disabled={
-              !detail.canEdit ||
-              (!detail.isAdmin && (order.estatus === 'espera_autorizacion' || order.estatus === 'finalizado')) ||
-              techWaitsAuthorization
-            }
-            title={
-              techWaitsAuthorization
-                ? t('techStatus.waitingAuthorizationNote')
-                : !detail.isAdmin && order.estatus === 'espera_autorizacion'
-                ? t('findings.pausedByOffice')
-                : !detail.isAdmin && order.estatus === 'finalizado'
-                  ? t('workOrders.onlyAdminReopens')
-                  : undefined
-            }
-            style={{ flex: '1 1 160px' }}
-          >
-            {Object.keys(statusLabels)
-              // Entregar asienta el ingreso y devenga las comisiones: no es un
-              // paso del taller. Si la orden ya está entregada la opción se deja
-              // visible, o el <select> no podría mostrar su propio valor.
-              .filter((s) => s !== 'entregado' || detail.canDeliver || order.estatus === 'entregado')
-              // Devolver una orden a Recepción es de administración: la base responde 42501.
-              // Se filtra igual que Entregado, para no ofrecer algo que siempre falla.
-              .filter((s) => s !== 'recepcion' || detail.isAdmin || order.estatus === 'recepcion')
-              // F6: la pausa la pone la oficina; el técnico reporta trabajo adicional en Tareas.
-              .filter((s) => s !== 'espera_autorizacion' || detail.isAdmin || order.estatus === 'espera_autorizacion')
-              .map((s) => (
-                <option key={s} value={s}>{statusLabels[s]}</option>
-              ))}
-          </select>
-          <div style={{ textAlign: 'right', flex: '1 1 180px' }}>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-              {t('workOrders.progress')}
-              {!detail.canEditProgress && (
-                <span style={{ marginLeft: 6, color: 'var(--color-text-tertiary)' }}>({t('workOrders.progressLocked')})</span>
-              )}
-            </div>
-            {/* Arrastrar solo mueve el borrador; se guarda al soltar (puntero o tecla) o al
-                salir del control. Guardar en cada paso mandaba una ráfaga de UPDATE que
-                llegaba a la base en cualquier orden (ver `commitProgress`). */}
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={5}
-              aria-label={t('workOrders.progress')}
-              value={sliderProgress}
-              onChange={(e) => detail.setProgressDraft(e.target.value)}
-              onPointerUp={detail.commitProgress}
-              onKeyUp={detail.commitProgress}
-              onBlur={detail.commitProgress}
-              disabled={!detail.canEditProgress}
-              style={{ width: '100%' }}
-            />
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
-              <input
-                className="form-input"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                max={100}
-                aria-label={t('workOrders.progress')}
-                value={detail.progressDraft}
-                disabled={!detail.canEditProgress}
-                style={{ width: 70, textAlign: 'right', padding: 'var(--space-1) var(--space-2)', color: detail.isComplete ? 'var(--color-success)' : undefined, fontWeight: detail.isComplete ? 700 : undefined }}
-                onChange={(e) => detail.setProgressDraft(e.target.value)}
-                onBlur={detail.commitProgress}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur(); } }}
-              />
-              <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: detail.isComplete ? 'var(--color-success)' : 'var(--color-primary-light)' }}>%</span>
-            </div>
-          </div>
-        </div>
-      </div>
+        <OrderHeader
+          order={order}
+          detail={detail}
+          statusLabels={statusLabels}
+          pdfLanguage={pdfLanguage}
+          onChangePdfLanguage={setPdfLanguage}
+          techWaitsAuthorization={techWaitsAuthorization}
+        />
 
-      {!isMobile && (
-        <Tabs tabs={tabItems} active={tab} onChange={selectTab} idPrefix="order-detail" ariaLabel={t('workOrders.tabs.label')} />
-      )}
+        {!isMobile && (
+          <Tabs tabs={tabItems} active={tab} onChange={selectTab} idPrefix="order-detail" ariaLabel={t('workOrders.tabs.label')} />
+        )}
       </div>
 
       {isMobile ? (
@@ -1326,79 +371,17 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         ))
       )}
 
-      {detail.delivering && (
-        <DeliveryModal
-          order={order}
-          onCancel={detail.cancelDelivery}
-          onDelivered={detail.finishDelivery}
-        />
-      )}
-
-      {detail.withdrawing && (
-        <WithdrawalModal
-          order={order}
-          lines={withdrawalLines}
-          onCancel={detail.cancelWithdrawal}
-          onDone={detail.finishWithdrawal}
-        />
-      )}
-
-      {detail.advancing && (
-        <AdvancePaymentModal
-          order={order}
-          onCancel={detail.cancelAdvance}
-          onDone={detail.finishAdvance}
-        />
-      )}
-
-
-      {detail.publishingProgress && (
-        <PublishProgressModal
-          entry={detail.publishingProgress}
-          saving={detail.busy}
-          onCancel={detail.cancelPublishProgress}
-          onConfirm={detail.confirmPublishProgress}
-        />
-      )}
-
-      {detail.share && (
-        <ShareReportModal
-          order={order}
-          link={detail.share.link}
-          message={detail.share.message}
-          downloading={detail.generatingPdf}
-          onDownload={() => void detail.generatePdf(pdfLanguage)}
-          onClose={detail.closeShare}
-        />
-      )}
-
-      {detail.readyNotifyOpen && (
-        <ReadyNotifyModal
-          order={order}
-          onClose={detail.closeReadyNotify}
-        />
-      )}
-
-      {showInsuranceModal && (
-        <OrderInsuranceModal
-          order={order}
-          onSave={detail.updateInsurance}
-          onClose={() => setShowInsuranceModal(false)}
-        />
-      )}
-
-      {stickerModal.open && (
-        <ServiceStickerModal
-          mode={isAdmin ? 'admin' : 'tecnico'}
-          order={order}
-          initialData={stickerModal.initialData}
-          onSave={isAdmin ? handleSaveNextService : undefined}
-          onSaveAndPrint={isAdmin ? handleSaveAndPrintNextService : undefined}
-          onSuggest={!isAdmin ? handleSuggestNextService : undefined}
-          onClose={() => setStickerModal({ open: false })}
-        />
-      )}
-
+      <OrderDialogs
+        order={order}
+        detail={detail}
+        isAdmin={isAdmin}
+        orderSede={orderSede}
+        pdfLanguage={pdfLanguage}
+        showInsuranceModal={showInsuranceModal}
+        onCloseInsuranceModal={() => setShowInsuranceModal(false)}
+        stickerModal={stickerModal}
+        onCloseStickerModal={() => setStickerModal({ open: false })}
+      />
     </div>
   );
 }

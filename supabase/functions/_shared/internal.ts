@@ -15,8 +15,13 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-export function isAuthorizedInternalCall(req: Request): boolean {
-  const expected = Deno.env.get('RESTORIFY_FUNCTIONS_SECRET');
+export type EnvGetter = (key: string) => string | undefined;
+
+export function isAuthorizedInternalCall(
+  req: Request,
+  getEnv: EnvGetter = (key) => Deno.env.get(key),
+): boolean {
+  const expected = getEnv('RESTORIFY_FUNCTIONS_SECRET');
   const received = req.headers.get('x-restorify-secret');
   // Sin secreto configurado la función no atiende a nadie, en vez de a todos.
   if (!expected || !received) return false;

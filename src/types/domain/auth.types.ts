@@ -31,6 +31,8 @@ export interface Sede {
   comision_porcentaje?: number;
   /** Tarifa de mano de obra por hora de referencia (referencia informativa, no calcula precios). */
   tarifa_hora?: number | null;
+  /** Zona horaria IANA de la sede (ej. 'America/New_York'). */
+  zona_horaria?: string;
   fecha_creacion: string;
 }
 
@@ -39,8 +41,8 @@ export interface UserProfile {
   nombre_completo: string;
   rol: UserRole;
   sede_id: string;
-  telefono: string;
+  telefono: string | null;
   email: string;
-  avatar_url?: string;
+  avatar_url?: string | null;
   creado_en: string;
 }

@@ -378,6 +378,52 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
   - **la configuración local es de la CLI 3** (`[local_smtp]`, `[auth.email] enabled`): necesita la
     CLI 2.122 o más nueva, y `npm run test:db` usa `npx supabase@3`. **`[auth.email] enabled` es el
     proveedor de correo**: en `false` nadie inicia sesión (regla 8d).
+- **Auditoría del 13–14/11/2026** (`20261010000043`, [bitacora.md](bitacora.md)):
+  - **toda función que escribe dinero de una orden toma primero el candado de su fila en
+    `ordenes_trabajo`** (`… FOR UPDATE`), antes de leer o tocar `orden_montos` u `orden_parqueo`.
+    Lo hacen `recalculate_order_totals`, `aplicar_descuento`, `_recalcular_parqueo`,
+    `ajustar_parqueo_orden`, `registrar_anticipo` y `entregar_orden`. Sin ese orden, dos acciones
+    simultáneas pisaban un total o se trababan entre sí. **Una función nueva de dinero hace lo mismo**;
+  - **una orden con dinero registrado en Finanzas no se borra** (movimientos no importados ligados a
+    ella; `trg_guard_order_delete_entregada`, 42501): se cancela con «Retirada sin reparar», que
+    registra la devolución. Sin sesión (mantenimiento) no se frena;
+  - **el correo del perfil no se cambia por la API** (`trg_guard_perfil_privilegios`): solo
+    administración o la ruta de servicio (`update-employee`). Ahí llegan los avisos internos;
+  - **un enlace desactivado a mano no renace solo** (`orden_enlaces.revocado_por`, que escribe solo
+    `revocar_enlace_cliente`): `asegurar_enlace_orden`, `encolar_correo_cliente` y `datos_correo` no
+    crean otro y el correo queda `omitido` con su motivo. «Crear enlace» y «Cambiar enlace» sí crean
+    uno (bandera de transacción `restorify.crear_enlace_manual`). **Un camino automático nuevo que
+    necesite el enlace pasa por `asegurar_enlace_orden`**;
+  - **el técnico tampoco** escribe `fecha_finalizacion`, ni borra un avance ligado a un trabajo
+    adicional (`orden_avances_delete`), ni borra de Storage los archivos de una inspección publicada
+    (`orden_media_delete`), ni arranca el reloj en una orden terminada (`iniciar_reloj`);
+  - **`is_assigned_to_order` exige la sede actual del técnico**, igual que `mis_ordenes_asignadas()`,
+    y **`traducciones_portal` solo la ejecuta `service_role`** (el portal pasa por su edge function);
+  - **el correo de una retirada sin reparar tiene su propio texto** (`datos_correo` expone
+    `retirada_sin_reparar`; `process-outbox` lo reenvía a la plantilla);
+  - **en la app:**
+    - después de una acción que cambia una orden o su dinero, la caché se invalida con
+      `invalidateOrderEffects` (`lib/queryClient.ts`), no clave por clave;
+    - un editor en línea cierra solo si guardar devolvió `true` (`updateLabor`, `updatePart`,
+      `approveCommission`): un rechazo de la base no puede borrar lo escrito;
+    - un «Guardar» nunca hace `return` en silencio: dice qué campo falta y lo marca (`aria-invalid`);
+    - el token para llamar a una edge function o subir un archivo sale de `getValidAccessToken`
+      (`services/support.ts`), que refresca la sesión una vez;
+    - cada ruta va dentro de su `ErrorBoundary` (`AppLayout`): si una pantalla falla, el menú y la
+      bandeja de subidas siguen vivos;
+    - las etiquetas de estado y de tipo de trabajo salen de `orderStatusKey` y `workTypeKey`
+      (`lib/workType.ts`), y el mensaje para compartir el enlace, de `lib/portalShare.ts`.
+- **Auditoría, segunda parte** (`20261010000044`, 14/11/2026):
+  - **un estado de cuenta no se importa dos veces**: `idx_finanzas_importaciones_hash` es único y
+    `importar_estado_cuenta` responde 23505 con «Este estado de cuenta ya se importó.»;
+  - **`finanzas_movimientos.monto >= 0`**: el signo lo da `tipo` (una devolución es un egreso con
+    monto positivo). **Nunca escribas un monto negativo**;
+  - **`orden_asignaciones` es única por (orden, persona, oficio)** y `tipo_tarea` va con `CHECK`;
+  - **los números que llegan del formulario a `create_work_order` se leen con
+    `NULLIF(btrim(…), '')`**: un campo vacío no tumba el alta;
+  - **las políticas de `storage.objects` envuelven sus helpers en `(SELECT …)`**, como las demás;
+  - **con el enlace vencido, el cliente puede darse de baja de los correos** (no de alta, ni cambiar
+    el idioma): `datos_portal` devuelve solo `cliente.tiene_correo`/`acepta_correos`.
 - **Índices e InitPlan** (`20261010000033`): toda clave foránea nueva lleva su índice, y toda
   llamada a un helper en una política va envuelta en `(SELECT …)`.
 - **Avisos y correos al personal.** El técnico se entera de lo no autorizado (`TechOrderStatus`)
@@ -413,8 +459,9 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
    `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca edites una migración
    ya aplicada ni cambies tablas desde el panel. **El nombre va después de la última
    migración, no de la fecha de hoy:** hay migraciones aplicadas con fecha futura (hoy la
-   última es `20261010000042`), y una con fecha anterior a la última aplicada no entra con
+   última es `20261010000044`), y una con fecha anterior a la última aplicada no entra con
    `db push` ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#4-base-de-datos), B-1).
+   Después de cada migración, regenera `src/types/supabase.gen.ts` con `npm run db:types` (`schema.contract.ts` verifica en compilación que los tipos de dominio no se desalineen).
 2. **Una función nueva en `public` es una RPC pública.** Postgres da `EXECUTE` a
    `PUBLIC` y Supabase a `anon` y `authenticated` al crearla. Revócala siempre:
    `REVOKE ALL ON FUNCTION ... FROM PUBLIC, anon, authenticated;` y concede solo lo
@@ -477,18 +524,18 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
 
 | Necesitas | Ve a |
 |---|---|
-| Consultas a Supabase | `src/services/<dominio>.service.ts`. Ningún componente llama `supabase.from` directo. `supabaseService.ts` es una fachada heredada; en código nuevo importa el servicio del dominio |
+| Consultas a Supabase | `src/services/<dominio>.service.ts`. Ningún componente llama `supabase.from` directo; cada archivo importa el servicio del dominio |
 | Lecturas y caché | TanStack Query; claves en `src/lib/queryClient.ts`. Tras mutar, **invalida** (la base cambia cosas que el cliente no predice) |
 | Formularios | react-hook-form + `zod/mini`; ejemplo en `src/features/workOrders/workOrderForm.schema.ts` |
 | Qué archivos, tablas, RPC y pruebas tiene cada sección | [mapa-de-secciones.md](mapa-de-secciones.md) |
 | La versión vigente de una función, trigger, política o tabla SQL | `npm run db:donde -- <nombre>` |
-| Detalle de orden | `src/features/workOrders/useWorkOrderDetail.ts` (permisos derivados: `canEditLines`, `canSendReport`, `canDeliver`, `canSign`…) y `WorkOrderDetail.tsx` |
+| Detalle de orden | `src/features/workOrders/useWorkOrderDetail.ts` (la API; la arman los subhooks de `detail/`), `detail/permissions.ts` (permisos de pantalla: `canEditLines`, `canSendReport`, `canDeliver`, `canSign`…), `WorkOrderDetail.tsx` (pestañas) y `detail/sections/` |
 | Multimedia | `src/lib/media/` (compresión, grabación, conversión, cola TUS en IndexedDB) y `src/features/media/`. Detalle en [multimedia-y-notificaciones.md](multimedia-y-notificaciones.md) |
 | Notificaciones | Triggers `trg_*_notify` → `notificar()` → `notificaciones` + `cola_envios`; edge function `process-outbox`; frontend en `src/features/notifications/`, `src/lib/push.ts`, `public/sw.js` |
-| Presupuestos | `quotes.service.ts`, `features/workOrders/QuoteCard.tsx`, `LineStateBadge.tsx`, `lineState.ts`; sección `QuoteSection` del portal. Detalle en [presupuestos.md](presupuestos.md) |
-| Portal y correos | `trg_order_portal` → `encolar_correo_cliente()`; `process-outbox` (`sendEmail`) + `_shared/email/templates.ts`; edge function `portal` → `datos_portal()`; `src/portal/`; tarjeta `CustomerLinkCard.tsx`. Detalle en [portal-y-correos.md](portal-y-correos.md) |
+| Presupuestos | `quotes.service.ts`, `features/workOrders/QuoteCard.tsx`, `LineStateBadge.tsx`, `lineState.ts`; sección `portal/components/QuoteSection.tsx` del portal. Detalle en [presupuestos.md](presupuestos.md) |
+| Portal y correos | `trg_order_portal` → `encolar_correo_cliente()`; `process-outbox/handler.ts` + `_shared/resend.ts` + `_shared/email/templates.ts`; edge function `portal/handler.ts` → `datos_portal()`; `src/portal/` (`components/`, `format.ts`, `shopPhones.ts`); tarjeta `CustomerLinkCard.tsx`. Detalle en [portal-y-correos.md](portal-y-correos.md) |
 | Cobro por parqueo | `src/features/parking/`, `parking.service.ts`; RPC en [parqueo.md](parqueo.md) |
-| Edge functions | `supabase/functions/` (Deno). Internas verifican `x-restorify-secret` con `_shared/internal.ts`. Si agregas una, súmala a la lista de SEC-17 en `scripts/qa/api-security.mjs` y despliégala (si no, responde 404). Llámalas con `invokeAdminFunction` (`users.service.ts`): `functions.invoke` pierde el motivo de un 4xx |
+| Edge functions | `supabase/functions/` (Deno). Internas verifican `x-restorify-secret` con `_shared/internal.ts`. Si agregas una, súmala a la lista de SEC-17 en `scripts/qa/api-security.mjs` y despliégala (si no, responde 404). Llámalas con `invokeAdminFunction` (`users.service.ts`): `functions.invoke` pierde el motivo de un 4xx. **Cada función tiene `handler.ts` (la lógica: exporta `handler`, `Deps` y `defaultDeps`) e `index.ts` mínimo** que crea las dependencias una vez y llama `Deno.serve` (no uses `import.meta.main`). Sus pruebas (`index.test.ts`, `npm run test:functions` con Deno 2) usan dobles en `deps`: sin red ni base. Un error de consulta responde 503, nunca «no existe» |
 | Administración de datos del proyecto real | `scripts/admin/`: `limpiar-datos.sql` (termina en `ROLLBACK`), `limpiar-operacion.sql`, `empezar-de-cero.sql` (conserva cuentas, clientes y vehículos; se usó el 06/11/2026) y `crear-primer-admin.sql`. Solo los corre quien administra, con su aprobación explícita. **Una tabla nueva que cuelgue de la orden se suma a la lista de los tres `TRUNCATE`**, o fallan sin borrar nada |
 | Qué hay en el proyecto de Supabase real (buckets, secretos por nombre, cron, Realtime, versiones de funciones, panel) | [supabase.md](supabase.md) |
 | Contextos | `src/context/` (Auth, Language, Theme, Toast, UnsavedChanges) |
@@ -500,11 +547,18 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
 | Teléfonos y país | `src/lib/phone.ts` (`PHONE_COUNTRIES`, `parsePhone`, `toE164`, `formatPhone`, `telUrl`, `whatsAppUrl`) y `src/components/PhoneInput.tsx` |
 | Color de la sede en el PDF | `src/lib/brandColor.ts`: el color tal cual para rayas y uno oscurecido para texto |
 | Tipos de dominio | `src/types/domain/` |
+| Tipos de la base | `src/types/supabase.gen.ts`: se regenera desde la base local tras cada migración con `npm run db:types` (`SUPABASE_DB_URL` si tu stack no está en el puerto de `config.toml`; no escribe nada si la base no responde). `src/types/domain/schema.contract.ts` hace fallar `tsc -b` si un tipo de dominio dice algo distinto de la base (una columna que no existe, un nulo que no admite); una relación embebida o un campo calculado se excluye ahí con su `Omit` y el porqué |
 
 ## 4. Patrones de interfaz
 
-- **Modales** controlados (`modal-overlay` + `modal`); los pesados con `LazyModal`. No uses
-  `prompt` ni `alert`. `confirm` solo para confirmaciones destructivas.
+- **Un diálogo es `<Modal>`** (`components/Modal.tsx`, 14/11/2026), nunca un `modal-overlay` armado a
+  mano. Da `role="dialog"`, `aria-modal`, el título enlazado y la X con nombre; atrapa el foco y lo
+  devuelve al cerrar; cierra con Escape, la X y el fondo llamando a su `onClose` (pásale el
+  `requestClose` de `useDiscardGuard` si hay algo escrito), y `closeDisabled` lo impide mientras se
+  guarda. **Escape lo atiende solo la capa de arriba** (`components/escapeLayer.ts`, pila compartida
+  con `ChoiceDialog`). Se escucha en la fase de burbuja y respeta `defaultPrevented`: un control que
+  usa su Escape (el autocompletado cierra su lista) no cierra el diálogo. Los pesados van con
+  `LazyModal`. No uses `prompt` ni `alert`. `confirm` solo para confirmaciones destructivas.
 - **Una capa de pantalla completa que no sea `modal-overlay` va en `<BodyPortal>`**
   (`src/components/BodyPortal.tsx`), como el grabador de video y el visor de la galería. Un
   `position: fixed` deja de medirse contra la pantalla si un ancestro tiene `transform`; por eso
@@ -532,16 +586,21 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
 
 ```bash
 npx tsc -b && npm run lint && npm test && npm run build
-npm run test:db       # si tocaste SQL (requiere Docker + npx supabase start)
-npm run qa:security   # después de aplicar una migración que toque permisos
+npm run test:functions # si tocaste edge functions (Deno 2)
+npm run test:db        # si tocaste SQL (requiere Docker + npx supabase start)
+npm run test:e2e:local # si tocaste pantallas o flujos E2E (Docker + base local)
+npm run db:types       # tras nuevas migraciones para regenerar src/types/supabase.gen.ts
+npm run qa:security    # después de aplicar una migración que toque permisos
 ```
 
 Qué cubren las pruebas automatizadas: [pruebas.md](pruebas.md). Qué probar según lo
 que cambiaste, con casos que un agente puede ejecutar: [plan-de-pruebas.md](plan-de-pruebas.md)
 (§1.4 tiene las instrucciones para agentes; §8, qué módulos probar según el cambio).
 Para comprobar el estado de una orden en la base: `scripts/qa/estado-orden.sql` (solo
-lectura). Las pruebas e2e y `qa:security` corren contra el proyecto de `.env.local`: no
-agregues pruebas que entreguen órdenes o paguen comisiones mientras no exista staging.
+lectura). **Las pruebas e2e se corren contra la base local con `npm run test:e2e:local`**
+(crea sus cuentas y se niega a usar una URL que no sea de esta máquina; [pruebas.md §2.3](pruebas.md#23-end-to-end-playwright)).
+`npm run test:e2e` y `qa:security` siguen yendo contra el proyecto de `.env.local`: una prueba e2e
+que entregue órdenes, cobre o pague comisiones lleva `test.skip(!isLocalStack, …)` (`e2e/fixtures.ts`).
 
 ## 6. Observabilidad y despliegue
 

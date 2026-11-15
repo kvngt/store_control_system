@@ -50,23 +50,29 @@ export default function PhoneInput({ value, onChange, id, disabled, invalid, pla
   };
 
   const incomplete = touched && looksIncomplete(iso, national);
+  const currentCountry = PHONE_COUNTRIES.find((c) => c.iso === iso) ?? PHONE_COUNTRIES[0];
 
   return (
     <div>
       <div className="phone-input">
-        <select
-          className="form-input form-select phone-input-country"
-          value={iso}
-          onChange={(e) => emit(e.target.value, national)}
-          disabled={disabled}
-          aria-label={t('phone.country')}
-        >
-          {PHONE_COUNTRIES.map((c) => (
-            <option key={c.iso} value={c.iso}>
-              {c.flag} +{c.dial} {t(`phone.countries.${c.iso}`)}
-            </option>
-          ))}
-        </select>
+        <div className="phone-input-country-wrap">
+          <select
+            className="form-input form-select phone-input-country"
+            value={iso}
+            onChange={(e) => emit(e.target.value, national)}
+            disabled={disabled}
+            aria-label={t('phone.country')}
+          >
+            {PHONE_COUNTRIES.map((c) => (
+              <option key={c.iso} value={c.iso}>
+                {c.flag} +{c.dial} {t(`phone.countries.${c.iso}`)}
+              </option>
+            ))}
+          </select>
+          <span className="form-input form-select phone-input-country-display" aria-hidden="true">
+            {currentCountry.flag} +{currentCountry.dial}
+          </span>
+        </div>
         <input
           className="form-input phone-input-number"
           id={id}

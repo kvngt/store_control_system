@@ -66,13 +66,13 @@ edge functions y el despliegue.
 
 **[planos.md](planos.md)** — Los planos en diagramas: las capas, el mapa de pantallas, el ciclo de
 vida de una orden, las tablas y cómo se relacionan, el camino del dinero y de las comisiones, lo
-que ve el cliente, los avisos, quién puede hacer qué y cómo sale un cambio. Cubre hasta la migración `028`: lo de `029` a `039` está en [arquitectura.md](arquitectura.md) y [ai-context.md](ai-context.md).
+que ve el cliente, los avisos, quién puede hacer qué y cómo sale un cambio. Cubre hasta la migración `028` (con el mapa de módulos actualizado al `15/11/2026`): lo de `029` a `044` está en [arquitectura.md](arquitectura.md) y [ai-context.md](ai-context.md).
  
 
 **[arquitectura.md](arquitectura.md)** — La arquitectura a fondo, para quien va a tocar el código:
 el mapa del repositorio, el modelo de datos, dónde vive la lógica de negocio (triggers y RPC),
 seguridad y permisos, el servidor, el frontend por dentro, cómo se escriben migraciones, cómo
-levantar el proyecto y las trampas que ya mordieron a alguien. Actualizado hasta la migración `028` más el resumen de las migraciones `029` a `039` (donde no coincida, manda [ai-context.md](ai-context.md)).
+levantar el proyecto y las trampas que ya mordieron a alguien. Actualizado en mapa de código y reglas al `15/11/2026` (última migración `044`; donde no coincida, manda [ai-context.md](ai-context.md)).
  
  
 
@@ -117,7 +117,7 @@ línea, las tres formas de autorizar (firma, enlace, registro del admin), qué c
 el dinero, qué ve cada quien y diagnóstico.
 
 **[evolucion.md](evolucion.md)** — La historia del proyecto: de la demo a las fases del
-cliente y los cambios de la reunión con el taller, las migraciones (con detalle hasta la 54; las siguientes, en la bitácora) con lo que hizo cada
+cliente y los cambios de la reunión con el taller, las migraciones (con detalle hasta la 54 y resumen hasta la 98 / `044`; las intermedias, en la bitácora) con lo que hizo cada
 una, las decisiones que se reemplazaron y cómo creció la red de pruebas.
 
 **[manual-de-pruebas.md](manual-de-pruebas.md)** — Para la persona que prueba la
@@ -184,9 +184,9 @@ correo con Resend, variables de entorno, el orden en que tiene que hacerse todo 
 qué revisar después.
 
 **[manual-usuario.md](manual-usuario.md)** — La aplicación pantalla por pantalla,
-escrita para el personal del taller, al día con la app del 26/10/2026 (incluye parqueo, seguro,
-trabajo adicional, "listo para entregar" y comisiones por aceptar). Base en texto para el
-manual con capturas: 46 marcadores dicen qué captura va en cada lugar.
+escrita para el personal del taller, al día con la app (incluye parqueo, seguro,
+trabajo adicional, "listo para entregar", comisiones por aceptar, cheque con número o comprobante en alta/anticipos/entrega y vocabulario ajustado en noviembre de 2026). Base en texto para el
+manual con capturas: 46 marcadores dicen qué captura va en cada lugar (también en inglés en [manual-usuario.en.md](manual-usuario.en.md)).
 
 **[parqueo.md](parqueo.md)** — El cobro por parqueo: perfiles con seguro y sin seguro, tramos,
 gracia, topes, ajustes por orden, sus siete estados, cómo se cuenta, dónde entra al dinero, cuándo
@@ -222,13 +222,14 @@ El estado al día —qué está hecho, qué falta publicar y quién hizo qué—
 **[bitacora.md](bitacora.md#estado)**, y cada agente lo actualiza al terminar un bloque de trabajo.
 Las cifras del proyecto están en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto).
 
-En resumen, al 11/10/2026: el taller usa el sistema desde el 29/09/2026 (ese día la base se limpió
+En resumen, al 15/11/2026: el taller usa el sistema desde el 29/09/2026 (ese día la base se limpió
 para la prueba); las seis fases del cliente, la auditoría, la revisión previa a producción, las
-reuniones con el taller (29/09 y 03/10) y sus pedidos del 05/10 y del 06/10 están hechos y
-publicados, igual que los teléfonos por sede, el trabajo con seguro y el cobro por parqueo. La
-historia de cada etapa está en [evolucion.md](evolucion.md).
+reuniones con el taller (29/09 y 03/10), sus pedidos del 05/10 y 06/10, las mejoras de noviembre
+(catálogo de trabajos, inspección por puntos, reloj e indicadores, próximo servicio) y la auditoría
+del 13–15/11/2026 (migraciones `043` y `044` aplicadas hoy en producción, división modular del frontend y
+edge functions con pruebas en Deno 2) están hechos. La historia de cada etapa está en [evolucion.md](evolucion.md).
 
-Pendiente fuera del código: un proyecto de staging, Sentry en producción, que Hostinger publique
+Pendiente fuera del código: un proyecto de staging remoto en Supabase (las E2E locales corren con `npm run test:e2e:local`), Sentry en producción, que Hostinger publique
 la rama `produccion` (hoy publica `main`) y las decisiones del taller sobre el pago a empleados
 ([pagos-a-empleados.md](pagos-a-empleados.md)), el texto legal
 ([plan-legal-y-privacidad.md](plan-legal-y-privacidad.md)) y el impuesto. Antes de atender

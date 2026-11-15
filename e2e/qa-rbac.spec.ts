@@ -128,20 +128,14 @@ test.describe('RBAC-20 | Dashboard de mecánico no muestra datos financieros', (
 // ---------------------------------------------------------------------------
 test.describe('RBAC-30 | Vista de órdenes para mecánico/pintor', () => {
   test.skip(!hasMechanicCredentials, 'Requiere credenciales de mecánico');
-  test('hay dos secciones: "Mis Órdenes" abierta y "Otras Órdenes" cerrada', async ({ page }) => {
+  test('solo ve "Mis Órdenes": las de sus compañeros no existen para él (20261007000000)', async ({ page }) => {
     await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
     await page.goto('/work-orders');
 
     const sections = page.locator('.orders-section');
-    await expect(sections).toHaveCount(2);
+    await expect(sections).toHaveCount(1);
     await expect(sections.first()).toContainText(/Mis Órdenes de Trabajo|My Work Orders/);
-
-    const toggle = page.locator('.orders-section-toggle');
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-
-    // Expandir
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('.orders-section-toggle')).toHaveCount(0);
   });
 });
 
@@ -160,19 +154,20 @@ test.describe('RBAC-31 | Mecánico NO abre órdenes ni se une a una', () => {
     await expect(page.locator('#new-order-btn')).toHaveCount(0);
   });
 
-  test('no existe el botón de unirse en una orden que no trabaja', async ({ page }) => {
+  test('no existe el botón de unirse en ninguna orden', async ({ page }) => {
     await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
     await page.goto('/work-orders');
+    await page.waitForSelector('.orders-section', { timeout: 10000 });
 
-    // "Otras Órdenes" son justo las que no tiene asignadas: las que alguien querría tomar.
-    const toggle = page.locator('.orders-section-toggle');
-    await toggle.click();
-    const otra = page.locator('.orders-section').last().locator('.row-clickable, .workorder-card').first();
-    if ((await otra.count()) === 0) test.skip(true, 'No hay órdenes ajenas en la sede de prueba');
-    await otra.click();
-
-    await page.waitForSelector('.modal, .page-title', { timeout: 10000 });
+    // Las órdenes ajenas ni siquiera llegan a su lista (RLS, 20261007000000); y en las suyas
+    // tampoco hay forma de asignarse otra parte.
     await expect(page.getByRole('button', { name: /Unirme a la orden|Join this order/ })).toHaveCount(0);
+    const mia = page.locator('.orders-section .row-clickable, .orders-section .workorder-card').first();
+    if ((await mia.count()) > 0) {
+      await mia.click();
+      await page.waitForSelector('.page-title, h1, h2', { timeout: 10000 });
+      await expect(page.getByRole('button', { name: /Unirme a la orden|Join this order/ })).toHaveCount(0);
+    }
   });
 });
 
@@ -192,9 +187,12 @@ test.describe('RBAC-04 | Admin sí abre órdenes', () => {
 // ---------------------------------------------------------------------------
 test.describe('RBAC-40 | Settings: admin ve sedes y empleados', () => {
   test.skip(!hasAdminCredentials, 'Requiere credenciales de admin');
-  test('sección de sedes está presente', async ({ page }) => {
+  test('sección de sedes está presente, y los empleados se crean en Empleados', async ({ page }) => {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
     await page.goto('/settings');
+    await expect(page.getByRole('heading', { name: /Sedes \/ Talleres|Locations/ })).toBeVisible({ timeout: 10000 });
+    // El alta de empleados vive en /employees (UsersCard), no en Configuración.
+    await page.goto('/employees');
     await expect(page.locator('#new-user-btn')).toBeVisible({ timeout: 10000 });
   });
 });

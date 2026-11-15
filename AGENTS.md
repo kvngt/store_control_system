@@ -33,7 +33,7 @@ Léela antes de empezar y agrega tu entrada al terminar cada bloque de trabajo.
   documentación decía `produccion`, ver [docs/historico/evaluacion-2026-10.md](docs/historico/evaluacion-2026-10.md#5-operación-y-despliegue)):
   un push a `main` sale en vivo en uno o dos minutos, sin esperar al CI.
 - **Migraciones nuevas: nómbralas después de la última** que haya en `supabase/migrations/`
-  (hoy `20261010000042`), no con la fecha de hoy. Hay migraciones aplicadas con fecha futura y
+  (hoy `20261010000044`), no con la fecha de hoy. Hay migraciones aplicadas con fecha futura y
   una más vieja que la última no se aplica con `db push`.
 - **Commits solo cuando se piden.**
 
@@ -61,6 +61,7 @@ Antes de cambiar una pantalla:
 ```bash
 npm run lint && npx tsc -b && npm test && npm run build
 npx supabase start && npm run test:db     # si tocaste SQL (necesita Docker)
+npm run test:e2e:local                    # Playwright contra la base local (si tocaste pantallas)
 npm run qa:security                       # después de aplicar migraciones de permisos
 ```
 

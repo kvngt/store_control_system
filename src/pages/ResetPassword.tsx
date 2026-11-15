@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MIN_PASSWORD_LENGTH } from '../lib/password';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
-import { supabaseService } from '../services/supabaseService';
+import { usersService } from '../services/users.service';
 import { getAuthErrorMessage } from '../lib/errors';
 import loginBg from '../assets/login-bg.webp';
 import logo from '../assets/restorify-logo.webp';
@@ -51,7 +51,7 @@ export default function ResetPassword() {
     setSaving(true);
     setError('');
     try {
-      await supabaseService.updatePassword(password);
+      await usersService.updatePassword(password);
       setDone(true);
     } catch (err) {
       setError(getAuthErrorMessage(err, language));

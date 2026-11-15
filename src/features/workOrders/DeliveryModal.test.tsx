@@ -18,8 +18,10 @@ const mocks = vi.hoisted(() => ({
   getOrderParking: vi.fn(),
 }));
 
-vi.mock('../../services/supabaseService', () => ({
+vi.mock('../../services/workOrders.service', () => ({
   workOrdersService: mocks,
+}));
+vi.mock('../../services/commissions.service', () => ({
   commissionsService: { getEstimate: mocks.getEstimate },
 }));
 

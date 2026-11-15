@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, FileSignature, RotateCcw, Send, X, XCircle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { CheckCircle2, FileSignature, RotateCcw, Send, XCircle } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { getErrorMessage } from '../../lib/errors';
@@ -9,6 +9,9 @@ import { relativeTime } from '../notifications/renderNotification';
 import { quotesService } from '../../services/quotes.service';
 import type { AdminAuthorizationVia, LineState, Quote, WorkOrder } from '../../types/database';
 import { money, sumMoney } from '../../lib/money';
+import { QuoteShareActions } from './QuoteShareActions';
+import { useQuoteSend, useQuoteShareUrl } from './useQuoteSend';
+import Modal from '../../components/Modal';
 
 interface QuoteLine {
   id: string;
@@ -47,9 +50,10 @@ function linesOf(order: WorkOrder): QuoteLine[] {
 export default function QuoteCard({ order }: { order: WorkOrder }) {
   const { t, language } = useLanguage();
   const { showToast } = useToast();
-  const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [registering, setRegistering] = useState(false);
+  const { sending, sendQuote, refreshOrderQueries } = useQuoteSend(order);
+  const isBusy = busy || sending;
 
   const quotesQuery = useQuery({
     queryKey: queryKeys.quotes(order.id),
@@ -61,37 +65,20 @@ export default function QuoteCard({ order }: { order: WorkOrder }) {
   const pending = lines.filter((l) => l.estado === 'pendiente');
   const quotes = quotesQuery.data ?? [];
   const open = quotes.find((q) => q.estado === 'enviado') ?? null;
+  const shareUrl = useQuoteShareUrl(order, Boolean(open));
   const history = quotes.filter((q) => q.estado !== 'enviado');
   const sum = (list: QuoteLine[]) => sumMoney(list.map((l) => l.monto));
-
-  const refreshAll = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.workOrderDetail(order.id) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.quotes(order.id) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.customerEmails(order.id) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.customerLink(order.id) }),
-      queryClient.invalidateQueries({ queryKey: ['work-orders'] }),
-    ]);
-  };
 
   const run = async (action: () => Promise<void>, errorKey: string) => {
     setBusy(true);
     try {
       await action();
-      await refreshAll();
+      await refreshOrderQueries();
     } catch (err) {
       showToast('error', t(errorKey), getErrorMessage(err, language));
     } finally {
       setBusy(false);
     }
-  };
-
-  const send = () => {
-    if (!confirm(t('quotes.sendConfirm'))) return;
-    void run(async () => {
-      const result = await quotesService.sendQuote(order.id, true);
-      showToast(result.correo === 'sin_correo' ? 'error' : 'success', t(result.correo === 'sin_correo' ? 'quotes.sentNoEmail' : 'quotes.sent'));
-    }, 'quotes.sendError');
   };
 
   const cancel = (quote: Quote) => {
@@ -122,17 +109,18 @@ export default function QuoteCard({ order }: { order: WorkOrder }) {
           </p>
           {drafts.length > 0 && <p>{t('quotes.openDraftsHint').replace('{count}', String(drafts.length))}</p>}
           <div className="quote-actions">
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => setRegistering(true)} disabled={busy}>
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => setRegistering(true)} disabled={isBusy}>
               <CheckCircle2 size={14} /> {t('quotes.register')}
             </button>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={send} disabled={busy}>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => void sendQuote()} disabled={isBusy}>
               {drafts.length > 0 ? <Send size={14} /> : <RotateCcw size={14} />}
               {drafts.length > 0 ? t('quotes.sendMore') : t('quotes.resend')}
             </button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => cancel(open)} disabled={busy}>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => cancel(open)} disabled={isBusy}>
               <XCircle size={14} style={{ color: 'var(--color-danger)' }} /> {t('quotes.cancel')}
             </button>
           </div>
+          <QuoteShareActions order={order} url={shareUrl} />
         </div>
       ) : drafts.length > 0 ? (
         <div className="quote-status is-draft">
@@ -141,10 +129,10 @@ export default function QuoteCard({ order }: { order: WorkOrder }) {
             {t('quotes.draftsHint').replace('{count}', String(drafts.length)).replace('{total}', money(sum(drafts)))}
           </p>
           <div className="quote-actions">
-            <button type="button" className="btn btn-primary btn-sm" onClick={send} disabled={busy}>
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => void sendQuote()} disabled={isBusy}>
               <Send size={14} /> {t('quotes.send')}
             </button>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRegistering(true)} disabled={busy}>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRegistering(true)} disabled={isBusy}>
               <CheckCircle2 size={14} /> {t('quotes.register')}
             </button>
           </div>
@@ -298,16 +286,26 @@ function AuthorizationModal({
   const total = sumMoney(lines.filter((l) => approved.has(l.id)).map((l) => l.monto));
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="authorization-title">
-        <div className="modal-header">
-          <h3 className="modal-title" id="authorization-title">{t('quotes.modalTitle')}</h3>
-          <button className="modal-close" onClick={onClose} aria-label={t('common.close')}>
-            <X size={20} />
+    <Modal
+      onClose={onClose}
+      style={{ maxWidth: 560 }}
+      title={t('quotes.modalTitle')}
+      titleId="authorization-title"
+      footer={
+        <>
+          <button type="button" className="btn btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={busy || lines.length === 0}
+            onClick={() => onSubmit({ approvedIds: [...approved], shownIds: lines.map((l) => l.id), via, name, note })}
+          >
+            {busy ? t('common.loading') : t('quotes.confirmRegister')}
           </button>
-        </div>
-        <div className="modal-body">
-          <p className="field-hint" style={{ marginBottom: 'var(--space-3)' }}>{t('quotes.modalHint')}</p>
+        </>
+      }
+    >
+      <p className="field-hint" style={{ marginBottom: 'var(--space-3)' }}>{t('quotes.modalHint')}</p>
 
           <div className="quote-select-actions">
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setApproved(new Set(lines.map((l) => l.id)))}>
@@ -397,19 +395,6 @@ function AuthorizationModal({
               onChange={(e) => setNote(e.target.value)}
             />
           </div>
-        </div>
-        <div className="modal-footer">
-          <button type="button" className="btn btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={busy || lines.length === 0}
-            onClick={() => onSubmit({ approvedIds: [...approved], shownIds: lines.map((l) => l.id), via, name, note })}
-          >
-            {busy ? t('common.loading') : t('quotes.confirmRegister')}
-          </button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

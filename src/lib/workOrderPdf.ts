@@ -179,11 +179,24 @@ const STRINGS = {
   },
 };
 
+const DEFAULT_TIMEZONE = 'America/New_York';
+
 /** 'AAAA-MM-DD' como fecha local, sin el corrimiento de zona de `new Date('AAAA-MM-DD')`. */
 function formatDay(value: string, locale: string) {
   const [y, m, d] = value.slice(0, 10).split('-').map(Number);
   if (!y || !m || !d) return value;
   return new Date(y, m - 1, d).toLocaleDateString(locale);
+}
+
+/** Formatea una marca ISO en la zona horaria de la sede (no la del dispositivo). */
+function formatTimestampDate(value: string, locale: string, timeZone: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  try {
+    return date.toLocaleDateString(locale, { timeZone });
+  } catch {
+    return date.toLocaleDateString(locale, { timeZone: DEFAULT_TIMEZONE });
+  }
 }
 
 // Phone photos come in at several MB each; embedding them raw produced a
@@ -267,6 +280,7 @@ async function buildWorkOrderPdf(
   const photos = customerReportPhotos(order);
   const lang: PdfLanguage = options.language ?? 'es';
   const S = STRINGS[lang];
+  const sedeTimeZone = sede?.zona_horaria || DEFAULT_TIMEZONE;
   // En inglés, lo que el taller escribió en español sale traducido si ya hay traducción.
   // El diccionario se arma con el texto recortado (_textos_cliente hace trim), como en el portal:
   // sin el trim, una descripción con un espacio al final salía sin traducir.
@@ -434,9 +448,14 @@ async function buildWorkOrderPdf(
   label(S.plate, order.vehiculo?.placa || '', MARGIN + half, half - 5);
   y += 11;
   label(S.vin, order.vehiculo?.vin || '—', MARGIN, half - 5);
-  label(S.milesIn, String(order.millas_ingreso ?? ''), MARGIN + half, half - 5);
+  label(
+    S.milesIn,
+    order.millas_ingreso != null ? new Intl.NumberFormat(S.locale).format(order.millas_ingreso) : '',
+    MARGIN + half,
+    half - 5
+  );
   y += 11;
-  label(S.dateIn, order.fecha_ingreso ? new Date(order.fecha_ingreso).toLocaleDateString(S.locale) : '', MARGIN, half - 5);
+  label(S.dateIn, order.fecha_ingreso ? formatTimestampDate(order.fecha_ingreso, S.locale, sedeTimeZone) : '', MARGIN, half - 5);
   label(S.estimated, order.fecha_estimada_entrega ? formatDay(order.fecha_estimada_entrega, S.locale) : '', MARGIN + half, half - 5);
   y += 11;
 
@@ -760,7 +779,7 @@ async function buildWorkOrderPdf(
       doc.setTextColor(...MUTED);
       doc.text(order.cliente?.nombre || S.customerFallback, MARGIN, y);
       if (order.firma_fecha) {
-        doc.text(`${S.signed}: ${new Date(order.firma_fecha).toLocaleDateString(S.locale)}`, MARGIN + 70, y, {
+        doc.text(`${S.signed}: ${formatTimestampDate(order.firma_fecha, S.locale, sedeTimeZone)}`, MARGIN + 70, y, {
           align: 'right',
         });
       }

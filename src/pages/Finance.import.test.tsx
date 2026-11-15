@@ -25,21 +25,23 @@ vi.mock('../context/auth.context', () => ({
   useAuth: () => mocks.auth.current,
 }));
 
-vi.mock('../services/supabaseService', () => {
-  const finance = {
+vi.mock('../services/commissions.service', () => ({
+  commissionsService: { signComprobante: vi.fn() },
+}));
+vi.mock('../services/finance.service', () => ({
+  financeService: {
     getTransactions: mocks.getTransactions,
     getImportBatches: mocks.getImportBatches,
     createTransaction: vi.fn(),
-  };
-  const dashboard = { getDashboardStats: mocks.getDashboardStats };
-  const workOrders = { getWorkOrders: mocks.getWorkOrders };
-  return {
-    financeService: finance,
-    dashboardService: dashboard,
-    workOrdersService: workOrders,
-    supabaseService: { ...finance, ...dashboard, ...workOrders },
-  };
-});
+  },
+}));
+vi.mock('../services/dashboard.service', () => ({
+  dashboardService: { getDashboardStats: mocks.getDashboardStats },
+  shopTimeZone: () => 'America/Chicago',
+}));
+vi.mock('../services/workOrders.service', () => ({
+  workOrdersService: { getWorkOrders: mocks.getWorkOrders },
+}));
 
 // Stand in for the real ~440 KB chunk, and keep it pending so the test can
 // observe what the user sees during the download.

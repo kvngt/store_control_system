@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, XCircle, X } from 'lucide-react';
+import { CheckCircle2, Info, XCircle, X } from 'lucide-react';
 import { ToastContext, type ToastType } from './toast.context';
 import { useLanguage } from './language.context';
 
@@ -64,6 +64,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           >
             {toast.type === 'success' ? (
               <CheckCircle2 size={20} className="toast-icon" />
+            ) : toast.type === 'info' ? (
+              <Info size={20} className="toast-icon" />
             ) : (
               <XCircle size={20} className="toast-icon" />
             )}

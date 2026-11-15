@@ -2,15 +2,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Qué tablas llega a consultar de verdad la búsqueda: un builder de supabase-js no manda nada
 // hasta que alguien lo espera, así que se anota la tabla en `then`.
-const mocks = vi.hoisted(() => ({ consultadas: [] as string[] }));
+const mocks = vi.hoisted(() => ({
+  consultadas: [] as string[],
+  errorByTable: {} as Record<string, unknown>,
+}));
 
 vi.mock('../lib/supabase', () => {
   const builder = (table: string) => {
     const chain: Record<string, unknown> = {};
     for (const method of ['select', 'or', 'ilike', 'limit', 'eq']) chain[method] = () => chain;
-    chain.then = (resolve: (value: { data: unknown[]; error: null }) => unknown) => {
+    chain.then = (resolve: (value: { data: unknown[]; error: unknown }) => unknown) => {
       mocks.consultadas.push(table);
-      return Promise.resolve({ data: [], error: null }).then(resolve);
+      const err = mocks.errorByTable[table] ?? null;
+      return Promise.resolve({ data: err ? [] : [], error: err }).then(resolve);
     };
     return chain;
   };
@@ -21,6 +25,7 @@ const { searchService } = await import('./search.service');
 
 beforeEach(() => {
   mocks.consultadas = [];
+  mocks.errorByTable = {};
 });
 
 describe('searchService.globalSearch', () => {
@@ -36,5 +41,12 @@ describe('searchService.globalSearch', () => {
     expect(mocks.consultadas).toEqual(['ordenes_trabajo']);
     expect(results.customers).toEqual([]);
     expect(results.vehicles).toEqual([]);
+  });
+
+  it('lanza el error de Supabase en vez de devolver resultados vacíos', async () => {
+    const dbError = { message: 'network error' };
+    mocks.errorByTable = { ordenes_trabajo: dbError };
+
+    await expect(searchService.globalSearch('camry', 'sede-1')).rejects.toEqual(dbError);
   });
 });

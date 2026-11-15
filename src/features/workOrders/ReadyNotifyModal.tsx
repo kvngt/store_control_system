@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Check, Copy, Link as LinkIcon, Loader2, MessageCircle, MessageSquareText, X } from 'lucide-react';
+import { Check, Copy, Link as LinkIcon, Loader2, MessageCircle, MessageSquareText } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { getTranslation } from '../../i18n/translations';
 import { canOpenSms, smsUrl, whatsAppUrl } from '../../lib/phone';
 import { customerPortalService } from '../../services/customerPortal.service';
 import { getErrorMessage } from '../../lib/errors';
 import { AlertError } from '../../components/AlertError';
+import Modal from '../../components/Modal';
 import type { WorkOrder } from '../../types/database';
 
 interface ReadyNotifyModalProps {
@@ -29,7 +30,7 @@ export default function ReadyNotifyModal({ order, onClose }: ReadyNotifyModalPro
       try {
         const token = await customerPortalService.getOrCreateToken(order.id);
         if (!cancelled && token) {
-          setPortalUrl(customerPortalService.buildPortalUrl(token));
+          setPortalUrl(customerPortalService.portalUrl(token));
         }
       } catch (err) {
         if (!cancelled) {
@@ -86,26 +87,13 @@ export default function ReadyNotifyModal({ order, onClose }: ReadyNotifyModalPro
   const smsAvailable = canOpenSms();
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        style={{ maxWidth: 520 }}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="ready-notify-title"
-      >
-        <div className="modal-header">
-          <h3 className="modal-title" id="ready-notify-title">
-            {t('customerLink.readyTitle')}
-          </h3>
-          <button className="modal-close" onClick={onClose} aria-label={t('common.close')}>
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="modal-body">
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-4)' }}>
+    <Modal
+      onClose={onClose}
+      style={{ maxWidth: 520 }}
+      title={t('customerLink.readyTitle')}
+      titleId="ready-notify-title"
+    >
+      <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-4)' }}>
             {t('customerLink.readyHint')}
           </p>
 
@@ -214,8 +202,6 @@ export default function ReadyNotifyModal({ order, onClose }: ReadyNotifyModalPro
               </div>
             </>
           )}
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

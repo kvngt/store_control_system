@@ -30,17 +30,18 @@ vi.mock('react-router-dom', async (importOriginal) => ({
   useNavigate: () => mocks.navigate,
 }));
 
-vi.mock('../services/supabaseService', () => {
-  const vehicles = {
+vi.mock('../services/vehicles.service', () => ({
+  vehiclesService: {
     getVehicles: mocks.getVehicles,
     getVehicleDetail: mocks.getVehicleDetail,
     createVehicle: vi.fn(),
     updateVehicle: vi.fn(),
     deleteVehicle: vi.fn(),
-  };
-  const customers = { getCustomers: mocks.getCustomers, createCustomer: vi.fn() };
-  return { vehiclesService: vehicles, customersService: customers, supabaseService: { ...vehicles, ...customers } };
-});
+  },
+}));
+vi.mock('../services/customers.service', () => ({
+  customersService: { getCustomers: mocks.getCustomers, createCustomer: vi.fn() },
+}));
 
 vi.mock('../lib/vin', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../lib/vin')>();

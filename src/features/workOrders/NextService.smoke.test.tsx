@@ -3,11 +3,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Tag, Wrench } from 'lucide-react';
 import { renderWithProviders, MECHANIC_USER } from '../../test/renderWithProviders';
 import ServiceStickerModal from './ServiceStickerModal';
 import NextServiceCard from './NextServiceCard';
 import QuickActions from './QuickActions';
-import type { WorkOrder } from '../../types/database';
+import { nextServiceService } from '../../services/nextService.service';
+import type { OrderNextService, WorkOrder } from '../../types/database';
 
 vi.mock('../../context/auth.context', () => ({
   useAuth: vi.fn(),
@@ -75,7 +77,7 @@ describe('NextService smoke test', () => {
   it('el admin ve Sticker de servicio y el técnico ve Sugerir próximo servicio en QuickActions', () => {
     // Admin quick actions
     const adminActions = [
-      { key: 'serviceSticker', icon: vi.fn() as any, label: 'quickActions.serviceSticker', onClick: vi.fn() },
+      { key: 'serviceSticker', icon: Tag, label: 'quickActions.serviceSticker', onClick: vi.fn() },
     ];
     const { unmount } = renderWithProviders(<QuickActions actions={adminActions} />);
     expect(screen.getByRole('button', { name: /Sticker de servicio/i })).toBeInTheDocument();
@@ -83,7 +85,7 @@ describe('NextService smoke test', () => {
 
     // Technician quick actions
     const techActions = [
-      { key: 'suggestService', icon: vi.fn() as any, label: 'quickActions.suggestService', onClick: vi.fn() },
+      { key: 'suggestService', icon: Wrench, label: 'quickActions.suggestService', onClick: vi.fn() },
     ];
     renderWithProviders(<QuickActions actions={techActions} />);
     expect(screen.getByRole('button', { name: /Sugerir próximo servicio/i })).toBeInTheDocument();
@@ -161,13 +163,15 @@ describe('NextService smoke test', () => {
     const onOpenModalMock = vi.fn();
 
     // Mock query result for NextServiceCard with a technician suggestion
-    const serviceWithSuggestion = {
-      id: 'order-123',
+    const serviceWithSuggestion: OrderNextService = {
       orden_id: 'order-123',
+      sede_id: 'sede-centro',
       fecha: null,
       millas: null,
       nota: null,
       token: null,
+      programado_por: null,
+      programado_en: null,
       sugerido_fecha: '2027-10-14',
       sugerido_millas: 65000,
       sugerido_nota: 'Aceite sintético 5W-30',
@@ -175,13 +179,9 @@ describe('NextService smoke test', () => {
       sugerido_en: '2026-10-14T11:00:00Z',
     };
 
-    vi.spyOn(await import('../../services/nextService.service'), 'nextServiceService', 'get').mockReturnValue({
-      getNextService: vi.fn().mockResolvedValue(serviceWithSuggestion),
-      suggest: vi.fn(),
-      program: vi.fn(),
-      remove: vi.fn(),
-      discardSuggestion: vi.fn(),
-    } as any);
+    const getNextServiceSpy = vi
+      .spyOn(nextServiceService, 'getNextService')
+      .mockResolvedValueOnce(serviceWithSuggestion);
 
     const { unmount } = renderWithProviders(
       <NextServiceCard
@@ -205,6 +205,7 @@ describe('NextService smoke test', () => {
       nota: 'Aceite sintético 5W-30',
     });
     unmount();
+    getNextServiceSpy.mockRestore();
 
     // Ahora renderizamos ServiceStickerModal con esos datos iniciales y comprobamos que los campos se llenaron
     renderWithProviders(

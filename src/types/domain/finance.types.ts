@@ -27,7 +27,7 @@ export interface FinancialTransaction {
   metodo_pago?: PaymentMethod | null;
   /** Foto del cheque o de la transferencia, en el bucket privado `comprobantes`. */
   comprobante_ruta?: string | null;
-  registrado_por?: string;
+  registrado_por?: string | null;
   /**
    * Quién lo asentó (20261010000038): 'manual' lo escribió una persona desde Finanzas; 'sistema' lo
    * asentó la base (un cobro, el costo de un repuesto, el egreso de un pago de comisiones). Lo del
@@ -128,7 +128,7 @@ export interface BankStatementImport {
   /** SHA-256 of the imported PDF; null on batches predating the column. */
   hash_archivo?: string | null;
   fecha_importacion: string;
-  importado_por?: string;
+  importado_por?: string | null;
   total_transacciones: number;
   creado_en: string;
 }

@@ -10,18 +10,20 @@ import {
   Percent,
   Trash2,
   Wallet,
-  X,
 } from 'lucide-react';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { useToast } from '../context/toast.context';
-import { commissionsService, sedesService, workOrdersService } from '../services/supabaseService';
-import { queryKeys } from '../lib/queryClient';
+import { commissionsService } from '../services/commissions.service';
+import { sedesService } from '../services/sedes.service';
+import { workOrdersService } from '../services/workOrders.service';
+import { invalidateOrderEffects, queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { formatDay, todayLocal } from '../lib/dates';
 import { getErrorMessage } from '../lib/errors';
 import type { Commission, CommissionBalance, CommissionPayment } from '../types/database';
 import { AlertError } from '../components/AlertError';
+import Modal from '../components/Modal';
 import { money, sumMoney } from '../lib/money';
 import { openInNewTab } from '../lib/openInNewTab';
 import CommissionApproval from '../features/workOrders/CommissionApproval';
@@ -75,9 +77,7 @@ export default function Payroll() {
   const error = loadError ? getErrorMessage(loadError, language) : '';
 
   const reload = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.commissions(sedeId) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.commissionPayments(sedeId) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.transactions(sedeId) });
+    void invalidateOrderEffects(queryClient, { sedeId });
   };
 
   const pending = useMemo(() => commissions.filter((c) => !c.pago_id), [commissions]);
@@ -107,14 +107,15 @@ export default function Payroll() {
     }
   };
 
-  const approveOne = async (comisionId: string, montoNuevo?: number, porcentajeNuevo?: number) => {
+  const approveOne = async (comisionId: string, montoNuevo?: number, porcentajeNuevo?: number): Promise<boolean> => {
     try {
       await workOrdersService.approveCommission(comisionId, montoNuevo, porcentajeNuevo);
       reload();
       showToast('success', t('commission.approvedSuccess'));
+      return true;
     } catch (err) {
       showToast('error', t('payroll.approveError'), getErrorMessage(err, language));
-      throw err;
+      return false;
     }
   };
 
@@ -157,23 +158,32 @@ export default function Payroll() {
   });
   const [chequeFile, setChequeFile] = useState<File | null>(null);
   const [payError, setPayError] = useState('');
+  const [dateInvalid, setDateInvalid] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [undoingId, setUndoingId] = useState<string | null>(null);
 
   const openPayModal = (balance: CommissionBalance) => {
     setPayTarget(balance);
     setPayForm({ fecha_pago: todayLocal(), metodo: 'cheque', numero_cheque: '', notas: '' });
     setChequeFile(null);
+    setDateInvalid(false);
     setPayError('');
   };
 
   const submitPayment = async () => {
     if (!payTarget) return;
+    if (!payForm.fecha_pago.trim()) {
+      setDateInvalid(true);
+      setPayError(t('payroll.dateRequired'));
+      return;
+    }
     // A cheque with no number and no photo is a payment nobody can trace back
     // to a bank statement, which is the whole reason the shop asked for this.
     if (payForm.metodo === 'cheque' && !payForm.numero_cheque.trim() && !chequeFile) {
       setPayError(t('payroll.chequeEvidenceRequired'));
       return;
     }
+    setDateInvalid(false);
     setPaying(true);
     setPayError('');
     try {
@@ -205,13 +215,17 @@ export default function Payroll() {
   };
 
   const undoPayment = async (payment: CommissionPayment) => {
+    if (undoingId) return;
     if (!confirm(t('payroll.confirmUndoPayment'))) return;
+    setUndoingId(payment.id);
     try {
       await commissionsService.deletePayment(payment.id);
       reload();
       showToast('success', t('payroll.paymentUndone'));
     } catch (err) {
       showToast('error', t('payroll.paymentUndoError'), getErrorMessage(err, language));
+    } finally {
+      setUndoingId(null);
     }
   };
 
@@ -533,6 +547,7 @@ export default function Payroll() {
                           className="btn btn-ghost btn-sm btn-icon"
                           title={t('payroll.undoPayment')}
                           style={{ color: 'var(--color-danger)' }}
+                          disabled={undoingId !== null}
                           onClick={() => undoPayment(p)}
                         >
                           <Trash2 size={16} />
@@ -552,14 +567,20 @@ export default function Payroll() {
 
       {/* ===== Pay dialog ===== */}
       {payTarget && (
-        <div className="modal-overlay" onClick={() => setPayTarget(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">{t('payroll.payBalance')}</h3>
-              <button className="modal-close" onClick={() => setPayTarget(null)}><X size={20} /></button>
-            </div>
-            <div className="modal-body">
-              <AlertError message={payError} />
+        <Modal
+          onClose={() => setPayTarget(null)}
+          closeDisabled={paying}
+          title={t('payroll.payBalance')}
+          footer={
+            <>
+              <button className="btn btn-secondary" disabled={paying} onClick={() => !paying && setPayTarget(null)}>{t('common.cancel')}</button>
+              <button className="btn btn-primary" onClick={submitPayment} disabled={paying}>
+                {paying ? t('common.loading') : t('payroll.confirmPayment')}
+              </button>
+            </>
+          }
+        >
+          <AlertError message={payError} />
 
               <div className="share-target">
                 <div className="share-target-label">{t('payroll.employee')}</div>
@@ -586,7 +607,11 @@ export default function Payroll() {
                     id="pay-date"
                     type="date"
                     value={payForm.fecha_pago}
-                    onChange={(e) => setPayForm({ ...payForm, fecha_pago: e.target.value })}
+                    aria-invalid={dateInvalid || undefined}
+                    onChange={(e) => {
+                      setDateInvalid(false);
+                      setPayForm({ ...payForm, fecha_pago: e.target.value });
+                    }}
                   />
                 </div>
                 <div className="form-group">
@@ -638,15 +663,7 @@ export default function Payroll() {
                   onChange={(e) => setPayForm({ ...payForm, notas: e.target.value })}
                 />
               </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setPayTarget(null)}>{t('common.cancel')}</button>
-              <button className="btn btn-primary" onClick={submitPayment} disabled={paying}>
-                {paying ? t('common.loading') : t('payroll.confirmPayment')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

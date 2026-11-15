@@ -39,9 +39,9 @@ test.describe('FIN-01 | Carga de Finanzas', () => {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
     await page.goto('/finance');
     await page.waitForSelector('#new-transaction-btn', { timeout: 12000 });
-    await expect(
-      page.locator('button:has-text("Importar"), button:has-text("Import"), #import-statement-btn').first()
-    ).toBeVisible();
+    // Importar vive en la vista de estados de cuenta: es contabilidad aparte de lo que registra la app.
+    await page.getByRole('tab', { name: /Estados de cuenta|Bank statements/ }).click();
+    await expect(page.locator('#import-statement-btn')).toBeVisible();
   });
 });
 
@@ -132,8 +132,8 @@ test.describe('FIN-04 | Lista de importaciones bancarias (si existen)', () => {
     await page.goto('/finance');
     await page.waitForSelector('#new-transaction-btn', { timeout: 12000 });
 
-    // The imports section only renders when imports.length > 0 (Finance.tsx line 286)
-    // So we can't guarantee it's visible; instead verify the Import button exists
+    // Importar y la lista de importaciones viven en la vista de estados de cuenta.
+    await page.getByRole('tab', { name: /Estados de cuenta|Bank statements/ }).click();
     await expect(page.locator('#import-statement-btn').first()).toBeVisible({ timeout: 8000 });
 
     // If imports do exist, verify their section header
@@ -209,6 +209,7 @@ test.describe('PAY-03 | Comisiones es solo para administradores', () => {
   test('un mecánico que va a /payroll vuelve al panel', async ({ page }) => {
     await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
     await page.goto('/payroll');
-    await expect(page).toHaveURL(/\/$/, { timeout: 10000 });
+    // El panel del personal vive en /panel desde el 28/10/2026 (la raíz es la página del taller).
+    await expect(page).toHaveURL(/\/panel$/, { timeout: 10000 });
   });
 });

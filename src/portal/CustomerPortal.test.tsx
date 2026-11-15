@@ -322,20 +322,24 @@ describe('CustomerPortal', () => {
     expect(await screen.findByRole('heading', { name: /2019 Toyota Camry/ })).toBeInTheDocument();
   });
 
-  it('la baja de correos se confirma con un botón, nunca al abrir el enlace', async () => {
+  it('la baja de correos se confirma con un botón, nunca al abrir el enlace, y aclara que aplica a todo el taller', async () => {
     window.history.replaceState(null, '', `/r/${TOKEN}?correos=baja`);
     mocks.fetchPortal.mockResolvedValue(report());
     mocks.setEmailPreference.mockResolvedValue(false);
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<CustomerPortal token={TOKEN} />);
 
     const section = (await screen.findByRole('heading', { name: /Avisos por correo/ })).closest<HTMLElement>('details, section')!;
+    expect(within(section).getByText(/todas sus órdenes/)).toBeInTheDocument();
     // Abrir el enlace de baja no da de baja: un filtro de correo lo abre solo.
     expect(mocks.setEmailPreference).not.toHaveBeenCalled();
     await userEvent.click(within(section).getByRole('button', { name: 'Dejar de recibir correos' }));
 
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/todas sus órdenes/));
     await waitFor(() => expect(mocks.setEmailPreference).toHaveBeenCalledWith(TOKEN, false));
     expect(await within(section).findByRole('button', { name: 'Volver a recibir correos' })).toBeInTheDocument();
+    expect(within(section).getByText(/ninguna de sus órdenes/)).toBeInTheDocument();
+    confirmSpy.mockRestore();
   });
 
   describe('presupuesto', () => {
@@ -364,19 +368,39 @@ describe('CustomerPortal', () => {
       expect(screen.queryByText('Revisando un trabajo adicional')).not.toBeInTheDocument();
     });
 
-    it('nada viene marcado y autorizar exige marcar algo y escribir el nombre', async () => {
+    it('nada viene marcado; los botones no se bloquean por el nombre y al pulsar sin nombre avisan y enfocan el campo', async () => {
       mocks.fetchPortal.mockResolvedValue(withQuote());
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
       render(<CustomerPortal token={TOKEN} />);
 
       const section = (await screen.findByRole('heading', { name: /Presupuesto por autorizar/ })).closest<HTMLElement>('details, section')!;
       const authorize = within(section).getByRole('button', { name: /Autorizar lo marcado/ });
-      expect(authorize).toBeDisabled();
+      const rejectAll = within(section).getByRole('button', { name: /No autorizar nada/ });
+      const nameInput = within(section).getByLabelText('Su nombre');
 
-      await userEvent.click(within(section).getByLabelText(/Alineación/));
+      expect(within(section).getByText(/constancia de su respuesta/)).toBeInTheDocument();
       expect(authorize).toBeDisabled();
-      await userEvent.type(within(section).getByLabelText('Su nombre'), 'Marta Ruiz');
+      expect(rejectAll).toBeEnabled();
+
+      // Al pulsar "No autorizar nada" sin nombre, muestra el aviso junto al campo y lo enfoca.
+      await userEvent.click(rejectAll);
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(mocks.answerQuote).not.toHaveBeenCalled();
+      expect(within(section).getByRole('alert')).toHaveTextContent(/Escriba su nombre/);
+      expect(nameInput).toHaveFocus();
+      expect(nameInput).toHaveAttribute('aria-invalid', 'true');
+
+      // Con línea marcada y sin nombre, tampoco se deshabilita "Autorizar lo marcado".
+      await userEvent.click(within(section).getByLabelText(/Alineación/));
       expect(authorize).toBeEnabled();
       expect(within(section).getByText('Total autorizado').parentElement).toHaveTextContent('$200.00');
+      await userEvent.click(authorize);
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(nameInput).toHaveFocus();
+
+      await userEvent.type(nameInput, 'Marta Ruiz');
+      expect(within(section).queryByRole('alert')).not.toBeInTheDocument();
+      confirmSpy.mockRestore();
     });
 
     it('manda lo marcado y todas las líneas que vio, y muestra la confirmación', async () => {
@@ -796,6 +820,132 @@ describe('CustomerPortal — la cuenta', () => {
     const quoteHeading = await screen.findByRole('heading', { name: /Presupuesto por autorizar/ });
     const quoteDetails = quoteHeading.closest('details') as HTMLDetailsElement;
     expect(quoteDetails.open).toBe(true);
+  });
+
+  describe('Su cuenta con depósito, devoluciones o líneas no autorizadas (total = 0)', () => {
+    const emptyAccount = {
+      mano_obra: [],
+      repuestos: [],
+      no_autorizados: [],
+      total_mano_obra: 0,
+      total_repuestos: 0,
+      subtotal: 0,
+      descuento: 0,
+      total: 0,
+      deposito: 0,
+      pagado: 0,
+      otros_pagos: 0,
+      saldo: 0,
+    };
+
+    it('muestra "Sin cargos" cuando todo está vacío y en cero', async () => {
+      mocks.fetchPortal.mockResolvedValue(report({ cuenta: emptyAccount }));
+      render(<CustomerPortal token={TOKEN} />);
+
+      await userEvent.click(await screen.findByRole('heading', { name: /Su cuenta/ }));
+      expect(screen.getByText('El taller todavía no registró cargos en esta orden.')).toBeInTheDocument();
+    });
+
+    it('muestra el desglose si hay depósito aunque total sea 0', async () => {
+      mocks.fetchPortal.mockResolvedValue(
+        report({
+          cuenta: { ...emptyAccount, deposito: 200, pagado: 200, saldo: -200 },
+        })
+      );
+      render(<CustomerPortal token={TOKEN} />);
+
+      const heading = await screen.findByRole('heading', { name: /Su cuenta/ });
+      const details = heading.closest('details')!;
+      await userEvent.click(heading);
+
+      expect(within(details).queryByText('El taller todavía no registró cargos en esta orden.')).not.toBeInTheDocument();
+      const depositLabel = within(details).getByText('Depósito y anticipos');
+      expect(depositLabel).toBeInTheDocument();
+      expect(within(depositLabel.parentElement!).getByText('$200.00')).toBeInTheDocument();
+    });
+
+    it('muestra el desglose si hay líneas no autorizadas o devoluciones aunque total sea 0', async () => {
+      mocks.fetchPortal.mockResolvedValue(
+        report({
+          cuenta: {
+            ...emptyAccount,
+            no_autorizados: [{ descripcion: 'Pintura de cofre', monto: 450 }],
+            otros_pagos: -150,
+            saldo: 150,
+          },
+        })
+      );
+      render(<CustomerPortal token={TOKEN} />);
+
+      const heading = await screen.findByRole('heading', { name: /Su cuenta/ });
+      const details = heading.closest('details')!;
+      await userEvent.click(heading);
+
+      expect(within(details).queryByText('El taller todavía no registró cargos en esta orden.')).not.toBeInTheDocument();
+      expect(within(details).getByText('Pintura de cofre')).toBeInTheDocument();
+      expect(within(details).getByText('Devuelto')).toBeInTheDocument();
+    });
+  });
+
+  describe('baja de correos con enlace vencido (auditoría 2026-11)', () => {
+    it('muestra solo el botón de dejar de recibir correos y al confirmar no ofrece reactivarlos', async () => {
+      mocks.fetchPortal.mockResolvedValue({
+        estado_enlace: 'vencido',
+        taller: report().taller,
+        cliente: { tiene_correo: true, acepta_correos: true },
+      });
+      mocks.setEmailPreference.mockResolvedValue(false);
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+      render(<CustomerPortal token={TOKEN} />);
+
+      const heading = await screen.findByRole('heading', { name: 'Avisos por correo' });
+      await userEvent.click(heading);
+
+      const stopBtn = screen.getByRole('button', { name: 'Dejar de recibir correos' });
+      expect(screen.queryByRole('button', { name: 'Volver a recibir correos' })).not.toBeInTheDocument();
+
+      await userEvent.click(stopBtn);
+
+      await waitFor(() => expect(mocks.setEmailPreference).toHaveBeenCalledWith(TOKEN, false));
+      expect(await screen.findByText('Preferencia guardada.')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Volver a recibir correos' })).not.toBeInTheDocument();
+      expect(screen.getByText('Si desea volver a recibir avisos por correo, pida un enlace nuevo al taller.')).toBeInTheDocument();
+    });
+
+    it('con ?correos=baja y enlace vencido abre y resalta el control de baja', async () => {
+      window.history.replaceState({}, '', '/?correos=baja');
+      try {
+        mocks.fetchPortal.mockResolvedValue({
+          estado_enlace: 'vencido',
+          taller: report().taller,
+          cliente: { tiene_correo: true, acepta_correos: true },
+        });
+
+        render(<CustomerPortal token={TOKEN} />);
+
+        const heading = await screen.findByRole('heading', { name: 'Avisos por correo' });
+        const details = heading.closest('details') as HTMLDetailsElement;
+        expect(details.open).toBe(true);
+        expect(details).toHaveClass('is-highlighted');
+        expect(screen.getByText('Llegó desde el enlace de baja del correo. Confirme con el botón:')).toBeInTheDocument();
+      } finally {
+        window.history.replaceState({}, '', '/');
+      }
+    });
+
+    it('si el cliente no tiene correo, con enlace vencido no muestra Avisos por correo', async () => {
+      mocks.fetchPortal.mockResolvedValue({
+        estado_enlace: 'vencido',
+        taller: report().taller,
+        cliente: { tiene_correo: false, acepta_correos: false },
+      });
+
+      render(<CustomerPortal token={TOKEN} />);
+
+      expect(await screen.findByRole('heading', { name: 'Este enlace venció' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Avisos por correo' })).not.toBeInTheDocument();
+    });
   });
 });
 

@@ -30,11 +30,34 @@ export function errorResponse(error: string, code: string, status: number) {
   return jsonResponse({ error, code }, status);
 }
 
+/** Respuesta uniforme cuando falla una consulta de comprobación en la base. */
+export function unavailableResponse() {
+  return errorResponse('No se pudo comprobar en este momento. Intenta de nuevo.', 'unavailable', 503);
+}
+
 export interface AdminCaller {
   /** El administrador que llama. */
   userId: string;
   /** Cliente con la llave de servicio: se salta RLS, úsalo solo tras esta comprobación. */
   adminClient: SupabaseClient;
+}
+
+export type SupabaseClientFactory = (
+  supabaseUrl: string,
+  supabaseKey: string,
+  options?: { global?: { headers?: Record<string, string> } },
+) => SupabaseClient;
+
+export interface AdminCallerDeps {
+  createClient?: SupabaseClientFactory;
+  getEnv?: (key: string) => string | undefined;
+}
+
+export function defaultAdminCallerDeps(): Required<AdminCallerDeps> {
+  return {
+    createClient: (url, key, options) => createClient(url, key, options),
+    getEnv: (key) => Deno.env.get(key),
+  };
 }
 
 /**
@@ -46,18 +69,22 @@ export interface AdminCaller {
 export async function resolveAdminCaller(
   req: Request,
   accion: string,
+  deps: AdminCallerDeps = {},
 ): Promise<AdminCaller | Response> {
   const authHeader = req.headers.get('Authorization');
   if (!authHeader) {
     return errorResponse('Tu sesión expiró. Vuelve a iniciar sesión.', 'session_expired', 401);
   }
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const getEnv = deps.getEnv ?? ((key) => Deno.env.get(key));
+  const makeClient = deps.createClient ?? ((url, key, options) => createClient(url, key, options));
+
+  const supabaseUrl = getEnv('SUPABASE_URL')!;
+  const anonKey = getEnv('SUPABASE_ANON_KEY')!;
+  const serviceRoleKey = getEnv('SUPABASE_SERVICE_ROLE_KEY')!;
 
   // Con el JWT de quien llama: sirve solo para saber quién es.
-  const callerClient = createClient(supabaseUrl, anonKey, {
+  const callerClient = makeClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   });
 
@@ -80,7 +107,7 @@ export async function resolveAdminCaller(
     return errorResponse('Tu sesión expiró. Vuelve a iniciar sesión.', 'session_expired', 401);
   }
 
-  const adminClient = createClient(supabaseUrl, serviceRoleKey);
+  const adminClient = makeClient(supabaseUrl, serviceRoleKey);
   const { data: callerProfile, error: profileError } = await adminClient
     .from('perfiles')
     .select('rol')

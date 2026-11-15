@@ -61,16 +61,18 @@ vi.mock('../services/employees.service', () => ({
   employeesService: { getPaySchemes: vi.fn().mockResolvedValue([]) },
 }));
 
-vi.mock('../services/supabaseService', () => {
-  const sedes = {
+vi.mock('../services/sedes.service', () => ({
+  sedesService: {
     getSedes: mocks.getSedes,
     // Unused by these tests, but Settings holds references to them.
     createSede: vi.fn(),
     updateSede: vi.fn(),
     deleteSede: vi.fn(),
     uploadSedeLogo: vi.fn(),
-  };
-  const users = {
+  },
+}));
+vi.mock('../services/users.service', () => ({
+  usersService: {
     getUsers: mocks.getUsers,
     createEmployee: mocks.createEmployee,
     updateEmployee: mocks.updateEmployee,
@@ -79,9 +81,11 @@ vi.mock('../services/supabaseService', () => {
     updateProfile: vi.fn(),
     uploadAvatar: vi.fn(),
     isEmailTaken: vi.fn().mockResolvedValue(false),
-  };
-  return { sedesService: sedes, usersService: users, supabaseService: { ...sedes, ...users } };
-});
+  },
+}));
+vi.mock('../services/notifications.service', () => ({
+  notificationsService: { usersWithPush: vi.fn().mockResolvedValue({}) },
+}));
 
 const { default: Employees } = await import('./Employees');
 

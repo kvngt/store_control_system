@@ -13,6 +13,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders, authValue, ADMIN_USER, SEDE_CENTRO } from '../test/renderWithProviders';
 import type { WorkOrder } from '../types/database';
+import * as queryClientLib from '../lib/queryClient';
 
 const mocks = vi.hoisted(() => ({
   auth: { current: null as ReturnType<typeof import('../test/renderWithProviders').authValue> | null },
@@ -25,21 +26,23 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../context/auth.context', () => ({ useAuth: () => mocks.auth.current }));
 
-vi.mock('../services/supabaseService', () => {
-  const finance = {
+vi.mock('../services/commissions.service', () => ({
+  commissionsService: { signComprobante: vi.fn() },
+}));
+vi.mock('../services/finance.service', () => ({
+  financeService: {
     getTransactions: mocks.getTransactions,
     getImportBatches: mocks.getImportBatches,
     createTransaction: mocks.createTransaction,
-  };
-  const dashboard = { getDashboardStats: mocks.getDashboardStats };
-  const workOrders = { getWorkOrders: mocks.getWorkOrders };
-  return {
-    financeService: finance,
-    dashboardService: dashboard,
-    workOrdersService: workOrders,
-    supabaseService: { ...finance, ...dashboard, ...workOrders },
-  };
-});
+  },
+}));
+vi.mock('../services/dashboard.service', () => ({
+  dashboardService: { getDashboardStats: mocks.getDashboardStats },
+  shopTimeZone: () => 'America/Chicago',
+}));
+vi.mock('../services/workOrders.service', () => ({
+  workOrdersService: { getWorkOrders: mocks.getWorkOrders },
+}));
 
 const { default: Finance } = await import('./Finance');
 
@@ -85,6 +88,7 @@ beforeEach(() => {
 
 describe('Linking a manual movement to a work order', () => {
   it('sends the selected order with the movement', async () => {
+    const spy = vi.spyOn(queryClientLib, 'invalidateOrderEffects');
     const { user, modal } = await openDialog();
 
     await user.type(within(modal).getByPlaceholderText('0.00'), '250');
@@ -96,6 +100,7 @@ describe('Linking a manual movement to a work order', () => {
     expect(mocks.createTransaction).toHaveBeenCalledWith(
       expect.objectContaining({ monto: 250, referencia_orden_id: ORDER.id })
     );
+    expect(spy).toHaveBeenCalledWith(expect.anything(), { orderId: ORDER.id, sedeId: SEDE_CENTRO.id });
   });
 
   it('sends null, not an empty string, when no order is chosen', async () => {
@@ -149,5 +154,42 @@ describe('Linking a manual movement to a work order', () => {
 
     expect(mocks.createTransaction).not.toHaveBeenCalled();
     expect((await within(modal).findByRole('alert')).textContent).toMatch(/descripción/i);
+  });
+
+  it('rejects an empty date inside the dialog instead of sending ""', async () => {
+    const { user, modal } = await openDialog();
+
+    await user.type(within(modal).getByPlaceholderText('0.00'), '120');
+    const dateInput = within(modal).getByLabelText('Fecha');
+    await user.clear(dateInput);
+    await user.type(within(modal).getByRole('textbox', { name: 'Descripción' }), 'Pago');
+    await user.click(within(modal).getByRole('button', { name: /^Crear$/i }));
+
+    expect(mocks.createTransaction).not.toHaveBeenCalled();
+    expect(dateInput).toHaveAttribute('aria-invalid', 'true');
+    expect((await within(modal).findByRole('alert')).textContent).toMatch(/fecha/i);
+  });
+
+  it('resets category and filters category options by selected type', async () => {
+    const { user, modal } = await openDialog();
+    const typeSelect = within(modal).getByLabelText('Tipo') as HTMLSelectElement;
+    const catSelect = within(modal).getByLabelText('Categoría') as HTMLSelectElement;
+
+    expect(typeSelect.value).toBe('ingreso');
+    expect(catSelect.value).toBe('pago_cliente');
+    expect(Array.from(catSelect.options).map((o) => o.value)).toEqual(['pago_cliente']);
+
+    await user.selectOptions(typeSelect, 'egreso');
+    expect(catSelect.value).toBe('gasto_operativo');
+    expect(Array.from(catSelect.options).map((o) => o.value)).toEqual([
+      'compra_repuesto',
+      'planilla',
+      'gasto_operativo',
+      'comision_bancaria',
+    ]);
+
+    await user.selectOptions(typeSelect, 'ingreso');
+    expect(catSelect.value).toBe('pago_cliente');
+    expect(Array.from(catSelect.options).map((o) => o.value)).toEqual(['pago_cliente']);
   });
 });

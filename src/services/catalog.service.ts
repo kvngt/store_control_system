@@ -6,7 +6,7 @@ export interface SaveCatalogJobInput {
   sede_id: string;
   nombre: string;
   activo?: boolean;
-  lineas: CatalogJobLine[];
+  lineas: (Omit<CatalogJobLine, 'posicion'> & { posicion?: number })[];
 }
 
 export const catalogService = {

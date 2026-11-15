@@ -35,6 +35,9 @@
 | Revisión 30/10–03/11 | Revisión completa del proyecto con seguimiento de las órdenes reales: ~30 errores de la app arreglados, migración `040` (traducciones, grupo «sin nada autorizado», fotos de una inspección publicada, indicadores, sticker, reloj), `delete-employee` más estricto, zona horaria de Maryland por defecto, `/ayuda` sin 403, documentación y Ayuda al día | **Publicado** el 04/11/2026: commits `259cd1f` y `c3a31d7` en `main`, `db push` de la `040`, `delete-employee` v13 y `process-outbox` v20 (lo hizo la persona responsable). Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
 | Decisiones 04/11 | El técnico no empieza ni termina sin nada autorizado; una orden entregada se archiva, no se borra (migración `041`); el correo del presupuesto espera a la traducción; subidas rechazadas con un motivo claro; la página no muestra el cobro del diagnóstico; se borró el video original; `config.toml` para la CLI 3 | **Publicado** el 04/11/2026: `db push` de la `041` (95 migraciones), `process-outbox` v21 y push a `main`. Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
 | «Atrás» 04/11 | El botón «atrás» del teléfono ya no hace perder lo que el técnico escribe o graba: avance de una tarea, trabajo adicional, pestaña Avances, nota de un punto, grabadores, visor y próximo servicio; trampa del historial en pila; arreglos del alta | **Publicado** el 04/11/2026 (push a `main`; sin migración ni funciones). Falta probarlo en un Android real. Ver la [bitácora](#04112026-tarde--claude-code-el-botón-atrás-en-lo-que-el-técnico-escribe-o-graba) |
+| Calidad 15/11 | Cheque y comprobante en una sola regla (también en el alta), inglés de correos y portal, tipos de la app comprobados contra la base, edge functions sin código repetido, los siete archivos grandes partidos, e2e contra la base local (77/77) | **Publicado** el 15/11/2026: `db push` de la `043` y la `044` (98 migraciones), `functions deploy` de las siete (`portal` v11, `process-outbox` v22, `cleanup-storage` v9, `create-employee` v14, `update-employee` v12, `delete-employee` v14, `traducir-texto` v2), push a `main` y `qa:security` contra producción (178 PASS, 0 FAIL, 31 SKIP). Ver la [bitácora](#15112026-noche--claude-code-publicación-de-la-auditoría-y-documentación-al-día) |
+| Auditoría (2) 14–15/11 | Lo que quedó abierto: diálogo común accesible, migración `044`, fachada retirada, pruebas y arreglos de las edge functions, botones de 44 px e inglés de EE. UU. | **Publicado** el 15/11/2026: `db push` de la `043` y la `044` (98 migraciones), `functions deploy` de las siete (`portal` v11, `process-outbox` v22, `cleanup-storage` v9, `create-employee` v14, `update-employee` v12, `delete-employee` v14, `traducir-texto` v2), push a `main` y `qa:security` contra producción (178 PASS, 0 FAIL, 31 SKIP). Ver la [bitácora](#15112026-noche--claude-code-publicación-de-la-auditoría-y-documentación-al-día) |
+| Auditoría 13–14/11 | Auditoría completa (base, app, experiencia del taller, cliente y arquitectura) con Gemini 4 Hydrogen como programador: 13 errores de comportamiento de la app, migración `043` con 15 puntos de permisos y dinero, y los flujos del cliente y del taller (presupuesto por WhatsApp, alta de empleado, portal, PDF) | **Publicado** el 15/11/2026: `db push` de la `043` y la `044` (98 migraciones), `functions deploy` de las siete (`portal` v11, `process-outbox` v22, `cleanup-storage` v9, `create-employee` v14, `update-employee` v12, `delete-employee` v14, `traducir-texto` v2), push a `main` y `qa:security` contra producción (178 PASS, 0 FAIL, 31 SKIP). Ver la [bitácora](#15112026-noche--claude-code-publicación-de-la-auditoría-y-documentación-al-día) |
 | Revisión desde cero 06/11 | La primera orden recorrida como el taller y revisión de código con Gemini: el técnico ya no desmarca tareas de una orden terminada (migración `042`), textos y fechas sin traducir, alerta de avance bajo, plurales, tablas vacías y el alta más rápida | **Publicado** el 07/11/2026: `db push` de la `042` (96 migraciones; verificada la regla y que `anon` no ejecuta la función) y push a `main` (`4cdddd9`, comprobado en vivo). Ver la [bitácora](#06112026-noche--claude-code-revisión-con-la-primera-orden-desde-cero-migración-042) |
 | Dibujo del vehículo 06/11 | El dibujo para marcar daños pasa de líneas rectas a un sedán moderno con curvas, en sus cinco vistas: la app, el enlace del cliente y el PDF | **Publicado** el 06/11/2026 (push a `main`; sin migración ni funciones). Ver la [bitácora](#06112026-tarde--claude-code-el-dibujo-del-vehículo-es-un-sedán-moderno) |
 | Empezar de cero 06/11 | Producción sin órdenes, Finanzas, comisiones, avisos ni archivos de las órdenes; se quedan las cuentas, los clientes con sus vehículos y la configuración de la sede | **Hecho en producción** el 06/11/2026 (`scripts/admin/empezar-de-cero.sql`, con respaldo previo fuera del repositorio; los vehículos se borraron y se devolvieron del respaldo; `orden_media` vacío). Ver la [bitácora](#06112026--claude-code-producción-empieza-de-cero) |
@@ -56,6 +59,269 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 15/11/2026, noche — Claude Code (publicación de la auditoría y documentación al día)
+
+- **Pedido de la persona responsable:** «realiza la publicación y revisa la carpeta de documentación».
+- **Antes de publicar:** consulta de solo lectura a producción contra las restricciones de la `044`
+  (estados de cuenta repetidos, montos negativos, `tipo_tarea` fuera de la lista y asignaciones
+  repetidas): ninguna fila en conflicto; producción tenía 2 órdenes de prueba. `db push --dry-run`
+  mostraba solo la `043` y la `044`.
+- **Publicado:**
+  1. `db push` de la `043` y la `044`; `db:check`: 98 migraciones aplicadas. Comprobado en
+     producción: `orden_asignaciones_unica`, `finanzas_movimientos_monto_no_negativo`,
+     `orden_enlaces.revocado_por`, y que `traducciones_portal` ya no la ejecutan `anon` ni
+     `authenticated`;
+  2. `functions deploy` de las siete (con `--use-api`): `portal` v11, `process-outbox` v22,
+     `cleanup-storage` v9, `create-employee` v14, `update-employee` v12, `delete-employee` v14,
+     `traducir-texto` v2, con la verificación de JWT de siempre. Una petición vacía da 401 en las
+     que piden secreto o sesión y 404 en `portal` (sin enlace no hay nada);
+  3. `qa:security` contra producción: **178 PASS, 0 FAIL, 31 SKIP** (los SKIP necesitan órdenes de
+     prueba que producción no tiene);
+  4. commit y push a `main` (Hostinger publica en uno o dos minutos).
+- **Documentación:** Gemini 4 Hydrogen revisó `docs/` contra una lista de hechos verificados (orden 20)
+  y Claude revisó su diff: 22 documentos al día con las migraciones `043`–`044`, las cifras de
+  pruebas, los comandos nuevos (`db:types`, `test:functions`, `test:e2e:local`), los archivos
+  partidos, la regla del cheque y el inglés de los manuales (cada nombre nuevo comprobado contra
+  `translations.ts`). Claude corrigió lo que Hydrogen inventó o dejó viejo: el nombre de la `044`
+  (`20261010000044_auditoria_2026_11_b`), las cifras de `qa:security`, un «token de baja» que no
+  existe, la `042` atribuida a la auditoría y las versiones de las funciones. Los 357 enlaces con
+  ancla entre documentos apuntan a un título que existe.
+- **Sigue abierto:** pruebas e2e de la entrega, el alta con depósito y la multimedia (ya se pueden
+  con la base local); la deuda chica del informe E (estilos en línea, `manualChunks`); staging en
+  la nube y Sentry en producción.
+
+### 15/11/2026 — Claude Code dirige, Gemini 4 Hydrogen programa (cheque y comprobante, inglés de los correos, tipos de la base, edge functions)
+
+- **Pedido:** unificar la lógica de cheque y comprobante, repetida en tres diálogos, y el inglés de
+  las plantillas de correo. Sin migración. **Sin commit ni publicar**, junto con lo del 13–15/11.
+- **Cheque y comprobante** (`features/workOrders/paymentReceipt.ts`, órden 11): `paymentProblem` (la
+  clave del error de pago o `null`), `paymentFields` (método y número de cheque que van a la RPC) y
+  `withReceipt` (sube el comprobante, llama a la RPC y, si falla, borra lo subido sin tapar el
+  error). Los usan el anticipo, la entrega y la retirada sin reparar. Arreglo: en la entrega y en la
+  retirada, un cheque elegido antes ya no bloquea cuando no hay nada que cobrar ni devolver.
+  - **El comprobante sirve para cualquier método** (el campo sale con todos): no se borra al
+    cambiar de método. Hydrogen lo borraba y el campo seguía mostrando una foto que no se mandaba;
+    se quitó.
+  - **El alta, igual desde el recorrido del 15/11:** el aviso decía «Anota el número del cheque o
+    sube su foto» y con la foto sola no dejaba crear (el esquema no ve archivos). Ahora el esquema solo
+    pide el método y `useIntakeSubmit` aplica `paymentProblem` con la foto; el campo del cheque se
+    marca (`aria-invalid`, también en `PaymentFields`) y la foto quita el aviso. Comprobado en la base
+    local: ORD-2026-001 con número y ORD-2026-002 solo con foto, cada una con su movimiento.
+- **Inglés de los correos y del portal** (orden 12): lo que lee el cliente dice **«approve»** para el
+  presupuesto (el personal sigue con «authorization»), **«Picked up without repair»**,
+  **«Estimated completion»** y **«balance»** para el saldo (correo del reporte y título
+  «Your balance» del portal). El español no cambió.
+- **Tipos de la app iguales a los de la base** (orden 13, etapa 1 del informe E):
+  - `src/types/supabase.gen.ts` sale de la base local con `npm run db:types` (`scripts/db-types.mjs`:
+    `SUPABASE_DB_URL` si el stack no está en el puerto de `config.toml`; si la base no responde no
+    escribe nada; antes la CLI dejaba su error como contenido del archivo);
+  - `src/types/domain/schema.contract.ts` hace fallar `tsc -b` si un tipo de dominio nombra una
+    columna que no existe o niega un nulo que la base admite (probado rompiendo `notas_crm`: el error
+    nombra el campo). Cubre 35 tipos; las relaciones embebidas y los campos calculados van en su `Omit`;
+  - se alinearon `telefono`, `avatar_url`, `notas_crm`, `inspeccion_360_notas`, `creado_por`,
+    `fecha_finalizacion` y otros a `| null`; se quitó `grupo` (no es columna) y se agregaron
+    `decidido_en` y `numero_parte`;
+  - **errores que escondía `as any`:** las tablas de mano de obra y repuestos buscaban su trabajo por
+    `grupo`, que nunca llega de la base (se quitó el camino muerto; queda `trabajo_id`), y dos pruebas
+    usaban columnas que no existen (`creado_el`, `nombre`, `creado_en` en el próximo servicio).
+- **Edge functions sin código repetido** (orden 14): `_shared/http.ts` (`fetchConTope`),
+  `_shared/resend.ts` (un solo envío y una sola clasificación de errores para el correo al cliente y
+  al empleado) y `_shared/gemini.ts` (un solo cliente y un solo modelo por defecto para
+  `process-outbox` y `traducir-texto`). Mismas URL, encabezados, textos y reintentos; 11 pruebas nuevas.
+- `customerPortalService.buildPortalUrl` era un alias de `portalUrl`: se quitó.
+- **Verificado:** lint y tipos limpios; Vitest 169 archivos / 1254 pruebas; build; Deno 102 pruebas.
+- **Archivos grandes partidos** (órdenes 15 a 18, «mover, no reescribir»; mismas pruebas sin cambiar
+  lo que afirman):
+  - portal del cliente: `CustomerPortal.tsx` de 1.469 a 125 líneas, secciones en `src/portal/components/`
+    (sigue sin importar nada de la app). Arreglos chicos: un `Set` que no se leía en `QuoteSection` y
+    el día anterior al parqueo se resta en UTC;
+  - Configuración: `Settings.tsx` de 962 a 66 líneas; cada tarjeta con su estado en
+    `src/features/settings/` (`ProfileCard`, `SedesCard` + `SedeItem`, `CreateSedeModal`,
+    `DeleteSedeModal`, idioma, tema, empleados). Un error viejo de guardar ya no tapa que la lista de
+    sedes no cargó (se ven los dos);
+  - `workOrders.service.ts` de 1.002 a 21 líneas: arma `workOrdersService` con ocho módulos de
+    `src/services/workOrders/` (los 56 métodos, mismas firmas; los `vi.mock` siguen funcionando);
+  - detalle de la orden: `WorkOrderDetail.tsx` de 1.393 a ~390 líneas y `useWorkOrderDetail.ts` de
+    1.184 a ~200, con subhooks, secciones y diálogos en `src/features/workOrders/detail/`. Los
+    permisos de pantalla salen de `detail/permissions.ts` (puro, con pruebas; comparados uno por uno
+    con los de antes). Arreglos de Claude: la sección de parqueo con el cobro apagado volvía a
+    contar para las pestañas y «Desplegar todo»; `refresh()` ahora pasa por `invalidateOrderEffects`
+    (editar una línea dejaba el panel y los pendientes con el total viejo); un error al agregar un
+    repuesto salía tres veces (aviso, recuadro y un segundo aviso).
+  - lista y alta (orden 19): `pages/WorkOrders.tsx` de 1.080 a ~330 líneas (la lista en
+    `features/workOrders/list/OrderList.tsx`) y `WorkOrderCreateModal.tsx` de 977 a ~200 (un archivo
+    por paso en `intake/steps/`; abrir, borrador, cliente y vehículo nuevos y envío en
+    `intake/useIntake*.ts`, el modal y sus diálogos en `intake/IntakeFlow.tsx`). Cambio menor: un
+    error al crear ya no se queda en el recuadro de la lista al cancelar.
+  - `mapa-de-secciones.md`, `ai-context.md` y `arquitectura.md` apuntan a los archivos nuevos.
+- **Recorrido en el navegador contra la base local** (`qa.local/r13.mjs`, app compilada contra
+  `127.0.0.1:44321`; la base local tenía las cuentas de QA borradas por el `db reset` y se volvieron
+  a crear con `crear-usuarios.mjs`): alta completa en cuatro pasos con cliente y vehículo nuevos y
+  depósito con cheque; las cinco pestañas del detalle con «Desplegar todo»; la vista del técnico en
+  un teléfono de 390 px; Configuración (todas las tarjetas, el diálogo de sede nueva y Escape) y el
+  enlace del cliente en inglés. Sin errores de consola. Lo que encontró: la regla del cheque del alta.
+- **e2e contra la base local** (`npm run test:e2e:local`, `scripts/e2e-local.mjs`): crea sus cuatro
+  cuentas con una contraseña nueva por corrida, se niega a una URL que no sea de esta máquina y
+  levanta Vite en el puerto 5174 apuntando a la base local. **77 de 77.** Los 12 que fallaban eran
+  pruebas viejas, no errores de hoy (se comprobó cada uno contra HEAD) y se pusieron al día. Una
+  prueba que entregue o cobre lleva `test.skip(!isLocalStack, …)`.
+- **Siguiente paso:** publicar en el orden de la entrada de abajo cuando se pida (siete funciones que
+  desplegar, sin migración nueva). Queda abierto, de menor prioridad: pruebas e2e de entrega, alta
+  con depósito y multimedia (ya se pueden con la base local) y la deuda chica del informe E
+  (estilos en línea, `manualChunks`).
+
+### 14–15/11/2026 — Claude Code dirige, Gemini 4 Hydrogen programa (lo que quedó abierto de la auditoría, migración 044)
+
+- **Pedido de la persona responsable:** seguir con lo que quedó abierto. Los datos actuales son de
+  prueba, así que no hace falta cuidarlos (la base local se reinició sin restaurar). Se mantiene la
+  regla de la `043` de que una orden con dinero registrado no se borra.
+- **Orden 5, un diálogo común:** `components/Modal.tsx` reemplaza los 29 `modal-overlay` armados a
+  mano.
+  - Da `role="dialog"`, el título enlazado y la X con nombre; cierra con Escape (solo la capa de
+    arriba, pila en `escapeLayer.ts` compartida con `ChoiceDialog`); atrapa el foco y lo devuelve.
+  - Ocho diálogos que no tenían X ahora la tienen.
+  - Claude corrigió un error de diseño: Hydrogen escuchaba Escape en la fase de captura y se llevaba
+    el Escape del autocompletado de marca y modelo. Ahora escucha en burbuja y respeta
+    `defaultPrevented`; lo fija una prueba en `Modal.test.tsx`.
+- **Orden 6, migración `20261010000044`** (pgTAP 48): estado de cuenta único, `monto >= 0`,
+  asignación única, alta con campos numéricos vacíos, políticas de Storage con `(SELECT …)`, zona
+  horaria por defecto de Maryland, y la baja de correos con el enlace vencido (base y portal).
+  - Hydrogen editó por error el árbol principal en vez de su copia; se separó a mano. Desde
+    entonces cada orden lleva la carpeta exacta y se comprueba que el árbol principal no cambió.
+  - Su prueba encontró una política que él mismo olvidó (`reportes_admin_delete`); la agregó Claude.
+- **Orden 7, sin fachada:** se borró `services/supabaseService.ts`; cada archivo importa el servicio de
+  su dominio. Cinco pruebas que seguían simulando la fachada las pasó Claude a los módulos de dominio.
+- **Orden 8, pruebas de las edge functions:** 73 pruebas con Deno 2 (`npm run test:functions`, con
+  `--node-modules-dir=none --no-lock` porque el `package.json` de la raíz confunde a Deno).
+  - Hydrogen las hizo arrancar con `if (import.meta.main)`. Claude lo cambió a `handler.ts` + un
+    `index.ts` mínimo, para no depender de cómo el entorno de Supabase evalúa `import.meta.main`, y
+    para crear las dependencias una vez al arrancar, como antes.
+  - Se comprobó con `supabase functions serve` que las siete arrancan y responden.
+- **Orden 9, cinco errores reales que encontraron esas pruebas:**
+  - `delete-employee` tomaba un conteo fallido como cero y borraba al empleado; `comisiones` borra en
+    cascada, así que se llevaba su historial. Ahora responde 503 sin borrar;
+  - `update-employee` y `create-employee`: `null` o espacios en el teléfono o el nombre se guardaban
+    como «null» o vacío; un error de consulta se presentaba como «no existe» o «único administrador»;
+  - `process-outbox` ignoraba el error de `finish_outbox`.
+  - 91 pruebas de funciones en total.
+- **Orden 10, teléfono del taller:**
+  - `.btn-sm`, `.btn-icon`, la X de los diálogos y el borrar de la campana miden 44 px en pantallas
+    táctiles;
+  - palabras del taller en vez de términos de sistema (por ejemplo «Ticket promedio (ARO)» → «Promedio
+    por carro», «Notas CRM» → «Notas del cliente»);
+  - inglés de Estados Unidos unificado: Estimate (no Quote), Check (no Cheque), color, canceled.
+  - Las plantillas de correo no se tocaron: quedan por unificar con el mismo criterio.
+  - El detalle está en los informes de cada orden, en el scratchpad de la sesión.
+- **Verificado:**
+  - lint y `tsc` limpios; build ✓;
+  - Vitest: 168 archivos, 1.239 pruebas;
+  - Deno: 91 pruebas de las edge functions;
+  - pgTAP sobre base limpia: 48 archivos, 1.181 pruebas.
+- **Sin commit ni publicar.** El orden de publicación es:
+  1. `db push` de la `043` y la `044`;
+  2. `functions deploy` de las siete funciones (todas cambiaron de estructura);
+  3. push a `main`;
+  4. `qa:security`.
+- **Sigue abierto:**
+  - partir los archivos de 900 a 1.400 líneas;
+  - tipos de dominio alineados con la base;
+  - la lógica de cheque y comprobante repetida en tres diálogos;
+  - e2e con un entorno de pruebas;
+  - las plantillas de correo con el inglés unificado.
+
+### 13–14/11/2026 — Claude Code dirige, Gemini 4 Hydrogen programa (auditoría completa, migración 043)
+
+- **Pedido de la persona responsable:** que Claude haga de arquitecto y director y Gemini 4 Hydrogen
+  de programador; analizar el proyecto, encontrar errores y fallas de diseño, y dejarlo como un
+  programa profesional.
+- **Cómo se trabajó:**
+  - Hydrogen trabaja en una copia aparte (`../restorify-hydrogen`, rama `hydrogen`), solo con los
+    archivos del repositorio: sin `.env.local`, sin `qa.local` y sin datos de clientes.
+  - Se le dio el esquema vigente de producción en un solo archivo (catálogo leído en solo lectura:
+    39 tablas, 121 políticas, 96 triggers y 196 funciones), en vez de las 96 migraciones.
+  - Cinco auditorías en paralelo: base y permisos, correctitud del frontend, experiencia del taller,
+    lo que ve el cliente, y arquitectura. Dieron 67 hallazgos con archivo, línea y escenario. Los
+    informes están en [historico/auditoria-2026-11/](historico/auditoria-2026-11/).
+  - Cada bloque fue una orden escrita para Hydrogen. Claude revisó cada diff, corrió lint, `tsc`,
+    Vitest, build y pgTAP, y devolvió una orden de correcciones con los errores reales. Hydrogen
+    programa sin poder ejecutar nada, así que la primera entrega de cada bloque traía pruebas rotas.
+  - Las funciones SQL reescritas se compararon una por una contra producción con un comparador
+    automático (`comparar-funciones.cjs`, en el scratchpad de la sesión): las 17 son copias fieles
+    con solo el cambio pedido.
+- **Bloque 1, errores de comportamiento de la app:**
+  - el arranque ya no deja una sesión a medias si falla la lectura de sedes;
+  - la cámara y el micrófono se apagan si se cierra el grabador mientras arrancan;
+  - editar una mano de obra, un repuesto o una comisión ya no pierde lo escrito si la base rechaza;
+  - Finanzas y Comisiones no mandan una fecha vacía;
+  - mover o entregar desde el tablero, pagar comisiones y autorizar refrescan todo lo que la base
+    recalcula (`invalidateOrderEffects`);
+  - «Guardar» con un campo vacío dice qué falta (clientes, taller, líneas);
+  - al registrar un gasto, la categoría sigue al tipo;
+  - un solo botón principal: «Marcar listo para entregar» queda solo en las acciones rápidas;
+  - la búsqueda distingue un error de «sin resultados»;
+  - sin doble envío en deshacer pago, sticker y borrar avance;
+  - la subida de archivos refresca la sesión vencida (`getValidAccessToken`);
+  - un fallo de pantalla ya no tumba el menú ni la bandeja de subidas (`ErrorBoundary` por ruta);
+  - `portal` y `traducir-texto` responden 400, no 500, a un cuerpo inválido.
+- **Bloque 2, base de datos (`20261010000043`, pgTAP 47 con 48 aserciones, SEC-210 a 212):** el
+  detalle de cada regla está en [ai-context.md](ai-context.md). En corto:
+  - candado de la orden antes de recalcular o escribir dinero;
+  - el correo del perfil no se cambia por la API;
+  - el técnico no borra archivos de una inspección publicada ni un avance ligado a un trabajo
+    adicional, no escribe la fecha de finalización y no arranca el reloj en una orden terminada;
+  - una orden con dinero registrado no se borra;
+  - un hallazgo no se descarta en una orden entregada;
+  - un enlace desactivado a mano no se recrea solo;
+  - la retirada sin reparar tiene su propio correo, y el de «vehículo listo» avisa del parqueo que
+    ya corre;
+  - `traducciones` para admin en todas las sedes; `is_assigned_to_order` con sede;
+    `traducciones_portal` solo para `service_role`; la página del QR con su traducción al inglés.
+
+  Pruebas viejas ajustadas: la 03, la 14 y la 17 mandaban `fecha_finalizacion` como técnico (la app
+  dejó de hacerlo en octubre), y la 24 llamaba a `traducciones_portal` como `anon`.
+- **Bloque 3, lo que ve el cliente y los flujos del taller:**
+  - presupuesto a un cliente sin correo: ya no es un error; mientras siga sin respuesta, ahí mismo
+    están WhatsApp y copiar enlace;
+  - al crear un mecánico o pintor se abre su ficha para fijar el pago;
+  - «Su cuenta» del portal muestra depósitos y devoluciones aunque el total sea cero;
+  - la baja de correos dice que aplica a todos los correos del taller;
+  - «No autorizar nada» pide el nombre con un aviso junto al campo, no con un botón apagado;
+  - «Abrir reporte» lleva `?vista=taller`;
+  - el PDF usa la zona horaria de la sede y separa las millas;
+  - Configuración no pisa borradores de otras sedes; la vista previa de parqueo no se queda colgada;
+    Finanzas muestra el error de sus sumas;
+  - el alta dice si falló guardar el cliente o el vehículo, una sola vez;
+  - etiquetas de estado y de tipo en un solo lugar (`lib/workType.ts`) y una sola regla de correo
+    válido (`lib/email.ts`);
+  - la grilla de sedes no desborda en 390 px y el selector de país muestra bandera y prefijo.
+- **Bloque 4, manual de usuario:** al día en los dos idiomas con lo anterior.
+- **Verificado:**
+  - lint y `tsc` limpios; build ✓;
+  - Vitest: 167 archivos, 1.228 pruebas (61 nuevas);
+  - pgTAP sobre la base local limpia: 47 archivos, 1.150 pruebas. Con los datos de demostración
+    fallan las que cuentan avisos y órdenes, como siempre;
+  - capturas del build local en 1366 y 390 px: alta, gasto y cliente sin teléfono.
+- **Falta publicar** (nada se publicó; orden obligatorio):
+  1. `db push` de la `043`;
+  2. `functions deploy` de `process-outbox`, `portal` y `traducir-texto`;
+  3. push a `main`;
+  4. `npm run qa:security` (SEC-210 escribe un perfil: solo después del `db push`).
+- **Decisión pendiente de la persona responsable:** que una orden con dinero registrado no se
+  borre (punto de la `043`). Si no se quiere, se quita ese bloque de la migración antes de publicar.
+- **Lo que la auditoría encontró y sigue abierto** (detalle en los informes):
+  - *base:* un estado de cuenta se puede importar dos veces por doble envío (el índice del hash no
+    es único); políticas de Storage sin `(SELECT …)`; `create_work_order` falla con
+    `costo_unitario: ""`; faltan `CHECK` en `finanzas_movimientos.monto` y `orden_asignaciones`;
+  - *cliente:* con el enlace vencido no se puede dar de baja de los correos (pide reescribir
+    `datos_portal`);
+  - *pantalla:* los diálogos no tienen `role="dialog"` ni cierran con Escape (pide un componente de
+    diálogo común); botones `.btn-sm` de menos de 44 px en teléfono; jerga del sistema en algunas
+    pantallas; inglés con mezcla británica y americana;
+  - *arquitectura:* siete archivos de 900 a 1.400 líneas; la fachada `supabaseService.ts` con ~20
+    importadores; la lógica de cheque y comprobante repetida en tres diálogos; sin pruebas
+    automáticas de las edge functions; e2e sin entorno de pruebas; tipos de dominio desalineados con
+    la base.
 
 ### 06/11/2026, noche — Claude Code (revisión con la primera orden desde cero, migración 042)
 

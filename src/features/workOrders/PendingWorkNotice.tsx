@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { History } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
-import { workOrdersService } from '../../services/supabaseService';
+import { workOrdersService } from '../../services/workOrders.service';
 import { money } from '../../lib/money';
 import type { PendingWorkItem } from '../../types/database';
 

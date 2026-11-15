@@ -9,6 +9,9 @@ interface PaymentFieldsProps {
   onChangeFile: (file: File | null) => void;
   disabled?: boolean;
   refunds?: boolean;
+  /** Marca el campo que falta (`aria-invalid`), para que se vea cuál es. */
+  methodInvalid?: boolean;
+  checkInvalid?: boolean;
 }
 
 export default function PaymentFields({
@@ -19,6 +22,8 @@ export default function PaymentFields({
   onChangeFile,
   disabled,
   refunds,
+  methodInvalid,
+  checkInvalid,
 }: PaymentFieldsProps) {
   const { t } = useLanguage();
 
@@ -32,6 +37,7 @@ export default function PaymentFields({
           className="form-input form-select"
           id="payment-method"
           value={metodo}
+          aria-invalid={methodInvalid || undefined}
           onChange={(e) => onChangeMetodo(e.target.value as PaymentMethod | '')}
           disabled={disabled}
         >
@@ -50,6 +56,7 @@ export default function PaymentFields({
             id="payment-check"
             inputMode="numeric"
             value={numeroCheque}
+            aria-invalid={checkInvalid || undefined}
             onChange={(e) => onChangeNumeroCheque(e.target.value)}
             placeholder="1042"
             disabled={disabled}

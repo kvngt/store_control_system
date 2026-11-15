@@ -70,6 +70,21 @@ sep 30    ──          Dominio definitivo restorifyauto.net (reinventa.shop d
                       plegables en el detalle de la orden (teléfono), ícono de la app con
                       el logo del login, recarga sola tras una publicación. Evaluación
                       del proyecto (evaluacion-2026-10.md)
+oct–nov 4 ──          Módulos nuevos del taller (`029`–`041`): próximo servicio y sticker con QR,
+                      autorización en recepción, marcas de daños, enlace al crear la orden,
+                      catálogo y trabajos agrupados, inspección por puntos, reloj/horas e
+                      indicadores, finanzas automáticas inmutables, VIN/placa únicos y guardia
+                      de borrado en entregadas
+nov 13–15 ──          Auditoría y refactorización modular (`043` y `044`, aplicadas
+                      en producción el 15/11/2026): baja de correos con enlace vencido,
+                      comprobante de cheque por número o foto desde el alta y para cualquier
+                      método, inglés de EE. UU. ("Estimate" / "approve" para cliente) y palabras
+                      del taller, botones táctiles de 44 px, `Modal.tsx` con Escape en la capa
+                      superior, retiro de `supabaseService.ts`, división de `WorkOrderDetail`,
+                      `useWorkOrderDetail`, `WorkOrders`, `CustomerPortal`, `Settings` y
+                      `workOrders.service`, `handler.ts` + `_shared/*` con 102 pruebas en Deno 2,
+                      `db:types` (`supabase.gen.ts` + `schema.contract.ts`) y `test:e2e:local`
+                      con 77 pruebas contra la base local
 ```
 
 ---
@@ -466,6 +481,7 @@ mejoras y la reunión con el taller.
 | 53 | `20261009000000_comisiones_por_especialidad` | **Reunión** Comisiones por especialidad y por empleado; `perfiles_pago` |
 | 54 | `20261010000000_egresos_de_comision_por_orden` | **Reunión** Un egreso por orden al pagar comisiones; `balance_orden`, `margen_ordenes` |
 | 55–82 | `20261010000001` … `20261010000028` | **Después de la reunión del 03/10/2026**: historial, comisión por tarea, hallazgos, "requiere atención", traducciones, aceptar comisiones, decisiones del proceso del taller, pago mixto, listo para entregar, idioma del cliente, correo al técnico, teléfonos por sede, trabajo con seguro y cobro por parqueo. Cada entrada de [bitacora.md](bitacora.md) nombra las suyas |
+| 83–98 | `20261010000029` … `20261010000044` | **Octubre–noviembre 2026**: próximo servicio/sticker (`029`, `032`, `037`, `038`), autorización en recepción (`030`), marcas de daños (`031`), catálogo y trabajos agrupados (`034`), inspección por puntos (`035`, `040`), reloj e indicadores (`036`), movimientos de finanzas del sistema (`038`), unicidad de VIN/placa (`039`), decisiones y guardias (`041`), correcciones de auditoría del 13–15/11/2026 (`042`–`044`, incluida la baja de correos por enlace vencido) |
 
 Las migraciones son la mejor documentación de cada decisión: cada una empieza con un
 comentario que explica el problema. Léelas en orden si quieres el detalle.
@@ -491,6 +507,7 @@ comentario que explica el problema. Léelas en orden si quieres el detalle.
 | Reunión con el taller | **480** (67 archivos) | 10–13 → **330 aserciones** en 13 archivos | `qa:security` 85 casos |
 | Antes de la prueba en vivo | **504** (71 archivos) | 330 aserciones, en CI | `qa:security` 85 casos (62 saltados sin cuentas de prueba) |
 | 11/10/2026 (82 migraciones) | **802** (97 archivos) | **811 aserciones** en 33 archivos, en CI | `qa:security` 155 casos |
+| 15/11/2026 (98 migraciones, hasta `044`) | **1.263** (174 archivos) | **1.181** pruebas en 48 archivos, en CI | 77 e2e contra base local (`test:e2e:local`); 102 pruebas Deno 2 en edge functions (`test:functions`) |
 
 Las pruebas pgTAP se ejecutaron por primera vez con Docker el 15 de septiembre de 2026:
 **158 aserciones en verde** y las 35 migraciones aplicadas desde cero. Solo hubo que
@@ -505,13 +522,12 @@ temporales que luego se borraron.
 - **La prueba del taller**, que empezó el 29 de septiembre de 2026 con la base limpia.
 - **Pago a empleados**: esperar las respuestas del taller y hacer la fase 1
   ([pagos-a-empleados.md](pagos-a-empleados.md)).
-- **Fuera del código**: staging, Sentry en producción y la rama que publica Hostinger (el plan
+- **Fuera del código**: staging remoto (las E2E ya corren en local con `test:e2e:local`), Sentry en producción y la rama que publica Hostinger (el plan
   Pro ya está) ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#7-plan-priorizado)).
-- **Mantenibilidad**: esquema actual en un solo archivo, partir `useWorkOrderDetail`,
-  retirar la fachada `supabaseService` (mismo plan).
+- **Mantenibilidad**: esquema actual en un solo archivo (ya existe `npm run db:types` para generar `supabase.gen.ts` + contrato `schema.contract.ts`; `useWorkOrderDetail` partido y fachada `supabaseService` retirada el 14–15/11/2026).
 - **Pendientes de datos**: nombre, logo, correo de contacto y teléfonos de la sede.
 - **Pendientes de decisión** (ver [reglas-de-negocio.md](reglas-de-negocio.md#10-riesgos-conocidos-y-decisiones-abiertas)):
-  borrar movimientos automáticos de Finanzas y si el correo de "Entregado" sale al instante.
+  si el correo de "Entregado" sale al instante (borrar movimientos automáticos de Finanzas quedó cerrado en `20261010000038`).
   Los correos en inglés y traducir en el portal lo que escribe el taller se hicieron el 06/10/2026
   (`20261010000022`)
   ([plan-de-mejora.md](historico/plan-de-mejora.md#funciones-propuestas-pendientes-de-autorización-del-taller)).

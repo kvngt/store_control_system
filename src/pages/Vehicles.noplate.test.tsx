@@ -32,20 +32,17 @@ vi.mock('../context/auth.context', () => ({
   useAuth: () => mocks.auth.current,
 }));
 
-vi.mock('../services/supabaseService', () => {
-  const vehicles = {
+vi.mock('../services/vehicles.service', () => ({
+  vehiclesService: {
     getVehicles: mocks.getVehicles,
     createVehicle: mocks.createVehicle,
     updateVehicle: mocks.updateVehicle,
     deleteVehicle: vi.fn(),
-  };
-  const customers = { getCustomers: mocks.getCustomers, createCustomer: vi.fn() };
-  return {
-    vehiclesService: vehicles,
-    customersService: customers,
-    supabaseService: { ...vehicles, ...customers },
-  };
-});
+  },
+}));
+vi.mock('../services/customers.service', () => ({
+  customersService: { getCustomers: mocks.getCustomers, createCustomer: vi.fn() },
+}));
 
 // The VIN decoder reaches out to the NHTSA API on input; keep the test offline
 // and deterministic by stubbing only the network call, not the validators.

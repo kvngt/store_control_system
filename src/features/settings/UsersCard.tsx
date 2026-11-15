@@ -1,17 +1,17 @@
 import { useMemo, useState } from 'react';
 import { MIN_PASSWORD_LENGTH } from '../../lib/password';
-import { BellRing, KeyRound, Pencil, Search, Shield, Trash2, UserPlus, Users, X } from 'lucide-react';
+import { BellRing, KeyRound, Pencil, Search, Shield, Trash2, UserPlus, Users } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { notificationsService } from '../../services/notifications.service';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
-import { usersService } from '../../services/supabaseService';
+import { usersService } from '../../services/users.service';
 import { getErrorMessage } from '../../lib/errors';
 import type { Sede, UserProfile, UserRole } from '../../types/database';
 import { AlertError } from '../../components/AlertError';
+import Modal from '../../components/Modal';
 import PhoneInput from '../../components/PhoneInput';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+import { isValidEmail } from '../../lib/email';
 
 interface UsersCardProps {
   users: UserProfile[];
@@ -19,6 +19,7 @@ interface UsersCardProps {
   currentUserId?: string;
   loading: boolean;
   onChanged: () => void;
+  onCreated?: (employee: UserProfile) => void;
 }
 
 type Draft = {
@@ -55,7 +56,7 @@ const emptyDraft = (sedeId = ''): Draft => ({
  * — including the password, because "I forgot mine" is a thing an admin should
  * be able to fix without a password-reset email round trip.
  */
-export default function UsersCard({ users, sedes, currentUserId, loading, onChanged }: UsersCardProps) {
+export default function UsersCard({ users, sedes, currentUserId, loading, onChanged, onCreated }: UsersCardProps) {
   const { t, language } = useLanguage();
   const { showToast } = useToast();
 
@@ -127,7 +128,7 @@ export default function UsersCard({ users, sedes, currentUserId, loading, onChan
       setModalError(t('settings.employeeMissingFields'));
       return;
     }
-    if (!EMAIL_RE.test(email)) {
+    if (!isValidEmail(email)) {
       setModalError(t('settings.employeeInvalidEmail'));
       return;
     }
@@ -152,8 +153,9 @@ export default function UsersCard({ users, sedes, currentUserId, loading, onChan
     setSaving(true);
     setModalError('');
     try {
+      let createdEmployee: UserProfile | null = null;
       if (creating) {
-        await usersService.createEmployee({
+        createdEmployee = await usersService.createEmployee({
           nombre_completo: nombre,
           email,
           password: draft.password,
@@ -178,6 +180,7 @@ export default function UsersCard({ users, sedes, currentUserId, loading, onChan
       }
       setEditing(null);
       onChanged();
+      if (createdEmployee) onCreated?.(createdEmployee);
     } catch (err) {
       setModalError(getErrorMessage(err, language));
     } finally {
@@ -328,16 +331,19 @@ export default function UsersCard({ users, sedes, currentUserId, loading, onChan
       )}
 
       {editing && (
-        <div className="modal-overlay" onClick={() => setEditing(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">
-                {editing === 'new' ? t('settings.newUser') : t('settings.editUser')}
-              </h3>
-              <button className="modal-close" onClick={() => setEditing(null)}><X size={20} /></button>
-            </div>
-            <div className="modal-body">
-              <AlertError message={modalError} />
+        <Modal
+          onClose={() => setEditing(null)}
+          title={editing === 'new' ? t('settings.newUser') : t('settings.editUser')}
+          footer={
+            <>
+              <button className="btn btn-secondary" onClick={() => setEditing(null)}>{t('common.cancel')}</button>
+              <button className="btn btn-primary" onClick={save} disabled={saving} id="user-save">
+                {saving ? t('common.loading') : editing === 'new' ? t('common.create') : t('common.save')}
+              </button>
+            </>
+          }
+        >
+          <AlertError message={modalError} />
 
               <div className="form-group">
                 <label className="form-label" htmlFor="user-name">{t('common.name')}</label>
@@ -421,15 +427,7 @@ export default function UsersCard({ users, sedes, currentUserId, loading, onChan
                   {editing === 'new' ? t('settings.temporaryPasswordHint') : t('settings.newPasswordHint')}
                 </p>
               </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setEditing(null)}>{t('common.cancel')}</button>
-              <button className="btn btn-primary" onClick={save} disabled={saving} id="user-save">
-                {saving ? t('common.loading') : editing === 'new' ? t('common.create') : t('common.save')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

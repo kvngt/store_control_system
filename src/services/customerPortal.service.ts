@@ -14,8 +14,6 @@ export const FAILED_EMAIL_WINDOW_HOURS = 72;
 export const customerPortalService = {
   /** restorifyauto.net/r/<token> */
   portalUrl: (token: string) => `${getPublicSiteUrl()}${CUSTOMER_PORTAL_PREFIX}${token}`,
-  buildPortalUrl: (token: string) => `${getPublicSiteUrl()}${CUSTOMER_PORTAL_PREFIX}${token}`,
-
   getOrCreateToken: async (orderId: string): Promise<string> => {
     const existing = await customerPortalService.getActiveLink(orderId);
     if (existing?.token) return existing.token;

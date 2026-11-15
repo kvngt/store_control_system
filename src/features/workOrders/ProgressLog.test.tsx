@@ -128,4 +128,14 @@ describe('ProgressLog y el botón «atrás» (04/11/2026)', () => {
     await user.click(screen.getByRole('button', { name: 'Descartar' }));
     expect(screen.queryByDisplayValue('Se cambió el empaque')).not.toBeInTheDocument();
   });
+
+  it('deshabilita el botón de eliminar avance mientras busy está activo', () => {
+    renderLog({
+      busy: true,
+      isAdmin: true,
+      entries: [{ id: 'av-1', orden_id: 'o-1', usuario_id: 'user-admin', descripcion: 'Avance de prueba', creado_en: '2026-10-06T15:00:00Z' }],
+    });
+
+    expect(screen.getByRole('button', { name: 'Eliminar' })).toBeDisabled();
+  });
 });

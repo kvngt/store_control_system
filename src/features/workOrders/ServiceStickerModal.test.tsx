@@ -158,4 +158,32 @@ describe('ServiceStickerModal: lo escrito no se pierde (04/11/2026)', () => {
     await user.click(screen.getByRole('button', { name: 'Descartar' }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('Enter no envía dos veces mientras está guardando y rechaza millas decimales sin truncar', async () => {
+    const { fireEvent } = await import('@testing-library/react');
+    const user = userEvent.setup();
+    let resolveSave!: () => void;
+    const onSave = vi.fn(() => new Promise<void>((res) => { resolveSave = res; }));
+
+    renderWithProviders(
+      <ServiceStickerModal mode="admin" order={makeOrder(null)} onSave={onSave} onClose={vi.fn()} />
+    );
+
+    const inputMillas = screen.getByLabelText('Millas recomendadas');
+    await user.type(inputMillas, '65000.5');
+    const form = inputMillas.closest('form') as HTMLFormElement;
+    fireEvent.submit(form);
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByText('Las millas deben ser un número entero.')).toBeInTheDocument();
+
+    await user.clear(inputMillas);
+    await user.type(inputMillas, '65000');
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    resolveSave();
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+  });
 });

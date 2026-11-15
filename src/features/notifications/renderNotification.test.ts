@@ -69,9 +69,9 @@ describe('renderNotification', () => {
     });
 
     expect(renderNotification(rechazo, es).title).toBe('El cliente no autorizó el presupuesto · ORD-2026-014');
-    expect(renderNotification(rechazo, en).title).toBe('The customer did not authorize the quote · ORD-2026-014');
+    expect(renderNotification(rechazo, en).title).toBe('Customer declined estimate · ORD-2026-014');
     expect(renderNotification(aprueba, es).title).toBe('El cliente respondió el presupuesto · ORD-2026-014');
-    expect(renderNotification(aprueba, en).title).toBe('The customer answered the quote · ORD-2026-014');
+    expect(renderNotification(aprueba, en).title).toBe('Customer responded to estimate · ORD-2026-014');
   });
 
   // 20261010000022: el técnico también se entera cuando el cliente no autoriza nada.

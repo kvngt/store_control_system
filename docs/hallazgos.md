@@ -32,7 +32,7 @@ Tabla `orden_hallazgos` (solo lectura por la API; se escribe solo por RPC):
 
 - Lectura: admin, o técnico asignado a la orden (`mis_ordenes_asignadas()`, como las demás
   hijas de la orden).
-- Está en la publicación de Realtime y en `ORDER_TABLES` (`workOrders.service.ts`); la prueba
+- Está en la publicación de Realtime y en `ORDER_TABLES` (`services/workOrders/realtime.ts`); la prueba
   `15_tiempo_real.test.sql` lo fija.
 
 ## 3. RPC y triggers
@@ -57,11 +57,11 @@ Tabla `orden_hallazgos` (solo lectura por la API; se escribe solo por RPC):
 | `features/workOrders/FindingsCard.tsx` | Tarjeta del admin y `DiscardFindingModal` |
 | `features/workOrders/findings.ts` | `findingsToReview`: pendientes + cotizados sin presupuesto |
 | `features/workOrders/FindingsAlert.tsx` | Aviso en `pages/WorkOrders.tsx` → `/work-orders?open=<id>&tab=resumen`. En el panel, desde F7, los hallazgos salen en "Requiere atención" (`features/dashboard/AttentionCard.tsx`, RPC `requiere_atencion`), que los cuenta en la base y no solo en las cinco órdenes recientes |
-| `useWorkOrderDetail.ts` | `reportFinding` (sube las fotos al `avance_id` que devuelve la RPC), `quoteFinding`, `discardFinding`; `changeStatus` no deja al técnico poner ni quitar la pausa |
+| `useWorkOrderDetail.ts` / `detail/` | `reportFinding` (sube las fotos al `avance_id` que devuelve la RPC), `quoteFinding`, `discardFinding`; `useOrderTransitions` no deja al técnico poner ni quitar la pausa |
 | `WorkOrderDetail.tsx` | Coloca la tarjeta; Cotizar → `prefill` de `LaborTable`/`TaskEditor` (`{text, nonce}`) y pestaña Trabajos; `findingEntryIds` a `ProgressLog` |
 | `pages/KanbanBoard.tsx` | Mismas reglas de la pausa para el técnico (desde F7, vista Tablero de Órdenes) |
 | `lib/reportMedia.ts` (`customerObservations`), `lib/workOrderPdf.ts` | Observaciones en el PDF |
-| `portal/CustomerPortal.tsx`, `portal.types.ts`, `strings.ts` | Sección del portal |
+| `portal/components/Report.tsx`, `portal.types.ts`, `strings.ts` | Sección del portal (cargada por `CustomerPortal.tsx`) |
 | `i18n/translations.ts` | Espacio `findings.*`; `notifications.types.hallazgo_reportado` |
 
 El servicio acepta la forma vieja de las RPC (antes de la `011`): `reportFinding` sin

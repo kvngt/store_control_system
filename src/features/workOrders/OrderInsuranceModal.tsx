@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Shield, X } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { AlertError } from '../../components/AlertError';
+import Modal from '../../components/Modal';
 import { getErrorMessage } from '../../lib/errors';
 import type { WorkOrder } from '../../types/database';
 
@@ -39,27 +40,30 @@ export default function OrderInsuranceModal({ order, onSave, onClose }: OrderIns
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        style={{ maxWidth: '480px' }}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="order-insurance-modal-title"
-      >
-        <div className="modal-header">
-          <h2 className="modal-title" id="order-insurance-modal-title">
-            <Shield size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
-            {t('workOrders.editInsurance')}
-          </h2>
-          <button type="button" className="modal-close" onClick={onClose} aria-label={t('common.close')}>
-            <X size={20} />
+    <Modal
+      onClose={onClose}
+      style={{ maxWidth: '480px' }}
+      titleId="order-insurance-modal-title"
+      as="form"
+      onSubmit={handleSubmit}
+      title={
+        <>
+          <Shield size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
+          {t('workOrders.editInsurance')}
+        </>
+      }
+      footer={
+        <>
+          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={saving}>
+            {t('common.cancel')}
           </button>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div className="modal-body">
-            <AlertError message={error} />
+          <button type="submit" className="btn btn-primary" id="insurance-submit-btn" disabled={saving}>
+            {saving ? t('common.loading') : t('common.save')}
+          </button>
+        </>
+      }
+    >
+      <AlertError message={error} />
             <div className="form-group">
               <label className="form-checkbox" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer' }}>
                 <input
@@ -101,17 +105,6 @@ export default function OrderInsuranceModal({ order, onSave, onClose }: OrderIns
                 </div>
               </div>
             )}
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={saving}>
-              {t('common.cancel')}
-            </button>
-            <button type="submit" className="btn btn-primary" id="insurance-submit-btn" disabled={saving}>
-              {saving ? t('common.loading') : t('common.save')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

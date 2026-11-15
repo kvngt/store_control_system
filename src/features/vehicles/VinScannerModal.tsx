@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Image as ImageIcon, Loader2, X } from 'lucide-react';
+import { Camera, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import Modal from '../../components/Modal';
 import { getVinDetector } from '../../lib/barcodeDetector';
 import { vinFromBarcode } from '../../lib/vinScan';
 
@@ -180,26 +181,14 @@ export default function VinScannerModal({ onDetected, onScan, onClose }: VinScan
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        style={{ maxWidth: 540, width: '100%', overflow: 'hidden' }}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="vin-scanner-title"
-      >
-        <div className="modal-header">
-          <h3 className="modal-title" id="vin-scanner-title">
-            {t('vehicles.scanTitle')}
-          </h3>
-          <button className="modal-close" onClick={onClose} aria-label={t('common.close')}>
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="modal-body" style={{ padding: 'var(--space-4)' }}>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-3)' }}>
+    <Modal
+      onClose={onClose}
+      title={t('vehicles.scanTitle')}
+      titleId="vin-scanner-title"
+      style={{ maxWidth: 540, width: '100%', overflow: 'hidden' }}
+      bodyStyle={{ padding: 'var(--space-4)' }}
+    >
+      <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-3)' }}>
             {t('vehicles.scanHint')}
           </p>
 
@@ -280,8 +269,6 @@ export default function VinScannerModal({ onDetected, onScan, onClose }: VinScan
               {t('common.close')}
             </button>
           </div>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

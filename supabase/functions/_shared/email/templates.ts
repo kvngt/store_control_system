@@ -48,6 +48,7 @@ export interface EmailContext {
     estatus: string;
     fechaIngreso?: string | null;
     fechaEstimadaEntrega?: string | null;
+    retirada_sin_reparar?: boolean | null;
   };
   /** "2019 Toyota Camry" */
   vehiculo: string | null;
@@ -211,17 +212,28 @@ function copyEs(template: EmailTemplate, ctx: EmailContext): Copy | null {
             'En el enlace puede revisar el trabajo realizado y el saldo pendiente.',
             ...(ctx.parqueo && ctx.parqueo.estado === 'por_empezar' && ctx.parqueo.inicio
               ? [`A partir del ${formatDate(ctx.parqueo.inicio, tz, 'es')} se cobrará parqueo de ${money(ctx.parqueo.tarifa_inicial)} por día.`]
-              : []),
+              : ctx.parqueo && ctx.parqueo.estado === 'acumulando' && ctx.parqueo.inicio
+                ? [`Desde el ${formatDate(ctx.parqueo.inicio, tz, 'es')} se está cobrando parqueo de ${money(ctx.parqueo.tarifa_inicial)} por día.`]
+                : []),
           ],
         },
-        entregado: {
-          subject: `Gracias por su visita · ${ctx.orden.numero}`,
-          preheader: 'Su reporte queda disponible en el enlace.',
-          heading: 'Gracias por confiar en nosotros',
-          paragraphs: [
-            `Entregamos su ${vehicle}. El reporte del trabajo, con sus fotos, queda disponible en el enlace durante 90 días.`,
-          ],
-        },
+        entregado: ctx.orden.retirada_sin_reparar
+          ? {
+            subject: `Entrega de vehículo · ${ctx.orden.numero}`,
+            preheader: 'Resumen disponible en el enlace.',
+            heading: 'Vehículo entregado sin reparar',
+            paragraphs: [
+              `Entregamos su ${vehicle} sin realizar la reparación. En el enlace de abajo puede consultar el detalle de lo cobrado o devuelto.`,
+            ],
+          }
+          : {
+            subject: `Gracias por su visita · ${ctx.orden.numero}`,
+            preheader: 'Su reporte queda disponible en el enlace.',
+            heading: 'Gracias por confiar en nosotros',
+            paragraphs: [
+              `Entregamos su ${vehicle}. El reporte del trabajo, con sus fotos, queda disponible en el enlace durante 90 días.`,
+            ],
+          },
       };
       const copy = byStatus[status];
       return copy ? { ...copy, button: 'Ver estado del vehículo' } : null;
@@ -309,7 +321,7 @@ function copyEn(template: EmailTemplate, ctx: EmailContext): Copy | null {
         paragraphs: [
           `${shop} received your vehicle${date ? ` on ${date}` : ''} under order ${ctx.orden.numero}.`,
           'The link shows the check-in report: photos of the condition it arrived in, the mileage, the fuel level and your signature. You will also see the progress of the work there.',
-          ...(eta ? [`Estimated delivery date: ${eta}.`] : []),
+          ...(eta ? [`Estimated completion: ${eta}.`] : []),
         ],
         button: 'View check-in report',
       };
@@ -332,17 +344,28 @@ function copyEn(template: EmailTemplate, ctx: EmailContext): Copy | null {
             'The link shows the work done and the balance due.',
             ...(ctx.parqueo && ctx.parqueo.estado === 'por_empezar' && ctx.parqueo.inicio
               ? [`Starting ${formatDate(ctx.parqueo.inicio, tz, 'en')}, a parking fee of ${money(ctx.parqueo.tarifa_inicial)} per day will apply.`]
-              : []),
+              : ctx.parqueo && ctx.parqueo.estado === 'acumulando' && ctx.parqueo.inicio
+                ? [`Since ${formatDate(ctx.parqueo.inicio, tz, 'en')}, a parking fee of ${money(ctx.parqueo.tarifa_inicial)} per day has been accruing.`]
+                : []),
           ],
         },
-        entregado: {
-          subject: `Thank you for your visit · ${ctx.orden.numero}`,
-          preheader: 'Your report stays available at the link.',
-          heading: 'Thank you for trusting us',
-          paragraphs: [
-            `We delivered your ${vehicle}. The work report, with its photos, stays available at the link for 90 days.`,
-          ],
-        },
+        entregado: ctx.orden.retirada_sin_reparar
+          ? {
+            subject: `Vehicle pickup summary · ${ctx.orden.numero}`,
+            preheader: 'Summary available at the link.',
+            heading: 'Picked up without repair',
+            paragraphs: [
+              `We delivered your ${vehicle} without performing the repair. You can review what was charged or refunded at the link below.`,
+            ],
+          }
+          : {
+            subject: `Thank you for your visit · ${ctx.orden.numero}`,
+            preheader: 'Your report stays available at the link.',
+            heading: 'Thank you for trusting us',
+            paragraphs: [
+              `We delivered your ${vehicle}. The work report, with its photos, stays available at the link for 90 days.`,
+            ],
+          },
       };
       const copy = byStatus[status];
       return copy ? { ...copy, button: 'View vehicle status' } : null;
@@ -354,13 +377,13 @@ function copyEn(template: EmailTemplate, ctx: EmailContext): Copy | null {
       const total = lines.reduce((sum, l) => sum + Number(l.monto), 0);
       return {
         subject: `Estimate for your ${vehicle} · ${ctx.orden.numero}`,
-        preheader: `${lines.length} job(s) for ${money(total)} are waiting for your authorization.`,
-        heading: 'You have an estimate to authorize',
+        preheader: `${lines.length} job(s) for ${money(total)} are waiting for your approval.`,
+        heading: 'You have an estimate to approve',
         paragraphs: [
-          `${shop} prepared an estimate for your ${vehicle}. At the link you can authorize each job separately: we will only do what you authorize.`,
+          `${shop} prepared an estimate for your ${vehicle}. At the link you can approve each job separately: we will only do what you approve.`,
         ],
         items: [...lines.map((l) => ({ label: l.descripcion, amount: money(l.monto) })), { label: 'Total', amount: money(total) }],
-        button: 'Review and authorize',
+        button: 'Review and approve',
       };
     }
     case 'presupuesto_confirmacion': {
@@ -372,17 +395,17 @@ function copyEn(template: EmailTemplate, ctx: EmailContext): Copy | null {
       const byShop = !!quote.via && quote.via !== 'cliente_portal';
       const approvedTotal = quote.totalAprobado ?? approved.reduce((sum, l) => sum + Number(l.monto), 0);
       return {
-        subject: `${byShop ? 'We recorded your authorization' : 'We received your answer'} · ${ctx.orden.numero}`,
-        preheader: approved.length ? `You authorized ${approved.length} job(s) for ${money(approvedTotal)}.` : 'You did not authorize any work.',
-        heading: approved.length ? 'These are the jobs you authorized' : 'You did not authorize any work',
+        subject: `${byShop ? 'We recorded your approval' : 'We received your answer'} · ${ctx.orden.numero}`,
+        preheader: approved.length ? `You approved ${approved.length} job(s) for ${money(approvedTotal)}.` : 'You did not approve any work.',
+        heading: approved.length ? 'These are the jobs you approved' : 'You did not approve any work',
         paragraphs: [
           byShop
             ? `${shop} recorded your answer to the estimate${via ? ` ${via}` : ''}. If anything does not match what you agreed to, reply to this email or call the shop.`
-            : 'We saved your answer to the estimate. We will only do the jobs you authorized.',
-          ...(rejected.length ? [`Not authorized: ${rejected.map((l) => l.descripcion).join(', ')}.`] : []),
+            : 'We saved your answer to the estimate. We will only do the jobs you approved.',
+          ...(rejected.length ? [`Not approved: ${rejected.map((l) => l.descripcion).join(', ')}.`] : []),
         ],
         items: approved.length
-          ? [...approved.map((l) => ({ label: l.descripcion, amount: money(l.monto) })), { label: 'Total authorized', amount: money(approvedTotal) }]
+          ? [...approved.map((l) => ({ label: l.descripcion, amount: money(l.monto) })), { label: 'Total approved', amount: money(approvedTotal) }]
           : undefined,
         button: 'View your order',
       };
@@ -390,11 +413,11 @@ function copyEn(template: EmailTemplate, ctx: EmailContext): Copy | null {
     case 'reporte':
       return {
         subject: `Report for your ${vehicle} · ${ctx.orden.numero}`,
-        preheader: 'The status, the photos and videos of the work and your account, in one link.',
+        preheader: 'The status, the photos and videos of the work and your balance, in one link.',
         heading: 'Your vehicle report',
         paragraphs: [
           `${shop} is sharing the report for order ${ctx.orden.numero}.`,
-          'At the link you can see how the work is going, the photos and videos the shop shared, the authorized jobs and your account. No account needed.',
+          'At the link you can see how the work is going, the photos and videos the shop shared, the approved jobs and your balance. No account needed.',
         ],
         button: 'View report',
       };

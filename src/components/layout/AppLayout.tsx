@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import BottomNav from './BottomNav';
 import { useAuth } from '../../context/auth.context';
 import { useTheme } from '../../context/theme.context';
+import { useLanguage } from '../../context/language.context';
 import { applySedeBranding, clearSedeBranding } from '../../lib/branding';
 import SchemaDriftBanner from '../SchemaDriftBanner';
+import ErrorBoundary from '../ErrorBoundary';
 import MediaUploadsProvider from '../../features/media/MediaUploadsProvider';
 import UploadTray from '../../features/media/UploadTray';
 import { syncThisDevice } from '../../features/notifications/pushDevice';
@@ -17,6 +19,8 @@ export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { currentSede, user } = useAuth();
   const { theme } = useTheme();
+  const { t } = useLanguage();
+  const location = useLocation();
 
   // Re-theme the whole app whenever the active sede (or the light/dark mode)
   // changes. Employees never switch sede, so they simply always see their own
@@ -76,7 +80,9 @@ export default function AppLayout() {
           {/* Above the routed page, so it is the first thing seen on whichever
               screen the drift happens to break. */}
           <SchemaDriftBanner />
-          <Outlet />
+          <ErrorBoundary key={location.pathname} inline retryLabel={t('common.retry')}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
         <BottomNav />
       </div>

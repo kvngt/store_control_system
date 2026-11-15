@@ -12,6 +12,13 @@ export const BRANCH_ADMIN_PASSWORD = process.env.E2E_BRANCH_ADMIN_PASSWORD;
 export const PAINTER_EMAIL = process.env.E2E_PAINTER_EMAIL;
 export const PAINTER_PASSWORD = process.env.E2E_PAINTER_PASSWORD;
 
+/**
+ * `true` solo con `npm run test:e2e:local` (scripts/e2e-local.mjs): la app habla con el Supabase
+ * de esta máquina. Una prueba que entregue órdenes, cobre o pague comisiones se salta si no lo
+ * es: `test.skip(!isLocalStack, 'Solo contra la base local')`.
+ */
+export const isLocalStack = process.env.E2E_LOCAL_STACK === '1';
+
 export const hasAdminCredentials = Boolean(ADMIN_EMAIL && ADMIN_PASSWORD);
 export const hasMechanicCredentials = Boolean(MECHANIC_EMAIL && MECHANIC_PASSWORD);
 export const hasBranchAdminCredentials = Boolean(BRANCH_ADMIN_EMAIL && BRANCH_ADMIN_PASSWORD);

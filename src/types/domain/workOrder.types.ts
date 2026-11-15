@@ -17,10 +17,10 @@ export interface WorkOrder {
   estatus: OrderStatus;
   millas_ingreso: number;
   nivel_gasolina: string;
-  inspeccion_360_notas: string;
+  inspeccion_360_notas: string | null;
   fecha_ingreso: string;
   fecha_estimada_entrega: string;
-  fecha_finalizacion?: string;
+  fecha_finalizacion?: string | null;
   /** Ruta de la firma en el bucket privado `orden_media`. No es una URL: se firma para verla. */
   firma_ruta?: string | null;
   firma_fecha?: string | null;
@@ -51,7 +51,7 @@ export interface WorkOrder {
    */
   lista_para_entregar_en?: string | null;
   lista_para_entregar_por?: string | null;
-  creado_por: string;
+  creado_por: string | null;
   creado_en: string;
   con_seguro: boolean;
   aseguradora?: string | null;
@@ -135,7 +135,7 @@ export interface PartSummary {
 export interface OrderProgressUpdate {
   id: string;
   orden_id: string;
-  usuario_id: string;
+  usuario_id: string | null;
   descripcion: string;
   creado_en: string;
   /**
@@ -177,7 +177,7 @@ export interface LaborItem {
   /** El perfil de `asignado_a`, embebido (`perfiles!asignado_a`). */
   tecnico?: Pick<UserProfile, 'id' | 'nombre_completo' | 'rol'> | null;
   trabajo_id?: string | null;
-  grupo?: string | null;
+  decidido_en?: string | null;
   horas?: number | null;
 }
 
@@ -212,7 +212,8 @@ export interface WorkOrderPart {
   pedido_en?: string | null;
   recibido_en?: string | null;
   trabajo_id?: string | null;
-  grupo?: string | null;
+  decidido_en?: string | null;
+  numero_parte?: string | null;
 }
 
 export interface WorkOrderInput {
@@ -229,9 +230,12 @@ export interface WorkOrderInput {
   deposito_comprobante?: string | null;
   inspeccion_360_notas: string;
   fecha_estimada_entrega: string;
-  labor_items: Omit<LaborItem, 'id' | 'orden_id'>[];
+  labor_items: (Omit<LaborItem, 'id' | 'orden_id'> & { grupo?: string | null })[];
   /** El precio, y el costo si administración lo sabe (sin él, la base usa el precio). */
-  repuestos: (Omit<WorkOrderPart, 'id' | 'orden_id' | 'subtotal' | 'costo_unitario'> & { costo_unitario?: number | null })[];
+  repuestos: (Omit<WorkOrderPart, 'id' | 'orden_id' | 'subtotal' | 'costo_unitario'> & {
+    costo_unitario?: number | null;
+    grupo?: string | null;
+  })[];
   asignaciones: { usuario_id: string; tipo_tarea: 'mecanica' | 'pintura' }[];
   con_seguro?: boolean;
   aseguradora?: string | null;

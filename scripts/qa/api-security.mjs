@@ -125,6 +125,7 @@ if (ctx.TOKEN_TECH) {
     descartar('ORDEN_ENTREGADA', (o) => o && mine(o) && o.estatus === 'entregado');
     ctx.ORDEN ||= list.find((o) => mine(o) && o.estatus !== 'entregado')?.id;
     ctx.ORDEN_ENTREGADA ||= list.find((o) => mine(o) && o.estatus === 'entregado')?.id;
+    ctx.ORDEN_FINALIZADA ||= list.find((o) => mine(o) && o.estatus === 'finalizado')?.id;
     // La ajena fija tiene que existir: una borrada daría "cero filas" y un PASS que no prueba nada.
     if (ctx.ORDEN_AJENA && ctx.TOKEN_ADMIN) {
       const r = await call('GET', `/rest/v1/ordenes_trabajo?select=id,cliente_id&id=eq.${ctx.ORDEN_AJENA}`, { token: ctx.TOKEN_ADMIN });
@@ -174,6 +175,14 @@ if (ctx.TOKEN_TECH) {
     // La línea de la orden ajena tampoco la ve el técnico: la lee el admin.
     ctx.LABOR_AJENA ||= await lineaDe(ctx.ORDEN_AJENA, ctx.TOKEN_ADMIN);
     ctx.LABOR_ENTREGADA ||= await lineaDe(ctx.ORDEN_ENTREGADA);
+    if (!ctx.LABOR_FINALIZADA && ctx.ORDEN_FINALIZADA && ctx.TOKEN_TECH) {
+      const r = await call(
+        'GET',
+        `/rest/v1/orden_labor?select=id&estado=eq.aprobado&completado_en=is.null&asignado_a=eq.${ctx.TECH_ID}&orden_id=eq.${ctx.ORDEN_FINALIZADA}&limit=1`,
+        { token: ctx.TOKEN_TECH }
+      );
+      ctx.LABOR_FINALIZADA = r.json?.[0]?.id;
+    }
 
     // SEC-99 y SEC-100 escriben lo que ya hay (el mismo técnico de la línea, el mismo tipo de
     // la asignación) y filtran por ese valor: si la regla fallara, la petición devolvería la fila
@@ -470,6 +479,13 @@ const CASES = [
   admin({ id: 'SEC-208', desc: 'Ni un admin llama el guardia de fotos de una inspección publicada como RPC', method: 'POST', path: () => rpc('trg_guard_inspeccion_media'), body: {}, expect: 'denied' }),
   // Decisiones del dueño del 04/11/2026 (20261010000041).
   admin({ id: 'SEC-209', desc: 'Ni un admin llama el guardia del borrado de una orden entregada como RPC', method: 'POST', path: () => rpc('trg_guard_order_delete_entregada'), body: {}, expect: 'denied' }),
+  // Auditoría 2026-11 (20261010000043).
+  tech({ id: 'SEC-210', desc: 'Un técnico no cambia el correo de su propio perfil', needs: ['TECH_ID'], method: 'PATCH', path: (c) => `/rest/v1/perfiles?id=eq.${c.TECH_ID}`, body: { email: 'cambio-ilegal@qa-security.invalid' }, expect: 'denied' }),
+  tech({ id: 'SEC-211', desc: 'Un técnico no inicia el reloj en una orden ya finalizada', needs: ['LABOR_FINALIZADA'], method: 'POST', path: () => rpc('iniciar_reloj'), body: (c) => ({ p_labor_id: c.LABOR_FINALIZADA }), expect: 'denied' }),
+  anon({ id: 'SEC-212', desc: 'Sin sesión no se llama traducciones_portal (solo service_role)', method: 'POST', path: () => rpc('traducciones_portal'), body: { p_token: ZERO_TOKEN }, expect: 'denied' }),
+  // Auditoría 2026-11 parte B (20261010000044).
+  anon({ id: 'SEC-213', desc: 'Con un enlace inventado no se cambia la preferencia de correos', method: 'POST', path: () => '/functions/v1/portal', body: { token: 'a'.repeat(64), accion: 'preferencia_correos', acepta: true }, expect: { status: 404 } }),
+  tech({ id: 'SEC-214', desc: 'Un técnico no ejecuta importar_estado_cuenta', method: 'POST', path: () => rpc('importar_estado_cuenta'), body: { p_importacion: { sede_id: ZERO_UUID, nombre_archivo: 'qa.csv', ruta_archivo: 'qa/qa.csv', hash_archivo: '0'.repeat(64) }, p_movimientos: [{ tipo: 'ingreso', categoria: 'pago_cliente', monto: 1, descripcion: 'qa', fecha: '2026-10-01' }] }, expect: 'denied' }),
 ];
 
 function evaluate(expect, r) {

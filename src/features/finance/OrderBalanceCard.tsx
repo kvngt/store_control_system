@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Scale } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
-import { financeService } from '../../services/supabaseService';
+import { financeService } from '../../services/finance.service';
 import { queryKeys } from '../../lib/queryClient';
 import { money, moneySigned } from '../../lib/money';
 import { getErrorMessage } from '../../lib/errors';

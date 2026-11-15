@@ -11,7 +11,7 @@ import type { WorkOrder } from '../../types/database';
 vi.mock('../../services/customerPortal.service', () => ({
   customerPortalService: {
     getOrCreateToken: vi.fn(),
-    buildPortalUrl: vi.fn((token: string) => `https://restorifyauto.net/r/${token}`),
+    portalUrl: vi.fn((token: string) => `https://restorifyauto.net/r/${token}`),
   },
 }));
 

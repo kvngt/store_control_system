@@ -84,7 +84,7 @@ that job belongs to them.
 **Job.** A labor line with its type (mechanical or painting), its price and its
 technician. A job **without a technician** pays commission to nobody.
 
-**Quote.** The work presented to the customer for authorization.
+**Estimate.** The work presented to the customer for authorization.
 **What the customer does not authorize is not done or charged.**
 
 **Additional work.** Unexpected findings discovered by the technician on the shop floor and reported from the order, which pauses the order while the office decides whether to quote it to the customer or discard it.
@@ -433,7 +433,7 @@ Items quoted in this step start as **Not authorized** unless you checked the in-
 
 **Step 4 — Deposit.** The advance payment left by the customer (leave 0 if none). If the customer pays a deposit:
 - Select **How the customer paid** (Cash, Card, Zelle, Transfer, Check).
-- If paid by check, record the **Check number** (it is required); the **Receipt photo** is optional.
+- If paid by check, enter the **Check number** or upload the **Receipt photo** (either one is enough; the **Receipt photo** also works as backup for any payment method).
 - It is automatically recorded as income in Finance under initial deposit.
 
 When you tap **Create**, the system generates the order number (for example, `ORD-2026-001`) and opens its details. Photos and multimedia files continue uploading in the background without interrupting your workflow.
@@ -483,7 +483,6 @@ Always visible at the top:
 - Order number, customer name and vehicle details.
 - Status badges: **Insurance**, **Waiting for parts**, **Waiting for authorization**, **To review** or **Ready for pickup**, **Picked up without repair**, **Archived**.
 - Action buttons (for administrators):
-  - **Mark ready for pickup**: green button when the technician finished and the work was inspected.
   - **Download PDF** with the **PDF language** selector (**ES** / **EN**).
   - **Send report**: opens the window to share the customer link via email or WhatsApp.
   - **Archive** / **Back to the board**.
@@ -494,6 +493,7 @@ Always visible at the top:
 
 Below the header are highlighted buttons with the most frequent actions based on your role:
 - **For administrators**:
+  - **Mark ready for pickup** (highlighted when the technician finished and the work was inspected).
   - **Deliver and charge** (highlighted when the order is marked ready for pickup).
   - **Add job** (highlighted if the order has no labor yet).
   - **Take signature** (highlighted during intake if the order has jobs and is not signed yet).
@@ -552,7 +552,7 @@ If halfway through you press the phone's **back** button, tap outside the box or
 ![«Report additional work», from a mechanic's phone.](../public/manual/en/16.webp)
 
 On the dashboard (under **Needs attention**) and above the Summary and Work tabs on the order, the office sees the card **The shop reported additional work**:
-- **Quote the customer**: pre-populates a new job in Labor with the description and the technician who reported it. The office sets the price and then sends the quote to the customer.
+- **Add to estimate**: pre-populates a new job in Labor with the description and the technician who reported it. The office sets the price and then sends the estimate to the customer.
 - **Discard…**: opens a dialog to discard it internally or check **Show it in the customer’s report** entering **Text for the customer**. In that case it appears on their link as a informational "Shop note", at no cost.
 - Once quoted or discarded, the order resumes from hold.
 
@@ -563,10 +563,10 @@ On the dashboard (under **Needs attention**) and above the Summary and Work tabs
 
 After reporting a finding, inside your **Tasks** section the **Additional work you reported** block appears showing each report on that order, its attached files, and a badge with the office or customer decision:
 - **To review**: administration has not quoted or discarded it yet.
-- **Quoted to the customer**: administration turned it into a labor item to quote it.
-- **Waiting for the customer**: included in a sent quote and awaiting customer response.
+- **Added to estimate**: administration turned it into a labor item to prepare an estimate.
+- **Waiting for the customer**: included in a sent estimate and awaiting customer response.
 - **Authorized by the customer**: the customer approved the work.
-- **The customer did not authorize it**: the customer declined the quote for that finding.
+- **The customer did not authorize it**: the customer declined the estimate for that finding.
 - **Not for now**: administration discarded it for now (showing their note, if one was added).
 
 #### Labor and Tasks
@@ -584,7 +584,7 @@ After reporting a finding, inside your **Tasks** section the **Additional work y
 - **For technicians (Tasks)**:
   - Main status button: the **Start work** (in reception with authorized work) and **Done: let the office know** (in progress when all work is completed) actions are placed at the top in the order's **quick actions**, ensuring a single primary button per status. In the task list, when all is done an informational help hint is shown, and if their own tasks are completed but another colleague's tasks are still pending, they see the notice «Your part is done. Still pending: ...».
   - They view their tasks with description, type and labor price (from which their commission is derived). Parts are shown without prices.
-  - **Per-task clock**: on their own tasks (labeled **Job: {description}**), each authorized, incomplete task includes an accessible touch button (44px or larger) showing **Start** when stopped or **Pause ({duration})** when running, updating elapsed duration live every minute. A technician can only have one active clock at any time: tapping **Start** on another task automatically pauses the previous one and starts the new one, and tapping **Done** also stops that task's active clock. If a clock is left running by mistake, the system automatically caps it at a maximum of 12 hours.
+  - **Per-task clock**: on their own tasks (labeled **Job: {description}**), each authorized, incomplete task includes an accessible touch button (44px or larger) showing **Start** when stopped or **Pause ({duration})** when running, updating elapsed duration live every minute. A technician can only have one active clock at any time: tapping **Start** on another task automatically pauses the previous one and starts the new one, and tapping **Done** also stops that task's active clock. If a clock is left running by mistake, the system automatically caps it at a maximum of 12 hours. Once the order is **Completed**, the technician can no longer start a task's clock (just as they can no longer reopen a job).
   - They tap **Done** upon completing a task; if a clock is running, it stops automatically. If marked by mistake, they tap **Reopen job** (while the order is not finished; after that, they ask the office).
   - Using **Photo**, they can directly take or upload a camera snapshot to attach as an update to that task.
   - Using **Add update**, they can upload photos, videos or voice notes linked to that specific job.
@@ -663,7 +663,7 @@ Allows conducting a comprehensive multi-point inspection (brakes, tires, fluids,
   - Once the inspection is completed, administrators can turn on the **Show to customer** toggle to make it visible on the customer's portal link.
   - Once published, the inspection is locked for the technician: points, notes and photos can no longer be changed, and their screen says «The customer can already see this inspection: if something changed, tell the office.». The office can still correct it, or tap **Hide from customer** so the technician can edit it again.
   - On every point marked **Attention** or **Urgent**, administration has two buttons to turn the finding into a quote:
-    - **Quote**: opens the labor editor pre-filling the point's name and note, ready to assign a technician and set the price.
+    - **Add to estimate**: opens the labor editor pre-filling the point's name and note, ready to assign a technician and set the price.
     - **From catalog**: opens the frequent job catalog picker to insert a predefined package with its labor lines and parts.
   - **On the customer portal**: once published, the customer sees a dedicated **Vehicle inspection** section featuring three summary badges (Urgent, Attention, Good), detailed cards for critical items showing notes and photos, and a collapsible list of items in good condition.
   - **Previous declined work**: attention and urgent points from completed inspections are automatically recalled on future visits of the same vehicle under the pending recommendations banner.
@@ -677,17 +677,17 @@ Captured by the office at the counter during intake. The customer signs with the
 #### Quotes: what the customer authorizes
 <!-- rol: admin -->
 
-When jobs or parts are quoted, they start as **Not authorized**. In the **Quote** section, the office has two alternatives:
+When jobs or parts are quoted, they start as **Not authorized**. In the **Estimate** section, the office has two alternatives:
 
-![Quote with unauthorized work.](../public/manual/en/21.webp)
+![Estimate with unauthorized work.](../public/manual/en/21.webp)
 
-**A. Send quote to the customer.** Tap **Send quote to customer**. The customer receives an email with a link to their portal, where they review each item, individually check what they authorize, enter their name and confirm.
+**A. Send estimate to the customer.** Tap **Send estimate to customer**. The customer receives an email with a link to their portal, where they review each item, individually check what they approve, enter their name and confirm.
 - While awaiting a response, lines display **Waiting for customer** and the order moves to **Waiting for Approval**.
-- If you need to correct something, tap **Cancel quote**.
-- If you add more work while waiting, tap **Add to quote and resend**.
-- If the customer has no email, you can share the link via WhatsApp from the Customer link card.
+- If you need to correct something, tap **Cancel estimate**.
+- If you add more work while waiting, tap **Add to estimate and resend**.
+- If the customer has no email (or opted out of emails), the estimate is still created and the **Send via WhatsApp** and **Copy link** buttons appear right there while it remains unanswered.
 
-![What the customer sees on their link: quote pending authorization.](../public/manual/en/22.webp)
+![What the customer sees on their link: estimate pending approval.](../public/manual/en/22.webp)
 
 **B. Record authorization.** If the customer responded by phone, in person or via WhatsApp:
 1. Tap **Record authorization**.
@@ -699,7 +699,7 @@ When jobs or parts are quoted, they start as **Not authorized**. In the **Quote*
 
 ![«Work authorized by the customer».](../public/manual/en/23.webp)
 
-Authorized work immediately adds to the order total and alerts technicians about which work to perform; unauthorized work is marked as **Do not do** and is neither charged nor performed. An order with a quote awaiting response cannot be delivered. In addition, the order automatically moves to **In Progress** upon the first authorization (whether from the portal, recorded manually, or accepted during intake), allowing technicians to start work without waiting for manual status updates.
+Authorized work immediately adds to the order total and alerts technicians about which work to perform; unauthorized work is marked as **Do not do** and is neither charged nor performed. An order with an estimate awaiting response cannot be delivered. In addition, the order automatically moves to **In Progress** upon the first authorization (whether from the portal, recorded manually, or accepted during intake), allowing technicians to start work without waiting for manual status updates.
 
 **Whole job authorization.** When an order contains grouped jobs from the catalog, the customer on their web portal and the office in the authorization dialog see each job as a single block with its checkbox, title, and total amount, detailing below what it includes («Includes: ...»). Checking or unchecking the box approves or declines the entire job with all its labor and part lines: individual lines within a grouped job are not approved separately.
 
@@ -708,7 +708,7 @@ Authorized work immediately adds to the order total and alerts technicians about
 
 When the technician sets the status to **Completed**, physical work is done but the customer is not notified yet. On the order details, the badge **To review** appears.
 
-The office must inspect the vehicle and verify accounts. To mark it ready, tap the primary **Mark ready for pickup** button in quick actions (also available in the header). At that instant:
+The office must inspect the vehicle and verify accounts. To mark it ready, tap the primary **Mark ready for pickup** button in quick actions. At that instant:
 1. The order badge updates to **Ready for pickup**.
 2. If the customer has a valid email address on file, an automatic email is sent letting them know their vehicle is ready.
 3. If the customer **does not have a registered email address**, a dialog opens immediately with the prepared message ready to send via **WhatsApp** or **SMS**, written in the customer's language (Spanish or English).
@@ -727,7 +727,7 @@ When selecting the **Delivered** status or tapping **Deliver and charge** in qui
   - **To refund to the customer**: if deposit or advances exceeded the total. The button shows **Deliver and refund {monto}**.
   - **Nothing left to collect.**: button shows **Deliver**.
 - Select under **How the customer paid** or **How it is refunded**: Cash, Card, Zelle, Transfer or Check.
-- If by check, record the **Check number** or upload the **Receipt photo** (either one is enough).
+- If by check, record the **Check number** or upload the **Receipt photo** (either one is enough; the **Receipt photo** works for any payment method).
 - Upon confirmation:
   - The payment or refund entry is booked in Finance.
   - The expense for parts cost is booked.
@@ -785,7 +785,7 @@ Each order has a unique web link (`restorifyauto.net/r/...`) available right fro
 - They view status, progress, check-in, published photos and videos, quote pending authorization, and their account balance.
 - The portal features **collapsible sections** designed for mobile devices: work progress, next service and contact start open; intake check-in (with photo count), account details (with formatted balance) and shop observations start collapsed with visible summaries and expand upon tapping. If a quote is pending authorization, it starts open for review.
 - It allows them to call the shop directly or message via WhatsApp if the workshop has phone numbers configured.
-- On the **Customer link** card, administrators can: **Copy**, **Open** (see the link as the customer does; switching the language there does not change the language of their emails), **Send via WhatsApp**, **Change link** (invalidates the previous one) or **Turn off**.
+- On the **Customer link** card, administrators can: **Copy**, **Open** (see the link as the customer does; switching the language there does not change the language of their emails), **Send via WhatsApp**, **Change link** (invalidates the previous one) or **Turn off**. If administration turns off the link, automatic emails stop sending for that order until a new link is created with **Create link**.
 - The link remains active while the order is open and for up to 90 days after delivery.
 - **Automatic emails**:
   - «We received your vehicle»: sent when the intake check-in is signed (with tracking link).
@@ -810,7 +810,7 @@ When a job is done (an oil change, a maintenance visit), administration can note
 
 **Scheduling the next service**
 1. Open the order and tap **Service sticker** in the quick actions (if a service is already scheduled or suggested, it navigates directly to the card to view or reprint; if none exists, it opens the dialog to schedule it), or go to the **Billing & customer** tab → **Next service** card → **Schedule next service**.
-2. Tap one of the **Quick presets** or fill in the fields by hand:
+2. Tap one of the **Quick options** or fill in the fields by hand:
 
    | Preset | Miles | Date |
    |---|---|---|
@@ -856,7 +856,7 @@ The same next service also appears as the **Recommended next service** card in t
 If while working you see that the vehicle will need a service later on (the next oil change, brakes, belts), you can leave it as a suggestion for administration. You do not schedule or print anything: administration decides.
 
 1. On the order, tap **Suggest next service** in the quick actions (opens the dialog directly if no service is recorded yet; if one is already scheduled or suggested, it takes you to the **Next service** section, where you can tap **Suggest next service**).
-2. Under **Quick presets**, tap an option (**Synthetic oil (+5,000 mi / 6 mo)**, **Conventional oil (+3,000 mi / 3 mo)**, **General inspection (+5,000 mi / 6 mo)** or **Paint warranty (+30 days)**) or fill in the **Recommended date**, the **In how many miles** field (when the order has check-in miles, you enter how many miles to add—for example, `5000`—and below it shows the live total «Next service at {total} mi ({actual} + {extra})»; if there are no check-in miles, the field asks for **Recommended miles**) and a **Note or service** (up to 120 characters). At least the date or the miles are required.
+2. Under **Quick options**, tap an option (**Synthetic oil (+5,000 mi / 6 mo)**, **Conventional oil (+3,000 mi / 3 mo)**, **General inspection (+5,000 mi / 6 mo)** or **Paint warranty (+30 days)**) or fill in the **Recommended date**, the **In how many miles** field (when the order has check-in miles, you enter how many miles to add—for example, `5000`—and below it shows the live total «Next service at {total} mi ({actual} + {extra})»; if there are no check-in miles, the field asks for **Recommended miles**) and a **Note or service** (up to 120 characters). At least the date or the miles are required.
 3. Tap **Send suggestion**. You will see «Suggestion sent to administration.»
 
 You can only suggest on an order that is assigned to you and not yet delivered. If you suggest again, you replace your earlier suggestion. Once administration uses or discards it, it disappears.
@@ -874,7 +874,7 @@ A delivered order remains in the main list for 90 days. To remove it from the da
 ### Deleting an order
 <!-- rol: admin -->
 
-Only an administrator can delete an order, and **only if it has not been delivered yet**. This deletes its media files, progress updates and the automatic entries it generated in Finance (for example, the deposit). Bank-imported transactions remain intact.
+Only an administrator can delete an order, and **only if it has not been delivered yet and has no money recorded in Finance**. An order that already has money recorded in Finance (an advance payment or deposit, for example) cannot be deleted: cancel it with **Picked up without repair**, which records the refund. Deleting an order removes its media files and progress updates; bank-imported transactions remain intact.
 
 **A delivered order is not deleted: it is archived.** It holds the payment, the parts cost and the commissions, and deleting it would erase that money from Finance. In the order list, the delete button is replaced by **Archive**: the order leaves the list and goes to **Archived**, from where you can bring it back whenever you want.
 
@@ -971,7 +971,7 @@ An administrator can move any order. A technician can only move orders assigned
 to them, and never a **Completed** or **Delivered** order: on those cards the
 selector does not appear. Nor do they have the options **Intake**, **Waiting for Approval**
 or **Delivered**. A paused order does show the selector, but the system will not let it
-leave the pause while there is undecided additional work or a quote
+leave the pause while there is undecided additional work or an estimate
 awaiting response.
 
 Moving an order to **Delivered** opens the same delivery dialog as on the order details.
@@ -1007,13 +1007,13 @@ while the app is open, with a brief on-screen message.
 | **Intake registered** | Administrators. No longer sent, because only administration creates orders; older notices can still be read |
 | **New progress update** | Administrators, when a technician adds a progress update |
 | **Work finished** | Administrators, when a technician finishes an order: it has to be reviewed and marked ready for pickup |
-| **The customer answered the quote** (or **The customer did not authorize the quote**, if they authorized nothing) | Administrators, when the customer answers from their link |
+| **Customer responded to estimate** (or **Customer declined estimate**, if they authorized nothing) | Administrators, when the customer answers from their link |
 | **Additional work reported** | Administrators, when a technician reports additional work |
 | **Needs approval** | Administrators, when the order moves to **Waiting for Approval** |
 | **Inspection complete** | Administrators, when a technician completes the order's point inspection |
 | **A part arrived** | Assigned technicians, when an ordered part is marked **Arrived** |
-| **Quote without a response** | Administrators, once a day if a quote has gone more than 24 hours without a response |
-| **Quote answered** / **Work not authorized** | Assigned technicians, when the customer answers the quote, with what was authorized or not |
+| **Estimate awaiting response** | Administrators, once a day if an estimate has gone more than 24 hours without a response |
+| **Estimate answered** / **Work not authorized** | Assigned technicians, when the customer answers the estimate, with what was authorized or not |
 | **Commission approved** | Each technician, when administration accepts their commission, with the accepted amount |
 | **Next service suggested** | Administrators, when a technician suggests the date or mileage for the next service |
 | **Past the delivery date** | Administrators and assigned technicians, once a day for each overdue order. **It replaces the previous day's notice**: there is only one per order, with the days overdue up to date |
@@ -1077,7 +1077,7 @@ The **Indicators** tab aggregates key metrics to evaluate shop profitability and
 - **Branch and period selectors**: select the branch (when managing multiple locations) and query timeframe using quick presets (**This month**, **Last month**, **Last 30 days**) or a **Custom range** with start and end dates.
 - **KPI cards (8 indicators)**:
   - **Cars delivered**: total completed repair orders delivered within the selected period.
-  - **Average ticket (ARO)**: total repair order revenue divided by delivered cars.
+  - **Average repair order (ARO)**: total repair order revenue divided by delivered cars.
   - **Effective hourly rate**: labor revenue divided by billed labor hours. If a reference rate is configured for the branch, it is shown below for comparison.
   - **Hours per order**: average billed labor hours sold per delivered vehicle.
   - **Labor margin**: percentage of labor sales remaining after subtracting technician commissions.
@@ -1102,9 +1102,9 @@ for that order.
 ### Recording a manual transaction
 
 1. **New Transaction**.
-2. **Type**: income or expense.
-3. **Category**: Client Payment, Parts Purchase, Commissions, Operating Expense or Bank and card fees.
-4. **Amount** and **Date**. The date belongs to the shop: a transaction on the 1st
+2. **Type**: **Income** or **Expenses**.
+3. **Category**: when choosing **Income**, it selects **Client Payment**; when choosing **Expenses**, it switches automatically to **Operating Expense** and the list shows only expense categories (Parts Purchase, Commissions, Operating Expense or Bank and card fees).
+4. **Amount** and **Date** (required). The date belongs to the shop: a transaction on the 1st
    counts in that month.
 5. **Linked order** (optional): links the transaction to an order. In the table,
    this column leads directly to the order.
@@ -1226,8 +1226,8 @@ Upon delivering an order, each commission starts as **To accept**. **Only accept
 
 1. In **Outstanding balances**, tap **Pay accepted** on the technician's row (the button remains disabled if nothing is accepted).
 2. The **Pay balance** dialog opens: displays the employee, amount calculated by the system, number of orders covered, and warns if unreviewed commissions remain (which are not included in this payment).
-3. Select the **Pay Date** and **Method** (**Cheque**, **Cash**, **Zelle** or **Transfer**).
-4. If paying by **Cheque**, enter the **Cheque number** or attach the **Cheque photo** (at least one is required to reconcile with the bank).
+3. Select the **Pay Date** and **Method** (**Check**, **Cash**, **Zelle** or **Transfer**).
+4. If paying by **Check**, enter the **Check number** or attach the **Check photo** (at least one is required to reconcile with the bank).
 5. Tap **Record payment**.
 
 The payment clears the technician's balance and is recorded automatically as an expense under category **Commissions** in Finance.
@@ -1362,7 +1362,7 @@ based on role.
 ### Administrators only: workshops, staff and emails
 <!-- rol: admin -->
 
-**Workshops.** Create new locations with **New Workshop** and edit existing ones: name, address, **Change workshop logo**, **Theme colour**, **Workshop capacity** (work bays, for shop occupancy), **Reference hourly rate** (for benchmark comparison with effective hourly rate in workshop indicators), and **Commission rate**.
+**Workshops.** Create new locations with **New Workshop** and edit existing ones: name, address, **Change workshop logo**, **Theme color**, **Workshop capacity** (work bays, for shop occupancy), **Reference hourly rate** (for benchmark comparison with effective hourly rate in workshop indicators), and **Commission rate**.
 
 Contact details and workshop rules:
 
@@ -1384,7 +1384,7 @@ To create a user account from the users list:
 2. Fill in **Name**, **Email** and **Temporary Password** (minimum 8 characters).
 3. Select the **Role** (**Admin**, **Mechanic** or **Painter**).
 4. Choose the workshop under **Workshops**.
-5. Tap **Create**.
+5. Tap **Create**. If you selected **Mechanic** or **Painter**, their profile opens right away so you can set how they are paid (or close it to keep the workshop rate).
 
 ![New user.](../public/manual/en/44.webp)
 
@@ -1502,11 +1502,11 @@ It is helpful to understand these so you are not surprised or record the same mo
 
 **When paying commissions**, the expense is booked in Finance. When undoing payment, it is removed.
 
-**The intake signature does not authorize quoted work:** it confirms vehicle condition upon drop-off. Quoted work is authorized only through a sent quote or by tapping **Record authorization**.
+**The intake signature does not authorize quoted work:** it confirms vehicle condition upon drop-off. Quoted work is authorized only through a sent estimate or by tapping **Record authorization**.
 
 **When adding a job** after check-in, it starts unauthorized: it is neither charged nor performed until the customer authorizes it.
 
-**When responding to a quote**, authorized items add to the total (and if the order is already delivered, an adjustment is booked in Finance); technicians receive notifications regarding what to do and what not to do, and the customer receives an email receipt. Furthermore, upon the first authorized work, the order automatically transitions to **In Progress**.
+**When responding to an estimate**, authorized items add to the total (and if the order is already delivered, an adjustment is booked in Finance); technicians receive notifications regarding what to do and what not to do, and the customer receives an email receipt. Furthermore, upon the first authorized work, the order automatically transitions to **In Progress**.
 
 **When assigning a technician to the order**, they automatically take on any tasks in their trade that had no technician assigned.
 
@@ -1516,7 +1516,7 @@ It is helpful to understand these so you are not surprised or record the same mo
 
 **When delivering an order**, the customer link remains accessible for 90 additional days.
 
-**When deleting an order**, its media files, commissions and automatic entries are deleted. Bank-imported transactions remain intact.
+**When deleting an order** (only possible if it has not been delivered and has no money recorded in Finance; otherwise, cancel it with **Picked up without repair**), its media files and progress updates are deleted. Bank-imported transactions remain intact.
 
 **Periodic cleanup.** Read notifications are deleted after 60 days, and all notifications after 180 days. Completed email and push delivery logs are deleted after 90 days. Abandoned uploads and files from deleted orders are purged from storage.
 
@@ -1548,14 +1548,14 @@ Failed emails are not retried indefinitely on an automatic loop. An administrato
 
 **«The total does not include a job I added.»**
 Look at the line badge: if it says **Not authorized** or **Waiting for customer**,
-it is not charged yet. Send the quote or record authorization.
+it is not charged yet. Send the estimate or record authorization.
 
 **«The app won't let me edit or delete a line.»**
-It is **Waiting for customer**. Cancel the quote, correct the line, and send it again.
+It is **Waiting for customer**. Cancel the estimate, correct the line, and send it again.
 
 **«The customer signed and jobs are still unauthorized.»**
-This is expected: the signature confirms vehicle drop-off condition, not quote authorization.
-Send the quote or record authorization.
+This is expected: the signature confirms vehicle drop-off condition, not estimate authorization.
+Send the estimate or record authorization.
 
 **«The app won't let me delete an order: it says it has paid commissions.»**
 Undo that payment in **Commissions**, delete the order, and re-pay
@@ -1566,15 +1566,15 @@ This should not happen due to poor signal. If it does, note the time and device 
 administration: it is a bug that needs investigation.
 
 **«The app won't let me deliver the order.»**
-It has a quote awaiting customer response. Record authorization (if the customer already
-responded) or cancel the quote.
+It has an estimate awaiting customer response. Record authorization (if the customer already
+responded) or cancel the estimate.
 
 **«I am a technician: should I perform this job?»**
 On your own task cards, only perform those marked **Pending** (those marked **Waiting for authorization** are not done yet, and those marked **Not authorized · not done** are closed without being done). In the **Other jobs on this order** table or in **Parts Description**, if the line has no badge it is authorized; **Not authorized** and **Waiting for
 customer**: not yet. **Do not do**: no.
 
 **«The customer says they authorized but it does not show up.»**
-Check the **Quote** card and email history on the **Customer link**
+Check the **Estimate** card and email history on the **Customer link**
 card. If the email went out but they did not respond online, ask them by phone and use
 **Record authorization…**.
 
@@ -1687,4 +1687,4 @@ The **Complete inspection** button is only enabled once no points remain pending
 
 ---
 
-*End of document. Last content revision: October 2026.*
+*End of document. Last content revision: November 2026.*

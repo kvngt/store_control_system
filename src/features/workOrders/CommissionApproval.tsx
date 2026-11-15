@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Edit2, CheckCircle2, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 
-export type ApproveCommission = (comisionId: string, montoNuevo?: number, porcentajeNuevo?: number) => Promise<void>;
+export type ApproveCommission = (comisionId: string, montoNuevo?: number, porcentajeNuevo?: number) => Promise<boolean>;
 
 export interface ApprovalProps {
   comisionId: string;
@@ -29,8 +29,8 @@ export default function CommissionApproval({ comisionId, estado, monto, porcenta
   const run = async (montoNuevo?: number, porcentajeNuevo?: number) => {
     setBusy(true);
     try {
-      await onApprove(comisionId, montoNuevo, porcentajeNuevo);
-      setEditing(false);
+      const saved = await onApprove(comisionId, montoNuevo, porcentajeNuevo);
+      if (saved) setEditing(false);
     } finally {
       setBusy(false);
     }

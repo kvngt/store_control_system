@@ -1,11 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { nextServiceService } from './nextService.service';
-import { supabase } from '../lib/supabase';
+import type { OrderNextService } from '../types/database';
+
+const { fromMock, rpcMock } = vi.hoisted(() => ({
+  fromMock: vi.fn(),
+  rpcMock: vi.fn(),
+}));
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
-    from: vi.fn(),
-    rpc: vi.fn(),
+    from: fromMock,
+    rpc: rpcMock,
   },
 }));
 
@@ -15,7 +20,7 @@ describe('nextServiceService', () => {
   });
 
   it('getNextService consulta la tabla orden_proximo_servicio con orden_id', async () => {
-    const mockRow = {
+    const mockRow: OrderNextService = {
       orden_id: 'ord-123',
       sede_id: 'sede-1',
       fecha: '2027-04-14',
@@ -34,18 +39,18 @@ describe('nextServiceService', () => {
     const maybeSingleMock = vi.fn().mockResolvedValueOnce({ data: mockRow, error: null });
     const eqMock = vi.fn().mockReturnValue({ maybeSingle: maybeSingleMock });
     const selectMock = vi.fn().mockReturnValue({ eq: eqMock });
-    vi.mocked(supabase.from).mockReturnValue({ select: selectMock } as any);
+    fromMock.mockReturnValue({ select: selectMock });
 
     const result = await nextServiceService.getNextService('ord-123');
 
-    expect(supabase.from).toHaveBeenCalledWith('orden_proximo_servicio');
+    expect(fromMock).toHaveBeenCalledWith('orden_proximo_servicio');
     expect(selectMock).toHaveBeenCalledWith('*');
     expect(eqMock).toHaveBeenCalledWith('orden_id', 'ord-123');
     expect(result).toEqual(mockRow);
   });
 
   it('suggest llama sugerir_proximo_servicio con los nombres de parámetros exactos', async () => {
-    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: null } as any);
+    rpcMock.mockResolvedValueOnce({ data: null, error: null });
 
     await nextServiceService.suggest('ord-123', {
       fecha: '2027-04-14',
@@ -53,7 +58,7 @@ describe('nextServiceService', () => {
       nota: 'Aceite 5W-30',
     });
 
-    expect(supabase.rpc).toHaveBeenCalledWith('sugerir_proximo_servicio', {
+    expect(rpcMock).toHaveBeenCalledWith('sugerir_proximo_servicio', {
       p_orden_id: 'ord-123',
       p_fecha: '2027-04-14',
       p_millas: 66000,
@@ -69,7 +74,7 @@ describe('nextServiceService', () => {
       nota: 'Aceite 5W-30',
       token: 'b'.repeat(64),
     };
-    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: mockResult, error: null } as any);
+    rpcMock.mockResolvedValueOnce({ data: mockResult, error: null });
 
     const res = await nextServiceService.program('ord-123', {
       fecha: '2027-04-14',
@@ -77,7 +82,7 @@ describe('nextServiceService', () => {
       nota: 'Aceite 5W-30',
     });
 
-    expect(supabase.rpc).toHaveBeenCalledWith('programar_proximo_servicio', {
+    expect(rpcMock).toHaveBeenCalledWith('programar_proximo_servicio', {
       p_orden_id: 'ord-123',
       p_fecha: '2027-04-14',
       p_millas: 66000,
@@ -89,39 +94,39 @@ describe('nextServiceService', () => {
 
   // 20261010000038: el idioma que elige administración se guarda y lo usa la página del QR.
   it('program manda el idioma elegido con el nombre exacto p_idioma', async () => {
-    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: { token: 'c'.repeat(64) }, error: null } as any);
+    rpcMock.mockResolvedValueOnce({ data: { token: 'c'.repeat(64) }, error: null });
 
     await nextServiceService.program('ord-123', { fecha: '2027-04-14', millas: null, nota: null }, 'en');
 
-    expect(supabase.rpc).toHaveBeenCalledWith(
+    expect(rpcMock).toHaveBeenCalledWith(
       'programar_proximo_servicio',
       expect.objectContaining({ p_idioma: 'en' })
     );
   });
 
   it('remove llama quitar_proximo_servicio con p_orden_id', async () => {
-    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: null } as any);
+    rpcMock.mockResolvedValueOnce({ data: null, error: null });
 
     await nextServiceService.remove('ord-123');
 
-    expect(supabase.rpc).toHaveBeenCalledWith('quitar_proximo_servicio', {
+    expect(rpcMock).toHaveBeenCalledWith('quitar_proximo_servicio', {
       p_orden_id: 'ord-123',
     });
   });
 
   it('discardSuggestion llama descartar_sugerencia_proximo_servicio con p_orden_id', async () => {
-    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: null } as any);
+    rpcMock.mockResolvedValueOnce({ data: null, error: null });
 
     await nextServiceService.discardSuggestion('ord-123');
 
-    expect(supabase.rpc).toHaveBeenCalledWith('descartar_sugerencia_proximo_servicio', {
+    expect(rpcMock).toHaveBeenCalledWith('descartar_sugerencia_proximo_servicio', {
       p_orden_id: 'ord-123',
     });
   });
 
   it('propaga errores cuando la base de datos devuelve error', async () => {
     const dbError = new Error('RPC error');
-    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: dbError } as any);
+    rpcMock.mockResolvedValueOnce({ data: null, error: dbError });
 
     await expect(
       nextServiceService.suggest('ord-123', { fecha: null, millas: 1000, nota: null })

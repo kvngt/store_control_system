@@ -57,6 +57,44 @@ describe('renderEmail', () => {
     expect(emailEn.text).toContain('Starting October 15, 2026, a parking fee of $40.00 per day will apply.');
   });
 
+  it('el correo de finalizado avisa cuando el parqueo ya está acumulando', () => {
+    const emailEs = renderEmail('estatus', {
+      ...base,
+      orden: { ...base.orden, estatus: 'finalizado' },
+      parqueo: { estado: 'acumulando', inicio: '2026-10-15', tarifa_inicial: 40 },
+    })!;
+    expect(emailEs.text).toContain('Desde el 15 de octubre de 2026 se está cobrando parqueo de $40.00 por día.');
+
+    const emailEn = renderEmail('estatus', {
+      ...base,
+      lang: 'en',
+      orden: { ...base.orden, estatus: 'finalizado' },
+      parqueo: { estado: 'acumulando', inicio: '2026-10-15', tarifa_inicial: 40 },
+    })!;
+    expect(emailEn.text).toContain('Since October 15, 2026, a parking fee of $40.00 per day has been accruing.');
+  });
+
+  it('el correo de entrega usa texto sobrio cuando es retirada sin reparar', () => {
+    const emailEs = renderEmail('estatus', {
+      ...base,
+      orden: { ...base.orden, estatus: 'entregado', retirada_sin_reparar: true },
+    })!;
+    expect(emailEs.subject).toContain('Entrega de vehículo');
+    expect(emailEs.text).toContain('sin realizar la reparación');
+    expect(emailEs.text).toContain('cobrado o devuelto');
+    expect(emailEs.text).not.toContain('Gracias por confiar en nosotros');
+
+    const emailEn = renderEmail('estatus', {
+      ...base,
+      lang: 'en',
+      orden: { ...base.orden, estatus: 'entregado', retirada_sin_reparar: true },
+    })!;
+    expect(emailEn.subject).toContain('Vehicle pickup summary');
+    expect(emailEn.text).toContain('without performing the repair');
+    expect(emailEn.text).toContain('charged or refunded');
+    expect(emailEn.text).not.toContain('Thank you for trusting us');
+  });
+
   it('no redacta un aviso de estado para uno que no se anuncia ni una plantilla desconocida', () => {
     expect(renderEmail('estatus', { ...base, orden: { ...base.orden, estatus: 'recepcion' } })).toBeNull();
     // Pedir autorización tampoco se anuncia: el presupuesto todavía no existe y su
@@ -213,7 +251,7 @@ describe('renderEmail en inglés', () => {
     expect(renderEmail('presupuesto_confirmacion', {
       ...en,
       presupuesto: { ...quote, estado: 'respondido', via: 'admin_telefono', lineas: [{ descripcion: 'Brake replacement', monto: 300, estado: 'rechazado' }] },
-    })!.text).toContain('Not authorized: Brake replacement.');
+    })!.text).toContain('Not approved: Brake replacement.');
     expect(renderEmail('reporte', en)!.subject).toBe('Report for your 2019 Toyota Camry · ORD-2026-014');
     expect(renderEmail('avance', en)!.subject).toBe('Updates on your 2019 Toyota Camry · ORD-2026-014');
   });

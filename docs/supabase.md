@@ -42,10 +42,10 @@ Para **por qué** está construido así: [radiografia.md](radiografia.md). Para
 | **Plan** | **Pro** desde el 30 de septiembre de 2026: respaldos diarios (Database → Backups). Los buckets siguen con 50 MB por archivo, que es lo que la app permite ([deployment.md §4.1](deployment.md#41-plan-y-límites-de-gasto)) |
 | **Postgres** | 17.6 |
 | **Tamaño de la base** | ~19 MB (29 de septiembre de 2026, recién limpiada) |
-| **Migraciones aplicadas** | 93 al 03/11/2026 (la última, `20261010000039_vehiculos_vin_y_placa_unicos`; en el repositorio ya están la `040` y la `041`, sin aplicar). `npm run db:check` dice si producción va al día |
+| **Migraciones aplicadas** | 98 al 15/11/2026 (última migración: `20261010000044_auditoria_2026_11_b`; no hay `045`, y el 15/11/2026 quedan aplicadas `043` y `044` en producción). `npm run db:check` dice si producción va al día |
 | **Max rows de la API** | 1.000 (valor por defecto; Project Settings → API). **No bajarlo**: `fetchAll` asume páginas de 1.000 |
 | **Enlace con este repositorio** | `supabase/.temp/project-ref` (lo crea `npx supabase link`) |
-| **Entornos** | Solo este. No hay staging: es la primera recomendación de [mantenimiento.md](mantenimiento.md#5-plan-priorizado) |
+| **Entornos** | Solo este proyecto remoto (no hay staging en la nube; las pruebas E2E de Playwright corren contra Supabase local con `npm run test:e2e:local`). Es la primera recomendación de [mantenimiento.md](mantenimiento.md#5-plan-priorizado) |
 | **Datos** | Limpiado el 29 de septiembre de 2026 para la prueba del taller: 1 administrador, 1 sede ("Taller principal"), sin clientes, órdenes, movimientos ni archivos |
 
 ---
@@ -197,7 +197,7 @@ a mano: la anterior se quedó cinco funciones atrás sin que nadie lo notara.
 | **Internas** | 32 | Dinero (`_saldo_orden`, `_reparto_comisiones`, `_balance_orden`, `recalculate_order_totals`, `sync_order_commissions`, `sync_order_parts_expense`, `reverse_order_delivery_finance`); parqueo (`_parqueo_calculo`, `recalcular_parqueo_pendiente`); avisos (`notificar`, `admins_de_sede`, `datos_orden_aviso`); cola (`claim_outbox`, `finish_outbox`, `dispatch_outbox_if_due`, `invoke_edge_function`, `purge_old_notifications`, `archivos_huerfanos`); portal y correos (`datos_portal`, `datos_correo`, `encolar_correo_cliente`, `asegurar_enlace_orden`, `preferencia_correos_portal`, `responder_presupuesto_portal`, `marcar_estatus_enviado`, `es_correo_valido`); presupuestos (`_crear_presupuesto`, `_agregar_borradores`, `_lineas_pendientes`, `_resolver_presupuesto`, `recordar_presupuestos_sin_respuesta`); recordatorios (`recordar_ordenes_vencidas`) | Solo `service_role` (Edge Functions), triggers y pg_cron |
 | **De trigger** | 48 | `trg_*`, `handle_*`, `cleanup_order_finance`, `trg_parqueo_orden` | Solo como trigger |
 
-Qué hace cada trigger, por tabla: [radiografia.md §5](arquitectura.md#5-dónde-vive-la-lógica-de-negocio).
+Qué hace cada trigger, por tabla: [arquitectura.md §5](arquitectura.md#5-dónde-vive-la-lógica-de-negocio).
 
 > **Regla:** una función nueva nace ejecutable por `anon` y `authenticated`. Revócala en
 > la misma migración y comprueba con `npm run qa:security` después de aplicarla
@@ -207,7 +207,7 @@ Qué hace cada trigger, por tabla: [radiografia.md §5](arquitectura.md#5-dónde
 
 Viven en `supabase/migrations/` y se aplican con `npx supabase db push --linked`. **No se
 cambia el esquema desde el panel**: lo que no está en una migración no existe en otro
-entorno y lo borra el próximo `db reset`. Historia de las primeras 54 (hoy son 95 migraciones, hasta `20261010000041`):
+entorno y lo borra el próximo `db reset`. Historia de las primeras 54 (hoy son 98 migraciones, hasta `20261010000044`):
 [evolucion.md §12](evolucion.md#12-todas-las-migraciones).
 
 Una función se reescribe entera en cada migración que la cambia. Para saber cuál es la
@@ -266,18 +266,18 @@ Delete), no la CLI.
 
 ## 6. Edge Functions
 
-Deno 2. Código en `supabase/functions/`; se despliegan con
+Deno 2. Código en `supabase/functions/` (cada función tiene `handler.ts` con `handler`, `Deps`, `defaultDeps` y un `index.ts` mínimo, apoyados en `_shared/`: `http.ts`, `resend.ts`, `gemini.ts`, `internal.ts`, `caller.ts`, `test_doubles.ts`, `email/`); se prueban con `npm run test:functions` y se despliegan con
 `npx supabase functions deploy <nombre>`.
 
-| Función | JWT verificado por Supabase | Quién la llama | Cómo se protege | Usa | Versión (29 sep 2026) |
+| Función | JWT verificado por Supabase | Quién la llama | Cómo se protege | Usa | Versión |
 |---|:---:|---|---|---|---|
-| `portal` | no | Portal del cliente (`/r/<token>`) | Token de 64 hex; `datos_portal` decide campo por campo | Llave de servicio | v2 |
-| `process-outbox` | no | La base (`pg_net`) al crear un aviso, y pg_cron cada minuto | Secreto `x-restorify-secret` | Llave de servicio, Resend, VAPID | v5 |
-| `cleanup-storage` | no | pg_cron a las 09:00 UTC | Secreto `x-restorify-secret` | Llave de servicio | v2 |
-| `create-employee` | sí | Empleados → Nuevo usuario | JWT + rol admin | Admin API de Auth | v6 |
-| `update-employee` | sí | Empleados → editar | JWT + rol admin; no degrada al último admin | Admin API de Auth | v4 |
-| `delete-employee` | sí | Empleados → quitar | JWT + rol admin; nadie se borra a sí mismo, ni a quien tiene órdenes asignadas o pagos de comisión | Admin API de Auth | v5 |
-| `traducir-texto` | sí | Próximo servicio → imprimir el sticker (traduce la nota) | JWT + rol admin; no toca la base | Gemini (`GEMINI_API_KEY`, `GEMINI_MODEL`) | desplegada (SEC-17, 19/10/2026) |
+| `portal` | no | Portal del cliente (`/r/<token>`, `/s/<código>` y baja por enlace vencido `044`) | Token de 64 hex (el mismo enlace sirve para darse de baja de los correos aunque haya vencido, `044`); `datos_portal` decide campo por campo | Llave de servicio | v11 (15/11/2026) |
+| `process-outbox` | no | La base (`pg_net`) al crear un aviso, y pg_cron cada minuto | Secreto `x-restorify-secret` | Llave de servicio, Resend, VAPID, Gemini | v22 (15/11/2026) |
+| `cleanup-storage` | no | pg_cron a las 09:00 UTC | Secreto `x-restorify-secret` | Llave de servicio | v9 (15/11/2026) |
+| `create-employee` | sí | Empleados → Nuevo usuario | JWT + rol admin | Admin API de Auth | v14 (15/11/2026) |
+| `update-employee` | sí | Empleados → editar | JWT + rol admin; no degrada al último admin | Admin API de Auth | v12 (15/11/2026) |
+| `delete-employee` | sí | Empleados → quitar | JWT + rol admin; nadie se borra a sí mismo, ni a quien tiene órdenes asignadas o pagos de comisión | Admin API de Auth | v14 (15/11/2026) |
+| `traducir-texto` | sí | Próximo servicio → imprimir el sticker (traduce la nota) | JWT + rol admin; no toca la base | Gemini (`GEMINI_API_KEY`, `GEMINI_MODEL`) | v2 (15/11/2026) |
 
 `verify_jwt = false` para las tres primeras está declarado en `supabase/config.toml`, y
 igual se despliegan con `--no-verify-jwt` para que quede explícito.
@@ -473,6 +473,8 @@ las migraciones. Sirve para las pruebas pgTAP y para probar una migración antes
 npx supabase start     # levantar (la primera vez descarga varios GB)
 npx supabase status    # direcciones y llaves locales
 npm run test:db        # las pruebas pgTAP
+npm run db:types       # regenera src/types/supabase.gen.ts desde la base local
+npm run test:e2e:local # Playwright contra la base local
 npx supabase db reset  # recrear la base local desde cero
 npx supabase stop      # apagar
 ```
@@ -511,7 +513,7 @@ ORDER BY 2 DESC, 3 DESC, 1;
 | Qué | Por qué importa | Cómo |
 |---|---|---|
 | ~~**Pasar a Pro**~~ Hecho el 30/09/2026 | Free no tenía respaldos diarios, pausaba proyectos inactivos y limitaba Storage a 1 GB | Organization → Billing. Mientras tanto, respaldo manual antes de cada `db push` ([mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación)) |
-| **Staging** | Hoy las pruebas e2e y `qa:security` corren contra el único proyecto, y sus cuentas de prueba se borraron el 29/09/2026 | Un segundo proyecto con las mismas migraciones, secretos propios y cuentas de prueba |
+| **Staging** | Hoy `qa:security` sigue corriendo contra el único proyecto remoto (aunque las pruebas E2E ya corren contra la base local con `npm run test:e2e:local`, sin cuentas de prueba en producción) | Un segundo proyecto con las mismas migraciones, secretos propios y cuentas de prueba |
 | **Sentry** | Hoy nadie se entera de un error en el teléfono de un técnico | Crear el proyecto en Sentry, poner `VITE_SENTRY_DSN` en las variables del sitio en Hostinger y volver a desplegar |
-| ~~**SMTP de Auth con Resend**~~ Hecho el 30/09/2026 (§9) | El correo de Supabase permitía ~2 por hora | [deployment.md §4.2](deployment.md#42-auth) |
+| ~~**SMTP de Auth con Resend**~~ Hecho el 30/09/2026 (§8) | El correo de Supabase permitía ~2 por hora | [deployment.md §4.2](deployment.md#42-auth) |
 | **`[inbucket]` en `config.toml`** | La CLI avisa que la sección es obsoleta; solo afecta al local | Renombrarla cuando se actualice la configuración local |

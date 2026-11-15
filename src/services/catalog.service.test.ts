@@ -1,10 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { catalogService } from './catalog.service';
-import { supabase } from '../lib/supabase';
+import type { CatalogJob } from '../types/database';
+
+const { rpcMock } = vi.hoisted(() => ({
+  rpcMock: vi.fn(),
+}));
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
-    rpc: vi.fn(),
+    rpc: rpcMock,
   },
 }));
 
@@ -14,7 +18,7 @@ describe('catalogService', () => {
   });
 
   it('list llama a catalogo_de_trabajos con los parámetros adecuados', async () => {
-    const mockJobs = [
+    const mockJobs: CatalogJob[] = [
       {
         id: 'job-1',
         nombre: 'Frenos',
@@ -23,11 +27,11 @@ describe('catalogService', () => {
         lineas: [],
       },
     ];
-    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: mockJobs, error: null } as any);
+    rpcMock.mockResolvedValueOnce({ data: mockJobs, error: null });
 
     const result = await catalogService.list('sede-123', true);
 
-    expect(supabase.rpc).toHaveBeenCalledWith('catalogo_de_trabajos', {
+    expect(rpcMock).toHaveBeenCalledWith('catalogo_de_trabajos', {
       p_sede_id: 'sede-123',
       p_incluir_inactivos: true,
     });
@@ -35,11 +39,11 @@ describe('catalogService', () => {
   });
 
   it('list usa p_incluir_inactivos = false por defecto', async () => {
-    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: [], error: null } as any);
+    rpcMock.mockResolvedValueOnce({ data: [], error: null });
 
     const result = await catalogService.list('sede-123');
 
-    expect(supabase.rpc).toHaveBeenCalledWith('catalogo_de_trabajos', {
+    expect(rpcMock).toHaveBeenCalledWith('catalogo_de_trabajos', {
       p_sede_id: 'sede-123',
       p_incluir_inactivos: false,
     });
@@ -47,7 +51,7 @@ describe('catalogService', () => {
   });
 
   it('save llama a guardar_trabajo_catalogo con lineas y posiciones', async () => {
-    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: 'job-uuid-1', error: null } as any);
+    rpcMock.mockResolvedValueOnce({ data: 'job-uuid-1', error: null });
 
     const result = await catalogService.save({
       id: 'job-1',
@@ -73,7 +77,7 @@ describe('catalogService', () => {
       ],
     });
 
-    expect(supabase.rpc).toHaveBeenCalledWith('guardar_trabajo_catalogo', {
+    expect(rpcMock).toHaveBeenCalledWith('guardar_trabajo_catalogo', {
       p_id: 'job-1',
       p_sede_id: 'sede-123',
       p_nombre: 'Cambio de Aceite',
@@ -100,7 +104,7 @@ describe('catalogService', () => {
   });
 
   it('save usa null en id si no se especifica y asigna posicion por índice', async () => {
-    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: 'job-new-uuid', error: null } as any);
+    rpcMock.mockResolvedValueOnce({ data: 'job-new-uuid', error: null });
 
     const result = await catalogService.save({
       sede_id: 'sede-123',
@@ -112,12 +116,11 @@ describe('catalogService', () => {
           especialidad: 'mecanica',
           cantidad: 1,
           precio: 80,
-          posicion: undefined as any,
         },
       ],
     });
 
-    expect(supabase.rpc).toHaveBeenCalledWith('guardar_trabajo_catalogo', {
+    expect(rpcMock).toHaveBeenCalledWith('guardar_trabajo_catalogo', {
       p_id: null,
       p_sede_id: 'sede-123',
       p_nombre: 'Frenos',
@@ -137,18 +140,18 @@ describe('catalogService', () => {
   });
 
   it('remove llama a borrar_trabajo_catalogo con p_id', async () => {
-    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: null } as any);
+    rpcMock.mockResolvedValueOnce({ data: null, error: null });
 
     await catalogService.remove('job-123');
 
-    expect(supabase.rpc).toHaveBeenCalledWith('borrar_trabajo_catalogo', {
+    expect(rpcMock).toHaveBeenCalledWith('borrar_trabajo_catalogo', {
       p_id: 'job-123',
     });
   });
 
   it('propaga errores de supabase.rpc', async () => {
     const error = new Error('Database error');
-    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error } as any);
+    rpcMock.mockResolvedValueOnce({ data: null, error });
 
     await expect(catalogService.remove('job-123')).rejects.toThrow('Database error');
   });

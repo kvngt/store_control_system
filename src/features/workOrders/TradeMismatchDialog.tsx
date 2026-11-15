@@ -1,5 +1,5 @@
 import { AlertTriangle } from 'lucide-react';
-import BodyPortal from '../../components/BodyPortal';
+import Modal from '../../components/Modal';
 import { useLanguage } from '../../context/language.context';
 import type { Specialty } from '../../types/database';
 import type { Technician } from './tasks';
@@ -34,40 +34,35 @@ export default function TradeMismatchDialog({ especialidad, technician, onAssign
   const oficio = t(`tasks.trade.${technician.rol === 'pintor' ? 'pintor' : 'mecanico'}`);
 
   return (
-    <BodyPortal>
-      <div className="modal-overlay" onClick={onCancel}>
-        <div
-          className="modal"
-          style={{ maxWidth: 460 }}
-          onClick={(e) => e.stopPropagation()}
-          role="alertdialog"
-          aria-modal="true"
-          aria-label={title}
-        >
-          <div className="modal-header">
-            <h2 className="modal-title">
-              <AlertTriangle size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle', color: 'var(--color-warning)' }} />
-              {title}
-            </h2>
-          </div>
-          <div className="modal-body">
-            <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-              {t('tasks.mismatchBody').replace('{nombre}', technician.nombre_completo).replace('{oficio}', oficio)}
-            </p>
-          </div>
-          <div className="modal-footer trade-mismatch-actions">
-            <button type="button" className="btn btn-ghost" onClick={onCancel}>
-              {t('common.cancel')}
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={onChooseOther}>
-              {t('tasks.chooseOther')}
-            </button>
-            <button type="button" className="btn btn-primary" onClick={onAssign} autoFocus>
-              {confirmLabel ?? t('tasks.assignAnyway')}
-            </button>
-          </div>
-        </div>
-      </div>
-    </BodyPortal>
+    <Modal
+      usePortal
+      role="alertdialog"
+      onClose={onCancel}
+      style={{ maxWidth: 460 }}
+      title={
+        <>
+          <AlertTriangle size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle', color: 'var(--color-warning)' }} />
+          {title}
+        </>
+      }
+      footerClassName="trade-mismatch-actions"
+      footer={
+        <>
+          <button type="button" className="btn btn-ghost" onClick={onCancel}>
+            {t('common.cancel')}
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={onChooseOther}>
+            {t('tasks.chooseOther')}
+          </button>
+          <button type="button" className="btn btn-primary" onClick={onAssign} autoFocus>
+            {confirmLabel ?? t('tasks.assignAnyway')}
+          </button>
+        </>
+      }
+    >
+      <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+        {t('tasks.mismatchBody').replace('{nombre}', technician.nombre_completo).replace('{oficio}', oficio)}
+      </p>
+    </Modal>
   );
 }

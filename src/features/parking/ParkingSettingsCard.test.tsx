@@ -21,7 +21,7 @@ vi.mock('../../services/parking.service', () => ({
   },
 }));
 
-vi.mock('../../services/supabaseService', () => ({
+vi.mock('../../services/sedes.service', () => ({
   sedesService: {
     getSedes: mocks.getSedes,
   },
@@ -154,5 +154,47 @@ describe('ParkingSettingsCard', () => {
         })
       );
     });
+  });
+
+  it('ignora respuestas viejas de vista previa cuando llega otra petición más reciente', async () => {
+    let resolveFirst!: (v: ParkingPreview) => void;
+    let resolveSecond!: (v: ParkingPreview) => void;
+    mocks.getConfig.mockResolvedValue({ ...sampleConfig, habilitado: true });
+    mocks.getPreview
+      .mockImplementationOnce(() => new Promise<ParkingPreview>((r) => { resolveFirst = r; }))
+      .mockImplementationOnce(() => new Promise<ParkingPreview>((r) => { resolveSecond = r; }));
+    const user = userEvent.setup();
+
+    renderWithProviders(<ParkingSettingsCard />);
+
+    await waitFor(() => expect(mocks.getPreview).toHaveBeenCalledTimes(1));
+    await user.click(screen.getByRole('button', { name: 'Con seguro' }));
+    await waitFor(() => expect(mocks.getPreview).toHaveBeenCalledTimes(2));
+
+    resolveSecond({ ...samplePreview, monto: 450 });
+    expect(await screen.findByText(/\$450\.00/)).toBeInTheDocument();
+
+    resolveFirst({ ...samplePreview, monto: 210 });
+    await waitFor(() => {
+      expect(screen.getByText(/\$450\.00/)).toBeInTheDocument();
+      expect(screen.queryByText(/\$210\.00/)).not.toBeInTheDocument();
+    });
+  });
+
+  it('apaga el spinner de vista previa al desactivar el perfil mientras calcula', async () => {
+    mocks.getConfig.mockResolvedValue({ ...sampleConfig, habilitado: true });
+    mocks.getPreview.mockImplementation(() => new Promise<ParkingPreview>(() => {}));
+    const user = userEvent.setup();
+
+    renderWithProviders(<ParkingSettingsCard />);
+
+    expect(await screen.findByText('Calculando vista previa...')).toBeInTheDocument();
+
+    const profileCheckboxes = screen.getAllByRole('checkbox', { name: 'Habilitado' });
+    // El segundo perfil corresponde a Particular, que es la pestaña activa al iniciar.
+    await user.click(profileCheckboxes[1]);
+
+    expect(screen.queryByText('Calculando vista previa...')).not.toBeInTheDocument();
+    expect(screen.getByText('Sin cálculo disponible para estos parámetros.')).toBeInTheDocument();
   });
 });

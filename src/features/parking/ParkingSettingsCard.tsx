@@ -6,7 +6,7 @@ import { useAuth } from '../../context/auth.context';
 import { useToast } from '../../context/toast.context';
 import { AlertError } from '../../components/AlertError';
 import { parkingService } from '../../services/parking.service';
-import { sedesService } from '../../services/supabaseService';
+import { sedesService } from '../../services/sedes.service';
 import { emptyList } from '../../lib/emptyList';
 import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';
@@ -113,9 +113,11 @@ export default function ParkingSettingsCard() {
     const activeProfile = previewTab === 'seguro' ? perfilSeguro : perfilParticular;
     if (!activeProfile.habilitado || activeProfile.tramos.length === 0) {
       setPreviewResult(null);
+      setPreviewLoading(false);
       return;
     }
 
+    let cancelled = false;
     setPreviewLoading(true);
     const timer = setTimeout(async () => {
       try {
@@ -124,15 +126,20 @@ export default function ParkingSettingsCard() {
           previewEventDate || null,
           previewEndDate || todayIso
         );
+        if (cancelled) return;
         setPreviewResult(preview);
       } catch {
+        if (cancelled) return;
         setPreviewResult(null);
       } finally {
-        setPreviewLoading(false);
+        if (!cancelled) setPreviewLoading(false);
       }
     }, 400);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [previewTab, perfilSeguro, perfilParticular, previewEventDate, previewEndDate, todayIso]);
 
   const handleSave = async (e: React.FormEvent) => {

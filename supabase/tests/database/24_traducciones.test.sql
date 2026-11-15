@@ -16,7 +16,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET search_path = public, extensions;
 
-SELECT plan(24);
+SELECT plan(25);
 
 -- ------------------------------------------------------------------------------------
 -- Datos: una sede, un admin, un mecánico asignado y otro que no lo está
@@ -164,9 +164,9 @@ SELECT is((SELECT traducciones_orden((SELECT id FROM t_o))), '{}'::jsonb,
   'Un técnico que no está en la orden no recibe nada (antes recibía las de cualquier orden)');
 
 RESET ROLE;
--- El token se lee antes de ser anon: anon no ve orden_enlaces.
+-- El token se lee antes y la consulta se hace como service_role (como la edge function portal).
 SELECT set_config('test.token24', (SELECT token FROM orden_enlaces WHERE orden_id = (SELECT id FROM t_o) AND revocado_en IS NULL), true);
-SET LOCAL ROLE anon;
+SET LOCAL ROLE service_role;
 SELECT is((SELECT traducciones_portal(current_setting('test.token24')) ->> 'Cambio de aceite'), 'Oil change',
   'El portal recibe el diccionario con un enlace vigente');
 SELECT is((SELECT traducciones_portal('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb')), '{}'::jsonb,
@@ -184,6 +184,8 @@ SELECT ok(NOT has_function_privilege('authenticated', 'public.trg_encolar_traduc
   'Ni la función del trigger');
 SELECT ok(NOT has_function_privilege('authenticated', 'public.guardar_traducciones(uuid, text, jsonb)', 'EXECUTE'),
   'Ni guardar_traducciones (solo la edge function, con service_role)');
+SELECT ok(NOT has_function_privilege('anon', 'public.traducciones_portal(text)', 'EXECUTE'),
+  'anon ya no ejecuta traducciones_portal (solo service_role)');
 
 SELECT * FROM finish();
 ROLLBACK;

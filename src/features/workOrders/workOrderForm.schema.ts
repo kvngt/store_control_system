@@ -145,9 +145,10 @@ export const workOrderFormSchema = baseShape.check((ctx) => {
     if (!form.paymentMethod) {
       reject(['paymentMethod'], 'delivery.methodRequired');
     }
-    if (form.paymentMethod === 'cheque' && !form.checkNumber.trim()) {
-      reject(['checkNumber'], 'delivery.checkRequired');
-    }
+    // El cheque se acepta con su número O con la foto del comprobante, como al cobrar en la
+    // entrega o un anticipo (`paymentProblem`). Este esquema no ve la foto (es un archivo, fuera
+    // del formulario): esa regla la aplica `useIntakeSubmit` al crear. Antes se exigía aquí el
+    // número siempre y el aviso, que dice «o sube su foto», no se cumplía.
   }
 
   form.laborItems.forEach((item, i) => {

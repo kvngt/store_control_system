@@ -5,25 +5,10 @@ import { MEDIA_BUCKET, RESUMABLE_THRESHOLD_BYTES } from '../lib/media/constants'
 import { baseMime } from '../lib/media/mime';
 import type { MediaUploader, UploadItem } from '../lib/media/uploadQueue';
 import type { OrderMedia } from '../types/database';
-import { assertAffected, assertDeleted } from './support';
+import { assertAffected, assertDeleted, getValidAccessToken } from './support';
 
 /** Una hora. Las galerías las cachean 50 minutos y piden nuevas antes de que venzan. */
 export const SIGNED_URL_TTL_SECONDS = 60 * 60;
-
-async function accessToken(): Promise<string> {
-  // `getSession` renueva el token si venció, lo que importa en un video que tarda
-  // más que la vida del token en subir.
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  // Mismo `code` que `users.service.ts`: las dos rutas dicen lo mismo, traducido.
-  if (!token) {
-    throw Object.assign(new Error('La sesión expiró. Vuelve a iniciar sesión.'), {
-      status: 401,
-      code: 'session_expired',
-    });
-  }
-  return token;
-}
 
 /**
  * El endpoint TUS. Supabase recomienda el host directo de Storage
@@ -62,7 +47,7 @@ async function uploadResumable(
   signal: AbortSignal
 ): Promise<void> {
   const { Upload } = await import('tus-js-client');
-  const token = await accessToken();
+  const token = await getValidAccessToken();
 
   await new Promise<void>((resolve, reject) => {
     const upload = new Upload(blob, {
@@ -78,7 +63,7 @@ async function uploadResumable(
       // encontrar una subida a medias.
       fingerprint: async () => `restorify-media:${path}`,
       onBeforeRequest: async (req) => {
-        req.setHeader('authorization', `Bearer ${await accessToken()}`);
+        req.setHeader('authorization', `Bearer ${await getValidAccessToken()}`);
       },
       onProgress: (sent, total) => onProgress(total ? sent / total : 0),
       onSuccess: () => resolve(),

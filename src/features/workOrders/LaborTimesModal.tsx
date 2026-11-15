@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, Pencil, Trash2, Check, Clock } from 'lucide-react';
+import { Pencil, Trash2, Check, Clock } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import Modal from '../../components/Modal';
 import { formatDurationMinutes } from '../../lib/dates';
 import { getErrorMessage } from '../../lib/errors';
 import type { LaborItem, LaborTimeEntry } from '../../types/database';
@@ -122,25 +123,23 @@ export default function LaborTimesModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        role="dialog"
-        aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: 580, width: '90vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
-      >
-        <div className="modal-header">
-          <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <Clock size={18} /> {t('tasks.timesTitle')}
-          </h3>
-          <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={onClose} aria-label={t('common.cancel')}>
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="modal-body" style={{ flex: 1, overflowY: 'auto', padding: 'var(--space-4)' }}>
-          <div style={{ marginBottom: 'var(--space-4)' }}>
+    <Modal
+      onClose={onClose}
+      style={{ maxWidth: 580, width: '90vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
+      bodyStyle={{ flex: 1, overflowY: 'auto', padding: 'var(--space-4)' }}
+      footerStyle={{ padding: 'var(--space-3) var(--space-4)' }}
+      title={
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          <Clock size={18} /> {t('tasks.timesTitle')}
+        </span>
+      }
+      footer={
+        <button type="button" className="btn btn-secondary" onClick={onClose}>
+          {t('common.close')}
+        </button>
+      }
+    >
+      <div style={{ marginBottom: 'var(--space-4)' }}>
             <strong style={{ fontSize: 'var(--font-size-md)', display: 'block' }}>{task.descripcion}</strong>
           </div>
 
@@ -288,14 +287,6 @@ export default function LaborTimesModal({
               })}
             </div>
           )}
-        </div>
-
-        <div className="modal-footer" style={{ padding: 'var(--space-3) var(--space-4)' }}>
-          <button type="button" className="btn btn-secondary" onClick={onClose}>
-            {t('common.close')}
-          </button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

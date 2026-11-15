@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AlertTriangle, FileSignature, Paperclip, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import Modal from '../../components/Modal';
 import type { OrderFinding } from '../../types/database';
 
 const MAX_TEXT = 1000;
@@ -101,20 +102,27 @@ export function DiscardFindingModal({ finding, saving, onCancel, onConfirm }: Di
   const missingText = enReporte && !texto.trim();
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div
-        className="modal"
-        style={{ maxWidth: 520 }}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('findings.discardTitle')}
-      >
-        <div className="modal-header">
-          <h2 className="modal-title">{t('findings.discardTitle')}</h2>
-        </div>
-        <div className="modal-body">
-          <p className="field-hint">{t('findings.reportedText')}</p>
+    <Modal
+      onClose={onCancel}
+      style={{ maxWidth: 520 }}
+      title={t('findings.discardTitle')}
+      footer={
+        <>
+          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={saving}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => void onConfirm(enReporte, texto.trim())}
+            disabled={saving || missingText}
+          >
+            {saving ? t('common.loading') : t('findings.discardConfirm')}
+          </button>
+        </>
+      }
+    >
+      <p className="field-hint">{t('findings.reportedText')}</p>
           <blockquote className="findings-quote">{finding.descripcion}</blockquote>
 
           <label className="checkbox-row" htmlFor="finding-in-report">
@@ -147,21 +155,6 @@ export function DiscardFindingModal({ finding, saving, onCancel, onConfirm }: Di
             />
             {missingText && <p className="findings-error" role="alert">{t('findings.customerTextRequired')}</p>}
           </div>
-        </div>
-        <div className="modal-footer">
-          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={saving}>
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => void onConfirm(enReporte, texto.trim())}
-            disabled={saving || missingText}
-          >
-            {saving ? t('common.loading') : t('findings.discardConfirm')}
-          </button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

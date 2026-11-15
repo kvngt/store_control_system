@@ -3,8 +3,8 @@ import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { dashboardService, workOrdersService } from '../services/supabaseService';
-import { DEFAULT_CAPACITY } from '../services/dashboard.service';
+import { dashboardService, DEFAULT_CAPACITY } from '../services/dashboard.service';
+import { workOrdersService } from '../services/workOrders.service';
 import { daysFromTodayLocal, formatDay, monthLabel } from '../lib/dates';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
@@ -21,6 +21,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { money } from '../lib/money';
+import { orderStatusKey, workTypeKey } from '../lib/workType';
 import AttentionCard from '../features/dashboard/AttentionCard';
 import MyTasksCard from '../features/dashboard/MyTasksCard';
 
@@ -83,14 +84,6 @@ export default function Dashboard() {
   const error = loadError ? getErrorMessage(loadError, language) : '';
 
   const maxRevenue = Math.max(1, ...stats.ingresos_por_mes.map((m) => Math.max(m.ingresos, m.egresos)));
-
-  const statusLabels: Record<string, string> = {
-    recepcion: t('workOrders.intake'),
-    en_proceso: t('workOrders.inProgress'),
-    espera_autorizacion: t('workOrders.waitingAuthorization'),
-    finalizado: t('workOrders.completed'),
-    entregado: t('workOrders.delivered'),
-  };
 
   const waitingOrders = visibleOrders.filter((o) => o.estatus === 'espera_autorizacion').slice(0, MAX_ALERT_ROWS);
   // Avance bajo: en proceso, con menos del 30 % y a un día o menos de su entrega estimada. Con
@@ -354,16 +347,12 @@ export default function Dashboard() {
                   </td>
                   <td data-label={t('common.type')}>
                     <span className={`badge badge-${order.tipo_trabajo}`}>
-                      {order.tipo_trabajo === 'mecanica'
-                        ? t('workOrders.mechanical')
-                        : order.tipo_trabajo === 'pintura'
-                        ? t('workOrders.painting')
-                        : t('workOrders.combined')}
+                      {t(workTypeKey(order.tipo_trabajo))}
                     </span>
                   </td>
                   <td data-label={t('common.status')}>
                     <span className={`badge badge-${order.estatus}`}>
-                      {statusLabels[order.estatus]}
+                      {t(orderStatusKey(order.estatus))}
                     </span>
                   </td>
                   <td data-label={t('workOrders.progress')}>

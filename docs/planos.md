@@ -20,7 +20,7 @@ que **no se puede romper**, [ai-context.md](ai-context.md).
 |---|---|---|
 | Una pantalla o su texto | [1](#1-las-capas-de-la-casa) y [2](#2-el-mapa-de-pantallas) | `src/pages/`, `src/features/`, `src/i18n/translations.ts` |
 | Una regla de dinero o de permisos | [1](#1-las-capas-de-la-casa) y [6](#6-el-camino-del-dinero) | `supabase/migrations/` (siempre una migración nueva) |
-| Qué pasa al abrir, trabajar o entregar una orden | [3](#3-el-ciclo-de-vida-de-una-orden) | `useWorkOrderDetail.ts`, `entregar_orden` |
+| Qué pasa al abrir, trabajar o entregar una orden | [3](#3-el-ciclo-de-vida-de-una-orden) | `features/workOrders/detail/` (`useWorkOrderDetail.ts`), `features/workOrders/intake/`, `entregar_orden` |
 | Comisiones | [7](#7-comisiones) | `_reparto_comisiones`, `pages/Payroll.tsx` |
 | Lo que ve el cliente | [8](#8-lo-que-ve-el-cliente) | `datos_portal`, `src/portal/` |
 | Correos, avisos, traducciones | [9](#9-avisos-correos-y-traducciones) | `process-outbox`, `notificar()` |
@@ -50,7 +50,7 @@ flowchart TB
   end
 
   subgraph Portal["Portal del cliente (src/portal/ — paquete aparte)"]
-    PO["CustomerPortal.tsx"]
+    PO["CustomerPortal.tsx + components/"]
   end
 
   subgraph Supabase["Supabase (todo el 'backend')"]
@@ -130,13 +130,13 @@ flowchart LR
 |---|---|---|
 | Panel | `pages/Dashboard.tsx`, `features/dashboard/` | `dashboard.service.ts` (`resumen_panel`, `requiere_atencion` `20261010000012`; `MyTasksCard`) |
 | Clientes / Vehículos | `pages/Customers.tsx`, `pages/Vehicles.tsx` | `customers.service.ts`, `vehicles.service.ts` |
-| Órdenes (lista y tablero) | `pages/WorkOrders.tsx` (`?vista=lista\|tablero`), `pages/KanbanBoard.tsx` | `workOrders.service.ts` (`/kanban` redirige a la vista tablero) |
-| Detalle de una orden | `features/workOrders/WorkOrderDetail.tsx` + `useWorkOrderDetail.ts` | `workOrders.service.ts`, `quotes.service.ts`, `commissions.service.ts`, `parking.service.ts` |
-| Alta de una orden | `features/workOrders/WorkOrderCreateModal.tsx` (4 pasos) | `workOrders.service.ts` → RPC `create_work_order` (seguro, tareas, depósito) |
+| Órdenes (lista y tablero) | `pages/WorkOrders.tsx` (`?vista=lista\|tablero`), `features/workOrders/list/OrderList.tsx`, `pages/KanbanBoard.tsx` | `workOrders.service.ts` (`/kanban` redirige a la vista tablero) |
+| Detalle de una orden | `features/workOrders/WorkOrderDetail.tsx`, `useWorkOrderDetail.ts` y `features/workOrders/detail/` (`permissions.ts`, subhooks, `sections/`, `OrderHeader`, `OrderTabTop`, `OrderQuickActions`, `OrderDialogs`) | `workOrders.service.ts` (`services/workOrders/`), `quotes.service.ts`, `commissions.service.ts`, `parking.service.ts` |
+| Alta de una orden | `features/workOrders/WorkOrderCreateModal.tsx` + `features/workOrders/intake/` (`IntakeFlow`, `steps/`, `useIntake*`) | `workOrders.service.ts` → RPC `create_work_order` (seguro, tareas, depósito) |
 | Finanzas | `pages/Finance.tsx`, `pages/finance/ImportStatementModal.tsx` | `finance.service.ts` |
 | Comisiones | `pages/Payroll.tsx` (admin), `pages/MyCommissions.tsx` (técnico) | `commissions.service.ts` (`resumen_mis_comisiones` `20261010000022`) |
-| Empleados | `pages/Employees.tsx`, `features/employees/` | `employees.service.ts`, `users.service.ts` |
-| Configuración | `pages/Settings.tsx` (teléfonos de sede, parqueo, push) | `sedes.service.ts`, `parking.service.ts`, `users.service.ts` |
+| Empleados | `pages/Employees.tsx`, `features/employees/` (alta y pago del personal) | `employees.service.ts`, `users.service.ts` |
+| Configuración | `pages/Settings.tsx` + tarjetas en `features/settings/` (perfil, sedes y teléfonos, parqueo, push) | `sedes.service.ts`, `parking.service.ts`, `users.service.ts` |
 
 ---
 
@@ -603,7 +603,7 @@ La impone **la base** (RLS y triggers), no la pantalla: `mis_ordenes_asignadas()
 
 ```mermaid
 flowchart LR
-  DEV["Cambio en tu máquina"] --> V["npm run lint · npx tsc -b · npm test · npm run build<br/>+ npm run test:db si tocaste SQL (Docker)"]
+  DEV["Cambio en tu máquina"] --> V["npm run lint · npx tsc -b · npm test · npm run build<br/>+ test:functions · test:db · test:e2e:local"]
   V --> CM["git commit (solo cuando se pide)"]
   CM --> DB{"¿Hay migración nueva?"}
   DB -->|sí| PUSH1["1º npx supabase db push<br/>(con permiso de la persona responsable)"]
@@ -616,7 +616,7 @@ flowchart LR
 
 - La base va **antes** que el sitio: una app nueva sobre una base vieja rompe funciones.
 - **Nombres de migraciones:** una migración nueva se nombra **después de la última que haya en
-  `supabase/migrations/`** (hoy después de `20261010000041`, por ejemplo `20261010000042_...`),
+  `supabase/migrations/`** (hoy después de `20261010000044`, por ejemplo `20261010000045_...`),
   **nunca según la fecha de hoy**. Una fecha anterior a la última migración aplicada no se aplica
   con `supabase db push`.
 - **Publicación:** Hostinger publica la rama `main` en 1–2 minutos directamente (verificado el
@@ -649,7 +649,7 @@ flowchart LR
 
 ---
 
-*Última revisión: 19 de octubre de 2026. Los diagramas cubren hasta la migración `20261010000028` (11/10/2026); lo agregado en las migraciones `029` a `039` está documentado en [arquitectura.md](arquitectura.md) y [ai-context.md](ai-context.md). Si cambias la
+*Última revisión: 15 de noviembre de 2026. Los diagramas cubren hasta la migración `20261010000028` (11/10/2026), con rutas de frontend actualizadas al `15/11/2026`; lo agregado en las migraciones `029` a `044` está documentado en [arquitectura.md](arquitectura.md) y [ai-context.md](ai-context.md). Si cambias la
 estructura —una tabla, un estado, una pantalla, un flujo de dinero— actualiza el diagrama
 correspondiente en el mismo cambio.*
 

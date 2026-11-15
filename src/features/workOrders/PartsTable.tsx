@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check, Paintbrush, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { useToast } from '../../context/toast.context';
 import type { PartOrderState, WorkOrderPart } from '../../types/database';
 import LineStateBadge from './LineStateBadge';
 import { isApproved } from './lineState';
@@ -22,7 +23,7 @@ interface PartsTableProps {
   busy: boolean;
   /** `false` si no entró: lo escrito se queda para corregir y reintentar. */
   onAdd: (item: PartInput) => Promise<boolean | void>;
-  onUpdate: (id: string, item: PartInput) => Promise<void>;
+  onUpdate: (id: string, item: PartInput) => Promise<boolean>;
   onRemove: (id: string, descripcion: string) => Promise<void>;
   /** Pedido → llegó. Sin la función, la tabla no lo ofrece. */
   onSetOrderState?: (id: string, estado: PartOrderState | null) => Promise<void>;
@@ -45,8 +46,10 @@ const EMPTY_DRAFT = { descripcion: '', cantidad: '1', precio_venta_unitario: '',
 export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRemove, onSetOrderState, trabajos = [] }: PartsTableProps) {
   const { added, flash: flashAdded } = useAddedConfirmation();
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const [newDraft, setNewDraft] = useState(EMPTY_DRAFT);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDescInvalid, setEditDescInvalid] = useState(false);
   const [editDraft, setEditDraft] = useState(EMPTY_DRAFT);
 
   const totalSale = sumMoney(items.filter(isApproved).map((p) => p.subtotal));
@@ -69,6 +72,7 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
 
   const startEdit = (part: WorkOrderPart) => {
     setEditingId(part.id);
+    setEditDescInvalid(false);
     setEditDraft({
       descripcion: part.descripcion,
       cantidad: String(part.cantidad),
@@ -93,9 +97,14 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
     ) : null;
 
   const saveEdit = async () => {
-    if (!editingId || !editDraft.descripcion.trim()) return;
-    await onUpdate(editingId, toInput(editDraft));
-    setEditingId(null);
+    if (!editingId) return;
+    if (!editDraft.descripcion.trim()) {
+      setEditDescInvalid(true);
+      showToast('error', t('parts.descriptionRequired'));
+      return;
+    }
+    const saved = await onUpdate(editingId, toInput(editDraft));
+    if (saved) setEditingId(null);
   };
 
   const add = async () => {
@@ -135,7 +144,12 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                     <input
                       className="form-input"
                       value={editDraft.descripcion}
-                      onChange={(e) => setEditDraft({ ...editDraft, descripcion: e.target.value })}
+                      onChange={(e) => {
+                        setEditDescInvalid(false);
+                        setEditDraft({ ...editDraft, descripcion: e.target.value });
+                      }}
+                      aria-label={t('common.description')}
+                      aria-invalid={editDescInvalid || undefined}
                     />
                   </td>
                   <td data-label={t('common.quantity')}>
@@ -192,7 +206,7 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                       <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={saveEdit} disabled={busy} aria-label={t('common.save')} title={t('common.save')}>
                         <Check size={14} style={{ color: 'var(--color-success)' }} />
                       </button>
-                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => setEditingId(null)} aria-label={t('common.cancel')} title={t('common.cancel')}>
+                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => { setEditingId(null); setEditDescInvalid(false); }} aria-label={t('common.cancel')} title={t('common.cancel')}>
                         <X size={14} />
                       </button>
                     </div>
@@ -206,7 +220,7 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
                     <div className="cell-main">
                       <span className="line-desc">{part.descripcion}</span> <LineStateBadge state={part.estado} />
                       {(() => {
-                        const job = trabajos?.find((j) => (part.trabajo_id && j.id === part.trabajo_id) || (part.grupo && j.grupo === part.grupo));
+                        const job = trabajos?.find((j) => !!part.trabajo_id && j.id === part.trabajo_id);
                         return job ? <span className="job-chip">{job.titulo}</span> : null;
                       })()}
                       {orderStateControl(part)}

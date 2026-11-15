@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Wrench, Package } from 'lucide-react';
+import { Plus, Trash2, Wrench, Package } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { AlertError } from '../../components/AlertError';
+import Modal from '../../components/Modal';
 import { catalogService } from '../../services/catalog.service';
 import { getErrorMessage } from '../../lib/errors';
 import type { CatalogJob } from '../../types/database';
@@ -184,24 +185,34 @@ export default function CatalogJobModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: 680, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
-      >
-        <div className="modal-header">
-          <h3 className="modal-title">
-            {job ? t('catalog.editJob') : t('catalog.newJob')}
-          </h3>
-          <button type="button" className="modal-close" onClick={onClose} aria-label={t('common.close')}>
-            <X size={20} />
+    <Modal
+      onClose={onClose}
+      title={job ? t('catalog.editJob') : t('catalog.newJob')}
+      style={{ maxWidth: 680, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+      bodyStyle={{ flex: 1, overflowY: 'auto' }}
+      as="form"
+      onSubmit={handleSubmit}
+      footer={
+        <>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={onClose}
+            disabled={saving}
+          >
+            {t('common.cancel')}
           </button>
-        </div>
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-          <div className="modal-body" style={{ flex: 1, overflowY: 'auto' }}>
-            <AlertError message={error} />
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={saving}
+          >
+            {saving ? t('common.loading') : t('common.save')}
+          </button>
+        </>
+      }
+    >
+      <AlertError message={error} />
 
             <div style={{ marginBottom: 'var(--space-4)' }}>
               <label className="form-label" htmlFor="catalog-job-name">
@@ -471,27 +482,6 @@ export default function CatalogJobModal({
                 </div>
               )}
             </div>
-          </div>
-
-          <div className="modal-footer">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={onClose}
-              disabled={saving}
-            >
-              {t('common.cancel')}
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={saving}
-            >
-              {saving ? t('common.loading') : t('common.save')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { metricsService } from './metrics.service';
-import { supabase } from '../lib/supabase';
 import type { WorkshopMetrics } from '../types/database';
+
+const { rpcMock } = vi.hoisted(() => ({
+  rpcMock: vi.fn(),
+}));
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
-    rpc: vi.fn(),
+    rpc: rpcMock,
   },
 }));
 
@@ -44,11 +47,11 @@ describe('metricsService', () => {
       ],
     };
 
-    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: mockMetrics, error: null } as any);
+    rpcMock.mockResolvedValueOnce({ data: mockMetrics, error: null });
 
     const result = await metricsService.getWorkshopMetrics('sede-123', '2026-10-01', '2026-10-31');
 
-    expect(supabase.rpc).toHaveBeenCalledWith('indicadores_taller', {
+    expect(rpcMock).toHaveBeenCalledWith('indicadores_taller', {
       p_sede_id: 'sede-123',
       p_desde: '2026-10-01',
       p_hasta: '2026-10-31',
@@ -58,7 +61,7 @@ describe('metricsService', () => {
 
   it('getWorkshopMetrics lanza el error si la RPC falla', async () => {
     const mockError = { message: 'Permiso denegado', code: '42501' };
-    vi.mocked(supabase.rpc).mockResolvedValueOnce({ data: null, error: mockError } as any);
+    rpcMock.mockResolvedValueOnce({ data: null, error: mockError });
 
     await expect(
       metricsService.getWorkshopMetrics('sede-123', '2026-10-01', '2026-10-31')

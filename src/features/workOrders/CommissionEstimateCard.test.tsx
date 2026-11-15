@@ -180,7 +180,7 @@ describe('CommissionEstimateCard — aprobación', () => {
   };
 
   it('administración ve el estado de cada una y acepta la sugerida tal cual', async () => {
-    const onApprove = vi.fn().mockResolvedValue(undefined);
+    const onApprove = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
     renderWithProviders(<CommissionEstimateCard estimate={ENTREGADA} isAdmin names={NAMES} onApproveCommission={onApprove} />);
 
@@ -195,7 +195,7 @@ describe('CommissionEstimateCard — aprobación', () => {
   });
 
   it('al cambiar solo el porcentaje manda solo el porcentaje (la base recalcula el monto)', async () => {
-    const onApprove = vi.fn().mockResolvedValue(undefined);
+    const onApprove = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
     renderWithProviders(<CommissionEstimateCard estimate={ENTREGADA} isAdmin names={NAMES} onApproveCommission={onApprove} />);
 
@@ -208,6 +208,22 @@ describe('CommissionEstimateCard — aprobación', () => {
     await user.click(within(mario).getByRole('button', { name: 'Aceptar' }));
 
     expect(onApprove).toHaveBeenCalledWith('c-mario', undefined, 40);
+  });
+
+  it('mantiene el editor abierto si aprobar la comisión devuelve false', async () => {
+    const onApprove = vi.fn().mockResolvedValue(false);
+    const user = userEvent.setup();
+    renderWithProviders(<CommissionEstimateCard estimate={ENTREGADA} isAdmin names={NAMES} onApproveCommission={onApprove} />);
+
+    const mario = screen.getByText('Cambio de aceite').closest('li') as HTMLElement;
+    await user.click(within(mario).getByRole('button', { name: 'Cambiar porcentaje o monto' }));
+    const pct = within(mario).getByRole('spinbutton', { name: 'Porcentaje' });
+    await user.clear(pct);
+    await user.type(pct, '45');
+    await user.click(within(mario).getByRole('button', { name: 'Aceptar' }));
+
+    expect(onApprove).toHaveBeenCalledWith('c-mario', undefined, 45);
+    expect(within(mario).getByRole('spinbutton', { name: 'Porcentaje' })).toHaveValue(45);
   });
 
   it('el técnico ve su tarea como pendiente, con el aviso de que la acepta administración', () => {

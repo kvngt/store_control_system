@@ -17,11 +17,13 @@ const items: LaborItem[] = [
   { id: 'l4', orden_id: 'o', descripcion: 'Alineación', costo: 80, estado: 'borrador' },
 ];
 
-const noop = vi.fn(async () => {});
+const noopAdd = vi.fn(async () => true);
+const noopUpdate = vi.fn(async () => true);
+const noopRemove = vi.fn(async () => {});
 
 describe('LaborTable con estados', () => {
   it('suma solo lo autorizado y muestra aparte lo que falta autorizar', () => {
-    renderWithProviders(<LaborTable items={items} canEdit busy={false} onAdd={noop} onUpdate={noop} onRemove={noop} canComplete={false} onToggleComplete={vi.fn()} />);
+    renderWithProviders(<LaborTable items={items} canEdit busy={false} onAdd={noopAdd} onUpdate={noopUpdate} onRemove={noopRemove} canComplete={false} onToggleComplete={vi.fn()} />);
 
     const totalCell = screen.getAllByText('$100.00').find((el) => el.getAttribute('data-label'));
     expect(totalCell).toBeTruthy();
@@ -33,7 +35,7 @@ describe('LaborTable con estados', () => {
   // más, y el color del icono no dice nada a quien no lo ve.
   it('los botones de solo icono se anuncian por su nombre', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<LaborTable items={items} canEdit busy={false} onAdd={noop} onUpdate={noop} onRemove={noop} canComplete={false} onToggleComplete={vi.fn()} />);
+    renderWithProviders(<LaborTable items={items} canEdit busy={false} onAdd={noopAdd} onUpdate={noopUpdate} onRemove={noopRemove} canComplete={false} onToggleComplete={vi.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Agregar trabajo' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Editar' }).length).toBeGreaterThan(0);
@@ -46,7 +48,7 @@ describe('LaborTable con estados', () => {
   });
 
   it('marca cada estado y bloquea la edición de lo que espera al cliente', () => {
-    renderWithProviders(<LaborTable items={items} canEdit busy={false} onAdd={noop} onUpdate={noop} onRemove={noop} canComplete={false} onToggleComplete={vi.fn()} />);
+    renderWithProviders(<LaborTable items={items} canEdit busy={false} onAdd={noopAdd} onUpdate={noopUpdate} onRemove={noopRemove} canComplete={false} onToggleComplete={vi.fn()} />);
 
     expect(screen.getByText('Esperando al cliente')).toBeInTheDocument();
     expect(screen.getByText('No realizar')).toBeInTheDocument();
@@ -60,7 +62,7 @@ describe('LaborTable con estados', () => {
   });
 
   it('un técnico ve los estados sin controles', () => {
-    renderWithProviders(<LaborTable items={items} canEdit={false} busy={false} onAdd={noop} onUpdate={noop} onRemove={noop} canComplete={false} onToggleComplete={vi.fn()} />);
+    renderWithProviders(<LaborTable items={items} canEdit={false} busy={false} onAdd={noopAdd} onUpdate={noopUpdate} onRemove={noopRemove} canComplete={false} onToggleComplete={vi.fn()} />);
     expect(screen.getByText('No realizar')).toBeInTheDocument();
     expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
@@ -71,7 +73,7 @@ describe('LaborTable con estados', () => {
   it('ofrece tachar solo las líneas aprobadas, también a quien no puede cotizar', () => {
     const toggle = vi.fn();
     renderWithProviders(
-      <LaborTable items={items} canEdit={false} busy={false} onAdd={noop} onUpdate={noop} onRemove={noop} canComplete onToggleComplete={toggle} />
+      <LaborTable items={items} canEdit={false} busy={false} onAdd={noopAdd} onUpdate={noopUpdate} onRemove={noopRemove} canComplete onToggleComplete={toggle} />
     );
 
     const aprobada = screen.getByText('Diagnóstico').closest('tr')!;
@@ -85,7 +87,7 @@ describe('LaborTable con estados', () => {
     const toggle = vi.fn();
     const hechas = [{ ...items[0], completado_en: new Date().toISOString() }, ...items.slice(1)];
     renderWithProviders(
-      <LaborTable items={hechas} canEdit={false} busy={false} onAdd={noop} onUpdate={noop} onRemove={noop} canComplete onToggleComplete={toggle} />
+      <LaborTable items={hechas} canEdit={false} busy={false} onAdd={noopAdd} onUpdate={noopUpdate} onRemove={noopRemove} canComplete onToggleComplete={toggle} />
     );
 
     expect(screen.getByText('Diagnóstico').closest('tr')).toHaveClass('line-done');
@@ -119,9 +121,9 @@ describe('LaborTable: tipo y técnico de cada línea', () => {
         items={tasks}
         canEdit
         busy={false}
-        onAdd={noop}
-        onUpdate={noop}
-        onRemove={noop}
+        onAdd={noopAdd}
+        onUpdate={noopUpdate}
+        onRemove={noopRemove}
         canComplete={false}
         onToggleComplete={vi.fn()}
         workType="combinado"
@@ -136,7 +138,7 @@ describe('LaborTable: tipo y técnico de cada línea', () => {
 
   it('al técnico le muestra el tipo y el técnico de cada tarea, sin controles', () => {
     renderWithProviders(
-      <LaborTable items={tasks} canEdit={false} busy={false} onAdd={noop} onUpdate={noop} onRemove={noop} canComplete={false} onToggleComplete={vi.fn()} />
+      <LaborTable items={tasks} canEdit={false} busy={false} onAdd={noopAdd} onUpdate={noopUpdate} onRemove={noopRemove} canComplete={false} onToggleComplete={vi.fn()} />
     );
 
     expect(within(rowOf('Pintura general')).getByText('Pintura')).toBeInTheDocument();
@@ -312,9 +314,9 @@ describe('LaborTable: tipo y técnico de cada línea', () => {
         items={tasks}
         canEdit={false}
         busy={false}
-        onAdd={noop}
-        onUpdate={noop}
-        onRemove={noop}
+        onAdd={noopAdd}
+        onUpdate={noopUpdate}
+        onRemove={noopRemove}
         canComplete={(item) => !item.asignado_a || item.asignado_a === MARIO.id}
         onToggleComplete={vi.fn()}
       />
@@ -327,7 +329,7 @@ describe('LaborTable: tipo y técnico de cada línea', () => {
 
   it('al editar una línea se cambian descripción y precio, sin tocar el técnico', async () => {
     const user = userEvent.setup();
-    const onUpdate = vi.fn(async () => {});
+    const onUpdate = vi.fn(async () => true);
     renderAdmin({ onUpdate });
 
     await user.click(within(rowOf('Cambio de aceite')).getByRole('button', { name: 'Editar' }));
@@ -337,6 +339,36 @@ describe('LaborTable: tipo y técnico de cada línea', () => {
     await user.click(screen.getByRole('button', { name: 'Guardar' }));
 
     expect(onUpdate).toHaveBeenCalledWith('m1', { descripcion: 'Cambio de aceite', costo: 250 });
+  });
+
+  it('mantiene el editor abierto y conserva lo escrito si onUpdate devuelve false', async () => {
+    const user = userEvent.setup();
+    const onUpdate = vi.fn(async () => false);
+    renderAdmin({ onUpdate });
+
+    await user.click(within(rowOf('Cambio de aceite')).getByRole('button', { name: 'Editar' }));
+    const desc = screen.getByRole('textbox', { name: 'Descripción' });
+    await user.clear(desc);
+    await user.type(desc, 'Cambio de aceite sintético');
+    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    expect(onUpdate).toHaveBeenCalled();
+    expect(screen.getByRole('textbox', { name: 'Descripción' })).toHaveValue('Cambio de aceite sintético');
+  });
+
+  it('al intentar guardar edición sin descripción avisa con error y marca aria-invalid', async () => {
+    const user = userEvent.setup();
+    const onUpdate = vi.fn(async () => true);
+    renderAdmin({ onUpdate });
+
+    await user.click(within(rowOf('Cambio de aceite')).getByRole('button', { name: 'Editar' }));
+    const desc = screen.getByRole('textbox', { name: 'Descripción' });
+    await user.clear(desc);
+    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(desc).toHaveAttribute('aria-invalid', 'true');
+    expect(await screen.findByText('Describe el trabajo.')).toBeInTheDocument();
   });
 
   it('el alta viene con el técnico de la primera tarea que tiene uno', async () => {

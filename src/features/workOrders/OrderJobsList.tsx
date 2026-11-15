@@ -5,7 +5,7 @@ import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { AlertError } from '../../components/AlertError';
 import { workOrdersService } from '../../services/workOrders.service';
-import { queryKeys } from '../../lib/queryClient';
+import { invalidateOrderEffects, queryKeys } from '../../lib/queryClient';
 import { emptyList } from '../../lib/emptyList';
 import { money } from '../../lib/money';
 import { getErrorMessage } from '../../lib/errors';
@@ -52,7 +52,7 @@ export default function OrderJobsList({ orderId, onRefresh }: OrderJobsListProps
       await workOrdersService.renameJob(jobId, cleanTitle);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.orderJobs(orderId) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.workOrderDetail(orderId) }),
+        invalidateOrderEffects(queryClient, { orderId }),
       ]);
       setRenamingId(null);
       showToast('success', t('catalog.jobRenamedSuccess'));
@@ -74,7 +74,7 @@ export default function OrderJobsList({ orderId, onRefresh }: OrderJobsListProps
       await workOrdersService.removeJob(job.id);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.orderJobs(orderId) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.workOrderDetail(orderId) }),
+        invalidateOrderEffects(queryClient, { orderId }),
       ]);
       showToast('success', t('catalog.jobRemovedSuccess'));
       onRefresh?.();

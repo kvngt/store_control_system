@@ -23,14 +23,18 @@ vi.mock('../../context/auth.context', () => ({
   useAuth: () => mocks.auth.current,
 }));
 
-vi.mock('../../services/supabaseService', () => ({
+vi.mock('../../services/commissions.service', () => ({
   commissionsService: {
     getEstimate: mocks.getEstimate,
   },
+}));
+vi.mock('../../services/workOrders.service', () => ({
   workOrdersService: {
     getWorkOrderDetail: mocks.getWorkOrderDetail,
     getPaidCommissionKeys: mocks.getPaidCommissionKeys,
   },
+}));
+vi.mock('../../services/users.service', () => ({
   usersService: {
     getOperators: mocks.getOperators,
   },

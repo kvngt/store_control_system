@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BookOpen, Check, CheckCircle2, Circle, Clock, Lock, Pencil, Trash2, User, Wrench, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { useToast } from '../../context/toast.context';
 import { SPECIALTIES, type LaborItem, type Specialty, type WorkType, type OrderAssignment, type LaborTimeEntry } from '../../types/database';
 import { formatDurationMinutes } from '../../lib/dates';
 import LineStateBadge from './LineStateBadge';
@@ -26,7 +27,7 @@ interface LaborTableProps {
   busy: boolean;
   /** Una tarea nueva, con su tipo y su técnico. `false` = no se guardó. */
   onAdd: (task: TaskDraft) => Promise<boolean | void>;
-  onUpdate: (id: string, item: { descripcion: string; costo: number; horas?: number | null }) => Promise<void>;
+  onUpdate: (id: string, item: { descripcion: string; costo: number; horas?: number | null }) => Promise<boolean>;
   onRemove: (id: string, descripcion: string) => Promise<void>;
   /**
    * Si se ofrece tachar el trabajo hecho. Es del técnico asignado, no solo del admin: por
@@ -111,8 +112,10 @@ export default function LaborTable({
   onDeleteTime,
 }: LaborTableProps) {
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const [catalogPickerOpen, setCatalogPickerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDescInvalid, setEditDescInvalid] = useState(false);
   const [editDraft, setEditDraft] = useState<{ descripcion: string; costo: string; horas: string }>({
     descripcion: '',
     costo: '',
@@ -169,6 +172,7 @@ export default function LaborTable({
 
   const startEdit = (item: LaborItem) => {
     setEditingId(item.id);
+    setEditDescInvalid(false);
     setEditDraft({
       descripcion: item.descripcion,
       costo: String(item.costo),
@@ -177,10 +181,15 @@ export default function LaborTable({
   };
 
   const saveEdit = async () => {
-    if (!editingId || !editDraft.descripcion.trim()) return;
+    if (!editingId) return;
+    if (!editDraft.descripcion.trim()) {
+      setEditDescInvalid(true);
+      showToast('error', t('tasks.descriptionRequired'));
+      return;
+    }
     // Las horas van solo si se escribieron, o en null si la línea tenía y se borraron.
     const hadHours = items.find((i) => i.id === editingId)?.horas != null;
-    await onUpdate(editingId, {
+    const saved = await onUpdate(editingId, {
       descripcion: editDraft.descripcion,
       costo: toCost(editDraft.costo),
       ...(editDraft.horas.trim()
@@ -189,7 +198,7 @@ export default function LaborTable({
           ? { horas: null }
           : {}),
     });
-    setEditingId(null);
+    if (saved) setEditingId(null);
   };
 
   const technicianOf = (item: LaborItem): Technician | null =>
@@ -310,8 +319,12 @@ export default function LaborTable({
                     <input
                       className="form-input"
                       value={editDraft.descripcion}
-                      onChange={(e) => setEditDraft({ ...editDraft, descripcion: e.target.value })}
+                      onChange={(e) => {
+                        setEditDescInvalid(false);
+                        setEditDraft({ ...editDraft, descripcion: e.target.value });
+                      }}
                       aria-label={t('common.description')}
+                      aria-invalid={editDescInvalid || undefined}
                     />
                   </td>
                   <td>
@@ -350,7 +363,7 @@ export default function LaborTable({
                       <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={saveEdit} disabled={busy} aria-label={t('common.save')} title={t('common.save')}>
                         <Check size={14} style={{ color: 'var(--color-success)' }} />
                       </button>
-                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => setEditingId(null)} aria-label={t('common.cancel')} title={t('common.cancel')}>
+                      <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => { setEditingId(null); setEditDescInvalid(false); }} aria-label={t('common.cancel')} title={t('common.cancel')}>
                         <X size={14} />
                       </button>
                     </div>
@@ -384,7 +397,7 @@ export default function LaborTable({
                     )}
                     <span className="line-desc">{item.descripcion}</span> <LineStateBadge state={item.estado} />
                     {(() => {
-                      const job = trabajos?.find((j) => (item.trabajo_id && j.id === item.trabajo_id) || (item.grupo && j.grupo === item.grupo));
+                      const job = trabajos?.find((j) => !!item.trabajo_id && j.id === item.trabajo_id);
                       return job ? <span className="job-chip">{job.titulo}</span> : null;
                     })()}
                     {item.horas != null && (

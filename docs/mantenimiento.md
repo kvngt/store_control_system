@@ -7,10 +7,11 @@ clientes reales. Pregunta de partida: **cuando haya que cambiar una parte en pro
 Dónde está cada parte: [mapa-de-secciones.md](mapa-de-secciones.md). Reglas que no se rompen:
 [ai-context.md](ai-context.md).
 
-> **Actualización:** la revisión del 1 de octubre de 2026 está en
-> [evaluacion-2026-10.md](historico/evaluacion-2026-10.md): qué cambió desde esta, el estado del plan
-> (P0-2 hecho) y riesgos nuevos (migraciones con fecha futura, Hostinger publicando `main`,
-> Sentry inactivo). Las secciones 4 y 5 de este documento siguen vigentes.
+> **Actualización al 15/11/2026:** la revisión del 1 de octubre de 2026 está en
+> [evaluacion-2026-10.md](historico/evaluacion-2026-10.md) (`P0-2` plan Pro ya hecho; Sentry y
+> staging remoto siguen pendientes, aunque las E2E locales corren con `npm run test:e2e:local`).
+> Los puntos `P1-2`, `P1-3`, `P2-3`, `P2-4` y `P2-7` de este documento ya se completaron entre
+> el 19/10 y el 15/11/2026. Las secciones 4 y 5 (salvo lo marcado como resuelto) siguen vigentes.
 
 ---
 
@@ -63,14 +64,13 @@ las migraciones desde cero en cada cambio (CI).
 
 ### Riesgos para el mantenimiento
 
-**R-B1. La versión vigente de una función está repartida en migraciones.** Hay 95 migraciones (al 04/11/2026, hasta `20261010000041`; 161 funciones contadas al 11/10/2026 en la migración `028`, más las de `029` a `041`). Cuando una cambia, la migración nueva
-la reescribe entera. `handle_order_delivery_payment` va por su quinta versión;
+**R-B1. La versión vigente de una función está repartida en migraciones.** Hay 98 migraciones (al 15/11/2026, hasta `20261010000044`; 161 funciones contadas al 11/10/2026 en la migración `028`, más las de `029` a `044`). Cuando una cambia, la migración nueva
 la reescribe entera. `handle_order_delivery_payment` va por su quinta versión;
 `sync_order_commissions`, `pay_commissions`, `create_work_order`, `recalculate_order_totals` y
-`trg_guard_order_technician`, por la cuarta. El riesgo concreto: quien la cambie parte de una
+`trg_guard_order_technician`, por la cuarta o posterior. El riesgo concreto: quien la cambie parte de una
 versión vieja y **deshace sin darse cuenta** un arreglo posterior. No da error: la migración
 se aplica y el arreglo desaparece.
-*Mitigación ya hecha:* `npm run db:donde -- <nombre>` dice en qué migración está la vigente.
+*Mitigación ya hecha:* `npm run db:donde -- <nombre>` dice en qué migración está la vigente, y `npm run db:types` regenera `src/types/supabase.gen.ts` validado contra `schema.contract.ts`.
 *Propuesta:* un archivo con el esquema actual completo, regenerado en cada migración (P1-1).
 
 **R-B2. `ordenes_trabajo` tiene 20 triggers.** Entregar una orden dispara, en la misma
@@ -81,9 +81,7 @@ que otro corra antes, y las pruebas `01`, `11`, `12` y `13` cubren el flujo comp
 *Propuesta:* no renombrar triggers de `ordenes_trabajo`; si uno nuevo depende de otro, un
 prefijo que fije el orden (`trg_10_…`, `trg_20_…`) en esa misma migración.
 
-**R-B3. No hay staging.** `qa:security` y las pruebas e2e corren contra el proyecto real, y
-desde la limpieza del 29 de septiembre las cuentas de prueba ya no existen, así que hoy no
-corren. Toda migración va de la base local directo al taller.
+**R-B3. No hay staging remoto.** `qa:security` y las migraciones publicadas siguen yendo al proyecto real tras probarse en local (aunque las pruebas E2E de Playwright ya corren contra el Supabase local con `npm run test:e2e:local`, sin tocar producción). Toda migración va de la base local al taller.
 
 **R-B4. No hay respaldos.** *(Resuelto el 30/09/2026: el proyecto pasó a Pro, con respaldo diario.)* El plan Free no los hace. Un error en una migración de datos o un
 borrado en cascada no tiene vuelta atrás.
@@ -98,13 +96,17 @@ descuadra los cálculos posteriores de esa orden. Conocido desde la auditoría; 
 
 ### Lo que está bien
 
-- **Capas claras.** Toda consulta a Supabase está en `src/services/` (17 módulos por
-  dominio). Solo `context/AuthContext.tsx` y `lib/schemaVersion.ts` llaman a Supabase fuera de
-  ahí, y son infraestructura. La lógica sin React vive en `lib/` y se prueba sin navegador.
-- **Las partes grandes ya están en módulos** (`features/workOrders`, `media`,
+- **Capas claras.** Toda consulta a Supabase está en `src/services/` (módulos por
+  dominio; `workOrders.service.ts` compuesto desde `services/workOrders/`). Solo
+  `context/AuthContext.tsx` y `lib/schemaVersion.ts` llaman a Supabase fuera de ahí, y son
+  infraestructura. La lógica sin React vive en `lib/` y se prueba sin navegador.
+- **Las partes grandes ya están en módulos** (`features/workOrders/detail/`,
+  `features/workOrders/intake/`, `features/settings/`, `portal/components/`, `media`,
   `notifications`, `employees`, `finance`).
-- **Red de pruebas amplia:** 480 unitarias, 330 pgTAP, 85 casos de seguridad de la API y
-  76 e2e. TypeScript estricto, lint sin avisos, CI en cada cambio.
+- **Red de pruebas amplia (al 15/11/2026):** 1.263 pruebas Vitest (174 archivos), 1.181 pruebas
+  pgTAP (48 archivos), 102 pruebas Deno 2 (`npm run test:functions`), 77 e2e contra la base
+  local (`npm run test:e2e:local`) y `qa:security`. TypeScript estricto, lint sin avisos, CI en
+  cada cambio (cifras vigentes en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto)).
 - **Portal del cliente aislado**: no importa nada de la app.
 
 ### Riesgos
@@ -114,24 +116,25 @@ personas que tocan partes distintas chocan en el mismo archivo:
 
 | Archivo | Líneas | Qué mezcla |
 |---|---:|---|
-| `i18n/translations.ts` | 1 837 | Todos los textos de la app, los dos idiomas |
-| `styles/components.css` | 4 560 | Todos los estilos de componentes |
-| `portal/CustomerPortal.tsx` | 851 | El portal entero: estado, recepción, presupuesto, avances, galería, cuenta |
-| `pages/Settings.tsx` | 834 | Perfil, idioma y tema, sedes (marca, capacidad, porcentaje, logo) y el borrado de una sede |
-| `features/workOrders/useWorkOrderDetail.ts` | 712 | Estado, entrega, mano de obra, repuestos, asignaciones, multimedia, avances, firma, PDF, compartir y archivo |
-| `pages/WorkOrders.tsx` | 637 | Lista, filtros y alta |
-| `pages/Finance.tsx` | 586 | Tarjetas, movimientos, alta manual e importación |
-| `pages/Payroll.tsx` | 558 | Saldos, historial, pagos y porcentaje de la sede |
+| `i18n/translations.ts` | 1 837 (al 29/09) | Todos los textos de la app, los dos idiomas |
+| `styles/components.css` | 4 560 (al 29/09) | Todos los estilos de componentes |
+| ~~`portal/CustomerPortal.tsx`~~ | 1 469 → 125 | *(Dividido el 15/11/2026)* Carga el token y elige; secciones en `portal/components/` |
+| ~~`pages/Settings.tsx`~~ | 962 → 66 | *(Dividido el 15/11/2026)* Decide qué tarjetas ve cada rol; tarjetas en `features/settings/` |
+| ~~`features/workOrders/useWorkOrderDetail.ts`~~ | 1 184 → 204 | *(Dividido el 15/11/2026)* Mantiene su API compuesta con los 6 subhooks de `detail/` |
+| ~~`pages/WorkOrders.tsx`~~ | 1 080 → 326 | *(Dividido el 15/11/2026)* Lista en `list/OrderList.tsx` y tablero; alta en `intake/` (`WorkOrderCreateModal.tsx`: 977 → 198) |
+| `pages/Finance.tsx` | 586 (al 29/09) | Tarjetas, movimientos, alta manual e importación |
+| `pages/Payroll.tsx` | 558 (al 29/09) | Saldos, historial, pagos y porcentaje de la sede |
 
-Dos inconsistencias menores:
+*(También se dividieron el 14–15/11/2026 `features/workOrders/WorkOrderDetail.tsx` de 1 393 a 383 líneas y `services/workOrders.service.ts` de 1 002 a 21 líneas compuesto desde `services/workOrders/`.)*
+
+Una inconsistencia menor de estructura:
 
 - **Unas secciones viven en `features/` y otras enteras en `pages/`.** Órdenes, empleados y
   multimedia están en módulos; clientes, vehículos, finanzas y comisiones están completas en
   su página. No es un error, pero para cambiar Finanzas hay que saber que está en `pages/`.
-  El mapa lo dice ([mapa-de-secciones.md](mapa-de-secciones.md)).
-- **La fachada `services/supabaseService.ts`** reexporta todos los servicios por
-  compatibilidad y la siguen importando 18 archivos. Código nuevo usa el servicio del
-  dominio. Mientras exista, los mocks de las pruebas tienen que simular las dos formas.
+  El mapa lo dice ([mapa-de-secciones.md](mapa-de-secciones.md)). (La fachada heredada
+  `services/supabaseService.ts` ya se retiró el 14/11/2026: cada archivo y cada prueba
+  importan o simulan directo el servicio del dominio.)
 
 ---
 
@@ -165,8 +168,8 @@ Dos inconsistencias menores:
    [deployment.md §5](deployment.md#5-publicar-una-versión). El de datos es
    `npx supabase db dump --linked --data-only --use-copy -f <carpeta fuera del repo>/datos-AAAAMMDD.sql`;
    sin `--data-only`, `db dump` guarda solo el esquema.
-2. **Staging** (cuando exista): aplicar ahí, correr `npm run qa:security` y las e2e.
-3. En local: `npx supabase db reset && npm run test:db`. CI lo repite en cada cambio.
+2. **Staging** (cuando exista): aplicar ahí, correr `npm run qa:security`.
+3. En local (Docker): `npx supabase db reset && npm run test:db`, `npm run test:functions`, `npm run test:e2e:local` y `npm run db:types` si cambió el esquema. CI lo repite en cada cambio.
 4. `npm run db:check`: qué se va a aplicar.
 5. **Publicar en este orden:** `db push` → funciones que cambiaron →
    push a `main` (hoy Hostinger publica `main`) → `npm run qa:security`
@@ -200,9 +203,9 @@ Dos inconsistencias menores:
 | # | Qué | Resuelve |
 |---|---|---|
 | P1-1 | **Esquema actual en un solo archivo** (`supabase/schema/actual.sql`, generado con `supabase db dump` de la base local), regenerado en cada migración, y una comprobación en CI de que está al día | R-B1: leer el estado vigente sin reconstruirlo de 54 migraciones. Se conservan las migraciones: sus comentarios son la historia de cada decisión |
-| P1-2 | **Partir `useWorkOrderDetail`** en hooks por tarjeta (`useOrderStatus`, `useOrderLines`, `useOrderMedia`, `useOrderReport`…), con el mismo resultado para `WorkOrderDetail` | El archivo que más se toca deja de mezclar doce responsabilidades |
-| P1-3 | **Retirar la fachada `supabaseService`**: cada archivo importa su servicio | Una sola forma de importar y de simular en pruebas |
-| P1-4 | **Fase 1 de pagos a empleados** ([pagos-a-empleados.md](pagos-a-empleados.md)) | La ambigüedad de dinero más riesgosa. Esta sí toca la base: va por staging |
+| P1-2 | ~~**Partir `useWorkOrderDetail`** en hooks por tarjeta~~ *(hecho 15/11/2026: subhooks, `permissions.ts` y `sections/` en `features/workOrders/detail/`)* | El archivo que más se toca deja de mezclar responsabilidades |
+| P1-3 | ~~**Retirar la fachada `supabaseService`**: cada archivo importa su servicio~~ *(hecho 14/11/2026)* | Una sola forma de importar y de simular en pruebas |
+| P1-4 | **Fase 1 de pagos a empleados** ([pagos-a-empleados.md](pagos-a-empleados.md)) | La ambigüedad de dinero más riesgosa. Esta sí toca la base |
 
 ### P2 — cuando toque trabajar en esa parte
 
@@ -210,15 +213,15 @@ Dos inconsistencias menores:
 |---|---|
 | P2-1 | Textos por dominio: `i18n/<dominio>.ts` con los dos idiomas, y `translations.ts` que los une. El test de paridad sigue igual |
 | P2-2 | Estilos por dominio: `styles/<dominio>.css` importados desde `index.css` |
-| P2-3 | Sacar de `Settings.tsx` la administración de sedes a `features/settings/SedesCard.tsx` |
-| P2-4 | Partir `portal/CustomerPortal.tsx` en una sección por archivo dentro de `portal/` |
+| P2-3 | ~~Sacar de `Settings.tsx` la administración de sedes a `features/settings/SedesCard.tsx`~~ *(hecho 15/11/2026: tarjetas en `features/settings/`)* |
+| P2-4 | ~~Partir `portal/CustomerPortal.tsx` en una sección por archivo dentro de `portal/`~~ *(hecho 15/11/2026: `portal/components/`)* |
 | P2-5 | Llevar a `features/<dominio>/` Finanzas, Comisiones, Clientes y Vehículos cuando crezcan |
 | P2-6 | Convención de orden para triggers nuevos de `ordenes_trabajo` (R-B2) |
 | P2-7 | ~~Decidir si un admin puede borrar movimientos automáticos (R-B5)~~ *(Resuelto en `20261010000038`)* |
 
 **Nada de P1-2 a P2-5 cambia lo que ve el usuario ni toca la base.** Son movimientos de
-código cubiertos por las 480 pruebas unitarias; se pueden hacer uno por uno y publicar cada
-uno por separado.
+código cubiertos por las pruebas unitarias y de componentes (1.263 en Vitest al 15/11/2026);
+se pueden hacer uno por uno y publicar cada uno por separado.
 
 ---
 

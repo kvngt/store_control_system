@@ -186,7 +186,7 @@ export default function ProgressLog({
                     </button>
                   )}
                   {(isAdmin || userId === avance.usuario_id) && (
-                    <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => onRemove(avance.id)} aria-label={t('common.delete')}>
+                    <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={() => onRemove(avance.id)} disabled={busy} aria-label={t('common.delete')}>
                       <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
                     </button>
                   )}

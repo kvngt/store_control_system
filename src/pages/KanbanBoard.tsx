@@ -3,15 +3,16 @@ import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { useToast } from '../context/toast.context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { workOrdersService } from '../services/supabaseService';
+import { workOrdersService } from '../services/workOrders.service';
 import { DEFAULT_CAPACITY } from '../services/dashboard.service';
-import { queryKeys } from '../lib/queryClient';
+import { invalidateOrderEffects, queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
 import type { OrderStatus, WorkOrder } from '../types/database';
 import DeliveryModal from '../features/workOrders/DeliveryModal';
 import { orderDueState, type DueState } from '../lib/orderDue';
 import { formatDay } from '../lib/dates';
+import { orderStatusKey, workTypeKey } from '../lib/workType';
 import { matchesOrderSearch } from '../features/workOrders/orderSearch';
 import { Archive, Calendar, Gauge } from 'lucide-react';
 
@@ -75,10 +76,10 @@ export default function KanbanBoard({ embedded = false, search = '', onOpen }: K
     onError: (_err, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(boardKey, context.previous);
     },
-    onSettled: () => {
+    onSettled: (_data, _err, vars) => {
       // Delivering an order books money and stamps a completion date by
       // trigger, so the row the board shows is not what the client guessed.
-      queryClient.invalidateQueries({ queryKey: boardKey });
+      void invalidateOrderEffects(queryClient, { orderId: vars.orderId, sedeId });
     },
   });
 
@@ -124,14 +125,6 @@ export default function KanbanBoard({ embedded = false, search = '', onOpen }: K
   const error =
     (move.error ? getErrorMessage(move.error, language) : '') ||
     (loadError ? getErrorMessage(loadError, language) : '');
-
-  const statusLabels: Record<OrderStatus, string> = {
-    recepcion: t('workOrders.intake'),
-    en_proceso: t('workOrders.inProgress'),
-    espera_autorizacion: t('workOrders.waitingAuthorization'),
-    finalizado: t('workOrders.completed'),
-    entregado: t('workOrders.delivered'),
-  };
 
   // Una pasada para las cinco columnas y la ocupación, y solo cuando cambian las órdenes.
   // Antes eran seis `.filter` sobre todo el tablero en cada render (PRs #3, #5–#7, #9, #11).
@@ -294,7 +287,7 @@ export default function KanbanBoard({ embedded = false, search = '', onOpen }: K
               <div className={`kanban-column-header ${status}`}>
                 <div className="kanban-column-title">
                   <span>{emoji}</span>
-                  <span>{statusLabels[status]}</span>
+                  <span>{t(orderStatusKey(status))}</span>
                 </div>
                 <span className="kanban-column-count">{columnOrders.length}</span>
               </div>
@@ -350,11 +343,7 @@ export default function KanbanBoard({ embedded = false, search = '', onOpen }: K
                           <span className="badge badge-insurance" style={{ fontSize: '10px' }}>{t('workOrders.insuranceBadge')}</span>
                         )}
                         <span className={`badge badge-${order.tipo_trabajo}`} style={{ fontSize: '10px' }}>
-                          {order.tipo_trabajo === 'mecanica'
-                            ? t('workOrders.mechanical')
-                            : order.tipo_trabajo === 'pintura'
-                            ? t('workOrders.painting')
-                            : t('workOrders.combined')}
+                          {t(workTypeKey(order.tipo_trabajo))}
                         </span>
                       </div>
 
@@ -405,7 +394,7 @@ export default function KanbanBoard({ embedded = false, search = '', onOpen }: K
                               .filter((c) => c.status !== 'espera_autorizacion' || isAdmin || order.estatus === 'espera_autorizacion')
                               .map((c) => (
                                 <option key={c.status} value={c.status}>
-                                  {statusLabels[c.status]}
+                                  {t(orderStatusKey(c.status))}
                                 </option>
                               ))}
                             {canArchive(order) && <option value={ARCHIVAR}>{t('workOrders.archive')}</option>}
@@ -487,8 +476,9 @@ export default function KanbanBoard({ embedded = false, search = '', onOpen }: K
             setMoveEpoch((n) => n + 1);
           }}
           onDelivered={() => {
+            const deliveredId = deliveringOrder.id;
             setDeliveringOrder(null);
-            void queryClient.invalidateQueries({ queryKey: boardKey });
+            void invalidateOrderEffects(queryClient, { orderId: deliveredId, sedeId });
           }}
         />
       )}

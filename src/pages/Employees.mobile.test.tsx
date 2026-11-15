@@ -39,11 +39,12 @@ vi.mock('../services/employees.service', () => ({
     getRecentProgress: mocks.getRecentProgress,
   },
 }));
-vi.mock('../services/supabaseService', () => {
-  const sedes = { getSedes: vi.fn().mockResolvedValue([{ ...SEDE_CENTRO, comision_porcentaje: 35 }]) };
-  const users = { getUsers: vi.fn().mockResolvedValue([ADMIN_USER, MARIO, PAULA]) };
-  return { sedesService: sedes, usersService: users, supabaseService: { ...sedes, ...users } };
-});
+vi.mock('../services/sedes.service', () => ({
+  sedesService: { getSedes: vi.fn().mockResolvedValue([{ ...SEDE_CENTRO, comision_porcentaje: 35 }]) },
+}));
+vi.mock('../services/users.service', () => ({
+  usersService: { getUsers: vi.fn().mockResolvedValue([ADMIN_USER, MARIO, PAULA]) },
+}));
 
 const { default: Employees } = await import('./Employees');
 

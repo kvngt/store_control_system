@@ -75,10 +75,14 @@ const FRIENDLY_BY_CODE: Record<string, Record<Language, string>> = {
 const SHOP_REASONS_EN: [RegExp, string][] = [
   [/^El cliente todavía no autoriza ningún trabajo/, "The customer has not authorized any work on this order yet. It cannot be started or finished until the office records the authorization."],
   [/^Una orden entregada no se borra/, "A delivered order cannot be deleted: it holds the payment, the parts cost and the commissions. Archive it to take it off the list."],
+  [/^Esta orden ya tiene dinero registrado en Finanzas/, "This order already has money recorded in Finance. To cancel it, use \"Picked up without repair\", which records the refund."],
   [/^La inspección ya está publicada para el cliente/, "The customer can already see this inspection. Only the office can change its photos."],
+  [/^La orden ya fue entregada: su reporte ya no se cambia/, "The order was already delivered: its report can no longer be changed."],
   [/^La orden ya fue entregada/, "The order was already delivered. Only an administrator can change it."],
   [/^La orden ya está terminada/, "The order is already finished. If something is missing, ask the office to reopen it."],
   [/^La orden ya está finalizada/, "The order is already finished. Only an administrator can reopen it."],
+  [/^Solo un administrador puede cambiar el correo/, "Only an administrator can change a user's email address."],
+  [/^Este estado de cuenta ya se importó/, "This bank statement has already been imported."],
 ];
 
 const DUPLICATE_VEHICLE: [RegExp, Record<Language, string>][] = [

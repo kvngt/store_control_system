@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { AlertError } from '../../components/AlertError';
+import Modal from '../../components/Modal';
 import { inspectionService } from '../../services/inspection.service';
 import { getErrorMessage } from '../../lib/errors';
 import type { InspectionTemplate, InspectionTemplatePoint } from '../../types/database';
@@ -146,20 +147,26 @@ export default function InspectionTemplateModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="modal modal-lg" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640 }}>
-        <div className="modal-header">
-          <h3 className="modal-title">
-            {template ? t('inspection.templates.editTemplate') : t('inspection.templates.newTemplate')}
-          </h3>
-          <button type="button" className="modal-close" onClick={onClose} aria-label={t('common.close')}>
-            <X size={20} />
+    <Modal
+      onClose={onClose}
+      size="lg"
+      style={{ maxWidth: 640 }}
+      bodyStyle={{ maxHeight: 'calc(85vh - 140px)', overflowY: 'auto' }}
+      as="form"
+      onSubmit={handleSave}
+      title={template ? t('inspection.templates.editTemplate') : t('inspection.templates.newTemplate')}
+      footer={
+        <>
+          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={saving}>
+            {t('common.cancel')}
           </button>
-        </div>
-
-        <form onSubmit={handleSave}>
-          <div className="modal-body" style={{ maxHeight: 'calc(85vh - 140px)', overflowY: 'auto' }}>
-            <AlertError message={error} />
+          <button type="submit" className="btn btn-primary" disabled={saving}>
+            {saving ? t('common.loading') : t('common.save')}
+          </button>
+        </>
+      }
+    >
+      <AlertError message={error} />
 
             <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
               <label className="form-label">{t('inspection.templates.name')}</label>
@@ -280,18 +287,6 @@ export default function InspectionTemplateModal({
                 ))}
               </div>
             )}
-          </div>
-
-          <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={saving}>
-              {t('common.cancel')}
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? t('common.loading') : t('common.save')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    </Modal>
   );
 }

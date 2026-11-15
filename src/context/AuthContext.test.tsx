@@ -154,4 +154,37 @@ describe('AuthProvider', () => {
     expect(result).toEqual({ success: true });
     expect(mocks.signOut).not.toHaveBeenCalled();
   });
+
+  it('en arranque en frío reintenta sedes hasta 2 veces y si sigue fallando no autentica a medias', async () => {
+    mocks.sedes.mockResolvedValue({ data: null, error: { message: 'TypeError: Failed to fetch' } });
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AuthProvider>
+          <Probe />
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText('sin sesión')).toBeInTheDocument();
+    expect(mocks.sedes.mock.calls.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('en arranque en frío autentica completo si sedes responde en el último reintento', async () => {
+    mocks.sedes
+      .mockResolvedValueOnce({ data: null, error: { message: 'timeout' } })
+      .mockResolvedValueOnce({ data: null, error: { message: 'timeout' } })
+      .mockResolvedValueOnce({ data: [SEDE_CENTRO], error: null });
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <AuthProvider>
+          <Probe />
+        </AuthProvider>
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText(`sesión de ${ADMIN_USER.nombre_completo} en ${SEDE_CENTRO.nombre}`)).toBeInTheDocument();
+    expect(mocks.sedes).toHaveBeenCalledTimes(3);
+  });
 });

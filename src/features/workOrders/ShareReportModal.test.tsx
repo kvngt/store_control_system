@@ -66,7 +66,7 @@ describe('ShareReportModal', () => {
     const whatsapp = screen.getByRole('link', { name: /Enviar por WhatsApp/ });
     expect(whatsapp.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/15125550100\?text=/);
     expect(decodeURIComponent(whatsapp.getAttribute('href')!)).toContain(LINK);
-    expect(screen.getByRole('link', { name: /Abrir/ })).toHaveAttribute('href', LINK);
+    expect(screen.getByRole('link', { name: /Abrir/ })).toHaveAttribute('href', `${LINK}?vista=taller`);
     expect(screen.getByText(/90 días después de entregarla/)).toBeInTheDocument();
   });
 

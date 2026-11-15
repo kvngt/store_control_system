@@ -4,13 +4,16 @@ import { AlertTriangle, PackageCheck } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { AlertError } from '../../components/AlertError';
-import { commissionsService, workOrdersService } from '../../services/supabaseService';
+import Modal from '../../components/Modal';
+import { commissionsService } from '../../services/commissions.service';
+import { workOrdersService } from '../../services/workOrders.service';
 import { parkingService } from '../../services/parking.service';
 import { queryKeys } from '../../lib/queryClient';
 import { getErrorMessage } from '../../lib/errors';
 import { money } from '../../lib/money';
 import { type PaymentMethod, type WorkOrder } from '../../types/database';
 import PaymentFields from './PaymentFields';
+import { paymentFields, paymentProblem, withReceipt } from './paymentReceipt';
 
 interface DeliveryModalProps {
   order: Pick<WorkOrder, 'id' | 'numero_orden' | 'sede_id'>;
@@ -75,32 +78,28 @@ export default function DeliveryModal({ order, onCancel, onDelivered }: Delivery
 
   const submit = async () => {
     if (!balance) return;
-    if (needsMethod && !metodo) {
-      setError(t('delivery.methodRequired'));
+    const problem = paymentProblem({ needsMethod, metodo, numeroCheque, file });
+    if (problem) {
+      setError(t(problem));
       return;
     }
-    if (metodo === 'cheque' && !numeroCheque.trim() && !file) {
-      setError(t('delivery.checkRequired'));
-      return;
-    }
+    const payment = paymentFields({ needsMethod, metodo, numeroCheque });
     setError('');
     setSaving(true);
-    let uploaded: string | null = null;
     try {
-      if (needsMethod && file) {
-        uploaded = await workOrdersService.uploadReceipt(order.sede_id, order.numero_orden, file);
-      }
-      await workOrdersService.deliver({
-        orderId: order.id,
-        metodo: needsMethod ? (metodo as PaymentMethod) : null,
-        numeroCheque: needsMethod && metodo === 'cheque' ? numeroCheque.trim() || null : null,
-        comprobanteRuta: uploaded,
-      });
+      await withReceipt(
+        { needsMethod, file, sedeId: order.sede_id, numeroOrden: order.numero_orden },
+        (comprobanteRuta) =>
+          workOrdersService.deliver({
+            orderId: order.id,
+            metodo: payment.metodo,
+            numeroCheque: payment.numeroCheque,
+            comprobanteRuta,
+          })
+      );
       showToast('success', t('delivery.done'));
       await onDelivered();
     } catch (err) {
-      // Sin entrega no hay a qué colgar el comprobante: se borra en vez de dejarlo huérfano.
-      if (uploaded) void workOrdersService.removeDeliveryReceipt(uploaded).catch(() => {});
       setError(getErrorMessage(err, language));
       setSaving(false);
     }
@@ -113,24 +112,34 @@ export default function DeliveryModal({ order, onCancel, onDelivered }: Delivery
       : t('delivery.confirm');
 
   return (
-    <div className="modal-overlay" onClick={saving ? undefined : onCancel}>
-      <div
-        className="modal"
-        style={{ maxWidth: 520 }}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('delivery.title').replace('{numero}', order.numero_orden)}
-      >
-        <div className="modal-header">
-          <h2 className="modal-title">
-            <PackageCheck size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
-            {t('delivery.title').replace('{numero}', order.numero_orden)}
-          </h2>
-        </div>
-
-        <div className="modal-body">
-          <AlertError message={error} />
+    <Modal
+      onClose={onCancel}
+      closeDisabled={saving}
+      style={{ maxWidth: 520 }}
+      title={
+        <>
+          <PackageCheck size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
+          {t('delivery.title').replace('{numero}', order.numero_orden)}
+        </>
+      }
+      footer={
+        <>
+          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={saving}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            id="delivery-submit"
+            onClick={() => void submit()}
+            disabled={saving || !balance}
+          >
+            {saving ? t('common.loading') : confirmLabel}
+          </button>
+        </>
+      }
+    >
+      <AlertError message={error} />
 
           {unassignedTasks.length > 0 && (
             <div className="alert-warn delivery-unassigned" role="note">
@@ -194,23 +203,6 @@ export default function DeliveryModal({ order, onCancel, onDelivered }: Delivery
               <p className="field-hint">{t('delivery.hint')}</p>
             </>
           )}
-        </div>
-
-        <div className="modal-footer">
-          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={saving}>
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            id="delivery-submit"
-            onClick={() => void submit()}
-            disabled={saving || !balance}
-          >
-            {saving ? t('common.loading') : confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

@@ -125,10 +125,13 @@ describe('work order intake schema', () => {
     }
   });
 
-  it('pide método de pago (y número si es cheque) cuando hay depósito', () => {
+  it('pide método de pago cuando hay depósito', () => {
     expect(issues(form({ deposit: '100' }))).toEqual({ paymentMethod: 'delivery.methodRequired' });
-    expect(issues(form({ deposit: '100', paymentMethod: 'cheque' }))).toEqual({ checkNumber: 'delivery.checkRequired' });
     expect(issues(form({ deposit: '100', paymentMethod: 'efectivo' }))).toEqual({});
+  });
+
+  it('el cheque (número o foto) no lo decide el esquema: lo aplica el alta con paymentProblem', () => {
+    expect(issues(form({ deposit: '100', paymentMethod: 'cheque' }))).toEqual({});
   });
 });
 

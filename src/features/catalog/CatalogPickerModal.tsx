@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { X, Search, Wrench, Package, BookOpen } from 'lucide-react';
+import { Search, Wrench, Package, BookOpen } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { AlertError } from '../../components/AlertError';
+import Modal from '../../components/Modal';
 import { catalogService } from '../../services/catalog.service';
 import { workOrdersService } from '../../services/workOrders.service';
 import { queryKeys } from '../../lib/queryClient';
@@ -131,28 +132,38 @@ export default function CatalogPickerModal({
   const hasLabor = selectedJob?.lineas?.some((l) => l.tipo === 'mano_obra');
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          maxWidth: 720,
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <div className="modal-header">
-          <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <BookOpen size={18} /> {t('catalog.selectJob')}
-          </h3>
-          <button type="button" className="modal-close" onClick={onClose} disabled={busy} aria-label={t('common.close')}>
-            <X size={20} />
+    <Modal
+      onClose={onClose}
+      closeDisabled={busy}
+      title={
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          <BookOpen size={18} /> {t('catalog.selectJob')}
+        </span>
+      }
+      style={{
+        maxWidth: 720,
+        maxHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+      bodyStyle={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}
+      footer={
+        <>
+          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={busy}>
+            {t('common.cancel')}
           </button>
-        </div>
-
-        <div className="modal-body" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          <AlertError message={error} />
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleConfirm}
+            disabled={!selectedJob || busy}
+          >
+            {busy ? t('common.loading') : t('catalog.addJobToOrder')}
+          </button>
+        </>
+      }
+    >
+      <AlertError message={error} />
 
           <div style={{ position: 'relative' }}>
             <Search
@@ -322,22 +333,6 @@ export default function CatalogPickerModal({
               </div>
             )}
           </div>
-        </div>
-
-        <div className="modal-footer">
-          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={busy}>
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={handleConfirm}
-            disabled={!selectedJob || busy}
-          >
-            {busy ? t('common.loading') : t('catalog.addJobToOrder')}
-          </button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

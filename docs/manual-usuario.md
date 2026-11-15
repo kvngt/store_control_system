@@ -262,7 +262,7 @@ cuántos vehículos tienen y cuántas órdenes han generado.
 ### Registrar un cliente
 
 1. Presiona **Nuevo Cliente**.
-2. Llena **Nombre** y **Teléfono** (obligatorios), y **Correo Electrónico**, **Dirección** y **Notas CRM** si los tienes.
+2. Llena **Nombre** y **Teléfono** (obligatorios), y **Correo Electrónico**, **Dirección** y **Notas del cliente** si los tienes.
 3. Elige el **Idioma de los correos** (Español o English, en inglés por defecto). El cliente también puede cambiarlo al elegir idioma en su enlace.
 4. **Crear**.
 
@@ -436,7 +436,7 @@ Lo que cotizas en este paso nace **Sin autorizar** salvo que hayas marcado la ca
 
 **Paso 4 — Depósito.** El anticipo que deja el cliente (deja 0 si no deja nada). Si el cliente paga un depósito:
 - Elige **Cómo pagó el cliente** (Efectivo, Tarjeta, Zelle, Transferencia, Cheque).
-- Si pagó con cheque, anota el **Número de cheque** (es obligatorio); la **Foto del comprobante** es opcional.
+- Si pagó con cheque, anota el **Número de cheque** o sube la **Foto del comprobante** (con uno de los dos basta; la **Foto del comprobante** también sirve como respaldo para cualquier método de pago).
 - Queda registrado automáticamente como ingreso en Finanzas bajo el concepto «Depósito inicial».
 
 Al presionar **Crear**, el sistema genera el número de orden (por ejemplo, `ORD-2026-001`) y abre su detalle. Las fotos y archivos multimedia continúan subiendo en segundo plano sin interrumpir tu navegación.
@@ -486,7 +486,6 @@ Arriba quedan siempre visibles:
 - Número de orden, nombre del cliente y datos del vehículo.
 - Insignias de estado: **Seguro**, **Esperando repuestos**, **Esperando autorización**, **Por revisar** o **Listo para entregar**, **Retirada sin reparar**, **Archivada**.
 - Botones de acción (para administradores):
-  - **Marcar listo para entregar**: botón verde cuando el técnico terminó y el trabajo fue revisado.
   - **Descargar PDF** con el selector **Idioma del PDF** (**ES** / **EN**).
   - **Enviar reporte**: abre la ventana para compartir el enlace del cliente por correo o WhatsApp.
   - **Archivar** / **Devolver al tablero**.
@@ -497,6 +496,7 @@ Arriba quedan siempre visibles:
 
 Debajo del encabezado aparecen botones destacados con las acciones más frecuentes según tu rol:
 - **Para administradores**:
+  - **Marcar listo para entregar** (aparece destacado cuando el técnico terminó y el trabajo fue revisado).
   - **Entregar y cobrar** (aparece destacado cuando la orden está marcada como lista para entregar).
   - **Agregar trabajo** (destacado si la orden aún no tiene mano de obra).
   - **Tomar firma** (destacado en recepción si la orden tiene trabajos y aún no está firmada).
@@ -587,7 +587,7 @@ Después de reportar un hallazgo, dentro de tu sección **Tareas** aparece el bl
 - **Para técnicos (Tareas)**:
   - Botón principal de estado: las acciones **Empezar trabajo** (en recepción con tarea autorizada) y **Terminé: avisar a la oficina** (en proceso cuando todo está hecho) se ubican arriba en las **acciones rápidas** de la orden, asegurando un solo botón principal por estado. En la lista de tareas, al estar en proceso con todo listo se muestra la ayuda explicativa, y si sus tareas están terminadas pero faltan tareas de otro compañero, ve el aviso «Tu parte está lista. Falta: ...».
   - Ve sus tareas con su descripción, su tipo y el precio de la mano de obra (de ahí sale su comisión). Los repuestos los ve sin precio.
-  - **Reloj por tarea**: en sus propias tareas (identificadas como **Tarea: {descripción}**), cada tarea autorizada y no terminada tiene un botón táctil amplio (44 px o más) con **Iniciar** si el reloj está detenido o **Pausar ({tiempo})** si está corriendo, actualizando el tiempo transcurrido en vivo cada minuto. El técnico solo puede tener un reloj corriendo a la vez: presionar **Iniciar** en otra tarea pausa automáticamente la anterior y arranca la nueva, y tocar **Realizado** también detiene el reloj activo de esa tarea. Si un reloj queda abierto por olvido, el sistema lo limita automáticamente a un máximo de 12 horas.
+  - **Reloj por tarea**: en sus propias tareas (identificadas como **Tarea: {descripción}**), cada tarea autorizada y no terminada tiene un botón táctil amplio (44 px o más) con **Iniciar** si el reloj está detenido o **Pausar ({tiempo})** si está corriendo, actualizando el tiempo transcurrido en vivo cada minuto. El técnico solo puede tener un reloj corriendo a la vez: presionar **Iniciar** en otra tarea pausa automáticamente la anterior y arranca la nueva, y tocar **Realizado** también detiene el reloj activo de esa tarea. Si un reloj queda abierto por olvido, el sistema lo limita automáticamente a un máximo de 12 horas. Con la orden terminada (**Finalizado**), el técnico ya no puede iniciar el reloj de una tarea (igual que ya no puede reabrir una tarea).
   - Toca **Realizado** al terminar una tarea; si el reloj estaba corriendo, se detiene automáticamente. Si la marcó por error, presiona **Reabrir tarea** (mientras la orden no esté terminada; después, pídeselo a administración).
   - Con **Foto** puede tomar o subir directamente una fotografía con la cámara para adjuntarla como avance a esa tarea.
   - Con **Agregar avance** puede subir fotos, videos o notas de voz vinculados a esa tarea específica.
@@ -688,7 +688,7 @@ Cuando se cotizan trabajos o repuestos, quedan **Sin autorizar**. En la sección
 - Mientras espera respuesta, las líneas muestran **Esperando al cliente** y la orden pasa a **Espera Autorización**.
 - Si necesitas corregir algo, pulsa **Cancelar presupuesto**.
 - Si agregas trabajos adicionales mientras espera, presiona **Agregar al presupuesto y reenviar**.
-- Si el cliente no tiene correo, puedes compartirle el enlace por WhatsApp desde la tarjeta Enlace del cliente.
+- Si el cliente no tiene correo (o pidió no recibir correos), el presupuesto se crea igual y ahí mismo aparecen los botones **Enviar por WhatsApp** y **Copiar enlace** mientras siga sin respuesta.
 
 ![Lo que ve el cliente en su enlace: el presupuesto por autorizar.](../public/manual/es/22.webp)
 
@@ -711,7 +711,7 @@ Lo autorizado suma inmediatamente al total de la orden y genera avisos a los té
 
 Cuando el técnico marca el estado en **Finalizado**, el trabajo físico concluyó pero el cliente aún no es notificado. En el detalle de la orden aparece la insignia **Por revisar**.
 
-Administración debe inspeccionar el vehículo y verificar las cuentas. Para marcarlo listo, pulsa el botón principal **Marcar listo para entregar** en las acciones rápidas (también disponible en el encabezado). En ese instante:
+Administración debe inspeccionar el vehículo y verificar las cuentas. Para marcarlo listo, pulsa el botón principal **Marcar listo para entregar** en las acciones rápidas. En ese instante:
 1. La orden cambia su insignia a **Listo para entregar**.
 2. Si el cliente tiene un correo electrónico válido, se le envía automáticamente el correo avisándole que su vehículo está listo.
 3. Si el cliente **no tiene correo electrónico registrado**, se abre de inmediato una ventana con el aviso preparado para enviárselo por **WhatsApp** o **SMS**, redactado en el idioma del cliente (español o inglés).
@@ -730,7 +730,7 @@ Al seleccionar el estado **Entregado** o pulsar **Entregar y cobrar** en las acc
   - **Hay que devolver al cliente**: si el depósito o anticipos superaron el total. El botón indica **Entregar y devolver (monto)**.
   - **No hay nada pendiente de cobro.**: botón **Entregar**.
 - Selecciona en **Cómo pagó el cliente** o **Cómo se le devuelve**: Efectivo, Tarjeta, Zelle, Transferencia o Cheque.
-- Si es con cheque, registra el **Número de cheque** o sube la **Foto del comprobante** (con uno de los dos basta).
+- Si es con cheque, registra el **Número de cheque** o sube la **Foto del comprobante** (con uno de los dos basta; la **Foto del comprobante** sirve para cualquier método de pago).
 - Al confirmar:
   - Se registra el movimiento de cobro o devolución en Finanzas.
   - Se registra el egreso por el costo de los repuestos.
@@ -788,7 +788,7 @@ Cada orden cuenta con un enlace web único (`restorifyauto.net/r/...`) que exist
 - Visualiza el estado, avance, recepción, fotos y videos publicados, presupuesto por autorizar y el desglose de su cuenta.
 - El portal cuenta con **secciones plegables** pensadas para el teléfono: los avances, el próximo servicio y el contacto arrancan abiertos; la recepción (con el conteo de fotos), la cuenta (con el saldo formateado) y las observaciones arrancan cerradas con un resumen visible y se despliegan al tocarlas. Si hay un presupuesto pendiente, arranca abierto para su revisión.
 - Permite llamar directamente al taller o escribir por WhatsApp si la sede tiene teléfonos configurados.
-- En la tarjeta **Enlace del cliente**, administración puede: **Copiar**, **Abrir** (ver el enlace como el cliente; si ahí cambias el idioma, no cambia el de sus correos), **Enviar por WhatsApp**, **Cambiar enlace** (invalida el anterior) o **Desactivar**.
+- En la tarjeta **Enlace del cliente**, administración puede: **Copiar**, **Abrir** (ver el enlace como el cliente; si ahí cambias el idioma, no cambia el de sus correos), **Enviar por WhatsApp**, **Cambiar enlace** (invalida el anterior) o **Desactivar**. Si administración desactiva el enlace, los correos automáticos dejan de salir para esa orden hasta que se cree un enlace nuevo con **Crear enlace**.
 - El enlace permanece activo mientras la orden está en curso y hasta 90 días después de entregada.
 - **Correos automáticos**:
   - «Recibimos su vehículo»: sale al capturar la firma de recepción (con el enlace de seguimiento).
@@ -813,7 +813,7 @@ Al terminar un trabajo (un cambio de aceite, un mantenimiento), administración 
 
 **Programar el próximo servicio**
 1. Abre la orden y pulsa **Sticker de servicio** en las acciones rápidas (si ya existe un servicio programado o sugerido, te lleva directamente a la tarjeta para verlo o reimprimirlo; si no hay ninguno, abre el diálogo para crearlo), o ve a la pestaña **Cobro y cliente** → tarjeta **Próximo servicio** → **Programar próximo servicio**.
-2. Toca uno de los **Presets rápidos** o llena los campos a mano:
+2. Toca una de las **Opciones rápidas** o llena los campos a mano:
 
    | Preset | Millas | Fecha |
    |---|---|---|
@@ -859,7 +859,7 @@ El mismo próximo servicio aparece como la tarjeta **Próximo servicio recomenda
 Si mientras trabajas ves que el vehículo va a necesitar un servicio más adelante (el siguiente cambio de aceite, frenos, bandas), puedes dejárselo sugerido a administración. Tú no programas ni imprimes nada: administración decide.
 
 1. En la orden, pulsa **Sugerir próximo servicio** en las acciones rápidas (abre el diálogo directamente si aún no hay servicio registrado; si ya hay uno programado o sugerido, te lleva a la sección **Próximo servicio**, donde puedes pulsar **Sugerir próximo servicio**).
-2. En **Presets rápidos**, toca una opción (**Aceite sintético (+5,000 mi / 6 m)**, **Aceite convencional (+3,000 mi / 3 m)**, **Revisión general (+5,000 mi / 6 m)** o **Garantía de pintura (+30 días)**) o completa la **Fecha recomendada**, el campo **En cuántas millas** (si la orden tiene millas de ingreso, escribes cuántas millas sumar —por ejemplo, `5000`— y debajo ves el cálculo en vivo «Próximo servicio a las {total} mi ({actual} + {extra})»; si no tiene millas de ingreso, el campo pide las **Millas recomendadas**) y una **Nota o servicio** (hasta 120 caracteres). Hace falta al menos la fecha o las millas.
+2. En **Opciones rápidas**, toca una opción (**Aceite sintético (+5,000 mi / 6 m)**, **Aceite convencional (+3,000 mi / 3 m)**, **Revisión general (+5,000 mi / 6 m)** o **Garantía de pintura (+30 días)**) o completa la **Fecha recomendada**, el campo **En cuántas millas** (si la orden tiene millas de ingreso, escribes cuántas millas sumar —por ejemplo, `5000`— y debajo ves el cálculo en vivo «Próximo servicio a las {total} mi ({actual} + {extra})»; si no tiene millas de ingreso, el campo pide las **Millas recomendadas**) y una **Nota o servicio** (hasta 120 caracteres). Hace falta al menos la fecha o las millas.
 3. Pulsa **Enviar sugerencia**. Sale el aviso «Sugerencia enviada a administración.»
 
 Solo puedes sugerir en una orden que tengas asignada y que todavía no esté entregada. Si vuelves a sugerir, reemplazas tu sugerencia anterior. Cuando administración la usa o la descarta, desaparece.
@@ -877,7 +877,7 @@ Una orden entregada permanece en la lista principal durante 90 días. Para retir
 ### Eliminar una orden
 <!-- rol: admin -->
 
-Solo un administrador puede eliminar una orden, y **solo si todavía no se entregó**. Esto borra sus archivos multimedia, avances y los movimientos automáticos que generó en Finanzas (por ejemplo, el depósito). Los movimientos importados del banco se conservan intactos.
+Solo un administrador puede eliminar una orden, y **solo si todavía no se entregó ni tiene dinero registrado en Finanzas**. Una orden que ya tiene dinero registrado en Finanzas (un anticipo o depósito, por ejemplo) no se borra: se cancela con **Retirada sin reparar**, que registra la devolución. Al borrar una orden se eliminan sus archivos multimedia y avances; los movimientos importados del banco se conservan intactos.
 
 **Una orden entregada no se elimina: se archiva.** Lleva el cobro, el costo de los repuestos y las comisiones, y borrarla borraría ese dinero de Finanzas. En la lista de órdenes, en lugar del botón de eliminar aparece **Archivar**: la orden sale de la lista y queda en **Archivadas**, de donde se puede devolver cuando quieras.
 
@@ -1054,7 +1054,7 @@ como los de cualquier otra aplicación.
 
 Tiene tres vistas:
 
-- **Registros del taller**: lo que registra la app (cobros de las órdenes, costo de repuestos,
+- **Movimientos del taller**: lo que registra la app (cobros de las órdenes, costo de repuestos,
   comisiones y lo que registres a mano). Arriba, **ingresos**, **egresos** y **balance**;
   abajo, la tabla con filtros por tipo y por **mes**. **Exportar Excel** baja lo que muestra
   la tabla (por ejemplo, un mes) para el contador.
@@ -1081,7 +1081,7 @@ La pestaña **Indicadores** reúne los números indispensables para medir la ren
 - **Selector de sede y período**: permite elegir la sede (si administras más de una) y el lapso de tiempo a consultar mediante accesos rápidos (**Este mes**, **Mes pasado**, **Últimos 30 días**) o un rango **Personalizado** con fechas de inicio y fin.
 - **Cuadrícula de indicadores (8 fichas)**:
   - **Carros entregados**: total de órdenes entregadas dentro del período.
-  - **Ticket promedio (ARO)**: facturación total general dividida entre la cantidad de autos entregados.
+  - **Promedio por carro**: facturación total general dividida entre la cantidad de autos entregados.
   - **Tarifa efectiva / hora**: ventas de mano de obra aprobada divididas entre las horas facturadas. Si la sede tiene configurada una tarifa de referencia, se muestra debajo para contrastar el valor real contra el esperado.
   - **Horas por orden**: promedio de horas de mano de obra vendidas por cada auto entregado.
   - **Margen de mano de obra**: porcentaje que queda de la venta de mano de obra tras descontar las comisiones del personal.
@@ -1106,9 +1106,9 @@ para esa orden.
 ### Registrar un movimiento a mano
 
 1. **Nueva Transacción**.
-2. **Tipo**: ingreso o egreso.
-3. **Categoría**: Pago de Cliente, Compra de Repuestos, Comisiones, Gasto Operativo o Comisiones de banco y tarjeta.
-4. **Monto** y **fecha**. La fecha es la del taller: un movimiento del día 1
+2. **Tipo**: **Ingresos** o **Egresos**.
+3. **Categoría**: al elegir **Ingresos**, queda en **Pago de Cliente**; al elegir **Egresos**, pasa sola a **Gasto Operativo** y la lista muestra solo las categorías de egreso (Compra de Repuestos, Comisiones, Gasto Operativo o Comisiones de banco y tarjeta).
+4. **Monto** y **Fecha** (obligatoria). La fecha es la del taller: un movimiento del día 1
    cuenta en ese mes.
 5. **Orden vinculada** (opcional): asocia el movimiento a una orden. En la tabla,
    esa columna lleva directo a la orden.
@@ -1389,7 +1389,7 @@ Para crear una cuenta de usuario desde la lista de usuarios:
 2. Completa **Nombre**, **Correo Electrónico** y **Contraseña Temporal** (mínimo 8 caracteres).
 3. Selecciona el **Rol** (**Administrador**, **Mecánico** o **Pintor**).
 4. Elige la sede en **Sedes / Talleres**.
-5. Presiona **Crear**.
+5. Presiona **Crear**. Si elegiste **Mecánico** o **Pintor**, se abre enseguida su ficha para fijar cómo se le paga (o ciérrala para dejar la comisión de la sede).
 
 ![Nuevo usuario.](../public/manual/es/44.webp)
 
@@ -1521,7 +1521,7 @@ Conviene conocerlas para no sorprenderse ni registrar el mismo dinero dos veces.
 
 **Al entregar una orden**, el enlace del cliente queda disponible 90 días más.
 
-**Al eliminar una orden**, se eliminan sus archivos, comisiones y movimientos automáticos. Los importados del banco se conservan.
+**Al eliminar una orden** (solo posible si no se entregó ni tiene dinero registrado en Finanzas; de lo contrario, se cancela con **Retirada sin reparar**), se eliminan sus archivos y avances. Los movimientos importados del banco se conservan.
 
 **Limpieza periódica.** Los avisos leídos se borran a los 60 días y todos a los 180. Los envíos de correo y push terminados a los 90 días. Los archivos que quedaron a medio subir o de órdenes borradas se eliminan del almacenamiento.
 
@@ -1692,4 +1692,4 @@ El botón **Terminar inspección** solo se habilita cuando no queda ningún punt
 
 ---
 
-*Fin del documento. Última revisión del contenido: octubre de 2026.*
+*Fin del documento. Última revisión del contenido: noviembre de 2026.*

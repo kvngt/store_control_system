@@ -21,7 +21,7 @@ vi.mock('../../services/inspection.service', () => ({
   },
 }));
 
-vi.mock('../../services/supabaseService', () => ({
+vi.mock('../../services/sedes.service', () => ({
   sedesService: {
     getSedes: mocks.getSedes,
   },

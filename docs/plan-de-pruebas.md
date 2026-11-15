@@ -110,10 +110,11 @@ que no son de la app (ver [deployment.md](deployment.md)).
 
 ### 2.2 Cuentas
 
-Créalas en **Empleados** (menú lateral). Las que había se borraron el 29/09/2026 con la
-limpieza del proyecto real; créalas de nuevo, idealmente en un proyecto de staging
-([mantenimiento.md P0-1](mantenimiento.md#5-plan-priorizado)), y **no** en el proyecto
-que usa el taller mientras dure su prueba:
+Para pruebas manuales o `qa:security` remoto, créalas en **Empleados** (menú lateral). Las
+que había se borraron el 29/09/2026 con la limpieza del proyecto real; **no** crees cuentas de
+prueba en producción mientras el taller trabaje ahí (para la suite E2E automatizada,
+`npm run test:e2e:local` genera sus propias cuentas `e2e-*@restorify.test` contra el
+Supabase local con Docker):
 
 | Clave en el plan | Rol | Sede | Variables en `.env.test.local` |
 |---|---|---|---|
@@ -181,13 +182,14 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | ID | P | Ejecuta | Comando | Esperado |
 |---|---|---|---|---|
 | AUT-01 | P0 | IA | `npm run lint` y `npx tsc -b` | Sin errores ni avisos |
-| AUT-02 | P0 | IA | `npm test` | Todas en verde (1.076 pruebas en 140 archivos al 19/10/2026) |
+| AUT-02 | P0 | IA | `npm test` | Todas en verde (1.263 pruebas en 174 archivos al 15/11/2026) |
+| AUT-02b | P0 | IA | `npm run test:functions` | Todas en verde (102 pruebas Deno 2 de edge functions al 15/11/2026) |
 | AUT-03 | P0 | IA | `npm run build` | Termina sin errores |
 | AUT-04 | P0 | IA | `npm run db:check` | "Base de datos al día" |
-| AUT-05 | P0 | IA | `npx supabase start` y `npm run test:db` (requiere Docker) | Todos los archivos pgTAP en verde (43 archivos / 1.053 pruebas al 19/10/2026). Sin Docker: **BLOQUEADO** |
-| AUT-06 | P0 | IA | `npm run qa:security` | 0 FAIL (202 casos al 19/10/2026: 171 PASS + 31 SKIP). Los SKIP dicen qué falta (una cuenta o una orden) |
+| AUT-05 | P0 | IA | `npx supabase start` y `npm run test:db` (requiere Docker) | Todos los archivos pgTAP en verde (48 archivos / 1.181 pruebas al 15/11/2026). Sin Docker: **BLOQUEADO** |
+| AUT-06 | P0 | IA | `npm run qa:security` | 0 FAIL (209 casos; el 15/11/2026 contra producción: 178 PASS + 31 SKIP). Los SKIP dicen qué falta (una cuenta o una orden) |
 | AUT-07 | P1 | IA | `npm run qa:security` (con cuenta de técnico) | SEC-55 PASS. Ya no crea nada: desde que abrir una orden es solo de admin, el caso comprueba el rechazo |
-| AUT-08 | P1 | IA | `npm run test:e2e` | Todas en verde o saltadas por falta de credenciales |
+| AUT-08 | P1 | IA | `npm run test:e2e:local` (requiere Docker) | 77 pruebas en verde contra la base local (15/11/2026). Sin Docker, `npm run test:e2e` corre contra `.env.local` o salta sin `.env.test.local` |
 
 ---
 
@@ -633,7 +635,7 @@ Errores ya corregidos. Si alguno reaparece, es una regresión **P0**.
 | Mi Perfil cambiaba el correo en el perfil pero no en el acceso | Mi Perfil: el correo es de solo lectura | — |
 | El técnico empezaba y terminaba órdenes sin nada autorizado *(decisión del dueño, 04/11/2026)* | Como técnico, en una orden sin autorizar: aviso y selector apagado; arrastrarla en el tablero la regresa con el motivo | pgTAP 45 y 03, `TechOrderStatus.test.tsx`, `errors.test.ts` |
 | Borrar una orden entregada borraba su dinero de Finanzas *(decisión del dueño, 04/11/2026)* | Órdenes → en una entregada sale «Archivar», no la papelera | pgTAP 45 y 07, `WorkOrders.smoke.test.tsx` |
-| El correo del presupuesto en inglés salía antes que la traducción de sus líneas | Agregar una línea y enviar el presupuesto enseguida a un cliente en inglés | — (`process-outbox`, sin pruebas de Deno) |
+| El correo del presupuesto en inglés salía antes que la traducción de sus líneas | Agregar una línea y enviar el presupuesto enseguida a un cliente en inglés | `process-outbox` (`npm run test:functions` en Deno 2) |
 | Una subida que terminaba después de entregar mostraba el error crudo de la base | Entregar una orden con una subida en cola, en el teléfono del técnico | `UploadTray.test.tsx` |
 | «Atrás» en el teléfono sacaba al técnico de la orden con un avance o un trabajo adicional a medias *(04/11/2026)* | En Android: escribir un avance y pulsar «atrás» (pregunta); con la cámara abierta, «atrás» cierra solo la cámara; con una foto abierta, cierra solo el visor | `TaskProgressModal.back.test.tsx`, `ReportFindingModal.test.tsx`, `MediaLightbox.test.tsx`, `backButtonTrap.test.tsx` |
 | Un toque fuera del diálogo de avance, de trabajo adicional o de próximo servicio lo borraba todo sin preguntar | Tocar fuera con algo escrito: pregunta | `ReportFindingModal.test.tsx`, `ServiceStickerModal.test.tsx` |

@@ -79,8 +79,8 @@ vi.mock('../features/workOrders/SignatureCard', () => ({
   ),
 }));
 
-vi.mock('../services/supabaseService', () => {
-  const workOrders = {
+vi.mock('../services/workOrders.service', () => ({
+  workOrdersService: {
     getWorkOrders: mocks.getWorkOrders,
     getWorkOrderDetail: mocks.getWorkOrderDetail,
     createWorkOrder: mocks.createWorkOrder,
@@ -105,23 +105,21 @@ vi.mock('../services/supabaseService', () => {
     discardFinding: mocks.discardFinding,
     setArchived: mocks.setArchived,
     deleteWorkOrder: mocks.deleteWorkOrder,
-  };
-  const customers = { getCustomers: mocks.getCustomers, createCustomer: mocks.createCustomer };
-  const vehicles = { getVehicles: mocks.getVehicles, createVehicle: mocks.createVehicle };
-  const users = { getOperators: mocks.getOperators };
-  const commissions = { getEstimate: mocks.getEstimate };
-  return {
-    commissionsService: commissions,
-    workOrdersService: workOrders,
-    customersService: customers,
-    vehiclesService: vehicles,
-    usersService: users,
-    supabaseService: { ...workOrders, ...customers, ...vehicles, ...users },
-  };
-});
-
-// El historial de la orden se pide al servicio de órdenes directo (no por la fachada).
-vi.mock('../services/workOrders.service', () => ({ workOrdersService: { getHistory: mocks.getHistory } }));
+    getHistory: mocks.getHistory,
+  },
+}));
+vi.mock('../services/customers.service', () => ({
+  customersService: { getCustomers: mocks.getCustomers, createCustomer: mocks.createCustomer },
+}));
+vi.mock('../services/vehicles.service', () => ({
+  vehiclesService: { getVehicles: mocks.getVehicles, createVehicle: mocks.createVehicle },
+}));
+vi.mock('../services/users.service', () => ({
+  usersService: { getOperators: mocks.getOperators },
+}));
+vi.mock('../services/commissions.service', () => ({
+  commissionsService: { getEstimate: mocks.getEstimate },
+}));
 
 // El detalle y el diálogo de entrega piden el parqueo a su servicio. Sin esto la prueba llamaba
 // al Supabase de `.env.local` (producción) y fallaba según la red.
@@ -1407,18 +1405,24 @@ describe('WorkOrders — finalizar y listo para entregar', () => {
     await openDetail(user);
 
     expect(screen.getAllByText('Por revisar').length).toBeGreaterThan(0);
-    await user.click(screen.getAllByRole('button', { name: /Marcar listo para entregar/ })[0]);
+    expect(document.getElementById('order-mark-ready')).toBeNull();
+    await user.click(screen.getByRole('button', { name: /Marcar listo para entregar/ }));
     expect(mocks.markReadyForPickup).toHaveBeenCalledWith(ORDER.id);
   });
 
-  it('ya marcada, administración ve "Listo para entregar" y no el botón', async () => {
-    mocks.getWorkOrderDetail.mockResolvedValue({ ...FINALIZADA, lista_para_entregar_en: '2026-10-06T10:00:00Z' });
+  it('ya marcada, administración ve "Listo para entregar", no el botón, y "Entregar" es el único botón principal', async () => {
+    mocks.getWorkOrderDetail.mockResolvedValue({ ...FINALIZADA, lista_para_entregar_en: '2026-10-06T10:00:00Z', labor_items: [] });
     const user = userEvent.setup();
     renderWithProviders(<WorkOrders />);
     await openDetail(user);
 
     expect(screen.getAllByText('Listo para entregar').length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /Marcar listo para entregar/ })).not.toBeInTheDocument();
+    const toolbar = screen.getByRole('toolbar', { name: 'Acciones rápidas' });
+    const primaryButtons = Array.from(toolbar.querySelectorAll('button.btn-primary'));
+    expect(primaryButtons).toHaveLength(1);
+    expect(primaryButtons[0]).toHaveTextContent(/Entregar/);
+    expect(within(toolbar).getByRole('button', { name: 'Agregar trabajo' })).not.toHaveClass('btn-primary');
   });
 
   it('un técnico no ve el botón y no puede reabrir la orden finalizada', async () => {
@@ -2015,5 +2019,41 @@ describe('WorkOrders — trabajo adicional reportado (F6)', () => {
     await user.click(within(screen.getByRole('toolbar', { name: 'Acciones rápidas' })).getByRole('button', { name: /Reportar trabajo adicional/ }));
     const dialog = await screen.findByRole('dialog', { name: 'Reportar trabajo adicional' });
     expect(dialog.closest('[hidden]')).toBeNull();
+  });
+});
+
+describe('WorkOrders — toasts de error al guardar cliente o vehículo en el alta', () => {
+  it('muestra el toast de cliente cuando falla guardar cliente nuevo (y no el de crear orden)', async () => {
+    mocks.createCustomer.mockRejectedValue(new Error('Teléfono duplicado'));
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+
+    await user.selectOptions(document.getElementById('intake-customer') as HTMLSelectElement, '__new__');
+    await user.type(within(dialog).getByPlaceholderText('Nombre'), 'Ana López');
+    await user.type(dialog.querySelector('input[type="tel"]') as HTMLInputElement, '3015550101');
+    await next(user, dialog);
+
+    expect(await screen.findByText('No se pudo guardar el cliente')).toBeInTheDocument();
+    expect(screen.queryByText('Falló al crear la orden')).not.toBeInTheDocument();
+    expect(currentStep(dialog)).toMatch(/Cliente/);
+  });
+
+  it('muestra el toast de vehículo cuando falla guardar vehículo nuevo (y no el de crear orden)', async () => {
+    mocks.createVehicle.mockRejectedValue(new Error('Placa duplicada'));
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+    await pickCustomer(user, dialog);
+
+    await user.selectOptions(document.getElementById('intake-vehicle') as HTMLSelectElement, '__new__');
+    await user.type(document.getElementById('vehicle-brand') as HTMLInputElement, 'Toyota');
+    await user.type(document.getElementById('vehicle-model') as HTMLInputElement, 'Camry');
+    const anio = document.getElementById('vehicle-year') as HTMLSelectElement;
+    await user.selectOptions(anio, anio.options[1].value);
+    await user.type(document.getElementById('vehicle-vin') as HTMLInputElement, '1HGCM82633A004352');
+    await next(user, dialog);
+
+    expect(await screen.findByText('No se pudo guardar el vehículo')).toBeInTheDocument();
+    expect(screen.queryByText('Falló al crear la orden')).not.toBeInTheDocument();
+    expect(currentStep(dialog)).toMatch(/Vehículo/);
   });
 });

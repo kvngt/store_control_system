@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, UserCog } from 'lucide-react';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
-import { sedesService, usersService } from '../services/supabaseService';
+import { sedesService } from '../services/sedes.service';
+import { usersService } from '../services/users.service';
 import { employeesService } from '../services/employees.service';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
@@ -27,6 +28,7 @@ export default function Employees() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<UserProfile | null>(null);
+  const [selectedNotice, setSelectedNotice] = useState<string | undefined>(undefined);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
@@ -77,6 +79,17 @@ export default function Employees() {
     void queryClient.invalidateQueries({ queryKey: queryKeys.paySchemes() });
   };
 
+  const openEmployee = (employee: UserProfile, notice?: string) => {
+    setSelected(employee);
+    setSelectedNotice(notice);
+  };
+
+  const handleCreated = (employee: UserProfile) => {
+    if (employee.rol === 'mecanico' || employee.rol === 'pintor') {
+      openEmployee(employee, t('employees.setPayNotice'));
+    }
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -120,7 +133,7 @@ export default function Employees() {
                           <div><dt>{t('employees.role')}</dt><dd>{t('employees.roles.' + u.rol)}</dd></div>
                           <div><dt>{t('employees.sede')}</dt><dd>{sedeOf(u)?.nombre ?? '—'}</dd></div>
                           <div><dt>{t('employees.payScheme')}</dt><dd>{payLabel(u)}</dd></div>
-                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelected(u)}>
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => openEmployee(u)}>
                             {t('employees.open')}
                           </button>
                         </dl>
@@ -163,7 +176,7 @@ export default function Employees() {
                       <td data-label={t('employees.sede')}>{sedeOf(u)?.nombre ?? '—'}</td>
                       <td data-label={t('employees.payScheme')}>{payLabel(u)}</td>
                       <td>
-                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSelected(u)}>
+                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => openEmployee(u)}>
                           {t('employees.open')}
                         </button>
                       </td>
@@ -177,14 +190,25 @@ export default function Employees() {
         </div>
       )}
 
-      <UsersCard users={users} sedes={sedes} currentUserId={user?.id} loading={loading} onChanged={reload} />
+      <UsersCard
+        users={users}
+        sedes={sedes}
+        currentUserId={user?.id}
+        loading={loading}
+        onChanged={reload}
+        onCreated={handleCreated}
+      />
 
       {selected && (
         <EmployeeDetailModal
           employee={selected}
           sede={sedeOf(selected)}
           scheme={schemes[selected.id]}
-          onClose={() => setSelected(null)}
+          notice={selectedNotice}
+          onClose={() => {
+            setSelected(null);
+            setSelectedNotice(undefined);
+          }}
         />
       )}
     </div>

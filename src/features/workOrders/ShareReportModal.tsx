@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, Copy, Download, ExternalLink, Mail, MessageCircle, MessageSquareText, X } from 'lucide-react';
+import { Check, Copy, Download, ExternalLink, Mail, MessageCircle, MessageSquareText } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { getErrorMessage } from '../../lib/errors';
@@ -10,6 +10,8 @@ import { customerPortalService } from '../../services/customerPortal.service';
 import { reportsService } from '../../services/reports.service';
 import type { WorkOrder } from '../../types/database';
 import { canOpenSms, formatPhone, smsUrl } from '../../lib/phone';
+import { staffPortalUrl } from '../../lib/portalShare';
+import Modal from '../../components/Modal';
 
 interface ShareReportModalProps {
   order: WorkOrder;
@@ -73,23 +75,13 @@ export default function ShareReportModal({ order, link, message, onClose, onDown
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        style={{ maxWidth: 520 }}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="share-report-title"
-      >
-        <div className="modal-header">
-          <h3 className="modal-title" id="share-report-title">{t('workOrders.shareReport')}</h3>
-          <button className="modal-close" onClick={onClose} aria-label={t('common.close')}>
-            <X size={20} />
-          </button>
-        </div>
-        <div className="modal-body">
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-4)' }}>
+    <Modal
+      onClose={onClose}
+      style={{ maxWidth: 520 }}
+      title={t('workOrders.shareReport')}
+      titleId="share-report-title"
+    >
+      <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-4)' }}>
             {t('workOrders.shareReportHint')}
           </p>
 
@@ -145,7 +137,7 @@ export default function ShareReportModal({ order, link, message, onClose, onDown
                 {copied ? <Check size={16} style={{ color: 'var(--color-success)' }} /> : <Copy size={16} />}
                 {copied ? t('workOrders.linkCopied') : t('workOrders.copyLink')}
               </button>
-              <a className="btn btn-secondary" style={{ flex: 1 }} href={link} target="_blank" rel="noopener noreferrer">
+              <a className="btn btn-secondary" style={{ flex: 1 }} href={staffPortalUrl(link)} target="_blank" rel="noopener noreferrer">
                 <ExternalLink size={16} /> {t('workOrders.openReport')}
               </a>
             </div>
@@ -159,8 +151,6 @@ export default function ShareReportModal({ order, link, message, onClose, onDown
             {link}
           </p>
           <p className="field-hint">{t('workOrders.shareLinkExpiry')}</p>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

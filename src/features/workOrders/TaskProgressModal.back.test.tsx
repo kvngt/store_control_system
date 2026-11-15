@@ -104,8 +104,11 @@ describe('Diálogo de avance de una tarea y el botón «atrás»', () => {
     expect(await screen.findByRole('alertdialog')).toHaveTextContent('¿Descartar este avance?');
     await user.click(screen.getByRole('button', { name: 'Seguir editando' }));
 
-    // La X y el «Cancelar» del pie se llaman igual: los dos preguntan.
-    for (const cancelar of screen.getAllByRole('button', { name: 'Cancelar' })) {
+    // La X («Cerrar») y el «Cancelar» del pie: los dos preguntan.
+    for (const cancelar of [
+      screen.getByRole('button', { name: 'Cerrar' }),
+      screen.getByRole('button', { name: 'Cancelar' }),
+    ]) {
       await user.click(cancelar);
       expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: 'Seguir editando' }));

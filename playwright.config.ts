@@ -1,10 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
 
-try {
-  process.loadEnvFile('.env.test.local');
-} catch {
-  // Optional — tests that need real credentials just skip themselves
-  // when the vars aren't set (see e2e/fixtures.ts).
+// `npm run test:e2e:local` (scripts/e2e-local.mjs) ya trae las cuentas de la base local: no se
+// mezclan con las de `.env.test.local`, que son las del proyecto real.
+const localStack = process.env.E2E_LOCAL_STACK === '1';
+if (!localStack) {
+  try {
+    process.loadEnvFile('.env.test.local');
+  } catch {
+    // Optional — tests that need real credentials just skip themselves
+    // when the vars aren't set (see e2e/fixtures.ts).
+  }
 }
 
 const baseURL = process.env.E2E_BASE_URL || 'http://localhost:5173';
@@ -49,12 +54,20 @@ export default defineConfig({
   // Only start a dev server when we are the ones serving the app.
   ...(isLocal
     ? {
-        webServer: {
-          command: 'npm run dev',
-          url: baseURL,
-          reuseExistingServer: !process.env.CI,
-          timeout: 30_000,
-        },
+        webServer: localStack
+          ? {
+              // Su propio puerto y nunca uno que ya esté corriendo: ese podría apuntar al proyecto real.
+              command: `npx vite --port ${new URL(baseURL).port || '5174'} --strictPort`,
+              url: baseURL,
+              reuseExistingServer: false,
+              timeout: 60_000,
+            }
+          : {
+              command: 'npm run dev',
+              url: baseURL,
+              reuseExistingServer: !process.env.CI,
+              timeout: 30_000,
+            },
       }
     : {}),
 });

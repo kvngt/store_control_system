@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../../context/language.context';
 import { useAuth } from '../../context/auth.context';
-import { supabaseService } from '../../services/supabaseService';
+import { financeService } from '../../services/finance.service';
 import { getErrorMessage } from '../../lib/errors';
 import { parseWellsFargoStatement } from '../../lib/bankStatementParser';
 import { isLikelyInternalTransfer, suggestCategory } from '../../lib/categorizationRules';
@@ -11,8 +11,9 @@ import type {
   ReviewableTransaction,
   TransactionCategory,
 } from '../../types/database';
-import { X, Upload, AlertTriangle } from 'lucide-react';
+import { Upload, AlertTriangle } from 'lucide-react';
 import { AlertError } from '../../components/AlertError';
+import Modal from '../../components/Modal';
 import { moneySigned, sumMoney } from '../../lib/money';
 import { formatDay } from '../../lib/dates';
 
@@ -53,7 +54,7 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    supabaseService
+    financeService
       .getCategorizationRules()
       .then((r) => {
         setRules(r);
@@ -73,16 +74,16 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
     try {
       // Before anything else: has this exact file been through here already?
       // Checked by content, so renaming the download doesn't hide it.
-      const hash = await supabaseService.fileFingerprint(selected);
+      const hash = await financeService.fileFingerprint(selected);
       setFingerprint(hash);
       if (sedeId) {
-        setAlreadyImported(await supabaseService.findImportsByFingerprint(sedeId, hash));
+        setAlreadyImported(await financeService.findImportsByFingerprint(sedeId, hash));
       }
 
       const { transactions, warnings: parseWarnings } = await parseWellsFargoStatement(selected);
       setWarnings(parseWarnings);
 
-      const duplicates = sedeId ? await supabaseService.findPossibleDuplicates(sedeId, transactions) : new Map<number, string>();
+      const duplicates = sedeId ? await financeService.findPossibleDuplicates(sedeId, transactions) : new Map<number, string>();
 
       const reviewRows: ReviewableTransaction[] = transactions.map((tx, idx) => {
         const internal = isLikelyInternalTransfer(tx.descripcion);
@@ -162,9 +163,9 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
     setError('');
     let uploadedPath: string | null = null;
     try {
-      uploadedPath = await supabaseService.uploadStatement(file, sedeId);
+      uploadedPath = await financeService.uploadStatement(file, sedeId);
       // El lote y sus movimientos en una sola transacción: o entra todo, o nada.
-      await supabaseService.importStatement(
+      await financeService.importStatement(
         {
           sede_id: sedeId,
           nombre_archivo: file.name,
@@ -185,7 +186,7 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
       onImported();
     } catch (err) {
       // La importación no se guardó: el PDF subido no describe nada. Mejor esfuerzo.
-      if (uploadedPath) void supabaseService.removeStatementFile(uploadedPath).catch(() => {});
+      if (uploadedPath) void financeService.removeStatementFile(uploadedPath).catch(() => {});
       setError(getErrorMessage(err, language));
     } finally {
       setSaving(false);
@@ -193,14 +194,35 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: '960px' }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3 className="modal-title">{t('finance.importStatement')}</h3>
-          <button className="modal-close" onClick={onClose}><X size={20} /></button>
-        </div>
-        <div className="modal-body">
-          <AlertError message={error} />
+    <Modal
+      onClose={onClose}
+      style={{ maxWidth: '960px' }}
+      title={t('finance.importStatement')}
+      footerClassName="import-footer"
+      footer={
+        <>
+          {successCount === null && blockedReason && (
+            <span className="import-blocked" role="status">
+              <AlertTriangle size={14} /> {blockedReason}
+            </span>
+          )}
+          <div className="import-footer-actions">
+            <button className="btn btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
+            {successCount === null && (
+              <button
+                className="btn btn-primary"
+                onClick={handleImport}
+                disabled={saving || parsing || selectedRows.length === 0 || hasUnresolvedSelection}
+                title={blockedReason || undefined}
+              >
+                <Upload size={16} /> {saving ? t('common.loading') : t('finance.importSelected')}
+              </button>
+            )}
+          </div>
+        </>
+      }
+    >
+      <AlertError message={error} />
 
           {successCount !== null ? (
             <div style={{
@@ -409,32 +431,6 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
               )}
             </>
           )}
-        </div>
-        {/* The reason the button is disabled has to live next to the button.
-            It used to be a line of small print above a long scrolling table, so
-            from the bottom of the dialog — where the button is — pressing it
-            looked like nothing happened at all. */}
-        <div className="modal-footer import-footer">
-          {successCount === null && blockedReason && (
-            <span className="import-blocked" role="status">
-              <AlertTriangle size={14} /> {blockedReason}
-            </span>
-          )}
-          <div className="import-footer-actions">
-            <button className="btn btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
-            {successCount === null && (
-              <button
-                className="btn btn-primary"
-                onClick={handleImport}
-                disabled={saving || parsing || selectedRows.length === 0 || hasUnresolvedSelection}
-                title={blockedReason || undefined}
-              >
-                <Upload size={16} /> {saving ? t('common.loading') : t('finance.importSelected')}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

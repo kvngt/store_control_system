@@ -1,36 +1,26 @@
-import { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
+import { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { useToast } from '../context/toast.context';
-import { useUnsavedChanges } from '../context/unsavedChanges.context';
-import {
-  customersService,
-  usersService,
-  vehiclesService,
-  workOrdersService,
-} from '../services/supabaseService';
+import { workOrdersService } from '../services/workOrders.service';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { useIsMobile } from '../lib/useMediaQuery';
-import { useMediaUploads } from '../features/media/mediaUploads.context';
-import { useWorkOrderForm, type WorkOrderFormValues } from '../features/workOrders/useWorkOrderForm';
-import { firstStepWithErrors } from '../features/workOrders/workOrderForm.schema';
 import { useWorkOrderDetail } from '../features/workOrders/useWorkOrderDetail';
-import LazyModal from '../components/LazyModal';
 import { getErrorMessage } from '../lib/errors';
-import { daysFromTodayLocal, formatDay } from '../lib/dates';
-import { orderDueState, type DueState } from '../lib/orderDue';
 import ArchivedOrders from '../features/workOrders/ArchivedOrders';
 import FindingsAlert from '../features/workOrders/FindingsAlert';
 import { matchesOrderSearch } from '../features/workOrders/orderSearch';
-import ChoiceDialog from '../components/ChoiceDialog';
-import { useBackButtonTrap } from '../lib/backButtonTrap';
-import { clearIntakeDraft, loadIntakeDraft, saveIntakeDraft, type IntakeDraft } from '../features/workOrders/intakeDraft';
+import { ORDER_STATUSES, orderStatusKey } from '../lib/workType';
+import { useIntake } from '../features/workOrders/intake/useIntake';
+import IntakeFlow from '../features/workOrders/intake/IntakeFlow';
+import OrderList from '../features/workOrders/list/OrderList';
+import type { WorkOrder } from '../types/database';
+import { Plus, Search, Wrench, List, Kanban } from 'lucide-react';
 
 const WorkOrderDetail = lazy(() => import('../features/workOrders/WorkOrderDetail'));
-const WorkOrderCreateModal = lazy(() => import('../features/workOrders/WorkOrderCreateModal'));
 const KanbanBoard = lazy(() => import('./KanbanBoard'));
 
 /** El archivo no es un estatus: es otra vista de la misma pantalla. */
@@ -60,16 +50,11 @@ function saveView(view: OrdersView) {
     // Sin almacenamiento (modo privado, datos bloqueados): la próxima vez abre la lista.
   }
 }
-import { checkUsPlate, checkVin } from '../lib/vin';
-import type { WorkOrder, Customer, Vehicle, UserProfile, PaymentMethod } from '../types/database';
-import { Plus, Search, Eye, Car, Calendar, Trash2, ChevronRight, Wrench, List, Kanban, Archive } from 'lucide-react';
-import { money } from '../lib/money';
 
 export default function WorkOrders() {
   const { t, language } = useLanguage();
   const { user, currentSede } = useAuth();
   const { showToast } = useToast();
-  const { setGuard } = useUnsavedChanges();
   const [searchParams, setSearchParams] = useSearchParams();
   const isAdmin = user?.rol === 'admin';
   const sedeId = isAdmin ? currentSede?.id : user?.sede_id;
@@ -77,20 +62,7 @@ export default function WorkOrders() {
   // Se renderiza una sola versión de la lista, no las dos escondiéndose con
   // CSS: el teléfono cargaba dos copias del marcado para mostrar una.
   const isMobile = useIsMobile();
-  // Un rótulo accesible además del color: el color solo no es información.
-  const dueLabel = (state: DueState) =>
-    state === 'vencida' ? t('workOrders.dueOverdue') : state === 'hoy' ? t('workOrders.dueToday') : t('workOrders.dueSoon');
-  const dueClass = (o: WorkOrder) => {
-    const state = orderDueState(o);
-    return state ? `due-${state}` : undefined;
-  };
-  const dueTitle = (o: WorkOrder) => {
-    const state = orderDueState(o);
-    return state ? dueLabel(state) : undefined;
-  };
 
-  const form = useWorkOrderForm();
-  const mediaUploads = useMediaUploads();
   const detail = useWorkOrderDetail({ onBoardChanged: () => loadOrders() });
 
   const queryClient = useQueryClient();
@@ -100,66 +72,17 @@ export default function WorkOrders() {
     queryFn: () => workOrdersService.getWorkOrders(sedeId),
   });
 
-  // The pickers behind the create dialog, each its own cache entry so a
-  // failure to load one never blanks the board — and so Clientes and Vehículos
-  // reuse them rather than asking again. Solo administración abre órdenes, así
-  // que un técnico no los descarga.
-  const customersQuery = useQuery({
-    queryKey: queryKeys.customers(sedeId),
-    queryFn: () => customersService.getCustomers(sedeId),
-    enabled: isAdmin,
-  });
-  const vehiclesQuery = useQuery({
-    queryKey: queryKeys.vehicles(sedeId),
-    queryFn: () => vehiclesService.getVehicles(sedeId),
-    enabled: isAdmin,
-  });
-  // Solo la consume interfaz de administración (el selector del alta y el de la tarjeta de
-  // técnicos), así que en el teléfono de un mecánico era una descarga que nadie mira.
-  const operatorsQuery = useQuery({
-    queryKey: queryKeys.operators(sedeId),
-    queryFn: () => usersService.getOperators(sedeId),
-    enabled: isAdmin,
-  });
-
-  const customers = customersQuery.data ?? emptyList<Customer>();
-  const vehicles = vehiclesQuery.data ?? emptyList<Vehicle>();
-  const operators = operatorsQuery.data ?? emptyList<UserProfile>();
-
   const loadOrders = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.workOrders(sedeId) });
   };
-  const reloadPickers = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.customers(sedeId) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.vehicles(sedeId) });
-  };
 
-  // La orden que ya se creó en este intento de envío.
-  //
-  // `createWorkOrder` es transaccional, pero la subida de fotos que va después
-  // no está dentro de ella. Si fallaba — y con ocho fotos de teléfono sobre el
-  // wifi del taller es el paso que falla — el usuario veía "error al crear la
-  // orden" con la orden ya creada, y al reintentar creaba una segunda. El
-  // cliente y el vehículo sí estaban protegidos contra eso
-  // (`markCustomerCreated` / `markVehicleCreated`); la orden no.
-  const createdOrderRef = useRef<WorkOrder | null>(null);
+  const intake = useIntake({
+    onOrderCreated: (orderId) => {
+      loadOrders();
+      detail.open(orderId);
+    },
+  });
 
-  // La ruta del comprobante del depósito ya subido, para no subirlo otra vez al reintentar.
-  const receiptPathRef = useRef<string | null>(null);
-
-  // Qué quedó guardado antes de que fallara la orden.
-  //
-  // No hay nada que deshacer: un cliente y un vehículo sin orden son filas válidas por sí
-  // solas — se crean igual desde Clientes y Vehículos — así que esto no es una escritura a
-  // medias. Lo que faltaba era decirlo. El formulario ya se pasa solo a "existente" para
-  // que un reintento los reutilice, pero quien lea "no se pudo crear la orden" y cierre el
-  // diálogo da por hecho que no se guardó nada, y acaba creando el mismo cliente otra vez.
-  //
-  // Se queda puesto mientras el diálogo siga abierto: en el segundo intento el cliente ya
-  // no se crea, y el aviso tiene que seguir siendo cierto.
-  const guardadoAntesDeFallar = useRef({ cliente: false, vehiculo: false });
-
-  const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState('');
   // Held raw by the hook until here: an error translated at fetch time forces
   // `language` into the loader's dependencies, and every language toggle then
@@ -205,29 +128,11 @@ export default function WorkOrders() {
       { replace: true }
     );
   };
-  // Every field of the create dialog lives in `useWorkOrderForm`; everything
-  // about the open order lives in `useWorkOrderDetail`. What is left here is
-  // the board itself.
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  // La pregunta al querer salir de un alta a medias (X, fondo o «atrás» de Android) y la de retomar un
-  // borrador al abrirla.
-  const [exitDialog, setExitDialog] = useState(false);
-  const [restoreDialog, setRestoreDialog] = useState<IntakeDraft | null>(null);
-  const userId = user?.id;
 
-  const typeLabels: Record<string, string> = {
-    mecanica: t('workOrders.typeMecanica'),
-    pintura: t('workOrders.typePintura'),
-    combinado: t('workOrders.typeCombinado'),
-  };
-
-  const statusLabels: Record<string, string> = {
-    recepcion: t('workOrders.intake'),
-    en_proceso: t('workOrders.inProgress'),
-    espera_autorizacion: t('workOrders.waitingAuthorization'),
-    finalizado: t('workOrders.completed'),
-    entregado: t('workOrders.delivered'),
-  };
+  const statusLabels = useMemo(
+    () => Object.fromEntries(ORDER_STATUSES.map((s) => [s, t(orderStatusKey(s))])),
+    [t]
+  );
 
   const filtered = useMemo(
     () =>
@@ -239,391 +144,6 @@ export default function WorkOrders() {
 
   // Un técnico solo recibe sus órdenes (la RLS le esconde las de sus compañeros desde
   // 20261007000000), así que su lista ya no se parte en "mis órdenes" y "otras".
-
-  const vehiclesForCustomer = useMemo(
-    () => vehicles.filter((v) => v.cliente_id === form.selectedCustomer),
-    [vehicles, form.selectedCustomer]
-  );
-
-  /** La frase que dice qué se salvó ya, o cadena vacía si no se creó nada. */
-  const avisoDeLoGuardado = () => {
-    const { cliente, vehiculo } = guardadoAntesDeFallar.current;
-    if (cliente && vehiculo) return t('workOrders.partialSaveBoth');
-    if (cliente) return t('workOrders.partialSaveCustomer');
-    if (vehiculo) return t('workOrders.partialSaveVehicle');
-    return '';
-  };
-
-  // El cliente y el vehículo nuevos del alta. Se guardan en cuanto se completan sus pasos
-  // ("Siguiente"), al cancelar el alta si ya estaban completos, y al crear la orden si todavía
-  // no: un cliente y un vehículo sin orden son filas válidas, y así la próxima vez ya están
-  // (pedido del taller del 06/10/2026). Cada uno pasa el formulario a "existente" en cuanto
-  // existe, así que nunca se crean dos veces.
-  const saveNewCustomer = async (values: WorkOrderFormValues): Promise<string> => {
-    if (values.customerMode !== 'new') return values.selectedCustomer;
-    const targetSedeId = sedeId || currentSede?.id || '';
-    const created = await customersService.createCustomer({
-      nombre: values.newCustomer.nombre,
-      telefono: values.newCustomer.telefono,
-      email: values.newCustomer.email,
-      direccion: values.newCustomer.direccion,
-      notas_crm: '',
-      sede_id: targetSedeId,
-    });
-    guardadoAntesDeFallar.current.cliente = true;
-    form.markCustomerCreated(created.id);
-    // Put it in the picker straight away. `markCustomerCreated` switches
-    // the form to "existing" so a retry cannot create the customer twice —
-    // but the dropdown is fed from the query cache, which does not know
-    // about them yet.
-    queryClient.setQueryData<Customer[]>(queryKeys.customers(sedeId), (prev) =>
-      prev ? [created, ...prev] : [created]
-    );
-    return created.id;
-  };
-
-  const saveNewVehicle = async (values: WorkOrderFormValues, customerId: string): Promise<string> => {
-    if (values.vehicleMode !== 'new') return values.selectedVehicle;
-    const v = values.newVehicle;
-    // NULL, never an empty string: `placa` is nullable precisely so a unit
-    // with no plate reads as "no plate" everywhere.
-    const plate = v.sin_placa ? null : checkUsPlate(v.placa, v.placa_estado || undefined).normalized || null;
-    const createdVehicle = await vehiclesService.createVehicle({
-      cliente_id: customerId,
-      marca: v.marca.trim(),
-      modelo: v.modelo.trim(),
-      anio: parseInt(v.anio, 10) || new Date().getFullYear(),
-      vin: checkVin(v.vin).normalized,
-      placa: plate,
-      // A plate state with no plate is meaningless, and the column carries
-      // a CHECK constraint saying so.
-      placa_estado: plate ? v.placa_estado || null : null,
-      color: v.color.trim(),
-    });
-    guardadoAntesDeFallar.current.vehiculo = true;
-    form.markVehicleCreated(createdVehicle.id);
-    queryClient.setQueryData<Vehicle[]>(queryKeys.vehicles(sedeId), (prev) =>
-      prev ? [createdVehicle, ...prev] : [createdVehicle]
-    );
-    return createdVehicle.id;
-  };
-
-  // Al salir del paso del cliente o del vehículo con "Siguiente", ya validado.
-  form.onLeaveStep.current = async (key, values) => {
-    if (!(key === 'customer' && values.customerMode === 'new') && !(key === 'vehicle' && values.vehicleMode === 'new')) {
-      return true;
-    }
-    try {
-      if (key === 'customer') {
-        await saveNewCustomer(values);
-        showToast('success', t('intake.customerSaved'));
-      } else {
-        await saveNewVehicle(values, values.selectedCustomer);
-        showToast('success', t('intake.vehicleSaved'));
-      }
-      return true;
-    } catch (err) {
-      showToast('error', t('workOrders.orderCreatedError'), getErrorMessage(err, language));
-      return false;
-    }
-  };
-
-  /**
-   * Lo que se guarda al cancelar: el cliente o el vehículo nuevos que ya están completos y aún
-   * no se guardaron. Lo incompleto no se guarda (no se inventan datos) y no frena el cierre.
-   */
-  const savePendingRecordsOnCancel = async (): Promise<{ cliente: boolean; vehiculo: boolean }> => {
-    const saved = { cliente: false, vehiculo: false };
-    const values = form.form.getValues();
-    let customerId = values.customerMode === 'existing' ? values.selectedCustomer : '';
-    if (values.customerMode === 'new' && (await form.form.trigger(['newCustomer']))) {
-      customerId = await saveNewCustomer(form.form.getValues());
-      saved.cliente = true;
-    }
-    const after = form.form.getValues();
-    if (customerId && after.vehicleMode === 'new' && (await form.form.trigger(['newVehicle']))) {
-      await saveNewVehicle(after, customerId);
-      saved.vehiculo = true;
-    }
-    return saved;
-  };
-
-  /** Abrir el alta: si hay un borrador de esta persona, se ofrece retomarlo. */
-  const openCreateModal = () => {
-    const draft = userId ? loadIntakeDraft(userId) : null;
-    setRestoreDialog(draft);
-    setShowCreateModal(true);
-  };
-
-  // Quiere salir (X, fondo o «atrás»). Sin nada capturado se cierra; con trabajo a medias se pregunta.
-  const handleCloseCreateModal = () => {
-    // Guardando no se sale: la orden se está creando (la X y el fondo quedaban activos).
-    if (saving) return;
-    if (!form.isDirty) {
-      void closeCreateModal(false);
-      return;
-    }
-    setExitDialog(true);
-  };
-
-  // «Atrás» de Android: la pantalla se queda y se pregunta, en vez de perder lo capturado.
-  // Cada rama que deja el alta abierta vuelve a armar la trampa: si no, el siguiente «atrás» salía de la
-  // pantalla y se perdían las fotos y el comprobante, que no entran en el borrador (revisión del 04/11/2026).
-  const backTrap = useBackButtonTrap(showCreateModal, () => {
-    // Guardando, o con la pregunta de retomar el borrador abierta, «atrás» no hace nada.
-    if (saving || restoreDialog) {
-      backTrap.rearm();
-      return;
-    }
-    // Con la pregunta de salir abierta, «atrás» la cierra y se sigue editando.
-    if (exitDialog) {
-      setExitDialog(false);
-      backTrap.rearm();
-      return;
-    }
-    if (form.isDirty) {
-      setExitDialog(true);
-      backTrap.rearm();
-      return;
-    }
-    void closeCreateModal(false);
-  });
-
-  // El borrador se guarda solo mientras se captura: cada cambio (con una pausa), al cambiar de paso y al
-  // mandar la app al fondo, que es cuando Android puede descartar la pestaña.
-  useEffect(() => {
-    if (!showCreateModal || !userId || restoreDialog) return undefined;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const guardar = () => saveIntakeDraft(userId, form.form.getValues(), form.step);
-    const subscription = form.form.watch(() => {
-      clearTimeout(timer);
-      timer = setTimeout(guardar, 600);
-    });
-    const alFondo = () => {
-      if (document.visibilityState === 'hidden') guardar();
-    };
-    document.addEventListener('visibilitychange', alFondo);
-    window.addEventListener('pagehide', guardar);
-    guardar();
-    return () => {
-      clearTimeout(timer);
-      subscription.unsubscribe();
-      document.removeEventListener('visibilitychange', alFondo);
-      window.removeEventListener('pagehide', guardar);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showCreateModal, userId, restoreDialog, form.step]);
-
-  /**
-   * Cierra el alta. `keepDraft`: dejar lo capturado como borrador para retomarlo; si no, se borra.
-   * El cliente y el vehículo nuevos que ya estén completos se guardan igual (pedido del 06/10/2026).
-   */
-  const closeCreateModal = async (keepDraft: boolean) => {
-    // Al cerrar es cuando se pierde el hilo: el formulario se vacía y el cliente recién creado deja de
-    // estar seleccionado.
-    const values = form.form.getValues();
-    const pendingNew = values.customerMode === 'new' || values.vehicleMode === 'new';
-    if (pendingNew) {
-      try {
-        const saved = await savePendingRecordsOnCancel();
-        if (saved.cliente || saved.vehiculo) {
-          showToast('success', saved.vehiculo ? t('intake.savedOnCancelBoth') : t('intake.customerSaved'));
-        }
-      } catch (err) {
-        showToast('error', t('intake.saveOnCancelError'), getErrorMessage(err, language));
-        return;
-      }
-    }
-    if (guardadoAntesDeFallar.current.cliente || guardadoAntesDeFallar.current.vehiculo) reloadPickers();
-    // Después de guardar lo pendiente: el borrador lleva ya al cliente y al vehículo como existentes.
-    if (userId) {
-      if (keepDraft) {
-        saveIntakeDraft(userId, form.form.getValues(), form.step);
-        showToast('success', t('intake.draftSaved'));
-      } else {
-        clearIntakeDraft(userId);
-      }
-    }
-    createdOrderRef.current = null;
-    receiptPathRef.current = null;
-    guardadoAntesDeFallar.current = { cliente: false, vehiculo: false };
-    setExitDialog(false);
-    setShowCreateModal(false);
-    form.reset();
-  };
-
-  // Register a navigation guard for as long as the create-order modal has
-  // unsaved data, so the sidebar/global search can't silently navigate away
-  // and lose it.
-  useEffect(() => {
-    if (showCreateModal) {
-      setGuard(() => !form.isDirty || confirm(t('workOrders.confirmDiscard')), () => form.isDirty);
-    } else {
-      setGuard(null);
-    }
-    return () => setGuard(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showCreateModal, form.isDirty]);
-
-  // Runs only after the Zod schema has passed, so `values` is already known to
-  // carry a customer, a vehicle and a non-negative odometer. What is left here
-  // is the ordering the database imposes: a new customer before the vehicle
-  // that belongs to them, both before the order, the order before its photos.
-  const submitOrder = form.form.handleSubmit(async (values) => {
-    if (!user) return;
-
-    setSaving(true);
-    setActionError('');
-    try {
-      const targetSedeId = sedeId || currentSede?.id || '';
-
-      const customerId = await saveNewCustomer(values);
-      const vehicleId = await saveNewVehicle(values, customerId);
-
-      // Los técnicos salen de las tareas (F4). La base ya los mete a la orden al guardar cada
-      // tarea (origen 'tarea') y `create_work_order` no los duplica; mandarlos también aquí es
-      // lo que la app anterior a F3 hacía y no cambia nada.
-      const uniqueTechnicianIds = Array.from(new Set(values.laborItems.map((l) => l.asignado_a).filter(Boolean)));
-      const asignaciones = uniqueTechnicianIds.map((id) => {
-        const op = operators.find((o) => o.id === id);
-        return { usuario_id: id, tipo_tarea: (op?.rol === 'pintor' ? 'pintura' : 'mecanica') as 'mecanica' | 'pintura' };
-      });
-
-      // El comprobante del depósito sube antes que la orden (la ruta va dentro de la misma
-      // llamada) y se guarda la ruta: un reintento no lo vuelve a subir.
-      const deposito = isAdmin ? parseFloat(values.deposit) || 0 : 0;
-      const conComprobante = deposito > 0 && !!values.paymentMethod && !!form.receiptFile;
-      if (conComprobante && !receiptPathRef.current && !createdOrderRef.current) {
-        receiptPathRef.current = await workOrdersService.uploadReceipt(targetSedeId, 'alta', form.receiptFile as File);
-      }
-
-      const crear = async () => {
-        try {
-          return await workOrdersService.createWorkOrder({
-            sede_id: targetSedeId,
-            cliente_id: customerId,
-            vehiculo_id: vehicleId,
-            tipo_trabajo: values.workType,
-            millas_ingreso: Math.max(0, parseInt(values.milesIn, 10) || 0),
-            nivel_gasolina: values.fuelLevel,
-            // Desde que abrir una orden es solo de admin, estas guardas son redundantes por
-            // arriba. Se quedan porque `create_work_order` también ignora el dinero que le
-            // mande quien no es admin: dos capas diciendo lo mismo, y ninguna que haya que
-            // recordar si algún día la pantalla cambia.
-            deposito_inicial: deposito,
-            deposito_metodo: deposito > 0 && values.paymentMethod ? (values.paymentMethod as PaymentMethod) : null,
-            deposito_cheque: deposito > 0 && values.paymentMethod === 'cheque' ? values.checkNumber.trim() || null : null,
-            deposito_comprobante: conComprobante ? receiptPathRef.current : null,
-            inspeccion_360_notas: values.inspectionNotes,
-            marcas_danos: values.damageMarks ?? [],
-            fecha_estimada_entrega: values.estimatedDate || daysFromTodayLocal(5),
-            con_seguro: values.withInsurance ?? false,
-            aseguradora: values.withInsurance ? (values.insurer?.trim() || null) : null,
-            numero_reclamo: values.withInsurance ? (values.claimNumber?.trim() || null) : null,
-            autorizado_en_recepcion: (values.laborItems.length > 0 || values.parts.length > 0) ? (values.authorizedAtIntake ?? false) : false,
-            trabajos: (values.jobs ?? [])
-              .filter((j) => {
-                const inLabor = values.laborItems.some((l) => l.grupo === j.grupo);
-                const inParts = values.parts.some((p) => p.grupo === j.grupo);
-                return inLabor || inParts;
-              })
-              .map((j) => ({
-                grupo: j.grupo,
-                titulo: j.titulo,
-                catalogo_id: j.catalogo_id || null,
-              })),
-            // `Math.max(0, ...)` igual que en los repuestos. La labor era la única
-            // cifra de dinero que aceptaba un negativo, y sobre una orden entregada
-            // un total que baja lo asienta Finanzas como reembolso al cliente.
-            labor_items: (isAdmin ? values.laborItems : []).map((l) => ({
-              descripcion: l.descripcion,
-              costo: Math.max(0, parseFloat(l.costo) || 0),
-              // El tipo que se eligió en la tarea, también en una orden de un solo tipo: una
-              // tarea de pintura en una orden de mecánica se guardaba como mecánica.
-              especialidad: l.especialidad,
-              asignado_a: l.asignado_a || null,
-              ...(l.horas?.trim() ? { horas: Math.max(0, parseFloat(l.horas) || 0) } : {}),
-              // Como `addLaborItem`: una tarea de la app nunca entra al reparto por especialidad.
-              // Sin técnico no le paga a nadie hasta que se le asigne (decisión del taller,
-              // 03/10/2026). Sin esto, `create_work_order` la dejaba heredada.
-              reparto_heredado: false,
-              ...(l.grupo ? { grupo: l.grupo } : {}),
-            })),
-            // El costo es opcional: vacío = el precio (el servicio lo completa), como en la
-            // tabla de repuestos de la orden. Escrito, es lo que pagó el taller.
-            repuestos: (isAdmin ? values.parts : []).map((p) => ({
-              descripcion: p.descripcion,
-              cantidad: Math.max(1, parseInt(p.cantidad, 10) || 1),
-              precio_venta_unitario: Math.max(0, parseFloat(p.precio_venta_unitario) || 0),
-              costo_unitario: p.costo_unitario?.trim() ? Math.max(0, parseFloat(p.costo_unitario) || 0) : null,
-              ...(p.grupo ? { grupo: p.grupo } : {}),
-            })),
-            asignaciones,
-            creado_por: user.id,
-          });
-        } catch (err) {
-          // La base contestó que no (traía código): la orden no existe y el comprobante sobra.
-          // Sin código fue la red, y la orden pudo crearse aunque la respuesta no llegara; ahí el
-          // archivo se queda, porque borrarlo dejaría la orden apuntando a nada.
-          const code = (err as { code?: unknown } | null)?.code;
-          if (receiptPathRef.current && typeof code === 'string' && code !== '') {
-            const path = receiptPathRef.current;
-            receiptPathRef.current = null;
-            void workOrdersService.removeDeliveryReceipt(path).catch(() => {});
-          }
-          throw err;
-        }
-      };
-      const order = createdOrderRef.current ?? await crear();
-
-      // De aquí en adelante un fallo no debe volver a crear la orden.
-      createdOrderRef.current = order;
-
-      // Las fotos ya están comprimidas desde que se eligieron: entran a la cola y
-      // suben en segundo plano. Crear la orden ya no espera a la red — que era el
-      // paso que fallaba con ocho fotos sobre el wifi del taller — y la cola
-      // reintenta sola y sobrevive a una recarga.
-      const photoUploads = form.photos.toUploads();
-      if (photoUploads.length) {
-        mediaUploads.enqueue(
-          photoUploads.map(({ zone, media }) => ({
-            ...media,
-            ordenId: order.id,
-            sedeId: order.sede_id,
-            numeroOrden: order.numero_orden,
-            origen: 'recepcion' as const,
-            zona: zone,
-          }))
-        );
-      }
-
-      const createdNewRecords = values.customerMode === 'new' || values.vehicleMode === 'new';
-      createdOrderRef.current = null;
-      receiptPathRef.current = null;
-      guardadoAntesDeFallar.current = { cliente: false, vehiculo: false };
-      // La orden ya existe: el borrador no vale.
-      if (userId) clearIntakeDraft(userId);
-      // Por si se tocó «atrás» mientras guardaba: la pregunta no aparece al abrir la orden siguiente.
-      setExitDialog(false);
-      setShowCreateModal(false);
-      form.reset();
-      loadOrders();
-      if (createdNewRecords) reloadPickers();
-      detail.open(order.id);
-      showToast('success', `${t('workOrders.orderCreatedSuccess')} (${order.numero_orden})`);
-    } catch (err) {
-      const message = getErrorMessage(err, language);
-      setActionError([message, avisoDeLoGuardado()].filter(Boolean).join(' '));
-      showToast('error', t('workOrders.orderCreatedError'), message);
-    } finally {
-      setSaving(false);
-    }
-  }, (errors) => {
-    // "Crear" está en el paso 4 y valida todo: un error de un paso anterior no se vería desde
-    // ahí, así que se abre ese paso.
-    const step = firstStepWithErrors(errors);
-    if (step) form.goToStep(step);
-  });
 
   const handleDeleteOrder = async (order: WorkOrder, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -650,29 +170,6 @@ export default function WorkOrders() {
       setActionError(getErrorMessage(err, language));
     }
   };
-
-  /** Borrar una orden, o archivarla si ya se entregó. */
-  const removeButton = (order: WorkOrder) =>
-    order.estatus === 'entregado' ? (
-      <button
-        className="btn btn-ghost btn-sm btn-icon"
-        title={t('workOrders.archive')}
-        aria-label={`${t('workOrders.archive')} ${order.numero_orden}`}
-        onClick={(e) => handleArchiveOrder(order, e)}
-      >
-        <Archive size={16} />
-      </button>
-    ) : (
-      <button
-        className="btn btn-ghost btn-sm btn-icon"
-        title={t('common.delete')}
-        aria-label={`${t('common.delete')} ${order.numero_orden}`}
-        style={{ color: 'var(--color-danger)' }}
-        onClick={(e) => handleDeleteOrder(order, e)}
-      >
-        <Trash2 size={16} />
-      </button>
-    );
 
   // Deep link from the global header search and from notifications:
   // /work-orders?open=<id>[&tab=<pestaña>]
@@ -712,179 +209,16 @@ export default function WorkOrders() {
     );
   }
 
-
-  // One list of orders, drawn as a table on desktop and as cards on mobile.
-  //
-  // `isMobile` elige cuál de las dos se monta. Antes se emitían ambas y el CSS
-  // escondía una: dos copias del marcado en el DOM del teléfono — con sus iconos
-  // y sus barras de avance — para mostrar una.
-  const renderOrderList = (list: WorkOrder[]) =>
-    isMobile ? (
-        <div className="workorder-card-list animate-fade-in">
-          {list.map((order) => (
-            <div key={order.id} className="workorder-card" onClick={() => detail.open(order.id)}>
-              <div className="workorder-card-top">
-                <span className="workorder-card-number">{order.numero_orden}</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
-                  {user?.rol === 'admin' && removeButton(order)}
-                  <ChevronRight size={18} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
-                </div>
-              </div>
-              <div className="workorder-card-meta">
-                {order.cliente?.nombre}
-              </div>
-              <div className="workorder-card-meta" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                <Car size={14} style={{ color: 'var(--color-text-tertiary)', flexShrink: 0 }} />
-                {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
-              </div>
-              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                <span className={`badge badge-${order.tipo_trabajo}`}>{typeLabels[order.tipo_trabajo]}</span>
-                {order.con_seguro && (
-                  <span className="badge badge-insurance">{t('workOrders.insuranceBadge')}</span>
-                )}
-                {order.retirada_sin_reparar ? (
-                  <span className="badge badge-retirada">{t('withdrawal.status')}</span>
-                ) : (
-                  <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
-                )}
-                {order.esperando_autorizacion && <span className="badge badge-waiting-auth">{t('quotes.waitingBadge')}</span>}
-                {order.esperando_repuestos && <span className="badge badge-waiting-parts">{t('parts.waitingBadge')}</span>}
-                {order.estatus === 'finalizado' && !order.retirada_sin_reparar && (
-                  order.lista_para_entregar_en
-                    ? <span className="badge badge-success">{t('workOrders.readyForPickup')}</span>
-                    : <span className="badge badge-waiting-auth">{t('workOrders.pendingReview')}</span>
-                )}
-              </div>
-              <div className="workorder-card-progress">
-                <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
-                  <div className={`progress-fill ${order.porcentaje_avance === 100 ? 'success' : ''}`} style={{ width: `${order.porcentaje_avance}%` }}></div>
-                </div>
-                <span style={{ fontSize: 'var(--font-size-xs)', minWidth: 28 }}>{order.porcentaje_avance}%</span>
-              </div>
-              <div className="workorder-card-footer">
-                <span className={dueClass(order)} title={dueTitle(order)}>
-                  <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-                  {formatDay(order.fecha_estimada_entrega, language)}
-                </span>
-                {/* `montos` es null para un técnico: la base no se lo devuelve. */}
-                {order.montos && (
-                  <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>
-                    {money(order.montos.total_general)}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-          {list.length === 0 && (
-            <p style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
-              {t('common.noResults')}
-            </p>
-          )}
-        </div>
-    ) : (
-        <div className="table-container animate-fade-in">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>{t('workOrders.orderNumber')}</th>
-                <th>{t('common.name')}</th>
-                <th>{t('vehicles.title')}</th>
-                <th>{t('common.type')}</th>
-                <th>{t('common.status')}</th>
-                <th>{t('workOrders.progress')}</th>
-                <th>{t('workOrders.estimatedDelivery')}</th>
-                {isAdmin && <th>{t('common.total')}</th>}
-                <th>{t('common.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((order) => (
-                <tr key={order.id} className="row-clickable" onClick={() => detail.open(order.id)}>
-                  <td>
-                    {/* The order number is the thing people point at, so it is
-                        the link. The eye icon stays, but it is no longer the only
-                        way in — which is how this was reported from the shop. */}
-                    <button
-                      type="button"
-                      className="link-button"
-                      onClick={(e) => { e.stopPropagation(); detail.open(order.id); }}
-                      title={t('workOrders.openOrder')}
-                    >
-                      {order.numero_orden}
-                    </button>
-                  </td>
-                  <td>{order.cliente?.nombre}</td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                      <Car size={14} style={{ color: 'var(--color-text-tertiary)' }} />
-                      {order.vehiculo?.anio} {order.vehiculo?.marca} {order.vehiculo?.modelo}
-                    </div>
-                  </td>
-                  <td>
-                    <span className={`badge badge-${order.tipo_trabajo}`}>{typeLabels[order.tipo_trabajo]}</span>
-                    {order.con_seguro && (
-                      <span className="badge badge-insurance" style={{ marginLeft: 4 }}>{t('workOrders.insuranceBadge')}</span>
-                    )}
-                  </td>
-                  <td>
-                    {order.retirada_sin_reparar ? (
-                      <span className="badge badge-retirada">{t('withdrawal.status')}</span>
-                    ) : (
-                      <span className={`badge badge-${order.estatus}`}>{statusLabels[order.estatus]}</span>
-                    )}
-                    {order.esperando_autorizacion && (
-                      <span className="badge badge-waiting-auth" style={{ marginLeft: 4 }}>{t('quotes.waitingBadge')}</span>
-                    )}
-                    {order.esperando_repuestos && (
-                      <span className="badge badge-waiting-parts" style={{ marginLeft: 4 }}>{t('parts.waitingBadge')}</span>
-                    )}
-                    {order.estatus === 'finalizado' && !order.retirada_sin_reparar && (
-                      order.lista_para_entregar_en
-                        ? <span className="badge badge-success" style={{ marginLeft: 4 }}>{t('workOrders.readyForPickup')}</span>
-                        : <span className="badge badge-waiting-auth" style={{ marginLeft: 4 }}>{t('workOrders.pendingReview')}</span>
-                    )}
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: 100 }}>
-                      <div className="progress-bar" style={{ flex: 1, height: '6px' }}>
-                        <div className={`progress-fill ${order.porcentaje_avance === 100 ? 'success' : ''}`} style={{ width: `${order.porcentaje_avance}%` }}></div>
-                      </div>
-                      <span style={{ fontSize: 'var(--font-size-xs)', minWidth: 28 }}>{order.porcentaje_avance}%</span>
-                    </div>
-                  </td>
-                  <td style={{ fontSize: 'var(--font-size-sm)' }} className={dueClass(order)} title={dueTitle(order)}>
-                    <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-                    {formatDay(order.fecha_estimada_entrega, language)}
-                  </td>
-                  {isAdmin && (
-                    <td style={{ fontWeight: 600 }}>{money(order.montos?.total_general)}</td>
-                  )}
-                  <td>
-                    <div className="table-actions">
-                      <button
-                        className="btn btn-ghost btn-sm btn-icon"
-                        title={t('workOrders.openOrder')}
-                        aria-label={t('workOrders.openOrder')}
-                        onClick={(e) => { e.stopPropagation(); detail.open(order.id); }}
-                      >
-                        <Eye size={16} />
-                      </button>
-                      {user?.rol === 'admin' && removeButton(order)}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-                {list.length === 0 && (
-                  <tr>
-                    <td colSpan={isAdmin ? 9 : 8} style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 'var(--space-6) 0' }}>
-                      {t('common.noResults')}
-                    </td>
-                  </tr>
-                )}
-            </tbody>
-          </table>
-        </div>
-    );
+  const orderList = (
+    <OrderList
+      orders={filtered}
+      isAdmin={isAdmin}
+      isMobile={isMobile}
+      onOpen={detail.open}
+      onDelete={handleDeleteOrder}
+      onArchive={handleArchiveOrder}
+    />
+  );
 
   // List view
   return (
@@ -921,7 +255,7 @@ export default function WorkOrders() {
             administración. La base lo impone con `ordenes_trabajo_insert`; esconder el
             botón solo evita que un técnico se lleve un error. */}
         {isAdmin && (
-          <button className="btn btn-primary" id="new-order-btn" onClick={openCreateModal}>
+          <button className="btn btn-primary" id="new-order-btn" onClick={intake.open}>
             <Plus size={18} /> {t('workOrders.newOrder')}
           </button>
         )}
@@ -941,18 +275,18 @@ export default function WorkOrders() {
         </div>
         {/* En el tablero las columnas ya son los estados, y el archivo no va en el tablero. */}
         {view === 'lista' && (
-        <div style={{ display: 'flex', gap: 'var(--space-1)', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 }}>
-          {['all', 'recepcion', 'en_proceso', 'espera_autorizacion', 'finalizado', 'entregado', ARCHIVED].map((status) => (
-            <button
-              key={status}
-              className={`tab ${filterStatus === status ? 'active' : ''}`}
-              onClick={() => setFilterStatus(status)}
-              style={{ borderBottom: 'none', padding: 'var(--space-2) var(--space-3)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-sm)', flexShrink: 0 }}
-            >
-              {status === 'all' ? t('common.all') : status === ARCHIVED ? t('workOrders.archived') : statusLabels[status]}
-            </button>
-          ))}
-        </div>
+          <div style={{ display: 'flex', gap: 'var(--space-1)', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 }}>
+            {['all', ...ORDER_STATUSES, ARCHIVED].map((status) => (
+              <button
+                key={status}
+                className={`tab ${filterStatus === status ? 'active' : ''}`}
+                onClick={() => setFilterStatus(status)}
+                style={{ borderBottom: 'none', padding: 'var(--space-2) var(--space-3)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-sm)', flexShrink: 0 }}
+              >
+                {status === 'all' ? t('common.all') : status === ARCHIVED ? t('workOrders.archived') : t(orderStatusKey(status))}
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
@@ -968,7 +302,7 @@ export default function WorkOrders() {
       ) : loading ? (
         <div className="loading-state"><div className="spinner" /></div>
       ) : isAdmin ? (
-        renderOrderList(filtered)
+        orderList
       ) : (
         <section className="orders-section">
           <h2 className="orders-section-title">
@@ -981,96 +315,12 @@ export default function WorkOrders() {
               {orders.length === 0 ? t('workOrders.myOrdersEmpty') : t('common.noResults')}
             </p>
           ) : (
-            renderOrderList(filtered)
+            orderList
           )}
         </section>
       )}
 
-      {isAdmin && showCreateModal && (
-        <LazyModal onClose={handleCloseCreateModal}>
-          <WorkOrderCreateModal
-            form={form}
-            sedeId={sedeId || currentSede?.id || ''}
-            customers={customers}
-            vehiclesForCustomer={vehiclesForCustomer}
-            operators={operators}
-            isAdmin={isAdmin}
-            saving={saving}
-            error={error}
-            onSubmit={submitOrder}
-            onClose={handleCloseCreateModal}
-          />
-        </LazyModal>
-      )}
-
-      {isAdmin && showCreateModal && restoreDialog && (
-        <ChoiceDialog
-          title={t('intake.restoreTitle')}
-          body={t('intake.restoreBody').replace(
-            '{fecha}',
-            new Date(restoreDialog.savedAt).toLocaleString(language === 'en' ? 'en-US' : 'es-US', {
-              day: 'numeric',
-              month: 'short',
-              hour: 'numeric',
-              minute: '2-digit',
-            })
-          )}
-          onDismiss={() => {
-            form.restoreDraft(restoreDialog.values, restoreDialog.step);
-            setRestoreDialog(null);
-          }}
-          actions={[
-            {
-              label: t('intake.restoreContinue'),
-              variant: 'primary',
-              onClick: () => {
-                form.restoreDraft(restoreDialog.values, restoreDialog.step);
-                setRestoreDialog(null);
-              },
-            },
-            {
-              label: t('intake.restoreStartNew'),
-              variant: 'secondary',
-              onClick: () => {
-                if (userId) clearIntakeDraft(userId);
-                setRestoreDialog(null);
-              },
-            },
-          ]}
-        />
-      )}
-
-      {isAdmin && showCreateModal && exitDialog && (
-        <ChoiceDialog
-          title={t('intake.exitTitle')}
-          body={[
-            t('intake.exitBody'),
-            avisoDeLoGuardado(),
-            form.form.getValues().customerMode === 'new' || form.form.getValues().vehicleMode === 'new'
-              ? t('intake.keepNewOnCancel')
-              : '',
-            form.photos.hasMedia || form.receiptFile ? t('intake.exitMediaWarning') : '',
-          ]
-            .filter(Boolean)
-            .join('\n\n')}
-          onDismiss={() => {
-            setExitDialog(false);
-            backTrap.rearm();
-          }}
-          actions={[
-            {
-              label: t('intake.exitKeepEditing'),
-              variant: 'primary',
-              onClick: () => {
-                setExitDialog(false);
-                backTrap.rearm();
-              },
-            },
-            { label: t('intake.exitSaveDraft'), variant: 'secondary', onClick: () => void closeCreateModal(true) },
-            { label: t('intake.exitDiscard'), variant: 'danger', onClick: () => void closeCreateModal(false) },
-          ]}
-        />
-      )}
+      <IntakeFlow intake={intake} />
     </div>
   );
 }

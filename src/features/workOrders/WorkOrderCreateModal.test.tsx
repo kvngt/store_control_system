@@ -5,9 +5,11 @@ import userEvent from '@testing-library/user-event';
 import WorkOrderCreateModal from './WorkOrderCreateModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '../../context/ToastContext';
+import { getTranslation } from '../../i18n/translations';
 import { customersService } from '../../services/customers.service';
 import { vehiclesService } from '../../services/vehicles.service';
 import { usersService } from '../../services/users.service';
+import type { Customer, UserProfile, Vehicle } from '../../types/database';
 
 vi.mock('../../services/workOrders.service');
 vi.mock('../../services/media.service');
@@ -19,17 +21,18 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
 
-const CUSTOMER = {
+const CUSTOMER: Customer = {
   id: 'cli-1',
   sede_id: 'sede-1',
   nombre: 'Juan Perez',
   telefono: '5551234567',
   email: '',
   direccion: '',
-  creado_el: '2026-01-01',
+  notas_crm: null,
+  creado_en: '2026-01-01',
 };
 
-const VEHICLE = {
+const VEHICLE: Vehicle = {
   id: 'veh-1',
   cliente_id: 'cli-1',
   sede_id: 'sede-1',
@@ -39,15 +42,17 @@ const VEHICLE = {
   vin: '1HGCM82633A000000',
   placa: 'ABC1234',
   color: 'Rojo',
-  creado_el: '2026-01-01',
+  creado_en: '2026-01-01',
 };
 
-const OPERATOR = {
+const OPERATOR: UserProfile = {
   id: 'usr-1',
   sede_id: 'sede-1',
-  nombre: 'Mecanico Bob',
-  rol: 'mecanico' as const,
-  reparto_heredado: false,
+  nombre_completo: 'Mecanico Bob',
+  rol: 'mecanico',
+  telefono: null,
+  email: 'bob@taller.test',
+  creado_en: '2026-01-01',
 };
 
 import { useWorkOrderForm } from './useWorkOrderForm';
@@ -62,9 +67,9 @@ function TestWrapper() {
   return (
     <WorkOrderCreateModal
       form={form}
-      customers={[CUSTOMER] as any}
-      vehiclesForCustomer={[VEHICLE] as any}
-      operators={[OPERATOR] as any}
+      customers={[CUSTOMER]}
+      vehiclesForCustomer={[VEHICLE]}
+      operators={[OPERATOR]}
       isAdmin={true}
       saving={false}
       error=""
@@ -81,9 +86,9 @@ describe('WorkOrderCreateModal - Assistant (Wizard)', () => {
     vi.clearAllMocks();
     mockSubmit.mockClear();
     queryClient.clear();
-    vi.mocked(customersService.getCustomers).mockResolvedValue([CUSTOMER] as any);
-    vi.mocked(vehiclesService.getVehicles).mockResolvedValue([VEHICLE] as any);
-    vi.mocked(usersService.getOperators).mockResolvedValue([OPERATOR] as any);
+    vi.mocked(customersService.getCustomers).mockResolvedValue([CUSTOMER]);
+    vi.mocked(vehiclesService.getVehicles).mockResolvedValue([VEHICLE]);
+    vi.mocked(usersService.getOperators).mockResolvedValue([OPERATOR]);
   });
 
   const renderModal = () => {
@@ -190,5 +195,34 @@ describe('WorkOrderCreateModal - Assistant (Wizard)', () => {
     const checkbox = document.getElementById('order-authorized-at-intake') as HTMLInputElement;
     expect(checkbox).not.toBeNull();
     expect(checkbox.checked).toBe(false);
+  });
+
+  it('no duplica los mensajes de error al validar un vehículo nuevo', async () => {
+    const user = userEvent.setup();
+    renderModal();
+
+    await waitFor(() => expect(currentStep()).toMatch(/Cliente/));
+    await user.selectOptions(screen.getByRole('combobox'), CUSTOMER.id);
+    await user.click(screen.getByRole('button', { name: /Siguiente/ }));
+
+    await waitFor(() => expect(currentStep()).toMatch(/Vehículo/));
+    await user.selectOptions(screen.getAllByRole('combobox')[0], '__new__');
+
+    const vinInput = document.getElementById('vehicle-vin') as HTMLInputElement;
+    await user.type(vinInput, '1HG');
+    await user.click(screen.getByRole('button', { name: /Siguiente/ }));
+
+    const brandError = getTranslation('es', 'vehicles.brandRequired');
+    const modelError = getTranslation('es', 'vehicles.modelRequired');
+    const yearError = getTranslation('es', 'vehicles.yearRequired');
+    const vinError = getTranslation('es', 'vehicles.vinLength');
+
+    expect(await screen.findAllByText(brandError)).toHaveLength(1);
+    expect(screen.getAllByText(modelError)).toHaveLength(1);
+    expect(screen.getAllByText(yearError)).toHaveLength(1);
+    expect(screen.getAllByText((text) => text.startsWith(vinError))).toHaveLength(1);
+    expect(screen.queryAllByText(getTranslation('es', 'workOrders.validation.vehicleBrand'))).toHaveLength(0);
+    expect(screen.queryAllByText(getTranslation('es', 'workOrders.validation.vehicleModel'))).toHaveLength(0);
+    expect(screen.queryAllByText(getTranslation('es', 'workOrders.validation.vinLength'))).toHaveLength(0);
   });
 });

@@ -21,7 +21,7 @@ const mocks = vi.hoisted(() => ({
   removeDeliveryReceipt: vi.fn(),
 }));
 
-vi.mock('../../services/supabaseService', () => ({
+vi.mock('../../services/workOrders.service', () => ({
   workOrdersService: {
     getBalance: mocks.getBalance,
     getWithdrawalBalance: mocks.getWithdrawalBalance,
@@ -273,6 +273,33 @@ describe('AdvancePaymentModal', () => {
     await waitFor(() =>
       expect(mocks.registerAdvance).toHaveBeenCalledWith({
         orderId: 'o1', monto: 200, metodo: 'zelle', numeroCheque: null, comprobanteRuta: null,
+      })
+    );
+    expect(onDone).toHaveBeenCalled();
+  });
+
+  it('el comprobante sirve para cualquier método: con efectivo se sube y no lleva número de cheque', async () => {
+    mocks.registerAdvance.mockResolvedValue({ anticipos: 300, saldo: 500 });
+    mocks.uploadReceipt.mockResolvedValue('s1/ORD-2026-009/recibo.jpg');
+    const onDone = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(
+      <AdvancePaymentModal order={{ id: 'o1', numero_orden: 'ORD-2026-009', sede_id: 's1' }} onCancel={vi.fn()} onDone={onDone} />
+    );
+
+    await user.type(screen.getByLabelText('Monto ($)'), '200');
+    await user.selectOptions(screen.getByLabelText('Cómo pagó el cliente'), 'cheque');
+    await user.type(screen.getByLabelText('Número de cheque'), '1042');
+    await user.upload(
+      screen.getByLabelText('Foto del comprobante (opcional)'),
+      new File(['jpg'], 'recibo.jpg', { type: 'image/jpeg' })
+    );
+    await user.selectOptions(screen.getByLabelText('Cómo pagó el cliente'), 'efectivo');
+    await user.click(screen.getByRole('button', { name: /Registrar \$200\.00/ }));
+
+    await waitFor(() =>
+      expect(mocks.registerAdvance).toHaveBeenCalledWith({
+        orderId: 'o1', monto: 200, metodo: 'efectivo', numeroCheque: null, comprobanteRuta: 's1/ORD-2026-009/recibo.jpg',
       })
     );
     expect(onDone).toHaveBeenCalled();

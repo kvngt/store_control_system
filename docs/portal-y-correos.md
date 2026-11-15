@@ -118,7 +118,7 @@ español. Lo que todavía no tiene traducción sale como se escribió.
 | `ok` | 200 | El reporte |
 | `no_encontrado` | 404 | "Enlace no válido" |
 | `revocado` | 410 | "Ya no está activo" + botón para llamar al taller |
-| `vencido` | 410 | "Venció" + botón para llamar al taller |
+| `vencido` | 410 | "Venció" + botón para llamar al taller (y, si entra con `?correos=baja` tras la migración `044`, botón para darse de baja de correos) |
 
 ### Carga separada
 
@@ -229,8 +229,10 @@ correos.
 
 El pie de cada correo lleva "No quiero recibir estos correos" →
 `/r/<token>?correos=baja`. **Esa página no da de baja sola**: resalta la sección y
-pide confirmar con un botón (POST). Los filtros de correo corporativos abren los
-enlaces para revisarlos; una baja por GET daría de baja a todos sus usuarios.
+pide confirmar con un botón (POST). Desde la migración `044`, la baja también se
+ofrece aunque el enlace del portal esté vencido (`vencido`). Los filtros de correo
+corporativos abren los enlaces para revisarlos; una baja por GET daría de baja a todos
+sus usuarios.
 
 ---
 
@@ -240,10 +242,10 @@ enlaces para revisarlos; una baja por GET daría de baja a todos sus usuarios.
 |---|---|
 | Tabla del enlace, funciones, trigger | `supabase/migrations/20260923000000_customer_portal_and_emails.sql` |
 | Próximo servicio y sticker (`20261010000029`) | `supabase/migrations/20261010000029_proximo_servicio.sql` |
-| Función pública del portal (`?token=` y `?servicio=`) | `supabase/functions/portal/index.ts` (`verify_jwt = false`) |
-| Envío de correos | `supabase/functions/process-outbox/index.ts` (`sendEmail`) |
-| Plantillas | `supabase/functions/_shared/email/templates.ts` (TS puro; se prueba con Vitest) |
-| Página del cliente | `src/portal/` (`CustomerPortal.tsx`, `strings.ts`, `portal.api.ts`, `portal.css`) |
+| Función pública del portal (`?token=`, `?servicio=` y baja con token vencido `044`) | `supabase/functions/portal/handler.ts` (`index.ts` mínimo; `verify_jwt = false`) |
+| Envío de correos | `supabase/functions/process-outbox/handler.ts` (`index.ts` mínimo) + `_shared/resend.ts` (`enviarPorResend`) y `_shared/http.ts` (`fetchConTope`) |
+| Plantillas | `supabase/functions/_shared/email/templates.ts` (TS puro; se prueba con Vitest y Deno) |
+| Página del cliente | `src/portal/` (`CustomerPortal.tsx`, `components/`, `format.ts`, `shopPhones.ts`, `path.ts`, `strings.ts`, `portal.api.ts`, `portal.css`) |
 | Página pública del sticker | `src/portal/ServicePage.tsx`, `src/portal/serviceStatus.ts` |
 | Generador de sticker térmico (PDF 62×50 mm) | `src/lib/serviceStickerPdf.ts` |
 | Modal y tarjeta de próximo servicio | `src/features/workOrders/ServiceStickerModal.tsx`, `src/features/workOrders/NextServiceCard.tsx` |

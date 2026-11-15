@@ -48,8 +48,10 @@ Inventario completo de lo que hay dentro y dónde se ve en el panel: [supabase.m
 
 ## 2. Entornos
 
-Hoy **solo existe producción**. Es un riesgo: las pruebas e2e que crean datos y la
-configuración de push y correo se prueban contra datos reales.
+Hoy **solo existe producción en la nube** (y un Supabase local con Docker para pruebas).
+Es un riesgo para `qa:security` y cambios de configuración: las pruebas manuales o el
+envío real de push y correo se prueban contra datos reales, aunque la batería E2E de
+Playwright ya corre contra la base local con `npm run test:e2e:local`.
 
 **Recomendado** antes de la fase 4: un segundo proyecto de Supabase como
 *staging*, con las mismas migraciones y secretos propios (otra llave VAPID, otro
@@ -251,9 +253,12 @@ En este orden. Los pasos 1–3 no cambian nada; los 4–6 sí.
 ```bash
 # 1. Todo en verde localmente
 npm run lint && npx tsc -b && npm test
+npm run test:functions   # pruebas Deno 2 de edge functions
 
-# 2. (Si hay Docker) pruebas de base de datos contra Supabase local
+# 2. (Si hay Docker) base local, tipos y pruebas E2E
 npx supabase start && npm run test:db
+npm run db:types         # si cambió el esquema (regenera src/types/supabase.gen.ts)
+npm run test:e2e:local   # Playwright contra Supabase local
 
 # 3. Qué migraciones faltan en el proyecto enlazado
 npm run db:check

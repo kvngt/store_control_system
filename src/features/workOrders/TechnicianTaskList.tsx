@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Camera, CheckCircle2, Circle, MessageSquarePlus, Clock, X, Plus, Eye, EyeOff, XCircle, Play, Pause } from 'lucide-react';
+import { AlertTriangle, Camera, CheckCircle2, Circle, MessageSquarePlus, Clock, Plus, Eye, EyeOff, XCircle, Play, Pause } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { formatDurationMinutes } from '../../lib/dates';
@@ -13,6 +13,7 @@ import { prepareMediaFile } from '../media/prepareMedia';
 import type { WorkOrderDetailApi } from './useWorkOrderDetail';
 import ReportFindingModal from './ReportFindingModal';
 import { useDiscardGuard } from '../../components/useDiscardGuard';
+import Modal from '../../components/Modal';
 import { findingOutcome } from './techStatus';
 import { techNextStep } from './techNextStep';
 
@@ -392,55 +393,57 @@ function TaskProgressModal({
   });
 
   return (
-    <div className="modal-overlay" onClick={guard.requestClose}>
-      <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-        <div className="modal-header">
-          <h2 className="modal-title">
+    <>
+      <Modal
+        onClose={guard.requestClose}
+        closeDisabled={saving}
+        style={{ maxWidth: 520 }}
+        bodyStyle={{ padding: 'var(--space-4)' }}
+        title={
+          <>
             <MessageSquarePlus size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
             {t('tasks.addProgress')}
-          </h2>
-          <button type="button" className="btn btn-ghost btn-sm btn-icon" onClick={guard.requestClose} disabled={saving} aria-label={t('common.cancel')}>
-            <X size={18} />
-          </button>
-        </div>
-        <div className="modal-body" style={{ padding: 'var(--space-4)' }}>
-          <p style={{ marginBottom: 'var(--space-4)', fontWeight: 600 }}>{task.descripcion}</p>
+          </>
+        }
+        footer={
+          <>
+            <button type="button" className="btn btn-ghost" onClick={guard.requestClose} disabled={saving}>
+              {t('common.cancel')}
+            </button>
+            <button type="button" className="btn btn-primary" onClick={() => onConfirm(note, drafts, isVisible)} disabled={!canSubmit}>
+              <Plus size={16} /> {saving ? t('common.loading') : t('common.save')}
+            </button>
+          </>
+        }
+      >
+        <p style={{ marginBottom: 'var(--space-4)', fontWeight: 600 }}>{task.descripcion}</p>
 
-          <div className="form-group">
-            <textarea
-              className="form-input form-textarea"
-              placeholder={t('workOrders.progressPlaceholder')}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={3}
-              disabled={saving}
-            />
-          </div>
-
-          <DraftMediaStrip items={drafts} onRemove={(index) => setDrafts((prev) => prev.filter((_, i) => i !== index))} />
-          <MediaCaptureBar onAdd={(items) => setDrafts((prev) => [...prev, ...items])} disabled={saving} onBusyChange={setProcessing} />
-
-          <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-            <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-              <input type="checkbox" checked={isVisible} onChange={(e) => setIsVisible(e.target.checked)} disabled={saving} />
-              {isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
-              <span>{t('tasks.visibleToCustomer')}</span>
-            </label>
-            <p className="field-hint" style={{ marginLeft: 24, marginTop: 4 }}>
-              {isVisible ? t('tasks.visibleHint') : t('tasks.internalHint')}
-            </p>
-          </div>
+        <div className="form-group">
+          <textarea
+            className="form-input form-textarea"
+            placeholder={t('workOrders.progressPlaceholder')}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={3}
+            disabled={saving}
+          />
         </div>
-        <div className="modal-footer">
-          <button type="button" className="btn btn-ghost" onClick={guard.requestClose} disabled={saving}>
-            {t('common.cancel')}
-          </button>
-          <button type="button" className="btn btn-primary" onClick={() => onConfirm(note, drafts, isVisible)} disabled={!canSubmit}>
-            <Plus size={16} /> {saving ? t('common.loading') : t('common.save')}
-          </button>
+
+        <DraftMediaStrip items={drafts} onRemove={(index) => setDrafts((prev) => prev.filter((_, i) => i !== index))} />
+        <MediaCaptureBar onAdd={(items) => setDrafts((prev) => [...prev, ...items])} disabled={saving} onBusyChange={setProcessing} />
+
+        <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
+          <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+            <input type="checkbox" checked={isVisible} onChange={(e) => setIsVisible(e.target.checked)} disabled={saving} />
+            {isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
+            <span>{t('tasks.visibleToCustomer')}</span>
+          </label>
+          <p className="field-hint" style={{ marginLeft: 24, marginTop: 4 }}>
+            {isVisible ? t('tasks.visibleHint') : t('tasks.internalHint')}
+          </p>
         </div>
-      </div>
+      </Modal>
       {guard.dialog}
-    </div>
+    </>
   );
 }

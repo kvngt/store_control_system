@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../../context/LanguageContext';
 import { ToastProvider } from '../../context/ToastContext';
 import { nextServiceService } from '../../services/nextService.service';
+import type { OrderNextService } from '../../types/database';
 import type { WorkOrderDetailApi } from './useWorkOrderDetail';
 import { queryKeys } from '../../lib/queryClient';
 
@@ -155,14 +156,23 @@ describe('WorkOrderDetail - QuickActions markReady', () => {
   });
 
   it('con un servicio programado, la acción rápida de sticker no abre el modal', async () => {
-    vi.mocked(nextServiceService.getNextService).mockResolvedValue({
+    const scheduledService: OrderNextService = {
       orden_id: 'wo-101',
+      sede_id: 'sede-1',
       token: 'tok-next-svc',
       fecha: '2026-12-01',
       millas: 50000,
       nota: 'Aceite sintético',
-      creado_en: '2026-10-10T10:00:00Z',
-    } as any);
+      idioma: 'es',
+      programado_por: 'admin-1',
+      programado_en: '2026-10-10T10:00:00Z',
+      sugerido_fecha: null,
+      sugerido_millas: null,
+      sugerido_nota: null,
+      sugerido_por: null,
+      sugerido_en: null,
+    };
+    vi.mocked(nextServiceService.getNextService).mockResolvedValue(scheduledService);
 
     const mockDetail = {
       order: {

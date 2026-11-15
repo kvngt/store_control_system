@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { customersService, vehiclesService } from '../services/supabaseService';
+import { customersService } from '../services/customers.service';
+import { vehiclesService } from '../services/vehicles.service';
 import { queryKeys } from '../lib/queryClient';
 import { emptyList } from '../lib/emptyList';
 import { getErrorMessage } from '../lib/errors';
-import { Search, Plus, Edit3, Trash2, X, Eye, ChevronLeft, ClipboardList, Car } from 'lucide-react';
+import { Search, Plus, Edit3, Trash2, Eye, ChevronLeft, ClipboardList, Car } from 'lucide-react';
+import Modal from '../components/Modal';
 import { checkUsPlate, checkVin } from '../lib/vin';
 import VehicleFields from '../features/vehicles/VehicleFields';
 import { EMPTY_VEHICLE_FIELDS, validateVehicleFields } from '../features/vehicles/vehicleForm';
@@ -15,7 +17,7 @@ import CustomerPicker from '../components/CustomerPicker';
 import type { NewCustomerDraft } from '../components/CustomerPicker';
 import type { Vehicle, Customer } from '../types/database';
 import { money } from '../lib/money';
-import { workTypeKey } from '../lib/workType';
+import { orderStatusKey, workTypeKey } from '../lib/workType';
 
 // The vehicle half of the form lives in `VehicleFields`, shared with the order
 // intake dialog; this screen adds only the owner.
@@ -23,13 +25,6 @@ const EMPTY_FORM = { cliente_id: '', ...EMPTY_VEHICLE_FIELDS };
 
 export default function Vehicles() {
   const { t, language } = useLanguage();
-  const statusLabels: Record<string, string> = {
-    recepcion: t('workOrders.intake'),
-    en_proceso: t('workOrders.inProgress'),
-    espera_autorizacion: t('workOrders.waitingAuthorization'),
-    finalizado: t('workOrders.completed'),
-    entregado: t('workOrders.delivered'),
-  };
   const { user, currentSede } = useAuth();
   const isAdmin = user?.rol === 'admin';
   // Strict isolation: only ever the active sede's vehicles and customers.
@@ -258,7 +253,7 @@ export default function Vehicles() {
                             </button>
                           </td>
                           <td data-label={t('common.type')}><span className={`badge badge-${o.tipo_trabajo}`}>{t(workTypeKey(o.tipo_trabajo))}</span></td>
-                          <td data-label={t('common.status')}><span className={`badge badge-${o.estatus}`}>{statusLabels[o.estatus] ?? o.estatus}</span></td>
+                          <td data-label={t('common.status')}><span className={`badge badge-${o.estatus}`}>{t(orderStatusKey(o.estatus))}</span></td>
                           <td data-label={t('common.date')}>{new Date(o.creado_en).toLocaleDateString(language === 'es' ? 'es' : 'en')}</td>
                           {isAdmin && (
                             <td data-label={t('common.total')} style={{ fontWeight: 600 }}>
@@ -355,14 +350,19 @@ export default function Vehicles() {
       )}
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">{selected ? t('vehicles.editVehicle') : t('vehicles.newVehicle')}</h3>
-              <button className="modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
-            </div>
-            <div className="modal-body">
-              {/* Un error de guardar se muestra aquí: el diálogo tapa el recuadro de la página. */}
+        <Modal
+          onClose={() => setShowModal(false)}
+          title={selected ? t('vehicles.editVehicle') : t('vehicles.newVehicle')}
+          footer={
+            <>
+              <button className="btn btn-secondary" onClick={() => setShowModal(false)}>{t('common.cancel')}</button>
+              <button className="btn btn-primary" onClick={handleSave} disabled={saving} id="vehicle-save">
+                {saving ? t('common.loading') : selected ? t('common.update') : t('common.create')}
+              </button>
+            </>
+          }
+        >
+          {/* Un error de guardar se muestra aquí: el diálogo tapa el recuadro de la página. */}
               {actionError && <div className="alert-error" role="alert">{actionError}</div>}
               {/* 1 — Owner: pick from the customers on file, or add one here. */}
               <div className="form-section">
@@ -388,15 +388,7 @@ export default function Vehicles() {
                 requirePlate
                 disabled={saving}
               />
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowModal(false)}>{t('common.cancel')}</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={saving} id="vehicle-save">
-                {saving ? t('common.loading') : selected ? t('common.update') : t('common.create')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

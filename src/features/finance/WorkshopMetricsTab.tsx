@@ -3,7 +3,7 @@ import { useLanguage } from '../../context/language.context';
 import { useAuth } from '../../context/auth.context';
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/queryClient';
-import { metricsService } from '../../services/supabaseService';
+import { metricsService } from '../../services/metrics.service';
 import { money } from '../../lib/money';
 import {
   currentMonthRangeLocal,
