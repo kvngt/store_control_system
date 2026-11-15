@@ -469,13 +469,12 @@ export default function Finance() {
       )}
 
       {/* Filter tabs */}
-      <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="tab-pill-row" style={{ gap: 'var(--space-2)', marginBottom: 'var(--space-4)', alignItems: 'center' }}>
         {(['all', 'ingreso', 'egreso'] as const).map((type) => (
           <button
             key={type}
-            className={`tab ${filterType === type ? 'active' : ''}`}
+            className={`tab tab-pill tab-pill-wide ${filterType === type ? 'active' : ''}`}
             onClick={() => setFilterType(type)}
-            style={{ borderBottom: 'none', padding: 'var(--space-2) var(--space-4)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-sm)' }}
           >
             {type === 'all' ? t('common.all') : type === 'ingreso' ? t('finance.income') : t('finance.expense')}
           </button>

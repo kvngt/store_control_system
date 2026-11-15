@@ -84,7 +84,7 @@ nov 13–15 ──          Auditoría y refactorización modular (`043` y `044`
                       `useWorkOrderDetail`, `WorkOrders`, `CustomerPortal`, `Settings` y
                       `workOrders.service`, `handler.ts` + `_shared/*` con 102 pruebas en Deno 2,
                       `db:types` (`supabase.gen.ts` + `schema.contract.ts`) y `test:e2e:local`
-                      con 77 pruebas contra la base local
+                      con 80 pruebas contra la base local
 ```
 
 ---
@@ -507,7 +507,7 @@ comentario que explica el problema. Léelas en orden si quieres el detalle.
 | Reunión con el taller | **480** (67 archivos) | 10–13 → **330 aserciones** en 13 archivos | `qa:security` 85 casos |
 | Antes de la prueba en vivo | **504** (71 archivos) | 330 aserciones, en CI | `qa:security` 85 casos (62 saltados sin cuentas de prueba) |
 | 11/10/2026 (82 migraciones) | **802** (97 archivos) | **811 aserciones** en 33 archivos, en CI | `qa:security` 155 casos |
-| 15/11/2026 (98 migraciones, hasta `044`) | **1.263** (174 archivos) | **1.181** pruebas en 48 archivos, en CI | 77 e2e contra base local (`test:e2e:local`); 102 pruebas Deno 2 en edge functions (`test:functions`) |
+| 15/11/2026 (98 migraciones, hasta `044`) | **1.263** (174 archivos) | **1.181** pruebas en 48 archivos, en CI | 80 e2e contra base local (`test:e2e:local`); 102 pruebas Deno 2 en edge functions (`test:functions`) |
 
 Las pruebas pgTAP se ejecutaron por primera vez con Docker el 15 de septiembre de 2026:
 **158 aserciones en verde** y las 35 migraciones aplicadas desde cero. Solo hubo que

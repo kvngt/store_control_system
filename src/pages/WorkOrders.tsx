@@ -269,9 +269,9 @@ export default function WorkOrders() {
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>
-        <div style={{ position: 'relative', flex: 1, maxWidth: 320 }}>
-          <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)' }} />
-          <input className="form-input" placeholder={t('common.search')} aria-label={t('common.search')} value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 36 }} />
+        <div className="combo-search" style={{ flex: 1, maxWidth: 320 }}>
+          <Search size={16} className="combo-search-icon" aria-hidden />
+          <input className="form-input" placeholder={t('common.search')} aria-label={t('common.search')} value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         {/* En el tablero las columnas ya son los estados, y el archivo no va en el tablero. */}
         {view === 'lista' && (
@@ -279,9 +279,8 @@ export default function WorkOrders() {
             {['all', ...ORDER_STATUSES, ARCHIVED].map((status) => (
               <button
                 key={status}
-                className={`tab ${filterStatus === status ? 'active' : ''}`}
+                className={`tab tab-pill ${filterStatus === status ? 'active' : ''}`}
                 onClick={() => setFilterStatus(status)}
-                style={{ borderBottom: 'none', padding: 'var(--space-2) var(--space-3)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-sm)', flexShrink: 0 }}
               >
                 {status === 'all' ? t('common.all') : status === ARCHIVED ? t('workOrders.archived') : t(orderStatusKey(status))}
               </button>

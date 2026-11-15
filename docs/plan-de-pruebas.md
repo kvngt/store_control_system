@@ -189,7 +189,7 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | AUT-05 | P0 | IA | `npx supabase start` y `npm run test:db` (requiere Docker) | Todos los archivos pgTAP en verde (48 archivos / 1.181 pruebas al 15/11/2026). Sin Docker: **BLOQUEADO** |
 | AUT-06 | P0 | IA | `npm run qa:security` | 0 FAIL (209 casos; el 15/11/2026 contra producción: 178 PASS + 31 SKIP). Los SKIP dicen qué falta (una cuenta o una orden) |
 | AUT-07 | P1 | IA | `npm run qa:security` (con cuenta de técnico) | SEC-55 PASS. Ya no crea nada: desde que abrir una orden es solo de admin, el caso comprueba el rechazo |
-| AUT-08 | P1 | IA | `npm run test:e2e:local` (requiere Docker) | 77 pruebas en verde contra la base local (15/11/2026). Sin Docker, `npm run test:e2e` corre contra `.env.local` o salta sin `.env.test.local` |
+| AUT-08 | P1 | IA | `npm run test:e2e:local` (requiere Docker) | 80 pruebas en verde contra la base local (15/11/2026). Sin Docker, `npm run test:e2e` corre contra `.env.local` o salta sin `.env.test.local` |
 
 ---
 

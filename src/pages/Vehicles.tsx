@@ -286,9 +286,9 @@ export default function Vehicles() {
 
       {error && !(showModal && actionError) && <div className="alert-error">{error}</div>}
 
-      <div style={{ marginBottom: 'var(--space-4)', position: 'relative', maxWidth: 400 }}>
-        <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)' }} />
-        <input className="form-input" placeholder={t('common.search')} value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 36 }} />
+      <div className="combo-search list-search">
+        <Search size={16} className="combo-search-icon" aria-hidden />
+        <input className="form-input" placeholder={t('common.search')} value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
       {loading ? (

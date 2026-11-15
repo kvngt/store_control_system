@@ -317,6 +317,18 @@ a `main` se publica hasta el push a `produccion`.
 - Para volver a compilar sin cambios en el código (por ejemplo, tras cambiar una variable),
   vuelve a desplegar desde el panel de Hostinger.
 
+> **Si un push no publica (pasó el 15/11/2026).** Comprueba que el sitio cambió: el
+> `index-*.js` que sirve `https://restorifyauto.net/login` tiene que ser otro, y un texto nuevo
+> tiene que estar en los archivos servidos. Si no cambia en unos minutos, mira el último build
+> (hPanel → Sitios web → restorifyauto.net → Deployments, o la operación `hosting_get-deployment`
+> del conector de Hostinger): si su commit es uno viejo, el push no disparó nada. El 15/11/2026 la
+> conexión de Hostinger con GitHub había perdido el acceso al repositorio
+> (`hosting_deploy`: «Repository … was not found in your Git installation»). Se arregla dándole de
+> nuevo el acceso: hPanel → Sitios web → restorifyauto.net → Avanzado → Git, o en GitHub →
+> Settings → Applications → Hostinger → acceso a `store_control_system`. Después, un push o un
+> «Deploy» desde el panel publica la punta de `main`. Mientras tanto la base y las funciones pueden
+> ir por delante del sitio: anótalo en la bitácora.
+
 ```bash
 # 7. Seguridad contra la API ya desplegada (0 FAIL)
 npm run qa:security

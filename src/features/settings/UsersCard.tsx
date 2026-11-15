@@ -222,23 +222,21 @@ export default function UsersCard({ users, sedes, currentUserId, loading, onChan
       </p>
 
       <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>
-        <div style={{ position: 'relative', flex: 1, minWidth: 200, maxWidth: 320 }}>
-          <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)' }} />
+        <div className="combo-search" style={{ flex: 1, minWidth: 200, maxWidth: 320 }}>
+          <Search size={16} className="combo-search-icon" aria-hidden />
           <input
             className="form-input"
             placeholder={t('common.search')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ paddingLeft: 36 }}
           />
         </div>
-        <div style={{ display: 'flex', gap: 'var(--space-1)', flexWrap: 'wrap' }}>
+        <div className="tab-pill-row">
           {(['all', 'admin', 'mecanico', 'pintor'] as const).map((r) => (
             <button
               key={r}
-              className={`tab ${roleFilter === r ? 'active' : ''}`}
+              className={`tab tab-pill ${roleFilter === r ? 'active' : ''}`}
               onClick={() => setRoleFilter(r)}
-              style={{ borderBottom: 'none', padding: 'var(--space-2) var(--space-3)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-sm)' }}
             >
               {r === 'all' ? t('common.all') : roleLabel[r]}
             </button>

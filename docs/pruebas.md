@@ -26,7 +26,7 @@ decidir cuál y corregirlo.
 | **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 1.263 pruebas, 174 archivos (15/11/2026) | ~30 s | Nada |
 | **Edge functions** | Deno 2 (`npm run test:functions`) | `handler.ts` y helpers `_shared/*` (`http`, `resend`, `gemini`, `email/`, etc.) con dobles | 102 pruebas (15/11/2026) | ~10 s | Deno 2 |
 | **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención", teléfonos de la sede, trabajo con seguro, cobro por parqueo, próximo servicio, autorización en recepción, marcas de daños, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, unicidad de VIN/placa, la revisión del 03/11 (`sin_autorizar`, fotos de una inspección publicada, traducciones), las decisiones del dueño del 04/11 y los arreglos de auditoría `042`–`044` (13–15/11/2026) contra un Postgres real | 1.181 pruebas, 48 archivos (15/11/2026) | ~1 min | Docker |
-| **End-to-end** | Playwright (`npm run test:e2e:local`) | Flujos en un navegador real contra Supabase local | 77 casos (77 en verde al 15/11/2026) | 2–5 min | Docker (`supabase start`) |
+| **End-to-end** | Playwright (`npm run test:e2e:local`) | Flujos en un navegador real contra Supabase local | 80 casos (80 en verde al 15/11/2026) | 2–5 min | Docker (`supabase start`) |
 | **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 209 casos (178 PASS + 31 SKIP al 15/11/2026), todos de solo lectura (los que escriben, escriben el valor que ya hay) | ~15 s | Nada; con cuentas de prueba cubre más |
 | **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
 
@@ -532,7 +532,7 @@ E2E_SUPABASE_URL=http://127.0.0.1:44321 npm run test:e2e:local   # si tu stack u
   servidor que ya esté corriendo: ese podría apuntar al proyecto real) y corre Playwright con
   `E2E_LOCAL_STACK=1`.
 
-El 15/11/2026: 77 de 77. Los 12 que fallaban eran pruebas viejas (el técnico ya no ve las órdenes
+El 15/11/2026: 80 de 80 (77 de antes más las 3 de cobros, `qa-cobros.spec.ts`). Los 12 que fallaban eran pruebas viejas (el técnico ya no ve las órdenes
 de otros desde el 07/10, el alta de empleados vive en `/employees`, importar está en la vista de
 estados de cuenta de Finanzas, el panel está en `/panel`, Vehículos es de administración).
 
@@ -567,6 +567,7 @@ prueba se borraron el 29/09/2026).
 | `qa-workorders.spec.ts` | WORK-01…06 | Modal nueva orden, millas, filtros, detalle, botón PDF, Kanban, "Mover a" |
 | `qa-finance-payroll.spec.ts` | FIN-01…04, PAY-01…03 | Finanzas y validaciones; **Comisiones**: pestañas, % inválido rechazado, técnico sin acceso |
 | `qa-settings.spec.ts` | CFG-01…12 | Perfil, idioma, tema, sedes, alta de empleado. **El alta se mudó a Empleados** el 29/09/2026: los casos de alta hay que apuntarlos a `/employees` |
+| `qa-cobros.spec.ts` | COB-01…03 | **Solo con `test:e2e:local`.** Anticipo con cheque (sin número ni foto avisa; con la foto sola entra y queda en Finanzas con su comprobante), entrega que cobra el saldo con su método y cierra la orden, y depósito del alta con cheque y solo foto. Prepara la orden por la API y comprueba la base al final |
 | `customer-crud.spec.ts` | 1 | Ejemplo de prueba que crea y borra datos (prefijo `PWTEST`) |
 
 Los identificadores de esta tabla (AUTH-, RBAC-, WORK-, FIN-, CFG-…) son los del código
@@ -582,9 +583,8 @@ Las pruebas **PAY-01/02** anteriores probaban la nómina por salario, eliminada 
 la migración `20260912000000`; fueron reemplazadas por las de comisiones.
 
 **Pendiente de cubrir con e2e** (ya se puede, con `test:e2e:local`): técnico sin precios en el
-detalle, multimedia con archivos de prueba, campana en tiempo real, el diálogo de entrega y el
-alta completa con depósito (hoy los cubre el recorrido `qa.local/r13.mjs`, que no es parte de la
-suite). Que un técnico solo vea sus órdenes ya lo cubren `login.spec.ts` y RBAC-30.
+detalle, multimedia con archivos de prueba y campana en tiempo real. El diálogo de entrega, el
+anticipo y el alta con depósito ya los cubre `qa-cobros.spec.ts`. Que un técnico solo vea sus órdenes ya lo cubren `login.spec.ts` y RBAC-30.
 
 ### 2.4 ¿Para qué hace falta Docker?
 

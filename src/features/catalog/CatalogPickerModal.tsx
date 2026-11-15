@@ -165,21 +165,11 @@ export default function CatalogPickerModal({
     >
       <AlertError message={error} />
 
-          <div style={{ position: 'relative' }}>
-            <Search
-              size={16}
-              style={{
-                position: 'absolute',
-                left: 12,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--color-text-tertiary)',
-              }}
-            />
+          <div className="combo-search">
+            <Search size={16} className="combo-search-icon" aria-hidden />
             <input
               type="text"
               className="form-input"
-              style={{ paddingLeft: 36 }}
               placeholder={t('catalog.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}

@@ -104,7 +104,7 @@ descuadra los cálculos posteriores de esa orden. Conocido desde la auditoría; 
   `features/workOrders/intake/`, `features/settings/`, `portal/components/`, `media`,
   `notifications`, `employees`, `finance`).
 - **Red de pruebas amplia (al 15/11/2026):** 1.263 pruebas Vitest (174 archivos), 1.181 pruebas
-  pgTAP (48 archivos), 102 pruebas Deno 2 (`npm run test:functions`), 77 e2e contra la base
+  pgTAP (48 archivos), 102 pruebas Deno 2 (`npm run test:functions`), 80 e2e contra la base
   local (`npm run test:e2e:local`) y `qa:security`. TypeScript estricto, lint sin avisos, CI en
   cada cambio (cifras vigentes en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto)).
 - **Portal del cliente aislado**: no importa nada de la app.

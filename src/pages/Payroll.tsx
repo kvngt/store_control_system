@@ -318,7 +318,7 @@ export default function Payroll() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 'var(--space-1)', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>
+      <div className="tab-pill-row" style={{ marginBottom: 'var(--space-4)' }}>
         {([
           ['pending', `${t('payroll.tabPending')} (${balances.length})`],
           ['history', `${t('payroll.tabHistory')} (${commissions.length})`],
@@ -326,9 +326,8 @@ export default function Payroll() {
         ] as [Tab, string][]).map(([key, labelText]) => (
           <button
             key={key}
-            className={`tab ${tab === key ? 'active' : ''}`}
+            className={`tab tab-pill ${tab === key ? 'active' : ''}`}
             onClick={() => setTab(key)}
-            style={{ borderBottom: 'none', padding: 'var(--space-2) var(--space-3)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-sm)' }}
           >
             {labelText}
           </button>

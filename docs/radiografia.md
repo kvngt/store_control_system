@@ -26,7 +26,7 @@ Actualizado el **15/11/2026** (las demás guías remiten aquí en vez de repetir
 | **Pruebas de base de datos** | 48 archivos | 1.181 pruebas (`supabase/tests/database/`, pgTAP, `npm run test:db`, 15/11/2026) |
 | **Casos de `qa:security`** | 209 | `scripts/qa/api-security.mjs`, contra la API (178 PASS + 31 SKIP contra producción el 15/11/2026) |
 | **Edge Functions** | 7 | En `supabase/functions/` (Deno 2): `cleanup-storage`, `create-employee`, `delete-employee`, `portal`, `process-outbox`, `traducir-texto`, `update-employee`, cada una con `handler.ts` + `index.ts` mínimo y helpers en `_shared/` |
-| **Pruebas e2e** | 77 | En `e2e/` (Playwright contra la base local con `npm run test:e2e:local`, 15/11/2026) |
+| **Pruebas e2e** | 80 | En `e2e/` (Playwright contra la base local con `npm run test:e2e:local`, 15/11/2026) |
 
 ---
 
