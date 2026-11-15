@@ -96,7 +96,7 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
   (`20261010000044_auditoria_2026_11_b`), las cifras de `qa:security`, un «token de baja» que no
   existe, la `042` atribuida a la auditoría y las versiones de las funciones. Los 357 enlaces con
   ancla entre documentos apuntan a un título que existe.
-- **Después de publicar, sin commit:**
+- **Después de publicar** (commit `cc49414`, en `main` el 15/11/2026; Hostinger tampoco lo publicó, por la misma causa):
   - **e2e de cobros** (`e2e/qa-cobros.spec.ts`, COB-01…03, solo con `test:e2e:local`): el anticipo con
     cheque (sin número ni foto avisa; con la foto sola entra y queda en Finanzas con su comprobante),
     la entrega que cobra los $300 de saldo en efectivo y cierra la orden, y el depósito del alta con
