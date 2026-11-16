@@ -35,6 +35,7 @@
 | Revisión 30/10–03/11 | Revisión completa del proyecto con seguimiento de las órdenes reales: ~30 errores de la app arreglados, migración `040` (traducciones, grupo «sin nada autorizado», fotos de una inspección publicada, indicadores, sticker, reloj), `delete-employee` más estricto, zona horaria de Maryland por defecto, `/ayuda` sin 403, documentación y Ayuda al día | **Publicado** el 04/11/2026: commits `259cd1f` y `c3a31d7` en `main`, `db push` de la `040`, `delete-employee` v13 y `process-outbox` v20 (lo hizo la persona responsable). Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
 | Decisiones 04/11 | El técnico no empieza ni termina sin nada autorizado; una orden entregada se archiva, no se borra (migración `041`); el correo del presupuesto espera a la traducción; subidas rechazadas con un motivo claro; la página no muestra el cobro del diagnóstico; se borró el video original; `config.toml` para la CLI 3 | **Publicado** el 04/11/2026: `db push` de la `041` (95 migraciones), `process-outbox` v21 y push a `main`. Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
 | «Atrás» 04/11 | El botón «atrás» del teléfono ya no hace perder lo que el técnico escribe o graba: avance de una tarea, trabajo adicional, pestaña Avances, nota de un punto, grabadores, visor y próximo servicio; trampa del historial en pila; arreglos del alta | **Publicado** el 04/11/2026 (push a `main`; sin migración ni funciones). Falta probarlo en un Android real. Ver la [bitácora](#04112026-tarde--claude-code-el-botón-atrás-en-lo-que-el-técnico-escribe-o-graba) |
+| Plan 16/11 | Lo pendiente después de la auditoría: publicar el sitio, CI completo, `qa:security` en local, e2e que faltan, sobras de la auditoría y, después, tablero por etapas, citas y recordatorios. Stripe y SMS, pendientes a propósito | **En curso.** Lista de control en la [bitácora](#16112026--claude-code-dirige-gemini-4-hydrogen-programa-plan-de-acción-de-lo-pendiente) |
 | Calidad 15/11 | Cheque y comprobante en una sola regla (también en el alta), inglés de correos y portal, tipos de la app comprobados contra la base, edge functions sin código repetido, los siete archivos grandes partidos, e2e contra la base local (77/77) | **Publicado** el 15/11/2026: `db push` de la `043` y la `044` (98 migraciones), `functions deploy` de las siete (`portal` v11, `process-outbox` v22, `cleanup-storage` v9, `create-employee` v14, `update-employee` v12, `delete-employee` v14, `traducir-texto` v2), push a `main` (commit `a4dfaac`) y `qa:security` contra producción (178 PASS, 0 FAIL, 31 SKIP). **El sitio web NO se actualizó:** Hostinger perdió el acceso de Git al repositorio y sigue en el build del 07/11. Ver la [bitácora](#15112026-noche--claude-code-publicación-de-la-auditoría-y-documentación-al-día) |
 | Auditoría (2) 14–15/11 | Lo que quedó abierto: diálogo común accesible, migración `044`, fachada retirada, pruebas y arreglos de las edge functions, botones de 44 px e inglés de EE. UU. | **Publicado** el 15/11/2026: `db push` de la `043` y la `044` (98 migraciones), `functions deploy` de las siete (`portal` v11, `process-outbox` v22, `cleanup-storage` v9, `create-employee` v14, `update-employee` v12, `delete-employee` v14, `traducir-texto` v2), push a `main` (commit `a4dfaac`) y `qa:security` contra producción (178 PASS, 0 FAIL, 31 SKIP). **El sitio web NO se actualizó:** Hostinger perdió el acceso de Git al repositorio y sigue en el build del 07/11. Ver la [bitácora](#15112026-noche--claude-code-publicación-de-la-auditoría-y-documentación-al-día) |
 | Auditoría 13–14/11 | Auditoría completa (base, app, experiencia del taller, cliente y arquitectura) con Gemini 4 Hydrogen como programador: 13 errores de comportamiento de la app, migración `043` con 15 puntos de permisos y dinero, y los flujos del cliente y del taller (presupuesto por WhatsApp, alta de empleado, portal, PDF) | **Publicado** el 15/11/2026: `db push` de la `043` y la `044` (98 migraciones), `functions deploy` de las siete (`portal` v11, `process-outbox` v22, `cleanup-storage` v9, `create-employee` v14, `update-employee` v12, `delete-employee` v14, `traducir-texto` v2), push a `main` (commit `a4dfaac`) y `qa:security` contra producción (178 PASS, 0 FAIL, 31 SKIP). **El sitio web NO se actualizó:** Hostinger perdió el acceso de Git al repositorio y sigue en el build del 07/11. Ver la [bitácora](#15112026-noche--claude-code-publicación-de-la-auditoría-y-documentación-al-día) |
@@ -59,6 +60,98 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 16/11/2026 — Claude Code dirige, Gemini 4 Hydrogen programa (plan de acción de lo pendiente)
+
+> **Si retomas este trabajo (Gemini u otro agente):** esta entrada es la lista de control. Cada
+> punto dice su estado: `[ ]` sin empezar, `[~]` a medias (con lo que falta), `[x]` hecho y
+> verificado. Sigue el orden. Antes de dar algo por bueno corre lo de «Cómo se verifica». No
+> publiques nada (`db push`, `functions deploy`, push a `main`) sin que la persona responsable lo
+> pida; lo único ya pedido es la fase 0.
+
+- **Pedido de la persona responsable (16/11):** implementar el plan de lo pendiente, con Gemini
+  programando y Claude dirigiendo, y documentarlo todo aquí. **Stripe (cobro con enlace) y los
+  mensajes de texto (SMS) quedan pendientes: no se tocan.**
+- **Punto de partida:** la base (98 migraciones, hasta la `044`) y las siete edge functions están en
+  producción desde el 15/11. `main` estaba en `c0d724b`. El sitio seguía en el build del 07/11
+  porque Hostinger había perdido el acceso de Git; la persona responsable lo reconectó el 16/11,
+  pero reconectar no lanza un build: hace falta un push o «Deploy» en hPanel.
+
+**Fase 0 — Cerrar la publicación**
+
+- [ ] 0.1 Push a `main` (este commit) para disparar el build de Hostinger.
+- [ ] 0.2 Comprobar en vivo, solo lectura: `/login` sirve otro `index-*.js` (el viejo es
+  `index-Cmr5zkWu.js`), el portal trae «Your balance», cargan la página del taller y `/login`.
+- [ ] 0.3 Dejar esta bitácora y `deployment.md` con la fecha real de publicación.
+
+**Fase 1 — Red de seguridad operativa**
+
+- [ ] 1.1 CI completo (`.github/workflows/ci.yml`): sumar `npm run test:functions` (Deno 2), las
+  e2e contra la base local (`npm run test:e2e:local`, con `supabase start`) y una comprobación de
+  que `src/types/supabase.gen.ts` está al día (`npm run db:types` y `git diff --exit-code`).
+- [ ] 1.2 `qa:security` completo contra la base local: hoy 31 casos se saltan porque faltan
+  órdenes de prueba. Un script que las prepare en local y pase sus ids
+  (`scripts/qa/api-security.mjs` lee `ORDEN`, `ORDEN_AJENA`, `ORDEN_ENTREGADA`,
+  `LABOR_FINALIZADA`…).
+- [ ] 1.3 `npm audit`: 4 moderadas, de `minimatch` por `@sentry/vite-plugin` (herramienta de
+  build, no llega al navegador). Subir el plugin y verificar el build.
+- [ ] 1.4 Sentry: `VITE_SENTRY_DSN` ya está en las variables de Hostinger (visto el 15/11), pero
+  el build avisa «No auth token provided»: no sube source maps. Corregir la documentación (dice
+  que no está) y dejar los pasos del token.
+- Configuración de cuentas, de la persona responsable (pasos en `deployment.md`):
+  `SENTRY_AUTH_TOKEN` en Hostinger y monitor de disponibilidad; que Hostinger publique la rama
+  `produccion` y no `main`; staging en Supabase (menos urgente con las e2e locales); MFA para
+  administradores (decisión suya).
+
+**Fase 2 — Deuda técnica restante**
+
+- [ ] 2.1 e2e que faltan (solo base local, patrón de `e2e/qa-cobros.spec.ts`): técnico sin precios
+  en el detalle, subida de fotos, campana en tiempo real, retirada sin reparar, aceptar y pagar
+  comisiones.
+- [ ] 2.2 Partir `src/pages/WorkOrders.smoke.test.tsx` (2.059 líneas, 28 mocks) en pruebas por
+  módulo (`intake/`, `detail/`, `list/`), con las mismas aserciones.
+- [ ] 2.3 Un solo criterio al descartar cambios: el alta (`intake/useIntake.ts`) y la nota de
+  inspección (`inspection/PointInspection.tsx`) aún preguntan con `confirm()` nativo al navegar por
+  el menú; pasarlos a `ChoiceDialog` / `useDiscardGuard`. Los `confirm()` de borrar se quedan.
+- [ ] 2.4 Sobras anotadas el 15/11: temporizador sin limpiar en `intake/steps/WorkStep.tsx`,
+  párrafo vacío en `detail/sections/InspectionSection.tsx`, `orderSede` calculado dos veces
+  (exponerlo en `WorkOrderDetailApi`), botones sin `type="button"`, `toDate` repetido en
+  `portal/ServicePage.tsx`, errores de `settings/SedesCard.tsx` por dos canales.
+- [ ] 2.5 Esquema vigente en un archivo generado (`supabase/schema/actual.sql`) con comprobación
+  en CI (P1-1 de `mantenimiento.md`).
+- [ ] 2.6 Peso de la app: `appStart` (655 kB) y el estudio de color (666 kB). Medir y diferir lo
+  que no hace falta al entrar. **Cuidado:** un cambio de empaquetado ya dejó la página del taller
+  sin estilos (ver `ai-context.md`, los `import()` de `main.tsx`).
+- [ ] 2.7 Pasar a `docs/historico/` los `tareas-para-gemini-*.md` ya ejecutados y arreglar enlaces.
+
+**Fase A — Adopción (en paralelo, sin código)**
+
+- [ ] A.1 Medir el uso desde el 06/11 con las consultas del anexo A de `plan-adopcion-2026-10.md`,
+  en solo lectura contra producción (`npx -y supabase@3 db query --remote=<ref> --read-only`).
+- Pendiente del taller o de la persona responsable: probar «atrás» en un Android real; las
+  preguntas del pago a empleados (`pagos-a-empleados.md`), el impuesto (contador), las 15 preguntas
+  legales (`plan-legal-y-privacidad.md`) y lo que la página del taller puede afirmar; confirmar que
+  salen los correos y las notificaciones push.
+
+**Fase 3 — Producto (después de ver los datos de A.1)**
+
+- [ ] 3.1 Tablero por etapas configurable. [ ] 3.2 Citas. [ ] 3.3 Recordatorios del próximo
+  servicio y pedir reseña (correo y enlace de WhatsApp). Detalle en `plan-saas-2026-10.md`.
+- **No se hacen ahora:** cobro con enlace (Stripe) y SMS; el impuesto espera al contador.
+
+**Cómo se trabaja y cómo se verifica**
+
+- Gemini 4 Hydrogen programa en su copia (`../restorify-hydrogen`, rama `hydrogen`), con una orden
+  escrita por bloque que dice la carpeta exacta y qué archivos puede tocar. No ejecuta comandos:
+  su primera entrega suele traer pruebas rotas y hay que devolverle los errores reales. Nunca se
+  le dan `.env.local`, `qa.local` ni datos de clientes.
+- Claude revisa cada diff, lo aplica al árbol principal y corre:
+  `npm run lint && npx tsc -b && npm test && npm run build`, `npm run test:functions`,
+  `npm run test:e2e:local` y, si se tocó SQL, `npm run test:db`. En esta máquina el stack local
+  responde en 44321/44322: `E2E_SUPABASE_URL=http://127.0.0.1:44321` y
+  `SUPABASE_DB_URL=postgresql://postgres:postgres@127.0.0.1:44322/postgres?sslmode=disable`.
+- Cambios de pantalla: capturas antes y después con los recorridos de `qa.local/` (`r13.mjs`,
+  `r14.mjs`), en escritorio y a 390 px.
 
 ### 15/11/2026, noche — Claude Code (publicación de la auditoría y documentación al día)
 
