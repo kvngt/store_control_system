@@ -53,6 +53,10 @@ export default function WorkStep({
   const [editingPart, setEditingPart] = useState<number | null>(null);
   // La última línea agregada se resalta un momento, para que se vea que entró.
   const [justAdded, setJustAdded] = useState<{ kind: 'task' | 'part'; index: number } | null>(null);
+  const justAddedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (justAddedTimerRef.current !== null) clearTimeout(justAddedTimerRef.current);
+  }, []);
   // La explicación ("se guarda al crear…") solo la primera vez: en el teléfono los avisos
   // apilados tapaban la lista.
   const explained = useRef(false);
@@ -63,7 +67,11 @@ export default function WorkStep({
   };
   const markAdded = (kind: 'task' | 'part', index: number) => {
     setJustAdded({ kind, index });
-    setTimeout(() => setJustAdded((cur) => (cur?.kind === kind && cur.index === index ? null : cur)), 2500);
+    if (justAddedTimerRef.current !== null) clearTimeout(justAddedTimerRef.current);
+    justAddedTimerRef.current = setTimeout(() => {
+      justAddedTimerRef.current = null;
+      setJustAdded((cur) => (cur?.kind === kind && cur.index === index ? null : cur));
+    }, 2500);
   };
 
   useEffect(() => {

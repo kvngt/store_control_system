@@ -1,4 +1,4 @@
-import { NavLink, Link, useLocation } from 'react-router-dom';
+import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../context/language.context';
 import { useAuth } from '../../context/auth.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
@@ -16,25 +16,30 @@ interface SidebarProps {
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
   const { t } = useLanguage();
   const { user, logout, currentSede, allSedes, setCurrentSede } = useAuth();
-  const { confirmNavigation } = useUnsavedChanges();
+  const { requestNavigation } = useUnsavedChanges();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const isAdmin = user?.rol === 'admin';
 
-  const handleNavClick = (e: React.MouseEvent) => {
-    if (!confirmNavigation()) {
-      e.preventDefault();
-      return;
-    }
-    onMobileClose();
+  const handleNavClick = (e: React.MouseEvent, to: string) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    requestNavigation(() => {
+      onMobileClose();
+      navigate(to);
+    });
   };
 
-  const handleLogout = async () => {
-    if (!confirmNavigation()) return;
-    // Primero se suelta el teléfono (con la sesión todavía válida para hacerlo):
-    // después de cerrar sesión ya no habría permiso para borrar la suscripción.
-    await detachThisDevice();
-    logout();
+  const handleLogout = () => {
+    requestNavigation(() => {
+      void (async () => {
+        // Primero se suelta el teléfono (con la sesión todavía válida para hacerlo):
+        // después de cerrar sesión ya no habría permiso para borrar la suscripción.
+        await detachThisDevice();
+        logout();
+      })();
+    });
   };
 
   // Clientes y Vehículos son de administración: un técnico ve el cliente y el vehículo de
@@ -79,7 +84,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
       />
 
       <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`} aria-label={t('nav.mainMenu')}>
-        <Link to={STAFF_HOME} className="sidebar-logo" onClick={handleNavClick} title={t('nav.dashboard')}>
+        <Link to={STAFF_HOME} className="sidebar-logo" onClick={(e) => handleNavClick(e, STAFF_HOME)} title={t('nav.dashboard')}>
           {currentSede?.logo_url ? (
             <img
               src={currentSede.logo_url}
@@ -145,7 +150,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                 `sidebar-link ${isActive && (link.to === '/' ? location.pathname === '/' : true) ? 'active' : ''}`
               }
               end={link.to === STAFF_HOME}
-              onClick={handleNavClick}
+              onClick={(e) => handleNavClick(e, link.to)}
             >
               <link.icon className="sidebar-link-icon" size={20} />
               <span className="sidebar-link-label">{link.label}</span>
@@ -162,7 +167,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                   key={link.to}
                   to={link.to}
                   className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                  onClick={handleNavClick}
+                  onClick={(e) => handleNavClick(e, link.to)}
                 >
                   <link.icon className="sidebar-link-icon" size={20} />
                   <span className="sidebar-link-label">{link.label}</span>
@@ -181,7 +186,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                   key={link.to}
                   to={link.to}
                   className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                  onClick={handleNavClick}
+                  onClick={(e) => handleNavClick(e, link.to)}
                 >
                   <link.icon className="sidebar-link-icon" size={20} />
                   <span className="sidebar-link-label">{link.label}</span>

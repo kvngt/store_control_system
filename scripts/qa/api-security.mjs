@@ -16,7 +16,8 @@
 //   Técnico:  TOKEN_TECH, o QA_TECH_EMAIL + QA_TECH_PASSWORD, o E2E_MECHANIC_EMAIL + E2E_MECHANIC_PASSWORD
 //   Admin:    TOKEN_ADMIN, o QA_ADMIN_EMAIL + QA_ADMIN_PASSWORD, o E2E_ADMIN_EMAIL + E2E_ADMIN_PASSWORD
 //   Órdenes (opcional; si faltan se buscan con la sesión del técnico):
-//     ORDEN (asignada, no entregada), ORDEN_AJENA (no asignada), ORDEN_ENTREGADA (asignada, entregada)
+//     ORDEN (asignada, no entregada), ORDEN_AJENA (no asignada), ORDEN_ENTREGADA (asignada, entregada),
+//     ORDEN_FINALIZADA (asignada, finalizada), ORDEN_FIRMADA (asignada, firmada, no entregada)
 //
 // Lo que no se puede preparar se marca SKIP, no FAIL. Termina con código 1 si algún
 // caso falla.
@@ -90,6 +91,8 @@ const ctx = {
   ORDEN: env.ORDEN,
   ORDEN_AJENA: env.ORDEN_AJENA,
   ORDEN_ENTREGADA: env.ORDEN_ENTREGADA,
+  ORDEN_FINALIZADA: env.ORDEN_FINALIZADA,
+  ORDEN_FIRMADA: env.ORDEN_FIRMADA,
 };
 
 if (ctx.TOKEN_TECH) {
@@ -123,6 +126,8 @@ if (ctx.TOKEN_TECH) {
     };
     descartar('ORDEN', (o) => o && mine(o) && o.estatus !== 'entregado');
     descartar('ORDEN_ENTREGADA', (o) => o && mine(o) && o.estatus === 'entregado');
+    descartar('ORDEN_FINALIZADA', (o) => o && mine(o) && o.estatus === 'finalizado');
+    descartar('ORDEN_FIRMADA', (o) => o && mine(o) && o.estatus !== 'entregado' && o.firma_ruta);
     ctx.ORDEN ||= list.find((o) => mine(o) && o.estatus !== 'entregado')?.id;
     ctx.ORDEN_ENTREGADA ||= list.find((o) => mine(o) && o.estatus === 'entregado')?.id;
     ctx.ORDEN_FINALIZADA ||= list.find((o) => mine(o) && o.estatus === 'finalizado')?.id;
@@ -545,7 +550,13 @@ for (const c of CASES) {
 const summary = {
   proyecto: SB_URL,
   sesiones: { tecnico: !!ctx.TOKEN_TECH, admin: !!ctx.TOKEN_ADMIN },
-  ordenes: { ORDEN: ctx.ORDEN ?? null, ORDEN_AJENA: ctx.ORDEN_AJENA ?? null, ORDEN_ENTREGADA: ctx.ORDEN_ENTREGADA ?? null },
+  ordenes: {
+    ORDEN: ctx.ORDEN ?? null,
+    ORDEN_AJENA: ctx.ORDEN_AJENA ?? null,
+    ORDEN_ENTREGADA: ctx.ORDEN_ENTREGADA ?? null,
+    ORDEN_FINALIZADA: ctx.ORDEN_FINALIZADA ?? null,
+    ORDEN_FIRMADA: ctx.ORDEN_FIRMADA ?? null,
+  },
   pass: results.filter((r) => r.estado === 'PASS').length,
   fail: results.filter((r) => r.estado === 'FAIL').length,
   skip: results.filter((r) => r.estado === 'SKIP').length,

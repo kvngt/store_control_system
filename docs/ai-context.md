@@ -424,6 +424,11 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
   - **las políticas de `storage.objects` envuelven sus helpers en `(SELECT …)`**, como las demás;
   - **con el enlace vencido, el cliente puede darse de baja de los correos** (no de alta, ni cambiar
     el idioma): `datos_portal` devuelve solo `cliente.tiene_correo`/`acepta_correos`.
+- **El egreso de un pago de comisiones lleva el método del pago** (`20261010000045`):
+  `pay_commissions` copia `metodo_pago` al egreso de `finanzas_movimientos` cuando es uno de los
+  cinco admitidos (`efectivo`, `tarjeta`, `zelle`, `transferencia`, `cheque`; si no, queda vacío y
+  el pago no se cae) y rellena los egresos ya hechos. **Una función que asiente un movimiento de
+  dinero copia también su método de pago.**
 - **Índices e InitPlan** (`20261010000033`): toda clave foránea nueva lleva su índice, y toda
   llamada a un helper en una política va envuelta en `(SELECT …)`.
 - **Avisos y correos al personal.** El técnico se entera de lo no autorizado (`TechOrderStatus`)
@@ -459,9 +464,9 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
    `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca edites una migración
    ya aplicada ni cambies tablas desde el panel. **El nombre va después de la última
    migración, no de la fecha de hoy:** hay migraciones aplicadas con fecha futura (hoy la
-   última es `20261010000044`), y una con fecha anterior a la última aplicada no entra con
+   última es `20261010000045`, aplicada en producción el 16/11/2026), y una con fecha anterior a la última aplicada no entra con
    `db push` ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#4-base-de-datos), B-1).
-   Después de cada migración, regenera `src/types/supabase.gen.ts` con `npm run db:types` (`schema.contract.ts` verifica en compilación que los tipos de dominio no se desalineen).
+   Después de cada migración, regenera `src/types/supabase.gen.ts` con `npm run db:types` (`schema.contract.ts` verifica en compilación que los tipos de dominio no se desalineen) y `supabase/schema/actual.sql` con `npm run db:schema`.
 2. **Una función nueva en `public` es una RPC pública.** Postgres da `EXECUTE` a
    `PUBLIC` y Supabase a `anon` y `authenticated` al crearla. Revócala siempre:
    `REVOKE ALL ON FUNCTION ... FROM PUBLIC, anon, authenticated;` y concede solo lo
@@ -590,6 +595,7 @@ npm run test:functions # si tocaste edge functions (Deno 2)
 npm run test:db        # si tocaste SQL (requiere Docker + npx supabase start)
 npm run test:e2e:local # si tocaste pantallas o flujos E2E (Docker + base local)
 npm run db:types       # tras nuevas migraciones para regenerar src/types/supabase.gen.ts
+npm run qa:security:local # seguridad de la API contra la base local (Docker; prepara órdenes de prueba)
 npm run qa:security    # después de aplicar una migración que toque permisos
 ```
 
@@ -606,8 +612,9 @@ que entregue órdenes, cobre o pague comisiones lleva `test.skip(!isLocalStack, 
 
 - Errores del frontend en Sentry, siempre a través de `src/lib/monitoring.ts`
   (`reportError`, `identifyUser`, `openProblemReport`); ningún otro archivo importa
-  `@sentry/react`. Sin `VITE_SENTRY_DSN` todo es un no-op (al 3/10/2026 no estaba en Hostinger,
-  [evaluacion-2026-10.md](historico/evaluacion-2026-10.md), O-2).
+  `@sentry/react`. Sin `VITE_SENTRY_DSN` todo es un no-op; `VITE_SENTRY_DSN` ya está configurado
+  en Hostinger (15/11/2026), y falta `SENTRY_AUTH_TOKEN` para que el build suba los source maps
+  (hoy llegan errores con el código minificado; pasos en [deployment.md §3](deployment.md#3-variables-del-frontend)).
 - **Historial de la orden** (`historial_orden`, `trg_historial`, `20261010000004`): quién cambió
   qué y el antes → después; solo un admin lo lee y nadie lo escribe por la API. **Si agregas una
   columna que alguien decide (no un total recalculado), súmala a la lista del trigger y a su

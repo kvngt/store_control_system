@@ -11,6 +11,7 @@ export default function LanguageCard() {
       </h3>
       <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
         <button
+          type="button"
           className={`btn ${language === 'es' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setLanguage('es')}
           style={{ flex: 1 }}
@@ -18,6 +19,7 @@ export default function LanguageCard() {
           🇪🇸 {t('settings.spanish')}
         </button>
         <button
+          type="button"
           className={`btn ${language === 'en' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setLanguage('en')}
           style={{ flex: 1 }}

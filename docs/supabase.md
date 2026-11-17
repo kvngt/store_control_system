@@ -42,7 +42,7 @@ Para **por qué** está construido así: [radiografia.md](radiografia.md). Para
 | **Plan** | **Pro** desde el 30 de septiembre de 2026: respaldos diarios (Database → Backups). Los buckets siguen con 50 MB por archivo, que es lo que la app permite ([deployment.md §4.1](deployment.md#41-plan-y-límites-de-gasto)) |
 | **Postgres** | 17.6 |
 | **Tamaño de la base** | ~19 MB (29 de septiembre de 2026, recién limpiada) |
-| **Migraciones aplicadas** | 98 al 15/11/2026 (última migración: `20261010000044_auditoria_2026_11_b`; no hay `045`, y el 15/11/2026 quedan aplicadas `043` y `044` en producción). `npm run db:check` dice si producción va al día |
+| **Migraciones aplicadas** | 99 en producción al 16/11/2026 (hasta `20261010000045_egreso_de_comision_con_metodo`; la `043` y la `044` se aplicaron el 15/11/2026 y la `045` el 16/11/2026, y el repositorio tiene las mismas 99). `npm run db:check` dice si producción va al día |
 | **Max rows de la API** | 1.000 (valor por defecto; Project Settings → API). **No bajarlo**: `fetchAll` asume páginas de 1.000 |
 | **Enlace con este repositorio** | `supabase/.temp/project-ref` (lo crea `npx supabase link`) |
 | **Entornos** | Solo este proyecto remoto (no hay staging en la nube; las pruebas E2E de Playwright corren contra Supabase local con `npm run test:e2e:local`). Es la primera recomendación de [mantenimiento.md](mantenimiento.md#5-plan-priorizado) |
@@ -91,7 +91,7 @@ Para **por qué** está construido así: [radiografia.md](radiografia.md). Para
 | **Servicios push** (Google, Apple, Mozilla) | Entregan los avisos al teléfono con la app cerrada | Nada: el navegador elige el servicio; las llaves VAPID van en los secretos |
 | **NHTSA vPIC** | Llena marca, modelo y año a partir del VIN, desde el navegador | Nada (API pública) |
 | **Google Fonts** | Tipografía Outfit de la app | Nada |
-| **Sentry** | Errores del frontend | `VITE_SENTRY_DSN`. **Hoy vacía: no está activo** |
+| **Sentry** | Errores del frontend | `VITE_SENTRY_DSN` ya está en Hostinger (15/11/2026); falta `SENTRY_AUTH_TOKEN` para subir los source maps al compilar |
 
 ---
 
@@ -207,7 +207,7 @@ Qué hace cada trigger, por tabla: [arquitectura.md §5](arquitectura.md#5-dónd
 
 Viven en `supabase/migrations/` y se aplican con `npx supabase db push --linked`. **No se
 cambia el esquema desde el panel**: lo que no está en una migración no existe en otro
-entorno y lo borra el próximo `db reset`. Historia de las primeras 54 (hoy son 98 migraciones, hasta `20261010000044`):
+entorno y lo borra el próximo `db reset`. Historia de las primeras 54 (hoy son 99 migraciones en el repositorio, hasta `20261010000045`; 99 aplicadas en producción):
 [evolucion.md §12](evolucion.md#12-todas-las-migraciones).
 
 Una función se reescribe entera en cada migración que la cambia. Para saber cuál es la
@@ -336,7 +336,7 @@ En producción, en el panel de Hostinger (el sitio compila con esas); en desarro
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Las del proyecto `lendsiqkxhvbxxkaadrt` |
 | `VITE_VAPID_PUBLIC_KEY` | Definida, la misma que en `.env.local` (sin ella no hay push) |
 | `VITE_PUBLIC_SITE_URL` | `https://restorifyauto.net` |
-| `VITE_SENTRY_DSN` | **Vacía**: Sentry no registra errores (PRD-06) |
+| `VITE_SENTRY_DSN` | **Configurada en Hostinger** (visto el 15/11/2026); falta `SENTRY_AUTH_TOKEN` para que el build suba los source maps |
 
 ---
 
@@ -470,13 +470,15 @@ las migraciones. Sirve para las pruebas pgTAP y para probar una migración antes
 | Correos de prueba | `http://127.0.0.1:54324` |
 
 ```bash
-npx supabase start     # levantar (la primera vez descarga varios GB)
-npx supabase status    # direcciones y llaves locales
-npm run test:db        # las pruebas pgTAP
-npm run db:types       # regenera src/types/supabase.gen.ts desde la base local
-npm run test:e2e:local # Playwright contra la base local
-npx supabase db reset  # recrear la base local desde cero
-npx supabase stop      # apagar
+npx supabase start        # levantar (la primera vez descarga varios GB)
+npx supabase status       # direcciones y llaves locales
+npm run test:db           # las pruebas pgTAP
+npm run db:types          # regenera src/types/supabase.gen.ts desde la base local
+npm run db:schema         # genera supabase/schema/actual.sql desde la base local
+npm run test:e2e:local    # Playwright contra la base local
+npm run qa:security:local # seguridad de la API contra la base local (209 casos sin SKIP)
+npx supabase db reset     # recrear la base local desde cero
+npx supabase stop         # apagar
 ```
 
 Diferencias con el real: sin datos, sin secretos de Vault (los avisos esperan en la cola),
@@ -514,6 +516,6 @@ ORDER BY 2 DESC, 3 DESC, 1;
 |---|---|---|
 | ~~**Pasar a Pro**~~ Hecho el 30/09/2026 | Free no tenía respaldos diarios, pausaba proyectos inactivos y limitaba Storage a 1 GB | Organization → Billing. Mientras tanto, respaldo manual antes de cada `db push` ([mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación)) |
 | **Staging** | Hoy `qa:security` sigue corriendo contra el único proyecto remoto (aunque las pruebas E2E ya corren contra la base local con `npm run test:e2e:local`, sin cuentas de prueba en producción) | Un segundo proyecto con las mismas migraciones, secretos propios y cuentas de prueba |
-| **Sentry** | Hoy nadie se entera de un error en el teléfono de un técnico | Crear el proyecto en Sentry, poner `VITE_SENTRY_DSN` en las variables del sitio en Hostinger y volver a desplegar |
+| **Sentry** | `VITE_SENTRY_DSN` ya está; falta `SENTRY_AUTH_TOKEN`, así que los errores llegan minificados | Crear el token en Sentry (Settings → Auth Tokens, con permiso para subir source maps), ponerlo como `SENTRY_AUTH_TOKEN` en Hostinger, volver a desplegar y comprobar con «Reportar un problema» (Configuración) |
 | ~~**SMTP de Auth con Resend**~~ Hecho el 30/09/2026 (§8) | El correo de Supabase permitía ~2 por hora | [deployment.md §4.2](deployment.md#42-auth) |
 | **`[inbucket]` en `config.toml`** | La CLI avisa que la sección es obsoleta; solo afecta al local | Renombrarla cuando se actualice la configuración local |

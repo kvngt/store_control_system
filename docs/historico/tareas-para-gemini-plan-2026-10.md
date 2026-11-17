@@ -1,7 +1,7 @@
 # Tareas para Gemini: plan del 17/10/2026 (Restorify al nivel de los programas de pago)
 
 > **Decidido por la persona responsable el 17/10/2026:** solo para Restorify, no para vender, y
-> sin SMS por ahora. El porqué de cada tarea está en [plan-saas-2026-10.md](plan-saas-2026-10.md).
+> sin SMS por ahora. El porqué de cada tarea está en [plan-saas-2026-10.md](../plan-saas-2026-10.md).
 >
 > - **Arquitecto y verificación:** Claude Code. **Implementa:** Gemini 3.8 Flash High
 >   (Antigravity), en una copia aislada y sin terminal.

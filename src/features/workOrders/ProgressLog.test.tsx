@@ -7,6 +7,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test/renderWithProviders';
+import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import type { PreparedMedia } from '../../types/database';
 
 const VOICE_NOTE: PreparedMedia = {
@@ -137,5 +138,81 @@ describe('ProgressLog y el botón «atrás» (04/11/2026)', () => {
     });
 
     expect(screen.getByRole('button', { name: 'Eliminar' })).toBeDisabled();
+  });
+
+  it('con un avance a medias, navegar por el menú abre ChoiceDialog; «Seguir editando» se queda y «Descartar» limpia y navega', async () => {
+    const user = userEvent.setup();
+    const proceed = vi.fn();
+    function NavTrigger() {
+      const { requestNavigation } = useUnsavedChanges();
+      return (
+        <button type="button" onClick={() => requestNavigation(proceed)}>
+          Navegar por menú
+        </button>
+      );
+    }
+
+    const baseProps = {
+      entries: [],
+      media: [],
+      pending: [],
+      canEdit: true,
+      busy: false,
+      isAdmin: false,
+      userId: 'user-mecanico',
+      onAdd: vi.fn(async () => true),
+      onRemove: vi.fn(async () => {}),
+      onToggleEntryVisibility: vi.fn(),
+      onToggleVisibility: vi.fn(),
+      onDeleteMedia: vi.fn(),
+    };
+
+    const { rerender } = renderWithProviders(
+      <>
+        <NavTrigger />
+        <ProgressLog {...baseProps} />
+      </>
+    );
+
+    // Sin nada escrito navega directo sin preguntar.
+    await user.click(screen.getByRole('button', { name: 'Navegar por menú' }));
+    expect(proceed).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+
+    // Con texto escrito abre ChoiceDialog y detiene la navegación.
+    await user.type(screen.getByPlaceholderText(/Describe el trabajo realizado/), 'Falta revisar manguera');
+    await user.click(screen.getByRole('button', { name: 'Navegar por menú' }));
+    expect(proceed).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('¿Descartar este avance?');
+
+    // «Seguir editando» conserva la nota y no navega.
+    await user.click(screen.getByRole('button', { name: 'Seguir editando' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('Falta revisar manguera')).toBeInTheDocument();
+    expect(proceed).toHaveBeenCalledTimes(1);
+
+    // Mientras guarda (busy: true), el guardia devuelve false sin abrir diálogo ni navegar.
+    rerender(
+      <>
+        <NavTrigger />
+        <ProgressLog {...baseProps} busy={true} />
+      </>
+    );
+    await user.click(screen.getByRole('button', { name: 'Navegar por menú' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(proceed).toHaveBeenCalledTimes(1);
+
+    // Al volver a busy: false y elegir «Descartar», limpia la nota y navega.
+    rerender(
+      <>
+        <NavTrigger />
+        <ProgressLog {...baseProps} busy={false} />
+      </>
+    );
+    await user.click(screen.getByRole('button', { name: 'Navegar por menú' }));
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('¿Descartar este avance?');
+    await user.click(screen.getByRole('button', { name: 'Descartar' }));
+    expect(screen.queryByDisplayValue('Falta revisar manguera')).not.toBeInTheDocument();
+    expect(proceed).toHaveBeenCalledTimes(2);
   });
 });

@@ -7,6 +7,7 @@ import {
   ADMIN_USER,
   MECHANIC_USER,
   SEDE_CENTRO,
+  SEDE_NORTE,
 } from '../../test/renderWithProviders';
 import { useWorkOrderDetail } from './useWorkOrderDetail';
 import type { CommissionEstimate, WorkOrder } from '../../types/database';
@@ -84,6 +85,7 @@ function TestHarness() {
       <button onClick={() => void api.open('ord-test-42')}>Open 42</button>
       <button onClick={() => void api.open('ord-tech-99')}>Open 99</button>
       <div data-testid="order-loaded">{api.order ? api.order.id : 'none'}</div>
+      <div data-testid="order-sede">{api.orderSede?.id ?? 'none'}</div>
       <div data-testid="estimate-loaded">
         {api.commissionEstimate ? String(api.commissionEstimate.mi_total) : 'none'}
       </div>
@@ -174,5 +176,25 @@ describe('useWorkOrderDetail parallel query execution (G2)', () => {
       expect(mocks.getEstimate).toHaveBeenCalledWith('ord-tech-99');
     });
     expect(screen.getByTestId('order-loaded').textContent).toBe('ord-tech-99');
+  });
+
+  it('expone orderSede desde order.sede_id aunque la sede elegida en sesión sea otra', async () => {
+    mocks.auth.current = authValue(ADMIN_USER, SEDE_CENTRO);
+    mocks.getWorkOrderDetail.mockResolvedValue({
+      ...baseOrder,
+      id: 'ord-norte-1',
+      sede_id: SEDE_NORTE.id,
+    });
+    mocks.getEstimate.mockResolvedValue(mockEstimate);
+
+    renderWithProviders(<TestHarness />);
+    expect(screen.getByTestId('order-sede').textContent).toBe(SEDE_CENTRO.id);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open 42' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('order-loaded').textContent).toBe('ord-norte-1');
+    });
+    expect(screen.getByTestId('order-sede').textContent).toBe(SEDE_NORTE.id);
   });
 });

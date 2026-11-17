@@ -13,6 +13,7 @@ export default function ThemeCard() {
       </h3>
       <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
         <button
+          type="button"
           className={`btn ${theme === 'dark' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setTheme('dark')}
           style={{ flex: 1 }}
@@ -20,6 +21,7 @@ export default function ThemeCard() {
           <Moon size={16} /> {t('settings.themeDark')}
         </button>
         <button
+          type="button"
           className={`btn ${theme === 'light' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setTheme('light')}
           style={{ flex: 1 }}

@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test/renderWithProviders';
+import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import type { OrderInspection, OrderMedia } from '../../types/database';
 
 const mocks = vi.hoisted(() => ({
@@ -295,5 +296,56 @@ describe('PointInspection', () => {
     const img = await screen.findByAltText('Pastillas delanteras');
     expect(img).toHaveAttribute('src', 'https://firmada.example/pt1-thumb.webp?token=x');
     expect(mocks.signUrls).toHaveBeenCalledWith(['sede-1/ord-1/pt1-thumb.webp']);
+  });
+
+  it('con una nota sin guardar, navegar por el menú abre ChoiceDialog; «Seguir editando» conserva la nota y «Descartar» limpia y navega', async () => {
+    mocks.getForOrder.mockResolvedValueOnce(sampleInspectionPending);
+    const user = userEvent.setup();
+    const proceed = vi.fn();
+
+    function NavTrigger() {
+      const { requestNavigation } = useUnsavedChanges();
+      return (
+        <button type="button" onClick={() => requestNavigation(proceed)}>
+          Navegar por menú
+        </button>
+      );
+    }
+
+    renderWithProviders(
+      <>
+        <NavTrigger />
+        <PointInspection
+          orderId="ord-1"
+          orderSedeId="sede-1"
+          canEdit={true}
+          isAdmin={true}
+          isDelivered={false}
+          media={[]}
+          pendingUploads={[]}
+          onAddMedia={vi.fn()}
+        />
+      </>
+    );
+
+    await screen.findByText('Pastillas delanteras');
+    await user.click(screen.getAllByRole('button', { name: 'Agregar nota' })[0]);
+    await user.type(screen.getByPlaceholderText(/Observaciones sobre este punto/), 'Pastilla cristalizada');
+
+    await user.click(screen.getByRole('button', { name: 'Navegar por menú' }));
+    expect(proceed).not.toHaveBeenCalled();
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('¿Descartar la nota?');
+
+    await user.click(screen.getByRole('button', { name: 'Seguir editando' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('Pastilla cristalizada')).toBeInTheDocument();
+    expect(proceed).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Navegar por menú' }));
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('¿Descartar la nota?');
+    await user.click(screen.getByRole('button', { name: 'Descartar' }));
+
+    expect(screen.queryByPlaceholderText(/Observaciones sobre este punto/)).not.toBeInTheDocument();
+    expect(proceed).toHaveBeenCalledTimes(1);
   });
 });

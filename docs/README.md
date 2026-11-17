@@ -17,6 +17,7 @@ entenderlo, desplegarlo y probarlo completo sin tener que preguntarle a nadie.
 | **Salir a producción**: bloqueantes, plan del día y vuelta atrás | [salida-a-produccion.md](historico/salida-a-produccion.md) |
 | **Entender el sistema** antes de tocar código | [radiografia.md](radiografia.md) (resumen y cifras) → [planos.md](planos.md) (diagramas) → [arquitectura.md](arquitectura.md) (a fondo) → [reglas-de-negocio.md](reglas-de-negocio.md) |
 | Saber **qué está hecho, qué falta publicar y quién hizo qué** (o retomar el trabajo de otro agente) | [bitacora.md](bitacora.md) |
+| Saber **qué sigue y por qué**: cómo debe funcionar el programa, las decisiones de arquitectura, la hoja de ruta y cómo se reparte el trabajo entre el arquitecto y los agentes | [plan-arquitectura-2026-11.md](plan-arquitectura-2026-11.md) |
 | **Cambiar una parte concreta** (Finanzas, la entrega, el portal…) y no saber a dónde ir | [mapa-de-secciones.md](mapa-de-secciones.md) |
 | Saber **qué tan sano está el proyecto hoy**: estructura, base de datos, operación y qué hacer primero | [evaluacion-2026-10.md](historico/evaluacion-2026-10.md) |
 | Ver **el plan de la reunión del 03/10/2026** (fases F0–F7, decisiones del taller; su estado está en la bitácora) | [plan-mejoras-2026-10.md](historico/plan-mejoras-2026-10.md) |
@@ -66,13 +67,13 @@ edge functions y el despliegue.
 
 **[planos.md](planos.md)** — Los planos en diagramas: las capas, el mapa de pantallas, el ciclo de
 vida de una orden, las tablas y cómo se relacionan, el camino del dinero y de las comisiones, lo
-que ve el cliente, los avisos, quién puede hacer qué y cómo sale un cambio. Cubre hasta la migración `028` (con el mapa de módulos actualizado al `15/11/2026`): lo de `029` a `044` está en [arquitectura.md](arquitectura.md) y [ai-context.md](ai-context.md).
+que ve el cliente, los avisos, quién puede hacer qué y cómo sale un cambio. Cubre hasta la migración `028` (con el mapa de módulos actualizado al `15/11/2026`): lo de `029` a `045` está en [arquitectura.md](arquitectura.md) y [ai-context.md](ai-context.md).
  
 
 **[arquitectura.md](arquitectura.md)** — La arquitectura a fondo, para quien va a tocar el código:
 el mapa del repositorio, el modelo de datos, dónde vive la lógica de negocio (triggers y RPC),
 seguridad y permisos, el servidor, el frontend por dentro, cómo se escriben migraciones, cómo
-levantar el proyecto y las trampas que ya mordieron a alguien. Actualizado en mapa de código y reglas al `15/11/2026` (última migración `044`; donde no coincida, manda [ai-context.md](ai-context.md)).
+levantar el proyecto y las trampas que ya mordieron a alguien. Actualizado en mapa de código y reglas al `16/11/2026` (última migración `045`; donde no coincida, manda [ai-context.md](ai-context.md)).
  
  
 
@@ -117,7 +118,7 @@ línea, las tres formas de autorizar (firma, enlace, registro del admin), qué c
 el dinero, qué ve cada quien y diagnóstico.
 
 **[evolucion.md](evolucion.md)** — La historia del proyecto: de la demo a las fases del
-cliente y los cambios de la reunión con el taller, las migraciones (con detalle hasta la 54 y resumen hasta la 98 / `044`; las intermedias, en la bitácora) con lo que hizo cada
+cliente y los cambios de la reunión con el taller, las migraciones (con detalle hasta la 54 y resumen hasta la 99 / `045`; las intermedias, en la bitácora) con lo que hizo cada
 una, las decisiones que se reemplazaron y cómo creció la red de pruebas.
 
 **[manual-de-pruebas.md](manual-de-pruebas.md)** — Para la persona que prueba la
@@ -222,14 +223,14 @@ El estado al día —qué está hecho, qué falta publicar y quién hizo qué—
 **[bitacora.md](bitacora.md#estado)**, y cada agente lo actualiza al terminar un bloque de trabajo.
 Las cifras del proyecto están en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto).
 
-En resumen, al 15/11/2026: el taller usa el sistema desde el 29/09/2026 (ese día la base se limpió
+En resumen, al 16/11/2026: el taller usa el sistema desde el 29/09/2026 (ese día la base se limpió
 para la prueba); las seis fases del cliente, la auditoría, la revisión previa a producción, las
 reuniones con el taller (29/09 y 03/10), sus pedidos del 05/10 y 06/10, las mejoras de noviembre
 (catálogo de trabajos, inspección por puntos, reloj e indicadores, próximo servicio) y la auditoría
-del 13–15/11/2026 (migraciones `043` y `044` aplicadas hoy en producción, división modular del frontend y
+del 13–15/11/2026 (migraciones `043` y `044` aplicadas en producción el 15/11/2026 y la `045` el 16/11/2026, división modular del frontend y
 edge functions con pruebas en Deno 2) están hechos. La historia de cada etapa está en [evolucion.md](evolucion.md).
 
-Pendiente fuera del código: un proyecto de staging remoto en Supabase (las E2E locales corren con `npm run test:e2e:local`), Sentry en producción, que Hostinger publique
+Pendiente fuera del código: un proyecto de staging remoto en Supabase (las E2E locales corren con `npm run test:e2e:local`), `SENTRY_AUTH_TOKEN` en Hostinger para subir source maps (`VITE_SENTRY_DSN` ya está configurado), que Hostinger publique
 la rama `produccion` (hoy publica `main`) y las decisiones del taller sobre el pago a empleados
 ([pagos-a-empleados.md](pagos-a-empleados.md)), el texto legal
 ([plan-legal-y-privacidad.md](plan-legal-y-privacidad.md)) y el impuesto. Antes de atender

@@ -86,8 +86,9 @@ export default function DeleteSedeModal({ sede, onClose, onDeleted }: DeleteSede
       }
       footer={
         <>
-          <button className="btn btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
+          <button type="button" className="btn btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
           <button
+            type="button"
             className="btn btn-danger"
             onClick={confirmDeleteSede}
             disabled={

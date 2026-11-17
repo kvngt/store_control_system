@@ -3,7 +3,7 @@
 > **Restaurado el 11/10/2026.** Este documento se perdió en la limpieza automática del 06/10/2026
 > (commit `1955f30`, que fusionó la arquitectura y los planos en uno más corto, y `ec689da`, que
 > lo reemplazó por [radiografia.md](radiografia.md)). Se recuperó tal como estaba el 05/10/2026.
-> Puesto al día el 15/11/2026 con las migraciones hasta `20261010000044` (incluidas `029`–`039`: historial, comisión por tarea, hallazgos, pago mixto, listo para entregar, idioma del cliente, teléfonos por sede, seguro, parqueo, próximo servicio y sticker, autorización en recepción, marcas de daños, enlace al crear la orden, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, origen de movimientos en finanzas y unicidad de VIN/placa; y `040`–`044`: reglas de auditoría del 13–15/11/2026), además de la división modular de `src/` y `supabase/functions/`.
+> Puesto al día el 16/11/2026 con las migraciones hasta `20261010000045` en el repositorio (`043` y `044` aplicadas en producción el 15/11/2026 y la `045` el 16/11/2026), incluidas `029`–`039`: historial, comisión por tarea, hallazgos, pago mixto, listo para entregar, idioma del cliente, teléfonos por sede, seguro, parqueo, próximo servicio y sticker, autorización en recepción, marcas de daños, enlace al crear la orden, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, origen de movimientos en finanzas y unicidad de VIN/placa; `040`–`044`: reglas de auditoría del 13–15/11/2026; y `045`: método de pago en egresos de comisiones), además de la división modular de `src/` y `supabase/functions/`.
 > Donde no coincida, mandan [ai-context.md](ai-context.md) y
 > [mapa-de-secciones.md](mapa-de-secciones.md); lo pendiente de actualizar está en la
 > [bitácora](bitacora.md#bitácora-de-traspaso-entre-agentes).
@@ -219,16 +219,19 @@ supabase/
                                                         `gemini.ts` (`pedirJsonAGemini`, `DEFAULT_GEMINI_MODEL`),
                                                         `internal.ts`, `caller.ts`, `test_doubles.ts`, `email/templates.ts`
   tests/database/                pruebas pgTAP
+  schema/actual.sql              esquema vigente en un solo archivo (generado con `npm run db:schema`)
   config.toml
 
 e2e/                             pruebas Playwright
 scripts/                         check-migrations (db:check), db-donde (db:donde),
-                                 db-types.mjs (db:types), e2e-local.mjs (test:e2e:local),
+                                 db-types.mjs (db:types), db-schema (db:schema),
+                                 e2e-local.mjs (test:e2e:local),
                                  copy-pdf-worker, generate-pwa-icons, reset-test-data.sql
   admin/                         limpiar-datos.sql, limpiar-operacion.sql, empezar-de-cero.sql
                                  y crear-primer-admin.sql (solo quien administra, con su
                                  aprobación)
   qa/api-security.mjs            npm run qa:security: seguridad contra la API desplegada
+  qa/security-local.mjs          npm run qa:security:local: los 209 casos contra la base local
   qa/estado-orden.sql            todo lo que la base sabe de una orden (solo lectura)
 docs/                            esta documentación
 ```
@@ -842,6 +845,7 @@ desde el panel de Supabase.
 ```bash
 npm run db:check                          # qué falta aplicar en el proyecto enlazado
 npm run db:donde -- sync_order_commissions  # en qué migración está la versión vigente
+npm run db:schema                         # regenera supabase/schema/actual.sql desde la base local
 npx supabase db push --dry-run            # simulacro
 npx supabase db push --linked             # aplicar
 ```
@@ -849,7 +853,7 @@ npx supabase db push --linked             # aplicar
 Antes de aplicar a producción: respaldo, staging y orden de publicación en
 [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación).
 
-Nombre: `AAAAMMDDHHMMSS_descripcion.sql`, **posterior a la última que haya en `supabase/migrations/` (hoy `20261010000044`)**, no según la fecha de hoy. Hay migraciones aplicadas con marcas de tiempo futuras: si se nombra una migración con la fecha de hoy quedaría antes de la última y `db push` no la aplicaría sin `--include-all`. El número total de migraciones vigentes se consulta en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto). El build estampa la migración más nueva (`__SCHEMA_VERSION__`) y la app la compara con `app_schema_version()`: si la base está atrasada, `SchemaDriftBanner` lo dice en pantalla.
+Nombre: `AAAAMMDDHHMMSS_descripcion.sql`, **posterior a la última que haya en `supabase/migrations/` (hoy `20261010000045`)**, no según la fecha de hoy. Hay migraciones aplicadas con marcas de tiempo futuras: si se nombra una migración con la fecha de hoy quedaría antes de la última y `db push` no la aplicaría sin `--include-all`. El número total de migraciones vigentes se consulta en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto). El build estampa la migración más nueva (`__SCHEMA_VERSION__`) y la app la compara con `app_schema_version()`: si la base está atrasada, `SchemaDriftBanner` lo dice en pantalla.
 
 ### Cómo escribirlas
 
@@ -894,14 +898,16 @@ no salen de `.env.local` sino del panel de Hostinger, que compila la rama config
 ([deployment.md §3](deployment.md#3-variables-del-frontend)).
 
 ```bash
-npm run build           # tsc -b && vite build → dist/
-npm run lint            # oxlint
-npm test                # Vitest
-npm run test:functions  # edge functions con Deno 2
-npm run test:db         # pgTAP (requiere `npx supabase start`, con Docker)
-npm run test:e2e:local  # Playwright contra la base local (Docker)
-npm run test:e2e        # Playwright contra la URL configurada
-npm run db:types        # regenera src/types/supabase.gen.ts desde la base local
+npm run build             # tsc -b && vite build → dist/
+npm run lint              # oxlint
+npm test                  # Vitest
+npm run test:functions    # edge functions con Deno 2
+npm run test:db           # pgTAP (requiere `npx supabase start`, con Docker)
+npm run test:e2e:local    # Playwright contra la base local (Docker)
+npm run test:e2e          # Playwright contra la URL configurada
+npm run qa:security:local # seguridad de la API contra la base local (Docker)
+npm run db:types          # regenera src/types/supabase.gen.ts desde la base local
+npm run db:schema         # regenera supabase/schema/actual.sql desde la base local (verificado por CI)
 ```
 
 Para desarrollo diario suele apuntarse al proyecto alojado en `.env.local`; las pruebas
@@ -1014,5 +1020,5 @@ aceptarla (`aprobar_comision` o `aprobar_comisiones`) antes de que el proceso de
 
 ---
 
-*Última revisión: 15 de noviembre de 2026 (migraciones hasta `20261010000044`).*
+*Última revisión: 16 de noviembre de 2026 (migraciones hasta `20261010000045` en el repositorio; 99 aplicadas en producción).*
 

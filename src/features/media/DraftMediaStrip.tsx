@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Mic, Play, Video, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { formatDuration } from '../../lib/media/mime';
@@ -7,13 +7,19 @@ import MediaLightbox from './MediaLightbox';
 
 /** Una object URL que vive lo que vive el componente que la pide. */
 function useObjectUrl(source: Blob | null) {
-  const url = useMemo(() => (source ? URL.createObjectURL(source) : null), [source]);
-  useEffect(
-    () => () => {
-      if (url) URL.revokeObjectURL(url);
-    },
-    [url]
-  );
+  // La URL se crea DENTRO del efecto y se revoca en su limpieza: con `useMemo`, el modo estricto
+  // de React revocaba la URL al desmontar y volvía a montar con la misma, ya muerta (la miniatura
+  // salía rota en desarrollo: `blob:… ERR_FILE_NOT_FOUND`).
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!source) {
+      setUrl(null);
+      return;
+    }
+    const created = URL.createObjectURL(source);
+    setUrl(created);
+    return () => URL.revokeObjectURL(created);
+  }, [source]);
   return url;
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Eye, EyeOff, Mic, Play, Trash2, Video } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { formatDuration } from '../../lib/media/mime';
@@ -25,13 +25,17 @@ interface MediaGalleryProps {
 function PendingTile({ item }: { item: UploadItem }) {
   const { t } = useLanguage();
   const source = item.thumb ?? (item.tipo === 'foto' ? item.blob : null);
-  const url = useMemo(() => (source ? URL.createObjectURL(source) : null), [source]);
-  useEffect(
-    () => () => {
-      if (url) URL.revokeObjectURL(url);
-    },
-    [url]
-  );
+  // Creada dentro del efecto, no con `useMemo`: ver `useObjectUrl` en DraftMediaStrip.tsx.
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!source) {
+      setUrl(null);
+      return;
+    }
+    const created = URL.createObjectURL(source);
+    setUrl(created);
+    return () => URL.revokeObjectURL(created);
+  }, [source]);
 
   const label =
     item.estado === 'error'

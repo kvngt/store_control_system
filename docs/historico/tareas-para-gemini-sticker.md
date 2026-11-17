@@ -81,7 +81,7 @@ CREATE TABLE public.orden_proximo_servicio (
   programado_en   TIMESTAMPTZ,
   -- La sugerencia del técnico, mientras administración no la acepta ni la descarta.
   sugerido_fecha  DATE,
-  sugerido_millas INTEGER CHECK (sugerido_millas IS NULL OR sugerido_millas >= 0),
+  sugerido_millas INTEGER CHECK (sugerido_millas IS NULL OR millas >= 0),
   sugerido_nota   TEXT CHECK (sugerido_nota IS NULL OR char_length(sugerido_nota) <= 120),
   sugerido_por    UUID REFERENCES public.perfiles(id) ON DELETE SET NULL,
   sugerido_en     TIMESTAMPTZ,

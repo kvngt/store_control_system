@@ -9,7 +9,10 @@ completo, empieza por **[docs/traspaso.md](docs/traspaso.md)**. Para ver cómo e
 **Si retomas trabajo en curso** (varios modelos se turnan): la tabla de estado y la
 **bitácora de traspaso** están en
 **[docs/bitacora.md](docs/bitacora.md#bitácora-de-traspaso-entre-agentes)**.
-Léela antes de empezar y agrega tu entrada al terminar cada bloque de trabajo.
+Léela antes de empezar y agrega tu entrada al terminar cada bloque de trabajo. **Qué sigue y en
+qué orden** (las decisiones de arquitectura, la hoja de ruta y quién hace qué) está en
+**[docs/plan-arquitectura-2026-11.md](docs/plan-arquitectura-2026-11.md)**: no empieces una
+función nueva que no esté ahí.
 
 ## Lo mínimo
 
@@ -33,7 +36,7 @@ Léela antes de empezar y agrega tu entrada al terminar cada bloque de trabajo.
   documentación decía `produccion`, ver [docs/historico/evaluacion-2026-10.md](docs/historico/evaluacion-2026-10.md#5-operación-y-despliegue)):
   un push a `main` sale en vivo en uno o dos minutos, sin esperar al CI.
 - **Migraciones nuevas: nómbralas después de la última** que haya en `supabase/migrations/`
-  (hoy `20261010000044`), no con la fecha de hoy. Hay migraciones aplicadas con fecha futura y
+  (hoy `20261010000045`), no con la fecha de hoy. Hay migraciones aplicadas con fecha futura y
   una más vieja que la última no se aplica con `db push`.
 - **Commits solo cuando se piden.**
 
@@ -62,6 +65,7 @@ Antes de cambiar una pantalla:
 npm run lint && npx tsc -b && npm test && npm run build
 npx supabase start && npm run test:db     # si tocaste SQL (necesita Docker)
 npm run test:e2e:local                    # Playwright contra la base local (si tocaste pantallas)
+npm run qa:security:local                 # seguridad de la API contra la base local (Docker)
 npm run qa:security                       # después de aplicar migraciones de permisos
 ```
 

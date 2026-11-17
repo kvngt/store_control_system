@@ -110,7 +110,7 @@ Desde F7 es la vista **Tablero** de Órdenes, no una ruta aparte (`/kanban` redi
 | Servicios | `commissions.service.ts`, `employees.service.ts`, `users.service.ts` (edge functions de empleados) |
 | Base | tablas `comisiones`, `comision_pagos`, `perfiles_pago`; `_reparto_comisiones` (**la única cuenta**), `sync_order_commissions`, `comisiones_estimadas`, `pay_commissions`, `resumen_empleado` |
 | Edge functions | `create-employee`, `update-employee`, `delete-employee` |
-| Pruebas | `Employees.pay.test.tsx`, `Employees.users.test.tsx`, `CommissionEstimateCard.test.tsx`, `TaskEditor.test.tsx`, `LaborTable.test.tsx`, `DeliveryModal.test.tsx`, `workOrders.service.test.ts` (lo que manda la pantalla), `styles/laborMobile.test.ts`; pgTAP `01`, `12`, `13`, `19` (comisión por tarea) |
+| Pruebas | `Employees.pay.test.tsx`, `Employees.users.test.tsx`, `CommissionEstimateCard.test.tsx`, `TaskEditor.test.tsx`, `LaborTable.test.tsx`, `DeliveryModal.test.tsx`, `workOrders.service.test.ts` (lo que manda la pantalla), `styles/laborMobile.test.ts`; pgTAP `01`, `12`, `13`, `19` (comisión por tarea), `49` (`49_egreso_de_comision_con_metodo.test.sql`); e2e `qa-comisiones.spec.ts` (`COM-01`) |
 | Documento | [comisiones.md](comisiones.md) (cómo funciona) y [pagos-a-empleados.md](pagos-a-empleados.md) (propuesta pendiente) |
 
 ## Proceso del taller (05/10/2026, `20261010000016`–`18`)

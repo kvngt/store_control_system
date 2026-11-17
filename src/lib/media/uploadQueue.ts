@@ -207,6 +207,19 @@ export class MediaUploadQueue {
     this.abortRunning();
     if (this.retryTimer) clearTimeout(this.retryTimer);
     this.listeners.clear();
+    // Sin usuario: si la cola revive (`resume`), `setUser` vuelve a leer lo pendiente en vez de
+    // creer que ya lo tiene.
+    this.userId = null;
+  }
+
+  /**
+   * Revive una cola desechada. Hace falta porque React, en modo estricto (desarrollo), monta,
+   * desmonta y vuelve a montar cada componente sobre la MISMA cola: sin esto quedaba desechada
+   * para siempre y con `npm run dev` ninguna foto subía (la bandeja se quedaba en «0 de 1»).
+   * En producción el proveedor se monta una vez y esto no cambia nada.
+   */
+  resume() {
+    this.disposed = false;
   }
 
   private abortRunning() {

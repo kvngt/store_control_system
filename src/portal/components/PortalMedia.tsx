@@ -104,11 +104,12 @@ export function PortalViewer({ media, s, onClose, onPrev, onNext }: PortalViewer
 
   return (
     <div className="lightbox-overlay" onClick={onClose} role="dialog" aria-modal="true">
-      <button className="lightbox-close" onClick={onClose} aria-label={s.close}>
+      <button type="button" className="lightbox-close" onClick={onClose} aria-label={s.close}>
         <X size={20} />
       </button>
       {onPrev && (
         <button
+          type="button"
           className="lightbox-nav is-prev"
           onClick={(e) => {
             e.stopPropagation();
@@ -128,6 +129,7 @@ export function PortalViewer({ media, s, onClose, onPrev, onNext }: PortalViewer
       </div>
       {onNext && (
         <button
+          type="button"
           className="lightbox-nav is-next"
           onClick={(e) => {
             e.stopPropagation();

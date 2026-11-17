@@ -264,9 +264,11 @@ Pantalla **Comisiones → Saldos pendientes → Pagar saldo**.
 - La foto va a un bucket **privado** (`comprobantes`) y se abre con un enlace
   firmado temporal, porque un cheque escaneado lleva número de cuenta.
 - El pago se registra automáticamente en Finanzas, categoría "planilla", como **un
-  egreso por cada orden** que cubre, vinculado a la orden y con el número de cheque
-  (migración `20261010000000`). La suma de esos egresos es exactamente el pago: la base lo
-  comprueba. Así el margen de cada orden (`balance_orden`) sale de Finanzas.
+  egreso por cada orden** que cubre, vinculado a la orden, con el **método de pago**
+  (`20261010000045`, si es efectivo, tarjeta, zelle, transferencia o cheque; si es otro, queda
+  vacío para que el pago no se caiga) y el número de cheque (migración `20261010000000`). La
+  suma de esos egresos es exactamente el pago: la base lo comprueba. Así el margen de cada orden
+  (`balance_orden`) sale de Finanzas.
 - **Un pago no se registra dos veces.** Si dos administradores (o dos pestañas) pagan las
   mismas comisiones a la vez, el segundo termina con "No hay comisiones pendientes para
   pagar en esta selección": la base bloquea las comisiones mientras registra el primero.

@@ -76,8 +76,8 @@ const LINKED_SECTION: Record<string, string> = { trabajos: 'mano_obra', tareas: 
  */
 export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOrderDetailProps) {
   const { t } = useLanguage();
-  const { confirmNavigation } = useUnsavedChanges();
-  const { user, currentSede, allSedes } = useAuth();
+  const { requestNavigation } = useUnsavedChanges();
+  const { user } = useAuth();
   const { showToast } = useToast();
   const isMobile = useIsMobile();
   // El idioma del PDF que se descarga: lo elige administración (05/10/2026).
@@ -162,10 +162,10 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   // Volver es la salida más usada del detalle, y descartaba un avance a medias
   // sin preguntar. Pasa por los mismos guardias que la navegación del menú.
   const handleBack = () => {
-    if (confirmNavigation()) onBack();
+    requestNavigation(onBack);
   };
 
-  const orderSede = (order && allSedes?.find((s) => s.id === order.sede_id)) || currentSede;
+  const orderSede = detail.orderSede;
 
   // ----- qué va en cada pestaña --------------------------------------------------
 

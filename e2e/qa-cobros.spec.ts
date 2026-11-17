@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   ADMIN_EMAIL,
   ADMIN_PASSWORD,
@@ -8,6 +8,7 @@ import {
   isLocalStack,
   login,
 } from './fixtures.js';
+import { RECEIPT, adminClient, createTestOrder } from './localData.js';
 
 // COB-01…03: los diálogos que mueven dinero, de punta a punta contra la base LOCAL.
 // Entregan órdenes y asientan movimientos, así que nunca corren contra el proyecto real
@@ -17,19 +18,6 @@ import {
 // se prueba por la interfaz es lo que hace la persona en el mostrador: el anticipo con cheque,
 // la entrega con su método y el depósito del alta. Lo que queda en la base se comprueba al final
 // con la misma sesión de administración.
-
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? '';
-const ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY ?? '';
-
-// Una imagen JPEG mínima para el comprobante (el campo acepta image/* y PDF).
-const RECEIPT = {
-  name: 'comprobante.jpg',
-  mimeType: 'image/jpeg',
-  buffer: Buffer.from(
-    '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=',
-    'base64',
-  ),
-};
 
 test.describe.configure({ mode: 'serial' });
 
@@ -42,54 +30,15 @@ test.describe('COB | Cobros: anticipo, entrega y depósito del alta', () => {
   let orderNumber = '';
 
   test.beforeAll(async () => {
-    db = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } });
-    const { data: auth, error: authError } = await db.auth.signInWithPassword({
-      email: ADMIN_EMAIL!,
-      password: ADMIN_PASSWORD!,
-    });
-    if (authError) throw authError;
-    const userId = auth.user.id;
-    const { data: perfil, error: perfilError } = await db.from('perfiles').select('sede_id').eq('id', userId).single();
-    if (perfilError) throw perfilError;
-    const sedeId = perfil.sede_id as string;
-
-    const tag = `${Date.now()}`.slice(-7);
-    const { data: cliente, error: clienteError } = await db
-      .from('clientes')
-      // Sin correo, como la app: la columna guarda '' (el cliente puede no tener correo).
-      .insert({ sede_id: sedeId, nombre: `${TEST_DATA_PREFIX} Cobro ${tag}`, telefono: `+1410${tag}`, email: '', direccion: '' })
-      .select('id')
-      .single();
-    if (clienteError) throw clienteError;
-    const { data: vehiculo, error: vehiculoError } = await db
-      .from('vehiculos')
-      .insert({ sede_id: sedeId, cliente_id: cliente.id, marca: 'Toyota', modelo: 'Camry', anio: 2019, color: 'Gris', vin: '', placa: `PW${tag}`, placa_estado: 'MD' })
-      .select('id')
-      .single();
-    if (vehiculoError) throw vehiculoError;
-
+    db = await adminClient();
     // Una tarea de $400 autorizada en el mostrador: la orden queda en proceso y con algo que cobrar.
-    const { data: orden, error: ordenError } = await db.rpc('create_work_order', {
-      p_order: {
-        sede_id: sedeId,
-        cliente_id: cliente.id,
-        vehiculo_id: vehiculo.id,
-        tipo_trabajo: 'mecanica',
-        millas_ingreso: 1000,
-        nivel_gasolina: '1/2',
-        deposito_inicial: 0,
-        inspeccion_360_notas: '',
-        fecha_estimada_entrega: new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10),
-        creado_por: userId,
-        autorizado_en_recepcion: true,
-      },
-      p_labor: [{ descripcion: `${TEST_DATA_PREFIX} Frenos`, costo: 400, especialidad: 'mecanica', reparto_heredado: false }],
-      p_parts: [],
-      p_assignments: [],
+    const orden = await createTestOrder(db, {
+      label: 'Cobro',
+      labor: [{ descripcion: `${TEST_DATA_PREFIX} Frenos`, costo: 400 }],
+      authorized: true,
     });
-    if (ordenError) throw ordenError;
-    orderId = (orden as { id: string }).id;
-    orderNumber = (orden as { numero_orden: string }).numero_orden;
+    orderId = orden.id;
+    orderNumber = orden.numero;
   });
 
   const movimientos = async () => {

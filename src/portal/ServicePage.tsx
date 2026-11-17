@@ -16,6 +16,7 @@ import { applySedeBranding } from '../lib/branding';
 import { formatPhone, telUrl, whatsAppUrl } from '../lib/phone';
 import { translateVehicleColor } from '../lib/vehicleColor';
 import { fetchService } from './portal.api';
+import { toDate } from './format';
 import { computeServiceStatus } from './serviceStatus';
 import {
   initialPortalLanguage,
@@ -34,10 +35,6 @@ type LoadState =
   | { kind: 'loading' }
   | { kind: 'error' }
   | { kind: 'loaded'; data: ServiceResponse };
-
-function toDate(value: string): Date {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00Z`) : new Date(value);
-}
 
 export default function ServicePage({ token }: ServicePageProps) {
   const [loadState, setLoadState] = useState<LoadState>({ kind: 'loading' });

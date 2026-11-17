@@ -29,15 +29,15 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
     return false;
   }, []);
 
-  const confirmNavigation = useCallback(() => {
+  const requestNavigation = useCallback((proceed: () => void) => {
     // Basta con que uno diga que no. Se para en el primero para no encadenar
     // dos confirmaciones seguidas, que es una forma segura de que alguien
     // acepte la segunda sin leerla.
-    if (slotRef.current && !slotRef.current()) return false;
+    if (slotRef.current && !slotRef.current(proceed)) return;
     for (const guard of guardsRef.current.keys()) {
-      if (!guard()) return false;
+      if (!guard(proceed)) return;
     }
-    return true;
+    proceed();
   }, []);
 
   // Also protect against closing the tab / hard refresh while dirty.
@@ -52,8 +52,8 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
   }, [anyDirty]);
 
   const value = useMemo(
-    () => ({ setGuard, registerGuard, confirmNavigation }),
-    [setGuard, registerGuard, confirmNavigation],
+    () => ({ setGuard, registerGuard, requestNavigation }),
+    [setGuard, registerGuard, requestNavigation],
   );
 
   return (

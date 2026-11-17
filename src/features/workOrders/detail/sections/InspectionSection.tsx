@@ -53,9 +53,11 @@ export default function InspectionSection({
           <Camera size={18} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
           {t('workOrders.inspection360')}
         </h3>
-        <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-4)', lineHeight: 1.6 }}>
-          {order.inspeccion_360_notas}
-        </p>
+        {Boolean(order.inspeccion_360_notas?.trim()) && (
+          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-4)', lineHeight: 1.6 }}>
+            {order.inspeccion_360_notas}
+          </p>
+        )}
 
         <div style={{ marginBottom: 'var(--space-4)' }}>
           <DamageDiagramEditor

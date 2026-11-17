@@ -20,10 +20,9 @@ vi.mock('../../context/auth.context', () => ({
 
 vi.mock('../../context/unsavedChanges.context', () => ({
   useUnsavedChanges: () => ({
-    confirmNavigation: (fn: () => void) => fn(),
-    markDirty: vi.fn(),
-    markPristine: vi.fn(),
-    isDirty: false,
+    requestNavigation: (proceed: () => void) => proceed(),
+    setGuard: vi.fn(),
+    registerGuard: vi.fn(() => () => {}),
   }),
 }));
 
@@ -104,6 +103,7 @@ describe('WorkOrderDetail - QuickActions markReady', () => {
       paidPools: new Set(),
       pendingUploads: [],
       isAdmin: true,
+      orderSede: null,
       userId: 'admin-1',
       requestedTab: null,
       open: vi.fn(),
@@ -212,6 +212,7 @@ describe('WorkOrderDetail - QuickActions markReady', () => {
       paidPools: new Set(),
       pendingUploads: [],
       isAdmin: true,
+      orderSede: null,
       userId: 'admin-1',
       requestedTab: null,
       open: vi.fn(),

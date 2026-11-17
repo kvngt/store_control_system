@@ -30,7 +30,13 @@ export default function MediaUploadsProvider({ children }: { children: React.Rea
     [queryClient]
   );
 
-  useEffect(() => () => queue.dispose(), [queue]);
+  // `resume` antes que nada: en modo estricto React desmonta y vuelve a montar este efecto sobre la
+  // misma cola, y sin revivirla quedaba desechada (ver `MediaUploadQueue.resume`). Va antes del
+  // efecto de `setUser`, que corre después en el mismo montaje.
+  useEffect(() => {
+    queue.resume();
+    return () => queue.dispose();
+  }, [queue]);
 
   useEffect(() => {
     void queue.setUser(user?.id ?? null);

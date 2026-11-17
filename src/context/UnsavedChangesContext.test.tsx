@@ -10,11 +10,11 @@ afterEach(cleanup);
 
 /** Deja el contexto a la vista de la prueba y registra los guardias que reciba. */
 function harness(guards: Guard[], slot?: Guard) {
-  const api: { confirmNavigation?: () => boolean; unregister: (() => void)[] } = { unregister: [] };
+  const api: { requestNavigation?: (proceed: () => void) => void; unregister: (() => void)[] } = { unregister: [] };
 
   function Consumer() {
     const ctx = useUnsavedChanges();
-    api.confirmNavigation = ctx.confirmNavigation;
+    api.requestNavigation = ctx.requestNavigation;
     if (api.unregister.length === 0) {
       for (const g of guards) api.unregister.push(ctx.registerGuard(g));
       if (slot) ctx.setGuard(slot);
@@ -33,7 +33,9 @@ function harness(guards: Guard[], slot?: Guard) {
 describe('UnsavedChanges: varios guardias a la vez', () => {
   it('deja salir cuando no hay ninguno', () => {
     const api = harness([]);
-    expect(api.confirmNavigation!()).toBe(true);
+    const proceed = vi.fn();
+    api.requestNavigation!(proceed);
+    expect(proceed).toHaveBeenCalledTimes(1);
   });
 
   // El hueco único hacía que dos formularios sucios se pisaran: el que se
@@ -41,32 +43,62 @@ describe('UnsavedChanges: varios guardias a la vez', () => {
   it('basta con que un guardia diga que no', () => {
     const si = vi.fn(() => true);
     const no = vi.fn(() => false);
+    const proceed = vi.fn();
     const api = harness([si, no]);
 
-    expect(api.confirmNavigation!()).toBe(false);
+    api.requestNavigation!(proceed);
+    expect(proceed).not.toHaveBeenCalled();
   });
 
   it('dar de baja uno deja vivo al otro', () => {
     const no = vi.fn(() => false);
+    const proceed = vi.fn();
     const api = harness([no]);
-    expect(api.confirmNavigation!()).toBe(false);
+    api.requestNavigation!(proceed);
+    expect(proceed).not.toHaveBeenCalled();
 
     api.unregister[0]();
 
-    expect(api.confirmNavigation!()).toBe(true);
+    api.requestNavigation!(proceed);
+    expect(proceed).toHaveBeenCalledTimes(1);
   });
 
   it('el hueco de setGuard sigue valiendo junto a los registrados', () => {
+    const proceed = vi.fn();
     const api = harness([() => true], () => false);
-    expect(api.confirmNavigation!()).toBe(false);
+    api.requestNavigation!(proceed);
+    expect(proceed).not.toHaveBeenCalled();
   });
 
   it('no encadena dos confirmaciones: para en el primero que dice que no', () => {
     const segundo = vi.fn(() => true);
+    const proceed = vi.fn();
     const api = harness([() => false, segundo]);
 
-    api.confirmNavigation!();
+    api.requestNavigation!(proceed);
 
+    expect(segundo).not.toHaveBeenCalled();
+    expect(proceed).not.toHaveBeenCalled();
+  });
+
+  it('si un guardia devuelve false y guarda proceed, no navega hasta que el guardia llama a proceed', () => {
+    let pendingProceed: (() => void) | undefined;
+    const segundo = vi.fn(() => true);
+    const guard: Guard = (proceed) => {
+      pendingProceed = proceed;
+      return false;
+    };
+    const proceed = vi.fn();
+    const api = harness([guard, segundo]);
+
+    api.requestNavigation!(proceed);
+
+    expect(proceed).not.toHaveBeenCalled();
+    expect(segundo).not.toHaveBeenCalled();
+    expect(pendingProceed).toBeDefined();
+
+    pendingProceed!();
+    expect(proceed).toHaveBeenCalledTimes(1);
     expect(segundo).not.toHaveBeenCalled();
   });
 });

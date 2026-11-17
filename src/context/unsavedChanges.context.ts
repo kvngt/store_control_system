@@ -7,7 +7,7 @@
 
 import { createContext, useContext } from 'react';
 
-export type Guard = () => boolean; // return true = OK to leave, false = user cancelled
+export type Guard = (proceed: () => void) => boolean; // return true = OK to leave now, false = guard takes over (and calls proceed if user confirms)
 /**
  * Si de verdad hay algo sin guardar, sin preguntar. Lo usa el aviso del navegador al cerrar la
  * pestaña o recargar: sin él, avisaba con solo tener abierto el formulario aunque estuviera vacío.
@@ -30,7 +30,7 @@ interface UnsavedChangesContextType {
    * orden que se está creando.
    */
   registerGuard: (guard: Guard, isDirty?: DirtyCheck) => () => void;
-  confirmNavigation: () => boolean;
+  requestNavigation: (proceed: () => void) => void;
 }
 
 export const UnsavedChangesContext = createContext<UnsavedChangesContextType | undefined>(undefined);

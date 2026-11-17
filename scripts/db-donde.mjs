@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 const nombre = process.argv[2];
 if (!nombre || !/^[a-z_][a-z0-9_]*$/i.test(nombre)) {
   console.error('Uso: npm run db:donde -- <función | trigger | política | tabla>');
+  console.error('El estado completo del esquema `public` está en supabase/schema/actual.sql.');
   process.exit(2);
 }
 

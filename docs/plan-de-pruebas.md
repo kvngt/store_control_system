@@ -182,14 +182,14 @@ En el navegador: DevTools → Application → Local Storage → `sb-<ref>-auth-t
 | ID | P | Ejecuta | Comando | Esperado |
 |---|---|---|---|---|
 | AUT-01 | P0 | IA | `npm run lint` y `npx tsc -b` | Sin errores ni avisos |
-| AUT-02 | P0 | IA | `npm test` | Todas en verde (1.263 pruebas en 174 archivos al 15/11/2026) |
-| AUT-02b | P0 | IA | `npm run test:functions` | Todas en verde (102 pruebas Deno 2 de edge functions al 15/11/2026) |
+| AUT-02 | P0 | IA | `npm test` | Todas en verde (1.274 pruebas en 175 archivos al 16/11/2026) |
+| AUT-02b | P0 | IA | `npm run test:functions` | Todas en verde (102 pruebas Deno 2 de edge functions al 16/11/2026) |
 | AUT-03 | P0 | IA | `npm run build` | Termina sin errores |
 | AUT-04 | P0 | IA | `npm run db:check` | "Base de datos al día" |
-| AUT-05 | P0 | IA | `npx supabase start` y `npm run test:db` (requiere Docker) | Todos los archivos pgTAP en verde (48 archivos / 1.181 pruebas al 15/11/2026). Sin Docker: **BLOQUEADO** |
-| AUT-06 | P0 | IA | `npm run qa:security` | 0 FAIL (209 casos; el 15/11/2026 contra producción: 178 PASS + 31 SKIP). Los SKIP dicen qué falta (una cuenta o una orden) |
+| AUT-05 | P0 | IA | `npx supabase start` y `npm run test:db` (requiere Docker) | Todos los archivos pgTAP en verde (49 archivos / 1.193 pruebas al 16/11/2026). Sin Docker: **BLOQUEADO** |
+| AUT-06 | P0 | IA | `npm run qa:security:local` / `npm run qa:security` | 0 FAIL (209 casos; `qa:security:local` el 16/11/2026: 209 PASS, 0 FAIL, 0 SKIP; contra producción el 15/11/2026: 178 PASS + 31 SKIP sin cuentas/órdenes) |
 | AUT-07 | P1 | IA | `npm run qa:security` (con cuenta de técnico) | SEC-55 PASS. Ya no crea nada: desde que abrir una orden es solo de admin, el caso comprueba el rechazo |
-| AUT-08 | P1 | IA | `npm run test:e2e:local` (requiere Docker) | 80 pruebas en verde contra la base local (15/11/2026). Sin Docker, `npm run test:e2e` corre contra `.env.local` o salta sin `.env.test.local` |
+| AUT-08 | P1 | IA | `npm run test:e2e:local` (requiere Docker) | 85 casos contra la base local (16/11/2026: 84 en verde, `MED-01` en arreglo). Sin Docker, `npm run test:e2e` corre contra `.env.local` o salta sin `.env.test.local` |
 
 ---
 

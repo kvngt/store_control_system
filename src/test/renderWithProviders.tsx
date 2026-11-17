@@ -21,19 +21,24 @@ export function renderWithProviders(ui: ReactElement, { route = '/' }: { route?:
     defaultOptions: { queries: { retry: false, staleTime: 0 } },
   });
 
-  return render(
+  const wrap = (node: ReactElement) => (
     <QueryClientProvider client={queryClient}>
     <MemoryRouter initialEntries={[route]}>
       <ThemeProvider>
         <LanguageProvider>
           <ToastProvider>
-            <UnsavedChangesProvider>{ui}</UnsavedChangesProvider>
+            <UnsavedChangesProvider>{node}</UnsavedChangesProvider>
           </ToastProvider>
         </LanguageProvider>
       </ThemeProvider>
     </MemoryRouter>
     </QueryClientProvider>
   );
+
+  const result = render(wrap(ui));
+  // `rerender` de Testing Library reemplaza TODO el árbol: sin esto, volver a pintar con otras
+  // props dejaba el componente sin proveedores («useLanguage must be used within…»).
+  return { ...result, rerender: (node: ReactElement) => result.rerender(wrap(node)) };
 }
 
 // ---- Fixtures -----------------------------------------------------------

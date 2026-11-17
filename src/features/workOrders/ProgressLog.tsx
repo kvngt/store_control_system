@@ -98,8 +98,8 @@ export default function ProgressLog({
   });
 
   useEffect(
-    () => registerGuard(() => !dirtyRef.current || confirm(t('workOrders.confirmDiscardProgress')), () => dirtyRef.current),
-    [registerGuard, t],
+    () => registerGuard(guard.requestLeave, () => dirtyRef.current),
+    [registerGuard, guard.requestLeave],
   );
 
   const submit = async () => {

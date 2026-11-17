@@ -225,4 +225,42 @@ describe('WorkOrderCreateModal - Assistant (Wizard)', () => {
     expect(screen.queryAllByText(getTranslation('es', 'workOrders.validation.vehicleModel'))).toHaveLength(0);
     expect(screen.queryAllByText(getTranslation('es', 'workOrders.validation.vinLength'))).toHaveLength(0);
   });
+
+  it('cancels the markAdded highlight timeout when unmounting', async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderModal();
+
+    await waitFor(() => expect(currentStep()).toMatch(/Cliente/));
+    await user.selectOptions(screen.getByRole('combobox'), CUSTOMER.id);
+    await user.click(screen.getByRole('button', { name: /Siguiente/ }));
+
+    await waitFor(() => expect(currentStep()).toMatch(/Vehículo/));
+    await user.selectOptions(screen.getAllByRole('combobox')[0], VEHICLE.id);
+    await user.click(screen.getByRole('button', { name: /Siguiente/ }));
+
+    await waitFor(() => expect(currentStep()).toMatch(/Trabajos/));
+
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
+    try {
+      await user.click(document.getElementById('create-order-open') as HTMLElement);
+      await user.type(document.getElementById('create-order-description') as HTMLInputElement, 'Alineacion');
+      await user.type(document.getElementById('create-order-price') as HTMLInputElement, '100');
+      await user.click(document.getElementById('create-order-submit') as HTMLElement);
+
+      const timerIndices = setTimeoutSpy.mock.calls
+        .map((call, idx) => (call[1] === 2500 ? idx : -1))
+        .filter((idx) => idx !== -1);
+      expect(timerIndices).toHaveLength(1);
+      const timerHandle = setTimeoutSpy.mock.results[timerIndices[0]]?.value;
+      expect(timerHandle).toBeDefined();
+
+      unmount();
+
+      expect(clearTimeoutSpy).toHaveBeenCalledWith(timerHandle);
+    } finally {
+      setTimeoutSpy.mockRestore();
+      clearTimeoutSpy.mockRestore();
+    }
+  });
 });

@@ -27,6 +27,9 @@ actual** del sistema. Donde contradigan a los documentos de `docs/`, mandan los 
 | [plan-pedidos-2026-10-05.md](plan-pedidos-2026-10-05.md) | Los pedidos del taller del 05/10/2026, listos para programar | Implementados (ver [../bitacora.md](../bitacora.md)) |
 | [tareas-para-gemini.md](tareas-para-gemini.md) | Tareas para Gemini (10/10/2026): tipo de teléfono (oficina o celular) y WhatsApp por teléfono | Hecho en `20261010000026` y auditado |
 | [tareas-para-gemini-parqueo.md](tareas-para-gemini-parqueo.md) | Diseño para Gemini (10/10/2026): trabajo con seguro y módulo de cobro por parqueo | Hecho en `20261010000027`–`28`, auditado y corregido el 11/10/2026; lo vigente está en [parqueo.md](../parqueo.md) |
+| [tareas-para-gemini-sticker.md](tareas-para-gemini-sticker.md) | Tareas para Gemini (14/10/2026): sticker de próximo servicio con QR (Brother QL-810W) | Hecho en `20261010000029` y auditado el 14/10/2026 |
+| [tareas-para-gemini-adopcion.md](tareas-para-gemini-adopcion.md) | Tareas para Gemini (14–16/10/2026): fase 1 de adopción, escáner de VIN, dibujo de daños, patio del técnico y parte E | Hecho en `20261010000030`–`32`, verificado el 16/10/2026 |
+| [tareas-para-gemini-plan-2026-10.md](tareas-para-gemini-plan-2026-10.md) | Tareas para Gemini (17/10/2026): fase 0, trabajos agrupados y catálogo, inspección por puntos, horas, reloj e indicadores | Hecho en `20261010000033`–`36`, verificado el 17/10/2026 |
 | [comparativa-comercial-y-ux-2026-10.md](comparativa-comercial-y-ux-2026-10.md) | Restorify frente a los programas comerciales, y qué satura en la interfaz (11/10/2026) | Vigente como análisis: sus propuestas todavía no se implementan |
 
 El estado vigente está en [../bitacora.md](../bitacora.md#estado); el índice de la documentación, en

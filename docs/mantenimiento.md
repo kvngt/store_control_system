@@ -7,11 +7,12 @@ clientes reales. Pregunta de partida: **cuando haya que cambiar una parte en pro
 Dónde está cada parte: [mapa-de-secciones.md](mapa-de-secciones.md). Reglas que no se rompen:
 [ai-context.md](ai-context.md).
 
-> **Actualización al 15/11/2026:** la revisión del 1 de octubre de 2026 está en
-> [evaluacion-2026-10.md](historico/evaluacion-2026-10.md) (`P0-2` plan Pro ya hecho; Sentry y
-> staging remoto siguen pendientes, aunque las E2E locales corren con `npm run test:e2e:local`).
-> Los puntos `P1-2`, `P1-3`, `P2-3`, `P2-4` y `P2-7` de este documento ya se completaron entre
-> el 19/10 y el 15/11/2026. Las secciones 4 y 5 (salvo lo marcado como resuelto) siguen vigentes.
+> **Actualización al 16/11/2026:** la revisión del 1 de octubre de 2026 está en
+> [evaluacion-2026-10.md](historico/evaluacion-2026-10.md) (`P0-2` plan Pro ya hecho; staging
+> remoto sigue pendiente, aunque las E2E locales corren con `npm run test:e2e:local`; en Sentry,
+> `VITE_SENTRY_DSN` ya está en Hostinger y solo falta `SENTRY_AUTH_TOKEN`).
+> Los puntos `P1-1`, `P1-2`, `P1-3`, `P2-3`, `P2-4` y `P2-7` de este documento ya se completaron
+> entre el 19/10 y el 16/11/2026. Las secciones 4 y 5 (salvo lo marcado como resuelto) siguen vigentes.
 
 ---
 
@@ -64,14 +65,13 @@ las migraciones desde cero en cada cambio (CI).
 
 ### Riesgos para el mantenimiento
 
-**R-B1. La versión vigente de una función está repartida en migraciones.** Hay 98 migraciones (al 15/11/2026, hasta `20261010000044`; 161 funciones contadas al 11/10/2026 en la migración `028`, más las de `029` a `044`). Cuando una cambia, la migración nueva
+**R-B1. La versión vigente de una función está repartida en migraciones.** Hay 99 migraciones en el repositorio (al 16/11/2026, hasta `20261010000045`; 99 aplicadas en producción; 161 funciones contadas al 11/10/2026 en la migración `028`, más las de `029` a `045`). Cuando una cambia, la migración nueva
 la reescribe entera. `handle_order_delivery_payment` va por su quinta versión;
 `sync_order_commissions`, `pay_commissions`, `create_work_order`, `recalculate_order_totals` y
 `trg_guard_order_technician`, por la cuarta o posterior. El riesgo concreto: quien la cambie parte de una
 versión vieja y **deshace sin darse cuenta** un arreglo posterior. No da error: la migración
 se aplica y el arreglo desaparece.
-*Mitigación ya hecha:* `npm run db:donde -- <nombre>` dice en qué migración está la vigente, y `npm run db:types` regenera `src/types/supabase.gen.ts` validado contra `schema.contract.ts`.
-*Propuesta:* un archivo con el esquema actual completo, regenerado en cada migración (P1-1).
+*Mitigación ya hecha:* `npm run db:donde -- <nombre>` dice en qué migración está la vigente, `npm run db:types` regenera `src/types/supabase.gen.ts` validado contra `schema.contract.ts`, y `npm run db:schema` genera `supabase/schema/actual.sql` desde la base local (comprobado en CI).
 
 **R-B2. `ordenes_trabajo` tiene 20 triggers.** Entregar una orden dispara, en la misma
 transacción, el cobro, el costo de repuestos, las comisiones, el portal, los avisos y los
@@ -103,9 +103,10 @@ descuadra los cálculos posteriores de esa orden. Conocido desde la auditoría; 
 - **Las partes grandes ya están en módulos** (`features/workOrders/detail/`,
   `features/workOrders/intake/`, `features/settings/`, `portal/components/`, `media`,
   `notifications`, `employees`, `finance`).
-- **Red de pruebas amplia (al 15/11/2026):** 1.263 pruebas Vitest (174 archivos), 1.181 pruebas
-  pgTAP (48 archivos), 102 pruebas Deno 2 (`npm run test:functions`), 80 e2e contra la base
-  local (`npm run test:e2e:local`) y `qa:security`. TypeScript estricto, lint sin avisos, CI en
+- **Red de pruebas amplia (al 16/11/2026):** 1.274 pruebas Vitest (175 archivos), 1.193 pruebas
+  pgTAP (49 archivos), 102 pruebas Deno 2 (`npm run test:functions`), 85 e2e contra la base
+  local (`npm run test:e2e:local`; 84 en verde, `MED-01` en arreglo) y `qa:security:local`
+  (209 PASS, 0 FAIL, 0 SKIP; más `qa:security` contra producción). TypeScript estricto, lint sin avisos, CI en
   cada cambio (cifras vigentes en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto)).
 - **Portal del cliente aislado**: no importa nada de la app.
 
@@ -169,7 +170,7 @@ Una inconsistencia menor de estructura:
    `npx supabase db dump --linked --data-only --use-copy -f <carpeta fuera del repo>/datos-AAAAMMDD.sql`;
    sin `--data-only`, `db dump` guarda solo el esquema.
 2. **Staging** (cuando exista): aplicar ahí, correr `npm run qa:security`.
-3. En local (Docker): `npx supabase db reset && npm run test:db`, `npm run test:functions`, `npm run test:e2e:local` y `npm run db:types` si cambió el esquema. CI lo repite en cada cambio.
+3. En local (Docker): `npx supabase db reset && npm run test:db`, `npm run test:functions`, `npm run test:e2e:local`, `npm run qa:security:local`, y `npm run db:types` / `npm run db:schema` si cambió el esquema. CI lo repite en cada cambio.
 4. `npm run db:check`: qué se va a aplicar.
 5. **Publicar en este orden:** `db push` → funciones que cambiaron →
    push a `main` (hoy Hostinger publica `main`) → `npm run qa:security`
@@ -196,13 +197,13 @@ Una inconsistencia menor de estructura:
 |---|---|---|---|
 | P0-1 | **Proyecto de staging** en Supabase con las mismas migraciones, secretos propios y las cuentas de prueba | Probar migraciones, `qa:security` y e2e sin tocar el taller (R-B3) | 1–2 h |
 | P0-2 | **Plan Pro** (respaldos diarios) o, mientras tanto, respaldo manual antes de cada `db push` | R-B4 | 5 min |
-| P0-3 | **Sentry** (`VITE_SENTRY_DSN`) | Hoy nadie se entera de un error en el teléfono de un técnico | 15 min |
+| P0-3 | **Sentry (`SENTRY_AUTH_TOKEN`)** | `VITE_SENTRY_DSN` ya está en Hostinger (15/11/2026); falta crear el token en Sentry (`Settings → Auth Tokens`, permiso de subir source maps), agregar `SENTRY_AUTH_TOKEN` en Hostinger, volver a desplegar y comprobar con «Reportar un problema» (Configuración). Sin él, los errores llegan minificados | 15 min |
 
 ### P1 — bajo riesgo, alto valor (1 a 2 días; no tocan la base de producción)
 
 | # | Qué | Resuelve |
 |---|---|---|
-| P1-1 | **Esquema actual en un solo archivo** (`supabase/schema/actual.sql`, generado con `supabase db dump` de la base local), regenerado en cada migración, y una comprobación en CI de que está al día | R-B1: leer el estado vigente sin reconstruirlo de 54 migraciones. Se conservan las migraciones: sus comentarios son la historia de cada decisión |
+| P1-1 | ~~**Esquema actual en un solo archivo** (`supabase/schema/actual.sql`, generado con `npm run db:schema` desde la base local) y comprobación en CI de que está al día~~ *(hecho 16/11/2026)* | R-B1: leer el estado vigente sin reconstruirlo de 99 migraciones. Se conservan las migraciones: sus comentarios son la historia de cada decisión |
 | P1-2 | ~~**Partir `useWorkOrderDetail`** en hooks por tarjeta~~ *(hecho 15/11/2026: subhooks, `permissions.ts` y `sections/` en `features/workOrders/detail/`)* | El archivo que más se toca deja de mezclar responsabilidades |
 | P1-3 | ~~**Retirar la fachada `supabaseService`**: cada archivo importa su servicio~~ *(hecho 14/11/2026)* | Una sola forma de importar y de simular en pruebas |
 | P1-4 | **Fase 1 de pagos a empleados** ([pagos-a-empleados.md](pagos-a-empleados.md)) | La ambigüedad de dinero más riesgosa. Esta sí toca la base |
@@ -220,7 +221,7 @@ Una inconsistencia menor de estructura:
 | P2-7 | ~~Decidir si un admin puede borrar movimientos automáticos (R-B5)~~ *(Resuelto en `20261010000038`)* |
 
 **Nada de P1-2 a P2-5 cambia lo que ve el usuario ni toca la base.** Son movimientos de
-código cubiertos por las pruebas unitarias y de componentes (1.263 en Vitest al 15/11/2026);
+código cubiertos por las pruebas unitarias y de componentes (1.274 en Vitest al 16/11/2026);
 se pueden hacer uno por uno y publicar cada uno por separado.
 
 ---

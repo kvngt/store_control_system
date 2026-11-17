@@ -58,8 +58,8 @@ export default function CreateSedeModal({ onClose, onCreated }: CreateSedeModalP
       title={t('settings.newWorkshop')}
       footer={
         <>
-          <button className="btn btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
-          <button className="btn btn-primary" onClick={handleCreateSede} disabled={creatingSede || !newSedeName.trim()}>
+          <button type="button" className="btn btn-secondary" onClick={onClose}>{t('common.cancel')}</button>
+          <button type="button" className="btn btn-primary" onClick={handleCreateSede} disabled={creatingSede || !newSedeName.trim()}>
             {creatingSede ? t('common.loading') : t('common.create')}
           </button>
         </>

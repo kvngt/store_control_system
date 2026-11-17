@@ -94,4 +94,56 @@ describe('Settings', () => {
     expect(screen.getByDisplayValue('Taller Centro Borrador')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Taller Norte Renovado')).toBeInTheDocument();
   });
+
+  it('handleSaveOperations avisa con toast de error al validar capacidad inválida sin recuadro .alert-error', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithProviders(<Settings />);
+
+    const nameInput = await screen.findByDisplayValue(SEDE_CENTRO.nombre);
+    const sedeCard = nameInput.closest('.card');
+    if (!(sedeCard instanceof HTMLElement)) throw new Error('Expected .card container');
+
+    const capacityInput = document.getElementById(`sede-capacity-${SEDE_CENTRO.id}`);
+    if (!(capacityInput instanceof HTMLInputElement)) throw new Error('Expected capacity input');
+
+    await user.clear(capacityInput);
+    await user.type(capacityInput, '0');
+    await user.click(within(sedeCard).getByRole('button', { name: 'Actualizar' }));
+
+    expect(mocks.updateSede).not.toHaveBeenCalled();
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText('La capacidad debe ser un número mayor que cero.')).toBeInTheDocument();
+    expect(container.querySelector('.alert-error')).toBeNull();
+  });
+
+  it('handleSaveOperations avisa con toast de error si updateSede falla sin recuadro .alert-error', async () => {
+    mocks.updateSede.mockRejectedValueOnce(new Error('Fallo de red'));
+    const user = userEvent.setup();
+    const { container } = renderWithProviders(<Settings />);
+
+    const nameInput = await screen.findByDisplayValue(SEDE_CENTRO.nombre);
+    const sedeCard = nameInput.closest('.card');
+    if (!(sedeCard instanceof HTMLElement)) throw new Error('Expected .card container');
+
+    const capacityInput = document.getElementById(`sede-capacity-${SEDE_CENTRO.id}`);
+    if (!(capacityInput instanceof HTMLInputElement)) throw new Error('Expected capacity input');
+
+    await user.clear(capacityInput);
+    await user.type(capacityInput, '12');
+    await user.click(within(sedeCard).getByRole('button', { name: 'Actualizar' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText('No se pudo guardar la sede')).toBeInTheDocument();
+    expect(within(alert).getByText('Fallo de red')).toBeInTheDocument();
+    expect(container.querySelector('.alert-error')).toBeNull();
+  });
+
+  it('muestra el recuadro .alert-error solo cuando falla la carga inicial de sedes', async () => {
+    mocks.getSedes.mockRejectedValueOnce(new Error('Sin conexión'));
+    const { container } = renderWithProviders(<Settings />);
+
+    const errorEl = await screen.findByText('Sin conexión');
+    expect(errorEl.closest('.alert-error')).not.toBeNull();
+    expect(container.querySelector('.alert-error')).not.toBeNull();
+  });
 });

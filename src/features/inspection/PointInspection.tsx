@@ -103,8 +103,8 @@ export default function PointInspection({
   const noteDirtyRef = useRef(false);
   noteDirtyRef.current = noteDirty;
   useEffect(
-    () => registerGuard(() => !noteDirtyRef.current || confirm(t('inspection.discardNoteTitle')), () => noteDirtyRef.current),
-    [registerGuard, t],
+    () => registerGuard(noteGuard.requestLeave, () => noteDirtyRef.current),
+    [registerGuard, noteGuard.requestLeave],
   );
 
   // Puntos agrupados por sección conservando el orden de aparición

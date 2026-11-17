@@ -182,6 +182,7 @@ export default function SedeItem({
             {brandDraft?.color_tema}
           </span>
           <button
+            type="button"
             className="btn btn-secondary btn-sm"
             style={{ marginLeft: 'auto' }}
             onClick={() => onSaveBranding(sede.id)}
@@ -244,6 +245,7 @@ export default function SedeItem({
             />
           </div>
           <button
+            type="button"
             className="btn btn-secondary btn-sm"
             onClick={() => onSaveOperations(sede.id)}
             disabled={

@@ -25,7 +25,7 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
   const { language, setLanguage, t } = useLanguage();
   const { user, currentSede, allSedes, setCurrentSede } = useAuth();
   const navigate = useNavigate();
-  const { confirmNavigation } = useUnsavedChanges();
+  const { requestNavigation } = useUnsavedChanges();
   const isAdmin = user?.rol === 'admin';
   const sedeId = isAdmin ? currentSede?.id : user?.sede_id;
 
@@ -127,21 +127,24 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
   }, [mobileSearchOpen, closeSearch]);
 
   const goToOrder = (id: string) => {
-    if (!confirmNavigation()) return;
-    navigate(`/work-orders?open=${id}`);
-    closeSearch();
+    requestNavigation(() => {
+      navigate(`/work-orders?open=${id}`);
+      closeSearch();
+    });
   };
 
   const goToCustomer = (id: string) => {
-    if (!confirmNavigation()) return;
-    navigate(`/customers?open=${id}`);
-    closeSearch();
+    requestNavigation(() => {
+      navigate(`/customers?open=${id}`);
+      closeSearch();
+    });
   };
 
   const goToVehicles = () => {
-    if (!confirmNavigation()) return;
-    navigate('/vehicles');
-    closeSearch();
+    requestNavigation(() => {
+      navigate('/vehicles');
+      closeSearch();
+    });
   };
 
   const hasResults = results.customers.length > 0 || results.vehicles.length > 0 || results.orders.length > 0;
@@ -298,8 +301,9 @@ export default function Header({ sidebarCollapsed, onMobileMenuToggle }: HeaderP
           aria-label={t('nav.settings')}
           id="user-avatar"
           onClick={() => {
-            if (!confirmNavigation()) return;
-            navigate('/settings');
+            requestNavigation(() => {
+              navigate('/settings');
+            });
           }}
         >
           {user?.avatar_url ? (

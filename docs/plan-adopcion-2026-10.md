@@ -3,7 +3,7 @@
 > **Estado: aprobado el 14/10/2026, en implementación** (ver §7: la persona responsable sumó el
 > escáner de VIN y el dibujo del vehículo).
 >
-> - Las tareas para Gemini están en [tareas-para-gemini-adopcion.md](tareas-para-gemini-adopcion.md).
+> - Las tareas para Gemini están en [tareas-para-gemini-adopcion.md](historico/tareas-para-gemini-adopcion.md).
 > - Claude Code verificó cada punto contra el código del 14/10/2026 (`3b38be0` más los cambios
 >   sin commit), con lecturas directas.
 > - La verificación en paralelo con agentes se cortó: agotó el límite de uso de la sesión.
@@ -186,7 +186,7 @@
 - **Que Gemini programe todo y Claude verifique.** Por eso la migración C1 pasa a Gemini (tarea
   A0), con la comparación de la función contra su versión anterior.
 
-Las tareas están en [tareas-para-gemini-adopcion.md](tareas-para-gemini-adopcion.md):
+Las tareas están en [tareas-para-gemini-adopcion.md](historico/tareas-para-gemini-adopcion.md):
 
 - **parte A:** la fase 1 y el escáner;
 - **parte B:** el dibujo.

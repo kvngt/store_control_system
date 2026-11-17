@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/auth.context';
 import { useLanguage } from '../../context/language.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
@@ -8,14 +8,17 @@ import { STAFF_HOME } from '../../lib/staffHome';
 export default function BottomNav() {
   const { t } = useLanguage();
   const { user } = useAuth();
-  const { confirmNavigation } = useUnsavedChanges();
+  const { requestNavigation } = useUnsavedChanges();
+  const navigate = useNavigate();
   const isAdmin = user?.rol === 'admin';
 
   // La barra lateral y el encabezado ya preguntaban antes de salir de un
   // formulario a medias; esta barra no, y es la navegación real del teléfono.
   // Un avance con nota y video se perdía con un toque, sin aviso.
-  const handleNavClick = (e: React.MouseEvent) => {
-    if (!confirmNavigation()) e.preventDefault();
+  const handleNavClick = (e: React.MouseEvent, to: string) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    requestNavigation(() => navigate(to));
   };
 
   // Short labels: a bottom tab has room for one word, so these are their own
@@ -44,7 +47,7 @@ export default function BottomNav() {
           to={item.to}
           className={({ isActive }) => `bottom-nav-item ${isActive ? 'active' : ''}`}
           end={item.to === STAFF_HOME}
-          onClick={handleNavClick}
+          onClick={(e) => handleNavClick(e, item.to)}
         >
           <item.icon className="bottom-nav-icon" size={24} />
           <span className="bottom-nav-label">{item.label}</span>

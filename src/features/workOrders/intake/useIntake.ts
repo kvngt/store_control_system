@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../../context/auth.context';
 import { useLanguage } from '../../../context/language.context';
 import { useToast } from '../../../context/toast.context';
@@ -32,10 +32,11 @@ export function useIntake({ onOrderCreated }: UseIntakeOptions) {
   const form = useWorkOrderForm();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
-  // La pregunta al querer salir de un alta a medias (X, fondo o «atrás» de Android) y la de retomar un
-  // borrador al abrirla.
+  // La pregunta al querer salir de un alta a medias (X, fondo, «atrás» de Android o menú) y la de
+  // retomar un borrador al abrirla.
   const [exitDialog, setExitDialog] = useState(false);
   const [restoreDialog, setRestoreDialog] = useState<IntakeDraft | null>(null);
+  const pendingProceedRef = useRef<(() => void) | null>(null);
 
   const records = useIntakeRecords({ form, isAdmin, sedeId, targetSedeId });
 
@@ -52,6 +53,7 @@ export function useIntake({ onOrderCreated }: UseIntakeOptions) {
     resetSavedFlags: records.resetSavedFlags,
     onCreatedSuccess: (orderId) => {
       // Por si se tocó «atrás» mientras guardaba: la pregunta no aparece al abrir la orden siguiente.
+      pendingProceedRef.current = null;
       setExitDialog(false);
       setShowCreateModal(false);
       onOrderCreated(orderId);
@@ -100,6 +102,9 @@ export function useIntake({ onOrderCreated }: UseIntakeOptions) {
     setExitDialog(false);
     setShowCreateModal(false);
     form.reset();
+    const proceed = pendingProceedRef.current;
+    pendingProceedRef.current = null;
+    proceed?.();
   };
 
   // Quiere salir (X, fondo o «atrás»). Sin nada capturado se cierra; con trabajo a medias se pregunta.
@@ -110,6 +115,7 @@ export function useIntake({ onOrderCreated }: UseIntakeOptions) {
       void close(false);
       return;
     }
+    pendingProceedRef.current = null;
     setExitDialog(true);
   };
 
@@ -124,11 +130,13 @@ export function useIntake({ onOrderCreated }: UseIntakeOptions) {
     }
     // Con la pregunta de salir abierta, «atrás» la cierra y se sigue editando.
     if (exitDialog) {
+      pendingProceedRef.current = null;
       setExitDialog(false);
       backTrap.rearm();
       return;
     }
     if (form.isDirty) {
+      pendingProceedRef.current = null;
       setExitDialog(true);
       backTrap.rearm();
       return;
@@ -164,15 +172,28 @@ export function useIntake({ onOrderCreated }: UseIntakeOptions) {
   // Register a navigation guard for as long as the create-order modal has
   // unsaved data, so the sidebar/global search can't silently navigate away
   // and lose it.
+  const dirtyRef = useRef(form.isDirty);
+  dirtyRef.current = form.isDirty;
+  const savingRef = useRef(submit.saving);
+  savingRef.current = submit.saving;
+
   useEffect(() => {
     if (showCreateModal) {
-      setGuard(() => !form.isDirty || confirm(t('workOrders.confirmDiscard')), () => form.isDirty);
+      setGuard(
+        (proceed) => {
+          if (savingRef.current) return false;
+          if (!dirtyRef.current) return true;
+          pendingProceedRef.current = proceed;
+          setExitDialog(true);
+          return false;
+        },
+        () => dirtyRef.current
+      );
     } else {
       setGuard(null);
     }
     return () => setGuard(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showCreateModal, form.isDirty]);
+  }, [showCreateModal, setGuard]);
 
   const confirmRestore = () => {
     if (!restoreDialog) return;
@@ -186,6 +207,7 @@ export function useIntake({ onOrderCreated }: UseIntakeOptions) {
   };
 
   const keepEditing = () => {
+    pendingProceedRef.current = null;
     setExitDialog(false);
     backTrap.rearm();
   };

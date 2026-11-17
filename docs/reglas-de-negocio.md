@@ -164,7 +164,7 @@ Nadie registra a mano el dinero de una orden. Estos movimientos los crea la base
 | Cambia el total de una orden **ya entregada** (también por un descuento) | Ingreso "Ajuste por cargo adicional" o egreso "Reembolso por ajuste" por la diferencia | pago_cliente |
 | Cambian los repuestos de una orden ya entregada (o se corrige su costo) | Egreso o ingreso de ajuste por la diferencia de costo | compra_repuesto |
 | Se **saca de Entregado** | Egreso "Reversión de entrega" (o ingreso "Reversión de devolución") e ingreso "Reversión de costo de repuestos" | pago_cliente / compra_repuesto |
-| Un admin **paga comisiones** | Un **egreso** por orden, "Comisión nombre – ORD-…", vinculado a la orden | planilla |
+| Un admin **paga comisiones** | Un **egreso** por orden, "Comisión nombre – ORD-…", vinculado a la orden, con su método (si es efectivo, tarjeta, Zelle, transferencia o cheque; si no, queda vacío) y número de cheque (`20261010000045`) | planilla |
 | Se **deshace** un pago de comisiones | Se eliminan **los** egresos de ese pago (y solo esos) | — |
 
 ### Reglas que sostienen los números

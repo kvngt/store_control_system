@@ -85,6 +85,11 @@ nov 13–15 ──          Auditoría y refactorización modular (`043` y `044`
                       `workOrders.service`, `handler.ts` + `_shared/*` con 102 pruebas en Deno 2,
                       `db:types` (`supabase.gen.ts` + `schema.contract.ts`) y `test:e2e:local`
                       con 80 pruebas contra la base local
+nov 16    ──          Migración `045` (`egreso_de_comision_con_metodo`, aplicada en producción),
+                      pgTAP 49/1.193, Vitest 175/1.274, `qa:security:local` 209/0/0,
+                      5 e2e nuevos (85 en total; `MED-01` en arreglo), `npm run db:schema`
+                      (`supabase/schema/actual.sql`), `npm audit` en 0 (`@sentry/vite-plugin` 11),
+                      Hostinger reconectado (`dd3b863` en vivo) y tareas de Gemini a `historico/`
 ```
 
 ---
@@ -481,7 +486,7 @@ mejoras y la reunión con el taller.
 | 53 | `20261009000000_comisiones_por_especialidad` | **Reunión** Comisiones por especialidad y por empleado; `perfiles_pago` |
 | 54 | `20261010000000_egresos_de_comision_por_orden` | **Reunión** Un egreso por orden al pagar comisiones; `balance_orden`, `margen_ordenes` |
 | 55–82 | `20261010000001` … `20261010000028` | **Después de la reunión del 03/10/2026**: historial, comisión por tarea, hallazgos, "requiere atención", traducciones, aceptar comisiones, decisiones del proceso del taller, pago mixto, listo para entregar, idioma del cliente, correo al técnico, teléfonos por sede, trabajo con seguro y cobro por parqueo. Cada entrada de [bitacora.md](bitacora.md) nombra las suyas |
-| 83–98 | `20261010000029` … `20261010000044` | **Octubre–noviembre 2026**: próximo servicio/sticker (`029`, `032`, `037`, `038`), autorización en recepción (`030`), marcas de daños (`031`), catálogo y trabajos agrupados (`034`), inspección por puntos (`035`, `040`), reloj e indicadores (`036`), movimientos de finanzas del sistema (`038`), unicidad de VIN/placa (`039`), decisiones y guardias (`041`), correcciones de auditoría del 13–15/11/2026 (`042`–`044`, incluida la baja de correos por enlace vencido) |
+| 83–99 | `20261010000029` … `20261010000045` | **Octubre–noviembre 2026**: próximo servicio/sticker (`029`, `032`, `037`, `038`), autorización en recepción (`030`), marcas de daños (`031`), catálogo y trabajos agrupados (`034`), inspección por puntos (`035`, `040`), reloj e indicadores (`036`), movimientos de finanzas del sistema (`038`), unicidad de VIN/placa (`039`), decisiones y guardias (`041`), correcciones de auditoría del 13–15/11/2026 (`042`–`044`, incluida la baja de correos por enlace vencido) y `045` (`egreso_de_comision_con_metodo`, aplicada en producción el 16/11/2026; 99 en producción) |
 
 Las migraciones son la mejor documentación de cada decisión: cada una empieza con un
 comentario que explica el problema. Léelas en orden si quieres el detalle.
@@ -508,6 +513,7 @@ comentario que explica el problema. Léelas en orden si quieres el detalle.
 | Antes de la prueba en vivo | **504** (71 archivos) | 330 aserciones, en CI | `qa:security` 85 casos (62 saltados sin cuentas de prueba) |
 | 11/10/2026 (82 migraciones) | **802** (97 archivos) | **811 aserciones** en 33 archivos, en CI | `qa:security` 155 casos |
 | 15/11/2026 (98 migraciones, hasta `044`) | **1.263** (174 archivos) | **1.181** pruebas en 48 archivos, en CI | 80 e2e contra base local (`test:e2e:local`); 102 pruebas Deno 2 en edge functions (`test:functions`) |
+| 16/11/2026 (99 migraciones, hasta `045`) | **1.274** (175 archivos) | **1.193** pruebas en 49 archivos, en CI | 85 e2e contra base local (`test:e2e:local`; 84 en verde, `MED-01` en arreglo); 102 pruebas Deno 2 (`test:functions`); `qa:security:local` 209 PASS, 0 FAIL, 0 SKIP |
 
 Las pruebas pgTAP se ejecutaron por primera vez con Docker el 15 de septiembre de 2026:
 **158 aserciones en verde** y las 35 migraciones aplicadas desde cero. Solo hubo que
@@ -522,9 +528,9 @@ temporales que luego se borraron.
 - **La prueba del taller**, que empezó el 29 de septiembre de 2026 con la base limpia.
 - **Pago a empleados**: esperar las respuestas del taller y hacer la fase 1
   ([pagos-a-empleados.md](pagos-a-empleados.md)).
-- **Fuera del código**: staging remoto (las E2E ya corren en local con `test:e2e:local`), Sentry en producción y la rama que publica Hostinger (el plan
+- **Fuera del código**: staging remoto (las E2E ya corren en local con `test:e2e:local`), `SENTRY_AUTH_TOKEN` en Hostinger para source maps (`VITE_SENTRY_DSN` ya está configurado) y la rama que publica Hostinger (el plan
   Pro ya está) ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#7-plan-priorizado)).
-- **Mantenibilidad**: esquema actual en un solo archivo (ya existe `npm run db:types` para generar `supabase.gen.ts` + contrato `schema.contract.ts`; `useWorkOrderDetail` partido y fachada `supabaseService` retirada el 14–15/11/2026).
+- **Mantenibilidad**: esquema actual en un solo archivo (`supabase/schema/actual.sql` generado con `npm run db:schema` desde la base local, además de `npm run db:types` + `schema.contract.ts`); `useWorkOrderDetail` partido y fachada `supabaseService` retirada el 14–15/11/2026; `npm audit` en 0 vulnerabilidades desde el 16/11 (`@sentry/vite-plugin` 11).
 - **Pendientes de datos**: nombre, logo, correo de contacto y teléfonos de la sede.
 - **Pendientes de decisión** (ver [reglas-de-negocio.md](reglas-de-negocio.md#10-riesgos-conocidos-y-decisiones-abiertas)):
   si el correo de "Entregado" sale al instante (borrar movimientos automáticos de Finanzas quedó cerrado en `20261010000038`).

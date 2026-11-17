@@ -19,7 +19,10 @@ export function EmailPreference({ token, initial, soloBaja = false, s }: EmailPr
   // Llegó desde "No quiero recibir estos correos". La baja se confirma con el
   // botón: un enlace directo daría de baja a quien tenga un filtro de correo que
   // abre los enlaces para revisarlos.
-  const fromUnsubscribeLink = useMemo(() => new URLSearchParams(window.location.search).get('correos') === 'baja', []);
+  const fromUnsubscribeLink = useMemo(
+    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('correos') === 'baja',
+    []
+  );
   const isCorreosHash = typeof window !== 'undefined' && window.location.hash === '#correos';
   const defaultOpen = fromUnsubscribeLink || isCorreosHash;
 

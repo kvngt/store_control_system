@@ -134,6 +134,7 @@ export default function ProfileCard() {
       </div>
       {profileError && <div className="alert-error">{profileError}</div>}
       <button
+        type="button"
         className="btn btn-primary"
         onClick={handleSaveProfile}
         disabled={savingProfile || !profileDirty}

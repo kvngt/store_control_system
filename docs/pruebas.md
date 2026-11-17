@@ -23,11 +23,11 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 1.263 pruebas, 174 archivos (15/11/2026) | ~30 s | Nada |
-| **Edge functions** | Deno 2 (`npm run test:functions`) | `handler.ts` y helpers `_shared/*` (`http`, `resend`, `gemini`, `email/`, etc.) con dobles | 102 pruebas (15/11/2026) | ~10 s | Deno 2 |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención", teléfonos de la sede, trabajo con seguro, cobro por parqueo, próximo servicio, autorización en recepción, marcas de daños, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, unicidad de VIN/placa, la revisión del 03/11 (`sin_autorizar`, fotos de una inspección publicada, traducciones), las decisiones del dueño del 04/11 y los arreglos de auditoría `042`–`044` (13–15/11/2026) contra un Postgres real | 1.181 pruebas, 48 archivos (15/11/2026) | ~1 min | Docker |
-| **End-to-end** | Playwright (`npm run test:e2e:local`) | Flujos en un navegador real contra Supabase local | 80 casos (80 en verde al 15/11/2026) | 2–5 min | Docker (`supabase start`) |
-| **Seguridad de la API** | `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 209 casos (178 PASS + 31 SKIP al 15/11/2026), todos de solo lectura (los que escriben, escriben el valor que ya hay) | ~15 s | Nada; con cuentas de prueba cubre más |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 1.274 pruebas, 175 archivos (16/11/2026) | ~30 s | Nada |
+| **Edge functions** | Deno 2 (`npm run test:functions`) | `handler.ts` y helpers `_shared/*` (`http`, `resend`, `gemini`, `email/`, etc.) con dobles | 102 pruebas (16/11/2026) | ~10 s | Deno 2 |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención", teléfonos de la sede, trabajo con seguro, cobro por parqueo, próximo servicio, autorización en recepción, marcas de daños, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, unicidad de VIN/placa, la revisión del 03/11 (`sin_autorizar`, fotos de una inspección publicada, traducciones), las decisiones del dueño del 04/11, los arreglos de auditoría `042`–`044` y método de pago en egresos de comisiones (`045`) contra un Postgres real | 1.193 pruebas, 49 archivos (16/11/2026) | ~1 min | Docker |
+| **End-to-end** | Playwright (`npm run test:e2e:local`) | Flujos en un navegador real contra Supabase local | 85 casos al 16/11/2026 (84 en verde; `MED-01` en arreglo) | 2–5 min | Docker (`supabase start`) |
+| **Seguridad de la API** | `npm run qa:security:local` / `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 209 casos (`qa:security:local` el 16/11/2026: 209 PASS, 0 FAIL, 0 SKIP; contra producción el 15/11/2026: 178 PASS + 31 SKIP sin órdenes de prueba), todos de solo lectura (los que escriben, escriben el valor que ya hay) | ~15 s | Docker (`supabase start`) para `qa:security:local`; nada para `qa:security` sin cuentas |
 | **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
 
 Por qué hacen falta todas: **Vitest simula la base**, así que no puede detectar una
@@ -38,13 +38,14 @@ navegador real; Playwright sí, pero no tiene cámara, micrófono ni un teléfon
 reciba push. Eso queda para el plan manual.
 
 ```bash
-npm test                 # Vitest
-npm run test:functions   # Deno 2 (edge functions)
-npm run test:db          # pgTAP  (antes: npx supabase start)
-npm run test:e2e:local   # Playwright contra Supabase local (Docker)
-npm run test:e2e         # Playwright contra .env.local / .env.test.local
-npm run test:e2e:ui      # Playwright interactivo, para depurar
-npm run qa:security      # seguridad contra la API del proyecto de .env.local
+npm test                  # Vitest
+npm run test:functions    # Deno 2 (edge functions)
+npm run test:db           # pgTAP  (antes: npx supabase start)
+npm run test:e2e:local    # Playwright contra Supabase local (Docker)
+npm run test:e2e          # Playwright contra .env.local / .env.test.local
+npm run test:e2e:ui       # Playwright interactivo, para depurar
+npm run qa:security:local # seguridad contra Supabase local (Docker; prepara órdenes y cubre los 209 casos)
+npm run qa:security       # seguridad contra la API del proyecto de .env.local
 ```
 
 ---
@@ -475,7 +476,13 @@ Las decisiones del taller del 05/10/2026 ([analisis-del-proceso-2026-10.md](hist
 
 - Unicidad de VIN (`uq_vehiculos_vin`) y de placa por estado (`uq_vehiculos_placa`) en `vehiculos` (`20261010000039`), ignorando mayúsculas, espacios y guiones.
 
-> **Estado (15 de noviembre de 2026):** **1.181 pruebas en verde en los 48 archivos**, con las 98 migraciones aplicadas desde cero (hasta `20261010000044_auditoria_2026_11_b`; aplicadas `043` y `044` en producción).
+**`supabase/tests/database/49_egreso_de_comision_con_metodo.test.sql`** (12)
+
+- Método de pago en los egresos de comisiones (`20261010000045`): `pay_commissions` copia el método en efectivo y cheque (con número) al egreso de `finanzas_movimientos`, deja vacío un método fuera de la lista sin tumbar el pago, cuadra con lo pagado y conserva los permisos (técnico 42501, `anon` denegado).
+
+> **Estado (16 de noviembre de 2026):** **1.193 pruebas en verde en los 49 archivos**, con las 99 migraciones del repositorio aplicadas desde cero en local (hasta `20261010000045_egreso_de_comision_con_metodo`; en producción hay 99 aplicadas, hasta la `045`, aplicada el 16/11/2026).
+>
+> **Estado (15 de noviembre de 2026):** 1.181 pruebas en verde en los 48 archivos, con las 98 migraciones aplicadas desde cero (hasta `20261010000044_auditoria_2026_11_b`; aplicadas `043` y `044` en producción).
 >
 > **Estado (4 de noviembre de 2026):** 1.093 pruebas en verde en los 45 archivos, con las 95 migraciones aplicadas desde cero (hasta `20261010000041_decisiones_del_dueno_2026_11`). `npm run test:db` usa `npx -y supabase@3 test db`; el `config.toml` es de la CLI 3 y la CLI 2 necesita la 2.122 o más nueva. Contra una base local en otro puerto: `npx supabase@3 test db --remote="postgresql://postgres:postgres@127.0.0.1:<puerto>/postgres?sslmode=disable" --yes`. **Las pruebas viejas suponen una base vacía**: con los datos de demostración cargados fallan seis archivos (05, 08, 19, 26, 27 y 30) por `more than one row`; respalda los datos, haz `db reset` y vuelve a cargarlos.
 >
@@ -532,7 +539,7 @@ E2E_SUPABASE_URL=http://127.0.0.1:44321 npm run test:e2e:local   # si tu stack u
   servidor que ya esté corriendo: ese podría apuntar al proyecto real) y corre Playwright con
   `E2E_LOCAL_STACK=1`.
 
-El 15/11/2026: 80 de 80 (77 de antes más las 3 de cobros, `qa-cobros.spec.ts`). Los 12 que fallaban eran pruebas viejas (el técnico ya no ve las órdenes
+El 16/11/2026: **85 casos en total** (los 80 del 15/11 más `TEC-01`, `RET-01`, `COM-01`, `NOT-01` y `MED-01`; 84 en verde y `MED-01` en arreglo). Los 12 que fallaban antes eran pruebas viejas (el técnico ya no ve las órdenes
 de otros desde el 07/10, el alta de empleados vive en `/employees`, importar está en la vista de
 estados de cuenta de Finanzas, el panel está en `/panel`, Vehículos es de administración).
 
@@ -568,6 +575,12 @@ prueba se borraron el 29/09/2026).
 | `qa-finance-payroll.spec.ts` | FIN-01…04, PAY-01…03 | Finanzas y validaciones; **Comisiones**: pestañas, % inválido rechazado, técnico sin acceso |
 | `qa-settings.spec.ts` | CFG-01…12 | Perfil, idioma, tema, sedes, alta de empleado. **El alta se mudó a Empleados** el 29/09/2026: los casos de alta hay que apuntarlos a `/employees` |
 | `qa-cobros.spec.ts` | COB-01…03 | **Solo con `test:e2e:local`.** Anticipo con cheque (sin número ni foto avisa; con la foto sola entra y queda en Finanzas con su comprobante), entrega que cobra el saldo con su método y cierra la orden, y depósito del alta con cheque y solo foto. Prepara la orden por la API y comprueba la base al final |
+| `qa-tecnico.spec.ts` | TEC-01 | **Solo con `test:e2e:local`.** Verifica que el técnico ve su tarea y los repuestos por descripción, sin precios ni pestañas o secciones de cobro/historial, y que por la API no lee `orden_montos`, `orden_repuestos` ni órdenes ajenas |
+| `qa-retirada.spec.ts` | RET-01 | **Solo con `test:e2e:local`.** Retirada sin reparar («cancelar todo»): devuelve el depósito en efectivo, pinta la insignia de retirada y registra el egreso `sistema` en `finanzas_movimientos` |
+| `qa-comisiones.spec.ts` | COM-01 | **Solo con `test:e2e:local`.** Acepta y paga una comisión en efectivo en `/payroll`, comprueba `comisiones`, `comision_pagos` y el egreso con `metodo_pago` en `finanzas_movimientos`, y confirma que aparece en `/mis-comisiones` |
+| `qa-avances.spec.ts` | MED-01 | **Solo con `test:e2e:local`.** *(En arreglo.)* El técnico registra un avance con nota y foto desde galería; comprueba `UploadTray` y las filas en `orden_avances` y `orden_media` |
+| `qa-campana.spec.ts` | NOT-01 | **Solo con `test:e2e:local`.** Con el panel abierto como admin, el mecánico reporta trabajo adicional por RPC y la campana sube y muestra el aviso en tiempo real sin recargar |
+| `localData.ts` | (ayudante) | Ayudante para pruebas E2E locales: crea clientes, vehículos y órdenes `PWTEST` vía `create_work_order`, obtiene ids de usuario (`userIdOf`) y abre clientes autenticados (`adminClient`, `clientFor`) |
 | `customer-crud.spec.ts` | 1 | Ejemplo de prueba que crea y borra datos (prefijo `PWTEST`) |
 
 Los identificadores de esta tabla (AUTH-, RBAC-, WORK-, FIN-, CFG-…) son los del código
@@ -582,9 +595,7 @@ algunos prefijos coincidan.
 Las pruebas **PAY-01/02** anteriores probaban la nómina por salario, eliminada en
 la migración `20260912000000`; fueron reemplazadas por las de comisiones.
 
-**Pendiente de cubrir con e2e** (ya se puede, con `test:e2e:local`): técnico sin precios en el
-detalle, multimedia con archivos de prueba y campana en tiempo real. El diálogo de entrega, el
-anticipo y el alta con depósito ya los cubre `qa-cobros.spec.ts`. Que un técnico solo vea sus órdenes ya lo cubren `login.spec.ts` y RBAC-30.
+**Cobertura nueva con `test:e2e:local` (16/11/2026):** técnico sin precios en el detalle (`qa-tecnico.spec.ts`), retirada sin reparar (`qa-retirada.spec.ts`), comisiones (`qa-comisiones.spec.ts`), campana en tiempo real (`qa-campana.spec.ts`) y avances con foto (`qa-avances.spec.ts`, `MED-01` en arreglo). El diálogo de entrega, el anticipo y el alta con depósito los cubre `qa-cobros.spec.ts`, y que un técnico solo vea sus órdenes lo cubren `login.spec.ts` y `RBAC-30`.
 
 ### 2.4 ¿Para qué hace falta Docker?
 
@@ -600,6 +611,8 @@ Se necesita para:
 | **Correr las pruebas de base de datos** (las aserciones pgTAP) | `npm run test:db` | Necesitan un Postgres real donde crear datos y deshacerlos |
 | **Probar que las migraciones aplican desde cero** | `npx supabase db reset` | Recrea la base local aplicando todas las migraciones en orden: detecta una migración que solo funciona sobre la base actual |
 | **Probar una migración antes de producción** | `npx supabase start` y luego la app contra la base local | Hoy cada migración se aplica directo al proyecto enlazado |
+| **Generar el esquema vigente en un archivo** | `npm run db:schema` | Volca `supabase/schema/actual.sql` desde el Postgres local (el CI comprueba que esté al día) |
+| **Seguridad de la API en local** | `npm run qa:security:local` | Corre los 209 casos contra el stack local con datos temporales |
 | Probar edge functions localmente | `npx supabase functions serve` | Corren en el contenedor de Supabase |
 
 **No** hace falta para: la app, Vitest, Playwright, desplegar ni aplicar migraciones al
@@ -631,14 +644,35 @@ vuelve a abrirlo.
   transacción que se deshace al final (no deja datos). Hoy esa ejecución está
   bloqueada por permisos de la herramienta.
 
-### 2.5 Seguridad contra la API (`qa:security`)
+### 2.5 Seguridad contra la API (`qa:security` y `qa:security:local`)
 
 ```bash
-npm run qa:security             # tabla PASS / FAIL / SKIP
-npm run qa:security -- --json   # para un agente o un CI
+npm run qa:security:local             # contra Supabase local (Docker; prepara datos y cubre los 209 casos)
+npm run qa:security:local -- --json   # para un agente o un CI
+npm run qa:security                   # contra el proyecto de .env.local (tabla PASS / FAIL / SKIP)
+npm run qa:security -- --json         # para un agente o un CI
 # `--alta` ya no existe: SEC-55 comprobaba que la orden de un técnico naciera corregida y
 # ahora comprueba que no entre, así que la suite no escribe nada.
 ```
+
+`scripts/qa/security-local.mjs` corre `api-security.mjs` contra el Supabase **local** sin
+dejar casos en **SKIP** por falta de órdenes o cuentas:
+
+1. Usa `scripts/lib/local-stack.mjs` (`localStack` y `ensureTestAccounts`, el mismo módulo que
+   `e2e-local.mjs`): se niega a seguir si la URL no es de esta máquina y prepara dos sedes y
+   cuatro cuentas con contraseña nueva por corrida (`E2E_SUPABASE_URL` si tu stack usa otro
+   puerto).
+2. Inicia sesión como el admin de prueba por la API de Auth (sin usar la llave de servicio para
+   los datos) y crea con `create_work_order` y `entregar_orden`: dos clientes y dos vehículos
+   `PWTEST` (cliente separado para la orden ajena, de modo que el técnico no lo vea en sus
+   órdenes), una orden asignada al mecánico de prueba autorizada en recepción y firmada
+   (`ORDEN` / `ORDEN_FIRMADA`), una orden sin asignar al técnico con una línea aprobada
+   (`ORDEN_AJENA` / `CLIENTE_AJENO` / `LABOR_AJENA`), una orden asignada y entregada
+   (`ORDEN_ENTREGADA` / `LABOR_ENTREGADA`) y una orden asignada en estado `finalizado` con una
+   tarea aprobada sin completar (`ORDEN_FINALIZADA` / `LABOR_FINALIZADA`, para `SEC-211`).
+3. Pasa `SB_URL`, `SB_ANON`, las credenciales y todos los identificadores por el entorno a
+   `scripts/qa/api-security.mjs` para que no se cuele nada de `.env.local` ni `.env.test.local`,
+   y termina con su mismo código de salida.
 
 `scripts/qa/api-security.mjs` llama la API **desplegada** (la de `.env.local`) como lo
 haría alguien con la clave pública de la app, un técnico con su propia sesión o un admin.
@@ -650,17 +684,17 @@ había pensado en llamarlas desde fuera ([auditoria-2026-09.md](historico/audito
 - **Con cuentas** (`E2E_ADMIN_*` y `E2E_MECHANIC_*` de `.env.test.local`, o `QA_TECH_*` /
   `QA_ADMIN_*`) inicia sesión, busca una orden asignada al técnico y una entregada con su
   sesión, y una ajena con la del admin (el técnico ya no la ve), y corre los 209 casos (178 PASS + 31 SKIP contra producción el 15/11/2026; los SKIP necesitan órdenes de prueba que producción no tiene).
-- Las cuentas de prueba de producción se borraron el 29/09/2026; las que usa hoy `.env.test.local` no se crean desde la app del taller. Para correrla contra la base local, ver el recuadro de abajo.
+- Las cuentas de prueba de producción se borraron el 29/09/2026; las que usa hoy `.env.test.local` no se crean desde la app del taller. Para correrla contra la base local usa `npm run qa:security:local`.
 - Lo que no puede preparar lo marca **SKIP**. Termina con código 1 si hay un **FAIL**.
 
 > Solo contra datos de prueba: si la base tiene un hueco, la petición que lo demuestra
 > sí escribe (por ejemplo, entrega la orden). SEC-99 y SEC-100 escriben el valor que la fila
 > ya tiene, así que una regresión ahí no mueve ninguna comisión.
 >
-> Para correrla contra el Supabase **local** (`SB_URL=http://127.0.0.1:54321` y la clave
-> anónima de `npx supabase status`), deja vacías `ORDEN`, `ORDEN_AJENA` y `ORDEN_ENTREGADA`:
-> `.env.test.local` trae ids del proyecto real, que en local no existen, y los casos que los
-> usan dan un FAIL falso (204 sin filas).
+> Con `npm run qa:security:local` ya no hace falta exportar `SB_URL` ni vaciar `ORDEN*` a mano
+> para correr la suite en local. Si ejecutas `node scripts/qa/api-security.mjs` directo contra
+> local, pisa `ORDEN`, `ORDEN_AJENA`, `ORDEN_ENTREGADA`, `ORDEN_FINALIZADA` y `ORDEN_FIRMADA`
+> para no arrastrar ids de `.env.test.local`.
 
 Lista de casos: [plan-de-pruebas.md §5](plan-de-pruebas.md#5-seguridad-contra-la-api-sec).
 

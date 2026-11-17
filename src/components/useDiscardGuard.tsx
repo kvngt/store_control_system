@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import ChoiceDialog from './ChoiceDialog';
 import { useLanguage } from '../context/language.context';
 import { useBackButtonTrap } from '../lib/backButtonTrap';
@@ -43,15 +43,54 @@ export function useDiscardGuard({ active = true, dirty, busy = false, onClose, t
   const { t } = useLanguage();
   const [asking, setAsking] = useState(false);
 
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  const busyRef = useRef(busy);
+  busyRef.current = busy;
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const pendingProceedRef = useRef<(() => void) | null>(null);
+
   const requestClose = () => {
     if (busy) return;
-    if (dirty) setAsking(true);
-    else onClose();
+    if (dirty) {
+      pendingProceedRef.current = null;
+      setAsking(true);
+    } else {
+      onClose();
+    }
+  };
+
+  /**
+   * Para un guardia de navegación (`registerGuard`): guardando devuelve `false` sin preguntar;
+   * sin nada capturado devuelve `true`; con cambios guarda `proceed`, abre la pregunta y, al
+   * descartar, limpia (`onClose`) y llama a `proceed()`.
+   */
+  const requestLeave = useCallback((proceed: () => void): boolean => {
+    if (busyRef.current) return false;
+    if (!dirtyRef.current) return true;
+    pendingProceedRef.current = proceed;
+    setAsking(true);
+    return false;
+  }, []);
+
+  const dismiss = () => {
+    pendingProceedRef.current = null;
+    setAsking(false);
+  };
+
+  const confirmDiscard = () => {
+    setAsking(false);
+    onCloseRef.current();
+    const proceed = pendingProceedRef.current;
+    pendingProceedRef.current = null;
+    proceed?.();
   };
 
   const backTrap = useBackButtonTrap(active, () => {
     // Este «atrás» ya gastó la entrada de reserva: si el diálogo se queda, se deja otra.
     if (asking) {
+      pendingProceedRef.current = null;
       setAsking(false);
       backTrap.rearm();
       return;
@@ -61,6 +100,7 @@ export function useDiscardGuard({ active = true, dirty, busy = false, onClose, t
       return;
     }
     if (dirty) {
+      pendingProceedRef.current = null;
       setAsking(true);
       backTrap.rearm();
       return;
@@ -72,21 +112,18 @@ export function useDiscardGuard({ active = true, dirty, busy = false, onClose, t
     <ChoiceDialog
       title={title}
       body={body}
-      onDismiss={() => setAsking(false)}
+      onDismiss={dismiss}
       zIndex={zIndex}
       actions={[
-        { label: t('common.keepEditing'), variant: 'primary', onClick: () => setAsking(false) },
+        { label: t('common.keepEditing'), variant: 'primary', onClick: dismiss },
         {
           label: t('common.discardChanges'),
           variant: 'danger',
-          onClick: () => {
-            setAsking(false);
-            onClose();
-          },
+          onClick: confirmDiscard,
         },
       ]}
     />
   ) : null;
 
-  return { requestClose, dialog };
+  return { requestClose, requestLeave, dialog };
 }

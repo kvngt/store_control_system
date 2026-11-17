@@ -6,7 +6,7 @@
 >   (Antigravity), en una copia aislada y sin terminal.
 > - **Cómo se corre:** en dos tandas. La **parte A** (fase 1 y escáner) va primero; la
 >   **parte B** (dibujo de daños) parte del resultado de la A.
-> - **El porqué** de cada tarea está en [plan-adopcion-2026-10.md](plan-adopcion-2026-10.md).
+> - **El porqué** de cada tarea está en [plan-adopcion-2026-10.md](../plan-adopcion-2026-10.md).
 > - **Si algo no se puede hacer como está escrito, detente y anótalo en la bitácora.** No
 >   improvises otro diseño.
 
@@ -810,7 +810,7 @@ Las pruebas `24_traducciones` y `26_proceso_del_taller` hacen `INSERT INTO orden
    - **Recepción** (datos, dibujo, fotos, firma): cerrado. El resumen dice cuántas fotos tiene.
    - **Próximo servicio:** abierto.
    - **Cuenta** (`AccountSection`): cerrado. El resumen muestra el saldo con el formateador del
-     portal (`fmt.money`) y el campo de saldo que ya usa la sección (búscalo; no calcules nada).
+     portal (`fmt.money`) y el campo de saldo que ya usa la sección (búscala; no calcules nada).
    - **Contacto:** abierto.
    - **Correos** (`EmailPreference`): cerrado, salvo cuando llegó desde el enlace para darse de
      baja (`fromUnsubscribeLink`).

@@ -77,7 +77,8 @@ Resend ni la VAPID privada.
 | `VITE_SUPABASE_ANON_KEY` | ✅ | Clave anónima (pública por diseño) |
 | `VITE_PUBLIC_SITE_URL` | recomendada | `https://restorifyauto.net`, sin barra final. Base del enlace del cliente y de la recuperación de contraseña |
 | `VITE_VAPID_PUBLIC_KEY` | para push | Llave **pública** VAPID, pareja de la privada de los secretos. Sin ella, la tarjeta de push dice "no configurado" |
-| `VITE_SENTRY_DSN` | opcional | Monitoreo de errores. Vacía mientras no exista el proyecto en Sentry; nunca el valor de ejemplo |
+| `VITE_SENTRY_DSN` | opcional | Monitoreo de errores (ya configurada en Hostinger, visto el 15/11/2026). Nunca el valor de ejemplo |
+| `SENTRY_AUTH_TOKEN` | para source maps | Variable de compilación en Hostinger (no va al navegador): crear un token en Sentry (`Settings → Auth Tokens` con permiso de subir source maps), cargarlo en Hostinger, volver a desplegar y comprobar que llega un evento desde Configuración → «Reportar un problema». Sin ella, los errores llegan a Sentry minificados |
 
 Para comprobar con qué se compiló lo publicado, se busca en los archivos de
 `https://restorifyauto.net/assets/`: el dominio, la URL del proyecto y la versión de esquema
@@ -255,10 +256,12 @@ En este orden. Los pasos 1–3 no cambian nada; los 4–6 sí.
 npm run lint && npx tsc -b && npm test
 npm run test:functions   # pruebas Deno 2 de edge functions
 
-# 2. (Si hay Docker) base local, tipos y pruebas E2E
+# 2. (Si hay Docker) base local, tipos, esquema y pruebas E2E
 npx supabase start && npm run test:db
 npm run db:types         # si cambió el esquema (regenera src/types/supabase.gen.ts)
+npm run db:schema        # si cambió el esquema (regenera supabase/schema/actual.sql)
 npm run test:e2e:local   # Playwright contra Supabase local
+npm run qa:security:local # seguridad contra la base local (209 casos sin SKIP)
 
 # 3. Qué migraciones faltan en el proyecto enlazado
 npm run db:check
@@ -325,9 +328,10 @@ a `main` se publica hasta el push a `produccion`.
 > conexión de Hostinger con GitHub había perdido el acceso al repositorio
 > (`hosting_deploy`: «Repository … was not found in your Git installation»). Se arregla dándole de
 > nuevo el acceso: hPanel → Sitios web → restorifyauto.net → Avanzado → Git, o en GitHub →
-> Settings → Applications → Hostinger → acceso a `store_control_system`. Después, un push o un
-> «Deploy» desde el panel publica la punta de `main`. Mientras tanto la base y las funciones pueden
-> ir por delante del sitio: anótalo en la bitácora.
+> Settings → Applications → Hostinger → acceso a `store_control_system`. **Reconectar el acceso no
+> lanza un build**: hace falta un push o pulsar «Deploy» desde el panel para publicar la punta de
+> `main` (el 16/11/2026 se reconectó y el push `dd3b863` publicó en ~2 min). Mientras tanto la
+> base y las funciones pueden ir por delante del sitio: anótalo en la bitácora.
 
 ```bash
 # 7. Seguridad contra la API ya desplegada (0 FAIL)
@@ -434,39 +438,11 @@ Diez minutos. Es el nivel **humo** del plan de pruebas; si algo falla,
 
 ## 9. Integración continua
 
-`.github/workflows/ci.yml` corre en cada push y pull request a `main`: lint, tipos, pruebas
-y build en un trabajo, y en otro levanta Postgres con la CLI de Supabase, aplica todas las
-migraciones desde cero y corre pgTAP. No despliega ni usa secretos. Referencia del flujo
-(el archivo del repositorio es la fuente de verdad):
+`.github/workflows/ci.yml` corre en cada push y pull request a `main`. No despliega ni usa
+secretos; la base de datos y los servicios locales los levanta el propio runner con Docker.
+Consta de cuatro trabajos (el archivo del repositorio es la fuente de verdad):
 
-```yaml
-name: CI
-on:
-  pull_request:
-    branches: [main]
-
-jobs:
-  verificar:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm ci
-      - run: npm run lint
-      - run: npx tsc -b
-      - run: npm test
-      - run: npm run build
-
-  base-de-datos:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
-      - run: supabase start
-      - run: supabase test db
-```
-
-Playwright (`npm run test:e2e`) necesita credenciales y un proyecto donde crear
-datos: agrégalo cuando exista staging.
+- **`app`:** `npm ci`, `npm run lint`, `npx tsc -b`, `npm test` y `npm run build`.
+- **`funciones`:** `npm run test:functions` (pruebas unitarias de Edge Functions con Deno 2, sin red ni base).
+- **`base-de-datos`:** levanta Postgres con `supabase db start`, corre las pruebas pgTAP (`supabase test db`) y verifica que `src/types/supabase.gen.ts` (`npm run db:types`) y `supabase/schema/actual.sql` (`npm run db:schema`) están al día con `git diff --exit-code`.
+- **`e2e`:** levanta el stack completo con `supabase start`, instala Chromium (`npx playwright install --with-deps chromium`), corre `npm run test:e2e:local` y después `npm run qa:security:local`, y sube `playwright-report/` como artefacto si falla.

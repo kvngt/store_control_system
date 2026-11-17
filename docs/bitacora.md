@@ -27,7 +27,7 @@
 | Seguro y parqueo 10/10 | Fase A: la orden dice si se trabaja con seguro. Fases B–D: módulo de cobro por parqueo configurable por sede (perfiles con y sin seguro, tramos, gracia, topes, ajustes por orden), en la cuenta del cliente, el PDF y el correo de "listo" | **Publicado** el 11/10/2026 (`3731cd8` en `main`; `db:check`: 82 migraciones aplicadas; `process-outbox` v18 desplegada el 11/10). Migraciones `20261010000027` y `20261010000028`. Gemini lo implementó y Claude Code lo auditó y corrigió el 11/10/2026 (un cobro de parqueo sobre órdenes ya entregadas, "vigente desde" hacia atrás, pruebas que llamaban a producción). `test:db` 33/811 ✓, Vitest 97/802 ✓. `qa:security` contra producción (11/10/2026, lo corrió el usuario): 126 PASS, 1 FAIL, 28 SKIP; el FAIL era la prueba SEC-160, que esperaba un rechazo donde la regla es cero filas (corregida; ver la bitácora). Detalle en la [bitácora](#11102026--claude-code-auditoría-y-arreglo-del-módulo-de-parqueo-de-gemini) |
 | Ayuda 12/10 | El manual de usuario dentro de la app (`/ayuda`), en español e inglés y por rol, con capturas | **Publicado** (`b6d8792` en `main`; sin migración ni funciones). Ver la entrada del 12/10/2026, tarde |
 | Sticker 14/10 | Sticker térmico de próximo servicio (62 × 50 mm, Brother QL-810W) con QR a una página pública propia (`/s/<código>`); el técnico sugiere y administración programa | **Publicado** el 14/10/2026 por el usuario (`3b38be0` y `3c3d53f` en `main`). Comprobado el 14/10: `db:check` con 83 migraciones aplicadas, incluida la `20261010000029`; la función `portal` de producción ya responde a `?servicio=` (`404 {"estado":"no_existe"}` con un código inexistente). Gemini lo implementó y Claude Code lo auditó y corrigió: `test:db` 34/845 ✓, Vitest 104/870 ✓. Falta: probar la impresora (§6 del plan) y correr `qa:security` (SEC-162 a SEC-171) |
-| Adopción 14–16/10 | Plan a partir del diagnóstico de Gemini, más lo que pidió la persona responsable. **A:** autorizar en el mostrador (migración `030`), VIN opcional y escáner, aviso de «listo» sin correo, mensajes en el idioma del cliente, color traducido. **B:** dibujo del vehículo con daños marcados (migración `031`). **C:** «Empezar» y «Terminé» para el técnico. **D:** ajustes visuales | **Publicado** (commit `818370d` en `main`; la `030` y la `031`, aplicadas según `db:check` del 17/10/2026). Gemini lo programó y Claude Code lo verificó y corrigió el 16/10/2026: `test:db` 36/876 ✓, Vitest 115/936 ✓, lint, `tsc` y build ✓, más capturas reales. Falta confirmar que se corrió `qa:security`. [plan](plan-adopcion-2026-10.md) · [tareas](tareas-para-gemini-adopcion.md) |
+| Adopción 14–16/10 | Plan a partir del diagnóstico de Gemini, más lo que pidió la persona responsable. **A:** autorizar en el mostrador (migración `030`), VIN opcional y escáner, aviso de «listo» sin correo, mensajes en el idioma del cliente, color traducido. **B:** dibujo del vehículo con daños marcados (migración `031`). **C:** «Empezar» y «Terminé» para el técnico. **D:** ajustes visuales | **Publicado** (commit `818370d` en `main`; la `030` y la `031`, aplicadas según `db:check` del 17/10/2026). Gemini lo programó y Claude Code lo verificó y corrigió el 16/10/2026: `test:db` 36/876 ✓, Vitest 115/936 ✓, lint, `tsc` y build ✓, más capturas reales. Falta confirmar que se corrió `qa:security`. [plan](plan-adopcion-2026-10.md) · [tareas](historico/tareas-para-gemini-adopcion.md) |
 | Adopción parte E 16/10 | **E:** Enlace desde el alta, aviso en proceso con firma, primera autorización inicia la orden, autoasignar tareas al asignar técnico, selector de país en teléfono de usuario, secciones plegables en portal, millaje faltante en sticker, acción rápida a sticker existente, traducción de nota con Gemini | **Publicado** (verificado el 21/10/2026: `db:check` con 93 migraciones aplicadas y SEC-17 con las 7 edge functions desplegadas). Gemini lo programó; Claude Code lo verificó y corrigió el 16/10/2026: `test:db` 37/891 ✓, Vitest 963/963 en el repositorio, lint, `tsc` y build ✓, y capturas reales. Orden de publicación en la [bitácora](#16102026--claude-code-parte-e-lo-que-salió-de-la-prueba-con-la-ord-2026-008). |
 | Plan SaaS 17/10 | Comparación con los programas de pago de 2026, auditoría con skills (Supabase, Vercel, Trail of Bits) y plan por fases: cimientos, mensajes SMS, cobro con enlace, trabajos agrupados, inspección por puntos, citas, indicadores y plataforma para vender | **Decidido: solo Restorify, sin SMS.** Se programó la fase 0, la 1.1, la 1.4 y la parte de la fase 3 de abajo. [plan](plan-saas-2026-10.md) |
 | Plan 17/10 (G–M) | Fase 0 (`033`), trabajos agrupados y catálogo (`034`), inspección por puntos (`035`), horas, reloj e indicadores (`036`) | **Publicado** (verificado el 21/10/2026: `db:check` con 93 migraciones aplicadas). Gemini programó y Claude verificó y corrigió: `test:db` 40/1000 ✓, Vitest, lint, `tsc` y build ✓, y capturas. Orden de publicación en la [bitácora](#17102026--claude-code-plan-del-1710-fase-0-trabajos-y-catálogo-inspección-por-puntos-horas-reloj-e-indicadores) |
@@ -35,7 +35,7 @@
 | Revisión 30/10–03/11 | Revisión completa del proyecto con seguimiento de las órdenes reales: ~30 errores de la app arreglados, migración `040` (traducciones, grupo «sin nada autorizado», fotos de una inspección publicada, indicadores, sticker, reloj), `delete-employee` más estricto, zona horaria de Maryland por defecto, `/ayuda` sin 403, documentación y Ayuda al día | **Publicado** el 04/11/2026: commits `259cd1f` y `c3a31d7` en `main`, `db push` de la `040`, `delete-employee` v13 y `process-outbox` v20 (lo hizo la persona responsable). Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
 | Decisiones 04/11 | El técnico no empieza ni termina sin nada autorizado; una orden entregada se archiva, no se borra (migración `041`); el correo del presupuesto espera a la traducción; subidas rechazadas con un motivo claro; la página no muestra el cobro del diagnóstico; se borró el video original; `config.toml` para la CLI 3 | **Publicado** el 04/11/2026: `db push` de la `041` (95 migraciones), `process-outbox` v21 y push a `main`. Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
 | «Atrás» 04/11 | El botón «atrás» del teléfono ya no hace perder lo que el técnico escribe o graba: avance de una tarea, trabajo adicional, pestaña Avances, nota de un punto, grabadores, visor y próximo servicio; trampa del historial en pila; arreglos del alta | **Publicado** el 04/11/2026 (push a `main`; sin migración ni funciones). Falta probarlo en un Android real. Ver la [bitácora](#04112026-tarde--claude-code-el-botón-atrás-en-lo-que-el-técnico-escribe-o-graba) |
-| Plan 16/11 | Lo pendiente después de la auditoría: publicar el sitio, CI completo, `qa:security` en local, e2e que faltan, sobras de la auditoría y, después, tablero por etapas, citas y recordatorios. Stripe y SMS, pendientes a propósito | **En curso.** Lista de control en la [bitácora](#16112026--claude-code-dirige-gemini-4-hydrogen-programa-plan-de-acción-de-lo-pendiente) |
+| Plan 16/11 | Lo pendiente después de la auditoría: publicar el sitio, CI completo, `qa:security` en local, e2e que faltan, sobras de la auditoría y, después, tablero por etapas, citas y recordatorios. Stripe y SMS, pendientes a propósito | **Fases 0 a 2 hechas y publicadas el 16/11/2026** (migración `045` incluida). Sigue la etapa 1 del [plan de arquitectura](plan-arquitectura-2026-11.md): calidad comercial en una sola sede. Lista de control en la [bitácora](#16112026--claude-code-dirige-gemini-4-hydrogen-programa-plan-de-acción-de-lo-pendiente) |
 | Calidad 15/11 | Cheque y comprobante en una sola regla (también en el alta), inglés de correos y portal, tipos de la app comprobados contra la base, edge functions sin código repetido, los siete archivos grandes partidos, e2e contra la base local (77/77) | **Publicado** el 15/11/2026: `db push` de la `043` y la `044` (98 migraciones), `functions deploy` de las siete (`portal` v11, `process-outbox` v22, `cleanup-storage` v9, `create-employee` v14, `update-employee` v12, `delete-employee` v14, `traducir-texto` v2), push a `main` (commit `a4dfaac`) y `qa:security` contra producción (178 PASS, 0 FAIL, 31 SKIP). **El sitio web NO se actualizó:** Hostinger perdió el acceso de Git al repositorio y sigue en el build del 07/11. Ver la [bitácora](#15112026-noche--claude-code-publicación-de-la-auditoría-y-documentación-al-día) |
 | Auditoría (2) 14–15/11 | Lo que quedó abierto: diálogo común accesible, migración `044`, fachada retirada, pruebas y arreglos de las edge functions, botones de 44 px e inglés de EE. UU. | **Publicado** el 15/11/2026: `db push` de la `043` y la `044` (98 migraciones), `functions deploy` de las siete (`portal` v11, `process-outbox` v22, `cleanup-storage` v9, `create-employee` v14, `update-employee` v12, `delete-employee` v14, `traducir-texto` v2), push a `main` (commit `a4dfaac`) y `qa:security` contra producción (178 PASS, 0 FAIL, 31 SKIP). **El sitio web NO se actualizó:** Hostinger perdió el acceso de Git al repositorio y sigue en el build del 07/11. Ver la [bitácora](#15112026-noche--claude-code-publicación-de-la-auditoría-y-documentación-al-día) |
 | Auditoría 13–14/11 | Auditoría completa (base, app, experiencia del taller, cliente y arquitectura) con Gemini 4 Hydrogen como programador: 13 errores de comportamiento de la app, migración `043` con 15 puntos de permisos y dinero, y los flujos del cliente y del taller (presupuesto por WhatsApp, alta de empleado, portal, PDF) | **Publicado** el 15/11/2026: `db push` de la `043` y la `044` (98 migraciones), `functions deploy` de las siete (`portal` v11, `process-outbox` v22, `cleanup-storage` v9, `create-employee` v14, `update-employee` v12, `delete-employee` v14, `traducir-texto` v2), push a `main` (commit `a4dfaac`) y `qa:security` contra producción (178 PASS, 0 FAIL, 31 SKIP). **El sitio web NO se actualizó:** Hostinger perdió el acceso de Git al repositorio y sigue en el build del 07/11. Ver la [bitácora](#15112026-noche--claude-code-publicación-de-la-auditoría-y-documentación-al-día) |
@@ -79,23 +79,23 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
 
 **Fase 0 — Cerrar la publicación**
 
-- [ ] 0.1 Push a `main` (este commit) para disparar el build de Hostinger.
-- [ ] 0.2 Comprobar en vivo, solo lectura: `/login` sirve otro `index-*.js` (el viejo es
+- [x] 0.1 Push a `main` (`dd3b863`): Hostinger construyó y publicó en ~2 min.
+- [x] 0.2 Comprobado en vivo el 16/11 (sirve `index-CGAPo065.js`, el portal dice «Your balance», la página del taller y `/login` cargan sin errores de consola). Era: `/login` sirve otro `index-*.js` (el viejo es
   `index-Cmr5zkWu.js`), el portal trae «Your balance», cargan la página del taller y `/login`.
-- [ ] 0.3 Dejar esta bitácora y `deployment.md` con la fecha real de publicación.
+- [x] 0.3 El sitio quedó publicado el 16/11/2026 con todo lo del 13–15/11.
 
 **Fase 1 — Red de seguridad operativa**
 
-- [ ] 1.1 CI completo (`.github/workflows/ci.yml`): sumar `npm run test:functions` (Deno 2), las
+- [~] 1.1 **Escrito, falta verlo correr en GitHub** (orden 22; no hay forma de mirar Actions desde esta máquina: revisar la pestaña Actions después del push). CI completo (`.github/workflows/ci.yml`): sumar `npm run test:functions` (Deno 2), las
   e2e contra la base local (`npm run test:e2e:local`, con `supabase start`) y una comprobación de
   que `src/types/supabase.gen.ts` está al día (`npm run db:types` y `git diff --exit-code`).
-- [ ] 1.2 `qa:security` completo contra la base local: hoy 31 casos se saltan porque faltan
+- [x] 1.2 Hecho (orden 22): `npm run qa:security:local` (`scripts/qa/security-local.mjs` + `scripts/lib/local-stack.mjs`) da **209 PASS, 0 FAIL, 0 SKIP**. Era: `qa:security` completo contra la base local: hoy 31 casos se saltan porque faltan
   órdenes de prueba. Un script que las prepare en local y pase sus ids
   (`scripts/qa/api-security.mjs` lee `ORDEN`, `ORDEN_AJENA`, `ORDEN_ENTREGADA`,
   `LABOR_FINALIZADA`…).
-- [ ] 1.3 `npm audit`: 4 moderadas, de `minimatch` por `@sentry/vite-plugin` (herramienta de
+- [x] 1.3 Hecho: `@sentry/vite-plugin` 5 → **11.11.0, versión exacta** y `npm audit fix`; **0 vulnerabilidades**, build y pruebas en verde. La 11.13.0 tenía horas de publicada y Deno (`test:functions`) rechaza por seguridad una dependencia de menos de 24 h: **no subir a una versión recién publicada**. Era: `npm audit`: 4 moderadas, de `minimatch` por `@sentry/vite-plugin` (herramienta de
   build, no llega al navegador). Subir el plugin y verificar el build.
-- [ ] 1.4 Sentry: `VITE_SENTRY_DSN` ya está en las variables de Hostinger (visto el 15/11), pero
+- [x] 1.4 Documentado (orden 25): el DSN está; falta que la persona responsable ponga `SENTRY_AUTH_TOKEN` en Hostinger (pasos en `deployment.md`). Era: Sentry: `VITE_SENTRY_DSN` ya está en las variables de Hostinger (visto el 15/11), pero
   el build avisa «No auth token provided»: no sube source maps. Corregir la documentación (dice
   que no está) y dejar los pasos del token.
 - Configuración de cuentas, de la persona responsable (pasos en `deployment.md`):
@@ -105,28 +105,28 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
 
 **Fase 2 — Deuda técnica restante**
 
-- [ ] 2.1 e2e que faltan (solo base local, patrón de `e2e/qa-cobros.spec.ts`): técnico sin precios
+- [x] 2.1 **Hecho: 85 de 85** (ver «Encontrado al implementar», la cola de subidas). Antes: cuatro de cinco pasan (orden 23: `e2e/localData.ts`, `qa-tecnico`, `qa-retirada`, `qa-comisiones`, `qa-campana`; suite en 84 de 85). **Falta `e2e/qa-avances.spec.ts` (MED-01):** la foto se queda en «0 de 1 archivos subidos» contra el servidor de desarrollo; en un navegador real contra el build local sube en 2 s (`qa.local/r16.mjs`), así que es de la prueba o del modo desarrollo, no de la app publicada. e2e que faltan (solo base local, patrón de `e2e/qa-cobros.spec.ts`): técnico sin precios
   en el detalle, subida de fotos, campana en tiempo real, retirada sin reparar, aceptar y pagar
   comisiones.
-- [ ] 2.2 Partir `src/pages/WorkOrders.smoke.test.tsx` (2.059 líneas, 28 mocks) en pruebas por
+- [x] 2.2 Hecho (orden 26): cuatro archivos (`WorkOrders.list|intake|detail|tasks.test.tsx`) con las mismas 92 pruebas y 8 a 10 simulaciones cada uno, más `workOrdersTestKit.tsx`. Era: partir `src/pages/WorkOrders.smoke.test.tsx` (2.059 líneas, 28 mocks) en pruebas por
   módulo (`intake/`, `detail/`, `list/`), con las mismas aserciones.
-- [ ] 2.3 Un solo criterio al descartar cambios: el alta (`intake/useIntake.ts`) y la nota de
+- [x] 2.3 Hecho (orden 24): `Guard = (proceed) => boolean` y `requestNavigation(proceed)` en `context/unsavedChanges.context.ts`; el alta abre su `ChoiceDialog` y `useDiscardGuard` tiene `requestLeave`. Vitest en verde; comprobado en el navegador (`qa.local/r15.mjs`): descartar o guardar el borrador sigue a donde se iba, «Seguir editando» se queda, y no sale la caja del navegador. Era: un solo criterio al descartar cambios: el alta (`intake/useIntake.ts`) y la nota de
   inspección (`inspection/PointInspection.tsx`) aún preguntan con `confirm()` nativo al navegar por
   el menú; pasarlos a `ChoiceDialog` / `useDiscardGuard`. Los `confirm()` de borrar se quedan.
-- [ ] 2.4 Sobras anotadas el 15/11: temporizador sin limpiar en `intake/steps/WorkStep.tsx`,
+- [x] 2.4 Hecho (orden 24), con sus pruebas. `renderWithProviders` ahora conserva los proveedores al hacer `rerender`. Era: sobras anotadas el 15/11: temporizador sin limpiar en `intake/steps/WorkStep.tsx`,
   párrafo vacío en `detail/sections/InspectionSection.tsx`, `orderSede` calculado dos veces
   (exponerlo en `WorkOrderDetailApi`), botones sin `type="button"`, `toDate` repetido en
   `portal/ServicePage.tsx`, errores de `settings/SedesCard.tsx` por dos canales.
-- [ ] 2.5 Esquema vigente en un archivo generado (`supabase/schema/actual.sql`) con comprobación
+- [x] 2.5 Hecho (orden 27): `npm run db:schema` (`scripts/db-schema.mjs`) escribe `supabase/schema/actual.sql` (11.491 líneas, idéntico entre corridas) y el CI lo compara. Era: esquema vigente en un archivo generado (`supabase/schema/actual.sql`) con comprobación
   en CI (P1-1 de `mantenimiento.md`).
 - [ ] 2.6 Peso de la app: `appStart` (655 kB) y el estudio de color (666 kB). Medir y diferir lo
   que no hace falta al entrar. **Cuidado:** un cambio de empaquetado ya dejó la página del taller
   sin estilos (ver `ai-context.md`, los `import()` de `main.tsx`).
-- [ ] 2.7 Pasar a `docs/historico/` los `tareas-para-gemini-*.md` ya ejecutados y arreglar enlaces.
+- [x] 2.7 Hecho (orden 25), con los enlaces corregidos. Era: pasar a `docs/historico/` los `tareas-para-gemini-*.md` ya ejecutados y arreglar enlaces.
 
 **Fase A — Adopción (en paralelo, sin código)**
 
-- [ ] A.1 Medir el uso desde el 06/11 con las consultas del anexo A de `plan-adopcion-2026-10.md`,
+- [x] A.1 **Medido el 16/11: el taller casi no usa el sistema.** Desde el 06/11 hay 2 órdenes (las dos del 09/11, de una sola cuenta de administración), 1 cliente, 1 vehículo, ningún movimiento en Finanzas, ningún técnico con ingreso desde el 20/10 y ningún teléfono con notificaciones push; los 2 enlaces de cliente sí se abrieron (11 veces). **Por eso la fase 3 espera.** Era: medir el uso desde el 06/11 con las consultas del anexo A de `plan-adopcion-2026-10.md`,
   en solo lectura contra producción (`npx -y supabase@3 db query --remote=<ref> --read-only`).
 - Pendiente del taller o de la persona responsable: probar «atrás» en un Android real; las
   preguntas del pago a empleados (`pagos-a-empleados.md`), el impuesto (contador), las 15 preguntas
@@ -138,6 +138,48 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
 - [ ] 3.1 Tablero por etapas configurable. [ ] 3.2 Citas. [ ] 3.3 Recordatorios del próximo
   servicio y pedir reseña (correo y enlace de WhatsApp). Detalle en `plan-saas-2026-10.md`.
 - **No se hacen ahora:** cobro con enlace (Stripe) y SMS; el impuesto espera al contador.
+
+**Encontrado al implementar (16/11)**
+
+- [x] **Migración `20261010000045`** (aplicada en producción el 16/11/2026) (`egreso_de_comision_con_metodo`): la prueba e2e de comisiones
+  encontró que `pay_commissions` asentaba el egreso en Finanzas sin `metodo_pago` (el pago sí lo
+  guarda). La `045` reemite la función desde la `038` con ese único cambio (comprobado con diff) y
+  rellena los egresos ya hechos. pgTAP `49_egreso_de_comision_con_metodo` (12 aserciones) pasa;
+  aplicada en local y documentada (orden 25). **Publicada el 16/11/2026** a pedido de la persona
+  responsable: `db push` (99 migraciones aplicadas; comprobado que la función lleva el método y que
+  `anon` no la ejecuta; en producción no había pagos de comisiones que rellenar).
+- Docker Desktop no arranca solo en esta máquina: si la base local no responde (`44321`), abrir
+  Docker Desktop y esperar a que los contenedores `supabase_*_store_control_system` estén sanos;
+  el de edge functions hay que arrancarlo a mano (`docker start supabase_edge_runtime_store_control_system`).
+
+- [x] **La cola de subidas no funcionaba en desarrollo** (lo diagnosticó Hydrogen leyendo el código,
+  orden 25): React, en modo estricto, monta, desmonta y vuelve a montar sobre la misma cola, que
+  quedaba desechada para siempre; con `npm run dev` ninguna foto subía (en producción no pasa). Ahora
+  `MediaUploadQueue.resume()` la revive al montar (`MediaUploadsProvider`), y las miniaturas crean su
+  URL dentro del efecto (`DraftMediaStrip`, `MediaGallery`). Prueba en `uploadQueue.test.ts`.
+- **Estado al cerrar el 16/11:** todo lo de arriba se publicó el 16/11/2026 (`db push` de la `045`,
+  commit y push a `main`; sin cambios en edge functions). Verificado antes de publicar: lint y tipos limpios, Vitest 178 archivos / 1.275 pruebas, build, Deno 102, e2e local
+  85 de 85, `qa:security:local` 209 PASS, pgTAP 49 (12 de 12). **Queda por hacer después de publicar:**
+  mirar la pestaña Actions de GitHub: es la primera vez que corren los trabajos nuevos del CI
+  (funciones, e2e, tipos y esquema al día) y puede hacer falta ajustarlos.
+- **Decisiones de la persona responsable al ver el plan (16/11, tarde):** publicar lo de hoy (hecho);
+  **no** hacer todavía el acceso del técnico con QR; **no** arrancar la medición de uso ni el sistema
+  de módulos por sede; los módulos que el taller no usa quedan apagados; y el foco es **que funcione
+  bien para una sola sede, a la altura de un programa comercial**. El plan de arquitectura quedó
+  reordenado: la etapa 1 es «Calidad comercial en una sola sede» (paquetes Q1 a Q5). Las órdenes
+  viven desde hoy en `docs/ordenes/`:
+  - [ ] **Q1** recorrido de calidad ([orden](ordenes/q1-recorrido-de-calidad.md)): dos agentes con
+    navegador contra la base local, uno como administración y otro como técnico y cliente. Entregan
+    `docs/ordenes/q1-informe-administracion.md` y `q1-informe-tecnico-y-cliente.md`.
+  - [ ] **Q3** módulos apagados ([orden](ordenes/q3-modulos-apagados.md)): lista en
+    `src/config/modulos.ts`, leída de `VITE_MODULOS_APAGADOS`, que producción toma de
+    `.env.production`. Desarrollo y pruebas quedan con todo encendido.
+  - [ ] **Q2** arreglos de lo que encuentre Q1; **Q4** PDF, correos, enlace y sticker; **Q5** la
+    prueba «un día en el taller» y datos de ejemplo. Se ordenan cuando esté Q1.
+
+- **Lo que sigue lo ordena el plan de arquitectura:** [plan-arquitectura-2026-11.md](plan-arquitectura-2026-11.md).
+  Desde el 16/11 Claude trabaja como arquitecto (diseña, escribe las órdenes y revisa) y la ejecución
+  va a Gemini Hydrogen (código, lectura) o a agentes Sonnet (lo que necesita correr comandos).
 
 **Cómo se trabaja y cómo se verifica**
 
@@ -1046,7 +1088,7 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
 
 - **Pedido:** «solo enfócate en las funcionalidades para Restorify, no para vender; no implementes
   lo del SMS todavía». Plan: [plan-saas-2026-10.md](plan-saas-2026-10.md). Tareas:
-  [tareas-para-gemini-plan-2026-10.md](tareas-para-gemini-plan-2026-10.md), partes G a M.
+  [tareas-para-gemini-plan-2026-10.md](historico/tareas-para-gemini-plan-2026-10.md), partes G a M.
 - **Quién hizo qué:**
   - **Claude** diseñó cada parte, escribió la `033`, verificó y corrigió todo, y pasó todo al
     repositorio;
@@ -1140,7 +1182,7 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
     que todavía no están publicadas;
   - la orden se entregó como «retirada sin reparar». Hay que preguntarle a la persona
     responsable si fue a propósito.
-- **Diseño (parte E de [tareas-para-gemini-adopcion.md](tareas-para-gemini-adopcion.md)).**
+- **Diseño (parte E de [tareas-para-gemini-adopcion.md](historico/tareas-para-gemini-adopcion.md)).**
   Migración `032`, todo con triggers que solo avisan con un WARNING si fallan:
   - el enlace nace con la orden (las abiertas sin enlace reciben uno);
   - el aviso «en proceso» espera la firma;
@@ -1480,7 +1522,7 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
 ### 14/10/2026 — Claude Code (auditoría del sticker de próximo servicio de Gemini)
 
 - **Pedido:** que Gemini (Antigravity CLI, Gemini 3.8 Flash High; el 3.1 Pro ya no está) implemente
-  el plan [tareas-para-gemini-sticker.md](tareas-para-gemini-sticker.md) y después auditar lo que
+  el plan [tareas-para-gemini-sticker.md](historico/tareas-para-gemini-sticker.md) y después auditar lo que
   hizo.
 - **Cómo:** Gemini trabajó en una copia aislada (`scratchpad/ws-sticker`, con un commit "base"),
   sin terminal. Ahí se revisó el diff completo, se corrigió y se verificó. Después se copiaron
@@ -1565,7 +1607,7 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
 > Revisada por Claude Code (entrada de arriba): las columnas y funciones que nombra aquí no
 > coinciden del todo con el código.
 
-- **Pedido:** Implementar completo el plan [tareas-para-gemini-sticker.md](tareas-para-gemini-sticker.md) (tareas T1 a T9) sobre la copia de trabajo.
+- **Pedido:** Implementar completo el plan [tareas-para-gemini-sticker.md](historico/tareas-para-gemini-sticker.md) (tareas T1 a T9) sobre la copia de trabajo.
 - **Condiciones de la corrida:** Trabajado sin acceso a terminal (sin correr `npm`, `git`, `supabase`). **NO se corrió ninguna prueba porque no había terminal.** Todas las pruebas de código, tipos, base y seguridad quedan escritas para pasar a la primera y ser ejecutadas por Claude Code. No se tocó `package-lock.json`, `entregar_orden` ni `DeliveryModal.tsx` (`git diff` limpio en ambos).
 - **Hecho (tareas T1 a T9):**
   - **`package.json`**: agregada dependencia `"qrcode": "1.5.4"` y `"@types/qrcode": "1.5.5"` en `devDependencies`.
@@ -1650,7 +1692,7 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
   - solo administración programa, y el técnico sugiere para que administración acepte o descarte;
   - se imprime desde Windows y desde iPhone.
 - **Entregado:**
-  - [tareas-para-gemini-sticker.md](tareas-para-gemini-sticker.md), con diseño, tareas T1–T9, verificación y orden de publicación;
+  - [tareas-para-gemini-sticker.md](historico/tareas-para-gemini-sticker.md), con diseño, tareas T1–T9, verificación y orden de publicación;
   - la hoja de calibración `Documentos\Restorify - Sticker\calibracion-sticker-62x50.pdf`, para probar la impresora antes de implementar.
 - **Sin commit y sin código de la función.**
 - **Siguiente paso:** el usuario prueba la impresora con la hoja de calibración (§6 del plan) y después se le pasa el plan a Gemini.

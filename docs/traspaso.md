@@ -55,7 +55,7 @@ de Hostinger no se puede publicar nada.
 | **Supabase** — proyecto `dbstores` (`lendsiqkxhvbxxkaadrt`, región `ca-central-1`) | Base de datos, Auth, Storage, Edge Functions, secretos, Vault, tareas programadas | Miembro **Owner** o **Administrator** de la organización | No puedes aplicar migraciones, desplegar funciones ni ver logs. Nadie puede recuperar el proyecto sin el dueño de la organización |
 | **Hostinger** | El sitio `restorifyauto.net` (conectado a GitHub, con las variables `VITE_*` de producción) y el **DNS del dominio**, incluidos los registros que verifican Resend | Acceso a hPanel (o acceso delegado de Hostinger) | No puedes publicar el frontend; si el dominio vence, cae todo |
 | **Resend** | Envío de correos al cliente, dominio verificado, llaves | Miembro del equipo | No puedes rotar la llave ni ver rebotes |
-| **Sentry** (org `restorify`, proyecto `restorify-frontend`) | Errores del frontend. **Hoy sin DSN configurado** | Miembro | No ves errores en producción |
+| **Sentry** (org `restorify`, proyecto `restorify-frontend`) | Errores del frontend. `VITE_SENTRY_DSN` ya está en Hostinger (15/11/2026); falta `SENTRY_AUTH_TOKEN` para subir los source maps | Miembro | No ves los errores desminificados (con archivo y línea) |
 | **Google Jules** (bot "Bolt" en GitHub) | Abre pull requests automáticas de rendimiento | Quien lo conectó al repositorio | Sigue abriendo PRs; revisarlas o desconectarlo |
 
 Datos que conviene tener anotados en un gestor de contraseñas del negocio, **no en el
@@ -105,7 +105,7 @@ npm run dev                          # http://localhost:5173
 ```bash
 npm run lint && npx tsc -b && npm test && npm run build
 npm run test:functions   # edge functions con Deno 2
-npx supabase start && npm run test:db && npm run test:e2e:local && npx supabase stop
+npx supabase start && npm run test:db && npm run test:e2e:local && npm run qa:security:local && npx supabase stop
 npm run qa:security      # contra el proyecto remoto (necesita cuentas en .env.test.local para probar como usuario)
 ```
 
@@ -140,8 +140,11 @@ Si todo pasa, la máquina está lista.
 ### Ramas y revisión
 
 - `main` es lo publicado. Trabaja en una rama y abre una pull request.
-- La integración continua corre en cada PR: lint, tipos, las pruebas de Vitest, build, y todas
-  las migraciones desde cero con las pruebas pgTAP (cifras al día en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto)). **No fusiones con CI en rojo.**
+- La integración continua corre en cada PR: lint, tipos, pruebas de Vitest y build (`app`),
+  pruebas de Edge Functions con Deno 2 (`funciones`), todas las migraciones desde cero con
+  pgTAP y verificación de `src/types/supabase.gen.ts` y `supabase/schema/actual.sql` al día (`base-de-datos`), y las pruebas
+  E2E de Playwright más `qa:security:local` contra el stack local (`e2e`) (cifras al día en
+  [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto)). **No fusiones con CI en rojo.**
 
 ### Un cambio que toca la base
 
@@ -153,7 +156,7 @@ Si todo pasa, la máquina está lista.
    necesario. Si es `SECURITY DEFINER`: `SET search_path = public` y validar rol por dentro.
 3. Si protege algo, protegerlo en `INSERT` **y** en `UPDATE`.
 4. Prueba pgTAP en `supabase/tests/database/`.
-5. `npx supabase start && npm run test:db` y `npm run db:types` para regenerar `src/types/supabase.gen.ts` (y revisar `src/types/domain/schema.contract.ts`).
+5. `npx supabase start && npm run test:db`, `npm run db:types` para regenerar `src/types/supabase.gen.ts` (y revisar `src/types/domain/schema.contract.ts`) y `npm run db:schema` para actualizar `supabase/schema/actual.sql` desde la base local (el CI comprueba que esté al día).
 6. Si agrega una RPC o función interna que no debe ser pública, sumar su caso a
    `scripts/qa/api-security.mjs`.
 7. Si toca edge functions, prueba con `npm run test:functions` (Deno 2).

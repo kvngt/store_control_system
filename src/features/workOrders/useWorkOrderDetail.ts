@@ -153,6 +153,7 @@ export function useWorkOrderDetail({ onBoardChanged }: UseWorkOrderDetailOptions
 
   return {
     order,
+    orderSede,
     loading,
     loadError,
     notFound,

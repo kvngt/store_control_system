@@ -19,7 +19,7 @@ import { useNotifications } from './useNotifications';
 export default function NotificationBell() {
   const { t, language } = useLanguage();
   const { showToast } = useToast();
-  const { confirmNavigation } = useUnsavedChanges();
+  const { requestNavigation } = useUnsavedChanges();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -48,10 +48,11 @@ export default function NotificationBell() {
   }, [open]);
 
   const openNotification = (notification: AppNotification) => {
-    if (!confirmNavigation()) return;
-    if (!notification.leida_en) void markRead(notification.id);
-    setOpen(false);
-    if (notification.url) navigate(notification.url);
+    requestNavigation(() => {
+      if (!notification.leida_en) void markRead(notification.id);
+      setOpen(false);
+      if (notification.url) navigate(notification.url);
+    });
   };
 
   const badge = unreadCount > 99 ? '99+' : String(unreadCount);

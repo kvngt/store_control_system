@@ -176,6 +176,26 @@ describe('MediaUploadQueue', () => {
     expect(second.getSnapshot().map((i) => i.userId)).toEqual(['user-1']);
   });
 
+  it('una cola desechada y revivida vuelve a subir (el doble montaje de React en modo estricto)', async () => {
+    const store = createMemoryStore();
+    const { uploader, calls } = fakeUploader();
+    const queue = new MediaUploadQueue({ uploader, store, newId, isOnline: () => true });
+
+    // Montaje, limpieza y nuevo montaje sobre la MISMA cola, como hace <StrictMode> en desarrollo.
+    queue.resume();
+    void queue.setUser('user-1');
+    queue.dispose();
+    queue.resume();
+    await queue.setUser('user-1');
+
+    queue.enqueue([upload()]);
+    await settle();
+
+    // Antes se quedaba en «0 de 1»: `pump()` salía en la primera línea porque seguía desechada.
+    expect(calls.saveRow).toEqual(['id-1']);
+    expect(queue.getSnapshot()[0].estado).toBe('listo');
+  });
+
   it('respeta el límite de subidas simultáneas', async () => {
     const resolvers: (() => void)[] = [];
     const { uploader } = fakeUploader({

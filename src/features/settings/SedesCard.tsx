@@ -43,11 +43,9 @@ export default function SedesCard() {
     queryClient.invalidateQueries({ queryKey: queryKeys.users(undefined) });
   };
 
-  const [actionError, setActionError] = useState('');
   // Translated here rather than at fetch time, so switching the UI language
   // no longer re-reads every sede and every staff profile.
-  // Los dos a la vez: un error viejo de guardar no debe tapar que la lista no cargó.
-  const errors = [actionError, loadError ? getErrorMessage(loadError, language) : ''].filter(Boolean);
+  const loadErrorMessage = loadError ? getErrorMessage(loadError, language) : '';
 
   const [capacityDrafts, setCapacityDrafts] = useState<Record<string, string>>({});
   const [rateDrafts, setRateDrafts] = useState<Record<string, string>>({});
@@ -195,19 +193,18 @@ export default function SedesCard() {
     const hourlyRateStr = ratePerHourDrafts[sedeId]?.trim();
     const hourlyRate = hourlyRateStr ? parseFloat(hourlyRateStr) : null;
     if (!capacity || capacity <= 0) {
-      setActionError(t('settings.capacityInvalid'));
+      showToast('error', t('settings.capacityInvalid'));
       return;
     }
     if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
-      setActionError(t('payroll.rateInvalid'));
+      showToast('error', t('payroll.rateInvalid'));
       return;
     }
     if (hourlyRate !== null && (!Number.isFinite(hourlyRate) || hourlyRate < 0)) {
-      setActionError(t('settings.hourlyRateInvalid'));
+      showToast('error', t('settings.hourlyRateInvalid'));
       return;
     }
     setSavingSedeId(sedeId);
-    setActionError('');
     try {
       // One update for all operations settings.
       await sedesService.updateSede(sedeId, {
@@ -220,7 +217,7 @@ export default function SedesCard() {
       loadData();
       showToast('success', t('settings.sedeUpdated'));
     } catch (err) {
-      setActionError(getErrorMessage(err, language));
+      showToast('error', t('settings.sedeError'), getErrorMessage(err, language));
     } finally {
       setSavingSedeId(null);
     }
@@ -250,14 +247,12 @@ export default function SedesCard() {
         <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
           <Building2 size={18} /> {t('settings.workshops')}
         </h3>
-        <button className="btn btn-secondary btn-sm" onClick={() => setShowCreateModal(true)}>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowCreateModal(true)}>
           <Plus size={16} /> {t('settings.newWorkshop')}
         </button>
       </div>
 
-      {errors.map((message) => (
-        <div key={message} className="alert-error">{message}</div>
-      ))}
+      {loadErrorMessage && <div className="alert-error">{loadErrorMessage}</div>}
 
       {/* Shared hidden picker for sede logos */}
       <input
