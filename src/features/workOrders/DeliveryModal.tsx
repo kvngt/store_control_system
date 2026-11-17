@@ -6,6 +6,7 @@ import { useToast } from '../../context/toast.context';
 import { AlertError } from '../../components/AlertError';
 import Modal from '../../components/Modal';
 import { commissionsService } from '../../services/commissions.service';
+import { moduloActivo } from '../../config/modulos';
 import { workOrdersService } from '../../services/workOrders.service';
 import { parkingService } from '../../services/parking.service';
 import { queryKeys } from '../../lib/queryClient';
@@ -66,6 +67,7 @@ export default function DeliveryModal({ order, onCancel, onDelivered }: Delivery
   const estimateQuery = useQuery({
     queryKey: queryKeys.commissionEstimate(order.id),
     queryFn: () => commissionsService.getEstimate(order.id),
+    enabled: moduloActivo('comisiones'),
     staleTime: 0,
   });
   const unassignedTasks = (estimateQuery.data?.sin_asignar ?? [])
@@ -200,7 +202,7 @@ export default function DeliveryModal({ order, onCancel, onDelivered }: Delivery
                 </>
               )}
 
-              <p className="field-hint">{t('delivery.hint')}</p>
+              <p className="field-hint">{t(moduloActivo('comisiones') ? 'delivery.hint' : 'delivery.hintNoCommissions')}</p>
             </>
           )}
     </Modal>

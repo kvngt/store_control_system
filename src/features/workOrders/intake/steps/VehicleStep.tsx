@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { Camera, CheckCircle2, ChevronLeft, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Camera, Car, CheckCircle2, ChevronLeft, Plus, Search, X } from 'lucide-react';
 import { useLanguage } from '../../../../context/language.context';
 import { useToast } from '../../../../context/toast.context';
 import { isMediaError } from '../../../../lib/media/errors';
@@ -39,6 +39,37 @@ export default function VehicleStep({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeZone, setActiveZone] = useState<string | null>(null);
+  const [vehicleQuery, setVehicleQuery] = useState('');
+  const [vehicleMenuOpen, setVehicleMenuOpen] = useState(false);
+  const vehiclePickerRef = useRef<HTMLDivElement>(null);
+
+  const selectedVehicleId = watch('selectedVehicle');
+  const selectedVehicleObj = useMemo(
+    () => vehiclesForCustomer.find((v) => v.id === selectedVehicleId) ?? null,
+    [vehiclesForCustomer, selectedVehicleId]
+  );
+
+  const useSearchableVehicle = vehiclesForCustomer.length > 8;
+
+  const vehicleMatches = useMemo(() => {
+    const needle = vehicleQuery.trim().toLowerCase();
+    if (!needle) return vehiclesForCustomer.slice(0, 8);
+    return vehiclesForCustomer
+      .filter((v) => {
+        const text = `${v.anio ?? ''} ${v.marca} ${v.modelo} ${v.placa ?? ''} ${v.vin ?? ''}`.toLowerCase();
+        return text.includes(needle);
+      })
+      .slice(0, 8);
+  }, [vehiclesForCustomer, vehicleQuery]);
+
+  useEffect(() => {
+    if (!vehicleMenuOpen) return;
+    const onDocDown = (e: MouseEvent) => {
+      if (!vehiclePickerRef.current?.contains(e.target as Node)) setVehicleMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDocDown);
+    return () => document.removeEventListener('mousedown', onDocDown);
+  }, [vehicleMenuOpen]);
 
   const handleZoneClick = (zoneKey: string) => {
     setActiveZone(zoneKey);
@@ -75,25 +106,131 @@ export default function VehicleStep({
       />
 
       <div className="form-group" style={{ marginBottom: 'var(--space-3)' }}>
-        <label className="form-label" htmlFor="intake-vehicle">{t('vehicles.title')}</label>
+        <label
+          className="form-label"
+          htmlFor={
+            form.vehicleMode === 'existing'
+              ? useSearchableVehicle
+                ? 'intake-vehicle-search'
+                : 'intake-vehicle'
+              : undefined
+          }
+        >
+          {t('vehicles.title')}
+        </label>
         {form.vehicleMode === 'existing' ? (
-          <>
-            <select
-              id="intake-vehicle"
-              className="form-input form-select"
-              value={watch('selectedVehicle')}
-              aria-invalid={!!errors.selectedVehicle}
-              onChange={(e) => form.selectVehicle(e.target.value)}
-              disabled={!form.selectedCustomer}
-            >
-              <option value="">{t('intake.selectVehicle')}</option>
-              <option value="__new__">+ {t('vehicles.newVehicle')}</option>
-              {vehiclesForCustomer.map((v) => (
-                <option key={v.id} value={v.id}>{v.marca} {v.modelo} ({v.placa})</option>
-              ))}
-            </select>
-            <FieldError messageKey={errors.selectedVehicle?.message} />
-          </>
+          useSearchableVehicle ? (
+            <>
+              <div className="intake-picker-row">
+                <div className="intake-picker-field">
+                  {selectedVehicleObj ? (
+                    <div className={`owner-card${errors.selectedVehicle ? ' is-invalid' : ''}`}>
+                      <div className="owner-card-avatar" aria-hidden="true">
+                        <Car size={16} />
+                      </div>
+                      <div className="owner-card-body">
+                        <div className="owner-card-name">
+                          {selectedVehicleObj.anio ? `${selectedVehicleObj.anio} ` : ''}
+                          {selectedVehicleObj.marca} {selectedVehicleObj.modelo}
+                        </div>
+                        <div className="owner-card-meta">
+                          <span>{selectedVehicleObj.placa || t('vehicles.noPlate')}</span>
+                          {selectedVehicleObj.vin && <span>{selectedVehicleObj.vin}</span>}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => {
+                          form.selectVehicle('');
+                          setVehicleQuery('');
+                          setVehicleMenuOpen(true);
+                        }}
+                      >
+                        {t('vehicles.changeOwner')}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="combo" ref={vehiclePickerRef}>
+                      <div className="combo-search">
+                        <Search size={16} className="combo-search-icon" />
+                        <input
+                          id="intake-vehicle-search"
+                          className={`form-input${errors.selectedVehicle ? ' is-invalid' : ''}`}
+                          autoComplete="off"
+                          aria-invalid={!!errors.selectedVehicle || undefined}
+                          placeholder={t('intake.searchVehicle')}
+                          value={vehicleQuery}
+                          onChange={(e) => {
+                            setVehicleQuery(e.target.value);
+                            setVehicleMenuOpen(true);
+                          }}
+                          onFocus={() => setVehicleMenuOpen(true)}
+                          disabled={!form.selectedCustomer}
+                        />
+                      </div>
+                      {vehicleMenuOpen && (
+                        <div className="combo-menu" role="listbox">
+                          {vehicleMatches.map((v) => (
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={false}
+                              key={v.id}
+                              className="combo-option"
+                              onClick={() => {
+                                form.selectVehicle(v.id);
+                                setVehicleMenuOpen(false);
+                              }}
+                            >
+                              <span className="combo-option-main">
+                                {v.anio ? `${v.anio} ` : ''}
+                                {v.marca} {v.modelo}
+                              </span>
+                              <span className="combo-option-sub">
+                                {v.placa || t('vehicles.noPlate')}
+                              </span>
+                            </button>
+                          ))}
+                          {vehicleMatches.length === 0 && (
+                            <div className="combo-empty">{t('intake.noVehicleMatches')}</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  id="intake-new-vehicle"
+                  className="btn btn-secondary"
+                  onClick={() => form.selectVehicle('__new__')}
+                  disabled={!form.selectedCustomer}
+                >
+                  <Plus size={16} /> {t('vehicles.newVehicle')}
+                </button>
+              </div>
+              <FieldError messageKey={errors.selectedVehicle?.message} />
+            </>
+          ) : (
+            <>
+              <select
+                id="intake-vehicle"
+                className="form-input form-select"
+                value={selectedVehicleId}
+                aria-invalid={!!errors.selectedVehicle}
+                onChange={(e) => form.selectVehicle(e.target.value)}
+                disabled={!form.selectedCustomer}
+              >
+                <option value="">{t('intake.selectVehicle')}</option>
+                <option value="__new__">+ {t('vehicles.newVehicle')}</option>
+                {vehiclesForCustomer.map((v) => (
+                  <option key={v.id} value={v.id}>{v.marca} {v.modelo} ({v.placa})</option>
+                ))}
+              </select>
+              <FieldError messageKey={errors.selectedVehicle?.message} />
+            </>
+          )
         ) : (
           /* The same VIN-first form the Vehiculos screen uses: VIN lookup, plate
              check and brand/model suggestions, with the customer standing there. */
@@ -104,6 +241,8 @@ export default function VehicleStep({
               touched={formState.isSubmitted || !!errors.newVehicle}
               requirePlate={false}
               disabled={saving}
+              plateError={errors.newVehicle?.placa?.message}
+              vinError={errors.newVehicle?.vin?.message}
             />
             {form.customerMode === 'existing' && (
               <button

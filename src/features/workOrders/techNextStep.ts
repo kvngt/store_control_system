@@ -1,5 +1,6 @@
 import type { LaborItem, OrderStatus, WorkOrder } from '../../types/database';
 import type { QuickAction } from './QuickActions';
+import { moduloActivo } from '../../config/modulos';
 import { isApproved } from './lineState';
 import { AlertTriangle, Car, CheckCircle2, ClipboardCheck, ListChecks, MessageSquarePlus, Play, Tag } from 'lucide-react';
 
@@ -131,12 +132,16 @@ export function buildTechActions({
       label: 'quickActions.progress',
       onClick: () => goTo('avances', 'avances'),
     },
-    {
-      key: 'inspection',
-      icon: ClipboardCheck,
-      label: 'quickActions.inspection',
-      onClick: () => goTo('orden', 'inspeccion'),
-    },
+    ...(moduloActivo('inspeccion')
+      ? [
+          {
+            key: 'inspection',
+            icon: ClipboardCheck,
+            label: 'quickActions.inspection',
+            onClick: () => goTo('orden', 'inspeccion'),
+          },
+        ]
+      : []),
     ...(order.estatus !== 'finalizado'
       ? [
           {

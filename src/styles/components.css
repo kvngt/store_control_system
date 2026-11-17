@@ -7182,3 +7182,75 @@ button.intake-step-button:hover:not(:disabled) {
     height: 44px;
   }
 }
+
+/* ===== Recepción: buscador con acción aparte, duplicado por teléfono e idioma ===== */
+.intake-picker-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.intake-picker-field {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.intake-duplicate-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.intake-lang-toggle {
+  display: inline-flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.intake-lang-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-surface-border);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.intake-lang-btn.is-active {
+  background: var(--color-primary-subtle);
+  border-color: var(--color-primary);
+  color: var(--color-primary-light);
+}
+
+/* En pantallas táctiles, 44 px de área. Va después de las reglas base: la del idioma tenía 36 px y la ganaba. */
+@media (pointer: coarse), (max-width: 768px) {
+  .intake-picker-row .btn,
+  .intake-lang-btn,
+  .intake-duplicate-notice .btn,
+  .combo-option {
+    min-height: 44px;
+  }
+}
+
+.progress-locked-note {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  line-height: 1.4;
+}

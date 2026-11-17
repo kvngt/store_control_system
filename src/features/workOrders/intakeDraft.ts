@@ -49,7 +49,13 @@ export function loadIntakeDraft(userId: string): IntakeDraft | null {
     const parsed = JSON.parse(raw) as Partial<IntakeDraft> | null;
     if (!parsed || parsed.v !== VERSION || !parsed.values || typeof parsed.values !== 'object') return null;
     // Lo que falte (un campo que se agregó después de guardarlo) se completa con el formulario vacío.
-    const values = { ...emptyWorkOrderForm(), ...parsed.values } as WorkOrderFormValues;
+    const blank = emptyWorkOrderForm();
+    const values = {
+      ...blank,
+      ...parsed.values,
+      newCustomer: { ...blank.newCustomer, ...(parsed.values.newCustomer ?? {}) },
+      newVehicle: { ...blank.newVehicle, ...(parsed.values.newVehicle ?? {}) },
+    } as WorkOrderFormValues;
     if (isBlank(values)) return null;
     return {
       v: VERSION,

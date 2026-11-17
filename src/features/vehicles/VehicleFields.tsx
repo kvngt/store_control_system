@@ -33,6 +33,9 @@ interface VehicleFieldsProps {
   requirePlate?: boolean;
   /** Set true while the form is inside a modal that is being submitted. */
   disabled?: boolean;
+  /** Error del servidor en placa o VIN (p. ej. duplicado en el alta de orden). */
+  plateError?: string;
+  vinError?: string;
   /** Rendered under the whole block; used for the "back to existing" link. */
   footer?: React.ReactNode;
 }
@@ -56,6 +59,8 @@ export default function VehicleFields({
   touched = false,
   requirePlate = true,
   disabled = false,
+  plateError,
+  vinError,
   footer,
 }: VehicleFieldsProps) {
   const { t, language } = useLanguage();
@@ -204,8 +209,9 @@ export default function VehicleFields({
         </div>
         <div className="vin-row">
           <input
-            className={`form-input vin-input${touched && invalid.vin ? ' is-invalid' : ''}`}
+            className={`form-input vin-input${(touched && invalid.vin) || vinError ? ' is-invalid' : ''}`}
             id="vehicle-vin"
+            aria-invalid={((touched && invalid.vin) || !!vinError) || undefined}
             placeholder="1HGCM82633A004352"
             maxLength={17}
             autoComplete="off"
@@ -256,6 +262,7 @@ export default function VehicleFields({
             {vinMessage.text}
           </p>
         )}
+        {vinError && <p className="field-hint field-hint-error" role="alert">{vinError}</p>}
 
         {decoded && decoded.detalles.length > 0 && (
           <div className="vin-details">
@@ -386,8 +393,9 @@ export default function VehicleFields({
         <div className="form-group">
           <label className="form-label" htmlFor="vehicle-plate">{t('vehicles.plate')}</label>
           <input
-            className={`form-input${touched && invalid.placa ? ' is-invalid' : ''}`}
+            className={`form-input${(touched && invalid.placa) || plateError ? ' is-invalid' : ''}`}
             id="vehicle-plate"
+            aria-invalid={((touched && invalid.placa) || !!plateError) || undefined}
             placeholder={value.sin_placa ? t('vehicles.noPlate') : 'ABC1234'}
             maxLength={10}
             autoComplete="off"
@@ -400,6 +408,7 @@ export default function VehicleFields({
               {plateMessage.text}
             </p>
           )}
+          {plateError && <p className="field-hint field-hint-error" role="alert">{plateError}</p>}
           {touched && requirePlate && !value.sin_placa && !value.placa.trim() && (
             <p className="field-hint field-hint-error">{t('vehicles.plateRequired')}</p>
           )}

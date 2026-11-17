@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, Plus } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { moduloActivo } from '../../config/modulos';
 import { SPECIALTIES, type Specialty, type WorkType } from '../../types/database';
 import TechnicianSelect from './TechnicianSelect';
 import TradeMismatchDialog from './TradeMismatchDialog';
@@ -152,7 +153,8 @@ export default function TaskEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefill]);
 
-  const pending = open && (draft.descripcion.trim() !== '' || draft.costo.trim() !== '' || draft.horas.trim() !== '');
+  const relojActivo = moduloActivo('reloj');
+  const pending = open && (draft.descripcion.trim() !== '' || draft.costo.trim() !== '' || (relojActivo && draft.horas.trim() !== ''));
   useEffect(() => {
     onPendingChange?.(pending);
     // Al desmontarse (el alta pasa a otro paso) ya no queda nada escrito.
@@ -188,10 +190,14 @@ export default function TaskEditor({
     especialidad: draft.especialidad,
     asignado_a: draft.asignado_a || null,
     // Las horas van solo si se escribieron; al editar, borrarlas las quita (null).
-    ...(draft.horas.trim() !== ''
-      ? { horas: clampLaborHours(draft.horas) }
+    ...(relojActivo
+      ? draft.horas.trim() !== ''
+        ? { horas: clampLaborHours(draft.horas) }
+        : initial?.horas != null
+          ? { horas: null }
+          : {}
       : initial?.horas != null
-        ? { horas: null }
+        ? { horas: initial.horas }
         : {}),
   });
 
@@ -304,7 +310,7 @@ export default function TaskEditor({
             disabled={disabled}
           />
         </div>
-        {isAdmin && (
+        {isAdmin && relojActivo && (
           <div className="form-group task-editor-hours">
             <label className="form-label" htmlFor={`${idPrefix}-hours`}>{t('tasks.hours')}</label>
             <input
@@ -341,7 +347,9 @@ export default function TaskEditor({
       </div>
       {error && <p className="task-editor-error" role="alert">{error}</p>}
       <AddedConfirmation text={added} />
-      {!draft.asignado_a && <p className="field-hint">{t('tasks.noTechnicianHint')}</p>}
+      {moduloActivo('comisiones') && !draft.asignado_a && (
+        <p className="field-hint">{t('tasks.noTechnicianHint')}</p>
+      )}
       <div className="task-editor-actions">
         <button type="button" className="btn btn-ghost" onClick={close} disabled={saving}>
           {t('common.cancel')}

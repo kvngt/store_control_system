@@ -199,9 +199,11 @@ SELECT is(
   'Su panel cuenta sus órdenes, no las del taller'
 );
 
-SELECT isnt_empty(
-  $$ UPDATE ordenes_trabajo SET porcentaje_avance = 10 WHERE id = (SELECT id FROM t_o1) RETURNING id $$,
-  'Sigue moviendo el avance de su orden'
+-- Su orden es una orden sin nada autorizado: desde 20261010000047 (B-02) no mueve el avance.
+SELECT throws_ok(
+  $$ UPDATE ordenes_trabajo SET porcentaje_avance = 10 WHERE id = (SELECT id FROM t_o1) $$,
+  '42501', NULL,
+  'No mueve el avance de su orden mientras no haya nada autorizado'
 );
 
 -- ------------------------------------------------------------------------------------

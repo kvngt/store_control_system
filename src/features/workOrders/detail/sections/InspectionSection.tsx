@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Camera } from 'lucide-react';
 import CollapsibleSection from '../../../../components/CollapsibleSection';
+import { moduloActivo } from '../../../../config/modulos';
 import { useLanguage } from '../../../../context/language.context';
 import type { DamageMark } from '../../../../lib/vehicleDiagram';
 import type { WorkOrder } from '../../../../types/database';
@@ -90,32 +91,34 @@ export default function InspectionSection({
           </div>
         )}
 
-        <PointInspection
-          orderId={order.id}
-          orderSedeId={order.sede_id}
-          isAdmin={detail.isAdmin}
-          canEdit={detail.canEdit}
-          isDelivered={detail.isDelivered}
-          media={order.media || []}
-          pendingUploads={detail.pendingUploads}
-          technicians={detail.technicians}
-          assignments={assignments}
-          onQuotePoint={(point) => {
-            const text = point.nota ? `${point.nombre} — ${point.nota}` : point.nombre;
-            onQuotePointPrefill({
-              text,
-              nonce: Date.now(),
-              technicianId: suggestedTechnicianId(assignments.map((a) => a.usuario_id), detail.technicians),
-            });
-          }}
-          onRefreshOrder={detail.refresh}
-          onAddMedia={(puntoId, items) => {
-            detail.enqueueMedia(items, {
-              origen: 'inspeccion',
-              inspeccionPuntoId: puntoId,
-            });
-          }}
-        />
+        {moduloActivo('inspeccion') && (
+          <PointInspection
+            orderId={order.id}
+            orderSedeId={order.sede_id}
+            isAdmin={detail.isAdmin}
+            canEdit={detail.canEdit}
+            isDelivered={detail.isDelivered}
+            media={order.media || []}
+            pendingUploads={detail.pendingUploads}
+            technicians={detail.technicians}
+            assignments={assignments}
+            onQuotePoint={(point) => {
+              const text = point.nota ? `${point.nombre} — ${point.nota}` : point.nombre;
+              onQuotePointPrefill({
+                text,
+                nonce: Date.now(),
+                technicianId: suggestedTechnicianId(assignments.map((a) => a.usuario_id), detail.technicians),
+              });
+            }}
+            onRefreshOrder={detail.refresh}
+            onAddMedia={(puntoId, items) => {
+              detail.enqueueMedia(items, {
+                origen: 'inspeccion',
+                inspeccionPuntoId: puntoId,
+              });
+            }}
+          />
+        )}
       </div>
     </CollapsibleSection>
   );

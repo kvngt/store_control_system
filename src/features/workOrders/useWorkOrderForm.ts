@@ -106,8 +106,12 @@ export function useWorkOrderForm() {
   const backToExistingVehicle = useCallback(() => form.setValue('vehicleMode', 'existing'), [form]);
 
   const setNewVehicle = useCallback(
-    (next: WorkOrderFormValues['newVehicle']) =>
-      form.setValue('newVehicle', next, { shouldDirty: true, shouldValidate: form.formState.isSubmitted }),
+    (next: WorkOrderFormValues['newVehicle']) => {
+      const prev = form.getValues('newVehicle');
+      form.setValue('newVehicle', next, { shouldDirty: true, shouldValidate: form.formState.isSubmitted });
+      if (next.placa !== prev.placa) form.clearErrors('newVehicle.placa');
+      if (next.vin !== prev.vin) form.clearErrors('newVehicle.vin');
+    },
     [form]
   );
 

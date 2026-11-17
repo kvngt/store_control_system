@@ -616,7 +616,7 @@ flowchart LR
 
 - La base va **antes** que el sitio: una app nueva sobre una base vieja rompe funciones.
 - **Nombres de migraciones:** una migración nueva se nombra **después de la última que haya en
-  `supabase/migrations/`** (hoy después de `20261010000045`, por ejemplo `20261010000046_...`),
+  `supabase/migrations/`** (hoy después de `20261010000047`, por ejemplo `20261010000048_...`),
   **nunca según la fecha de hoy**. Una fecha anterior a la última migración aplicada no se aplica
   con `supabase db push`.
 - **Publicación:** Hostinger publica la rama `main` en 1–2 minutos directamente (verificado el
@@ -649,7 +649,7 @@ flowchart LR
 
 ---
 
-*Última revisión: 16 de noviembre de 2026. Los diagramas cubren hasta la migración `20261010000028` (11/10/2026), con rutas de frontend actualizadas al `15/11/2026`; lo agregado en las migraciones `029` a `045` está documentado en [arquitectura.md](arquitectura.md) y [ai-context.md](ai-context.md). Si cambias la
+*Última revisión: 16 de noviembre de 2026. Los diagramas cubren hasta la migración `20261010000028` (11/10/2026), con rutas de frontend actualizadas al `15/11/2026`; lo agregado en las migraciones `029` a `047` está documentado en [arquitectura.md](arquitectura.md) y [ai-context.md](ai-context.md). Si cambias la
 estructura —una tabla, un estado, una pantalla, un flujo de dinero— actualiza el diagrama
 correspondiente en el mismo cambio.*
 

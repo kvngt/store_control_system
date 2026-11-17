@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { HandCoins, Percent, X } from 'lucide-react';
+import { moduloActivo } from '../../config/modulos';
 import { useLanguage } from '../../context/language.context';
 import { workOrdersService } from '../../services/workOrders.service';
 import { queryKeys } from '../../lib/queryClient';
@@ -180,7 +181,7 @@ export default function OrderTotalsCard({ order, amounts, parkingAmount, canDisc
               placeholder={t('discount.reasonPlaceholder')}
               onChange={(e) => setReason(e.target.value)}
             />
-            <p className="field-hint">{t('discount.hint')}</p>
+            <p className="field-hint">{t(moduloActivo('comisiones') ? 'discount.hint' : 'discount.hintNoCommissions')}</p>
             <div className="order-totals-discount-actions">
               <button
                 type="button"

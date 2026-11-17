@@ -308,10 +308,25 @@ describe('CustomerPortal', () => {
     });
   });
 
-  it('con una ruta sin token válido no pide nada al servidor', () => {
+  it('con una ruta sin token válido no pide nada al servidor y ofrece teléfonos públicos sin nombres', () => {
     render(<CustomerPortal token={null} />);
     expect(screen.getByRole('heading', { name: 'Enlace no válido' })).toBeInTheDocument();
+    expect(screen.getByText('Llame al taller que le atendió para pedir su enlace de nuevo.')).toBeInTheDocument();
+    expect(screen.getByText('Restorify Auto')).toBeInTheDocument();
+    const links = screen.getAllByRole('link');
+    expect(links.some((a) => a.getAttribute('href')?.startsWith('tel:'))).toBe(true);
+    expect(document.body.textContent).not.toMatch(/Jesus|Carlos/);
     expect(mocks.fetchPortal).not.toHaveBeenCalled();
+  });
+
+  it('cuando el servidor responde no_encontrado muestra teléfonos de llamada y sin nombres de persona', async () => {
+    mocks.fetchPortal.mockResolvedValue({ estado_enlace: 'no_encontrado' });
+    render(<CustomerPortal token={TOKEN} />);
+
+    expect(await screen.findByRole('heading', { name: 'Enlace no válido' })).toBeInTheDocument();
+    const telLinks = screen.getAllByRole('link').filter((a) => a.getAttribute('href')?.startsWith('tel:'));
+    expect(telLinks.length).toBeGreaterThan(0);
+    expect(document.body.textContent).not.toMatch(/Jesus|Carlos/);
   });
 
   it('si la red falla deja reintentar', async () => {
@@ -368,9 +383,9 @@ describe('CustomerPortal', () => {
       expect(screen.queryByText('Revisando un trabajo adicional')).not.toBeInTheDocument();
     });
 
-    it('nada viene marcado; los botones no se bloquean por el nombre y al pulsar sin nombre avisan y enfocan el campo', async () => {
+    it('nada viene marcado; los botones no se bloquean por el nombre y al pulsar sin nombre avisan y enfocan el campo sin abrir el diálogo', async () => {
       mocks.fetchPortal.mockResolvedValue(withQuote());
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      const confirmSpy = vi.spyOn(window, 'confirm');
       render(<CustomerPortal token={TOKEN} />);
 
       const section = (await screen.findByRole('heading', { name: /Presupuesto por autorizar/ })).closest<HTMLElement>('details, section')!;
@@ -382,20 +397,22 @@ describe('CustomerPortal', () => {
       expect(authorize).toBeDisabled();
       expect(rejectAll).toBeEnabled();
 
-      // Al pulsar "No autorizar nada" sin nombre, muestra el aviso junto al campo y lo enfoca.
+      // Al pulsar "No autorizar nada" sin nombre, muestra el aviso junto al campo, lo enfoca y no abre diálogo.
       await userEvent.click(rejectAll);
       expect(confirmSpy).not.toHaveBeenCalled();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(mocks.answerQuote).not.toHaveBeenCalled();
       expect(within(section).getByRole('alert')).toHaveTextContent(/Escriba su nombre/);
       expect(nameInput).toHaveFocus();
       expect(nameInput).toHaveAttribute('aria-invalid', 'true');
 
-      // Con línea marcada y sin nombre, tampoco se deshabilita "Autorizar lo marcado".
+      // Con línea marcada y sin nombre, tampoco se deshabilita "Autorizar lo marcado" ni abre el diálogo.
       await userEvent.click(within(section).getByLabelText(/Alineación/));
       expect(authorize).toBeEnabled();
       expect(within(section).getByText('Total autorizado').parentElement).toHaveTextContent('$200.00');
       await userEvent.click(authorize);
       expect(confirmSpy).not.toHaveBeenCalled();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(nameInput).toHaveFocus();
 
       await userEvent.type(nameInput, 'Marta Ruiz');
@@ -403,17 +420,33 @@ describe('CustomerPortal', () => {
       confirmSpy.mockRestore();
     });
 
-    it('manda lo marcado y todas las líneas que vio, y muestra la confirmación', async () => {
+    it('confirma con el diálogo del portal (Volver no envía, Aprobar sí) y usa singular para 1 trabajo', async () => {
       mocks.fetchPortal.mockResolvedValueOnce(withQuote()).mockResolvedValue(report());
       mocks.answerQuote.mockResolvedValue({ ok: true, autorizados: 1, rechazados: 1, total_autorizado: 200 });
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      const confirmSpy = vi.spyOn(window, 'confirm');
       render(<CustomerPortal token={TOKEN} />);
 
       const section = (await screen.findByRole('heading', { name: /Presupuesto por autorizar/ })).closest<HTMLElement>('details, section')!;
       await userEvent.click(within(section).getByLabelText(/Alineación/));
       await userEvent.type(within(section).getByLabelText('Su nombre'), 'Marta Ruiz');
-      await userEvent.click(within(section).getByRole('button', { name: /Autorizar lo marcado/ }));
+      await userEvent.click(within(section).getByRole('button', { name: /Autorizar lo marcado \(1\)/ }));
 
+      expect(confirmSpy).not.toHaveBeenCalled();
+      const dialog = screen.getByRole('dialog');
+      expect(within(dialog).getByText('Confirmar autorización')).toBeInTheDocument();
+      expect(within(dialog).getByText('¿Aprueba 1 trabajo por $200.00? Lo que no marcó no se realizará.')).toBeInTheDocument();
+
+      // Volver cierra el diálogo sin enviar nada.
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Volver' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(mocks.answerQuote).not.toHaveBeenCalled();
+
+      // Al confirmar con Aprobar, envía exactamente lo marcado.
+      await userEvent.click(within(section).getByRole('button', { name: /Autorizar lo marcado \(1\)/ }));
+      const confirmDialog = screen.getByRole('dialog');
+      await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Aprobar' }));
+
+      expect(confirmSpy).not.toHaveBeenCalled();
       expect(mocks.answerQuote).toHaveBeenCalledWith(TOKEN, {
         quoteId: '33333333-3333-4333-8333-333333333333',
         approvedIds: [LINE_A],
@@ -423,9 +456,10 @@ describe('CustomerPortal', () => {
       });
       expect(await screen.findByText(/Guardamos su respuesta/)).toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: /Presupuesto por autorizar/ })).not.toBeInTheDocument();
+      confirmSpy.mockRestore();
     });
 
-    it('agrupa por trabajo y marcar un trabajo manda todos sus ids', async () => {
+    it('agrupa por trabajo, cuenta el trabajo como 1 en botón y diálogo, y manda todos sus ids', async () => {
       const JOB_ID = 'job-uuid-1111';
       const LINE_1 = 'line-uuid-1111';
       const LINE_2 = 'line-uuid-2222';
@@ -478,7 +512,7 @@ describe('CustomerPortal', () => {
         .mockResolvedValue(report());
 
       mocks.answerQuote.mockResolvedValue({ ok: true, autorizados: 2, rechazados: 1, total_autorizado: 250 });
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      const confirmSpy = vi.spyOn(window, 'confirm');
       render(<CustomerPortal token={TOKEN} />);
 
       const section = (await screen.findByRole('heading', { name: /Presupuesto por autorizar/ })).closest<HTMLElement>('details, section')!;
@@ -491,13 +525,18 @@ describe('CustomerPortal', () => {
       expect(within(section).getByText('Cambio de pastillas')).toBeInTheDocument();
       expect(within(section).getByText('Juego de pastillas')).toBeInTheDocument();
 
-      // Al marcar el trabajo "Frenos completos"
+      // Al marcar el trabajo "Frenos completos" (2 líneas): el cliente ve una sola fila, cuenta 1
       await userEvent.click(within(section).getByLabelText(/Frenos completos/));
       expect(within(section).getByText('Total autorizado').parentElement).toHaveTextContent('$250.00');
 
       await userEvent.type(within(section).getByLabelText('Su nombre'), 'Marta Ruiz');
-      await userEvent.click(within(section).getByRole('button', { name: /Autorizar lo marcado/ }));
+      await userEvent.click(within(section).getByRole('button', { name: /Autorizar lo marcado \(1\)/ }));
 
+      const dialog = screen.getByRole('dialog');
+      expect(within(dialog).getByText('¿Aprueba 1 trabajo por $250.00? Lo que no marcó no se realizará.')).toBeInTheDocument();
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Aprobar' }));
+
+      expect(confirmSpy).not.toHaveBeenCalled();
       // Verifica que approvedIds contiene TODOS los IDs de las líneas del trabajo, y no la línea suelta
       expect(mocks.answerQuote).toHaveBeenCalledWith(TOKEN, {
         quoteId: '33333333-3333-4333-8333-333333333333',
@@ -509,21 +548,102 @@ describe('CustomerPortal', () => {
       const submittedApproved = mocks.answerQuote.mock.calls[0][1].approvedIds;
       expect(submittedApproved).toHaveLength(2);
       expect(submittedApproved).not.toContain(LINE_LOOSE);
+      confirmSpy.mockRestore();
+    });
+
+    it('un trabajo de 3 líneas más una línea suelta cuenta 2, no 4', async () => {
+      const JOB_ID = 'job-uuid-9999';
+      const L1 = 'line-uuid-a1';
+      const L2 = 'line-uuid-a2';
+      const L3 = 'line-uuid-a3';
+      const LOOSE = 'line-uuid-a4';
+      const jobLine = (id: string, descripcion: string, tipo: 'mano_obra' | 'repuesto') => ({
+        id,
+        tipo,
+        descripcion,
+        cantidad: 1,
+        precio_unitario: 100,
+        monto: 100,
+        trabajo_id: JOB_ID,
+        trabajo: 'Suspensión delantera',
+      });
+      mocks.fetchPortal.mockResolvedValue(
+        report({
+          presupuesto: {
+            id: '33333333-3333-4333-8333-333333333333',
+            numero: 4,
+            enviado_en: '2026-09-12T15:00:00Z',
+            total: 400,
+            trabajos: [{ id: JOB_ID, titulo: 'Suspensión delantera', total: 300 }],
+            lineas: [
+              jobLine(L1, 'Amortiguador izquierdo', 'repuesto'),
+              jobLine(L2, 'Amortiguador derecho', 'repuesto'),
+              jobLine(L3, 'Instalación', 'mano_obra'),
+              { id: LOOSE, tipo: 'mano_obra', descripcion: 'Rotación de llantas', cantidad: 1, precio_unitario: 100, monto: 100, trabajo_id: null, trabajo: null },
+            ],
+          },
+        }),
+      );
+      render(<CustomerPortal token={TOKEN} />);
+
+      const section = (await screen.findByRole('heading', { name: /Presupuesto por autorizar/ })).closest<HTMLElement>('details, section')!;
+      await userEvent.type(within(section).getByLabelText('Su nombre'), 'Marta Ruiz');
+      await userEvent.click(within(section).getByLabelText(/Suspensión delantera/));
+      await userEvent.click(within(section).getByLabelText(/Rotación de llantas/));
+
+      expect(within(section).getByText('Total autorizado').parentElement).toHaveTextContent('$400.00');
+      await userEvent.click(within(section).getByRole('button', { name: /Autorizar lo marcado \(2\)/ }));
+      const dialog = screen.getByRole('dialog');
+      expect(within(dialog).getByText('¿Aprueba 2 trabajos por $400.00? Lo que no marcó no se realizará.')).toBeInTheDocument();
+    });
+
+    it('en inglés muestra singular y plural correctamente en el diálogo de confirmación', async () => {
+      localStorage.setItem('restorify_portal_lang', 'en');
+      mocks.fetchPortal.mockResolvedValue(withQuote());
+      const confirmSpy = vi.spyOn(window, 'confirm');
+      render(<CustomerPortal token={TOKEN} />);
+
+      const section = (await screen.findByRole('heading', { name: /Estimate to approve/ })).closest<HTMLElement>('details, section')!;
+      await userEvent.type(within(section).getByLabelText('Your name'), 'Marta Ruiz');
+
+      // 1 item
+      await userEvent.click(within(section).getByLabelText(/Alineación/));
+      await userEvent.click(within(section).getByRole('button', { name: /Approve checked items \(1\)/ }));
+      let dialog = screen.getByRole('dialog');
+      expect(within(dialog).getByText('Confirm approval')).toBeInTheDocument();
+      expect(within(dialog).getByText('Approve 1 item for $200.00? Anything unchecked will not be done.')).toBeInTheDocument();
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Go back' }));
+
+      // 2 items
+      await userEvent.click(within(section).getByLabelText(/Pintura de puerta/));
+      await userEvent.click(within(section).getByRole('button', { name: /Approve checked items \(2\)/ }));
+      dialog = screen.getByRole('dialog');
+      expect(within(dialog).getByText('Approve 2 items for $700.00? Anything unchecked will not be done.')).toBeInTheDocument();
+      expect(within(dialog).getByRole('button', { name: 'Approve' })).toBeInTheDocument();
+      expect(confirmSpy).not.toHaveBeenCalled();
+      confirmSpy.mockRestore();
     });
 
     it('si el taller cambió el presupuesto, lo explica y lo vuelve a pedir', async () => {
       mocks.fetchPortal.mockResolvedValue(withQuote());
       mocks.answerQuote.mockResolvedValue({ ok: false, motivo: 'presupuesto_cambio' });
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      const confirmSpy = vi.spyOn(window, 'confirm');
       render(<CustomerPortal token={TOKEN} />);
 
       const section = (await screen.findByRole('heading', { name: /Presupuesto por autorizar/ })).closest<HTMLElement>('details, section')!;
       await userEvent.type(within(section).getByLabelText('Su nombre'), 'Marta Ruiz');
       await userEvent.click(within(section).getByRole('button', { name: 'No autorizar nada' }));
 
+      const dialog = screen.getByRole('dialog');
+      expect(within(dialog).getByText('Rechazar el presupuesto')).toBeInTheDocument();
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Rechazar todo' }));
+
+      expect(confirmSpy).not.toHaveBeenCalled();
       expect(mocks.answerQuote).toHaveBeenCalledWith(TOKEN, expect.objectContaining({ approvedIds: [] }));
       expect(await screen.findByText(/actualizó el presupuesto/)).toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(mocks.fetchPortal).toHaveBeenCalledTimes(2);
+      confirmSpy.mockRestore();
     });
 
     it('en la cuenta separa lo no autorizado', async () => {

@@ -1,6 +1,7 @@
 import { useState, lazy, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/language.context';
+import { moduloActivo } from '../config/modulos';
 import { useAuth } from '../context/auth.context';
 import { useToast } from '../context/toast.context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -88,14 +89,19 @@ export default function Finance() {
     queryKey: queryKeys.workOrders(sedeId),
     queryFn: () => workOrdersService.getWorkOrders(sedeId),
   });
+  const statementsOn = moduloActivo('estados_de_cuenta');
+  const metricsOn = moduloActivo('indicadores');
+
   const importsQuery = useQuery({
     queryKey: queryKeys.importBatches(sedeId),
     queryFn: () => financeService.getImportBatches(sedeId),
+    enabled: statementsOn,
   });
   // Las sumas de cada estado de cuenta las hace la base (`resumen_importaciones`).
   const summariesQuery = useQuery({
     queryKey: [...queryKeys.importBatches(sedeId), 'resumen'],
     queryFn: () => financeService.getStatementSummaries(sedeId),
+    enabled: statementsOn,
   });
 
   const transactions = transactionsQuery.data ?? emptyList<FinancialTransaction>();
@@ -107,7 +113,7 @@ export default function Finance() {
     transactionsQuery.isPending ||
     statsQuery.isPending ||
     ordersQuery.isPending ||
-    importsQuery.isPending;
+    (statementsOn && importsQuery.isPending);
   const loadError =
     transactionsQuery.error ??
     statsQuery.error ??
@@ -130,6 +136,12 @@ export default function Finance() {
   // Dos libros (decisión del taller, 05/10/2026): lo que registra la app, y los estados de
   // cuenta importados, que son para la contabilidad de meses pasados y para el contador.
   const [view, setView] = useState<'app' | 'banco' | 'indicadores'>('app');
+  const views: readonly ('app' | 'banco' | 'indicadores')[] = [
+    'app',
+    ...(statementsOn ? (['banco'] as const) : []),
+    ...(metricsOn ? (['indicadores'] as const) : []),
+  ];
+  const activeView = views.includes(view) ? view : 'app';
   // 'AAAA-MM' o '' (todos): para revisar un mes y mandárselo al contador.
   const [month, setMonth] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -311,10 +323,10 @@ export default function Finance() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{t('finance.title')}</h1>
-          {view === 'app' && <p className="page-subtitle">{filtered.length} {t(filtered.length === 1 ? 'finance.transactionOne' : 'finance.transactions').toLowerCase()}</p>}
+          {activeView === 'app' && <p className="page-subtitle">{filtered.length} {t(filtered.length === 1 ? 'finance.transactionOne' : 'finance.transactions').toLowerCase()}</p>}
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-          {view === 'app' ? (
+          {activeView === 'app' ? (
             <>
               <button className="btn btn-secondary" id="export-excel-btn" onClick={handleExportExcel}>
                 <Download size={18} /> {t('finance.exportExcel')}
@@ -323,7 +335,7 @@ export default function Finance() {
                 <Plus size={18} /> {t('finance.newTransaction')}
               </button>
             </>
-          ) : view === 'banco' ? (
+          ) : activeView === 'banco' ? (
             <button className="btn btn-primary" id="import-statement-btn" onClick={() => setShowImportModal(true)}>
               <FileUp size={18} /> {t('finance.importStatement')}
             </button>
@@ -333,26 +345,28 @@ export default function Finance() {
 
       {error && <div className="alert-error">{error}</div>}
 
-      <div className="tabs finance-views" role="tablist" aria-label={t('finance.title')}>
-        {(['app', 'banco', 'indicadores'] as const).map((v) => (
-          <button
-            key={v}
-            type="button"
-            role="tab"
-            aria-selected={view === v}
-            className={`tab ${view === v ? 'active' : ''}`}
-            onClick={() => setView(v)}
-          >
-            {v === 'app' ? t('finance.viewShop') : v === 'banco' ? t('finance.viewStatements') : t('finance.viewMetrics')}
-          </button>
-        ))}
-      </div>
+      {views.length >= 2 && (
+        <div className="tabs finance-views" role="tablist" aria-label={t('finance.title')}>
+          {views.map((v) => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              aria-selected={activeView === v}
+              className={`tab ${activeView === v ? 'active' : ''}`}
+              onClick={() => setView(v)}
+            >
+              {v === 'app' ? t('finance.viewShop') : v === 'banco' ? t('finance.viewStatements') : t('finance.viewMetrics')}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {view === 'indicadores' && (
+      {activeView === 'indicadores' && (
         <WorkshopMetricsTab sedeId={sedeId} />
       )}
 
-      {view === 'banco' && (
+      {activeView === 'banco' && (
         <div className="card finance-statements" style={{ marginBottom: 'var(--space-4)' }}>
           <p className="field-hint" style={{ marginTop: 0 }}>{t('finance.statementsHint')}</p>
           {imports.length === 0 ? (
@@ -402,7 +416,7 @@ export default function Finance() {
         </div>
       )}
 
-      {view === 'app' && (
+      {activeView === 'app' && (
       <>
 
       {/* Financial KPIs */}
@@ -715,7 +729,7 @@ export default function Finance() {
         </Modal>
       )}
 
-      {showImportModal && (
+      {statementsOn && showImportModal && (
         <LazyModal onClose={() => setShowImportModal(false)}>
           <ImportStatementModal
             onClose={() => setShowImportModal(false)}

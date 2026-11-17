@@ -190,7 +190,8 @@ export const currentStep = (dialog: HTMLElement) => dialog.querySelector('[aria-
 
 /** Paso 1 con el cliente de siempre, y al paso 2. */
 export async function pickCustomer(user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement) {
-  await user.selectOptions(document.getElementById('intake-customer') as HTMLSelectElement, CUSTOMER.id);
+  await user.click(document.getElementById('intake-customer-search') as HTMLInputElement);
+  await user.click(await within(dialog).findByRole('option', { name: new RegExp(CUSTOMER.nombre) }));
   await next(user, dialog);
   await waitFor(() => expect(currentStep(dialog)).toMatch(/Vehículo/));
 }

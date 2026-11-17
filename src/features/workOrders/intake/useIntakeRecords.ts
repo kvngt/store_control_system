@@ -7,7 +7,7 @@ import { vehiclesService } from '../../../services/vehicles.service';
 import { usersService } from '../../../services/users.service';
 import { queryKeys } from '../../../lib/queryClient';
 import { emptyList } from '../../../lib/emptyList';
-import { getErrorMessage } from '../../../lib/errors';
+import { duplicateVehicleField, getErrorMessage } from '../../../lib/errors';
 import { checkUsPlate, checkVin } from '../../../lib/vin';
 import type { Customer, UserProfile, Vehicle } from '../../../types/database';
 import type { WorkOrderFormApi, WorkOrderFormValues } from '../useWorkOrderForm';
@@ -107,6 +107,7 @@ export function useIntakeRecords({ form, isAdmin, sedeId, targetSedeId }: UseInt
         telefono: values.newCustomer.telefono,
         email: values.newCustomer.email,
         direccion: values.newCustomer.direccion,
+        idioma: values.newCustomer.idioma,
         notas_crm: '',
         sede_id: targetSedeId,
       });
@@ -168,10 +169,22 @@ export function useIntakeRecords({ form, isAdmin, sedeId, targetSedeId }: UseInt
       }
       return true;
     } catch (err) {
+      const message = getErrorMessage(err, language);
+      const dupField = key === 'vehicle' ? duplicateVehicleField(err) : null;
+      if (dupField) {
+        form.form.setError(`newVehicle.${dupField}`, { type: 'server', message });
+        requestAnimationFrame(() => {
+          const field = document.getElementById(dupField === 'placa' ? 'vehicle-plate' : 'vehicle-vin');
+          field?.focus();
+          // El motivo va debajo del campo y el cuerpo del diálogo se desplaza: que se vea sin buscarlo.
+          field?.parentElement?.querySelector('[role="alert"]')?.scrollIntoView({ block: 'nearest' });
+        });
+        return false;
+      }
       showToast(
         'error',
         t(key === 'customer' ? 'intake.customerSaveError' : 'intake.vehicleSaveError'),
-        getErrorMessage(err, language)
+        message
       );
       return false;
     }

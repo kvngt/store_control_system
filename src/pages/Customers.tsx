@@ -27,7 +27,7 @@ import { AlertError } from '../components/AlertError';
 import Modal from '../components/Modal';
 import { money } from '../lib/money';
 import PhoneInput from '../components/PhoneInput';
-import { formatPhone } from '../lib/phone';
+import { formatPhone, isValidPhone } from '../lib/phone';
 import { workTypeKey, orderStatusKey } from '../lib/workType';
 
 const digitsOf = (v: string) => (v || '').replace(/\D/g, '');
@@ -142,6 +142,11 @@ export default function Customers() {
     if (!form.telefono.trim()) {
       setInvalidField('telefono');
       setFormError(t('workOrders.validation.customerPhone'));
+      return;
+    }
+    if (!isValidPhone(form.telefono)) {
+      setInvalidField('telefono');
+      setFormError(t('workOrders.validation.customerPhoneInvalid'));
       return;
     }
     setInvalidField(null);

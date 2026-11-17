@@ -283,6 +283,24 @@ describe('generateWorkOrderPdf: idioma y cuenta', () => {
     expect(fontSizes).toContain(7);
   });
 
+  it('sin marcas (arreglo vacío) no dibuja el diagrama ni agrega página extra', async () => {
+    await generateWorkOrderPdf({ ...orden('en_proceso'), marcas_danos: [] } as unknown as WorkOrder, SEDE);
+
+    const texto = textoPintado();
+    expect(texto).not.toContain('Daños del Vehículo (Recepción)');
+    expect(llamadas.lista.filter(([m]) => m === 'lines' || m === 'circle')).toEqual([]);
+    expect(llamadas.lista.filter(([m]) => m === 'addPage')).toEqual([]);
+  });
+
+  it('con marcas_danos ausente tampoco dibuja el diagrama en inglés y queda en una página', async () => {
+    await generateWorkOrderPdf(orden('en_proceso'), SEDE, {}, { language: 'en' });
+
+    const texto = textoPintado();
+    expect(texto).not.toContain('Vehicle Damage (Intake)');
+    expect(llamadas.lista.filter(([m]) => m === 'lines' || m === 'circle')).toEqual([]);
+    expect(llamadas.lista.filter(([m]) => m === 'addPage')).toEqual([]);
+  });
+
   it('formatea fecha de ingreso y firma con la zona horaria de la sede y las millas con separador de miles', async () => {
     const iso = '2026-09-02T03:00:00Z';
     const expectedNy = new Date(iso).toLocaleDateString('es-US', { timeZone: 'America/New_York' });

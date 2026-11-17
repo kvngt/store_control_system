@@ -37,6 +37,10 @@ if (!isLocal && !process.env.E2E_ALLOW_REMOTE) {
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
+  // 60 s y no los 30 s por defecto: con Vite en desarrollo, la primera vez que se abre un diálogo diferido
+  // (el alta de la orden baja decenas de módulos) tarda de 1 a 15 s, y una prueba de 25 pasos con la
+  // suite en paralelo no cabe en 30. Lo que se espera sigue siendo una condición real, no un reintento.
+  timeout: 60_000,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   // Every spec logs in with a password, and the whole suite shares a handful of

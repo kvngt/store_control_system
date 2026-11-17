@@ -1,5 +1,6 @@
 import { AlertTriangle } from 'lucide-react';
 import Modal from '../../components/Modal';
+import { moduloActivo } from '../../config/modulos';
 import { useLanguage } from '../../context/language.context';
 import type { Specialty } from '../../types/database';
 import type { Technician } from './tasks';
@@ -61,7 +62,7 @@ export default function TradeMismatchDialog({ especialidad, technician, onAssign
       }
     >
       <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-        {t('tasks.mismatchBody').replace('{nombre}', technician.nombre_completo).replace('{oficio}', oficio)}
+        {t(moduloActivo('comisiones') ? 'tasks.mismatchBody' : 'tasks.mismatchBodyNoCommission').replace('{nombre}', technician.nombre_completo).replace('{oficio}', oficio)}
       </p>
     </Modal>
   );

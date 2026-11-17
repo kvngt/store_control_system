@@ -115,8 +115,9 @@ describe('WorkOrders', () => {
     const dialog = (await screen.findByText(/^Nueva Orden/i, { selector: '.modal-title' }, { timeout: 10000 })).closest('.modal') as HTMLElement;
     expect(dialog).toBeTruthy();
     // The pickers come from the screen's own load, through the extracted modal: the
-    // customers on step 1, the technicians in the job editor of step 4.
-    expect(within(dialog).getByRole('option', { name: 'Marta Ruiz' })).toBeInTheDocument();
+    // customers on step 1 (buscador), the technicians in the job editor of step 4.
+    await user.click(document.getElementById('intake-customer-search') as HTMLInputElement);
+    expect(within(dialog).getByRole('option', { name: /Marta Ruiz/ })).toBeInTheDocument();
     await goToWorkStep(user, dialog);
     await user.click(within(dialog).getByRole('button', { name: /Agregar trabajo/ }));
     expect(within(dialog).getByRole('option', { name: /Sara Vega/ })).toBeInTheDocument();
@@ -391,7 +392,8 @@ describe('WorkOrders — intake validation', () => {
     expect(currentStep(dialog)).toMatch(/Cliente/);
 
     // Elegir apaga el aviso en el momento, sin esperar a otro "Siguiente".
-    await user.selectOptions(document.getElementById('intake-customer') as HTMLSelectElement, CUSTOMER.id);
+    await user.click(document.getElementById('intake-customer-search') as HTMLInputElement);
+    await user.click(await within(dialog).findByRole('option', { name: /Marta Ruiz/ }));
     await waitFor(() => expect(within(dialog).queryByText(/Selecciona un cliente/i)).not.toBeInTheDocument());
 
     await next(user, dialog);
@@ -442,7 +444,7 @@ describe('WorkOrders — intake validation', () => {
     const user = userEvent.setup();
     const dialog = await openIntake(user);
 
-    await user.selectOptions(document.getElementById('intake-customer') as HTMLSelectElement, '__new__');
+    await user.click(document.getElementById('intake-new-customer') as HTMLElement);
     await next(user, dialog);
 
     expect(await within(dialog).findByText(/nombre del cliente es obligatorio/i)).toBeInTheDocument();
@@ -456,7 +458,7 @@ describe('WorkOrders — intake validation', () => {
 // la orden se cancele, para no volver a escribirlos.
 describe('WorkOrders — el cliente nuevo del alta queda guardado', () => {
   async function typeNewCustomer(user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement) {
-    await user.selectOptions(document.getElementById('intake-customer') as HTMLSelectElement, '__new__');
+    await user.click(document.getElementById('intake-new-customer') as HTMLElement);
     await user.type(within(dialog).getByPlaceholderText('Nombre'), 'Pedro Pérez');
     const phone = dialog.querySelector('input[type="tel"]') as HTMLInputElement;
     await user.type(phone, '5551234567');
@@ -836,7 +838,7 @@ describe('WorkOrders — toasts de error al guardar cliente o vehículo en el al
     const user = userEvent.setup();
     const dialog = await openIntake(user);
 
-    await user.selectOptions(document.getElementById('intake-customer') as HTMLSelectElement, '__new__');
+    await user.click(document.getElementById('intake-new-customer') as HTMLElement);
     await user.type(within(dialog).getByPlaceholderText('Nombre'), 'Ana López');
     await user.type(dialog.querySelector('input[type="tel"]') as HTMLInputElement, '3015550101');
     await next(user, dialog);
@@ -863,5 +865,120 @@ describe('WorkOrders — toasts de error al guardar cliente o vehículo en el al
     expect(await screen.findByText('No se pudo guardar el vehículo')).toBeInTheDocument();
     expect(screen.queryByText('Falló al crear la orden')).not.toBeInTheDocument();
     expect(currentStep(dialog)).toMatch(/Vehículo/);
+  });
+});
+
+describe('WorkOrders — Q2 Tanda 1 (recepción limpia)', () => {
+  it('A-01/A-18: bloquea teléfono incompleto, permite elegir idioma y lo manda al crear cliente', async () => {
+    mocks.createCustomer.mockResolvedValue({ ...CUSTOMER, id: 'cli-es', nombre: 'Luis Mora', idioma: 'es' });
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+
+    await user.click(document.getElementById('intake-new-customer') as HTMLElement);
+    await user.type(within(dialog).getByPlaceholderText('Nombre'), 'Luis Mora');
+    const telInput = document.getElementById('intake-new-customer-phone') as HTMLInputElement;
+    await user.type(telInput, '512abc');
+    expect(telInput.value).toBe('512');
+
+    // English por defecto.
+    expect(within(dialog).getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true');
+
+    await next(user, dialog);
+    expect(mocks.createCustomer).not.toHaveBeenCalled();
+    expect(telInput).toHaveAttribute('aria-invalid', 'true');
+    expect(await within(dialog).findByText(/teléfono válido/i)).toBeInTheDocument();
+
+    await user.type(telInput, '5550199');
+    await user.click(within(dialog).getByRole('button', { name: 'Español' }));
+    await next(user, dialog);
+
+    await waitFor(() => expect(currentStep(dialog)).toMatch(/Vehículo/));
+    expect(mocks.createCustomer).toHaveBeenCalledWith(
+      expect.objectContaining({ nombre: 'Luis Mora', telefono: '+15125550199', idioma: 'es' })
+    );
+  });
+
+  it('A-02: avisa si ya existe cliente con ese teléfono en la sede y permite usarlo', async () => {
+    const existing = { ...CUSTOMER, id: 'cli-dup', nombre: 'Carlos Mena', telefono: '+13015550140' };
+    const otherSede = { ...CUSTOMER, id: 'cli-other', sede_id: 'sede-norte', nombre: 'Otro Taller', telefono: '+13015559999' };
+    mocks.getCustomers.mockResolvedValue([existing, otherSede]);
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+
+    await user.click(document.getElementById('intake-new-customer') as HTMLElement);
+    const telInput = document.getElementById('intake-new-customer-phone') as HTMLInputElement;
+    await user.type(telInput, '3015559999');
+    expect(within(dialog).queryByText(/Ya existe/i)).not.toBeInTheDocument();
+
+    await user.clear(telInput);
+    await user.type(telInput, '3015550140');
+    expect(await within(dialog).findByText(/Ya existe Carlos Mena/)).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Usar este cliente' }));
+    expect(await within(dialog).findByText('Carlos Mena')).toBeInTheDocument();
+    expect(mocks.createCustomer).not.toHaveBeenCalled();
+  });
+
+  it('A-08: busca entre muchos clientes y usa buscador de vehículos cuando hay más de 8', async () => {
+    const manyCustomers = Array.from({ length: 12 }, (_, i) => ({
+      ...CUSTOMER,
+      id: `cli-${i + 1}`,
+      nombre: i === 10 ? 'Zulema Díaz' : `Cliente ${i + 1}`,
+      telefono: `+151255501${String(i).padStart(2, '0')}`,
+    }));
+    const manyVehicles = Array.from({ length: 9 }, (_, i) => ({
+      ...VEHICLE,
+      id: `veh-${i + 1}`,
+      cliente_id: 'cli-11',
+      marca: i === 8 ? 'Subaru' : 'Toyota',
+      modelo: i === 8 ? 'Outback' : `Corolla ${i + 1}`,
+      placa: `XYZ${100 + i}`,
+    }));
+    mocks.getCustomers.mockResolvedValue(manyCustomers);
+    mocks.getVehicles.mockResolvedValue(manyVehicles);
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+
+    await user.type(document.getElementById('intake-customer-search') as HTMLInputElement, '5125550110');
+    await user.click(await within(dialog).findByRole('option', { name: /Zulema Díaz/ }));
+    await next(user, dialog);
+    await waitFor(() => expect(currentStep(dialog)).toMatch(/Vehículo/));
+
+    const vehicleSearch = document.getElementById('intake-vehicle-search') as HTMLInputElement;
+    expect(vehicleSearch).toBeInTheDocument();
+    expect(document.getElementById('intake-new-vehicle')).toBeInTheDocument();
+    await user.type(vehicleSearch, 'XYZ108');
+    await user.click(await within(dialog).findByRole('option', { name: /Subaru Outback/ }));
+    expect(await within(dialog).findByText(/Subaru Outback/)).toBeInTheDocument();
+  });
+
+  it('A-03: placa o VIN repetidos señalan su campo en el paso 2 sin perder el cliente guardado', async () => {
+    mocks.createCustomer.mockResolvedValue({ ...CUSTOMER, id: 'cli-new-ok', nombre: 'Rosa Gil' });
+    mocks.createVehicle.mockRejectedValue({
+      code: '23505',
+      message: 'duplicate key value violates unique constraint "uq_vehiculos_placa"',
+    });
+    const user = userEvent.setup();
+    const dialog = await openIntake(user);
+
+    await user.click(document.getElementById('intake-new-customer') as HTMLElement);
+    await user.type(within(dialog).getByPlaceholderText('Nombre'), 'Rosa Gil');
+    await user.type(document.getElementById('intake-new-customer-phone') as HTMLInputElement, '5125550100');
+    await next(user, dialog);
+    await waitFor(() => expect(currentStep(dialog)).toMatch(/Vehículo/));
+    expect(mocks.createCustomer).toHaveBeenCalledTimes(1);
+
+    await user.type(document.getElementById('vehicle-brand') as HTMLInputElement, 'Honda');
+    await user.type(document.getElementById('vehicle-model') as HTMLInputElement, 'Civic');
+    const anio = document.getElementById('vehicle-year') as HTMLSelectElement;
+    await user.selectOptions(anio, anio.options[1].value);
+    await user.type(document.getElementById('vehicle-plate') as HTMLInputElement, 'ABC1234');
+    await next(user, dialog);
+
+    const plateInput = document.getElementById('vehicle-plate') as HTMLInputElement;
+    await waitFor(() => expect(plateInput).toHaveAttribute('aria-invalid', 'true'));
+    expect(await within(dialog).findByText(/Ya hay un vehículo con esa placa/i)).toBeInTheDocument();
+    expect(currentStep(dialog)).toMatch(/Vehículo/);
+    await waitFor(() => expect(document.activeElement).toBe(plateInput));
   });
 });

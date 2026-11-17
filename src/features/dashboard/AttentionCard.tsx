@@ -5,6 +5,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { dashboardService } from '../../services/dashboard.service';
 import { queryKeys } from '../../lib/queryClient';
+import { moduloActivo } from '../../config/modulos';
 import type { AttentionGroup } from '../../types/database';
 
 /** Cuántas órdenes se nombran por grupo; el resto queda en "+n más" (la RPC manda cinco). */
@@ -62,7 +63,9 @@ export default function AttentionCard({ sedeId }: { sedeId?: string }) {
     { key: 'sin_autorizar', icon: CircleDollarSign, label: t('attention.unauthorizedWork'), group: data.sin_autorizar ?? { total: 0, ordenes: [] }, tab: 'trabajos' },
     { key: 'por_autorizar', icon: FileSignature, label: t('attention.toAuthorize'), group: data.por_autorizar ?? { total: 0, ordenes: [] }, tab: 'trabajos' },
     { key: 'presupuestos', icon: FileQuestion, label: t('attention.quotes'), group: data.presupuestos, tab: 'trabajos' },
-    { key: 'sin_tecnico', icon: UserX, label: t('attention.unassigned'), group: data.sin_tecnico, tab: 'trabajos' },
+    ...(moduloActivo('comisiones')
+      ? [{ key: 'sin_tecnico', icon: UserX, label: t('attention.unassigned'), group: data.sin_tecnico, tab: 'trabajos' }]
+      : []),
     { key: 'por_revisar', icon: ClipboardCheck, label: t('attention.toReview'), group: data.por_revisar ?? { total: 0, ordenes: [] } },
     { key: 'sugerencias_servicio', icon: Tag, label: t('attention.serviceSuggestions'), group: data.sugerencias_servicio ?? { total: 0, ordenes: [] }, tab: 'cobro' },
     { key: 'vencidas', icon: CalendarX, label: t('attention.overdue'), group: data.vencidas },

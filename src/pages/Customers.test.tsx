@@ -77,6 +77,12 @@ describe('Customers', () => {
     expect(mocks.createCustomer).not.toHaveBeenCalled();
     expect(within(modal).getByLabelText('Teléfono')).toHaveAttribute('aria-invalid', 'true');
     expect((await within(modal).findByRole('alert')).textContent).toMatch(/teléfono/i);
+
+    await user.type(within(modal).getByLabelText('Teléfono'), '555123');
+    await user.click(within(modal).getByRole('button', { name: 'Crear' }));
+    expect(mocks.createCustomer).not.toHaveBeenCalled();
+    expect(within(modal).getByLabelText('Teléfono')).toHaveAttribute('aria-invalid', 'true');
+    expect((await within(modal).findByRole('alert')).textContent).toMatch(/válido/i);
   });
 
   it('invalida el detalle del cliente y las órdenes al guardar sin invalidar finanzas ni comisiones', async () => {

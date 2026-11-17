@@ -125,4 +125,19 @@ describe('PhoneInput', () => {
     await user.selectOptions(pais(), 'MX');
     expect(display).toHaveTextContent('🇲🇽 +52');
   });
+
+  it('bloquea letras y caracteres inválidos y marca aria-invalid cuando invalid es true', async () => {
+    const user = userEvent.setup();
+    function InvalidCampo() {
+      const [val, setVal] = useState('');
+      return <PhoneInput value={val} onChange={setVal} id="tel-test" invalid />;
+    }
+    renderWithProviders(<InvalidCampo />);
+    const input = document.getElementById('tel-test') as HTMLInputElement;
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input.className).toContain('is-invalid');
+
+    await user.type(input, '555abc-1234xyz');
+    expect(input.value).toBe('555-1234');
+  });
 });

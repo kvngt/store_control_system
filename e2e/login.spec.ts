@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { login, goToIntakeVehicleStep, ADMIN_EMAIL, ADMIN_PASSWORD, MECHANIC_EMAIL, MECHANIC_PASSWORD, hasAdminCredentials, hasMechanicCredentials } from './fixtures.js';
+import { login, goToIntakeVehicleStep, openIntakeDialog, ADMIN_EMAIL, ADMIN_PASSWORD, MECHANIC_EMAIL, MECHANIC_PASSWORD, hasAdminCredentials, hasMechanicCredentials } from './fixtures.js';
 
 test('shows an error and stays on /login for invalid credentials', async ({ page }) => {
   await page.goto('/login');
@@ -36,9 +36,11 @@ test.describe('mechanic/painter session', () => {
 
   test('mechanic does not see the finance/payroll/settings menu', async ({ page }) => {
     await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
+    // Configuración la ve todo el personal (su perfil, idioma y tema; ver Sidebar). Sirve de espera a que la
+    // barra pinte: un `toHaveCount(0)` a secas pasaba o fallaba según si ya había pintado.
+    await expect(page.locator('a[href="/settings"]')).toHaveCount(1);
     await expect(page.locator('a[href="/finance"]')).toHaveCount(0);
     await expect(page.locator('a[href="/payroll"]')).toHaveCount(0);
-    await expect(page.locator('a[href="/settings"]')).toHaveCount(0);
     await expect(page.locator('#sede-selector')).toHaveCount(0);
   });
 
@@ -86,9 +88,7 @@ test.describe('intake form (admin session)', () => {
   // qa-workorders.spec.ts. Here we type.
   test('intake mileage rejects a negative value', async ({ page }) => {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
-    await page.goto('/work-orders');
-    await page.waitForSelector('#new-order-btn', { timeout: 10000 });
-    await page.click('#new-order-btn');
+    await openIntakeDialog(page);
     test.skip(!(await goToIntakeVehicleStep(page)), 'La sede no tiene clientes');
 
     const miles = page.locator('#order-miles-in');

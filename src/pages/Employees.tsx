@@ -15,6 +15,7 @@ import UsersCard from '../features/settings/UsersCard';
 import EmployeeDetailModal from '../features/employees/EmployeeDetailModal';
 import { useIsMobile } from '../lib/useMediaQuery';
 import CollapsibleSection from '../components/CollapsibleSection';
+import { moduloActivo } from '../config/modulos';
 
 /**
  * Empleados: quién trabaja en el taller, cómo se le paga y qué ha hecho.
@@ -32,9 +33,14 @@ export default function Employees() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
+  const comisionesOn = moduloActivo('comisiones');
   const sedesQuery = useQuery({ queryKey: queryKeys.sedes(), queryFn: () => sedesService.getSedes() });
   const usersQuery = useQuery({ queryKey: queryKeys.users(undefined), queryFn: () => usersService.getUsers() });
-  const schemesQuery = useQuery({ queryKey: queryKeys.paySchemes(), queryFn: () => employeesService.getPaySchemes() });
+  const schemesQuery = useQuery({
+    queryKey: queryKeys.paySchemes(),
+    queryFn: () => employeesService.getPaySchemes(),
+    enabled: comisionesOn,
+  });
 
   const sedes = sedesQuery.data ?? emptyList<Sede>();
   const users = usersQuery.data ?? emptyList<UserProfile>();
@@ -85,7 +91,7 @@ export default function Employees() {
   };
 
   const handleCreated = (employee: UserProfile) => {
-    if (employee.rol === 'mecanico' || employee.rol === 'pintor') {
+    if (comisionesOn && (employee.rol === 'mecanico' || employee.rol === 'pintor')) {
       openEmployee(employee, t('employees.setPayNotice'));
     }
   };
@@ -95,13 +101,13 @@ export default function Employees() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{t('employees.title')}</h1>
-          <p className="page-subtitle">{t('employees.subtitle')}</p>
+          <p className="page-subtitle">{t(comisionesOn ? 'employees.subtitle' : 'employees.subtitleNoPay')}</p>
         </div>
       </div>
 
       {loadError && <div className="alert-error">{getErrorMessage(loadError, language)}</div>}
 
-      {isMobile ? (
+      {comisionesOn && (isMobile ? (
         <div className="employee-mobile">
           <CollapsibleSection
             title={t('employees.payTitle')}
@@ -188,7 +194,7 @@ export default function Employees() {
           )}
           <p className="field-hint" style={{ marginTop: 'var(--space-3)' }}>{t('employees.payHint')}</p>
         </div>
-      )}
+      ))}
 
       <UsersCard
         users={users}

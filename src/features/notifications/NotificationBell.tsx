@@ -6,8 +6,19 @@ import { useToast } from '../../context/toast.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import type { AppNotification } from '../../types/database';
 import { getErrorMessage } from '../../lib/errors';
+import { moduloActivo } from '../../config/modulos';
 import { relativeTime, renderNotification } from './renderNotification';
 import { useNotifications } from './useNotifications';
+
+function notificationVisible(notification: AppNotification): boolean {
+  if (!moduloActivo('comisiones') && notification.tipo === 'comision_generada') {
+    return false;
+  }
+  if (!moduloActivo('inspeccion') && notification.tipo === 'inspeccion_completada') {
+    return false;
+  }
+  return true;
+}
 
 /**
  * La campana del encabezado.
@@ -26,10 +37,15 @@ export default function NotificationBell() {
 
   const { items, unreadCount, loading, failed, markRead, markAllRead, remove, removeAll } = useNotifications({
     onArrive: (notification) => {
+      if (!notificationVisible(notification)) return;
       const { title, body } = renderNotification(notification, t);
       showToast('success', title, body);
     },
   });
+
+  const visibleItems = items.filter(notificationVisible);
+  const hiddenUnreadCount = items.filter((n) => !n.leida_en && !notificationVisible(n)).length;
+  const visibleUnreadCount = Math.max(0, unreadCount - hiddenUnreadCount);
 
   useEffect(() => {
     if (!open) return;
@@ -55,7 +71,7 @@ export default function NotificationBell() {
     });
   };
 
-  const badge = unreadCount > 99 ? '99+' : String(unreadCount);
+  const badge = visibleUnreadCount > 99 ? '99+' : String(visibleUnreadCount);
 
   // Los avisos se acumulaban: marcar como leído los apaga pero no los quita, y la base solo
   // purga los de más de 60 días. Borrar es de cada quien sobre los suyos
@@ -86,10 +102,10 @@ export default function NotificationBell() {
         id="notifications-btn"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        aria-label={unreadCount ? t('notifications.unreadLabel').replace('{count}', badge) : t('notifications.title')}
+        aria-label={visibleUnreadCount ? t('notifications.unreadLabel').replace('{count}', badge) : t('notifications.title')}
       >
         <Bell size={20} />
-        {unreadCount > 0 && <span className="header-notification-count">{badge}</span>}
+        {visibleUnreadCount > 0 && <span className="header-notification-count">{badge}</span>}
       </button>
 
       {open && (
@@ -97,12 +113,12 @@ export default function NotificationBell() {
           <div className="notif-dropdown-header">
             <span>{t('notifications.title')}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              {unreadCount > 0 && (
+              {visibleUnreadCount > 0 && (
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => void markAllRead()}>
                   <CheckCheck size={14} /> {t('notifications.markAllRead')}
                 </button>
               )}
-              {items.length > 0 && (
+              {visibleItems.length > 0 && (
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => void deleteAll()} id="notifications-delete-all">
                   <Trash2 size={14} /> {t('notifications.deleteAll')}
                 </button>
@@ -117,11 +133,11 @@ export default function NotificationBell() {
             <div className="search-dropdown-empty">{t('common.loading')}</div>
           ) : failed ? (
             <div className="search-dropdown-empty" role="alert">{t('notifications.loadError')}</div>
-          ) : items.length === 0 ? (
+          ) : visibleItems.length === 0 ? (
             <div className="search-dropdown-empty">{t('notifications.empty')}</div>
           ) : (
             <ul className="notif-list">
-              {items.map((notification) => {
+              {visibleItems.map((notification) => {
                 const { title, body } = renderNotification(notification, t);
                 return (
                   <li key={notification.id} className="notif-item">

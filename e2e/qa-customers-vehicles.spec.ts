@@ -33,7 +33,7 @@ test.describe('CUST-01 | CRUD de cliente (autolimpiante)', () => {
     // Crear
     await page.click('#new-customer-btn');
     await page.fill('#customer-name', name);
-    await page.fill('#customer-phone', '555-9999');
+    await page.fill('#customer-phone', '410-555-9999');
     await page.fill('#customer-email', 'qa-test@example.com');
     await page.click('#customer-save');
 
@@ -63,7 +63,7 @@ test.describe('CUST-02 | Validación de campos obligatorios', () => {
     await page.click('#new-customer-btn');
 
     // Deja nombre vacío, solo llena teléfono
-    await page.fill('#customer-phone', '555-0001');
+    await page.fill('#customer-phone', '410-555-0001');
     await page.click('#customer-save');
 
     // El modal debe seguir abierto y mostrar error

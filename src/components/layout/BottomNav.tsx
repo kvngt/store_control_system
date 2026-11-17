@@ -4,6 +4,7 @@ import { useLanguage } from '../../context/language.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import { LayoutDashboard, Users, Car, ClipboardList, Wallet } from 'lucide-react';
 import { STAFF_HOME } from '../../lib/staffHome';
+import { moduloActivo } from '../../config/modulos';
 
 export default function BottomNav() {
   const { t } = useLanguage();
@@ -29,7 +30,9 @@ export default function BottomNav() {
     { to: STAFF_HOME, icon: LayoutDashboard, label: t('nav.dashboardShort') },
     { to: '/work-orders', icon: ClipboardList, label: t('nav.workOrdersShort') },
     // Mecánicos y pintores: sus comisiones (06/10/2026).
-    ...(isAdmin ? [] : [{ to: '/mis-comisiones', icon: Wallet, label: t('nav.myCommissionsShort') }]),
+    ...(!isAdmin && moduloActivo('comisiones')
+      ? [{ to: '/mis-comisiones', icon: Wallet, label: t('nav.myCommissionsShort') }]
+      : []),
     // Solo administración: un técnico ve el cliente y el vehículo dentro de sus órdenes.
     ...(isAdmin
       ? [

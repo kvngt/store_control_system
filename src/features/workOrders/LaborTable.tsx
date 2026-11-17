@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BookOpen, Check, CheckCircle2, Circle, Clock, Lock, Pencil, Trash2, User, Wrench, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { moduloActivo } from '../../config/modulos';
 import { useToast } from '../../context/toast.context';
 import { SPECIALTIES, type LaborItem, type Specialty, type WorkType, type OrderAssignment, type LaborTimeEntry } from '../../types/database';
 import { formatDurationMinutes } from '../../lib/dates';
@@ -192,11 +193,13 @@ export default function LaborTable({
     const saved = await onUpdate(editingId, {
       descripcion: editDraft.descripcion,
       costo: toCost(editDraft.costo),
-      ...(editDraft.horas.trim()
-        ? { horas: clampLaborHours(editDraft.horas) }
-        : hadHours
-          ? { horas: null }
-          : {}),
+      ...(moduloActivo('reloj')
+        ? editDraft.horas.trim()
+          ? { horas: clampLaborHours(editDraft.horas) }
+          : hadHours
+            ? { horas: null }
+            : {}
+        : {}),
     });
     if (saved) setEditingId(null);
   };
@@ -234,7 +237,7 @@ export default function LaborTable({
   // no son lo cotizado); los demás los leen.
   const assignmentControls = (item: LaborItem) => {
     const locked = lockedIds.has(item.id);
-    const inherited = !item.asignado_a && item.reparto_heredado !== false;
+    const inherited = moduloActivo('comisiones') && !item.asignado_a && item.reparto_heredado !== false;
     // Una línea heredada autorizada se queda en el reparto al cambiar de tipo: no puede pasar a
     // una especialidad cuyo reparto ya se pagó.
     const blockedType = (s: Specialty) =>
@@ -329,20 +332,22 @@ export default function LaborTable({
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end', alignItems: 'center' }}>
-                      <input
-                        className="form-input"
-                        type="number"
-                        inputMode="decimal"
-                        step="0.25"
-                        min={0}
-                        max={MAX_LABOR_HOURS}
-                        placeholder={t('tasks.hours')}
-                        title={t('tasks.hours')}
-                        style={{ width: 75, textAlign: 'right' }}
-                        value={editDraft.horas}
-                        onChange={(e) => setEditDraft({ ...editDraft, horas: e.target.value })}
-                        aria-label={t('tasks.hours')}
-                      />
+                      {moduloActivo('reloj') && (
+                        <input
+                          className="form-input"
+                          type="number"
+                          inputMode="decimal"
+                          step="0.25"
+                          min={0}
+                          max={MAX_LABOR_HOURS}
+                          placeholder={t('tasks.hours')}
+                          title={t('tasks.hours')}
+                          style={{ width: 75, textAlign: 'right' }}
+                          value={editDraft.horas}
+                          onChange={(e) => setEditDraft({ ...editDraft, horas: e.target.value })}
+                          aria-label={t('tasks.hours')}
+                        />
+                      )}
                       <input
                         className="form-input"
                         type="number"
@@ -400,14 +405,14 @@ export default function LaborTable({
                       const job = trabajos?.find((j) => !!item.trabajo_id && j.id === item.trabajo_id);
                       return job ? <span className="job-chip">{job.titulo}</span> : null;
                     })()}
-                    {item.horas != null && (
+                    {moduloActivo('reloj') && item.horas != null && (
                       <span className="badge" style={{ marginLeft: 6, fontSize: 'var(--font-size-xs)' }}>
                         {item.horas} h
                       </span>
                     )}
                     {/* Para administración, a la vista: una tarea sin técnico no le paga
                         comisión a nadie. */}
-                    {canEdit && isUnassignedTask(item) && item.estado !== 'rechazado' && (
+                    {moduloActivo('comisiones') && canEdit && isUnassignedTask(item) && item.estado !== 'rechazado' && (
                       <span className="badge line-state labor-no-tech" title={t('tasks.noTechnicianHint')}>
                         {t('tasks.noTechnician')}
                       </span>
@@ -415,7 +420,7 @@ export default function LaborTable({
                     {assignmentControls(item)}
 
                     {/* Tiempo registrado y enlace a Tiempos */}
-                    {(() => {
+                    {moduloActivo('reloj') && (() => {
                       const durationMinutes = getTaskDurationMinutes(item.id);
                       const hasRunning = (laborTimes || []).some((e) => e.labor_id === item.id && !e.fin);
                       return (
@@ -525,7 +530,7 @@ export default function LaborTable({
             idPrefix="labor-new"
             prefill={prefill}
             extraActions={
-              orderId && orderSedeId && catalogAllowed ? (
+              orderId && orderSedeId && catalogAllowed && moduloActivo('catalogo') ? (
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -537,7 +542,7 @@ export default function LaborTable({
               ) : undefined
             }
           />
-          {orderId && orderSedeId && catalogAllowed && (
+          {orderId && orderSedeId && catalogAllowed && moduloActivo('catalogo') && (
             <CatalogPickerModal
               isOpen={catalogPickerOpen}
               onClose={() => setCatalogPickerOpen(false)}
@@ -588,15 +593,17 @@ export default function LaborTable({
         />
       )}
 
-      <LaborTimesModal
-        isOpen={!!timesModalTask}
-        onClose={() => setTimesModalTask(null)}
-        task={timesModalTask}
-        entries={laborTimes ?? []}
-        onCorrectTime={onCorrectTime}
-        onDeleteTime={onDeleteTime}
-        isAdmin={canEdit}
-      />
+      {moduloActivo('reloj') && (
+        <LaborTimesModal
+          isOpen={!!timesModalTask}
+          onClose={() => setTimesModalTask(null)}
+          task={timesModalTask}
+          entries={laborTimes ?? []}
+          onCorrectTime={onCorrectTime}
+          onDeleteTime={onDeleteTime}
+          isAdmin={canEdit}
+        />
+      )}
     </div>
   );
 }

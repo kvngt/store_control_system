@@ -65,7 +65,7 @@ las migraciones desde cero en cada cambio (CI).
 
 ### Riesgos para el mantenimiento
 
-**R-B1. La versión vigente de una función está repartida en migraciones.** Hay 99 migraciones en el repositorio (al 16/11/2026, hasta `20261010000045`; 99 aplicadas en producción; 161 funciones contadas al 11/10/2026 en la migración `028`, más las de `029` a `045`). Cuando una cambia, la migración nueva
+**R-B1. La versión vigente de una función está repartida en migraciones.** Hay 101 migraciones en el repositorio (al 17/11/2026, hasta `20261010000047`; 99 aplicadas en producción, hasta la `045`; 161 funciones contadas al 11/10/2026 en la migración `028`, más las de `029` a `047`). Cuando una cambia, la migración nueva
 la reescribe entera. `handle_order_delivery_payment` va por su quinta versión;
 `sync_order_commissions`, `pay_commissions`, `create_work_order`, `recalculate_order_totals` y
 `trg_guard_order_technician`, por la cuarta o posterior. El riesgo concreto: quien la cambie parte de una
@@ -103,9 +103,9 @@ descuadra los cálculos posteriores de esa orden. Conocido desde la auditoría; 
 - **Las partes grandes ya están en módulos** (`features/workOrders/detail/`,
   `features/workOrders/intake/`, `features/settings/`, `portal/components/`, `media`,
   `notifications`, `employees`, `finance`).
-- **Red de pruebas amplia (al 16/11/2026):** 1.274 pruebas Vitest (175 archivos), 1.193 pruebas
-  pgTAP (49 archivos), 102 pruebas Deno 2 (`npm run test:functions`), 85 e2e contra la base
-  local (`npm run test:e2e:local`; 84 en verde, `MED-01` en arreglo) y `qa:security:local`
+- **Red de pruebas amplia (al 16/11/2026):** 1.311 pruebas Vitest (186 archivos), 1.219 pruebas
+  pgTAP (51 archivos), 102 pruebas Deno 2 (`npm run test:functions`), 86 e2e contra la base
+  local (`npm run test:e2e:local`; los 86 en verde) y `qa:security:local`
   (209 PASS, 0 FAIL, 0 SKIP; más `qa:security` contra producción). TypeScript estricto, lint sin avisos, CI en
   cada cambio (cifras vigentes en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto)).
 - **Portal del cliente aislado**: no importa nada de la app.
@@ -221,7 +221,7 @@ Una inconsistencia menor de estructura:
 | P2-7 | ~~Decidir si un admin puede borrar movimientos automáticos (R-B5)~~ *(Resuelto en `20261010000038`)* |
 
 **Nada de P1-2 a P2-5 cambia lo que ve el usuario ni toca la base.** Son movimientos de
-código cubiertos por las pruebas unitarias y de componentes (1.274 en Vitest al 16/11/2026);
+código cubiertos por las pruebas unitarias y de componentes (1.311 en Vitest al 17/11/2026);
 se pueden hacer uno por uno y publicar cada uno por separado.
 
 ---

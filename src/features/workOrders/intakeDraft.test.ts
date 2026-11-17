@@ -37,9 +37,12 @@ describe('borrador del alta de una orden', () => {
     saveIntakeDraft('u1', conDatos(), 1);
     const raw = JSON.parse(localStorage.getItem('restorify_intake_draft:u1')!);
     delete raw.values.authorizedAtIntake;
+    delete raw.values.newCustomer.idioma;
     localStorage.setItem('restorify_intake_draft:u1', JSON.stringify(raw));
 
-    expect(loadIntakeDraft('u1')!.values.authorizedAtIntake).toBe(false);
+    const loaded = loadIntakeDraft('u1')!;
+    expect(loaded.values.authorizedAtIntake).toBe(false);
+    expect(loaded.values.newCustomer.idioma).toBe('en');
   });
 
   it('un borrador roto o de otra versión se ignora sin romper nada', () => {

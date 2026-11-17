@@ -10,6 +10,7 @@ import { ToastProvider } from './context/ToastContext';
 import { UnsavedChangesProvider } from './context/UnsavedChangesContext';
 import { isSupabaseConfigured } from './lib/supabase';
 import { afterLoginPath, STAFF_HOME } from './lib/staffHome';
+import { moduloActivo, type Modulo } from './config/modulos';
 import ErrorBoundary from './components/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
 import Login from './pages/Login';
@@ -31,13 +32,25 @@ const Settings = lazy(() => import('./pages/Settings'));
 const MyCommissions = lazy(() => import('./pages/MyCommissions'));
 const Help = lazy(() => import('./pages/Help'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
-function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
+function ProtectedRoute({
+  children,
+  adminOnly = false,
+  modulo,
+}: {
+  children: React.ReactNode;
+  adminOnly?: boolean;
+  modulo?: Modulo;
+}) {
   const { isAuthenticated, user } = useAuth();
   const location = useLocation();
 
   if (!isAuthenticated) {
     // Se recuerda a dónde iba (la orden de un correo o de un aviso) para volver ahí al entrar.
     return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}${location.hash}` }} />;
+  }
+
+  if (modulo && !moduloActivo(modulo)) {
+    return <Navigate to={STAFF_HOME} replace />;
   }
 
   if (adminOnly && user?.rol !== 'admin') {
@@ -125,7 +138,7 @@ function AppRoutes() {
         <Route
           path="/payroll"
           element={
-            <ProtectedRoute adminOnly>
+            <ProtectedRoute adminOnly modulo="comisiones">
               <Payroll />
             </ProtectedRoute>
           }
@@ -143,7 +156,14 @@ function AppRoutes() {
         <Route path="/settings" element={<Settings />} />
         {/* Las comisiones de quien entra (pedido del taller, 06/10/2026). La base le muestra
             solo lo suyo aceptado o pagado. */}
-        <Route path="/mis-comisiones" element={<MyCommissions />} />
+        <Route
+          path="/mis-comisiones"
+          element={
+            <ProtectedRoute modulo="comisiones">
+              <MyCommissions />
+            </ProtectedRoute>
+          }
+        />
         {/* El manual de usuario, en el idioma elegido y con las secciones del rol (12/10/2026). */}
         <Route path="/ayuda" element={<Help />} />
         <Route path="/help" element={<Navigate to="/ayuda" replace />} />

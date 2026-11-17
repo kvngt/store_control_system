@@ -10,6 +10,7 @@ const makeOrder = (overrides: Partial<PermissionsOrderInput> = {}): PermissionsO
   asignaciones: [{ usuario_id: 'tech-1' }],
   archivada_en: null,
   lista_para_entregar_en: null,
+  labor_items: [{ estado: 'aprobado' }],
   ...overrides,
 });
 
@@ -126,5 +127,26 @@ describe('computeOrderPermissions', () => {
 
     const adminPerms = computeOrderPermissions(makeOrder({ estatus: 'entregado' }), admin);
     expect(adminPerms.canCompleteLaborItem({ asignado_a: 'tech-2' })).toBe(true);
+  });
+
+  it('disables progress for assigned technician when nothing is authorized (B-02)', () => {
+    const noApproved = computeOrderPermissions(
+      makeOrder({ estatus: 'recepcion', labor_items: [{ estado: 'borrador' }], repuestos: [], repuestos_resumen: [] }),
+      tech1
+    );
+    expect(noApproved.canEdit).toBe(true);
+    expect(noApproved.canEditProgress).toBe(false);
+
+    const adminNoApproved = computeOrderPermissions(
+      makeOrder({ estatus: 'recepcion', labor_items: [], repuestos: [] }),
+      admin
+    );
+    expect(adminNoApproved.canEditProgress).toBe(true);
+
+    const partApproved = computeOrderPermissions(
+      makeOrder({ estatus: 'en_proceso', labor_items: [], repuestos_resumen: [{ estado: 'aprobado' }] }),
+      tech1
+    );
+    expect(partApproved.canEditProgress).toBe(true);
   });
 });

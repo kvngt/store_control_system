@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, TrendingUp } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { moduloActivo } from '../../config/modulos';
 import { financeService } from '../../services/finance.service';
 import { shopTimeZone } from '../../services/dashboard.service';
 import { queryKeys } from '../../lib/queryClient';
@@ -31,6 +32,9 @@ export default function OrderMarginCard({ sedeId }: { sedeId?: string }) {
     placeholderData: keepPreviousData,
   });
   const data = query.data;
+  // Con el módulo apagado la base sigue restando del margen las comisiones que haya (también las
+  // sugeridas): la columna se esconde solo si en la página no hay ninguna, para que el margen cuadre.
+  const showCommissions = moduloActivo('comisiones') || Number(data?.sumas.comisiones ?? 0) !== 0;
   const pages = data ? Math.max(1, Math.ceil(data.total_filas / PAGE_SIZE)) : 1;
 
   return (
@@ -69,7 +73,7 @@ export default function OrderMarginCard({ sedeId }: { sedeId?: string }) {
                   <th>{t('orderBalance.customer')}</th>
                   <th style={{ textAlign: 'right' }}>{t('orderBalance.collected')}</th>
                   <th style={{ textAlign: 'right' }}>{t('orderBalance.parts')}</th>
-                  <th style={{ textAlign: 'right' }}>{t('orderBalance.commissions')}</th>
+                  {showCommissions && <th style={{ textAlign: 'right' }}>{t('orderBalance.commissions')}</th>}
                   <th style={{ textAlign: 'right' }}>{t('orderBalance.margin')}</th>
                 </tr>
               </thead>
@@ -89,7 +93,7 @@ export default function OrderMarginCard({ sedeId }: { sedeId?: string }) {
                     <td data-label={t('orderBalance.customer')}>{row.cliente ?? '—'}</td>
                     <td data-label={t('orderBalance.collected')} style={{ textAlign: 'right' }}>{money(Number(row.cobrado))}</td>
                     <td data-label={t('orderBalance.parts')} style={{ textAlign: 'right' }}>{money(Number(row.costo_repuestos))}</td>
-                    <td data-label={t('orderBalance.commissions')} style={{ textAlign: 'right' }}>{money(Number(row.comisiones))}</td>
+                    {showCommissions && <td data-label={t('orderBalance.commissions')} style={{ textAlign: 'right' }}>{money(Number(row.comisiones))}</td>}
                     <td
                       data-label={t('orderBalance.margin')}
                       style={{ textAlign: 'right', fontWeight: 700, color: Number(row.margen) < 0 ? 'var(--color-danger)' : 'var(--color-success)' }}
@@ -102,7 +106,7 @@ export default function OrderMarginCard({ sedeId }: { sedeId?: string }) {
                   <td className="desktop-only" colSpan={2}>{data.total_filas === 1 ? t('orderBalance.monthTotalOne') : t('orderBalance.monthTotal').replace('{n}', String(data.total_filas))}</td>
                   <td data-label={t('orderBalance.collected')} style={{ textAlign: 'right' }}>{money(Number(data.sumas.cobrado))}</td>
                   <td data-label={t('orderBalance.parts')} style={{ textAlign: 'right' }}>{money(Number(data.sumas.costo_repuestos))}</td>
-                  <td data-label={t('orderBalance.commissions')} style={{ textAlign: 'right' }}>{money(Number(data.sumas.comisiones))}</td>
+                  {showCommissions && <td data-label={t('orderBalance.commissions')} style={{ textAlign: 'right' }}>{money(Number(data.sumas.comisiones))}</td>}
                   <td data-label={t('orderBalance.margin')} style={{ textAlign: 'right' }}>{money(Number(data.sumas.margen))}</td>
                 </tr>
               </tbody>
@@ -119,7 +123,7 @@ export default function OrderMarginCard({ sedeId }: { sedeId?: string }) {
               </button>
             </div>
           )}
-          <p className="field-hint" style={{ marginTop: 'var(--space-2)' }}>{t('orderBalance.marginHint')}</p>
+          <p className="field-hint" style={{ marginTop: 'var(--space-2)' }}>{t(showCommissions ? 'orderBalance.marginHint' : 'orderBalance.marginHintNoCommissions')}</p>
         </>
       )}
     </div>

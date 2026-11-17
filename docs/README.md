@@ -67,13 +67,13 @@ edge functions y el despliegue.
 
 **[planos.md](planos.md)** — Los planos en diagramas: las capas, el mapa de pantallas, el ciclo de
 vida de una orden, las tablas y cómo se relacionan, el camino del dinero y de las comisiones, lo
-que ve el cliente, los avisos, quién puede hacer qué y cómo sale un cambio. Cubre hasta la migración `028` (con el mapa de módulos actualizado al `15/11/2026`): lo de `029` a `045` está en [arquitectura.md](arquitectura.md) y [ai-context.md](ai-context.md).
+que ve el cliente, los avisos, quién puede hacer qué y cómo sale un cambio. Cubre hasta la migración `028` (con el mapa de módulos actualizado al `15/11/2026`): lo de `029` a `047` está en [arquitectura.md](arquitectura.md) y [ai-context.md](ai-context.md).
  
 
 **[arquitectura.md](arquitectura.md)** — La arquitectura a fondo, para quien va a tocar el código:
 el mapa del repositorio, el modelo de datos, dónde vive la lógica de negocio (triggers y RPC),
 seguridad y permisos, el servidor, el frontend por dentro, cómo se escriben migraciones, cómo
-levantar el proyecto y las trampas que ya mordieron a alguien. Actualizado en mapa de código y reglas al `16/11/2026` (última migración `045`; donde no coincida, manda [ai-context.md](ai-context.md)).
+levantar el proyecto y las trampas que ya mordieron a alguien. Actualizado en mapa de código y reglas al `16/11/2026` (última migración `047`; donde no coincida, manda [ai-context.md](ai-context.md)).
  
  
 
@@ -118,7 +118,7 @@ línea, las tres formas de autorizar (firma, enlace, registro del admin), qué c
 el dinero, qué ve cada quien y diagnóstico.
 
 **[evolucion.md](evolucion.md)** — La historia del proyecto: de la demo a las fases del
-cliente y los cambios de la reunión con el taller, las migraciones (con detalle hasta la 54 y resumen hasta la 99 / `045`; las intermedias, en la bitácora) con lo que hizo cada
+cliente y los cambios de la reunión con el taller, las migraciones (con detalle hasta la 54 y resumen hasta la 101 / `047`; las intermedias, en la bitácora) con lo que hizo cada
 una, las decisiones que se reemplazaron y cómo creció la red de pruebas.
 
 **[manual-de-pruebas.md](manual-de-pruebas.md)** — Para la persona que prueba la

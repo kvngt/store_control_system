@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Paintbrush, Plus, User, Wrench, X } from 'lucide-react';
 import CollapsibleSection from '../../../../components/CollapsibleSection';
+import { moduloActivo } from '../../../../config/modulos';
 import { useLanguage } from '../../../../context/language.context';
 import type { WorkOrder } from '../../../../types/database';
 import { assignmentStatus } from '../../assignmentStatus';
@@ -83,7 +84,7 @@ export default function TechniciansSection({
                 </span>
                 {/* Quien entró por una tarea cobra solo sus tareas; quien se asignó a mano entra
                     además al reparto de los trabajos anteriores sin técnico (20261010000006). */}
-                {(a.origen === 'tarea' || hasInheritedLines) && (
+                {moduloActivo('comisiones') && (a.origen === 'tarea' || hasInheritedLines) && (
                   <div className="assignment-origin">
                     <span
                       className={`badge assignment-origin-badge${a.origen === 'tarea' ? ' is-task' : ''}`}

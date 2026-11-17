@@ -568,92 +568,94 @@ async function buildWorkOrderPdf(
   }
 
   // ===== Diagrama de daños (Recepción) =====
-  // Sale siempre, aunque no haya marcas, como en la hoja de papel del taller.
+  // Solo si hay marcas: sin marcas no se agrega página ni se imprime el dibujo vacío.
   const marks = sanitizeDamageMarks(order.marcas_danos);
-  ensureSpace(95);
-  sectionTitle(S.damageDiagram);
+  if (marks.length > 0) {
+    ensureSpace(95);
+    sectionTitle(S.damageDiagram);
 
-  const drawDamageView = (
-    viewId: DamageView,
-    vx: number,
-    vy: number,
-    vw: number,
-    vh: number,
-    scale: number
-  ) => {
-    const viewDef = DAMAGE_VIEWS.find((v) => v.id === viewId);
-    if (!viewDef) return;
+    const drawDamageView = (
+      viewId: DamageView,
+      vx: number,
+      vy: number,
+      vw: number,
+      vh: number,
+      scale: number
+    ) => {
+      const viewDef = DAMAGE_VIEWS.find((v) => v.id === viewId);
+      if (!viewDef) return;
 
-    // View title
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...MUTED);
-    const viewName = S.damageViews[viewId] ?? viewId;
-    doc.text(viewName, vx, vy);
-
-    const shapesY = vy + 2;
-
-    // El dibujo, con el tono de cada forma como en la pantalla (curvas incluidas).
-    for (const shape of viewDef.shapes) {
-      const tone = DIAGRAM_TONES[shape.tone ?? 'line'];
-      doc.setDrawColor(...tone.stroke);
-      doc.setLineWidth(tone.width);
-      if (tone.fill) doc.setFillColor(...tone.fill);
-      const filled = tone.fill ? 'FD' : 'S';
-      if (shape.kind === 'circle') {
-        doc.circle(vx + shape.cx * scale, shapesY + shape.cy * scale, shape.r * scale, filled);
-        continue;
-      }
-      for (const sub of pathSubpaths(shape.d)) {
-        doc.lines(
-          sub.segments,
-          vx + sub.start[0] * scale,
-          shapesY + sub.start[1] * scale,
-          [scale, scale],
-          sub.closed ? filled : 'S',
-          sub.closed
-        );
-      }
-    }
-
-    // Damage marks
-    const viewMarks = marks.filter((m) => m.vista === viewId);
-    for (const mark of viewMarks) {
-      const mx = vx + mark.x * vw;
-      const my = shapesY + mark.y * vh;
-      const typeDef = DAMAGE_TYPES.find((t) => t.id === mark.tipo);
-      const letter = typeDef?.letter ?? 'O';
-
-      doc.setDrawColor(220, 38, 38);
-      doc.setFillColor(254, 242, 242);
-      doc.circle(mx, my, 2.2, 'FD');
-
+      // View title
       doc.setFontSize(7);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(220, 38, 38);
-      doc.text(letter, mx, my + 1.0, { align: 'center' });
-    }
-  };
+      doc.setTextColor(...MUTED);
+      const viewName = S.damageViews[viewId] ?? viewId;
+      doc.text(viewName, vx, vy);
 
-  // Row 1: izquierda (85x34) and derecha (85x34)
-  const row1Y = y;
-  drawDamageView('izquierda', MARGIN, row1Y, 85, 34, 0.425);
-  drawDamageView('derecha', MARGIN + 95, row1Y, 85, 34, 0.425);
-  y += 40;
+      const shapesY = vy + 2;
 
-  // Row 2: frontal (38x30.4), trasera (38x30.4), superior (92x41.4)
-  const row2Y = y;
-  drawDamageView('frontal', MARGIN, row2Y, 38, 30.4, 0.38);
-  drawDamageView('trasera', MARGIN + 44, row2Y, 38, 30.4, 0.38);
-  drawDamageView('superior', MARGIN + 88, row2Y, 92, 41.4, 0.46);
-  y += 46;
+      // El dibujo, con el tono de cada forma como en la pantalla (curvas incluidas).
+      for (const shape of viewDef.shapes) {
+        const tone = DIAGRAM_TONES[shape.tone ?? 'line'];
+        doc.setDrawColor(...tone.stroke);
+        doc.setLineWidth(tone.width);
+        if (tone.fill) doc.setFillColor(...tone.fill);
+        const filled = tone.fill ? 'FD' : 'S';
+        if (shape.kind === 'circle') {
+          doc.circle(vx + shape.cx * scale, shapesY + shape.cy * scale, shape.r * scale, filled);
+          continue;
+        }
+        for (const sub of pathSubpaths(shape.d)) {
+          doc.lines(
+            sub.segments,
+            vx + sub.start[0] * scale,
+            shapesY + sub.start[1] * scale,
+            [scale, scale],
+            sub.closed ? filled : 'S',
+            sub.closed
+          );
+        }
+      }
 
-  // Legend
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...MUTED);
-  doc.text(S.damageLegend, MARGIN, y);
-  y += LINE;
+      // Damage marks
+      const viewMarks = marks.filter((m) => m.vista === viewId);
+      for (const mark of viewMarks) {
+        const mx = vx + mark.x * vw;
+        const my = shapesY + mark.y * vh;
+        const typeDef = DAMAGE_TYPES.find((t) => t.id === mark.tipo);
+        const letter = typeDef?.letter ?? 'O';
+
+        doc.setDrawColor(220, 38, 38);
+        doc.setFillColor(254, 242, 242);
+        doc.circle(mx, my, 2.2, 'FD');
+
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(220, 38, 38);
+        doc.text(letter, mx, my + 1.0, { align: 'center' });
+      }
+    };
+
+    // Row 1: izquierda (85x34) and derecha (85x34)
+    const row1Y = y;
+    drawDamageView('izquierda', MARGIN, row1Y, 85, 34, 0.425);
+    drawDamageView('derecha', MARGIN + 95, row1Y, 85, 34, 0.425);
+    y += 40;
+
+    // Row 2: frontal (38x30.4), trasera (38x30.4), superior (92x41.4)
+    const row2Y = y;
+    drawDamageView('frontal', MARGIN, row2Y, 38, 30.4, 0.38);
+    drawDamageView('trasera', MARGIN + 44, row2Y, 38, 30.4, 0.38);
+    drawDamageView('superior', MARGIN + 88, row2Y, 92, 41.4, 0.46);
+    y += 46;
+
+    // Legend
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...MUTED);
+    doc.text(S.damageLegend, MARGIN, y);
+    y += LINE;
+  }
 
   // ===== Observaciones del taller (F6) =====
   // Lo que administración decidió contarle al cliente de un hallazgo que no se hará ahora.

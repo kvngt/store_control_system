@@ -19,6 +19,7 @@ import { telUrl, whatsAppUrl } from '../../lib/phone';
 import { translateVehicleColor } from '../../lib/vehicleColor';
 import PortalSection from '../PortalSection';
 import { useFormatters, type PortalStrings } from '../format';
+import { portalModuloActivo } from '../modulos';
 import type { PortalReport } from '../portal.types';
 import { shopPhones } from '../shopPhones';
 import type { PortalLanguage } from '../strings';
@@ -26,7 +27,8 @@ import { AccountSection } from './AccountSection';
 import { ContactPhones } from './ContactPhones';
 import { EmailPreference } from './EmailPreference';
 import { InspectionSection } from './InspectionSection';
-import { PortalMediaGrid } from './PortalMedia';
+import { PortalMediaGrid, PortalPhoto } from './PortalMedia';
+import { QuoteOutcome } from './QuoteOutcome';
 import { QuoteSection } from './QuoteSection';
 import { ShopHeader } from './ShopHeader';
 import { StatusSteps } from './StatusSteps';
@@ -159,6 +161,8 @@ export function Report({ report, token, s, language, onReload }: ReportProps) {
         />
       )}
 
+      <QuoteOutcome report={report} s={s} fmt={fmt} />
+
       <PortalSection
         icon={Wrench}
         title={s.progressTitle}
@@ -246,7 +250,7 @@ export function Report({ report, token, s, language, onReload }: ReportProps) {
         {orden.firma_url && (
           <div className="portal-signature">
             <div className="portal-label">{s.signature}</div>
-            <img src={orden.firma_url} alt={s.signature} />
+            <PortalPhoto src={orden.firma_url} alt={s.signature} errorLabel={s.photoLoadError} />
             {orden.firma_fecha && (
               <div className="portal-muted">
                 {s.signedOn} {fmt.dateTime(orden.firma_fecha)}
@@ -257,7 +261,7 @@ export function Report({ report, token, s, language, onReload }: ReportProps) {
       </PortalSection>
 
       {/* Inspección por puntos (20261010000035) */}
-      {report.inspeccion && (
+      {portalModuloActivo('inspeccion') && report.inspeccion && (
         <InspectionSection
           inspeccion={report.inspeccion}
           multimedia={report.multimedia}

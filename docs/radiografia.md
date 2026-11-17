@@ -1,6 +1,6 @@
 # Radiografía Técnica de Restorify
 
-**Fecha de actualización:** 16 de noviembre de 2026 (cifras de pruebas al 16/11/2026 y migraciones hasta `20261010000045` en el repositorio; `043` y `044` aplicadas en producción el 15/11/2026, `045` el 16/11/2026; división modular de `src/` y `supabase/functions/`)
+**Fecha de actualización:** 16 de noviembre de 2026 (cifras de pruebas al 16/11/2026 y migraciones hasta `20261010000047` en el repositorio; `043` y `044` aplicadas en producción el 15/11/2026, `045` el 16/11/2026 y `046` y `047` pendientes de su `db push`; división modular de `src/` y `supabase/functions/`)
 **Audiencia:** Desarrolladores y agentes de IA que toman el proyecto.
 
 Restorify es un sistema B2B multi-sede para talleres mecánicos y de pintura. Administra la operación completa: vehículos, recepción con fotos/videos, presupuestos línea por línea, trabajos, finanzas y cálculo de comisiones.
@@ -16,17 +16,17 @@ Actualizado el **16/11/2026** (las demás guías remiten aquí en vez de repetir
 | Métrica | Valor | Detalle |
 | :--- | :--- | :--- |
 | **Archivos fuente (TypeScript)** | 196 (al 19/10/2026) | `src/` excluyendo pruebas (aumentó tras la división modular del 15/11/2026; sin recontar) |
-| **Pruebas (Vitest)** | 175 archivos | 1.274 pruebas unitarias y de componentes (16/11/2026) |
+| **Pruebas (Vitest)** | 186 archivos | 1.311 pruebas unitarias y de componentes (17/11/2026) |
 | **Pruebas de edge functions (Deno 2)** | 102 pruebas | `npm run test:functions` en `supabase/functions/` (16/11/2026) |
-| **Migraciones de base de datos** | 99 (99 en producción) | En `supabase/migrations/`, hasta `20261010000045_egreso_de_comision_con_metodo` (`043` y `044` aplicadas en producción el 15/11/2026 y `045` el 16/11/2026; `npm run db:check`) |
+| **Migraciones de base de datos** | 101 (99 en producción) | En `supabase/migrations/`, hasta `20261010000047_tecnico_avance_con_autorizacion` (`043` y `044` aplicadas en producción el 15/11/2026 y `045` el 16/11/2026; la `046` y la `047` esperan su `db push`; `npm run db:check`) |
 | **Tablas de base de datos** | 30 al 11/10/2026 más las 9 tablas de las migraciones 029 a 039 | En `public` (`orden_proximo_servicio`, `catalogo_trabajos`, `catalogo_trabajo_lineas`, `orden_trabajos`, `inspeccion_plantillas`, `inspeccion_plantilla_puntos`, `orden_inspecciones`, `orden_inspeccion_puntos`, `orden_labor_tiempos`) |
-| **Funciones SQL** | 161 al 11/10/2026 (más las agregadas entre `029` y `045`) | En `public` (RPC, internas y de trigger); `npm run db:donde -- <nombre>` da la versión vigente de cada una |
+| **Funciones SQL** | 161 al 11/10/2026 (más las agregadas entre `029` y `047`) | En `public` (RPC, internas y de trigger); `npm run db:donde -- <nombre>` da la versión vigente de cada una |
 | **Triggers en `ordenes_trabajo`** | 24 al 11/10/2026 (más `029`–`041`, p. ej. `trg_marcas_danos_firmadas`, `trg_order_link_on_create`, `trg_a_orden_entregada_no_se_borra`) | La tabla con más lógica asociada |
 | **Tareas programadas** | 5 | `pg_cron`: `restorify-outbox`, `-maintenance`, `-due-reminders`, `-quote-reminders`, `-parqueo` |
-| **Pruebas de base de datos** | 49 archivos | 1.193 pruebas (`supabase/tests/database/`, pgTAP, `npm run test:db`, 16/11/2026) |
-| **Casos de `qa:security`** | 209 | `scripts/qa/api-security.mjs`, contra la API (`qa:security:local`: 209 PASS, 0 FAIL, 0 SKIP el 16/11/2026; contra producción el 15/11/2026: 178 PASS + 31 SKIP sin órdenes de prueba) |
+| **Pruebas de base de datos** | 51 archivos | 1.219 pruebas (`supabase/tests/database/`, pgTAP, `npm run test:db`, 17/11/2026) |
+| **Casos de `qa:security`** | 210 | `scripts/qa/api-security.mjs`, contra la API (`qa:security:local`: 210 PASS, 0 FAIL, 0 SKIP el 17/11/2026; contra producción el 15/11/2026: 178 PASS + 31 SKIP sin órdenes de prueba) |
 | **Edge Functions** | 7 | En `supabase/functions/` (Deno 2): `cleanup-storage`, `create-employee`, `delete-employee`, `portal`, `process-outbox`, `traducir-texto`, `update-employee`, cada una con `handler.ts` + `index.ts` mínimo y helpers en `_shared/` |
-| **Pruebas e2e** | 85 | En `e2e/` (Playwright contra la base local con `npm run test:e2e:local`, 16/11/2026: 84 en verde, `MED-01` en arreglo) |
+| **Pruebas e2e** | 86 | En `e2e/` (Playwright contra la base local con `npm run test:e2e:local`, 16/11/2026: 86 en verde) |
 
 ---
 

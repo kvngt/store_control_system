@@ -6,6 +6,7 @@ import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import { useIsMobile } from '../../lib/useMediaQuery';
+import { moduloActivo } from '../../config/modulos';
 import { findingsToReview } from './findings';
 import { isUnassignedTask } from './tasks';
 import type { WorkOrderDetailApi } from './useWorkOrderDetail';
@@ -156,7 +157,9 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   const techWaitsAuthorization = !isAdmin && !hasAuthorizedWork && (order.estatus === 'recepcion' || order.estatus === 'en_proceso');
   // Tareas sin técnico (no heredadas, no rechazadas): nadie cobrará su comisión hasta asignarlas
   // (20261010000006). Se cuentan líneas, no se suma dinero.
-  const unassignedCount = laborList.filter((l) => isUnassignedTask(l) && l.estado !== 'rechazado').length;
+  const unassignedCount = moduloActivo('comisiones')
+    ? laborList.filter((l) => isUnassignedTask(l) && l.estado !== 'rechazado').length
+    : 0;
   const findings = isAdmin ? findingsToReview(order.hallazgos) : [];
 
   // Volver es la salida más usada del detalle, y descartaba un avance a medias
@@ -184,7 +187,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     tareas: !isAdmin ? <TechLaborSection order={order} detail={detail} reportRequest={reportRequest} sectionProps={sectionState('tareas')} /> : null,
     repuestos: <PartsSection order={order} detail={detail} isAdmin={isAdmin} sectionProps={sectionState('repuestos')} />,
     presupuesto: isAdmin ? <QuoteSection order={order} sectionProps={sectionState('presupuesto')} /> : null,
-    comision: detail.commissionEstimate ? <CommissionSection order={order} detail={detail} isAdmin={isAdmin} sectionProps={sectionState('comision')} /> : null,
+    comision: moduloActivo('comisiones') && detail.commissionEstimate ? <CommissionSection order={order} detail={detail} isAdmin={isAdmin} sectionProps={sectionState('comision')} /> : null,
     inspeccion: (
       <InspectionSection
         order={order}

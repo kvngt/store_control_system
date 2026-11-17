@@ -119,9 +119,11 @@ SELECT lives_ok(
   $$ UPDATE ordenes_trabajo SET estatus = 'en_proceso' WHERE id = '45e00000-0000-0000-0000-000000000004' $$,
   'un repuesto autorizado también cuenta'
 );
-SELECT lives_ok(
+-- Desde 20261010000047 (B-02) el avance tampoco se mueve sin nada autorizado (pgTAP 51).
+SELECT throws_ok(
   $$ UPDATE ordenes_trabajo SET porcentaje_avance = 40 WHERE id = '45e00000-0000-0000-0000-000000000002' $$,
-  'sin cambiar de estado, el avance lo sigue moviendo'
+  '42501', NULL,
+  'sin cambiar de estado, el avance tampoco se mueve sin nada autorizado'
 );
 
 RESET ROLE;

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Scale } from 'lucide-react';
+import { moduloActivo } from '../../config/modulos';
 import { useLanguage } from '../../context/language.context';
 import { financeService } from '../../services/finance.service';
 import { queryKeys } from '../../lib/queryClient';
@@ -44,17 +45,20 @@ export default function OrderBalanceCard({ orderId }: { orderId: string }) {
               <dt>{t('orderBalance.parts')}</dt>
               <dd>{moneySigned(Number(b.costo_repuestos), false)}</dd>
             </div>
-            <div className="delivery-balance-row">
-              <dt>
-                {t('orderBalance.commissions')}
-                {Number(b.comisiones_pagadas) > 0 && (
-                  <span className="order-balance-note">
-                    {' '}· {t('orderBalance.paidOf').replace('{monto}', money(Number(b.comisiones_pagadas)))}
-                  </span>
-                )}
-              </dt>
-              <dd>{moneySigned(Number(b.comisiones), false)}</dd>
-            </div>
+            {/* Con el módulo apagado, solo si hay comisiones: la base las resta del margen igual. */}
+            {(moduloActivo('comisiones') || Number(b.comisiones) !== 0) && (
+              <div className="delivery-balance-row">
+                <dt>
+                  {t('orderBalance.commissions')}
+                  {Number(b.comisiones_pagadas) > 0 && (
+                    <span className="order-balance-note">
+                      {' '}· {t('orderBalance.paidOf').replace('{monto}', money(Number(b.comisiones_pagadas)))}
+                    </span>
+                  )}
+                </dt>
+                <dd>{moneySigned(Number(b.comisiones), false)}</dd>
+              </div>
+            )}
             <div className={'delivery-balance-row is-result' + (Number(b.margen) < 0 ? ' is-refund' : '')}>
               <dt>{t('orderBalance.margin')}</dt>
               <dd>{money(Number(b.margen))}</dd>

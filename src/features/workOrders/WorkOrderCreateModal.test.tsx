@@ -81,6 +81,12 @@ function TestWrapper() {
 
 import { LanguageProvider } from '../../context/LanguageContext';
 
+/** El buscador del paso 1 (A-08): se abre, y se elige al cliente de la lista. */
+async function chooseCustomer(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(document.getElementById('intake-customer-search') as HTMLInputElement);
+  await user.click(await screen.findByRole('option', { name: new RegExp(CUSTOMER.nombre) }));
+}
+
 describe('WorkOrderCreateModal - Assistant (Wizard)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -109,8 +115,7 @@ describe('WorkOrderCreateModal - Assistant (Wizard)', () => {
 
     // Paso 1: Cliente
     await waitFor(() => expect(currentStep()).toMatch(/Cliente/));
-    const customerSelect = screen.getByRole('combobox');
-    await user.selectOptions(customerSelect, CUSTOMER.id);
+    await chooseCustomer(user);
     await user.click(screen.getByRole('button', { name: /Siguiente/ }));
 
     // Paso 2: Vehículo
@@ -167,8 +172,7 @@ describe('WorkOrderCreateModal - Assistant (Wizard)', () => {
 
     // Paso 1: Cliente
     await waitFor(() => expect(currentStep()).toMatch(/Cliente/));
-    const customerSelect = screen.getByRole('combobox');
-    await user.selectOptions(customerSelect, CUSTOMER.id);
+    await chooseCustomer(user);
     await user.click(screen.getByRole('button', { name: /Siguiente/ }));
 
     // Paso 2: Vehículo
@@ -202,7 +206,7 @@ describe('WorkOrderCreateModal - Assistant (Wizard)', () => {
     renderModal();
 
     await waitFor(() => expect(currentStep()).toMatch(/Cliente/));
-    await user.selectOptions(screen.getByRole('combobox'), CUSTOMER.id);
+    await chooseCustomer(user);
     await user.click(screen.getByRole('button', { name: /Siguiente/ }));
 
     await waitFor(() => expect(currentStep()).toMatch(/Vehículo/));
@@ -231,7 +235,7 @@ describe('WorkOrderCreateModal - Assistant (Wizard)', () => {
     const { unmount } = renderModal();
 
     await waitFor(() => expect(currentStep()).toMatch(/Cliente/));
-    await user.selectOptions(screen.getByRole('combobox'), CUSTOMER.id);
+    await chooseCustomer(user);
     await user.click(screen.getByRole('button', { name: /Siguiente/ }));
 
     await waitFor(() => expect(currentStep()).toMatch(/Vehículo/));

@@ -7765,11 +7765,11 @@ ALTER FUNCTION "public"."trg_guard_order_montos"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."trg_guard_order_technician"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
-    AS $_$
+    AS $$
 DECLARE
   v_permitidas CONSTANT TEXT[] := ARRAY[
     'estatus', 'porcentaje_avance',
-    'total_labor', 'motivo_autorizacion'
+    'total_labor', 'motivo_autorizacion', 'fecha_finalizacion'
   ];
   v_estados_tecnico CONSTANT order_status[] := ARRAY[
     'en_proceso', 'espera_autorizacion', 'finalizado'
@@ -7818,13 +7818,13 @@ BEGIN
       USING ERRCODE = '42501';
   END IF;
 
-  -- Decisión del dueño (04/11/2026): el técnico no empieza ni termina una orden hasta que el
-  -- cliente autorice algo. Antes podía, y se terminaban órdenes que al entregarse cobraban $0
-  -- (ORD-2026-005 y ORD-2026-010). La primera autorización la pasa sola a en_proceso
-  -- (trg_quote_starts_order); administración sí puede mover una orden sin nada autorizado
-  -- (garantía, cortesía), y para eso está el grupo sin_autorizar de requiere_atencion.
-  IF NEW.estatus IS DISTINCT FROM OLD.estatus
-     AND NEW.estatus IN ('en_proceso', 'finalizado')
+  -- Decisión del dueño (04/11/2026) y B-02 (Q2): el técnico no empieza, mueve el avance ni
+  -- termina una orden hasta que el cliente autorice algo (mano de obra o repuesto aprobado).
+  -- Administración sí puede mover una orden sin nada autorizado (garantía, cortesía).
+  IF (
+       (NEW.estatus IS DISTINCT FROM OLD.estatus AND NEW.estatus IN ('en_proceso', 'finalizado'))
+       OR NEW.porcentaje_avance IS DISTINCT FROM OLD.porcentaje_avance
+     )
      AND NOT EXISTS (SELECT 1 FROM orden_labor WHERE orden_id = NEW.id AND estado = 'aprobado')
      AND NOT EXISTS (SELECT 1 FROM orden_repuestos WHERE orden_id = NEW.id AND estado = 'aprobado') THEN
     RAISE EXCEPTION 'El cliente todavía no autoriza ningún trabajo de esta orden. No se puede empezar ni terminar hasta que administración registre la autorización.'
@@ -7861,6 +7861,15 @@ BEGIN
       USING ERRCODE = '42501';
   END IF;
 
+  -- La fecha de finalización la pone la base, no el técnico (hallazgo B-01 del 16/11/2026): al
+  -- terminar la orden queda en NOW(); en cualquier otro caso se conserva la de antes. Un valor que
+  -- el técnico mande se ignora sin error.
+  IF NEW.estatus = 'finalizado' AND OLD.estatus IS DISTINCT FROM 'finalizado' THEN
+    NEW.fecha_finalizacion := NOW();
+  ELSE
+    NEW.fecha_finalizacion := OLD.fecha_finalizacion;
+  END IF;
+
   IF (to_jsonb(NEW) - v_permitidas) IS DISTINCT FROM (to_jsonb(OLD) - v_permitidas) THEN
     RAISE EXCEPTION 'Solo un administrador puede cambiar los datos de recepción de una orden.'
       USING ERRCODE = '42501';
@@ -7868,7 +7877,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$_$;
+$$;
 
 ALTER FUNCTION "public"."trg_guard_order_technician"() OWNER TO "postgres";
 

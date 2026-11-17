@@ -2,10 +2,12 @@ import type { KeyboardEvent } from 'react';
 import {
   PAYMENT_METHODS,
   type CatalogJob,
+  type Customer,
   type PaymentMethod,
   type Specialty,
   type UserProfile,
 } from '../../../types/database';
+import { isValidPhone, toWhatsAppNumber } from '../../../lib/phone';
 import type { WorkOrderFormApi } from '../useWorkOrderForm';
 
 /**
@@ -30,6 +32,25 @@ export function toPaymentMethod(value: string): PaymentMethod | null {
 export function getErrorCode(err: unknown): string | null {
   if (typeof err !== 'object' || err === null || !('code' in err)) return null;
   return typeof err.code === 'string' && err.code !== '' ? err.code : null;
+}
+
+/**
+ * Busca un cliente de la misma sede cuyo teléfono coincide en formato internacional.
+ * Sirve para avisar en el alta de cliente nuevo sin prohibir cuentas que comparten número.
+ */
+export function findDuplicateCustomerByPhone(
+  customers: Customer[],
+  phone: string,
+  sedeId?: string
+): Customer | null {
+  if (!isValidPhone(phone)) return null;
+  const target = toWhatsAppNumber(phone);
+  if (!target) return null;
+  return (
+    customers.find(
+      (c) => (!sedeId || c.sede_id === sedeId) && toWhatsAppNumber(c.telefono) === target
+    ) ?? null
+  );
 }
 
 /** Agrega un trabajo del catálogo y sus líneas al borrador del formulario de alta. */

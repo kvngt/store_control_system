@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
+import { moduloActivo } from '../config/modulos';
 import { useToast } from '../context/toast.context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { workOrdersService } from '../services/workOrders.service';
@@ -197,7 +198,7 @@ export default function KanbanBoard({ embedded = false, search = '', onOpen }: K
 
     if (status === 'entregado' && !canDeliver) {
       discard();
-      showToast('error', t('workOrders.deliverAdminOnly'));
+      showToast('error', t(moduloActivo('comisiones') ? 'workOrders.deliverAdminOnly' : 'workOrders.deliverAdminOnlyNoCommissions'));
       return;
     }
     if (status === 'entregado') {
@@ -221,7 +222,7 @@ export default function KanbanBoard({ embedded = false, search = '', onOpen }: K
       showToast('error', t('workOrders.onlyAdminReopens'));
       return;
     }
-    if (order.estatus === 'entregado' && !confirm(t('workOrders.confirmUndeliver'))) {
+    if (order.estatus === 'entregado' && !confirm(t(moduloActivo('comisiones') ? 'workOrders.confirmUndeliver' : 'workOrders.confirmUndeliverNoCommissions'))) {
       discard();
       return;
     }

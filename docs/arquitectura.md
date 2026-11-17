@@ -3,7 +3,7 @@
 > **Restaurado el 11/10/2026.** Este documento se perdió en la limpieza automática del 06/10/2026
 > (commit `1955f30`, que fusionó la arquitectura y los planos en uno más corto, y `ec689da`, que
 > lo reemplazó por [radiografia.md](radiografia.md)). Se recuperó tal como estaba el 05/10/2026.
-> Puesto al día el 16/11/2026 con las migraciones hasta `20261010000045` en el repositorio (`043` y `044` aplicadas en producción el 15/11/2026 y la `045` el 16/11/2026), incluidas `029`–`039`: historial, comisión por tarea, hallazgos, pago mixto, listo para entregar, idioma del cliente, teléfonos por sede, seguro, parqueo, próximo servicio y sticker, autorización en recepción, marcas de daños, enlace al crear la orden, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, origen de movimientos en finanzas y unicidad de VIN/placa; `040`–`044`: reglas de auditoría del 13–15/11/2026; y `045`: método de pago en egresos de comisiones), además de la división modular de `src/` y `supabase/functions/`.
+> Puesto al día el 16/11/2026 con las migraciones hasta `20261010000047` en el repositorio (`043` y `044` aplicadas en producción el 15/11/2026 y la `045` el 16/11/2026; la `046` y la `047` esperan su `db push`), incluidas `029`–`039`: historial, comisión por tarea, hallazgos, pago mixto, listo para entregar, idioma del cliente, teléfonos por sede, seguro, parqueo, próximo servicio y sticker, autorización en recepción, marcas de daños, enlace al crear la orden, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, origen de movimientos en finanzas y unicidad de VIN/placa; `040`–`044`: reglas de auditoría del 13–15/11/2026; y `045`: método de pago en egresos de comisiones; `046`: la fecha de finalización de una orden que termina un técnico la pone la base; `047`: el técnico tampoco mueve el avance en una orden sin ninguna línea `aprobado`), además de la división modular de `src/` y `supabase/functions/`.
 > Donde no coincida, mandan [ai-context.md](ai-context.md) y
 > [mapa-de-secciones.md](mapa-de-secciones.md); lo pendiente de actualizar está en la
 > [bitácora](bitacora.md#bitácora-de-traspaso-entre-agentes).
@@ -853,7 +853,7 @@ npx supabase db push --linked             # aplicar
 Antes de aplicar a producción: respaldo, staging y orden de publicación en
 [mantenimiento.md §4](mantenimiento.md#4-cambiar-la-base-sin-comprometer-la-operación).
 
-Nombre: `AAAAMMDDHHMMSS_descripcion.sql`, **posterior a la última que haya en `supabase/migrations/` (hoy `20261010000045`)**, no según la fecha de hoy. Hay migraciones aplicadas con marcas de tiempo futuras: si se nombra una migración con la fecha de hoy quedaría antes de la última y `db push` no la aplicaría sin `--include-all`. El número total de migraciones vigentes se consulta en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto). El build estampa la migración más nueva (`__SCHEMA_VERSION__`) y la app la compara con `app_schema_version()`: si la base está atrasada, `SchemaDriftBanner` lo dice en pantalla.
+Nombre: `AAAAMMDDHHMMSS_descripcion.sql`, **posterior a la última que haya en `supabase/migrations/` (hoy `20261010000047`)**, no según la fecha de hoy. Hay migraciones aplicadas con marcas de tiempo futuras: si se nombra una migración con la fecha de hoy quedaría antes de la última y `db push` no la aplicaría sin `--include-all`. El número total de migraciones vigentes se consulta en [radiografia.md §1](radiografia.md#1-cifras-actuales-del-proyecto). El build estampa la migración más nueva (`__SCHEMA_VERSION__`) y la app la compara con `app_schema_version()`: si la base está atrasada, `SchemaDriftBanner` lo dice en pantalla.
 
 ### Cómo escribirlas
 
@@ -1020,5 +1020,5 @@ aceptarla (`aprobar_comision` o `aprobar_comisiones`) antes de que el proceso de
 
 ---
 
-*Última revisión: 16 de noviembre de 2026 (migraciones hasta `20261010000045` en el repositorio; 99 aplicadas en producción).*
+*Última revisión: 16 de noviembre de 2026 (migraciones hasta `20261010000047` en el repositorio; 99 aplicadas en producción, hasta la `045`).*
 

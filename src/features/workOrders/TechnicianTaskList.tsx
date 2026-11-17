@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Camera, CheckCircle2, Circle, MessageSquarePlus, Clock, Plus, Eye, EyeOff, XCircle, Play, Pause } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { moduloActivo } from '../../config/modulos';
 import { useToast } from '../../context/toast.context';
 import { formatDurationMinutes } from '../../lib/dates';
 import { isMediaError } from '../../lib/media/errors';
@@ -290,7 +291,7 @@ function TaskActions({
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
-      {!completed && (
+      {!completed && moduloActivo('reloj') && (
         runningEntry ? (
           <button
             type="button"

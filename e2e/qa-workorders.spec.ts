@@ -14,6 +14,7 @@ import { test, expect } from '@playwright/test';
 import {
   login,
   goToIntakeVehicleStep,
+  openIntakeDialog,
   ADMIN_EMAIL, ADMIN_PASSWORD, hasAdminCredentials,
   MECHANIC_EMAIL, MECHANIC_PASSWORD, hasMechanicCredentials,
 } from './fixtures.js';
@@ -26,11 +27,7 @@ test.describe('WORK-01 | Modal Nueva Orden', () => {
 
   test('abre y cierra el modal de nueva orden', async ({ page }) => {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
-    await page.goto('/work-orders');
-    await page.waitForSelector('#new-order-btn', { timeout: 10000 });
-    await page.click('#new-order-btn');
-
-    const modal = page.locator('.modal');
+    const modal = await openIntakeDialog(page);
     await expect(modal).toBeVisible();
 
     // Cierre con el botón X
@@ -41,15 +38,12 @@ test.describe('WORK-01 | Modal Nueva Orden', () => {
 
   test('el modal muestra secciones clave: cliente, tipo de trabajo, nivel de gasolina', async ({ page }) => {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
-    await page.goto('/work-orders');
-    await page.waitForSelector('#new-order-btn', { timeout: 10000 });
-    await page.click('#new-order-btn');
-
-    const modal = page.locator('.modal');
+    const modal = await openIntakeDialog(page);
     await expect(modal).toBeVisible();
 
-    // Debe haber selector de tipo de trabajo
-    await expect(modal.locator('select, input[type="radio"]').first()).toBeVisible();
+    // El paso 1 es el buscador de clientes (A-08), con «Nuevo cliente» aparte.
+    await expect(modal.locator('#intake-customer-search')).toBeVisible();
+    await expect(modal.locator('#intake-new-customer')).toBeVisible();
   });
 });
 
@@ -66,9 +60,7 @@ test.describe('WORK-02 | Validación millas negativas', () => {
   // prueba aquí — que el campo de millas no acepte un negativo — no depende del rol.
   test('el teclado descarta el signo menos', async ({ page }) => {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
-    await page.goto('/work-orders');
-    await page.waitForSelector('#new-order-btn', { timeout: 10000 });
-    await page.click('#new-order-btn');
+    await openIntakeDialog(page);
     test.skip(!(await goToIntakeVehicleStep(page)), 'La sede no tiene clientes');
 
     const milesField = page.locator('#order-miles-in');
@@ -78,11 +70,7 @@ test.describe('WORK-02 | Validación millas negativas', () => {
 
   test('un valor negativo pegado se rechaza al enviar', async ({ page }) => {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
-    await page.goto('/work-orders');
-    await page.waitForSelector('#new-order-btn', { timeout: 10000 });
-    await page.click('#new-order-btn');
-
-    const modal = page.locator('.modal');
+    const modal = await openIntakeDialog(page);
     test.skip(!(await goToIntakeVehicleStep(page)), 'La sede no tiene clientes');
     await modal.locator('#order-miles-in').fill('-250');
     // En el paso 2 el botón de enviar es "Siguiente": valida el paso antes de avanzar.

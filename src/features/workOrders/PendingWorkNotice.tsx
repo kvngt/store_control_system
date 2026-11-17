@@ -3,6 +3,7 @@ import { History } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { workOrdersService } from '../../services/workOrders.service';
 import { money } from '../../lib/money';
+import { moduloActivo } from '../../config/modulos';
 import type { PendingWorkItem } from '../../types/database';
 
 interface PendingWorkNoticeProps {
@@ -27,7 +28,10 @@ export default function PendingWorkNotice({ vehicleId, excludeOrderId }: Pending
     queryFn: async () => (await workOrdersService.getPendingWork(vehicleId, excludeOrderId)) ?? [],
     enabled: !!vehicleId,
   });
-  const items: PendingWorkItem[] = query.data ?? [];
+  const rawItems: PendingWorkItem[] = query.data ?? [];
+  const items = moduloActivo('inspeccion')
+    ? rawItems
+    : rawItems.filter((item) => item.tipo !== 'inspeccion');
   if (items.length === 0) return null;
 
   return (

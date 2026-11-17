@@ -17,8 +17,12 @@ interface CustomerPickerProps {
   value: string;
   onChange: (customerId: string) => void;
   /** Creates the customer and resolves with the stored row (id included). */
-  onCreate: (draft: NewCustomerDraft) => Promise<Customer>;
+  onCreate?: (draft: NewCustomerDraft) => Promise<Customer>;
   invalid?: boolean;
+  /** En el alta de la orden, el botón de nuevo cliente va aparte del buscador. */
+  hideInlineCreate?: boolean;
+  inputId?: string;
+  placeholder?: string;
 }
 
 /**
@@ -33,6 +37,9 @@ export default function CustomerPicker({
   onChange,
   onCreate,
   invalid = false,
+  hideInlineCreate = false,
+  inputId = 'vehicle-owner-search',
+  placeholder,
 }: CustomerPickerProps) {
   const { t } = useLanguage();
   const [query, setQuery] = useState('');
@@ -48,11 +55,12 @@ export default function CustomerPicker({
   const matches = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return customers.slice(0, 8);
+    const needleDigits = needle.replace(/\D/g, '');
     return customers
       .filter(
         (c) =>
           c.nombre.toLowerCase().includes(needle) ||
-          c.telefono.replace(/\D/g, '').includes(needle.replace(/\D/g, '')) ||
+          (needleDigits.length > 0 && c.telefono.replace(/\D/g, '').includes(needleDigits)) ||
           c.email.toLowerCase().includes(needle)
       )
       .slice(0, 8);
@@ -81,6 +89,7 @@ export default function CustomerPicker({
   };
 
   const submitCreate = async () => {
+    if (!onCreate) return;
     if (!draft.nombre.trim() || !draft.telefono.trim()) {
       setCreateError(t('vehicles.ownerNameRequired'));
       return;
@@ -143,9 +152,10 @@ export default function CustomerPicker({
         <Search size={16} className="combo-search-icon" />
         <input
           className={`form-input${invalid ? ' is-invalid' : ''}`}
-          id="vehicle-owner-search"
+          id={inputId}
           autoComplete="off"
-          placeholder={t('vehicles.searchOwner')}
+          aria-invalid={invalid || undefined}
+          placeholder={placeholder ?? t('vehicles.searchOwner')}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -177,12 +187,14 @@ export default function CustomerPicker({
           {matches.length === 0 && (
             <div className="combo-empty">{t('vehicles.noOwnerMatches')}</div>
           )}
-          <button type="button" className="combo-footer-action" onClick={startCreate} id="vehicle-owner-new">
-            <UserPlus size={16} />
-            {query.trim()
-              ? `${t('vehicles.newOwner')}: "${query.trim()}"`
-              : t('vehicles.newOwner')}
-          </button>
+          {!hideInlineCreate && onCreate && (
+            <button type="button" className="combo-footer-action" onClick={startCreate} id="vehicle-owner-new">
+              <UserPlus size={16} />
+              {query.trim()
+                ? `${t('vehicles.newOwner')}: "${query.trim()}"`
+                : t('vehicles.newOwner')}
+            </button>
+          )}
         </div>
       )}
 

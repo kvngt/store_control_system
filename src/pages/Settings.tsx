@@ -1,5 +1,6 @@
 import { useLanguage } from '../context/language.context';
 import { useAuth } from '../context/auth.context';
+import { moduloActivo } from '../config/modulos';
 import ProfileCard from '../features/settings/ProfileCard';
 import LanguageCard from '../features/settings/LanguageCard';
 import ThemeCard from '../features/settings/ThemeCard';
@@ -45,10 +46,10 @@ export default function Settings() {
         {isAdmin && <ParkingSettingsCard />}
 
         {/* Catálogo de trabajos frecuentes (solo admin). */}
-        {isAdmin && <JobCatalogCard />}
+        {isAdmin && moduloActivo('catalogo') && <JobCatalogCard />}
 
         {/* Plantillas de inspección por puntos (solo admin). */}
-        {isAdmin && <InspectionTemplatesCard />}
+        {isAdmin && moduloActivo('inspeccion') && <InspectionTemplatesCard />}
 
         {/* Reportar un problema (Sentry). No se dibuja si Sentry no está configurado. */}
         <ProblemReportCard />

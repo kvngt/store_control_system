@@ -51,8 +51,12 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
   puede moverla sin nada autorizado. **Con la orden `finalizado`, tampoco desmarca una tarea hecha**
   (`marcar_labor_completada`, `20261010000042`): la orden quedaba terminada con trabajo sin hacer.
   La firma de recepción, devolver a recepción, reabrir una finalizada y entregar son de
-  administración. **Si agregas una acción de técnico que cambie otra columna de `ordenes_trabajo`,
-  añádela a la lista permitida de ese trigger en una migración nueva.**
+  administración. **La fecha de finalización de una orden que termina un técnico la pone la base**
+  (`20261010000046`): la app puede mandarla, pero se ignora. **Tampoco mueve el avance (`porcentaje_avance`)
+  en una orden sin ninguna línea `aprobado`** (`20261010000047`, hallazgo B-02 del Q2: no se reporta avance de obra sobre
+  trabajo que nadie autorizó; en pantalla, el deslizador y el campo se apagan); administración sí. **Si agregas una acción de técnico que
+  cambie otra columna de `ordenes_trabajo`, añádela a la lista permitida de ese trigger en una
+  migración nueva.**
 - **Abrir una orden y asignar a alguien (alta, edición y baja) son solo de admin**
   (`ordenes_trabajo_insert`, `orden_asignaciones_*`). Asignar es dinero, no una etiqueta: reparte
   la comisión de las líneas heredadas. [arquitectura.md §6](arquitectura.md#6-seguridad-y-permisos).
@@ -162,7 +166,14 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
 - **El portal del cliente (`src/portal/`) es un paquete aparte.** No importes ahí nada que
   arrastre `lib/supabase`, `services/`, contextos de la app ni `i18n/translations.ts`: habla con
   la edge function `portal` por `fetch`. Todo dato nuevo para el cliente se agrega a mano en
-  `datos_portal` (**nunca `to_jsonb(fila)`**).
+  `datos_portal` (**nunca `to_jsonb(fila)`**). **La única excepción es `src/landing/business.ts`**
+  (datos puros, sin ningún import): el portal lo importa para el contacto del taller cuando el
+  enlace no es válido (`src/portal/publicContact.ts`). `src/portal/boundary.test.ts` sigue cada import
+  desde el portal (los `import type` no cuentan) y falla si algo llega a Supabase, los servicios, los
+  contextos o las traducciones de la app; si `business.ts` ganara un import, la prueba lo atrapa.
+  **Lo que el portal cuenta al cliente son filas, no líneas:** un trabajo agrupado es una sola fila
+  (el botón y el diálogo de `QuoteSection` cuentan 1; el título de `QuoteOutcome` no lleva número,
+  porque `autorizados` de la base cuenta líneas).
 - **La raíz es la página del taller para el público** (`src/landing/`, 26/10/2026), otro paquete
   aparte con las mismas reglas que el portal (sin Supabase ni nada de la app). `main.tsx` la
   arranca en `/` en el navegador **aunque haya una sesión del personal** (28/10/2026), y en `/home`
@@ -394,7 +405,8 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
     crean otro y el correo queda `omitido` con su motivo. «Crear enlace» y «Cambiar enlace» sí crean
     uno (bandera de transacción `restorify.crear_enlace_manual`). **Un camino automático nuevo que
     necesite el enlace pasa por `asegurar_enlace_orden`**;
-  - **el técnico tampoco** escribe `fecha_finalizacion`, ni borra un avance ligado a un trabajo
+  - **el técnico tampoco** fija `fecha_finalizacion` (desde la `046` no da error: lo que mande se
+    ignora y la pone la base al terminar la orden), ni borra un avance ligado a un trabajo
     adicional (`orden_avances_delete`), ni borra de Storage los archivos de una inspección publicada
     (`orden_media_delete`), ni arranca el reloj en una orden terminada (`iniciar_reloj`);
   - **`is_assigned_to_order` exige la sede actual del técnico**, igual que `mis_ordenes_asignadas()`,
@@ -464,7 +476,7 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
    `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca edites una migración
    ya aplicada ni cambies tablas desde el panel. **El nombre va después de la última
    migración, no de la fecha de hoy:** hay migraciones aplicadas con fecha futura (hoy la
-   última es `20261010000045`, aplicada en producción el 16/11/2026), y una con fecha anterior a la última aplicada no entra con
+   última es `20261010000047`; en producción siguen aplicadas 99, hasta la `045`, y la `046` y la `047` esperan su `db push`), y una con fecha anterior a la última aplicada no entra con
    `db push` ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#4-base-de-datos), B-1).
    Después de cada migración, regenera `src/types/supabase.gen.ts` con `npm run db:types` (`schema.contract.ts` verifica en compilación que los tipos de dominio no se desalineen) y `supabase/schema/actual.sql` con `npm run db:schema`.
 2. **Una función nueva en `public` es una RPC pública.** Postgres da `EXECUTE` a

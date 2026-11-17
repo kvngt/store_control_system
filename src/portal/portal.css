@@ -936,4 +936,123 @@ details.portal-collapsible[open] summary {
   margin-right: var(--space-1);
 }
 
+/* ===== Diálogo de confirmación del portal (B-13) ===== */
+.portal-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--color-text-inverse) 60%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.portal-confirm-card {
+  width: 100%;
+  max-width: min(420px, calc(100vw - 32px));
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.portal-confirm-title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.portal-confirm-message {
+  margin: 0;
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.portal-confirm-actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.portal-confirm-actions .btn {
+  min-height: 44px;
+  justify-content: center;
+}
+
+@media (max-width: 480px) {
+  .portal-confirm-card {
+    max-width: calc(100vw - 32px);
+  }
+
+  .portal-confirm-actions {
+    flex-direction: column-reverse;
+  }
+
+  .portal-confirm-actions .btn {
+    width: 100%;
+  }
+}
+
+/* ===== Resumen de respuesta al presupuesto (B-14) ===== */
+.portal-quote-outcome .portal-section-title {
+  margin-bottom: var(--space-1);
+}
+
+.portal-quote-outcome-date {
+  margin: 0;
+}
+
+.portal-quote-outcome-declined {
+  margin-top: var(--space-3);
+}
+
+.portal-quote-outcome-declined .portal-line:last-of-type {
+  border-bottom: none;
+}
+
+.portal-quote-outcome-more {
+  margin: var(--space-2) 0 0;
+}
+
+/* ===== Recuadro de foto que no carga (B-17) ===== */
+.portal-photo-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  height: 100%;
+  padding: var(--space-2);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  border: 1px dashed var(--color-surface-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  line-height: 1.3;
+}
+
+.lightbox-content .portal-photo-error {
+  min-width: 220px;
+  min-height: 160px;
+  padding: var(--space-4);
+  font-size: var(--font-size-sm);
+}
+
+.portal-signature .portal-photo-error {
+  min-height: 90px;
+  margin-bottom: var(--space-1);
+}
+
+
 

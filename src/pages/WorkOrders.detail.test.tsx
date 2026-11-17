@@ -335,6 +335,41 @@ describe('WorkOrders — avance de la orden', () => {
     expect(slider()).toBeDisabled();
     expect(screen.getByText(/la orden ya está cerrada/)).toBeInTheDocument();
   });
+
+  it('B-02: apaga el deslizador de avance para el técnico cuando no hay nada autorizado', async () => {
+    mocks.auth.current = authValue(MECHANIC_USER);
+    mocks.getWorkOrderDetail.mockResolvedValue({
+      ...TECH_DETAIL,
+      estatus: 'recepcion',
+      asignaciones: [{ id: 'asg-1', orden_id: ORDER.id, usuario_id: MECHANIC_USER.id, tipo_tarea: 'mecanica', estatus_tarea: 'pendiente' }],
+      labor_items: [{ id: 'lab-1', orden_id: ORDER.id, descripcion: 'Frenos', costo: 120, estado: 'borrador' }],
+      repuestos_resumen: [],
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+
+    expect(slider()).toBeDisabled();
+    expect(box()).toBeDisabled();
+    expect(screen.getAllByText(/todavía no autoriza ningún trabajo/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/la orden ya está cerrada/)).not.toBeInTheDocument();
+  });
+
+  it('B-02: deja mover el avance al técnico si tiene al menos una línea aprobada', async () => {
+    mocks.auth.current = authValue(MECHANIC_USER);
+    mocks.getWorkOrderDetail.mockResolvedValue({
+      ...TECH_DETAIL,
+      estatus: 'en_proceso',
+      asignaciones: [{ id: 'asg-1', orden_id: ORDER.id, usuario_id: MECHANIC_USER.id, tipo_tarea: 'mecanica', estatus_tarea: 'pendiente' }],
+      labor_items: [{ id: 'lab-1', orden_id: ORDER.id, descripcion: 'Frenos', costo: 120, estado: 'aprobado' }],
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<WorkOrders />);
+    await openDetail(user);
+
+    expect(slider()).toBeEnabled();
+    expect(box()).toBeEnabled();
+  });
 });
 
 // Pedido del taller (05/10/2026): finalizar lo hace el técnico, "listo para entregar" lo confirma

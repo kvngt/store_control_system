@@ -185,7 +185,7 @@ export default function OrderHeader({
         <div style={{ textAlign: 'right', flex: '1 1 180px' }}>
           <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
             {t('workOrders.progress')}
-            {!detail.canEditProgress && (
+            {!detail.canEditProgress && detail.isComplete && (
               <span style={{ marginLeft: 6, color: 'var(--color-text-tertiary)' }}>({t('workOrders.progressLocked')})</span>
             )}
           </div>
@@ -204,6 +204,7 @@ export default function OrderHeader({
             onKeyUp={detail.commitProgress}
             onBlur={detail.commitProgress}
             disabled={!detail.canEditProgress}
+            title={!detail.canEditProgress && techWaitsAuthorization ? t('techStatus.waitingAuthorizationNote') : undefined}
             style={{ width: '100%' }}
           />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
@@ -216,6 +217,7 @@ export default function OrderHeader({
               aria-label={t('workOrders.progress')}
               value={detail.progressDraft}
               disabled={!detail.canEditProgress}
+              title={!detail.canEditProgress && techWaitsAuthorization ? t('techStatus.waitingAuthorizationNote') : undefined}
               style={{ width: 70, textAlign: 'right', padding: 'var(--space-1) var(--space-2)', color: detail.isComplete ? 'var(--color-success)' : undefined, fontWeight: detail.isComplete ? 700 : undefined }}
               onChange={(e) => detail.setProgressDraft(e.target.value)}
               onBlur={detail.commitProgress}
@@ -223,6 +225,12 @@ export default function OrderHeader({
             />
             <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: detail.isComplete ? 'var(--color-success)' : 'var(--color-primary-light)' }}>%</span>
           </div>
+          {/* La misma frase ya la dice `TechOrderStatus` (más abajo) mientras la orden espera en recepción o en
+              proceso: repetirla pegada al deslizador llenaba la primera pantalla del teléfono. Aquí solo sale cuando
+              esa tarjeta no la muestra. */}
+          {!detail.canEditProgress && !detail.isComplete && !detail.isAdmin && detail.canEdit && !techWaitsAuthorization && (
+            <p className="progress-locked-note">{t('techStatus.waitingAuthorizationNote')}</p>
+          )}
         </div>
       </div>
     </div>

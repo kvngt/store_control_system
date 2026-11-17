@@ -1,4 +1,5 @@
 import * as z from 'zod/mini';
+import { isValidPhone } from '../../lib/phone';
 
 /**
  * Validation for the "nueva orden" dialog.
@@ -67,6 +68,7 @@ const baseShape = z.object({
     telefono: stringField,
     email: stringField,
     direccion: stringField,
+    idioma: z.enum(['en', 'es']),
   }),
   newVehicle: z.object({
     marca: stringField,
@@ -112,7 +114,11 @@ export const workOrderFormSchema = baseShape.check((ctx) => {
     if (!form.selectedCustomer) reject(['selectedCustomer'], 'workOrders.validation.customerRequired');
   } else {
     if (!form.newCustomer.nombre.trim()) reject(['newCustomer', 'nombre'], 'workOrders.validation.customerName');
-    if (!form.newCustomer.telefono.trim()) reject(['newCustomer', 'telefono'], 'workOrders.validation.customerPhone');
+    if (!form.newCustomer.telefono.trim()) {
+      reject(['newCustomer', 'telefono'], 'workOrders.validation.customerPhone');
+    } else if (!isValidPhone(form.newCustomer.telefono)) {
+      reject(['newCustomer', 'telefono'], 'workOrders.validation.customerPhoneInvalid');
+    }
   }
 
   if (form.vehicleMode === 'existing') {
@@ -207,7 +213,7 @@ export function emptyWorkOrderForm(): WorkOrderFormValues {
     vehicleMode: 'existing',
     selectedCustomer: '',
     selectedVehicle: '',
-    newCustomer: { nombre: '', telefono: '', email: '', direccion: '' },
+    newCustomer: { nombre: '', telefono: '', email: '', direccion: '', idioma: 'en' },
     newVehicle: {
       marca: '',
       modelo: '',

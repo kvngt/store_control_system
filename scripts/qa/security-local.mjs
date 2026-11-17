@@ -115,7 +115,7 @@ const [vehiculoAjeno] = await api('POST', '/rest/v1/vehiculos', {
 
 const fechaEstimada = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
 
-async function createOrder({ clienteId, vehiculoId, labor }) {
+async function createOrder({ clienteId, vehiculoId, labor, autorizar = true, assignments = [] }) {
   return api('POST', '/rest/v1/rpc/create_work_order', {
     token: adminToken,
     body: {
@@ -130,11 +130,11 @@ async function createOrder({ clienteId, vehiculoId, labor }) {
         inspeccion_360_notas: '',
         fecha_estimada_entrega: fechaEstimada,
         creado_por: adminId,
-        autorizado_en_recepcion: true,
+        autorizado_en_recepcion: autorizar,
       },
       p_labor: labor,
       p_parts: [],
-      p_assignments: [],
+      p_assignments: assignments,
     },
   });
 }
@@ -191,6 +191,15 @@ await api('PATCH', `/rest/v1/ordenes_trabajo?id=eq.${ordenFinalizada.id}`, {
   },
 });
 
+// 5. Orden asignada al mecánico con lo cotizado sin autorizar (ORDEN_SIN_AUTORIZAR / SEC-215, B-02).
+const ordenSinAutorizar = await createOrder({
+  clienteId: clientePropio.id,
+  vehiculoId: vehiculoPropio.id,
+  labor: [{ descripcion: 'PWTEST QA Sin autorizar', costo: 100, especialidad: 'mecanica', asignado_a: techId, reparto_heredado: false }],
+  autorizar: false,
+  assignments: [{ usuario_id: techId, tipo_tarea: 'mecanica' }],
+});
+
 const extraArgs = process.argv.slice(2);
 const childEnv = {
   ...process.env,
@@ -214,6 +223,7 @@ const childEnv = {
   ORDEN_ENTREGADA: ordenEntregada.id,
   ORDEN_FINALIZADA: ordenFinalizada.id,
   ORDEN_FIRMADA: ordenActiva.id,
+  ORDEN_SIN_AUTORIZAR: ordenSinAutorizar.id,
 };
 
 if (!extraArgs.includes('--json')) {

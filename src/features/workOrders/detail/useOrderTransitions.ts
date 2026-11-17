@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { moduloActivo } from '../../../config/modulos';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../../context/language.context';
 import { useToast } from '../../../context/toast.context';
@@ -82,7 +83,7 @@ export function useOrderTransitions({
     // Sacar una orden de "entregado" revierte en Finanzas el pago final y el
     // costo de repuestos, y borra las comisiones que aún no se han pagado. Vale
     // decirlo antes y no después.
-    if (order.estatus === 'entregado' && !confirm(t('workOrders.confirmUndeliver'))) {
+    if (order.estatus === 'entregado' && !confirm(t(moduloActivo('comisiones') ? 'workOrders.confirmUndeliver' : 'workOrders.confirmUndeliverNoCommissions'))) {
       discard();
       return;
     }

@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../../context/language.context';
 import { useToast } from '../../../context/toast.context';
 import { commissionsService } from '../../../services/commissions.service';
+import { moduloActivo } from '../../../config/modulos';
 import { workOrdersService } from '../../../services/workOrders.service';
 import { queryKeys } from '../../../lib/queryClient';
 import { getErrorMessage } from '../../../lib/errors';
@@ -38,7 +39,7 @@ export function useOrderMoney({
   const estimateQuery = useQuery({
     queryKey: queryKeys.commissionEstimate(openOrderId ?? ''),
     queryFn: () => commissionsService.getEstimate(openOrderId ?? ''),
-    enabled: !!openOrderId && (isAdmin || isAssignedToMe),
+    enabled: moduloActivo('comisiones') && !!openOrderId && (isAdmin || isAssignedToMe),
   });
   const commissionEstimate = estimateQuery.data ?? null;
 

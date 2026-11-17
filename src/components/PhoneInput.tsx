@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../context/language.context';
-import { looksIncomplete, parsePhone, PHONE_COUNTRIES, toE164 } from '../lib/phone';
+import { looksIncomplete, parsePhone, PHONE_COUNTRIES, sanitizePhoneInput, toE164 } from '../lib/phone';
 
 interface PhoneInputProps {
   /** Lo guardado: formato internacional (`+15551234567`) o un número viejo sin "+". */
@@ -74,13 +74,13 @@ export default function PhoneInput({ value, onChange, id, disabled, invalid, pla
           </span>
         </div>
         <input
-          className="form-input phone-input-number"
+          className={`form-input phone-input-number${invalid ? ' is-invalid' : ''}`}
           id={id}
           type="tel"
           inputMode="tel"
           autoComplete="tel-national"
           value={national}
-          onChange={(e) => emit(iso, e.target.value)}
+          onChange={(e) => emit(iso, sanitizePhoneInput(e.target.value))}
           onBlur={() => setTouched(true)}
           disabled={disabled}
           aria-invalid={invalid || undefined}

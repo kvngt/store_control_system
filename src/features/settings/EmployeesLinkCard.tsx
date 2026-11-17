@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { moduloActivo } from '../../config/modulos';
 import { useLanguage } from '../../context/language.context';
 
 export default function EmployeesLinkCard() {
@@ -7,7 +8,7 @@ export default function EmployeesLinkCard() {
   return (
     <div className="card">
       <h3 className="card-title">{t('employees.title')}</h3>
-      <p className="field-hint" style={{ margin: 'var(--space-2) 0 var(--space-3)' }}>{t('employees.movedHint')}</p>
+      <p className="field-hint" style={{ margin: 'var(--space-2) 0 var(--space-3)' }}>{t(moduloActivo('comisiones') ? 'employees.movedHint' : 'employees.movedHintNoPay')}</p>
       <Link to="/employees" className="btn btn-secondary btn-sm">{t('employees.goTo')}</Link>
     </div>
   );

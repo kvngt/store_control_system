@@ -170,7 +170,7 @@ export default function WorkOrderCreateModal({
         }}
       />
 
-      {step === 1 && <CustomerStep form={form} customers={customers} />}
+      {step === 1 && <CustomerStep form={form} customers={customers} sedeId={sedeId} />}
       {step === 2 && (
         <VehicleStep
           form={form}

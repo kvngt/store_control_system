@@ -207,6 +207,87 @@ export function looksIncomplete(iso: string, national: string): boolean {
 }
 
 /**
+ * Largo esperado del número nacional (sin prefijo de país) según cada país de `PHONE_COUNTRIES`.
+ * - NANP (+1: US, PR, DO), MX (+52), CO (+57), VE (+58): 10 dígitos.
+ * - AR (+54): 10 dígitos (fijo/móvil sin 9) o 11 (móvil internacional con 9).
+ * - CL (+56), ES (+34), PE (+51): 9 dígitos.
+ * - EC (+593): 8–9 dígitos (fijo 8, móvil 9).
+ * - PA (+507): 7–8 dígitos (fijo 7, móvil 8).
+ * - CR (+506), CU (+53), SV (+503), GT (+502), HN (+504), NI (+505): 8 dígitos.
+ */
+const NATIONAL_DIGIT_BOUNDS: Record<string, [number, number]> = {
+  US: [10, 10],
+  MX: [10, 10],
+  AR: [10, 11],
+  CL: [9, 9],
+  CO: [10, 10],
+  CR: [8, 8],
+  CU: [8, 8],
+  EC: [8, 9],
+  SV: [8, 8],
+  ES: [9, 9],
+  GT: [8, 8],
+  HN: [8, 8],
+  NI: [8, 8],
+  PA: [7, 8],
+  PE: [9, 9],
+  PR: [10, 10],
+  DO: [10, 10],
+  VE: [10, 10],
+};
+
+/** Solo deja dígitos y signos de formato telefónico (+ al principio, espacios, paréntesis, guiones, puntos). */
+export function sanitizePhoneInput(raw: string): string {
+  let seenPlus = false;
+  let out = '';
+  for (const ch of raw) {
+    if (ch === '+') {
+      if (!seenPlus && out.trim() === '') {
+        seenPlus = true;
+        out += ch;
+      }
+      continue;
+    }
+    if (/[\d()\s.-]/.test(ch)) {
+      out += ch;
+    }
+  }
+  return out;
+}
+
+/**
+ * Valida un número completo (internacional `+...` o heredado sin `+`) contra las reglas de su país.
+ * Rechaza letras, símbolos ajenos y teléfonos incompletos.
+ */
+export function isValidPhone(value: string | null | undefined): boolean {
+  const raw = (value ?? '').trim();
+  if (!raw) return false;
+  if (!/^[+\d()\s.-]+$/.test(raw)) return false;
+  // Un "+" en medio del texto no es un teléfono válido.
+  if (raw.indexOf('+', 1) !== -1) return false;
+
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return false;
+
+  if (raw.startsWith('+')) {
+    const candidatos = [...PHONE_COUNTRIES].sort((a, b) => b.dial.length - a.dial.length);
+    const known = candidatos.find((c) => digits.startsWith(c.dial));
+    if (!known) {
+      // País fuera de la lista (p. ej. +44): exigir largo E.164 razonable (8 a 15 dígitos en total).
+      return digits.length >= 8 && digits.length <= 15;
+    }
+    const { iso, national } = parsePhone(raw);
+    const bounds = NATIONAL_DIGIT_BOUNDS[iso] ?? [7, 15];
+    return national.length >= bounds[0] && national.length <= bounds[1];
+  }
+
+  // Teléfono viejo guardado sin "+" (se interpreta como EE. UU., 10 dígitos o 1 + 10 dígitos).
+  const { iso, national } = parsePhone(raw);
+  const bounds = NATIONAL_DIGIT_BOUNDS[iso] ?? [10, 10];
+  return national.length >= bounds[0] && national.length <= bounds[1];
+}
+
+/**
  * Un teléfono de la sede en una línea, para el PDF y Configuración: "Spanish: 202-607-6126
  * (WhatsApp)". Sin descripción va `fallbackLabel` (el tipo, en el idioma de quien lo lee).
  */

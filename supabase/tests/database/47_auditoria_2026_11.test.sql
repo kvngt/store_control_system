@@ -6,7 +6,8 @@
 --     ajustar_parqueo_orden toman candado FOR UPDATE sobre ordenes_trabajo.
 --  2. trg_guard_perfil_privilegios impide cambiar email por API autenticada (no admin).
 --  3. orden_media_delete excluye objetos de inspecciones publicadas (y conserva dueño/admin).
---  4. trg_guard_order_technician impide escribir fecha_finalizacion sin romper transiciones.
+--  4. trg_guard_order_technician no deja al técnico fijar fecha_finalizacion sin romper transiciones
+--     (desde la 046 lo que mande se ignora sin error; antes daba 42501).
 --  5. orden_avances_delete impide borrar un avance ligado a orden_hallazgos.
 --  6. trg_guard_order_delete_entregada impide borrar con sesión una orden con dinero registrado en Finanzas.
 --  7. descartar_hallazgo rechaza (42501) si la orden ya fue entregada.
@@ -279,11 +280,16 @@ SET LOCAL request.jwt.claim.role = 'authenticated';
 SET LOCAL request.jwt.claim.sub  = '47b00000-0000-0000-0000-000000000001';
 SET LOCAL ROLE authenticated;
 
--- [10] Falla sin la migración
-SELECT throws_ok(
-  $$ UPDATE ordenes_trabajo SET fecha_finalizacion = NOW() WHERE id = '47e00000-0000-0000-0000-000000000001' $$,
-  '42501', 'Solo un administrador puede cambiar los datos de recepción de una orden.',
-  '4. el técnico asignado no puede escribir fecha_finalizacion'
+-- [10] Desde la 046 no da error: la base ignora lo que el técnico mande y la fecha no cambia
+SELECT lives_ok(
+  $$ DO $d$
+     BEGIN
+       UPDATE ordenes_trabajo SET fecha_finalizacion = NOW() WHERE id = '47e00000-0000-0000-0000-000000000001';
+       IF (SELECT fecha_finalizacion FROM ordenes_trabajo WHERE id = '47e00000-0000-0000-0000-000000000001') IS NOT NULL THEN
+         RAISE EXCEPTION 'el técnico logró fijar fecha_finalizacion';
+       END IF;
+     END $d$ $$,
+  '4. el técnico asignado no cambia fecha_finalizacion (desde la 046 se ignora, sin error)'
 );
 
 -- [11] Permitido: el técnico reporta trabajo adicional -> orden pasa a espera_autorizacion

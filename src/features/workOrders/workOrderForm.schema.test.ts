@@ -54,6 +54,27 @@ describe('work order intake schema', () => {
     expect(found.selectedCustomer).toBeUndefined();
   });
 
+  it('rejects an incomplete or invalid phone number on inline customer creation', () => {
+    const bad = issues(
+      form({
+        customerMode: 'new',
+        selectedCustomer: '',
+        newCustomer: { ...emptyWorkOrderForm().newCustomer, nombre: 'Ana', telefono: '+1512555' },
+      })
+    );
+    expect(bad['newCustomer.telefono']).toBe('workOrders.validation.customerPhoneInvalid');
+
+    const good = issues(
+      form({
+        customerMode: 'new',
+        selectedCustomer: '',
+        newCustomer: { ...emptyWorkOrderForm().newCustomer, nombre: 'Ana', telefono: '+15125550100' },
+      })
+    );
+    expect(good['newCustomer.telefono']).toBeUndefined();
+    expect(emptyWorkOrderForm().newCustomer.idioma).toBe('en');
+  });
+
   it('requires make and model when the vehicle is being created inline, but VIN is optional', () => {
     const found = issues(form({ vehicleMode: 'new', selectedVehicle: '' }));
     expect(found['newVehicle.marca']).toBe('workOrders.validation.vehicleBrand');

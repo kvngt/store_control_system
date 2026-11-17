@@ -114,9 +114,11 @@ SELECT throws_ok(
   'El técnico asignado no empieza la orden mientras no haya nada autorizado'
 );
 
-SELECT lives_ok(
+-- Desde 20261010000047 (B-02) tampoco mueve el avance sin nada autorizado.
+SELECT throws_ok(
   $$ UPDATE ordenes_trabajo SET porcentaje_avance = 40 WHERE vehiculo_id = 'd0000000-0000-0000-0000-000000000001' $$,
-  'El técnico asignado mueve el avance'
+  '42501', NULL,
+  'El técnico asignado no mueve el avance mientras no haya nada autorizado'
 );
 
 -- La firma es de mostrador, aunque el técnico esté asignado (20261006000000). Hasta

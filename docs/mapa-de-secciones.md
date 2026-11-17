@@ -44,13 +44,13 @@ la base sin comprometer la operación: [mantenimiento.md §4](mantenimiento.md#4
 | Servicio | `services/workOrders.service.ts` (compone `workOrdersService` desde `services/workOrders/`: `queries`, `orders`, `lines`, `money`, `followUp`, `team`, `clock`, `realtime` con `ORDER_TABLES`) |
 | Tablas | `ordenes_trabajo` (con `marcas_danos`, `trg_marcas_danos_firmadas` y `trg_order_link_on_create`; 24 triggers al 11/10/2026 más los 2 de `031` y `032`), `orden_montos`, `orden_labor`, `orden_repuestos`, `orden_asignaciones`, `orden_avances`, `orden_hallazgos` (F6), `orden_trabajos` (`034`), `orden_labor_tiempos` (`036`) |
 | RPC | `create_work_order`, `repuestos_de_orden`, `marcar_labor_completada`, `mis_ordenes_asignadas`; hallazgos: `reportar_hallazgo`, `cotizar_hallazgo`, `descartar_hallazgo` (y `_salir_de_espera`, interna) |
-| Pruebas | `pages/WorkOrders.smoke.test.tsx`, `features/workOrders/*.test.tsx`, `features/workOrders/intakeDraft.test.ts`, `lib/backButtonTrap.test.tsx`, `techNextStep.test.ts`, `VehicleDiagram.test.tsx`, `vehicleDiagram.test.ts`, `ReadyNotifyModal.test.tsx`; pgTAP `01`, `03`, `07`, `09`, `10`, `21`, `22` (hallazgos), `35_autorizar_en_recepcion.test.sql`, `36_marcas_de_danos.test.sql`, `37_enlace_autorizacion_y_tareas.test.sql`, `41_arreglos_del_qa.test.sql`, `45_decisiones_del_dueno.test.sql`; `TechOrderStatus.test.tsx` |
+| Pruebas | `pages/WorkOrders.smoke.test.tsx`, `features/workOrders/*.test.tsx`, `features/workOrders/intakeDraft.test.ts`, `lib/backButtonTrap.test.tsx`, `techNextStep.test.ts`, `VehicleDiagram.test.tsx`, `vehicleDiagram.test.ts`, `ReadyNotifyModal.test.tsx`; pgTAP `01`, `03`, `07`, `09`, `10`, `21`, `22` (hallazgos), `35_autorizar_en_recepcion.test.sql`, `36_marcas_de_danos.test.sql`, `37_enlace_autorizacion_y_tareas.test.sql`, `41_arreglos_del_qa.test.sql`, `45_decisiones_del_dueno.test.sql`, `50_tecnico_termina_su_orden.test.sql`, `51_tecnico_avance_con_autorizacion.test.sql`; `TechOrderStatus.test.tsx` |
 | Documento | [reglas-de-negocio.md §1 y §3](reglas-de-negocio.md) |
 
 - **Qué puede tocar un técnico** de una orden: trigger `trg_guard_order_technician` (columnas
-  y estados permitidos; desde `20261010000041`, sin nada `aprobado` no empieza ni termina) y las
-  políticas de `20261007000000` (qué órdenes ve). En pantalla: `TechOrderStatus` (aviso) y el
-  selector de estado de `WorkOrderDetail.tsx`.
+  y estados permitidos; desde `20261010000041`, sin nada `aprobado` no empieza ni termina; la `046` ignora la fecha de finalización que mande y la `047` tampoco le deja mover el avance) y las
+  políticas de `20261007000000` (qué órdenes ve). En pantalla: `TechOrderStatus` (aviso), el
+  selector de estado de `WorkOrderDetail.tsx` y el deslizador de avance de `detail/OrderHeader.tsx` (apagado con `detail/permissions.ts`).
 - **Borrar o archivar** (`pages/WorkOrders.tsx`, `removeButton`): una orden entregada no se borra,
   se archiva (`trg_guard_order_delete_entregada`, `20261010000041`).
 - **«Atrás» en el teléfono** (04/11/2026): `lib/backButtonTrap.ts` (pila de trampas en el historial) y

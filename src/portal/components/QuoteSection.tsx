@@ -4,6 +4,7 @@ import PortalSection from '../PortalSection';
 import type { Formatters, PortalStrings } from '../format';
 import { answerQuote } from '../portal.api';
 import type { PortalQuote, PortalQuoteLine } from '../portal.types';
+import { ConfirmDialog } from './ConfirmDialog';
 
 export interface QuoteSectionProps {
   quote: PortalQuote;
@@ -22,6 +23,7 @@ export function QuoteSection({ quote, token, s, fmt, onAnswered }: QuoteSectionP
   const [name, setName] = useState('');
   const [comment, setComment] = useState('');
   const [sending, setSending] = useState(false);
+  const [pendingIds, setPendingIds] = useState<string[] | null>(null);
   const [nameError, setNameError] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
@@ -88,38 +90,31 @@ export function QuoteSection({ quote, token, s, fmt, onAnswered }: QuoteSectionP
     return sum;
   }, [groups, selected]);
 
-  const approvedItemCount = useMemo(() => {
-    let count = 0;
-    for (const group of groups) {
-      if (group.kind === 'job') {
-        if (group.lines.length > 0 && group.lines.every((l) => selected.has(l.id))) {
-          count++;
-        }
-      } else {
-        if (selected.has(group.line.id)) {
-          count++;
-        }
-      }
-    }
-    return count;
-  }, [groups, selected]);
+  // El cliente ve un trabajo agrupado como una sola fila: cuenta 1, con todas sus líneas
+  // marcadas, igual que una línea suelta. (`selected` cuenta líneas, no filas.)
+  const approvedItemCount = useMemo(
+    () =>
+      groups.filter((group) =>
+        group.kind === 'job'
+          ? group.lines.length > 0 && group.lines.every((l) => selected.has(l.id))
+          : selected.has(group.line.id),
+      ).length,
+    [groups, selected],
+  );
 
   const nameOk = name.trim().length >= 2;
 
-  const submit = async (approvedIds: string[]) => {
+  const requestConfirm = (approvedIds: string[]) => {
     if (!nameOk) {
       setNameError(true);
       nameRef.current?.focus();
       return;
     }
     setNameError(false);
+    setPendingIds(approvedIds);
+  };
 
-    const question =
-      approvedIds.length === 0
-        ? s.confirmRejectAll
-        : s.confirmAuthorize.replace('{count}', String(approvedItemCount)).replace('{total}', fmt.money(total));
-    if (!confirm(question)) return;
-
+  const submit = async (approvedIds: string[]) => {
     setSending(true);
     setMessage(null);
     try {
@@ -140,6 +135,7 @@ export function QuoteSection({ quote, token, s, fmt, onAnswered }: QuoteSectionP
     } catch {
       setMessage({ ok: false, text: s.answerErrors.red });
     } finally {
+      setPendingIds(null);
       setSending(false);
     }
   };
@@ -267,11 +263,11 @@ export function QuoteSection({ quote, token, s, fmt, onAnswered }: QuoteSectionP
       </div>
 
       <div className="portal-actions">
-        <button type="button" className="btn btn-primary" disabled={sending || selected.size === 0} onClick={() => void submit([...selected])}>
+        <button type="button" className="btn btn-primary" disabled={sending || selected.size === 0} onClick={() => requestConfirm([...selected])}>
           {s.authorize}
           {approvedItemCount > 0 && ` (${approvedItemCount})`}
         </button>
-        <button type="button" className="btn btn-secondary" disabled={sending} onClick={() => void submit([])}>
+        <button type="button" className="btn btn-secondary" disabled={sending} onClick={() => requestConfirm([])}>
           {s.rejectAll}
         </button>
       </div>
@@ -279,6 +275,25 @@ export function QuoteSection({ quote, token, s, fmt, onAnswered }: QuoteSectionP
         <p className={message.ok ? 'portal-success' : 'portal-error'} role="status">
           {message.text}
         </p>
+      )}
+      {pendingIds !== null && (
+        <ConfirmDialog
+          title={pendingIds.length === 0 ? s.confirmRejectTitle : s.confirmApproveTitle}
+          message={
+            pendingIds.length === 0
+              ? s.confirmRejectAll
+              : (approvedItemCount === 1 ? s.confirmApproveOne : s.confirmApproveMany)
+                  .replace('{count}', String(approvedItemCount))
+                  .replace('{total}', fmt.money(total))
+          }
+          confirmLabel={pendingIds.length === 0 ? s.confirmRejectBtn : s.confirmApproveBtn}
+          cancelLabel={s.confirmBack}
+          busy={sending}
+          onConfirm={() => void submit(pendingIds)}
+          onCancel={() => {
+            if (!sending) setPendingIds(null);
+          }}
+        />
       )}
     </PortalSection>
   );

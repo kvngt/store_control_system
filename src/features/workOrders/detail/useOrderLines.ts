@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../../context/language.context';
+import { moduloActivo } from '../../../config/modulos';
 import { useToast } from '../../../context/toast.context';
 import { usersService } from '../../../services/users.service';
 import { workOrdersService } from '../../../services/workOrders.service';
@@ -39,7 +40,7 @@ export function useOrderLines({
   const laborTimesQuery = useQuery({
     queryKey: queryKeys.orderLaborTimes(openOrderId ?? ''),
     queryFn: () => workOrdersService.getOrderLaborTimes(openOrderId ?? ''),
-    enabled: !!openOrderId,
+    enabled: moduloActivo('reloj') && !!openOrderId,
   });
   const laborTimes = laborTimesQuery.data ?? [];
 

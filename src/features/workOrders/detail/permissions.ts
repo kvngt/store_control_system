@@ -5,6 +5,9 @@ export interface PermissionsOrderInput {
   asignaciones?: ReadonlyArray<{ usuario_id: string }>;
   archivada_en?: string | null;
   lista_para_entregar_en?: string | null;
+  labor_items?: ReadonlyArray<{ estado?: string | null }>;
+  repuestos?: ReadonlyArray<{ estado?: string | null }>;
+  repuestos_resumen?: ReadonlyArray<{ estado?: string | null }>;
 }
 
 export interface PermissionsUserInput {
@@ -51,7 +54,13 @@ export function computeOrderPermissions(
   const canEdit = isAdmin || (isAssignedToMe && !isDelivered);
   const canResign = isAdmin && order?.estatus === 'recepcion';
   const canSign = isAdmin;
-  const canEditProgress = canEdit && !isComplete;
+  // B-02 (20261010000047): sin ninguna línea autorizada, la base rechaza que el técnico mueva porcentaje_avance.
+  const hasAuthorizedWork = [
+    ...(order?.labor_items ?? []),
+    ...(order?.repuestos ?? []),
+    ...(order?.repuestos_resumen ?? []),
+  ].some((l) => l.estado === 'aprobado');
+  const canEditProgress = canEdit && !isComplete && (isAdmin || hasAuthorizedWork);
   const canCompleteLabor = canEdit;
   const canCompleteLaborItem = (item: Pick<LaborItem, 'asignado_a'>) =>
     canCompleteLabor && (isAdmin || !item.asignado_a || item.asignado_a === user?.id);

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { isOptionalEmailValid, isValidEmail } from './email';
-import { canOpenSms, formatPhone, looksIncomplete, parsePhone, sedePhoneLine, smsUrl, telUrl, toE164, toWhatsAppNumber, whatsAppUrl } from './phone';
+import { canOpenSms, formatPhone, isValidPhone, looksIncomplete, parsePhone, sanitizePhoneInput, sedePhoneLine, smsUrl, telUrl, toE164, toWhatsAppNumber, whatsAppUrl } from './phone';
 import { tokenFromPath } from '../portal/path';
 
 describe('phone', () => {
@@ -115,6 +115,27 @@ describe('país del teléfono', () => {
     expect(looksIncomplete('US', '')).toBe(false);
     // Otros países tienen largos distintos; ahí no se adivina.
     expect(looksIncomplete('GT', '51234567')).toBe(false);
+  });
+
+  it('sanitizePhoneInput quita letras y símbolos ajenos dejando dígitos y formato', () => {
+    expect(sanitizePhoneInput('555abc-1234')).toBe('555-1234');
+    expect(sanitizePhoneInput('+1 (555) 123.4567')).toBe('+1 (555) 123.4567');
+    expect(sanitizePhoneInput('555+123')).toBe('555123');
+    expect(sanitizePhoneInput('++52 55')).toBe('+52 55');
+  });
+
+  it('isValidPhone exige el largo correcto por país y rechaza letras o incompletos', () => {
+    expect(isValidPhone('+15125550100')).toBe(true);
+    expect(isValidPhone('+151255501')).toBe(false);
+    expect(isValidPhone('+525512345678')).toBe(true);
+    expect(isValidPhone('+5255123456')).toBe(false);
+    expect(isValidPhone('+50251234567')).toBe(true);
+    expect(isValidPhone('+5025123456')).toBe(false);
+    expect(isValidPhone('+34612345678')).toBe(true);
+    expect(isValidPhone('+1512abc0100')).toBe(false);
+    expect(isValidPhone('5551234567')).toBe(true);
+    expect(isValidPhone('5551234')).toBe(false);
+    expect(isValidPhone('')).toBe(false);
   });
 });
 

@@ -93,6 +93,7 @@ const ctx = {
   ORDEN_ENTREGADA: env.ORDEN_ENTREGADA,
   ORDEN_FINALIZADA: env.ORDEN_FINALIZADA,
   ORDEN_FIRMADA: env.ORDEN_FIRMADA,
+  ORDEN_SIN_AUTORIZAR: env.ORDEN_SIN_AUTORIZAR,
 };
 
 if (ctx.TOKEN_TECH) {
@@ -198,6 +199,20 @@ if (ctx.TOKEN_TECH) {
     }
     const asig = await call('GET', `/rest/v1/orden_asignaciones?select=id,tipo_tarea&usuario_id=eq.${ctx.TECH_ID}&limit=1`, { token: ctx.TOKEN_TECH });
     ctx.ASIGNACION_PROPIA = Array.isArray(asig.json) ? asig.json[0] : undefined;
+
+    // Sin un id fijo (security-local lo trae), se busca una orden del técnico sin nada aprobado.
+    if (ctx.TOKEN_ADMIN && !ctx.ORDEN_SIN_AUTORIZAR) {
+      for (const candidate of list.filter((o) => mine(o) && o.estatus !== 'entregado')) {
+        const [lab, rep] = await Promise.all([
+          call('GET', `/rest/v1/orden_labor?select=id&estado=eq.aprobado&orden_id=eq.${candidate.id}&limit=1`, { token: ctx.TOKEN_ADMIN }),
+          call('GET', `/rest/v1/orden_repuestos?select=id&estado=eq.aprobado&orden_id=eq.${candidate.id}&limit=1`, { token: ctx.TOKEN_ADMIN }),
+        ]);
+        if (Array.isArray(lab.json) && lab.json.length === 0 && Array.isArray(rep.json) && rep.json.length === 0) {
+          ctx.ORDEN_SIN_AUTORIZAR = candidate.id;
+          break;
+        }
+      }
+    }
   }
 }
 
@@ -491,6 +506,8 @@ const CASES = [
   // Auditoría 2026-11 parte B (20261010000044).
   anon({ id: 'SEC-213', desc: 'Con un enlace inventado no se cambia la preferencia de correos', method: 'POST', path: () => '/functions/v1/portal', body: { token: 'a'.repeat(64), accion: 'preferencia_correos', acepta: true }, expect: { status: 404 } }),
   tech({ id: 'SEC-214', desc: 'Un técnico no ejecuta importar_estado_cuenta', method: 'POST', path: () => rpc('importar_estado_cuenta'), body: { p_importacion: { sede_id: ZERO_UUID, nombre_archivo: 'qa.csv', ruta_archivo: 'qa/qa.csv', hash_archivo: '0'.repeat(64) }, p_movimientos: [{ tipo: 'ingreso', categoria: 'pago_cliente', monto: 1, descripcion: 'qa', fecha: '2026-10-01' }] }, expect: 'denied' }),
+  // Tanda 1 Q2 — B-02 (20261010000047).
+  tech({ id: 'SEC-215', desc: 'Un técnico no mueve el avance de una orden sin nada autorizado', needs: ['ORDEN_SIN_AUTORIZAR'], method: 'PATCH', path: (c) => `/rest/v1/ordenes_trabajo?id=eq.${c.ORDEN_SIN_AUTORIZAR}`, body: { porcentaje_avance: 50 }, expect: 'denied' }),
 ];
 
 function evaluate(expect, r) {

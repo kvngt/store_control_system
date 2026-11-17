@@ -17,7 +17,7 @@ test.describe('customer CRUD (self-cleaning)', () => {
 
     await page.click('#new-customer-btn');
     await page.fill('#customer-name', name);
-    await page.fill('#customer-phone', '555-0100');
+    await page.fill('#customer-phone', '410-555-0100');
     await page.fill('#customer-email', 'pwtest@example.com');
     await page.click('#customer-save');
 

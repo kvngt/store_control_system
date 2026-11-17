@@ -13,6 +13,8 @@ import { adminClient, clientFor, createTestOrder, userIdOf, type CreatedTestOrde
 
 // TEC-01: el técnico ve su tarea y los repuestos por descripción, sin precios ni secciones de cobro,
 // y por la API tampoco accede a `orden_montos`, `orden_repuestos` ni órdenes ajenas.
+// TEC-02: el técnico asignado termina su orden desde la pantalla (hallazgo B-01, 16/11/2026): la base
+// pone la fecha de finalización y la orden queda `finalizado`.
 
 test.describe.configure({ mode: 'serial' });
 
@@ -23,6 +25,7 @@ test.describe('TEC | Técnico sin precios ni dinero', () => {
   let adminDb: SupabaseClient;
   let assignedOrder: CreatedTestOrder;
   let unassignedOrder: CreatedTestOrder;
+  let finishOrder: CreatedTestOrder;
   const laborDesc = `${TEST_DATA_PREFIX} Cambio de frenos`;
   const partDesc = `${TEST_DATA_PREFIX} Pastillas cerámicas`;
 
@@ -40,6 +43,13 @@ test.describe('TEC | Técnico sin precios ni dinero', () => {
     unassignedOrder = await createTestOrder(adminDb, {
       label: 'TecAjena',
       labor: [{ descripcion: `${TEST_DATA_PREFIX} Trabajo ajeno`, costo: 250 }],
+      authorized: true,
+    });
+
+    finishOrder = await createTestOrder(adminDb, {
+      label: 'TecTermina',
+      assignTo: mechanicId,
+      labor: [{ descripcion: `${TEST_DATA_PREFIX} Cambio de aceite`, costo: 80, asignado_a: mechanicId, reparto_heredado: false }],
       authorized: true,
     });
   });
@@ -102,5 +112,36 @@ test.describe('TEC | Técnico sin precios ni dinero', () => {
       .eq('id', unassignedOrder.id);
     expect(ajenaError).toBeNull();
     expect(ajena ?? []).toHaveLength(0);
+  });
+
+  test('TEC-02 el técnico termina su orden por la pantalla y la base fija la fecha de finalización', async ({ page }) => {
+    await login(page, MECHANIC_EMAIL!, MECHANIC_PASSWORD!);
+    await page.goto(`/work-orders?open=${finishOrder.id}`);
+    await expect(page.locator('h1.order-detail-title')).toContainText(finishOrder.numero, { timeout: 10000 });
+
+    // Marca su única tarea como realizada (el botón verde de la tarea).
+    const tareasSection = page.locator('[data-section="tareas"]');
+    await tareasSection.locator('.collapsible-section-toggle').click();
+    await tareasSection.getByRole('button', { name: /^(Realizado|Done)$/ }).click();
+
+    // Con todo hecho, el botón principal pasa a «Terminé: avisar a la oficina».
+    const terminar = page.getByRole('button', { name: /Terminé: avisar a la oficina|Done: let the office know/ });
+    await expect(terminar).toBeVisible({ timeout: 10000 });
+    await terminar.click();
+
+    // La orden queda finalizada y la base puso la fecha (la app manda la suya y la base la ignora).
+    await expect
+      .poll(
+        async () => {
+          const { data } = await adminDb
+            .from('ordenes_trabajo')
+            .select('estatus, fecha_finalizacion')
+            .eq('id', finishOrder.id)
+            .single();
+          return data?.estatus === 'finalizado' && data.fecha_finalizacion !== null;
+        },
+        { timeout: 15000 },
+      )
+      .toBe(true);
   });
 });

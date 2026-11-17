@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 // Credentials come from .env.test.local (see .env.test.example) — never
 // hardcoded, and tests that need them skip themselves when absent so the
@@ -45,17 +45,41 @@ export async function waitForDashboard(page: Page) {
 }
 
 /**
+ * Abre el diálogo «Nueva orden» y espera a que de verdad se pueda usar. Devuelve el diálogo.
+ *
+ * El diálogo se carga por partes: al pulsar el botón primero sale el recuadro de «Cargando» de
+ * `LazyModal` (también es un `.modal`, pero sin `role="dialog"`), y el diálogo real llega cuando baja
+ * su archivo (con Vite en desarrollo y varios navegadores a la vez, de 1 a 5 s). Un `.modal` visible no
+ * prueba que el formulario esté: se espera el diálogo real y su primer campo habilitado. Y un clic no
+ * se reintenta a ciegas, porque «Nuevo cliente» cambia el panel y el botón desaparece al primer
+ * clic que entra, aunque Playwright lo reporte tarde.
+ */
+export async function openIntakeDialog(page: Page): Promise<Locator> {
+  await page.goto('/work-orders');
+  const button = page.locator('#new-order-btn');
+  await button.waitFor({ state: 'visible', timeout: 20000 });
+  await button.click();
+  const modal = page.locator('.modal[role="dialog"]');
+  await expect(modal).toBeVisible({ timeout: 30000 });
+  await expect(modal.locator('#intake-customer-search')).toBeEnabled({ timeout: 30000 });
+  return modal;
+}
+
+/**
  * El alta de la orden va en cuatro pasos desde F4 (octubre 2026): las millas y la inspección
  * están en el paso 2. Elige el primer cliente que haya y pasa con "Siguiente". No crea nada.
  * Devuelve `false` si la sede no tiene clientes (la prueba se salta).
  */
 export async function goToIntakeVehicleStep(page: Page): Promise<boolean> {
-  const customer = page.locator('#intake-customer');
-  await customer.waitFor({ timeout: 10000 });
-  // Las dos primeras opciones son "Seleccionar" y "+ Nuevo cliente".
-  const first = customer.locator('option').nth(2);
-  if ((await first.count()) === 0) return false;
-  await customer.selectOption((await first.getAttribute('value')) ?? '');
+  // El paso 1 es un buscador (A-08): al enfocarlo lista los primeros clientes.
+  const search = page.locator('#intake-customer-search');
+  await search.waitFor({ timeout: 10000 });
+  await search.click();
+  // Los clientes llegan por la red después de abrir el diálogo: se espera la primera opción antes de
+  // dar por vacía la sede (si no, una lista que tarda 2 s saltaba la prueba sin avisar).
+  const first = page.locator('.combo-option').first();
+  if (!(await first.waitFor({ state: 'visible', timeout: 10000 }).then(() => true, () => false))) return false;
+  await first.click();
   await page.locator('.modal-footer button[type="submit"]').click();
   await page.locator('#order-miles-in').waitFor({ timeout: 10000 });
   return true;

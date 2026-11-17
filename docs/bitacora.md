@@ -168,14 +168,61 @@ lo descartes) y `npm run db:check` (si la base de producción va atrasada respec
   bien para una sola sede, a la altura de un programa comercial**. El plan de arquitectura quedó
   reordenado: la etapa 1 es «Calidad comercial en una sola sede» (paquetes Q1 a Q5). Las órdenes
   viven desde hoy en `docs/ordenes/`:
-  - [ ] **Q1** recorrido de calidad ([orden](ordenes/q1-recorrido-de-calidad.md)): dos agentes con
-    navegador contra la base local, uno como administración y otro como técnico y cliente. Entregan
-    `docs/ordenes/q1-informe-administracion.md` y `q1-informe-tecnico-y-cliente.md`.
-  - [ ] **Q3** módulos apagados ([orden](ordenes/q3-modulos-apagados.md)): lista en
+  - [x] **Q1** recorrido de calidad ([orden](ordenes/q1-recorrido-de-calidad.md)), hecho el 16/11 por
+    dos agentes Sonnet con navegador: 35 hallazgos (1 alto, 16 medios, 18 bajos) en
+    [q1-informe-administracion.md](ordenes/q1-informe-administracion.md) y
+    [q1-informe-tecnico-y-cliente.md](ordenes/q1-informe-tecnico-y-cliente.md). El flujo completo
+    corre y los números cuadran; lo que falta es fricción y pulido. **Qué se arregla, en qué orden y
+    con qué diseño: [q2-prioridades.md](ordenes/q2-prioridades.md)** (tandas 0 a 4).
+  - [~] **Tanda 0 (urgente): el técnico no podía terminar una orden** (B-01; roto en producción desde
+    el 15/11: la `043` le quitó `fecha_finalizacion` al técnico y la app la manda al terminar).
+    Migración `20261010000046_tecnico_termina_su_orden`: la fecha la pone la base y lo que mande el
+    técnico se ignora. Hecha y verificada en local por un agente Sonnet y revisada por el arquitecto
+    (el diff de la función contra la `043` son dos cambios): pgTAP 50 (14 aserciones) y 47 ajustada,
+    e2e `TEC-02` (suite 86 de 86), `qa:security:local` 209 PASS, lint, tipos y 1.275 pruebas.
+    **Sin commit. Falta publicar: `db push` de la `046` (la app no cambia) y push a `main`.**
+  - [x] **Q3** módulos apagados ([orden](ordenes/q3-modulos-apagados.md), [informe](ordenes/q3-informe.md)),
+    en el árbol principal **sin commit**. Hydrogen programó (16/11); un jefe de obra Sonnet lo verificó
+    el 17/11: lint, tipos, 1.300 pruebas, build, e2e 86/86 y recorrido en el navegador con los módulos
+    apagados y encendidos (órdenes de prueba locales 078 a 080). Arregló pruebas y textos que seguían
+    nombrando comisiones. Revisión del arquitecto: **la base sigue generando comisiones (sugeridas) y
+    `_balance_orden` las resta del margen aunque el módulo esté apagado**, así que la comisión en
+    `OrderMarginCard` y `OrderBalanceCard` se esconde solo si vale cero. Quedan: la Ayuda sigue hablando
+    de los módulos apagados, y la categoría «planilla» de Finanzas se llama «Comisiones». Diseño: lista en
     `src/config/modulos.ts`, leída de `VITE_MODULOS_APAGADOS`, que producción toma de
     `.env.production`. Desarrollo y pruebas quedan con todo encendido.
-  - [ ] **Q2** arreglos de lo que encuentre Q1; **Q4** PDF, correos, enlace y sticker; **Q5** la
-    prueba «un día en el taller» y datos de ejemplo. Se ordenan cuando esté Q1.
+  - [x] **Publicación del 17/11/2026.** Producción: `db push` de la `046` y la `047` (dry-run previo: solo
+    esas dos); la lista remota termina en la `047`. App: commit y push a `main` con los módulos apagados, la
+    tanda 1 y la tanda 4. Verificado antes del push: lint, tipos, 1.331 pruebas de Vitest (2 fallaron bajo
+    carga y pasaron al repetirse) y build contra la base local. Pendiente: comprobar el sitio en vivo.
+    Pendiente sin resolver: `--repeat-each=3` de las e2e, con la máquina libre; y borrar a mano la carpeta
+    `/tmp-build-check` de la raíz del disco (un build de prueba la dejó y no se pudo borrar).
+  - [x] **Q2 tanda 1** (datos sucios en la recepción: A-01, A-02, A-08, A-03, A-18, B-02;
+    [informe](ordenes/q2-tanda1-informe.md)), en el árbol principal **sin commit**, verificada el 17/11 por un
+    jefe de obra. Resultados: Vitest 1.311, e2e 85 pasan y 1 se salta, `qa:security:local` 210 PASS (SEC-215),
+    pgTAP 50 y 51. Migración `20261010000047_tecnico_avance_con_autorizacion`: el técnico no mueve el avance de
+    una orden sin nada autorizado. El arquitecto revisó el diff del guardia contra la `046`: solo cambia la
+    condición. `test:db` en una base limpia (`db reset` local; los datos de demostración se respaldaron
+    y se restauraron): 51 archivos, 1.219 aserciones, todo pasa. Con los datos de demostración fallan 19, 23,
+    27, 30 y 41, que no dependen de la 046 ni la 047. Documentación de la 047 al día. Abierto: los dígitos por país de Colombia y Venezuela están
+    por confirmar con el taller; con el buscador abierto en el teléfono, el menú tapa «Nuevo Cliente».
+    Incidente menor: un build sin variables locales intentó 2 o 3 inicios de sesión `@qa.local` contra el
+    Auth real; fallaron y no escribieron nada.
+  - [x] **Q2 tanda 4** (lo que ve el cliente: B-13, B-14, B-15, B-17, A-17;
+    [informe](ordenes/q2-tanda4-informe.md)), en el árbol principal **sin commit**. Verificada el 17/11:
+    Vitest 1.329, `test:functions` 102, e2e 85 pasan y 1 se salta, recorrido 30 de 30, sin tocar la base ni
+    las edge functions. Revisión del arquitecto:
+    - el número de lo aprobado cuenta filas que ve el cliente, no líneas;
+    - el resumen tras aprobar va sin número, porque `autorizados` de la base cuenta líneas;
+    - la carrera del diálogo «Nueva orden» en las e2e se arregla de raíz.
+    Esos tres ajustes están en curso. Por confirmar con el taller: los teléfonos públicos del enlace inválido
+    (salen de `landing/business.ts`). Sobre el incidente de la tanda 1: la causa es que `vite build` lee
+    `.env.local` (el proyecto real) si no se le pasan las variables locales, no `.env.production`, que solo
+    trae `VITE_MODULOS_APAGADOS` y **tiene que ir en el commit** (Hostinger lo usa).
+  - [ ] **Q2** tandas 2 y 3 de [q2-prioridades.md](ordenes/q2-prioridades.md), una por jefe de obra y
+    de una en una: tanda 1 (datos sucios en la recepción) y tanda 4 (lo que ve el cliente) primero;
+    tanda 2 (un solo camino claro) después de Q3; tanda 3 (se toca y se lee bien) al final.
+    **Q5** la prueba «un día en el taller» y datos de ejemplo, al cerrar.
 
 - **Lo que sigue lo ordena el plan de arquitectura:** [plan-arquitectura-2026-11.md](plan-arquitectura-2026-11.md).
   Desde el 16/11 Claude trabaja como arquitecto (diseña, escribe las órdenes y revisa) y la ejecución

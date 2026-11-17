@@ -4,7 +4,7 @@ import { useToast } from '../../../context/toast.context';
 import { useMediaUploads } from '../../media/mediaUploads.context';
 import { workOrdersService } from '../../../services/workOrders.service';
 import { daysFromTodayLocal } from '../../../lib/dates';
-import { getErrorMessage } from '../../../lib/errors';
+import { duplicateVehicleField, getErrorMessage } from '../../../lib/errors';
 import { clearIntakeDraft } from '../intakeDraft';
 import { firstStepWithErrors } from '../workOrderForm.schema';
 import type { WorkOrderFormApi, WorkOrderFormValues } from '../useWorkOrderForm';
@@ -231,6 +231,17 @@ export function useIntakeSubmit({
       showToast('success', `${t('workOrders.orderCreatedSuccess')} (${order.numero_orden})`);
     } catch (err) {
       const message = getErrorMessage(err, language);
+      const dupField = failedStage === 'vehicle' ? duplicateVehicleField(err) : null;
+      if (dupField) {
+        form.form.setError(`newVehicle.${dupField}`, { type: 'server', message });
+        form.goToStep(2);
+        requestAnimationFrame(() => {
+          const field = document.getElementById(dupField === 'placa' ? 'vehicle-plate' : 'vehicle-vin');
+          field?.focus();
+          // El motivo va debajo del campo y el cuerpo del diálogo se desplaza: que se vea sin buscarlo.
+          field?.parentElement?.querySelector('[role="alert"]')?.scrollIntoView({ block: 'nearest' });
+        });
+      }
       setError([message, avisoDeLoGuardado()].filter(Boolean).join(' '));
       const titleKey =
         failedStage === 'customer'

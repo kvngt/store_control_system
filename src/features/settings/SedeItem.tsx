@@ -12,6 +12,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { moduloActivo } from '../../config/modulos';
 import { sedePhoneLine } from '../../lib/phone';
 import type { Sede, SedeTelefono, UserProfile } from '../../types/database';
 import SedePhonesEditor from './SedePhonesEditor';
@@ -212,38 +213,42 @@ export default function SedeItem({
           {/* The commission rate decides what every technician in
               this workshop is paid, so it lives with the other
               things only an admin can set. */}
-          <div>
-            <label htmlFor={`sede-rate-${sede.id}`} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
-              <Percent size={12} /> {t('payroll.commissionRate')}
-            </label>
-            <input
-              id={`sede-rate-${sede.id}`}
-              className="form-input"
-              type="number"
-              min={0}
-              max={100}
-              step="0.5"
-              style={{ width: 90 }}
-              value={rateDraft ?? ''}
-              onChange={(e) => onRateChange(sede.id, e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor={`sede-hourly-${sede.id}`} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
-              {t('settings.hourlyRateReference')}
-            </label>
-            <input
-              id={`sede-hourly-${sede.id}`}
-              className="form-input"
-              type="number"
-              min={0}
-              step="0.01"
-              placeholder="0.00"
-              style={{ width: 100 }}
-              value={ratePerHourDraft ?? ''}
-              onChange={(e) => onRatePerHourChange(sede.id, e.target.value)}
-            />
-          </div>
+          {moduloActivo('comisiones') && (
+            <div>
+              <label htmlFor={`sede-rate-${sede.id}`} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
+                <Percent size={12} /> {t('payroll.commissionRate')}
+              </label>
+              <input
+                id={`sede-rate-${sede.id}`}
+                className="form-input"
+                type="number"
+                min={0}
+                max={100}
+                step="0.5"
+                style={{ width: 90 }}
+                value={rateDraft ?? ''}
+                onChange={(e) => onRateChange(sede.id, e.target.value)}
+              />
+            </div>
+          )}
+          {(moduloActivo('reloj') || moduloActivo('indicadores')) && (
+            <div>
+              <label htmlFor={`sede-hourly-${sede.id}`} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
+                {t('settings.hourlyRateReference')}
+              </label>
+              <input
+                id={`sede-hourly-${sede.id}`}
+                className="form-input"
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="0.00"
+                style={{ width: 100 }}
+                value={ratePerHourDraft ?? ''}
+                onChange={(e) => onRatePerHourChange(sede.id, e.target.value)}
+              />
+            </div>
+          )}
           <button
             type="button"
             className="btn btn-secondary btn-sm"

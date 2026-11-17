@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CarFront } from 'lucide-react';
+import { moduloActivo } from '../../config/modulos';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
 import { AlertError } from '../../components/AlertError';
@@ -298,7 +299,7 @@ export default function WithdrawalModal({ order, lines, onCancel, onDone }: With
                   refunds={refunds}
                 />
               )}
-              <p className="field-hint">{t('withdrawal.explain')}</p>
+              <p className="field-hint">{t(moduloActivo('comisiones') ? 'withdrawal.explain' : 'withdrawal.explainNoCommissions')}</p>
             </>
           )}
     </Modal>

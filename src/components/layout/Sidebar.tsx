@@ -5,6 +5,7 @@ import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import { detachThisDevice } from '../../features/notifications/pushDevice';
 import { LayoutDashboard, Users, Car, ClipboardList, DollarSign, CreditCard, Settings, LogOut, ChevronLeft, ChevronRight, Wrench, Building2, Hexagon, UserCog, Wallet, LifeBuoy } from 'lucide-react';
 import { STAFF_HOME } from '../../lib/staffHome';
+import { moduloActivo } from '../../config/modulos';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -56,13 +57,17 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
     // vista que cada quien usó la última vez.
     { to: '/work-orders', icon: ClipboardList, label: t('nav.workOrders') },
     // Mecánicos y pintores: sus comisiones aceptadas y sus pagos (06/10/2026).
-    ...(isAdmin ? [] : [{ to: '/mis-comisiones', icon: Wallet, label: t('nav.myCommissions') }]),
+    ...(!isAdmin && moduloActivo('comisiones')
+      ? [{ to: '/mis-comisiones', icon: Wallet, label: t('nav.myCommissions') }]
+      : []),
   ];
 
   const financeLinks = isAdmin
     ? [
         { to: '/finance', icon: DollarSign, label: t('nav.finance') },
-        { to: '/payroll', icon: CreditCard, label: t('nav.payroll') },
+        ...(moduloActivo('comisiones')
+          ? [{ to: '/payroll', icon: CreditCard, label: t('nav.payroll') }]
+          : []),
         { to: '/employees', icon: UserCog, label: t('nav.employees') },
       ]
     : [];

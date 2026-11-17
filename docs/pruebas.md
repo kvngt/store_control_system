@@ -23,11 +23,11 @@ decidir cuál y corregirlo.
 
 | Capa | Herramienta | Qué prueba | Tamaño | Tiempo | Requiere |
 |---|---|---|---|---|---|
-| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 1.274 pruebas, 175 archivos (16/11/2026) | ~30 s | Nada |
+| **Unitarias y componentes** | Vitest + Testing Library | Lógica pura y pantallas con la base simulada | 1.311 pruebas, 186 archivos (17/11/2026) | ~30 s | Nada |
 | **Edge functions** | Deno 2 (`npm run test:functions`) | `handler.ts` y helpers `_shared/*` (`http`, `resend`, `gemini`, `email/`, etc.) con dobles | 102 pruebas (16/11/2026) | ~10 s | Deno 2 |
-| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención", teléfonos de la sede, trabajo con seguro, cobro por parqueo, próximo servicio, autorización en recepción, marcas de daños, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, unicidad de VIN/placa, la revisión del 03/11 (`sin_autorizar`, fotos de una inspección publicada, traducciones), las decisiones del dueño del 04/11, los arreglos de auditoría `042`–`044` y método de pago en egresos de comisiones (`045`) contra un Postgres real | 1.193 pruebas, 49 archivos (16/11/2026) | ~1 min | Docker |
-| **End-to-end** | Playwright (`npm run test:e2e:local`) | Flujos en un navegador real contra Supabase local | 85 casos al 16/11/2026 (84 en verde; `MED-01` en arreglo) | 2–5 min | Docker (`supabase start`) |
-| **Seguridad de la API** | `npm run qa:security:local` / `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 209 casos (`qa:security:local` el 16/11/2026: 209 PASS, 0 FAIL, 0 SKIP; contra producción el 15/11/2026: 178 PASS + 31 SKIP sin órdenes de prueba), todos de solo lectura (los que escriben, escriben el valor que ya hay) | ~15 s | Docker (`supabase start`) para `qa:security:local`; nada para `qa:security` sin cuentas |
+| **Base de datos** | pgTAP (`supabase test db`) | RLS, triggers, dinero, comisiones, multimedia, avisos, permisos del técnico, portal, correos, presupuestos, reporte, hallazgos del taller, "requiere atención", teléfonos de la sede, trabajo con seguro, cobro por parqueo, próximo servicio, autorización en recepción, marcas de daños, trabajos agrupados y catálogo, inspección por puntos, horas/reloj/indicadores, unicidad de VIN/placa, la revisión del 03/11 (`sin_autorizar`, fotos de una inspección publicada, traducciones), las decisiones del dueño del 04/11, los arreglos de auditoría `042`–`044`, método de pago en egresos de comisiones (`045`) y el técnico que termina su orden con la fecha puesta por la base (`046`) y que no mueve el avance sin nada autorizado (`047`) contra un Postgres real | 1.219 pruebas, 51 archivos (17/11/2026) | ~1 min | Docker |
+| **End-to-end** | Playwright (`npm run test:e2e:local`) | Flujos en un navegador real contra Supabase local | 86 casos al 16/11/2026 (los 86 en verde) | 2–5 min | Docker (`supabase start`) |
+| **Seguridad de la API** | `npm run qa:security:local` / `npm run qa:security` (Node) | Lo que haría alguien con la clave pública o un técnico con su sesión llamando la API directo | 210 casos (`qa:security:local` el 17/11/2026: 210 PASS, 0 FAIL, 0 SKIP; contra producción el 15/11/2026: 178 PASS + 31 SKIP sin órdenes de prueba), todos de solo lectura (los que escriben, escriben el valor que ya hay) | ~15 s | Docker (`supabase start`) para `qa:security:local`; nada para `qa:security` sin cuentas |
 | **Plan manual** | Personas, dispositivos o un agente de IA | Flujos completos por rol, cámara, micrófono, push, iPhone, correos, diseño móvil | [plan-de-pruebas.md](plan-de-pruebas.md) | 40 min (humo) a 1 día (completo) | Cuentas de prueba; teléfonos para los casos H |
 
 Por qué hacen falta todas: **Vitest simula la base**, así que no puede detectar una
@@ -44,7 +44,7 @@ npm run test:db           # pgTAP  (antes: npx supabase start)
 npm run test:e2e:local    # Playwright contra Supabase local (Docker)
 npm run test:e2e          # Playwright contra .env.local / .env.test.local
 npm run test:e2e:ui       # Playwright interactivo, para depurar
-npm run qa:security:local # seguridad contra Supabase local (Docker; prepara órdenes y cubre los 209 casos)
+npm run qa:security:local # seguridad contra Supabase local (Docker; prepara órdenes y cubre los 210 casos)
 npm run qa:security       # seguridad contra la API del proyecto de .env.local
 ```
 
@@ -480,7 +480,7 @@ Las decisiones del taller del 05/10/2026 ([analisis-del-proceso-2026-10.md](hist
 
 - Método de pago en los egresos de comisiones (`20261010000045`): `pay_commissions` copia el método en efectivo y cheque (con número) al egreso de `finanzas_movimientos`, deja vacío un método fuera de la lista sin tumbar el pago, cuadra con lo pagado y conserva los permisos (técnico 42501, `anon` denegado).
 
-> **Estado (16 de noviembre de 2026):** **1.193 pruebas en verde en los 49 archivos**, con las 99 migraciones del repositorio aplicadas desde cero en local (hasta `20261010000045_egreso_de_comision_con_metodo`; en producción hay 99 aplicadas, hasta la `045`, aplicada el 16/11/2026).
+> **Estado (17 de noviembre de 2026):** **1.219 pruebas en verde en los 51 archivos**, con las 101 migraciones del repositorio aplicadas desde cero en local (hasta `20261010000047_tecnico_avance_con_autorizacion`; en producción hay 99 aplicadas, hasta la `045`, y la `046` y la `047` esperan su `db push`). Sobre una base local **con datos de demostración**, los archivos `19`, `23`, `27`, `30` y `41` fallan por esos datos (cuentan filas existentes): comprobado el 17/11/2026 que con `db reset` pasan los 51.
 >
 > **Estado (15 de noviembre de 2026):** 1.181 pruebas en verde en los 48 archivos, con las 98 migraciones aplicadas desde cero (hasta `20261010000044_auditoria_2026_11_b`; aplicadas `043` y `044` en producción).
 >
@@ -612,7 +612,7 @@ Se necesita para:
 | **Probar que las migraciones aplican desde cero** | `npx supabase db reset` | Recrea la base local aplicando todas las migraciones en orden: detecta una migración que solo funciona sobre la base actual |
 | **Probar una migración antes de producción** | `npx supabase start` y luego la app contra la base local | Hoy cada migración se aplica directo al proyecto enlazado |
 | **Generar el esquema vigente en un archivo** | `npm run db:schema` | Volca `supabase/schema/actual.sql` desde el Postgres local (el CI comprueba que esté al día) |
-| **Seguridad de la API en local** | `npm run qa:security:local` | Corre los 209 casos contra el stack local con datos temporales |
+| **Seguridad de la API en local** | `npm run qa:security:local` | Corre los 210 casos contra el stack local con datos temporales |
 | Probar edge functions localmente | `npx supabase functions serve` | Corren en el contenedor de Supabase |
 
 **No** hace falta para: la app, Vitest, Playwright, desplegar ni aplicar migraciones al
@@ -647,7 +647,7 @@ vuelve a abrirlo.
 ### 2.5 Seguridad contra la API (`qa:security` y `qa:security:local`)
 
 ```bash
-npm run qa:security:local             # contra Supabase local (Docker; prepara datos y cubre los 209 casos)
+npm run qa:security:local             # contra Supabase local (Docker; prepara datos y cubre los 210 casos)
 npm run qa:security:local -- --json   # para un agente o un CI
 npm run qa:security                   # contra el proyecto de .env.local (tabla PASS / FAIL / SKIP)
 npm run qa:security -- --json         # para un agente o un CI
@@ -683,7 +683,7 @@ había pensado en llamarlas desde fuera ([auditoria-2026-09.md](historico/audito
 - **Sin cuentas** corre los 23 casos sin sesión, incluidos SEC-17 (las 7 edge functions responden, no 404) y SEC-18 (el registro público está apagado).
 - **Con cuentas** (`E2E_ADMIN_*` y `E2E_MECHANIC_*` de `.env.test.local`, o `QA_TECH_*` /
   `QA_ADMIN_*`) inicia sesión, busca una orden asignada al técnico y una entregada con su
-  sesión, y una ajena con la del admin (el técnico ya no la ve), y corre los 209 casos (178 PASS + 31 SKIP contra producción el 15/11/2026; los SKIP necesitan órdenes de prueba que producción no tiene).
+  sesión, y una ajena con la del admin (el técnico ya no la ve), y corre los 210 casos (178 PASS + 31 SKIP de 209 contra producción el 15/11/2026; los SKIP necesitan órdenes de prueba que producción no tiene).
 - Las cuentas de prueba de producción se borraron el 29/09/2026; las que usa hoy `.env.test.local` no se crean desde la app del taller. Para correrla contra la base local usa `npm run qa:security:local`.
 - Lo que no puede preparar lo marca **SKIP**. Termina con código 1 si hay un **FAIL**.
 

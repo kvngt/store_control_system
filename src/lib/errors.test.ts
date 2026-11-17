@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getAuthErrorMessage, getErrorMessage, getRecoveryErrorMessage } from './errors';
+import { duplicateVehicleField, getAuthErrorMessage, getErrorMessage, getRecoveryErrorMessage } from './errors';
 
 describe('getRecoveryErrorMessage', () => {
   // Así respondía Auth con el puerto del SMTP mal escrito: 30 s de espera y un 504
@@ -41,6 +41,9 @@ describe('getErrorMessage', () => {
   it('una placa repetida lo dice aparte', () => {
     const raw = { code: '23505', message: 'duplicate key value violates unique constraint "uq_vehiculos_placa"' };
     expect(getErrorMessage(raw, 'es')).toContain('esa placa en ese estado');
+    expect(duplicateVehicleField(raw)).toBe('placa');
+    expect(duplicateVehicleField({ code: '23505', message: 'duplicate key value violates unique constraint "uq_vehiculos_vin"' })).toBe('vin');
+    expect(duplicateVehicleField(new Error('Otro error'))).toBeNull();
   });
 
   it('translates a unique constraint violation', () => {

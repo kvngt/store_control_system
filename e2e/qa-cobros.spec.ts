@@ -7,6 +7,7 @@ import {
   hasAdminCredentials,
   isLocalStack,
   login,
+  openIntakeDialog,
 } from './fixtures.js';
 import { RECEIPT, adminClient, createTestOrder } from './localData.js';
 
@@ -101,13 +102,16 @@ test.describe('COB | Cobros: anticipo, entrega y depósito del alta', () => {
 
   test('COB-03 el depósito del alta con cheque entra con la foto sola', async ({ page }) => {
     await login(page, ADMIN_EMAIL!, ADMIN_PASSWORD!);
-    await page.goto('/work-orders');
-    await page.click('#new-order-btn');
-    const modal = page.locator('.modal').first();
+    // ~25 pasos por la interfaz, cada uno de 1 a 5 s con la suite en paralelo y Vite en desarrollo.
+    test.setTimeout(120_000);
+    const modal = await openIntakeDialog(page);
     const next = () => modal.getByRole('button', { name: /Siguiente|Next/ }).click();
 
     const tag = `${Date.now()}`.slice(-7);
-    await page.locator('#intake-customer').selectOption({ label: '+ Nuevo Cliente' });
+    // Un solo clic, con el diálogo ya listo (`openIntakeDialog`): «Nuevo cliente» cambia el panel y el
+    // botón desaparece en cuanto el clic entra, así que reintentarlo a ciegas fallaba aunque hubiera entrado.
+    await page.locator('#intake-new-customer').click();
+    await expect(modal.getByPlaceholder(/Nombre|Name/).first()).toBeVisible({ timeout: 15000 });
     await modal.getByPlaceholder(/Nombre|Name/).first().fill(`${TEST_DATA_PREFIX} Alta ${tag}`);
     await modal.locator('input[type="tel"]').first().fill(`410${tag}`);
     await next();

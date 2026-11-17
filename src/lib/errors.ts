@@ -107,6 +107,18 @@ interface ErrorLike {
   message?: string;
 }
 
+/**
+ * Detecta qué columna chocó con una restricción única de `vehiculos` para
+ * señalarla en el campo correspondiente (placa o VIN).
+ */
+export function duplicateVehicleField(err: unknown): 'placa' | 'vin' | null {
+  if (!err || typeof err !== 'object' || !('message' in err)) return null;
+  const msg = String((err as ErrorLike).message || '');
+  if (/uq_vehiculos_placa/.test(msg)) return 'placa';
+  if (/uq_vehiculos_vin/.test(msg)) return 'vin';
+  return null;
+}
+
 // Supabase Auth returns its own English strings ("Invalid login credentials"),
 // which used to reach the login screen untranslated — an English sentence in an
 // otherwise Spanish UI, and one that says nothing useful to shop staff. Newer

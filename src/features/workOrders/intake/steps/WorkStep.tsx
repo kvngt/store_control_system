@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { BookOpen, Pencil, Trash2 } from 'lucide-react';
 import { useLanguage } from '../../../../context/language.context';
+import { moduloActivo } from '../../../../config/modulos';
 import { useToast } from '../../../../context/toast.context';
 import { money } from '../../../../lib/money';
 import type { UserProfile } from '../../../../types/database';
@@ -175,7 +176,7 @@ export default function WorkStep({
                       </div>
                       <span>
                         {specialtyLabel(field.especialidad)} · {money(parseFloat(field.costo) || 0)}
-                        {field.horas ? ` · ${field.horas} h` : ''} ·{' '}
+                        {moduloActivo('reloj') && field.horas ? ` · ${field.horas} h` : ''} ·{' '}
                         {technician?.nombre_completo || t('tasks.unassigned')}
                       </span>
                     </div>
@@ -230,7 +231,7 @@ export default function WorkStep({
               busy={saving}
               idPrefix="create-order"
               extraActions={
-                sedeId ? (
+                sedeId && moduloActivo('catalogo') ? (
                   <button
                     type="button"
                     className="btn btn-secondary"
@@ -336,7 +337,7 @@ export default function WorkStep({
         </div>
       )}
 
-      {sedeId && (
+      {sedeId && moduloActivo('catalogo') && (
         <CatalogPickerModal
           isOpen={catalogPickerOpen}
           onClose={() => setCatalogPickerOpen(false)}

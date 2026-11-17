@@ -14,6 +14,7 @@ import {
   FileSignature,
 } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { moduloActivo } from '../../config/modulos';
 import { useToast } from '../../context/toast.context';
 import { inspectionService } from '../../services/inspection.service';
 import { queryKeys } from '../../lib/queryClient';
@@ -505,13 +506,15 @@ export default function PointInspection({
                     >
                       <FileSignature size={14} /> {t('inspection.quote')}
                     </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => setCatalogPoint(point)}
-                    >
-                      <BookOpen size={14} /> {t('inspection.fromCatalog')}
-                    </button>
+                    {moduloActivo('catalogo') && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => setCatalogPoint(point)}
+                      >
+                        <BookOpen size={14} /> {t('inspection.fromCatalog')}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -521,7 +524,7 @@ export default function PointInspection({
       ))}
 
       {/* Modal del catálogo si se eligió agregar desde catálogo en un punto */}
-      {catalogPoint && (
+      {moduloActivo('catalogo') && catalogPoint && (
         <CatalogPickerModal
           isOpen={true}
           onClose={() => setCatalogPoint(null)}
