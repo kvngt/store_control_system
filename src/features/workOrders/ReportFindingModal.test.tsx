@@ -115,4 +115,23 @@ describe('ReportFindingModal: no se pierde lo escrito (pedido del taller, 04/11/
     await asentar();
     expect(onCancel).not.toHaveBeenCalled();
   });
+
+  it('B-08: el botón no se apaga vacío y al tocarlo avisa qué falta y enfoca', async () => {
+    const user = userEvent.setup();
+    const { onConfirm } = abrir();
+    const submit = screen.getByRole('button', { name: 'Reportar y pausar la orden' });
+    const textarea = screen.getByLabelText('Qué encontraste');
+
+    expect(submit).toBeEnabled();
+    await user.click(submit);
+
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Describe lo que encontraste antes de reportarlo.');
+    expect(textarea).toHaveAttribute('aria-invalid', 'true');
+    expect(textarea).toHaveFocus();
+
+    await user.type(textarea, 'Balero dañado');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(textarea).not.toHaveAttribute('aria-invalid');
+  });
 });

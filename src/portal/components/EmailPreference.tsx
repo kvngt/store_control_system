@@ -3,6 +3,7 @@ import { Mail } from 'lucide-react';
 import PortalSection from '../PortalSection';
 import type { PortalStrings } from '../format';
 import { setEmailPreference } from '../portal.api';
+import { ConfirmDialog } from './ConfirmDialog';
 
 export interface EmailPreferenceProps {
   token: string;
@@ -14,6 +15,7 @@ export interface EmailPreferenceProps {
 export function EmailPreference({ token, initial, soloBaja = false, s }: EmailPreferenceProps) {
   const [accepts, setAccepts] = useState(initial);
   const [saving, setSaving] = useState(false);
+  const [confirmingStop, setConfirmingStop] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   // Llegó desde "No quiero recibir estos correos". La baja se confirma con el
@@ -30,18 +32,27 @@ export function EmailPreference({ token, initial, soloBaja = false, s }: EmailPr
     if (fromUnsubscribeLink) document.getElementById('correos')?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
   }, [fromUnsubscribeLink]);
 
-  const change = async (next: boolean) => {
-    if (!next && !confirm(soloBaja ? s.emailsStopConfirmExpired : s.emailsStopConfirm)) return;
+  const applyChange = async (next: boolean) => {
     setSaving(true);
     setMessage(null);
     try {
       setAccepts(await setEmailPreference(token, next));
+      setConfirmingStop(false);
       setMessage({ ok: true, text: s.emailsSaved });
     } catch {
+      setConfirmingStop(false);
       setMessage({ ok: false, text: s.emailsError });
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleToggleClick = () => {
+    if (accepts) {
+      setConfirmingStop(true);
+      return;
+    }
+    void applyChange(true);
   };
 
   return (
@@ -56,12 +67,23 @@ export function EmailPreference({ token, initial, soloBaja = false, s }: EmailPr
       {fromUnsubscribeLink && accepts && <p>{s.unsubscribeHint}</p>}
       {accepts || !soloBaja ? (
         <div className="portal-actions">
-          <button type="button" className={accepts ? 'btn btn-secondary' : 'btn btn-primary'} onClick={() => void change(!accepts)} disabled={saving}>
+          <button type="button" className={accepts ? 'btn btn-secondary' : 'btn btn-primary'} onClick={handleToggleClick} disabled={saving}>
             {accepts ? s.emailsStop : s.emailsStart}
           </button>
         </div>
       ) : (
         <p className="portal-muted">{s.emailsExpiredReenableHint}</p>
+      )}
+      {confirmingStop && (
+        <ConfirmDialog
+          title={s.emailsStopConfirmTitle}
+          message={soloBaja ? s.emailsStopConfirmExpired : s.emailsStopConfirm}
+          confirmLabel={s.emailsStopConfirmButton}
+          cancelLabel={s.confirmBack}
+          busy={saving}
+          onConfirm={() => void applyChange(false)}
+          onCancel={() => setConfirmingStop(false)}
+        />
       )}
       {message && (
         <p className={message.ok ? 'portal-success' : 'portal-error'} role="status">

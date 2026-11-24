@@ -337,23 +337,39 @@ describe('CustomerPortal', () => {
     expect(await screen.findByRole('heading', { name: /2019 Toyota Camry/ })).toBeInTheDocument();
   });
 
-  it('la baja de correos se confirma con un botón, nunca al abrir el enlace, y aclara que aplica a todo el taller', async () => {
+  it('la baja de correos se confirma con un botón, nunca al abrir el enlace, usa diálogo propio y aclara que aplica a todo el taller', async () => {
     window.history.replaceState(null, '', `/r/${TOKEN}?correos=baja`);
     mocks.fetchPortal.mockResolvedValue(report());
     mocks.setEmailPreference.mockResolvedValue(false);
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, 'confirm');
     render(<CustomerPortal token={TOKEN} />);
 
     const section = (await screen.findByRole('heading', { name: /Avisos por correo/ })).closest<HTMLElement>('details, section')!;
     expect(within(section).getByText(/todas sus órdenes/)).toBeInTheDocument();
     // Abrir el enlace de baja no da de baja: un filtro de correo lo abre solo.
     expect(mocks.setEmailPreference).not.toHaveBeenCalled();
-    await userEvent.click(within(section).getByRole('button', { name: 'Dejar de recibir correos' }));
 
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/todas sus órdenes/));
+    await userEvent.click(within(section).getByRole('button', { name: 'Dejar de recibir correos' }));
+    const cancelDialog = screen.getByRole('dialog');
+    expect(within(cancelDialog).getByText(/todas sus órdenes/)).toBeInTheDocument();
+    await userEvent.click(within(cancelDialog).getByRole('button', { name: 'Volver' }));
+    expect(mocks.setEmailPreference).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await userEvent.click(within(section).getByRole('button', { name: 'Dejar de recibir correos' }));
+    const confirmDialog = screen.getByRole('dialog');
+    await userEvent.click(within(confirmDialog).getByRole('button', { name: 'Dejar de recibir' }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
     await waitFor(() => expect(mocks.setEmailPreference).toHaveBeenCalledWith(TOKEN, false));
     expect(await within(section).findByRole('button', { name: 'Volver a recibir correos' })).toBeInTheDocument();
     expect(within(section).getByText(/ninguna de sus órdenes/)).toBeInTheDocument();
+
+    // Reactivar no pide diálogo de confirmación.
+    mocks.setEmailPreference.mockResolvedValue(true);
+    await userEvent.click(within(section).getByRole('button', { name: 'Volver a recibir correos' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(mocks.setEmailPreference).toHaveBeenCalledWith(TOKEN, true));
     confirmSpy.mockRestore();
   });
 
@@ -1015,7 +1031,7 @@ describe('CustomerPortal — la cuenta', () => {
         cliente: { tiene_correo: true, acepta_correos: true },
       });
       mocks.setEmailPreference.mockResolvedValue(false);
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      const confirmSpy = vi.spyOn(window, 'confirm');
 
       render(<CustomerPortal token={TOKEN} />);
 
@@ -1026,11 +1042,15 @@ describe('CustomerPortal — la cuenta', () => {
       expect(screen.queryByRole('button', { name: 'Volver a recibir correos' })).not.toBeInTheDocument();
 
       await userEvent.click(stopBtn);
+      const dialog = screen.getByRole('dialog');
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Dejar de recibir' }));
 
+      expect(confirmSpy).not.toHaveBeenCalled();
       await waitFor(() => expect(mocks.setEmailPreference).toHaveBeenCalledWith(TOKEN, false));
       expect(await screen.findByText('Preferencia guardada.')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Volver a recibir correos' })).not.toBeInTheDocument();
       expect(screen.getByText('Si desea volver a recibir avisos por correo, pida un enlace nuevo al taller.')).toBeInTheDocument();
+      confirmSpy.mockRestore();
     });
 
     it('con ?correos=baja y enlace vencido abre y resalta el control de baja', async () => {
@@ -1065,6 +1085,56 @@ describe('CustomerPortal — la cuenta', () => {
 
       expect(await screen.findByRole('heading', { name: 'Este enlace venció' })).toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: 'Avisos por correo' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('plurales reales en el portal (B-16)', () => {
+    const makePhoto = (id: string) => ({
+      id,
+      tipo: 'foto' as const,
+      origen: 'recepcion' as const,
+      avance_id: null,
+      zona: 'front',
+      mime: 'image/jpeg',
+      duracion_seg: null,
+      ancho: 1920,
+      alto: 1080,
+      creado_en: '2026-09-10T15:01:00Z',
+      url: `https://storage.example/${id}.jpg`,
+      miniatura_url: `https://storage.example/${id}-thumb.jpg`,
+    });
+
+    it('muestra "0 fotos", "1 foto" y "3 fotos" y en inglés "0 photos", "1 photo" y "3 photos"', async () => {
+      mocks.fetchPortal.mockResolvedValue(report({ multimedia: [] }));
+      const { rerender } = render(<CustomerPortal token={TOKEN} />);
+      expect(await screen.findByText('0 fotos')).toBeInTheDocument();
+
+      mocks.fetchPortal.mockResolvedValue(report({ multimedia: [makePhoto('p1')] }));
+      rerender(<CustomerPortal token={TOKEN + '1'} />);
+      expect(await screen.findByText('1 foto')).toBeInTheDocument();
+
+      mocks.fetchPortal.mockResolvedValue(report({ multimedia: [makePhoto('p1'), makePhoto('p2'), makePhoto('p3')] }));
+      rerender(<CustomerPortal token={TOKEN + '3'} />);
+      expect(await screen.findByText('3 fotos')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: /English/ }));
+      expect(screen.getByText('3 photos')).toBeInTheDocument();
+    });
+
+    it('usa singular y plural reales en el historial de autorizaciones', async () => {
+      mocks.fetchPortal.mockResolvedValue(
+        report({
+          presupuestos_respondidos: [
+            { numero: 1, respondido_en: '2026-09-11T10:00:00Z', via: 'cliente_portal', nombre: 'Marta', total_aprobado: 100, autorizados: 1, rechazados: 1 },
+            { numero: 2, respondido_en: '2026-09-12T10:00:00Z', via: 'cliente_portal', nombre: 'Marta', total_aprobado: 0, autorizados: 0, rechazados: 2 },
+          ],
+        })
+      );
+
+      render(<CustomerPortal token={TOKEN} />);
+      await screen.findByRole('heading', { name: /Su cuenta/ });
+      expect(screen.getByText(/1 autorizado, 1 no autorizado · \$100\.00/)).toBeInTheDocument();
+      expect(screen.getByText(/0 autorizados, 2 no autorizados · \$0\.00/)).toBeInTheDocument();
     });
   });
 });

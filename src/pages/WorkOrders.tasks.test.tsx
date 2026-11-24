@@ -450,7 +450,12 @@ describe('WorkOrders — trabajo adicional reportado (F6)', () => {
 
     await user.click(within(dialog).getByRole('checkbox', { name: /Mostrarlo en el reporte del cliente/ }));
     await user.clear(text);
-    expect(within(dialog).getByRole('button', { name: 'Descartar' })).toBeDisabled();
+    // B-08: el botón no se apaga; sin texto avisa qué falta y no guarda.
+    expect(within(dialog).getByRole('button', { name: 'Descartar' })).toBeEnabled();
+    await user.click(within(dialog).getByRole('button', { name: 'Descartar' }));
+    expect(mocks.discardFinding).not.toHaveBeenCalled();
+    expect(await within(dialog).findByText('Escribe lo que verá el cliente.')).toBeInTheDocument();
+    expect(text).toHaveAttribute('aria-invalid', 'true');
 
     await user.type(text, 'Las pastillas traseras tienen poca vida.');
     await user.click(within(dialog).getByRole('button', { name: 'Descartar' }));
@@ -479,7 +484,11 @@ describe('WorkOrders — trabajo adicional reportado (F6)', () => {
     await user.click(within(screen.getByRole('toolbar', { name: 'Acciones rápidas' })).getByRole('button', { name: /Reportar trabajo adicional/ }));
     const dialog = screen.getByRole('dialog', { name: 'Reportar trabajo adicional' });
     const confirm = within(dialog).getByRole('button', { name: 'Reportar y pausar la orden' });
-    expect(confirm).toBeDisabled();
+    // B-08: el botón no se apaga; sin texto avisa qué falta y no reporta.
+    expect(confirm).toBeEnabled();
+    await user.click(confirm);
+    expect(mocks.reportFinding).not.toHaveBeenCalled();
+    expect(await within(dialog).findByText('Describe lo que encontraste antes de reportarlo.')).toBeInTheDocument();
 
     await user.type(within(dialog).getByRole('textbox'), 'Fuga en la bomba de agua');
     await user.click(confirm);

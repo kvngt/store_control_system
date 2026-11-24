@@ -65,7 +65,7 @@ export default function OrderInsuranceModal({ order, onSave, onClose }: OrderIns
     >
       <AlertError message={error} />
             <div className="form-group">
-              <label className="form-checkbox" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer' }}>
+              <label className="form-checkbox checkbox-touch" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
                   id="modal-with-insurance"

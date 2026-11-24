@@ -4,3 +4,11 @@ import type { LineState } from '../../types/database';
 export function isApproved(line: { estado?: LineState }): boolean {
   return (line.estado ?? 'aprobado') === 'aprobado';
 }
+
+/** Indica si hay al menos una línea de mano de obra o repuesto autorizada (`aprobado`). */
+export function hasApprovedLines(
+  labor: ReadonlyArray<{ estado?: LineState }> = [],
+  parts: ReadonlyArray<{ estado?: LineState }> = []
+): boolean {
+  return labor.some(isApproved) || parts.some(isApproved);
+}

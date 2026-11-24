@@ -474,7 +474,8 @@ describe('WorkOrders — el cliente nuevo del alta queda guardado', () => {
     await waitFor(() => expect(currentStep(dialog)).toMatch(/Vehículo/));
     expect(mocks.createCustomer).toHaveBeenCalledTimes(1);
     expect(mocks.createCustomer.mock.calls[0][0]).toMatchObject({ nombre: 'Pedro Pérez' });
-    expect(await screen.findByText('Cliente guardado')).toBeInTheDocument();
+    // A-12 (Q2 tanda 3): ya no sale el aviso de éxito al avanzar; el indicador de pasos lo dice.
+    expect(screen.queryByText('Cliente guardado')).not.toBeInTheDocument();
   });
 
   it('al cancelar, guarda el cliente nuevo que ya estaba completo', async () => {

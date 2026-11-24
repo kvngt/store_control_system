@@ -223,6 +223,28 @@ describe('Acciones rápidas del técnico (D1: un solo botón principal)', () => 
     renderWithProviders(<QuickActions actions={actions} />);
 
     expect(screen.getByRole('button', { name: /Start work/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /My jobs/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /My tasks/i })).toBeInTheDocument();
+  });
+
+  it('B-09: al marcar una tarea hecha y refrescar la orden reordenada, se queda en su lugar', () => {
+    const detail = mockDetail({ id: 'o-fixed', estatus: 'en_proceso' });
+    const first = makeTask('t1', 'tech-1', 'aprobado', null, 'Primera tarea');
+    const second = makeTask('t2', 'tech-1', 'aprobado', null, 'Segunda tarea');
+
+    const { rerender } = renderWithProviders(
+      <TechnicianTaskList items={[first, second]} currentUserId="tech-1" detail={detail} />
+    );
+
+    const before = screen.getAllByText(/Primera tarea|Segunda tarea/).map((el) => el.textContent?.replace(/^Tarea:\s*/, ''));
+    expect(before).toEqual(['Primera tarea', 'Segunda tarea']);
+
+    // Simula el refetch que devuelve la lista con t1 ya completada al final.
+    const firstDone = makeTask('t1', 'tech-1', 'aprobado', '2026-11-24T12:00:00Z', 'Primera tarea');
+    rerender(
+      <TechnicianTaskList items={[second, firstDone]} currentUserId="tech-1" detail={detail} />
+    );
+
+    const after = screen.getAllByText(/Primera tarea|Segunda tarea/).map((el) => el.textContent?.replace(/^Tarea:\s*/, ''));
+    expect(after).toEqual(['Primera tarea', 'Segunda tarea']);
   });
 });

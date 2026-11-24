@@ -554,7 +554,7 @@ export default function Customers() {
               </div>
               {form.email.trim() && (
                 <div className="form-group">
-                  <label className="checkbox-row" htmlFor="customer-accepts-emails">
+                  <label className="checkbox-row checkbox-touch" htmlFor="customer-accepts-emails">
                     <input
                       id="customer-accepts-emails"
                       type="checkbox"

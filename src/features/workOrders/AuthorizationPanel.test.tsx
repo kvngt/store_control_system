@@ -52,7 +52,7 @@ describe('AuthorizationPanel', () => {
     const user = userEvent.setup();
     renderWithProviders(<AuthorizationPanel order={order([{ descripcion: 'Frenos', estado: 'borrador' }])} onOpenQuote={vi.fn()} />);
 
-    expect(await screen.findByText(/1 trabajo\(s\) cotizados sin enviar al cliente/)).toBeInTheDocument();
+    expect(await screen.findByText(/1 trabajo cotizado sin enviar al cliente/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Enviar presupuesto/ }));
     expect(mocks.sendQuote).toHaveBeenCalledWith('o-1', true);
     expect(spy).toHaveBeenCalledWith(expect.anything(), { orderId: 'o-1' });
@@ -154,5 +154,108 @@ describe('AuthorizationPanel', () => {
     await waitFor(() => expect(portalMocks.getActiveLink).toHaveBeenCalledWith('o-1'));
     expect(screen.queryByRole('link', { name: /Enviar por WhatsApp/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Copiar enlace/ })).not.toBeInTheDocument();
+  });
+});
+
+// B-16 (Q2 tanda 3): singular y plural de verdad, sin «(s)».
+function makeOrderN(
+  draftCount: number,
+  pendingCount: number,
+  presupuestoId = 'q-open'
+): WorkOrder {
+  const labor_items = [
+    ...Array.from({ length: draftCount }, (_, i) => ({
+      id: `d-${i}`,
+      orden_id: 'ord-1',
+      descripcion: `Trabajo ${i + 1}`,
+      costo: 100,
+      especialidad: 'mecanica',
+      asignado_a: null,
+      estado: 'borrador',
+      presupuesto_id: null,
+      completado_en: null,
+      creado_en: '2026-10-01T10:00:00Z',
+    })),
+    ...Array.from({ length: pendingCount }, (_, i) => ({
+      id: `p-${i}`,
+      orden_id: 'ord-1',
+      descripcion: `Pendiente ${i + 1}`,
+      costo: 150,
+      especialidad: 'mecanica',
+      asignado_a: null,
+      estado: 'pendiente',
+      presupuesto_id: presupuestoId,
+      completado_en: null,
+      creado_en: '2026-10-01T10:00:00Z',
+    })),
+  ];
+
+  return {
+    id: 'ord-1',
+    numero_orden: 'ORD-2026-021',
+    estatus: 'en_proceso',
+    cliente: { nombre: 'Marta Ruiz', telefono: '512-555-0100', email: 'marta@example.com', idioma: 'es', acepta_correos: true },
+    labor_items,
+    repuestos: [],
+  } as unknown as WorkOrder;
+}
+const OPEN_QUOTE_N: Quote = {
+  id: 'q-open',
+  orden_id: 'ord-1',
+  sede_id: 's-1',
+  numero: 1,
+  estado: 'enviado',
+  creado_en: '2026-10-01T10:00:00Z',
+  enviado_por: null,
+  total_propuesto: 150,
+  respondido_en: null,
+  respondido_via: null,
+  respondido_por_nombre: null,
+  respondido_por_perfil: null,
+  total_aprobado: null,
+  comentario_cliente: null,
+  nota_admin: null,
+  cancelado_en: null,
+};
+describe('AuthorizationPanel (B-16 plurales)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    portalMocks.getActiveLink.mockResolvedValue(null);
+  });
+
+  it('trabajos sin enviar: singular para 1, plural para 3 (es)', async () => {
+    mocks.listQuotes.mockResolvedValue([]);
+    const one = renderWithProviders(<AuthorizationPanel order={makeOrderN(1, 0)} onOpenQuote={vi.fn()} />);
+    expect(await screen.findByText(/1 trabajo cotizado sin enviar al cliente/)).toBeInTheDocument();
+    one.unmount();
+    renderWithProviders(<AuthorizationPanel order={makeOrderN(3, 0)} onOpenQuote={vi.fn()} />);
+    expect(await screen.findByText(/3 trabajos cotizados sin enviar al cliente/)).toBeInTheDocument();
+  });
+
+  it('líneas en espera: singular para 1, plural para 3 (es)', async () => {
+    mocks.listQuotes.mockResolvedValue([OPEN_QUOTE_N]);
+    const one = renderWithProviders(<AuthorizationPanel order={makeOrderN(0, 1)} onOpenQuote={vi.fn()} />);
+    expect(await screen.findByText(/1 línea por \$150\.00 espera su respuesta\./)).toBeInTheDocument();
+    one.unmount();
+    renderWithProviders(<AuthorizationPanel order={makeOrderN(0, 3)} onOpenQuote={vi.fn()} />);
+    expect(await screen.findByText(/3 líneas por \$450\.00 esperan su respuesta\./)).toBeInTheDocument();
+  });
+
+  it('en inglés: 1 y 3 trabajos sin enviar; 0 y 1 líneas en espera', async () => {
+    localStorage.setItem('restorify_lang', 'en');
+    mocks.listQuotes.mockResolvedValue([]);
+    const a = renderWithProviders(<AuthorizationPanel order={makeOrderN(1, 0)} onOpenQuote={vi.fn()} />);
+    expect(await screen.findByText(/1 estimated job not sent to the customer/)).toBeInTheDocument();
+    a.unmount();
+    const b = renderWithProviders(<AuthorizationPanel order={makeOrderN(3, 0)} onOpenQuote={vi.fn()} />);
+    expect(await screen.findByText(/3 estimated jobs not sent to the customer/)).toBeInTheDocument();
+    b.unmount();
+    mocks.listQuotes.mockResolvedValue([OPEN_QUOTE_N]);
+    const c = renderWithProviders(<AuthorizationPanel order={makeOrderN(0, 1)} onOpenQuote={vi.fn()} />);
+    expect(await screen.findByText(/1 line for \$150\.00 awaits their answer\./)).toBeInTheDocument();
+    c.unmount();
+    renderWithProviders(<AuthorizationPanel order={makeOrderN(0, 0)} onOpenQuote={vi.fn()} />);
+    expect(await screen.findByText(/0 lines for \$0\.00 await their answer\./)).toBeInTheDocument();
   });
 });

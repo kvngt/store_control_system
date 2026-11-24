@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Check, Paintbrush, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import { useToast } from '../../context/toast.context';
@@ -48,6 +48,8 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
   const { t } = useLanguage();
   const { showToast } = useToast();
   const [newDraft, setNewDraft] = useState(EMPTY_DRAFT);
+  const [newDescInvalid, setNewDescInvalid] = useState(false);
+  const newDescRef = useRef<HTMLInputElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDescInvalid, setEditDescInvalid] = useState(false);
   const [editDraft, setEditDraft] = useState(EMPTY_DRAFT);
@@ -108,7 +110,12 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
   };
 
   const add = async () => {
-    if (!newDraft.descripcion.trim()) return;
+    if (!newDraft.descripcion.trim()) {
+      setNewDescInvalid(true);
+      newDescRef.current?.focus();
+      return;
+    }
+    setNewDescInvalid(false);
     const input = toInput(newDraft);
     const result = await onAdd(input);
     if (result === false) return;
@@ -289,11 +296,17 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
       </div>
       <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-3)', flexWrap: 'wrap' }}>
         <input
+          ref={newDescRef}
           className="form-input"
           placeholder={t('common.description')}
+          aria-label={t('parts.formTitle')}
+          aria-invalid={newDescInvalid || undefined}
           style={{ flex: '2 1 140px' }}
           value={newDraft.descripcion}
-          onChange={(e) => setNewDraft({ ...newDraft, descripcion: e.target.value })}
+          onChange={(e) => {
+            if (newDescInvalid) setNewDescInvalid(false);
+            setNewDraft({ ...newDraft, descripcion: e.target.value });
+          }}
         />
         <input
           className="form-input"
@@ -337,11 +350,12 @@ export default function PartsTable({ items, canEdit, busy, onAdd, onUpdate, onRe
           aria-label={t('common.add')}
           title={t('common.add')}
           onClick={add}
-          disabled={!canEdit || busy || !newDraft.descripcion.trim()}
+          disabled={!canEdit || busy}
         >
           <Plus size={16} /> {t('common.add')}
         </button>
       </div>
+      {newDescInvalid && <p className="task-editor-error" role="alert">{t('parts.descriptionRequired')}</p>}
       <AddedConfirmation text={added} />
     </div>
   );

@@ -76,9 +76,9 @@ test.describe('TEC | Técnico sin precios ni dinero', () => {
     await expect(page.getByRole('tab', { name: /Cobro y cliente|Billing & customer/ })).toHaveCount(0);
     await expect(page.getByRole('tab', { name: /Historial|History/ })).toHaveCount(0);
 
-    // En la pestaña Tareas abre la sección de tareas y ve su tarea por descripción.
+    // En la pestaña Tareas la sección de tareas ya viene abierta (B-03) y ve su tarea por descripción.
     const tareasSection = page.locator('[data-section="tareas"]');
-    await tareasSection.locator('.collapsible-section-toggle').click();
+    await expect(tareasSection.locator('.collapsible-section-toggle')).toHaveAttribute('aria-expanded', 'true');
     await expect(tareasSection).toContainText(laborDesc);
 
     // En la pestaña Orden abre Repuestos: aparece la descripción de la pieza, pero no "$120.00".
@@ -120,8 +120,9 @@ test.describe('TEC | Técnico sin precios ni dinero', () => {
     await expect(page.locator('h1.order-detail-title')).toContainText(finishOrder.numero, { timeout: 10000 });
 
     // Marca su única tarea como realizada (el botón verde de la tarea).
+    // «Tareas» ya viene abierta para el técnico (B-03): no se vuelve a tocar su flecha.
     const tareasSection = page.locator('[data-section="tareas"]');
-    await tareasSection.locator('.collapsible-section-toggle').click();
+    await expect(tareasSection.locator('.collapsible-section-toggle')).toHaveAttribute('aria-expanded', 'true');
     await tareasSection.getByRole('button', { name: /^(Realizado|Done)$/ }).click();
 
     // Con todo hecho, el botón principal pasa a «Terminé: avisar a la oficina».

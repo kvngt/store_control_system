@@ -480,7 +480,7 @@ Las decisiones del taller del 05/10/2026 ([analisis-del-proceso-2026-10.md](hist
 
 - Método de pago en los egresos de comisiones (`20261010000045`): `pay_commissions` copia el método en efectivo y cheque (con número) al egreso de `finanzas_movimientos`, deja vacío un método fuera de la lista sin tumbar el pago, cuadra con lo pagado y conserva los permisos (técnico 42501, `anon` denegado).
 
-> **Estado (17 de noviembre de 2026):** **1.219 pruebas en verde en los 51 archivos**, con las 101 migraciones del repositorio aplicadas desde cero en local (hasta `20261010000047_tecnico_avance_con_autorizacion`; en producción hay 99 aplicadas, hasta la `045`, y la `046` y la `047` esperan su `db push`). Sobre una base local **con datos de demostración**, los archivos `19`, `23`, `27`, `30` y `41` fallan por esos datos (cuentan filas existentes): comprobado el 17/11/2026 que con `db reset` pasan los 51.
+> **Estado (17 de noviembre de 2026):** **1.219 pruebas en verde en los 51 archivos**, con las 101 migraciones del repositorio aplicadas desde cero en local (hasta `20261010000047_tecnico_avance_con_autorizacion`; todas aplicadas en producción desde el 17/11/2026). Sobre una base local **con datos de demostración**, los archivos `19`, `23`, `27`, `30` y `41` fallan por esos datos (cuentan filas existentes): comprobado el 17/11/2026 que con `db reset` pasan los 51.
 >
 > **Estado (15 de noviembre de 2026):** 1.181 pruebas en verde en los 48 archivos, con las 98 migraciones aplicadas desde cero (hasta `20261010000044_auditoria_2026_11_b`; aplicadas `043` y `044` en producción).
 >

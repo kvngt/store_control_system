@@ -16,19 +16,12 @@ import { AlertError } from '../../components/AlertError';
 import Modal from '../../components/Modal';
 import { moneySigned, sumMoney } from '../../lib/money';
 import { formatDay } from '../../lib/dates';
+import { ALL_FINANCE_CATEGORIES, financeCategoryLabel } from '../../lib/financeCategories';
 
 interface Props {
   onClose: () => void;
   onImported: () => void;
 }
-
-const CATEGORY_KEYS: Record<TransactionCategory, string> = {
-  pago_cliente: 'finance.clientPayment',
-  compra_repuesto: 'finance.partsPurchase',
-  planilla: 'finance.payroll',
-  gasto_operativo: 'finance.operatingExpense',
-  comision_bancaria: 'finance.bankFees',
-};
 
 export default function ImportStatementModal({ onClose, onImported }: Props) {
   const { t, language } = useLanguage();
@@ -316,8 +309,8 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
                         onChange={(e) => setBulkCategory(e.target.value as TransactionCategory)}
                       >
                         <option value="">{t('finance.selectCategory')}</option>
-                        {(Object.keys(CATEGORY_KEYS) as TransactionCategory[]).map((cat) => (
-                          <option key={cat} value={cat}>{t(CATEGORY_KEYS[cat])}</option>
+                        {ALL_FINANCE_CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>{financeCategoryLabel(cat, t)}</option>
                         ))}
                       </select>
                       <button
@@ -405,8 +398,8 @@ export default function ImportStatementModal({ onClose, onImported }: Props) {
                                 disabled={!row.incluir}
                               >
                                 <option value="">{t('finance.selectCategory')}</option>
-                                {(Object.keys(CATEGORY_KEYS) as TransactionCategory[]).map((cat) => (
-                                  <option key={cat} value={cat}>{t(CATEGORY_KEYS[cat])}</option>
+                                {ALL_FINANCE_CATEGORIES.map((cat) => (
+                                  <option key={cat} value={cat}>{financeCategoryLabel(cat, t)}</option>
                                 ))}
                               </select>
                             </td>

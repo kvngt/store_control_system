@@ -13,6 +13,7 @@ import type { WorkOrderDetailApi } from './useWorkOrderDetail';
 import type { LaborPrefill, SectionStateProps, StickerModalState } from './detail/detailTypes';
 import OrderDialogs from './detail/OrderDialogs';
 import OrderHeader from './detail/OrderHeader';
+import OrderQuickActions from './detail/OrderQuickActions';
 import OrderTabTop from './detail/OrderTabTop';
 import BalanceSection from './detail/sections/BalanceSection';
 import CommissionSection from './detail/sections/CommissionSection';
@@ -101,16 +102,20 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
   // La tarea que se precarga al cotizar un hallazgo (F6).
   // "Reportar trabajo adicional" desde las acciones rápidas abre el diálogo de la lista de tareas.
   const [reportRequest, setReportRequest] = useState(0);
+  const [addLaborRequest, setAddLaborRequest] = useState(0);
+  const [authorizeRequest, setAuthorizeRequest] = useState(0);
   const [prefill, setPrefill] = useState<LaborPrefill | null>(null);
-  // Qué secciones están abiertas: ninguna al entrar a una orden, salvo la que pide un enlace.
-  const [openSections, setOpenSections] = useState<ReadonlySet<string>>(() => new Set());
+  // Qué secciones están abiertas: para el técnico «Tareas» abre desplegada al entrar (B-03).
+  const [openSections, setOpenSections] = useState<ReadonlySet<string>>(() => new Set(isAdmin ? [] : ['tareas']));
 
   useEffect(() => {
     const next = detail.requestedTab && tabIds.includes(detail.requestedTab) ? detail.requestedTab : tabIds[0];
     setTab(next);
     setVisited([next]);
     const linked = detail.requestedTab === next ? LINKED_SECTION[next] : undefined;
-    setOpenSections(new Set(linked ? [linked] : []));
+    const initialSections = new Set<string>(isAdmin ? [] : ['tareas']);
+    if (linked) initialSections.add(linked);
+    setOpenSections(initialSections);
     // `tabIds` cambia solo con el rol, que no cambia con la orden abierta.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, detail.requestedTab]);
@@ -183,10 +188,10 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
     ),
     firma: <SignatureSection order={order} detail={detail} sectionProps={sectionState('firma')} />,
     tecnicos: <TechniciansSection order={order} detail={detail} isAdmin={isAdmin} sectionProps={sectionState('tecnicos')} />,
-    mano_obra: <LaborSection order={order} detail={detail} isAdmin={isAdmin} prefill={prefill} sectionProps={sectionState('mano_obra')} />,
+    mano_obra: <LaborSection order={order} detail={detail} isAdmin={isAdmin} prefill={prefill} sectionProps={sectionState('mano_obra')} openAddRequest={addLaborRequest} />,
     tareas: !isAdmin ? <TechLaborSection order={order} detail={detail} reportRequest={reportRequest} sectionProps={sectionState('tareas')} /> : null,
     repuestos: <PartsSection order={order} detail={detail} isAdmin={isAdmin} sectionProps={sectionState('repuestos')} />,
-    presupuesto: isAdmin ? <QuoteSection order={order} sectionProps={sectionState('presupuesto')} /> : null,
+    presupuesto: isAdmin ? <QuoteSection order={order} sectionProps={sectionState('presupuesto')} registerRequest={authorizeRequest} /> : null,
     comision: moduloActivo('comisiones') && detail.commissionEstimate ? <CommissionSection order={order} detail={detail} isAdmin={isAdmin} sectionProps={sectionState('comision')} /> : null,
     inspeccion: (
       <InspectionSection
@@ -260,6 +265,34 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
 
   const openEmptyStickerModal = () => setStickerModal({ open: true, initialData: null });
 
+  const handleAddWork = () => {
+    goTo('trabajos', 'mano_obra');
+    setAddLaborRequest((n) => n + 1);
+  };
+
+  const handleAuthorize = () => {
+    goTo('trabajos', 'presupuesto');
+    setAuthorizeRequest((n) => n + 1);
+  };
+
+  const quickActionsNode = (
+    <OrderQuickActions
+      order={order}
+      detail={detail}
+      isAdmin={isAdmin}
+      goTo={goTo}
+      onAddWork={handleAddWork}
+      onAuthorize={handleAuthorize}
+      onOpenStickerModal={openEmptyStickerModal}
+      // El diálogo vive en la lista de tareas: con «Tareas» plegada se abría invisible (y desde el
+      // 04/11/2026 su trampa se habría comido el «atrás»). Primero se abre la sección.
+      onReportFinding={() => {
+        goTo('tareas', 'tareas');
+        setReportRequest((n) => n + 1);
+      }}
+    />
+  );
+
   const renderTab = (tabId: string) => (
     <>
       <OrderTabTop
@@ -272,17 +305,12 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         findings={findings}
         unassignedCount={unassignedCount}
         techWaitsAuthorization={techWaitsAuthorization}
+        quickActions={quickActionsNode}
         goTo={goTo}
         onOpenSection={openSection}
         onSelectTab={selectTab}
-        onOpenStickerModal={openEmptyStickerModal}
         onSetPrefill={setPrefill}
-        // El diálogo vive en la lista de tareas: con «Tareas» plegada se abría invisible (y desde el
-        // 04/11/2026 su trampa se habría comido el «atrás»). Primero se abre la sección.
-        onReportFinding={() => {
-          goTo('tareas', 'tareas');
-          setReportRequest((n) => n + 1);
-        }}
+        onRegisterAuthorization={handleAuthorize}
       />
       {!isMobile && sectionTools(sectionsOf(tabId))}
       {sectionsOf(tabId).map((id) => (
@@ -349,6 +377,8 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           pdfLanguage={pdfLanguage}
           onChangePdfLanguage={setPdfLanguage}
           techWaitsAuthorization={techWaitsAuthorization}
+          isMobile={isMobile}
+          quickActions={quickActionsNode}
         />
 
         {!isMobile && (
@@ -384,6 +414,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
         onCloseInsuranceModal={() => setShowInsuranceModal(false)}
         stickerModal={stickerModal}
         onCloseStickerModal={() => setStickerModal({ open: false })}
+        onReviewTasks={() => goTo(isAdmin ? 'trabajos' : 'tareas', isAdmin ? 'mano_obra' : 'tareas')}
       />
     </div>
   );

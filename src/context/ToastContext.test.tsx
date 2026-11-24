@@ -53,6 +53,7 @@ describe('ToastContext', () => {
     const listeners: Record<string, () => void> = {};
     const viewport = {
       offsetTop: 0,
+      height: window.innerHeight,
       addEventListener: (name: string, fn: () => void) => { listeners[name] = fn; },
       removeEventListener: vi.fn(),
     };
@@ -63,11 +64,14 @@ describe('ToastContext', () => {
       </ToastProvider></LanguageProvider>
     );
     const stack = container.querySelector('.toast-stack') as HTMLElement;
-    expect(stack.style.transform).toBe('');
+    expect(stack.style.getPropertyValue('--toast-vv-top')).toBe('');
 
     viewport.offsetTop = 320;
     act(() => listeners.scroll());
-    expect(stack.style.transform).toBe('translateY(320px)');
+    // Q2 tanda 3: el desplazamiento viaja como variable CSS (arriba en escritorio; en el teléfono
+    // los avisos van abajo y `--toast-vv-bottom` los sube por encima del teclado).
+    expect(stack.style.getPropertyValue('--toast-vv-top')).toBe('320px');
+    expect(stack.style.getPropertyValue('--toast-vv-bottom')).toBe('0px');
     vi.unstubAllGlobals();
   });
 });

@@ -201,8 +201,14 @@ export function AccountSection({ report, s, fmt, language }: AccountSectionProps
                 </div>
                 <div className="portal-muted">
                   {s.historyCounts
-                    .replace('{autorizados}', String(q.autorizados))
-                    .replace('{rechazados}', String(q.rechazados))
+                    .replace(
+                      '{autorizados}',
+                      (q.autorizados === 1 ? s.historyApprovedOne : s.historyApprovedMany).replace('{count}', String(q.autorizados))
+                    )
+                    .replace(
+                      '{rechazados}',
+                      (q.rechazados === 1 ? s.historyRejectedOne : s.historyRejectedMany).replace('{count}', String(q.rechazados))
+                    )
                     .replace('{total}', fmt.money(q.total_aprobado ?? 0))}
                 </div>
               </li>

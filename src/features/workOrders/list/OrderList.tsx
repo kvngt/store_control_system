@@ -116,11 +116,13 @@ export default function OrderList({
                 {formatDay(order.fecha_estimada_entrega, language)}
               </span>
               {/* `montos` es null para un técnico: la base no se lo devuelve. */}
-              {order.montos && (
+              {isAdmin && order.por_autorizar ? (
+                <span className="badge badge-waiting-auth">{t('workOrders.toAuthorizeBadge')}</span>
+              ) : order.montos ? (
                 <span style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>
                   {money(order.montos.total_general)}
                 </span>
-              )}
+              ) : null}
             </div>
           </div>
         ))}
@@ -209,7 +211,13 @@ export default function OrderList({
                 {formatDay(order.fecha_estimada_entrega, language)}
               </td>
               {isAdmin && (
-                <td style={{ fontWeight: 600 }}>{money(order.montos?.total_general)}</td>
+                <td style={{ fontWeight: 600 }}>
+                  {order.por_autorizar ? (
+                    <span className="badge badge-waiting-auth">{t('workOrders.toAuthorizeBadge')}</span>
+                  ) : (
+                    money(order.montos?.total_general)
+                  )}
+                </td>
               )}
               <td>
                 <div className="table-actions">

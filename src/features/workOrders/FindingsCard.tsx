@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { AlertTriangle, FileSignature, Paperclip, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import Modal from '../../components/Modal';
@@ -99,7 +99,18 @@ export function DiscardFindingModal({ finding, saving, onCancel, onConfirm }: Di
   const { t } = useLanguage();
   const [texto, setTexto] = useState(finding.texto_cliente ?? finding.descripcion);
   const [enReporte, setEnReporte] = useState(false);
-  const missingText = enReporte && !texto.trim();
+  const [error, setError] = useState('');
+  const textRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleConfirm = () => {
+    if (enReporte && !texto.trim()) {
+      setError(t('findings.customerTextRequired'));
+      textRef.current?.focus();
+      return;
+    }
+    setError('');
+    void onConfirm(enReporte, texto.trim());
+  };
 
   return (
     <Modal
@@ -114,8 +125,8 @@ export function DiscardFindingModal({ finding, saving, onCancel, onConfirm }: Di
           <button
             type="button"
             className="btn btn-primary"
-            onClick={() => void onConfirm(enReporte, texto.trim())}
-            disabled={saving || missingText}
+            onClick={handleConfirm}
+            disabled={saving}
           >
             {saving ? t('common.loading') : t('findings.discardConfirm')}
           </button>
@@ -125,12 +136,15 @@ export function DiscardFindingModal({ finding, saving, onCancel, onConfirm }: Di
       <p className="field-hint">{t('findings.reportedText')}</p>
           <blockquote className="findings-quote">{finding.descripcion}</blockquote>
 
-          <label className="checkbox-row" htmlFor="finding-in-report">
+          <label className="checkbox-row checkbox-touch" htmlFor="finding-in-report">
             <input
               id="finding-in-report"
               type="checkbox"
               checked={enReporte}
-              onChange={(e) => setEnReporte(e.target.checked)}
+              onChange={(e) => {
+                setEnReporte(e.target.checked);
+                if (!e.target.checked && error) setError('');
+              }}
               disabled={saving}
             />
             <span>
@@ -144,16 +158,20 @@ export function DiscardFindingModal({ finding, saving, onCancel, onConfirm }: Di
               {enReporte ? t('findings.customerText') : t('findings.internalNote')}
             </label>
             <textarea
+              ref={textRef}
               id="finding-customer-text"
               className="form-input form-textarea"
               value={texto}
-              onChange={(e) => setTexto(e.target.value)}
+              onChange={(e) => {
+                setTexto(e.target.value);
+                if (error) setError('');
+              }}
               maxLength={MAX_TEXT}
               rows={4}
               disabled={saving}
-              aria-invalid={missingText || undefined}
+              aria-invalid={!!error || undefined}
             />
-            {missingText && <p className="findings-error" role="alert">{t('findings.customerTextRequired')}</p>}
+            {error && <p className="findings-error" role="alert">{error}</p>}
           </div>
     </Modal>
   );

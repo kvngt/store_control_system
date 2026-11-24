@@ -44,17 +44,23 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(() => ({ showToast }), [showToast]);
 
   // En el iPhone, con el teclado abierto, `position: fixed` se mide contra la página y no
-  // contra lo que se ve: el aviso de "Mano de obra agregada" quedaba arriba, fuera de la
-  // pantalla, y el taller no sabía si el trabajo había entrado (06/10/2026). Se corre lo que
-  // la parte visible se haya desplazado.
-  const viewportTop = useVisualViewportTop();
+  // contra lo que se ve: en escritorio compensa arriba; en el teléfono los avisos van abajo y
+  // se suben por encima del teclado si está abierto.
+  const { top: viewportTop, bottom: viewportBottom } = useVisualViewportOffsets();
+  const stackStyle =
+    viewportTop > 0 || viewportBottom > 0
+      ? ({
+          '--toast-vv-top': `${viewportTop}px`,
+          '--toast-vv-bottom': `${viewportBottom}px`,
+        } as React.CSSProperties)
+      : undefined;
 
   return (
     <ToastContext.Provider value={value}>
       {children}
       {/* Lo que se lee en voz alta es cada aviso, no el contenedor: un `role="status"` fijo y
           vacío chocaba con los demás estados de la pantalla. */}
-      <div className="toast-stack" style={viewportTop > 0 ? { transform: `translateY(${viewportTop}px)` } : undefined}>
+      <div className="toast-stack" style={stackStyle}>
         {toasts.map((toast) => (
           <div
             key={toast.id}
@@ -83,13 +89,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Cuánto se desplazó la parte visible de la pantalla (el teclado del iPhone la corre). */
-function useVisualViewportTop(): number {
-  const [top, setTop] = useState(0);
+/** Desplazamiento visible arriba y hueco ocupado abajo (teclado del teléfono). */
+function useVisualViewportOffsets(): { top: number; bottom: number } {
+  const [offsets, setOffsets] = useState({ top: 0, bottom: 0 });
   useEffect(() => {
     const viewport = typeof window !== 'undefined' ? window.visualViewport : null;
     if (!viewport) return;
-    const update = () => setTop(Math.max(0, Math.round(viewport.offsetTop)));
+    const update = () => {
+      const top = Math.max(0, Math.round(viewport.offsetTop));
+      const bottom = Math.max(0, Math.round(window.innerHeight - (viewport.offsetTop + viewport.height)));
+      setOffsets({ top, bottom });
+    };
     update();
     viewport.addEventListener('resize', update);
     viewport.addEventListener('scroll', update);
@@ -98,5 +108,5 @@ function useVisualViewportTop(): number {
       viewport.removeEventListener('scroll', update);
     };
   }, []);
-  return top;
+  return offsets;
 }

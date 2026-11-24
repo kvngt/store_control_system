@@ -24,6 +24,7 @@ import { money } from '../lib/money';
 import { orderStatusKey, workTypeKey } from '../lib/workType';
 import AttentionCard from '../features/dashboard/AttentionCard';
 import MyTasksCard from '../features/dashboard/MyTasksCard';
+import { formatOverCapacity } from '../features/workOrders/occupancy';
 
 const EMPTY_STATS: DashboardStats = {
   ordenes_activas: 0,
@@ -158,30 +159,48 @@ export default function Dashboard() {
 
         {/* La ocupación es del taller entero, y con las órdenes de un solo técnico daría un
             número falso: es de administración. */}
-        {isAdmin && (
-        <button
-          type="button"
-          className="stat-card stat-card-link stagger-3 animate-fade-in-up"
-          onClick={() => navigate('/work-orders?vista=tablero')}
-        >
-          <div className="stat-icon warning">
-            <Gauge size={24} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-label">{t('dashboard.occupancyRate')}</div>
-            <div className="stat-value">{stats.tasa_ocupacion}%</div>
-            <div style={{ marginTop: 'var(--space-2)' }}>
-              <div className="progress-bar" style={{ height: '6px' }}>
-                <div className="progress-fill" style={{ width: `${stats.tasa_ocupacion}%` }}></div>
+        {isAdmin && (() => {
+          const capacity = currentSede?.capacidad ?? DEFAULT_CAPACITY;
+          const isOverCapacity = stats.ordenes_activas > capacity;
+          const cappedOccupancy = Math.min(100, stats.tasa_ocupacion);
+          return (
+            <button
+              type="button"
+              className="stat-card stat-card-link stagger-3 animate-fade-in-up"
+              onClick={() => navigate('/work-orders?vista=tablero')}
+            >
+              <div className="stat-icon warning">
+                <Gauge size={24} />
               </div>
-            </div>
-            <div className="stat-change" style={{ color: 'var(--color-text-tertiary)' }}>
-              {stats.ordenes_activas}/{currentSede?.capacidad ?? DEFAULT_CAPACITY} {t('dashboard.spacesInUse')}
-            </div>
-          </div>
-          <ChevronRight size={18} className="stat-card-arrow" />
-        </button>
-        )}
+              <div className="stat-content">
+                <div className="stat-label">{t('dashboard.occupancyRate')}</div>
+                <div className="stat-value" style={isOverCapacity ? { color: 'var(--color-warning)' } : undefined}>
+                  {cappedOccupancy}%
+                </div>
+                <div style={{ marginTop: 'var(--space-2)' }}>
+                  <div className="progress-bar" style={{ height: '6px' }}>
+                    <div
+                      className={isOverCapacity ? '' : 'progress-fill'}
+                      style={{
+                        width: `${cappedOccupancy}%`,
+                        ...(isOverCapacity ? { height: '100%', borderRadius: 'inherit', background: 'var(--color-warning)' } : {}),
+                      }}
+                    ></div>
+                  </div>
+                </div>
+                <div
+                  className="stat-change"
+                  style={{ color: isOverCapacity ? 'var(--color-warning)' : 'var(--color-text-tertiary)' }}
+                >
+                  {isOverCapacity
+                    ? formatOverCapacity(stats.ordenes_activas, capacity, t)
+                    : `${stats.ordenes_activas}/${capacity} ${t('dashboard.spacesInUse')}`}
+                </div>
+              </div>
+              <ChevronRight size={18} className="stat-card-arrow" />
+            </button>
+          );
+        })()}
 
         {isAdmin && (
           <button
@@ -312,7 +331,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="card" style={{ marginTop: 'var(--space-4)' }}>
+      {/* Recent Orders (solo administración; el técnico tiene «Mis tareas», B-12) */}
+      {isAdmin && (
+        <div className="card" style={{ marginTop: 'var(--space-4)' }}>
         <div className="card-header">
           <h3 className="card-title">{t('dashboard.recentOrders')}</h3>
         </div>
@@ -397,7 +418,8 @@ export default function Dashboard() {
             </tbody>
           </table>
         </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

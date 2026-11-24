@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ADMIN_USER, SEDE_CENTRO, authValue, renderWithProviders } from '../test/renderWithProviders';
@@ -79,6 +79,10 @@ const IMPORT_BATCH: BankStatementImport = {
   creado_en: '2026-03-01T10:00:00Z',
 };
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.auth.current = authValue(ADMIN_USER);
@@ -148,5 +152,38 @@ describe('Finance', () => {
     await waitFor(() => {
       expect(screen.queryByLabelText(getTranslation('es', 'common.description'))).not.toBeInTheDocument();
     });
+  });
+
+  it('con comisiones apagado muestra "Pagos al personal" para planilla y "Comisiones" cuando está activo', async () => {
+    mocks.getTransactions.mockResolvedValue([
+      {
+        id: 't-planilla',
+        sede_id: SEDE_CENTRO.id,
+        tipo: 'egreso',
+        categoria: 'planilla',
+        monto: 300,
+        descripcion: 'Pago semanal',
+        fecha: '2026-06-05',
+        registrado_por: ADMIN_USER.id,
+        creado_en: '2026-06-05T12:00:00Z',
+      } as FinancialTransaction,
+    ]);
+
+    vi.stubEnv('VITE_MODULOS_APAGADOS', 'comisiones');
+    const user = userEvent.setup();
+    const { unmount } = renderWithProviders(<Finance />);
+
+    expect(await screen.findByText('Pagos al personal')).toBeInTheDocument();
+    expect(screen.queryByRole('cell', { name: 'Comisiones' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: getTranslation('es', 'finance.newTransaction') }));
+    await user.selectOptions(screen.getByLabelText(getTranslation('es', 'common.type')), 'egreso');
+    const categorySelect = screen.getByLabelText(getTranslation('es', 'common.category'));
+    expect(categorySelect).toHaveTextContent('Pagos al personal');
+    unmount();
+
+    vi.unstubAllEnvs();
+    renderWithProviders(<Finance />);
+    expect(await screen.findByText('Comisiones')).toBeInTheDocument();
   });
 });

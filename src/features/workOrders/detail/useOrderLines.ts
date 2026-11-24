@@ -49,10 +49,14 @@ export function useOrderLines({
   const toggleLaborComplete = async (item: LaborItem) => {
     if (!order) return;
     setBusy(true);
+    const markDone = !item.completado_en;
     try {
-      await workOrdersService.setLaborCompleted(item.id, !item.completado_en);
+      await workOrdersService.setLaborCompleted(item.id, markDone);
       // Sin recargar el tablero: no cambian totales ni estado de la orden.
       await refresh(false);
+      if (markDone) {
+        showToast('success', t('tasks.markedDone'));
+      }
     } catch (err) {
       fail(err);
     } finally {

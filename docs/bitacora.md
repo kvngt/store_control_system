@@ -35,6 +35,7 @@
 | Revisión 30/10–03/11 | Revisión completa del proyecto con seguimiento de las órdenes reales: ~30 errores de la app arreglados, migración `040` (traducciones, grupo «sin nada autorizado», fotos de una inspección publicada, indicadores, sticker, reloj), `delete-employee` más estricto, zona horaria de Maryland por defecto, `/ayuda` sin 403, documentación y Ayuda al día | **Publicado** el 04/11/2026: commits `259cd1f` y `c3a31d7` en `main`, `db push` de la `040`, `delete-employee` v13 y `process-outbox` v20 (lo hizo la persona responsable). Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
 | Decisiones 04/11 | El técnico no empieza ni termina sin nada autorizado; una orden entregada se archiva, no se borra (migración `041`); el correo del presupuesto espera a la traducción; subidas rechazadas con un motivo claro; la página no muestra el cobro del diagnóstico; se borró el video original; `config.toml` para la CLI 3 | **Publicado** el 04/11/2026: `db push` de la `041` (95 migraciones), `process-outbox` v21 y push a `main`. Ver la [bitácora](#04112026--claude-code-decisiones-del-dueño-migración-041-y-cli-3) |
 | «Atrás» 04/11 | El botón «atrás» del teléfono ya no hace perder lo que el técnico escribe o graba: avance de una tarea, trabajo adicional, pestaña Avances, nota de un punto, grabadores, visor y próximo servicio; trampa del historial en pila; arreglos del alta | **Publicado** el 04/11/2026 (push a `main`; sin migración ni funciones). Falta probarlo en un Android real. Ver la [bitácora](#04112026-tarde--claude-code-el-botón-atrás-en-lo-que-el-técnico-escribe-o-graba) |
+| Etapa 1 (calidad, una sola sede) 16–17/11 | Recorrido de calidad Q1 (35 hallazgos), módulos apagados para este taller (Q3), tanda 0 (el técnico termina su orden, `046`), tanda 1 (datos sucios en la recepción, `047`) y tanda 4 (lo que ve el cliente) de [q2-prioridades.md](ordenes/q2-prioridades.md) | **Publicado** el 17/11/2026: `db push` de la `046` y la `047` (101 migraciones, todas las del repositorio) y push a `main` (`ca31f3b`; el sitio sirve `index-BoqMoWD7.js`). Las tandas 2 y 3 se publicaron el 24/11 (push a `main`, sin migraciones). Siguen Q4 y Q5: ver la [bitácora](#24112026--claude-code-dirige-gemini-4-hydrogen-programa-traspaso-y-tanda-2) |
 | Plan 16/11 | Lo pendiente después de la auditoría: publicar el sitio, CI completo, `qa:security` en local, e2e que faltan, sobras de la auditoría y, después, tablero por etapas, citas y recordatorios. Stripe y SMS, pendientes a propósito | **Fases 0 a 2 hechas y publicadas el 16/11/2026** (migración `045` incluida). Sigue la etapa 1 del [plan de arquitectura](plan-arquitectura-2026-11.md): calidad comercial en una sola sede. Lista de control en la [bitácora](#16112026--claude-code-dirige-gemini-4-hydrogen-programa-plan-de-acción-de-lo-pendiente) |
 | Calidad 15/11 | Cheque y comprobante en una sola regla (también en el alta), inglés de correos y portal, tipos de la app comprobados contra la base, edge functions sin código repetido, los siete archivos grandes partidos, e2e contra la base local (77/77) | **Publicado** el 15/11/2026: `db push` de la `043` y la `044` (98 migraciones), `functions deploy` de las siete (`portal` v11, `process-outbox` v22, `cleanup-storage` v9, `create-employee` v14, `update-employee` v12, `delete-employee` v14, `traducir-texto` v2), push a `main` (commit `a4dfaac`) y `qa:security` contra producción (178 PASS, 0 FAIL, 31 SKIP). **El sitio web NO se actualizó:** Hostinger perdió el acceso de Git al repositorio y sigue en el build del 07/11. Ver la [bitácora](#15112026-noche--claude-code-publicación-de-la-auditoría-y-documentación-al-día) |
 | Auditoría (2) 14–15/11 | Lo que quedó abierto: diálogo común accesible, migración `044`, fachada retirada, pruebas y arreglos de las edge functions, botones de 44 px e inglés de EE. UU. | **Publicado** el 15/11/2026: `db push` de la `043` y la `044` (98 migraciones), `functions deploy` de las siete (`portal` v11, `process-outbox` v22, `cleanup-storage` v9, `create-employee` v14, `update-employee` v12, `delete-employee` v14, `traducir-texto` v2), push a `main` (commit `a4dfaac`) y `qa:security` contra producción (178 PASS, 0 FAIL, 31 SKIP). **El sitio web NO se actualizó:** Hostinger perdió el acceso de Git al repositorio y sigue en el build del 07/11. Ver la [bitácora](#15112026-noche--claude-code-publicación-de-la-auditoría-y-documentación-al-día) |
@@ -60,6 +61,93 @@ al día aparte.
 
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
+
+### 24/11/2026 — Claude Code dirige, Gemini 4 Hydrogen programa (traspaso y tanda 2)
+
+**Dónde estamos.** La etapa 1 del [plan de arquitectura](plan-arquitectura-2026-11.md) (calidad comercial
+en una sola sede) va por la mitad. Lo publicado el 17/11/2026, a pedido de la persona responsable:
+- **Base:** `db push` de la `046` y la `047`. Producción tiene las 101 migraciones del repositorio.
+- **App:** commit `ca31f3b` en `main`. Hostinger sirve el build `index-BoqMoWD7.js`.
+- **Qué entró:** los módulos apagados (Q3, `.env.production`), la tanda 1 (recepción) y la tanda 4 (lo que
+  ve el cliente).
+
+No quedó nada sin commit. La copia de Hydrogen (`../restorify-hydrogen`, rama `hydrogen`) tenía una versión
+vieja de lo ya publicado: se igualó a `main` el 24/11 sin perder nada.
+
+**Cómo se trabaja** (para quien releve):
+- El arquitecto (Claude) escribe el diseño y revisa.
+- Gemini 4 Hydrogen programa en su copia.
+- Un agente Sonnet hace de **jefe de obra** y lleva cada orden de principio a fin según
+  [ordenes/README.md](ordenes/README.md): iguala la copia, manda a Hydrogen, trae la entrega, verifica,
+  corrige lo chico y escribe el informe `docs/ordenes/<orden>-informe.md`.
+- Un solo jefe de obra a la vez: comparten la base local y los puertos.
+
+**Qué sigue, en orden** (diseño ya decidido en [q2-prioridades.md](ordenes/q2-prioridades.md)):
+
+**Publicadas el 24/11/2026 las tandas 2 y 3 juntas**, a pedido de la persona responsable, con un push a `main`
+sin `db push` (no tienen migraciones). El arquitecto verificó el árbol final antes de subirlo: lint, `tsc -b`,
+Vitest 1.385 de 1.385 y build contra la base local. **Lo que sigue:** Q4 (PDF, correos, enlace y sticker),
+Q5 («un día en el taller» y datos de ejemplo) y las sobras de abajo; en la tanda 3 quedaron:
+- 22 claves con «(s)» en `translations.ts`;
+- el cuerpo en español del aviso «Trabajos autorizados», que necesita una migración;
+- pasar a 390 px por Parqueo, Catálogo y Nómina.
+
+1. **Tanda 2 — un solo camino claro en la orden: HECHA y publicada el 24/11.** Informe:
+   [ordenes/q2-tanda2-informe.md](ordenes/q2-tanda2-informe.md) (lint, `tsc -b` y build limpios; Vitest 1.366 de 1.366;
+   e2e local 86 de 86; recorrido a 1366 y 390 px 19/19 y 21/21). Los cambios están en el árbol principal sin
+   commit (44 archivos, sin migraciones). Dudas del informe, resueltas por el arquitecto (24/11):
+   - **«Por autorizar»** sale solo si hay alguna línea `borrador` o `pendiente` y ninguna `aprobado`; una orden
+     sin ninguna línea no la lleva (`queries.ts`).
+   - **«Revisar tareas»** que cambia de pestaña en escritorio se queda como está.
+   - **Una orden firmada, toda autorizada y en proceso** se queda sin botón principal de administración, a
+     propósito: no hay nada que la oficina tenga que hacer.
+   - **Los dos embebidos de estados de línea en la lista** se aceptan. Si la lista crece, pasarán a un campo
+     calculado en la base.
+   **Siguiente paso:** la persona responsable pide el commit; al ser solo interfaz, publicar es un
+   push a `main` sin `db push`. Después, la tanda 3. Con la tanda 2 ya no abre solo lo que tocaba: la e2e `qa-tecnico`
+   espera «Tareas» abierta para el técnico.
+2. **Tanda 3 — se toca y se lee bien: HECHA y publicada el 24/11.** Informe:
+   [ordenes/q2-tanda3-informe.md](ordenes/q2-tanda3-informe.md) (lint y `tsc -b` limpios; Vitest 1.385 de 1.385;
+   build limpio; e2e local 86 de 86; recorrido a 390 y 1366 px con las medidas de área táctil). Los cambios están en
+   el árbol principal sin commit, encima de los de la tanda 2 (sin migraciones; solo interfaz, así que publicar es
+   un push a `main` sin `db push`). Incluye las cuatro sobras: «planilla» de Finanzas como «Pagos al personal» con
+   comisiones apagado, «Nuevo Cliente» a la vista con el buscador abierto, `EmailPreference` con el diálogo del
+   portal y los «(s)» del panel de autorización. **Siguiente paso:** la persona responsable pide el commit de las
+   tandas 2 y 3 (un solo commit o dos). Dudas abiertas del informe:
+   - el cuerpo del aviso «Trabajos autorizados» lo arma la base en español: necesita una migración (la siguiente
+     después de la `047`);
+   - quedan 22 claves con «(s)» en `translations.ts` (comisiones, tareas, cotizaciones, notificaciones, Nómina, correos);
+   - `.btn` mide 44 px en todo el teléfono: falta pasar por Parqueo, Catálogo y Nómina a 390 px;
+   - en escritorio con ratón no se agrandó nada (solo la X de los diálogos), a propósito.
+3. **Q4:** PDF, correos, enlace y sticker. **Q5:** la prueba «un día en el taller» y datos de ejemplo
+   ([plan](plan-arquitectura-2026-11.md)).
+4. **Sobras abiertas:**
+   - la Ayuda (`manual-usuario.md` y `.en.md`) sigue explicando los módulos apagados (lista en
+     [q3-informe.md](ordenes/q3-informe.md) §3);
+   - repetir las e2e con `--repeat-each=3` con la máquina libre.
+
+**Lecciones de esta etapa:**
+- `vite build` sin `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` del stack local toma `.env.local`, que es
+  el proyecto real. El 17/11, un build de prueba intentó 2 o 3 inicios de sesión `@qa.local` contra el Auth
+  real; fallaron y no escribieron nada. **Todo preview se compila con las variables locales en el entorno.**
+- `.env.production` solo lleva `VITE_MODULOS_APAGADOS` y **va en el repositorio**: Hostinger lo usa.
+- Con los datos de demostración, `test:db` falla en 19, 23, 27, 30 y 41. En una base limpia (`db reset`,
+  respaldando antes) pasa entera: 51 archivos y 1.219 aserciones.
+- Con el módulo de comisiones apagado, la base sigue generando comisiones sugeridas y `_balance_orden` las
+  resta del margen. Por eso la comisión se esconde en Finanzas solo cuando vale cero.
+- Hydrogen se cuelga sin avisar si se cae la red. Revisa la hora de sus archivos y relánzalo con una orden
+  de continuación.
+
+**Falta comprobar en vivo (lo hace la persona responsable o un agente con una cuenta):**
+- que `/panel` no muestra «Comisiones» ni «Mis comisiones»;
+- que el técnico puede terminar una orden autorizada.
+
+**Por confirmar con el taller:**
+- los teléfonos que salen en un enlace inválido (`landing/business.ts`);
+- los dígitos de teléfono de Colombia y Venezuela;
+- las decisiones abiertas de [pagos-a-empleados.md](pagos-a-empleados.md).
+
+Pendientes a propósito: Stripe, SMS, acceso del técnico con QR, medición de uso y módulos por sede.
 
 ### 16/11/2026 — Claude Code dirige, Gemini 4 Hydrogen programa (plan de acción de lo pendiente)
 

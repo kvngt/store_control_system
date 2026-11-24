@@ -54,9 +54,23 @@ function renderLog(overrides: Partial<Parameters<typeof ProgressLog>[0]> = {}) {
 }
 
 describe('ProgressLog', () => {
-  it('no deja enviar un avance vacío', () => {
-    renderLog();
-    expect(screen.getByRole('button', { name: /Agregar Avance/i })).toBeDisabled();
+  it('mantiene el botón activo y al enviar vacío avisa qué falta, enfoca y marca aria-invalid (B-08)', async () => {
+    const props = renderLog();
+    const user = userEvent.setup();
+    const submit = screen.getByRole('button', { name: /Agregar Avance/i });
+    const textarea = screen.getByPlaceholderText(/Describe el trabajo realizado/i);
+
+    expect(submit).toBeEnabled();
+    await user.click(submit);
+
+    expect(props.onAdd).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Escribe qué se hizo o agrega una foto o video.');
+    expect(textarea).toHaveAttribute('aria-invalid', 'true');
+    expect(textarea).toHaveFocus();
+
+    await user.type(textarea, 'Alineado');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(textarea).not.toHaveAttribute('aria-invalid');
   });
 
   it('acepta un avance que es solo una nota de voz, sin texto', async () => {

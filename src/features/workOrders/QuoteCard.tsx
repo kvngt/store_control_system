@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, FileSignature, RotateCcw, Send, XCircle } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
@@ -47,11 +47,12 @@ function linesOf(order: WorkOrder): QuoteLine[] {
  * Nada aquí aprueba una línea con un UPDATE: enviar, registrar y cancelar son
  * funciones de la base que dejan evidencia de quién respondió, cómo y cuándo.
  */
-export default function QuoteCard({ order }: { order: WorkOrder }) {
+export default function QuoteCard({ order, registerRequest = 0 }: { order: WorkOrder; registerRequest?: number }) {
   const { t, language } = useLanguage();
   const { showToast } = useToast();
   const [busy, setBusy] = useState(false);
   const [registering, setRegistering] = useState(false);
+  const lastRegisterRequest = useRef(0);
   const { sending, sendQuote, refreshOrderQueries } = useQuoteSend(order);
   const isBusy = busy || sending;
 
@@ -63,6 +64,13 @@ export default function QuoteCard({ order }: { order: WorkOrder }) {
   const lines = useMemo(() => linesOf(order), [order]);
   const drafts = lines.filter((l) => l.estado === 'borrador');
   const pending = lines.filter((l) => l.estado === 'pendiente');
+
+  useEffect(() => {
+    if (registerRequest > lastRegisterRequest.current && (drafts.length > 0 || pending.length > 0)) {
+      lastRegisterRequest.current = registerRequest;
+      setRegistering(true);
+    }
+  }, [registerRequest, drafts.length, pending.length]);
   const quotes = quotesQuery.data ?? [];
   const open = quotes.find((q) => q.estado === 'enviado') ?? null;
   const shareUrl = useQuoteShareUrl(order, Boolean(open));
@@ -89,7 +97,7 @@ export default function QuoteCard({ order }: { order: WorkOrder }) {
     }, 'quotes.cancelError');
   };
 
-  if (!open && drafts.length === 0 && history.length === 0) return null;
+  if (!open && drafts.length === 0 && pending.length === 0 && history.length === 0) return null;
 
   return (
     <div className="card quote-card" style={{ marginTop: 'var(--space-4)' }}>
@@ -109,7 +117,7 @@ export default function QuoteCard({ order }: { order: WorkOrder }) {
           </p>
           {drafts.length > 0 && <p>{t('quotes.openDraftsHint').replace('{count}', String(drafts.length))}</p>}
           <div className="quote-actions">
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => setRegistering(true)} disabled={isBusy}>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRegistering(true)} disabled={isBusy}>
               <CheckCircle2 size={14} /> {t('quotes.register')}
             </button>
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => void sendQuote()} disabled={isBusy}>
@@ -129,7 +137,7 @@ export default function QuoteCard({ order }: { order: WorkOrder }) {
             {t('quotes.draftsHint').replace('{count}', String(drafts.length)).replace('{total}', money(sum(drafts)))}
           </p>
           <div className="quote-actions">
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => void sendQuote()} disabled={isBusy}>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => void sendQuote()} disabled={isBusy}>
               <Send size={14} /> {t('quotes.send')}
             </button>
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRegistering(true)} disabled={isBusy}>
@@ -322,7 +330,7 @@ function AuthorizationModal({
                 const isJobSelected = group.lines.length > 0 && group.lines.every((l) => approved.has(l.id));
                 return (
                   <li key={`job-${group.job.id}`}>
-                    <label className="checkbox-row">
+                    <label className="checkbox-row checkbox-touch">
                       <input
                         type="checkbox"
                         checked={isJobSelected}
@@ -354,7 +362,7 @@ function AuthorizationModal({
               const line = group.line;
               return (
                 <li key={line.id}>
-                  <label className="checkbox-row">
+                  <label className="checkbox-row checkbox-touch">
                     <input type="checkbox" checked={approved.has(line.id)} onChange={() => toggleLine(line.id)} />
                     <span className="quote-line-desc">
                       {line.descripcion}

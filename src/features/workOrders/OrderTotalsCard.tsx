@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { HandCoins, Percent, X } from 'lucide-react';
 import { moduloActivo } from '../../config/modulos';
@@ -45,6 +45,8 @@ export default function OrderTotalsCard({ order, amounts, parkingAmount, canDisc
   const [draft, setDraft] = useState('');
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
+  const [discountError, setDiscountError] = useState('');
+  const discountRef = useRef<HTMLInputElement>(null);
 
   // Lo recibido cambia con cada movimiento en Finanzas: la cuenta de este momento.
   const balanceQuery = useQuery({
@@ -59,6 +61,7 @@ export default function OrderTotalsCard({ order, amounts, parkingAmount, canDisc
     setMode('monto');
     setDraft(descuento > 0 ? String(descuento) : '');
     setReason(amounts.descuento_motivo ?? '');
+    setDiscountError('');
     setEditing(true);
   };
 
@@ -153,6 +156,7 @@ export default function OrderTotalsCard({ order, amounts, parkingAmount, canDisc
                   onClick={() => {
                     setMode(m);
                     setDraft('');
+                    setDiscountError('');
                   }}
                 >
                   {m === 'monto' ? t('discount.inDollars') : t('discount.inPercent')}
@@ -163,6 +167,7 @@ export default function OrderTotalsCard({ order, amounts, parkingAmount, canDisc
               {mode === 'monto' ? t('discount.amount') : t('discount.percent')}
             </label>
             <input
+              ref={discountRef}
               id="discount-amount"
               className="form-input"
               type="number"
@@ -171,8 +176,13 @@ export default function OrderTotalsCard({ order, amounts, parkingAmount, canDisc
               max={mode === 'porcentaje' ? 100 : undefined}
               step="0.01"
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                if (discountError) setDiscountError('');
+              }}
+              aria-invalid={!!discountError || undefined}
             />
+            {discountError && <p className="task-editor-error" role="alert">{discountError}</p>}
             <label className="form-label" htmlFor="discount-reason">{t('discount.reason')}</label>
             <input
               id="discount-reason"
@@ -186,8 +196,16 @@ export default function OrderTotalsCard({ order, amounts, parkingAmount, canDisc
               <button
                 type="button"
                 className="btn btn-primary btn-sm"
-                disabled={saving || !valid}
-                onClick={() => void save(mode === 'monto' ? { monto: parsed } : { porcentaje: parsed })}
+                disabled={saving}
+                onClick={() => {
+                  if (!valid) {
+                    setDiscountError(t('discount.amountRequired'));
+                    discountRef.current?.focus();
+                    return;
+                  }
+                  setDiscountError('');
+                  void save(mode === 'monto' ? { monto: parsed } : { porcentaje: parsed });
+                }}
               >
                 {saving ? t('common.loading') : t('discount.apply')}
               </button>

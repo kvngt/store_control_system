@@ -381,5 +381,43 @@ describe('Archivar desde el tablero', () => {
       expect(spy).toHaveBeenCalledWith(expect.anything(), { orderId: listo.id, sedeId: SEDE_CENTRO.id })
     );
   });
+
+  it('A-11: muestra insignia "Por autorizar" al admin pero no al técnico', async () => {
+    const quoted = order({ id: 'ord-auth', numero_orden: 'ORD-2026-AUTH', por_autorizar: true });
+    mocks.getWorkOrders.mockResolvedValue([quoted]);
+
+    mocks.auth.current = authValue(ADMIN_USER);
+    const { unmount } = renderWithProviders(<KanbanBoard />);
+    expect(await screen.findByText('ORD-2026-AUTH')).toBeInTheDocument();
+    expect(screen.getByText('Por autorizar')).toBeInTheDocument();
+    unmount();
+
+    mocks.auth.current = authValue(MECHANIC_USER);
+    renderWithProviders(<KanbanBoard />);
+    expect(await screen.findByText('ORD-2026-AUTH')).toBeInTheDocument();
+    expect(screen.queryByText('Por autorizar')).not.toBeInTheDocument();
+  });
+
+  it('A-06: cuando hay sobrecupo muestra carros · lugares (sobrecupo) en --color-warning y barra al 100%', async () => {
+    const activeOrders = Array.from({ length: 12 }, (_, idx) =>
+      order({ id: `ord-cap-${idx}`, numero_orden: `ORD-CAP-${idx + 1}`, estatus: 'en_proceso' })
+    );
+    mocks.auth.current = authValue(ADMIN_USER, { ...SEDE_CENTRO, capacidad: 10 });
+    mocks.getWorkOrders.mockResolvedValue(activeOrders);
+
+    renderWithProviders(<KanbanBoard />);
+    const overText = await screen.findByText('12 carros · 10 lugares (sobrecupo)');
+    expect(overText).toHaveStyle({ color: 'var(--color-warning)' });
+    expect(screen.getByText('100%')).toHaveStyle({ color: 'var(--color-warning)' });
+  });
+
+  it('A-06: sin sobrecupo conserva el texto y los colores habituales', async () => {
+    mocks.auth.current = authValue(ADMIN_USER, { ...SEDE_CENTRO, capacidad: 10 });
+    mocks.getWorkOrders.mockResolvedValue([MINE]);
+
+    renderWithProviders(<KanbanBoard />);
+    expect(await screen.findByText(/Ocupación del taller: 1\/10 \(10%\)/)).toBeInTheDocument();
+    expect(screen.queryByText(/sobrecupo/i)).not.toBeInTheDocument();
+  });
 });
 

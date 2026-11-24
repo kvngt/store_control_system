@@ -267,4 +267,19 @@ describe('WorkOrderCreateModal - Assistant (Wizard)', () => {
       clearTimeoutSpy.mockRestore();
     }
   });
+
+  it('mantiene el botón "Nuevo Cliente" fuera de la lista desplegable del buscador (paso 1)', async () => {
+    const user = userEvent.setup();
+    renderModal();
+
+    const search = document.getElementById('intake-customer-search') as HTMLInputElement;
+    await user.click(search);
+
+    const menu = document.querySelector('.intake-picker-row .combo-menu');
+    const newBtn = document.getElementById('intake-new-customer');
+    expect(menu).not.toBeNull();
+    expect(newBtn).not.toBeNull();
+    expect(menu!.contains(newBtn!)).toBe(false);
+    expect(newBtn!.closest('.intake-picker-row')).toBe(menu!.closest('.intake-picker-row'));
+  });
 });

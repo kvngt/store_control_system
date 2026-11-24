@@ -476,7 +476,7 @@ Cada viñeta es una regla; el porqué, las fechas y los incidentes están en el 
    `supabase/migrations/AAAAMMDDHHMMSS_descripcion.sql`. Nunca edites una migración
    ya aplicada ni cambies tablas desde el panel. **El nombre va después de la última
    migración, no de la fecha de hoy:** hay migraciones aplicadas con fecha futura (hoy la
-   última es `20261010000047`; en producción siguen aplicadas 99, hasta la `045`, y la `046` y la `047` esperan su `db push`), y una con fecha anterior a la última aplicada no entra con
+   última es `20261010000047`; las 101 están aplicadas en producción; la `046` y la `047`, el 17/11/2026), y una con fecha anterior a la última aplicada no entra con
    `db push` ([evaluacion-2026-10.md](historico/evaluacion-2026-10.md#4-base-de-datos), B-1).
    Después de cada migración, regenera `src/types/supabase.gen.ts` con `npm run db:types` (`schema.contract.ts` verifica en compilación que los tipos de dominio no se desalineen) y `supabase/schema/actual.sql` con `npm run db:schema`.
 2. **Una función nueva en `public` es una RPC pública.** Postgres da `EXECUTE` a

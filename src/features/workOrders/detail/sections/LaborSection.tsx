@@ -14,6 +14,7 @@ interface LaborSectionProps {
   isAdmin: boolean;
   prefill: LaborPrefill | null;
   sectionProps: SectionStateProps;
+  openAddRequest?: number;
 }
 
 export default function LaborSection({
@@ -22,6 +23,7 @@ export default function LaborSection({
   isAdmin,
   prefill,
   sectionProps,
+  openAddRequest = 0,
 }: LaborSectionProps) {
   const { t } = useLanguage();
   const assignments = order.asignaciones || [];
@@ -61,6 +63,7 @@ export default function LaborSection({
         lockedIds={detail.lockedLaborIds}
         paidPools={detail.paidPools}
         prefill={prefill}
+        openAddRequest={openAddRequest}
         // Un trabajo que agrega administración: el único técnico de la orden, o nadie si hay
         // varios, para que se elija a quién va (06/10/2026).
         suggestedTechnicianId={suggestedTechnicianId(assignments.map((a) => a.usuario_id), detail.technicians)}

@@ -79,6 +79,8 @@ export interface WorkOrder {
   esperando_autorizacion?: boolean;
   /** Hay una pieza pedida que no ha llegado (`ordenes_esperando_repuestos`). */
   esperando_repuestos?: boolean;
+  /** Ninguna línea autorizada aún (y sin entregar): en la lista muestra «Por autorizar» en vez de $0.00. */
+  por_autorizar?: boolean;
   /** Trabajo adicional que reportó el taller (F6). Lo leen admin y los técnicos de la orden. */
   hallazgos?: OrderFinding[];
   /** Trabajos agrupados de la orden (Fase H/I). */

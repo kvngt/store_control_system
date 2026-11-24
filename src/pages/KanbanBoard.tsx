@@ -15,6 +15,7 @@ import { orderDueState, type DueState } from '../lib/orderDue';
 import { formatDay } from '../lib/dates';
 import { orderStatusKey, workTypeKey } from '../lib/workType';
 import { matchesOrderSearch } from '../features/workOrders/orderSearch';
+import { formatOverCapacity } from '../features/workOrders/occupancy';
 import { Archive, Calendar, Gauge } from 'lucide-react';
 
 /**
@@ -238,43 +239,66 @@ export default function KanbanBoard({ embedded = false, search = '', onOpen }: K
   };
 
   const capacity = currentSede?.capacidad ?? DEFAULT_CAPACITY;
+  const isOverCapacity = totalActive > capacity;
   const occupancy = Math.min(100, Math.round((totalActive / capacity) * 100));
 
   if (loading) {
     return <div className="loading-state"><div className="spinner" /></div>;
   }
 
-  const occupancyText = `${t('kanban.occupancy')}: ${totalActive}/${capacity} (${occupancy}%)`;
+  const occupancyText = isOverCapacity
+    ? formatOverCapacity(totalActive, capacity, t)
+    : `${t('kanban.occupancy')}: ${totalActive}/${capacity} (${occupancy}%)`;
+  const occupancySubtitleStyle = isOverCapacity ? { color: 'var(--color-warning)' } : undefined;
 
   return (
     <div>
       <div className={embedded ? 'kanban-occupancy' : 'page-header'}>
         <div>
           {embedded ? (
-            <p className="page-subtitle">{occupancyText}</p>
+            <p className="page-subtitle" style={occupancySubtitleStyle}>{occupancyText}</p>
           ) : (
             <>
               <h1 className="page-title">{t('kanban.title')}</h1>
-              <p className="page-subtitle">{occupancyText}</p>
+              <p className="page-subtitle" style={occupancySubtitleStyle}>{occupancyText}</p>
             </>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-          <Gauge size={18} style={{ color: occupancy > 80 ? 'var(--color-danger)' : 'var(--color-primary-light)' }} />
+          <Gauge
+            size={18}
+            style={{
+              color: isOverCapacity
+                ? 'var(--color-warning)'
+                : occupancy > 80
+                  ? 'var(--color-danger)'
+                  : 'var(--color-primary-light)',
+            }}
+          />
           <div className="progress-bar" style={{ width: 120, height: 8 }}>
             <div
               style={{
                 width: `${occupancy}%`,
                 height: '100%',
                 borderRadius: 'inherit',
-                background: occupancy > 80
-                  ? 'linear-gradient(90deg, #EF4444, #F87171)'
-                  : undefined,
+                background: isOverCapacity
+                  ? 'var(--color-warning)'
+                  : occupancy > 80
+                    ? 'var(--color-danger)'
+                    : undefined,
               }}
-              className={occupancy > 80 ? '' : 'progress-fill'}
+              className={isOverCapacity || occupancy > 80 ? '' : 'progress-fill'}
             ></div>
           </div>
-          <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>{occupancy}%</span>
+          <span
+            style={{
+              fontSize: 'var(--font-size-sm)',
+              fontWeight: 600,
+              color: isOverCapacity ? 'var(--color-warning)' : undefined,
+            }}
+          >
+            {occupancy}%
+          </span>
         </div>
       </div>
 
@@ -325,6 +349,9 @@ export default function KanbanBoard({ embedded = false, search = '', onOpen }: K
                           </button>
                         ) : (
                           <span className="kanban-card-order">{order.numero_orden}</span>
+                        )}
+                        {isAdmin && order.por_autorizar && (
+                          <span className="badge badge-waiting-auth" style={{ fontSize: '10px' }}>{t('workOrders.toAuthorizeBadge')}</span>
                         )}
                         {order.esperando_autorizacion && (
                           <span className="badge badge-waiting-auth" style={{ fontSize: '10px' }}>{t('quotes.waitingBadge')}</span>

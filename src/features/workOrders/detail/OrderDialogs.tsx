@@ -4,6 +4,7 @@ import { useToast } from '../../../context/toast.context';
 import { nextServiceService } from '../../../services/nextService.service';
 import { queryKeys } from '../../../lib/queryClient';
 import { getErrorMessage } from '../../../lib/errors';
+import ChoiceDialog from '../../../components/ChoiceDialog';
 import type { NextServiceInput, Sede, WorkOrder } from '../../../types/database';
 import type { WorkOrderDetailApi } from '../useWorkOrderDetail';
 import { isApproved } from '../lineState';
@@ -29,6 +30,7 @@ interface OrderDialogsProps {
   onCloseInsuranceModal: () => void;
   stickerModal: StickerModalState;
   onCloseStickerModal: () => void;
+  onReviewTasks: () => void;
 }
 
 export default function OrderDialogs({
@@ -41,6 +43,7 @@ export default function OrderDialogs({
   onCloseInsuranceModal,
   stickerModal,
   onCloseStickerModal,
+  onReviewTasks,
 }: OrderDialogsProps) {
   const { t, language } = useLanguage();
   const { showToast } = useToast();
@@ -199,6 +202,35 @@ export default function OrderDialogs({
           onSaveAndPrint={isAdmin ? handleSaveAndPrintNextService : undefined}
           onSuggest={!isAdmin ? handleSuggestNextService : undefined}
           onClose={onCloseStickerModal}
+        />
+      )}
+
+      {detail.finishConfirmCount != null && detail.finishConfirmCount > 0 && (
+        <ChoiceDialog
+          title={
+            detail.finishConfirmCount === 1
+              ? t('workOrders.finishUnmarkedTitleOne')
+              : t('workOrders.finishUnmarkedTitleMany').replace('{n}', String(detail.finishConfirmCount))
+          }
+          body={t('workOrders.finishUnmarkedBody')}
+          onDismiss={detail.cancelFinishConfirm}
+          actions={[
+            {
+              label: t('workOrders.reviewTasks'),
+              variant: 'primary',
+              onClick: () => {
+                detail.cancelFinishConfirm();
+                onReviewTasks();
+              },
+            },
+            {
+              label: t('workOrders.finishAnyway'),
+              variant: 'secondary',
+              onClick: () => {
+                void detail.confirmFinish();
+              },
+            },
+          ]}
         />
       )}
     </>

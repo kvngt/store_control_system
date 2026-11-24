@@ -8,15 +8,16 @@ import type { SectionStateProps } from '../detailTypes';
 interface QuoteSectionProps {
   order: WorkOrder;
   sectionProps: SectionStateProps;
+  registerRequest?: number;
 }
 
-export default function QuoteSection({ order, sectionProps }: QuoteSectionProps) {
+export default function QuoteSection({ order, sectionProps, registerRequest = 0 }: QuoteSectionProps) {
   const { t } = useLanguage();
 
   // Presupuesto: lo que falta autorizar y lo que espera al cliente. Solo admin.
   return (
     <CollapsibleSection {...sectionProps} title={t('quotes.title')} icon={<FileSignature size={18} />}>
-      <QuoteCard order={order} />
+      <QuoteCard order={order} registerRequest={registerRequest} />
     </CollapsibleSection>
   );
 }

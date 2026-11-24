@@ -6,20 +6,25 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import { renderWithProviders, authValue, ADMIN_USER } from '../test/renderWithProviders';
+import { renderWithProviders, authValue, ADMIN_USER, MECHANIC_USER, SEDE_CENTRO } from '../test/renderWithProviders';
 import type { WorkOrder } from '../types/database';
 import { daysFromTodayLocal } from '../lib/dates';
 
 const mocks = vi.hoisted(() => ({
   auth: { current: null as ReturnType<typeof import('../test/renderWithProviders').authValue> | null },
   getWorkOrders: vi.fn(),
+  getMyTasks: vi.fn(),
   getDashboardStats: vi.fn(),
   getAttention: vi.fn(),
 }));
 
 vi.mock('../context/auth.context', () => ({ useAuth: () => mocks.auth.current }));
 vi.mock('../services/workOrders.service', () => ({
-  workOrdersService: { getWorkOrders: mocks.getWorkOrders, subscribeToChanges: vi.fn(() => () => undefined) },
+  workOrdersService: {
+    getWorkOrders: mocks.getWorkOrders,
+    getMyTasks: mocks.getMyTasks,
+    subscribeToChanges: vi.fn(() => () => undefined),
+  },
 }));
 vi.mock('../services/dashboard.service', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../services/dashboard.service')>();
@@ -80,5 +85,36 @@ describe('Dashboard: alertas', () => {
 
     expect(await screen.findByText(/ORD-2026-02 · /)).toBeInTheDocument();
     expect(screen.queryByText(/ORD-2026-01 · /)).not.toBeInTheDocument();
+  });
+
+  it('B-12: el panel del técnico muestra Mis tareas y oculta Órdenes recientes', async () => {
+    mocks.auth.current = authValue(MECHANIC_USER);
+    mocks.getWorkOrders.mockResolvedValue([orden(1, 'en_proceso', 40)]);
+    mocks.getMyTasks.mockResolvedValue([]);
+    mocks.getDashboardStats.mockResolvedValue({
+      ordenes_activas: 1, ordenes_finalizadas_mes: 0, ingresos_mes: 0, egresos_mes: 0, ingresos_total: 0, egresos_total: 0,
+      clientes_nuevos_mes: 0, tasa_ocupacion: 0, ordenes_por_estatus: {}, ingresos_por_mes: [],
+    });
+    mocks.getAttention.mockResolvedValue({ total: 0, grupos: [] });
+
+    renderWithProviders(<Dashboard />);
+
+    expect(await screen.findByRole('region', { name: 'Mis tareas' })).toBeInTheDocument();
+    expect(screen.queryByText('Órdenes recientes')).not.toBeInTheDocument();
+  });
+
+  it('A-06: en sobrecupo la tarjeta de ocupación del admin muestra el aviso en --color-warning', async () => {
+    mocks.auth.current = authValue(ADMIN_USER, { ...SEDE_CENTRO, capacidad: 10 });
+    mocks.getWorkOrders.mockResolvedValue([]);
+    mocks.getDashboardStats.mockResolvedValue({
+      ordenes_activas: 33, ordenes_finalizadas_mes: 0, ingresos_mes: 0, egresos_mes: 0, ingresos_total: 0, egresos_total: 0,
+      clientes_nuevos_mes: 0, tasa_ocupacion: 100, ordenes_por_estatus: {}, ingresos_por_mes: [],
+    });
+    mocks.getAttention.mockResolvedValue({ total: 0, grupos: [] });
+
+    renderWithProviders(<Dashboard />);
+
+    const label = await screen.findByText('33 carros · 10 lugares (sobrecupo)');
+    expect(label).toHaveStyle({ color: 'var(--color-warning)' });
   });
 });

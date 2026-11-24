@@ -102,3 +102,34 @@ export function suggestedTechnicianFor(
   return null;
 }
 
+/**
+ * Conserva el orden inicial de las tareas al actualizar la orden (B-09):
+ * evita que una tarea recién marcada salte al final de la lista antes de recargar.
+ */
+export function mergeTaskOrder(
+  previousIds: readonly string[],
+  items: readonly Pick<LaborItem, 'id'>[]
+): string[] {
+  const currentIds = new Set(items.map((item) => item.id));
+  const kept = previousIds.filter((id) => currentIds.has(id));
+  const seen = new Set(kept);
+  for (const item of items) {
+    if (!seen.has(item.id)) {
+      kept.push(item.id);
+      seen.add(item.id);
+    }
+  }
+  return kept;
+}
+
+/** Ordena las tareas según la lista de ids fijada al cargar. */
+export function orderTasksByIds<T extends Pick<LaborItem, 'id'>>(
+  items: readonly T[],
+  orderedIds: readonly string[]
+): T[] {
+  const rank = new Map(orderedIds.map((id, index) => [id, index]));
+  return [...items].sort(
+    (a, b) => (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER)
+  );
+}
+

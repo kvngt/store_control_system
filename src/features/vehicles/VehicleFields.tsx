@@ -352,7 +352,7 @@ export default function VehicleFields({
 
       {/* Plate, checked against the issuing state. Auction units have none, so
           the whole block can be switched off. */}
-      <label className="checkbox-row" htmlFor="vehicle-no-plate">
+      <label className="checkbox-row checkbox-touch" htmlFor="vehicle-no-plate">
         <input
           type="checkbox"
           id="vehicle-no-plate"

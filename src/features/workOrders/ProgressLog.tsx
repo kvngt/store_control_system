@@ -102,14 +102,25 @@ export default function ProgressLog({
     [registerGuard, guard.requestLeave],
   );
 
+  const [error, setError] = useState('');
+  const noteRef = useRef<HTMLTextAreaElement>(null);
+
   const submit = async () => {
+    if (processing) {
+      setError(t('tasks.mediaProcessingWait'));
+      return;
+    }
+    if (note.trim().length === 0 && drafts.length === 0) {
+      setError(t('tasks.progressRequired'));
+      noteRef.current?.focus();
+      return;
+    }
+    setError('');
     if (await onAdd(note, drafts, undefined, taskId || undefined)) {
       setNote('');
       setDrafts([]);
     }
   };
-
-  const canSubmit = canEdit && !busy && !processing && (note.trim().length > 0 || drafts.length > 0);
 
   return (
     <div className="card" style={{ marginTop: 'var(--space-4)' }}>
@@ -121,14 +132,30 @@ export default function ProgressLog({
       {canEdit && (
         <div className="progress-entry-form">
           <textarea
+            ref={noteRef}
             className="form-input form-textarea"
             placeholder={t('workOrders.progressPlaceholder')}
             value={note}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={(e) => {
+              setNote(e.target.value);
+              if (error) setError('');
+            }}
             rows={2}
+            aria-invalid={!!error || undefined}
           />
+          {error && <p className="task-editor-error" role="alert">{error}</p>}
           <DraftMediaStrip items={drafts} onRemove={(index) => setDrafts((prev) => prev.filter((_, i) => i !== index))} />
-          <MediaCaptureBar onAdd={(items) => setDrafts((prev) => [...prev, ...items])} disabled={busy} onBusyChange={setProcessing} />
+          <MediaCaptureBar
+            onAdd={(items) => {
+              setDrafts((prev) => [...prev, ...items]);
+              if (error) setError('');
+            }}
+            disabled={busy}
+            onBusyChange={(isBusy) => {
+              setProcessing(isBusy);
+              if (!isBusy) setError((prev) => (prev === t('tasks.mediaProcessingWait') ? '' : prev));
+            }}
+          />
           {tasks.length > 0 && (
             <div className="form-group" style={{ marginTop: 'var(--space-2)', marginBottom: 0 }}>
               <label className="form-label" htmlFor="progress-task">{t('workOrders.progressTask')}</label>
@@ -142,7 +169,7 @@ export default function ProgressLog({
           )}
           <div className="progress-entry-submit">
             <p className="field-hint">{t('media.internalUntilPublished')}</p>
-            <button type="button" className="btn btn-primary btn-sm btn-touch" onClick={submit} disabled={!canSubmit}>
+            <button type="button" className="btn btn-primary btn-sm btn-touch" onClick={submit} disabled={!canEdit || busy}>
               <Plus size={16} /> {busy ? t('common.loading') : t('workOrders.addProgress')}
             </button>
           </div>

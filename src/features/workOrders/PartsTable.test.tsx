@@ -77,4 +77,35 @@ describe('PartsTable', () => {
     expect(desc).toHaveAttribute('aria-invalid', 'true');
     expect(await screen.findByText('Describe el repuesto.')).toBeInTheDocument();
   });
+
+  it('B-08: el botón Agregar no se apaga vacío y al pulsarlo avisa y enfoca', async () => {
+    const user = userEvent.setup();
+    const onAdd = vi.fn(async () => true);
+
+    renderWithProviders(
+      <PartsTable
+        items={PARTS}
+        canEdit
+        busy={false}
+        onAdd={onAdd}
+        onUpdate={vi.fn(async () => true)}
+        onRemove={vi.fn(async () => {})}
+      />
+    );
+
+    const addBtn = screen.getByRole('button', { name: 'Agregar' });
+    const desc = screen.getByRole('textbox', { name: 'Nuevo repuesto' });
+
+    expect(addBtn).toBeEnabled();
+    await user.click(addBtn);
+
+    expect(onAdd).not.toHaveBeenCalled();
+    expect(desc).toHaveAttribute('aria-invalid', 'true');
+    expect(desc).toHaveFocus();
+    expect(screen.getByRole('alert')).toHaveTextContent('Describe el repuesto.');
+
+    await user.type(desc, 'Bujías');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(desc).not.toHaveAttribute('aria-invalid');
+  });
 });

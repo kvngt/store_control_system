@@ -18,7 +18,7 @@ Actualizado el **16/11/2026** (las demás guías remiten aquí en vez de repetir
 | **Archivos fuente (TypeScript)** | 196 (al 19/10/2026) | `src/` excluyendo pruebas (aumentó tras la división modular del 15/11/2026; sin recontar) |
 | **Pruebas (Vitest)** | 186 archivos | 1.311 pruebas unitarias y de componentes (17/11/2026) |
 | **Pruebas de edge functions (Deno 2)** | 102 pruebas | `npm run test:functions` en `supabase/functions/` (16/11/2026) |
-| **Migraciones de base de datos** | 101 (99 en producción) | En `supabase/migrations/`, hasta `20261010000047_tecnico_avance_con_autorizacion` (`043` y `044` aplicadas en producción el 15/11/2026 y `045` el 16/11/2026; la `046` y la `047` esperan su `db push`; `npm run db:check`) |
+| **Migraciones de base de datos** | 101 (101 en producción) | En `supabase/migrations/`, hasta `20261010000047_tecnico_avance_con_autorizacion` (`043` y `044` aplicadas en producción el 15/11/2026 y `045` el 16/11/2026; la `046` y la `047` el 17/11/2026; `npm run db:check`) |
 | **Tablas de base de datos** | 30 al 11/10/2026 más las 9 tablas de las migraciones 029 a 039 | En `public` (`orden_proximo_servicio`, `catalogo_trabajos`, `catalogo_trabajo_lineas`, `orden_trabajos`, `inspeccion_plantillas`, `inspeccion_plantilla_puntos`, `orden_inspecciones`, `orden_inspeccion_puntos`, `orden_labor_tiempos`) |
 | **Funciones SQL** | 161 al 11/10/2026 (más las agregadas entre `029` y `047`) | En `public` (RPC, internas y de trigger); `npm run db:donde -- <nombre>` da la versión vigente de cada una |
 | **Triggers en `ordenes_trabajo`** | 24 al 11/10/2026 (más `029`–`041`, p. ej. `trg_marcas_danos_firmadas`, `trg_order_link_on_create`, `trg_a_orden_entregada_no_se_borra`) | La tabla con más lógica asociada |

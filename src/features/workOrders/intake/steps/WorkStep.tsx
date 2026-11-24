@@ -277,7 +277,7 @@ export default function WorkStep({
 
       {hasLines && (
         <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-          <label className="form-checkbox" style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)', cursor: 'pointer' }}>
+          <label className="form-checkbox checkbox-touch" style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)', cursor: 'pointer' }}>
             <input
               type="checkbox"
               id="order-authorized-at-intake"
@@ -302,7 +302,7 @@ export default function WorkStep({
       </div>
 
       <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-        <label className="form-checkbox" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer' }}>
+        <label className="form-checkbox checkbox-touch" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer' }}>
           <input
             type="checkbox"
             id="order-with-insurance"

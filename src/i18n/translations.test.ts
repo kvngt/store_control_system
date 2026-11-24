@@ -71,4 +71,18 @@ describe('translations', () => {
     expect(OMISIONES_A_PROPOSITO.es.filter((k) => !en.has(k))).toEqual([]);
     expect(OMISIONES_A_PROPOSITO.en.filter((k) => !es.has(k))).toEqual([]);
   });
+
+  it('A-13: restoreBody no deja doble punto cuando la fecha termina en "p.m."', () => {
+    const sampleDate = '12 nov, 6:18 p.m.';
+    expect(es.get('intake.restoreBody')!.replace('{fecha}', sampleDate)).not.toContain('..');
+    expect(en.get('intake.restoreBody')!.replace('{fecha}', sampleDate)).not.toContain('..');
+  });
+
+  it('B-11 y A-15: términos de tareas unificados y sin detalles técnicos en correos de configuración', () => {
+    expect(en.get('quickActions.myTasks')).toBe('My tasks');
+    expect(en.get('myTasks.title')).toBe('My tasks');
+    expect(en.get('notifications.types.presupuesto_respondido.title')).toBe('Jobs authorized · {numero_orden}');
+    expect(es.get('settings.emailOutbox.hint')).not.toMatch(/Resend|RESEND_API_KEY/i);
+    expect(en.get('settings.emailOutbox.hint')).not.toMatch(/Resend|RESEND_API_KEY/i);
+  });
 });

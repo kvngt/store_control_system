@@ -42,7 +42,7 @@ Para **por qué** está construido así: [radiografia.md](radiografia.md). Para
 | **Plan** | **Pro** desde el 30 de septiembre de 2026: respaldos diarios (Database → Backups). Los buckets siguen con 50 MB por archivo, que es lo que la app permite ([deployment.md §4.1](deployment.md#41-plan-y-límites-de-gasto)) |
 | **Postgres** | 17.6 |
 | **Tamaño de la base** | ~19 MB (29 de septiembre de 2026, recién limpiada) |
-| **Migraciones aplicadas** | 99 en producción al 16/11/2026 (hasta `20261010000045_egreso_de_comision_con_metodo`; la `043` y la `044` se aplicaron el 15/11/2026 y la `045` el 16/11/2026). El repositorio tiene 101: la `20261010000046_tecnico_termina_su_orden` y la `20261010000047_tecnico_avance_con_autorizacion` esperan su `db push`. `npm run db:check` dice si producción va al día |
+| **Migraciones aplicadas** | 101 en producción al 17/11/2026, todas las del repositorio (hasta `20261010000047_tecnico_avance_con_autorizacion`; la `043` y la `044` se aplicaron el 15/11/2026, la `045` el 16/11/2026, y la `046` y la `047` el 17/11/2026). `npm run db:check` dice si producción va al día |
 | **Max rows de la API** | 1.000 (valor por defecto; Project Settings → API). **No bajarlo**: `fetchAll` asume páginas de 1.000 |
 | **Enlace con este repositorio** | `supabase/.temp/project-ref` (lo crea `npx supabase link`) |
 | **Entornos** | Solo este proyecto remoto (no hay staging en la nube; las pruebas E2E de Playwright corren contra Supabase local con `npm run test:e2e:local`). Es la primera recomendación de [mantenimiento.md](mantenimiento.md#5-plan-priorizado) |
@@ -207,7 +207,7 @@ Qué hace cada trigger, por tabla: [arquitectura.md §5](arquitectura.md#5-dónd
 
 Viven en `supabase/migrations/` y se aplican con `npx supabase db push --linked`. **No se
 cambia el esquema desde el panel**: lo que no está en una migración no existe en otro
-entorno y lo borra el próximo `db reset`. Historia de las primeras 54 (hoy son 101 migraciones en el repositorio, hasta `20261010000047`; 99 aplicadas en producción, hasta la `045`):
+entorno y lo borra el próximo `db reset`. Historia de las primeras 54 (hoy son 101 migraciones en el repositorio, hasta `20261010000047`; las 101 aplicadas en producción):
 [evolucion.md §12](evolucion.md#12-todas-las-migraciones).
 
 Una función se reescribe entera en cada migración que la cambia. Para saber cuál es la

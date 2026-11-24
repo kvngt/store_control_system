@@ -208,7 +208,7 @@ export default function WithdrawalModal({ order, lines, onCancel, onDone }: With
                 <p className="field-hint">{t('withdrawal.noAuthorizedJobs')}</p>
               ) : (
                 lines.map((l) => (
-                  <label key={l.id} className="withdrawal-job">
+                  <label key={l.id} className="withdrawal-job checkbox-touch">
                     <input type="checkbox" checked={kept.has(l.id)} onChange={() => toggle(l.id)} disabled={saving} />
                     <span className="withdrawal-job-desc">
                       {l.descripcion}

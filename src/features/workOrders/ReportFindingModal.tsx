@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
 import type { PreparedMedia } from '../../types/database';
@@ -28,7 +28,8 @@ export default function ReportFindingModal({ saving, onCancel, onConfirm }: Repo
   const [texto, setTexto] = useState('');
   const [drafts, setDrafts] = useState<PreparedMedia[]>([]);
   const [processing, setProcessing] = useState(false);
-  const canSubmit = !saving && !processing && texto.trim().length > 0;
+  const [error, setError] = useState('');
+  const descRef = useRef<HTMLTextAreaElement>(null);
 
   // La X, «Cancelar», el fondo y el «atrás» de Android: con algo escrito o una foto, se pregunta.
   const guard = useDiscardGuard({
@@ -38,6 +39,20 @@ export default function ReportFindingModal({ saving, onCancel, onConfirm }: Repo
     title: t('findings.discardReportTitle'),
     body: t('findings.discardReportBody'),
   });
+
+  const handleConfirm = () => {
+    if (processing) {
+      setError(t('tasks.mediaProcessingWait'));
+      return;
+    }
+    if (!texto.trim()) {
+      setError(t('findings.reportRequired'));
+      descRef.current?.focus();
+      return;
+    }
+    setError('');
+    void onConfirm(texto.trim(), drafts);
+  };
 
   return (
     <>
@@ -59,8 +74,8 @@ export default function ReportFindingModal({ saving, onCancel, onConfirm }: Repo
             <button
               type="button"
               className="btn btn-primary"
-              onClick={() => void onConfirm(texto.trim(), drafts)}
-              disabled={!canSubmit}
+              onClick={handleConfirm}
+              disabled={saving}
             >
               {saving ? t('common.loading') : t('findings.reportConfirm')}
             </button>
@@ -73,22 +88,31 @@ export default function ReportFindingModal({ saving, onCancel, onConfirm }: Repo
             {t('findings.reportLabel')}
           </label>
           <textarea
+            ref={descRef}
             id="finding-description"
             className="form-input form-textarea"
             value={texto}
-            onChange={(e) => setTexto(e.target.value)}
+            onChange={(e) => {
+              setTexto(e.target.value);
+              if (error) setError('');
+            }}
             placeholder={t('findings.reportPlaceholder')}
             maxLength={MAX_TEXT}
             rows={4}
             disabled={saving}
+            aria-invalid={!!error || undefined}
             autoFocus
           />
+          {error && <p className="task-editor-error" role="alert">{error}</p>}
         </div>
         <DraftMediaStrip items={drafts} onRemove={(index) => setDrafts((prev) => prev.filter((_, i) => i !== index))} />
         <MediaCaptureBar
           onAdd={(items) => setDrafts((prev) => [...prev, ...items])}
           disabled={saving}
-          onBusyChange={setProcessing}
+          onBusyChange={(isBusy) => {
+            setProcessing(isBusy);
+            if (!isBusy) setError((prev) => (prev === t('tasks.mediaProcessingWait') ? '' : prev));
+          }}
         />
         <p className="field-hint">{t('findings.reportInternal')}</p>
       </Modal>

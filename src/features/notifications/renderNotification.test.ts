@@ -105,11 +105,11 @@ describe('renderNotification', () => {
     const hecha = notification({ tipo: 'tarea_completada', titulo: 'Tarea hecha · ORD-2026-014', datos });
 
     expect(renderNotification(asignada, es)).toEqual({ title: 'Nueva tarea · ORD-2026-014', body: 'Pintar defensa — 2019 Toyota Camry' });
-    expect(renderNotification(asignada, en)).toEqual({ title: 'New job · ORD-2026-014', body: 'Pintar defensa — 2019 Toyota Camry' });
+    expect(renderNotification(asignada, en)).toEqual({ title: 'New task · ORD-2026-014', body: 'Pintar defensa — 2019 Toyota Camry' });
     expect(renderNotification(reasignada, es).body).toBe('Pintar defensa ya no está a tu cargo');
-    expect(renderNotification(reasignada, en).title).toBe('Job reassigned · ORD-2026-014');
+    expect(renderNotification(reasignada, en).title).toBe('Task reassigned · ORD-2026-014');
     expect(renderNotification(hecha, es)).toEqual({ title: 'Tarea hecha · ORD-2026-014', body: 'Paula Pintora: Pintar defensa' });
-    expect(renderNotification(hecha, en).title).toBe('Job done · ORD-2026-014');
+    expect(renderNotification(hecha, en).title).toBe('Task done · ORD-2026-014');
   });
 
   it('una tarea hecha sin nombre de técnico no deja los dos puntos colgando', () => {

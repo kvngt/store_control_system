@@ -47,6 +47,8 @@ interface TaskEditorProps {
   onClose?: () => void;
   /** Acciones adicionales junto al botón principal (ej. Del catálogo). */
   extraActions?: React.ReactNode;
+  /** Contador para abrir el editor y enfocar descripción desde acciones rápidas (A-05). */
+  openRequest?: number;
 }
 
 interface Draft {
@@ -83,10 +85,11 @@ export default function TaskEditor({
   isAdmin = true,
   onClose,
   extraActions,
+  openRequest = 0,
 }: TaskEditorProps) {
   const { t } = useLanguage();
   const editing = !!initial;
-  const [open, setOpen] = useState(!!prefill || editing);
+  const [open, setOpen] = useState(!!prefill || editing || openRequest > 0);
   // En un "combinado" el tipo que se usó la última vez: casi siempre se agregan seguidas varias
   // tareas de lo mismo.
   const [lastCombined, setLastCombined] = useState<Specialty>('mecanica');
@@ -131,6 +134,8 @@ export default function TaskEditor({
   // control deshabilitado no recibe el foco, así que quedaba en el body y había que volver a
   // hacer clic para escribir la siguiente.
   const refocus = useRef(false);
+  const lastOpenRequest = useRef(0);
+  const pendingFocus = useRef(false);
   const disabled = busy || saving;
 
   useEffect(() => {
@@ -167,6 +172,27 @@ export default function TaskEditor({
       descriptionRef.current?.focus();
     }
   }, [disabled]);
+
+  useEffect(() => {
+    if (openRequest > lastOpenRequest.current) {
+      lastOpenRequest.current = openRequest;
+      pendingFocus.current = true;
+      if (!open) {
+        start();
+      } else if (!disabled) {
+        pendingFocus.current = false;
+        descriptionRef.current?.focus();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openRequest]);
+
+  useEffect(() => {
+    if (open && !disabled && pendingFocus.current) {
+      pendingFocus.current = false;
+      descriptionRef.current?.focus();
+    }
+  }, [open, disabled]);
 
   const start = () => {
     const spec = initialSpecialty();

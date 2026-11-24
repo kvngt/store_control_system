@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Archive, ArchiveRestore, CarFront, FileDown, Send } from 'lucide-react';
 import { useLanguage } from '../../../context/language.context';
 import { workTypeKey } from '../../../lib/workType';
@@ -12,6 +13,8 @@ interface OrderHeaderProps {
   pdfLanguage: 'es' | 'en';
   onChangePdfLanguage: (lang: 'es' | 'en') => void;
   techWaitsAuthorization: boolean;
+  isMobile?: boolean;
+  quickActions?: ReactNode;
 }
 
 export default function OrderHeader({
@@ -21,6 +24,8 @@ export default function OrderHeader({
   pdfLanguage,
   onChangePdfLanguage,
   techWaitsAuthorization,
+  isMobile = false,
+  quickActions,
 }: OrderHeaderProps) {
   const { t } = useLanguage();
 
@@ -66,7 +71,13 @@ export default function OrderHeader({
           )}
           {detail.isArchived && <span className="badge badge-archived">{t('workOrders.archivedBadge')}</span>}
         </h1>
-        <p className="page-subtitle">{customer?.nombre} — {vehicle?.anio} {vehicle?.marca} {vehicle?.modelo}</p>
+        {isMobile ? (
+          // En el teléfono los datos del vehículo ya están en su sección; solo conservamos el cliente.
+          customer?.nombre ? <p className="page-subtitle">{customer.nombre}</p> : null
+        ) : (
+          <p className="page-subtitle">{customer?.nombre} — {vehicle?.anio} {vehicle?.marca} {vehicle?.modelo}</p>
+        )}
+        {isMobile && quickActions}
         {(detail.canSendReport || detail.canArchive || detail.canWithdraw) && (
           <div className="order-detail-actions">
             {/* Solo administración: el reporte lleva precios y totales, y el
@@ -142,7 +153,7 @@ export default function OrderHeader({
             Remontarlo es lo único que lo devuelve al valor real. */}
         <select
           key={detail.statusEpoch}
-          className="form-input form-select"
+          className="form-input form-select order-status-select"
           aria-label={t('common.status')}
           value={order.estatus}
           onChange={(e) => {
@@ -166,7 +177,6 @@ export default function OrderHeader({
                 ? t('workOrders.onlyAdminReopens')
                 : undefined
           }
-          style={{ flex: '1 1 160px' }}
         >
           {Object.keys(statusLabels)
             // Entregar asienta el ingreso y devenga las comisiones: no es un
@@ -194,6 +204,7 @@ export default function OrderHeader({
               llegaba a la base en cualquier orden (ver `commitProgress`). */}
           <input
             type="range"
+            className="progress-slider"
             min={0}
             max={100}
             step={5}
@@ -205,7 +216,6 @@ export default function OrderHeader({
             onBlur={detail.commitProgress}
             disabled={!detail.canEditProgress}
             title={!detail.canEditProgress && techWaitsAuthorization ? t('techStatus.waitingAuthorizationNote') : undefined}
-            style={{ width: '100%' }}
           />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
             <input

@@ -226,7 +226,7 @@ Es la pantalla de inicio. Resume cómo va el taller.
 - **Órdenes Activas** y cuántas están **Finalizadas este mes**.
 - **Ingresos del Mes**.
 - **Tasa de Ocupación**: cuántos espacios del taller están ocupados respecto a la
-  capacidad configurada.
+  capacidad configurada. Si los carros activos superan los lugares configurados, muestra el aviso «N carros · M lugares (sobrecupo)» en color de advertencia con la barra al 100 %.
 - **Clientes Nuevos** del mes.
 - **Ingresos vs Egresos**: gráfico comparativo de los últimos meses.
 - **Alertas**: órdenes detenidas en espera de autorización y órdenes en proceso con poco avance (menos del 30 %).
@@ -236,8 +236,8 @@ Es la pantalla de inicio. Resume cómo va el taller.
 <!-- rol: tecnico -->
 
 La misma pantalla, sin datos financieros ni de capacidad global: no aparecen ingresos, totales, clientes
-nuevos, tasa de ocupación ni el gráfico financiero. El indicador de órdenes dice **Mis Órdenes Activas**,
-y las **Alertas** y las **Órdenes Recientes** muestran únicamente **sus propias órdenes**.
+nuevos, tasa de ocupación, **Órdenes Recientes** ni el gráfico financiero. El indicador de órdenes dice **Mis Órdenes Activas**,
+y las **Alertas** muestran únicamente **sus propias órdenes**.
 
 Arriba de todo está **Mis tareas**: los trabajos que tiene asignados en todas sus órdenes
 sin entregar y que todavía no marca como hechos. Primero los que ya se pueden hacer (la
@@ -363,7 +363,7 @@ Arriba a la derecha está el selector **Vista**, que permite cambiar entre:
 
 El sistema recuerda automáticamente la última vista que utilizaste en ese dispositivo.
 
-**Si eres administrador**, ves todas las órdenes de la sede activa y su total.
+**Si eres administrador**, ves todas las órdenes de la sede activa y su total (si la orden aún no tiene trabajos ni repuestos autorizados, muestra la etiqueta **Por autorizar** en lugar de `$0.00`).
 **Si eres técnico**, ves **Mis Órdenes de Trabajo**: únicamente las que tienes asignadas. Las de tus compañeros no aparecen ni en la lista, ni en el tablero, ni en el buscador. Si abres un enlace o aviso de una orden que no te corresponde, el sistema te avisa: «Esa orden no está entre las tuyas. Si te toca trabajarla, pide a administración que te asigne.».
 
 ![Órdenes de un mecánico: solo las que tiene asignadas.](../public/manual/es/12.webp)
@@ -483,23 +483,24 @@ Es la pantalla donde se sigue el trabajo día a día.
 #### Encabezado de la orden
 
 Arriba quedan siempre visibles:
-- Número de orden, nombre del cliente y datos del vehículo.
+- Número de orden, nombre del cliente y datos del vehículo (en el teléfono el encabezado omite el año, marca y modelo porque ya están en **Información del Vehículo**, dejando visible al cliente).
 - Insignias de estado: **Seguro**, **Esperando repuestos**, **Esperando autorización**, **Por revisar** o **Listo para entregar**, **Retirada sin reparar**, **Archivada**.
 - Botones de acción (para administradores):
   - **Descargar PDF** con el selector **Idioma del PDF** (**ES** / **EN**).
   - **Enviar reporte**: abre la ventana para compartir el enlace del cliente por correo o WhatsApp.
   - **Archivar** / **Devolver al tablero**.
   - **Retirada sin reparar**: para cerrar la orden si el cliente se lleva el auto sin reparar.
-- Selector de estado y barra de **Avance** (0 a 100 %).
+- Selector de estado y barra de **Avance** (0 a 100 %). Al pasar una orden a **Finalizado** si todavía quedan tareas autorizadas sin marcar como hechas, pregunta si prefieres **Revisar tareas** o **Terminar de todos modos**; al cambiar de estado siempre muestra un aviso de confirmación.
 
 #### Acciones rápidas
 
-Debajo del encabezado aparecen botones destacados con las acciones más frecuentes según tu rol:
+Debajo del encabezado (en el teléfono, justo debajo del título y nombre del cliente, antes de los botones PDF y del selector de estado) aparecen botones destacados con un único paso principal por estado:
 - **Para administradores**:
-  - **Marcar listo para entregar** (aparece destacado cuando el técnico terminó y el trabajo fue revisado).
-  - **Entregar y cobrar** (aparece destacado cuando la orden está marcada como lista para entregar).
-  - **Agregar trabajo** (destacado si la orden aún no tiene mano de obra).
-  - **Tomar firma** (destacado en recepción si la orden tiene trabajos y aún no está firmada).
+  - **Marcar listo para entregar** (botón principal cuando el técnico terminó y el trabajo fue revisado).
+  - **Entregar y cobrar** (botón principal cuando la orden está marcada como lista para entregar).
+  - **Agregar trabajo** (botón principal si la orden aún no tiene mano de obra; abre directamente la pestaña **Trabajos → Mano de obra** con el formulario desplegado y listo para escribir).
+  - **Tomar firma** (botón principal mientras falta la firma de recepción).
+  - **Registrar autorización** (aparece cuando hay trabajos o repuestos pendientes por autorizar y pasa a ser el botón principal una vez tomada la firma; abre **Trabajos → Presupuesto** con el diálogo listo para registrar la respuesta).
   - **Registrar avance**.
   - **Registrar anticipo**.
   - **Cobro y totales**.
@@ -508,8 +509,8 @@ Debajo del encabezado aparecen botones destacados con las acciones más frecuent
   - **Terminé: avisar a la oficina** (aparece destacado como botón principal en proceso cuando todas las tareas autorizadas de la orden están terminadas; cambia la orden a finalizado y avisa a administración).
   - **Mis tareas** (destacado cuando no toca empezar ni terminar; lleva directo a sus tareas asignadas).
   - **Registrar avance**.
-  - **Inspección** (abre la sección **Inspección 360°**, donde está la **Inspección por puntos**).
   - **Reportar trabajo adicional** (activo mientras la orden no esté finalizada).
+  - **Inspección** (abre la sección **Inspección 360°**, donde está la **Inspección por puntos**).
   - **Sugerir próximo servicio** (abre el diálogo para sugerir fecha y millas del próximo mantenimiento, o te lleva a la sección **Próximo servicio** si la orden ya tiene uno registrado).
   - **Datos del vehículo**.
 
@@ -524,7 +525,7 @@ Junto a cada pestaña aparece un contador de líneas o archivos. Un indicador am
 
 #### Secciones plegables
 
-Dentro de cada pestaña, las tarjetas vienen agrupadas como secciones plegables que arrancan **cerradas**: muestran su título y un resumen a la derecha (placa del auto, cantidad de líneas, total en dinero o un visto bueno). La flecha abre o cierra la sección, y los botones **Desplegar todo** y **Contraer todo** abren o cierran todas las secciones de esa vista. Si abres una orden desde una notificación o enlace directo, la sección correspondiente se abre automáticamente.
+Dentro de cada pestaña, las tarjetas vienen agrupadas como secciones plegables que arrancan **cerradas** (para el técnico, la sección **Tareas** abre desplegada al entrar a la orden): muestran su título y un resumen a la derecha (placa del auto, cantidad de líneas, total en dinero o un visto bueno). La flecha abre o cierra la sección, y los botones **Desplegar todo** y **Contraer todo** abren o cierran todas las secciones de esa vista. Si abres una orden desde una notificación o enlace directo, la sección correspondiente se abre automáticamente.
 
 En el teléfono no hay pestañas superiores: todas las secciones aparecen apiladas en una sola columna en el mismo orden, con un botón **Desplegar todo** / **Contraer todo** al inicio.
 
@@ -547,7 +548,7 @@ Cuando un mecánico o pintor encuentra daños o piezas gastadas que no estaban e
 1. En sus acciones rápidas o en su lista de tareas presiona **Reportar trabajo adicional**.
 2. Escribe en **Qué encontraste** y toma fotos, video o una nota de voz de evidencia.
 3. El texto y los archivos son internos para el taller; el cliente no los ve.
-4. Presiona **Reportar y pausar la orden**.
+4. Presiona **Reportar y pausar la orden**. Si todavía falta describir qué encontraste, el diálogo te avisa ahí mismo y lleva el foco al campo para que no quede duda de qué falta.
 5. La orden pasa automáticamente a **Espera Autorización** y se genera una notificación para administración.
 
 Si a medio camino pulsas **«atrás»** en el teléfono, tocas fuera del recuadro o presionas **Cancelar** con algo ya escrito o una foto tomada, el sistema pregunta antes de perderlo: **Seguir editando** o **Descartar**. Sin nada escrito, se cierra sin preguntar.
@@ -588,7 +589,7 @@ Después de reportar un hallazgo, dentro de tu sección **Tareas** aparece el bl
   - Botón principal de estado: las acciones **Empezar trabajo** (en recepción con tarea autorizada) y **Terminé: avisar a la oficina** (en proceso cuando todo está hecho) se ubican arriba en las **acciones rápidas** de la orden, asegurando un solo botón principal por estado. En la lista de tareas, al estar en proceso con todo listo se muestra la ayuda explicativa, y si sus tareas están terminadas pero faltan tareas de otro compañero, ve el aviso «Tu parte está lista. Falta: ...».
   - Ve sus tareas con su descripción, su tipo y el precio de la mano de obra (de ahí sale su comisión). Los repuestos los ve sin precio.
   - **Reloj por tarea**: en sus propias tareas (identificadas como **Tarea: {descripción}**), cada tarea autorizada y no terminada tiene un botón táctil amplio (44 px o más) con **Iniciar** si el reloj está detenido o **Pausar ({tiempo})** si está corriendo, actualizando el tiempo transcurrido en vivo cada minuto. El técnico solo puede tener un reloj corriendo a la vez: presionar **Iniciar** en otra tarea pausa automáticamente la anterior y arranca la nueva, y tocar **Realizado** también detiene el reloj activo de esa tarea. Si un reloj queda abierto por olvido, el sistema lo limita automáticamente a un máximo de 12 horas. Con la orden terminada (**Finalizado**), el técnico ya no puede iniciar el reloj de una tarea (igual que ya no puede reabrir una tarea).
-  - Toca **Realizado** al terminar una tarea; si el reloj estaba corriendo, se detiene automáticamente. Si la marcó por error, presiona **Reabrir tarea** (mientras la orden no esté terminada; después, pídeselo a administración).
+  - Toca **Realizado** al terminar una tarea; sale el aviso «Tarea hecha», la tarea queda tachada en su lugar hasta recargar la orden y si el reloj estaba corriendo se detiene automáticamente. Si la marcó por error, presiona **Reabrir tarea** (mientras la orden no esté terminada; después, pídeselo a administración).
   - Con **Foto** puede tomar o subir directamente una fotografía con la cámara para adjuntarla como avance a esa tarea.
   - Con **Agregar avance** puede subir fotos, videos o notas de voz vinculados a esa tarea específica.
 - **Insignias de cada línea**:
@@ -607,7 +608,7 @@ Después de reportar un hallazgo, dentro de tu sección **Tareas** aparece el bl
   - Muestra cuántas tareas están aprobadas y terminadas (**{n} autorizada(s) por el cliente · {done} hecha(s)**).
   - Lista por nombre las tareas que siguen **Esperando autorización del cliente** y las que **El cliente no autorizó** («No se realizan.»).
 - **Avances desde la tarjeta de una tarea**:
-  - **Agregar avance** abre una ventana para escribir qué hiciste, adjuntar fotos, video o nota de voz y marcar la casilla **Visible para el cliente** si quieres publicarlo desde ese momento en el reporte del cliente.
+  - **Agregar avance** abre una ventana para escribir qué hiciste, adjuntar fotos, video o nota de voz y marcar la casilla **Visible para el cliente** si quieres publicarlo desde ese momento en el reporte del cliente. Si presionas **Guardar** sin nota ni archivos, el diálogo indica qué falta y lleva el foco al recuadro.
   - **Foto** abre directamente la cámara del teléfono; al tomar la foto, abre esa misma ventana con la imagen ya adjunta para que escribas una nota opcional y presiones **Guardar avance**.
   - Debajo de cada tarea que ya tiene registros aparece el desplegable **{n} avance(s) de esta tarea** para consultar su historial sin salir de la lista de tareas.
   - **El botón «atrás» del teléfono no te hace perder lo que escribes o grabas.** Con la cámara, la grabadora o una foto abierta, «atrás» cierra solo eso y vuelves al avance como estaba; si ya grabaste un video o una nota de voz sin usarlos, primero pregunta. En la ventana del avance, en el formulario de la pestaña **Avances** y en la nota de un punto de la inspección, con algo escrito o un archivo, pregunta **Seguir editando** o **Descartar**; lo mismo si tocas fuera de la ventana. Sin nada escrito, «atrás» funciona como siempre.
@@ -1107,7 +1108,7 @@ para esa orden.
 
 1. **Nueva Transacción**.
 2. **Tipo**: **Ingresos** o **Egresos**.
-3. **Categoría**: al elegir **Ingresos**, queda en **Pago de Cliente**; al elegir **Egresos**, pasa sola a **Gasto Operativo** y la lista muestra solo las categorías de egreso (Compra de Repuestos, Comisiones, Gasto Operativo o Comisiones de banco y tarjeta).
+3. **Categoría**: al elegir **Ingresos**, queda en **Pago de Cliente**; al elegir **Egresos**, pasa sola a **Gasto Operativo** y la lista muestra solo las categorías de egreso (Compra de Repuestos, Comisiones —o **Pagos al personal** si el taller no usa el módulo de comisiones—, Gasto Operativo o Comisiones de banco y tarjeta).
 4. **Monto** y **Fecha** (obligatoria). La fecha es la del taller: un movimiento del día 1
    cuenta en ese mes.
 5. **Orden vinculada** (opcional): asocia el movimiento a una orden. En la tabla,

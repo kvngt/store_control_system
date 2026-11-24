@@ -956,6 +956,21 @@ body.drawer-open {
   min-height: 44px;
 }
 
+/* Controles de avance y casillas táctiles (Tanda 3 Q2) */
+.progress-slider {
+  width: 100%;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.progress-slider:disabled {
+  cursor: not-allowed;
+}
+
+.checkbox-touch {
+  cursor: pointer;
+}
+
 /* Subir / bajar un punto: compacto en escritorio, de 44 px en una pantalla táctil (QA 18/10/2026). */
 .btn-reorder {
   padding: 2px;
@@ -964,6 +979,10 @@ body.drawer-open {
 }
 
 @media (pointer: coarse), (max-width: 768px) {
+  .btn {
+    min-height: 44px;
+  }
+
   .btn-reorder {
     height: 44px;
     min-height: 44px;
@@ -985,6 +1004,40 @@ body.drawer-open {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .tab,
+  .view-switch-option {
+    min-height: 44px;
+  }
+
+  .attention-order,
+  .table td .link-button {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .intake-step-button {
+    min-height: 44px;
+  }
+
+  .progress-slider {
+    height: 44px;
+    min-height: 44px;
+    padding: 12px 0;
+    background: transparent;
+  }
+
+  .checkbox-touch {
+    min-height: 44px;
+  }
+
+  .checkbox-touch input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    accent-color: var(--color-primary);
   }
 }
 
@@ -1216,10 +1269,23 @@ body.drawer-open {
 }
 
 .modal-close {
+  min-width: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: var(--space-1);
   border-radius: var(--radius-md);
   color: var(--color-text-tertiary);
   transition: all var(--transition-fast);
+}
+
+/* Después de la regla base: la de 36 px de escritorio ganaba a la de 44 px del teléfono (Q2 tanda 3). */
+@media (pointer: coarse), (max-width: 768px) {
+  .modal-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
 
 .modal-close:hover:not(:disabled) {
@@ -1820,6 +1886,8 @@ body.drawer-open {
   gap: var(--space-3);
   max-width: 380px;
   width: calc(100% - var(--space-8));
+  transform: translateY(var(--toast-vv-top, 0px));
+  pointer-events: none;
 }
 
 .toast {
@@ -1832,6 +1900,7 @@ body.drawer-open {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
   animation: slideInRight 0.25s ease-out;
+  pointer-events: auto;
 }
 
 .toast-success {
@@ -1895,12 +1964,16 @@ body.drawer-open {
 
 @media (max-width: 768px) {
   .toast-stack {
-    top: calc(var(--header-height, 64px) + env(safe-area-inset-top, 0px) + var(--space-2));
-    bottom: auto;
+    top: auto;
+    bottom: max(
+      calc(64px + env(safe-area-inset-bottom, 0px) + var(--space-2)),
+      calc(var(--toast-vv-bottom, 0px) + var(--space-2))
+    );
     left: var(--space-4);
     right: var(--space-4);
     max-width: none;
     width: auto;
+    transform: none;
   }
 }
 
@@ -4268,7 +4341,13 @@ body.drawer-open {
   gap: var(--space-4);
   flex-wrap: wrap;
   width: 100%;
-  max-width: 460px;
+  max-width: 560px;
+}
+
+.order-status-select {
+  flex: 1 1 220px;
+  min-width: 220px;
+  width: auto;
 }
 
 /* Pestañas como botones: las clases `.tab` nacieron para enlaces y no limpiaban el botón. */
@@ -4338,6 +4417,11 @@ button.tab:focus-visible {
     margin-bottom: var(--space-3);
   }
 
+  .order-detail-heading .quick-actions {
+    margin-top: var(--space-2);
+    margin-bottom: var(--space-1);
+  }
+
   .order-detail-title {
     font-size: var(--font-size-xl);
     gap: var(--space-2);
@@ -4346,6 +4430,12 @@ button.tab:focus-visible {
   .order-detail-controls {
     gap: var(--space-2);
     max-width: none;
+  }
+
+  .order-status-select {
+    flex: 1 1 100%;
+    min-width: 0;
+    width: 100%;
   }
 }
 
@@ -4985,7 +5075,7 @@ td .labor-specialty-select {
 }
 
 .labor-type-select { max-width: 140px; }
-.labor-tech-select { max-width: 240px; }
+.labor-tech-select { min-width: 190px; }
 
 .labor-meta-lock {
   display: inline-flex;
@@ -5024,13 +5114,28 @@ td .labor-specialty-select {
 
 .task-editor-fields {
   display: grid;
-  grid-template-columns: minmax(110px, 140px) minmax(160px, 1fr) minmax(90px, 120px) minmax(150px, 220px);
+  grid-template-columns: minmax(110px, 140px) minmax(180px, 1fr) minmax(90px, 120px);
   gap: var(--space-2) var(--space-3);
   align-items: end;
 }
 
+.task-editor-technician {
+  grid-column: 1 / -1;
+}
+
 .task-editor-fields .form-group {
   margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .task-editor-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .labor-tech-select {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 .task-editor-actions {
@@ -7236,6 +7341,17 @@ button.intake-step-button:hover:not(:disabled) {
   background: var(--color-primary-subtle);
   border-color: var(--color-primary);
   color: var(--color-primary-light);
+}
+
+@media (max-width: 768px) {
+  .part-editor-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .intake-picker-row .combo-menu {
+    position: static;
+    margin-top: var(--space-2);
+  }
 }
 
 /* En pantallas táctiles, 44 px de área. Va después de las reglas base: la del idioma tenía 36 px y la ganaba. */

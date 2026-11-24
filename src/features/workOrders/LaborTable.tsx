@@ -69,6 +69,8 @@ interface LaborTableProps {
   onCorrectTime?: (tiempoId: string, inicio: string, fin: string | null) => Promise<void>;
   /** Borra un registro de tiempo (solo admin). */
   onDeleteTime?: (tiempoId: string) => Promise<void>;
+  /** Contador para abrir el editor de tarea nueva y enfocar su descripción (A-05). */
+  openAddRequest?: number;
 }
 
 const NO_LOCKS: ReadonlySet<string> = new Set();
@@ -111,6 +113,7 @@ export default function LaborTable({
   laborTimes,
   onCorrectTime,
   onDeleteTime,
+  openAddRequest = 0,
 }: LaborTableProps) {
   const { t } = useLanguage();
   const { showToast } = useToast();
@@ -529,6 +532,7 @@ export default function LaborTable({
             onAdd={onAdd}
             idPrefix="labor-new"
             prefill={prefill}
+            openRequest={openAddRequest}
             extraActions={
               orderId && orderSedeId && catalogAllowed && moduloActivo('catalogo') ? (
                 <button

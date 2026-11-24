@@ -17,6 +17,7 @@ import { useDiscardGuard } from '../../components/useDiscardGuard';
 import Modal from '../../components/Modal';
 import { findingOutcome } from './techStatus';
 import { techNextStep } from './techNextStep';
+import { mergeTaskOrder, orderTasksByIds } from './tasks';
 
 interface TechnicianTaskListProps {
   items: LaborItem[];
@@ -44,13 +45,27 @@ export default function TechnicianTaskList({ items, currentUserId, detail, repor
   // Lo que reportó: así sabe si administración ya lo vio y qué decidió.
   const myFindings = (detail.order?.hallazgos || []).filter((h) => h.reportado_por === currentUserId);
 
-  const myTasks = items.filter((item) => item.asignado_a === currentUserId);
+  const orderId = detail.order?.id ?? '';
+  const [pinnedOrder, setPinnedOrder] = useState<{ orderId: string; ids: string[] }>(() => ({
+    orderId,
+    ids: items.map((item) => item.id),
+  }));
+
+  useEffect(() => {
+    setPinnedOrder((prev) => ({
+      orderId,
+      ids: prev.orderId === orderId ? mergeTaskOrder(prev.ids, items) : items.map((item) => item.id),
+    }));
+  }, [orderId, items]);
+
+  const orderedItems = pinnedOrder.orderId === orderId ? orderTasksByIds(items, pinnedOrder.ids) : items;
+  const myTasks = orderedItems.filter((item) => item.asignado_a === currentUserId);
   // Los avances de cada tarea (06/10/2026: se guardaban con su tarea pero no se veían ahí).
   const updatesByTask = new Map<string, OrderProgressUpdate[]>();
   for (const avance of detail.order?.avances || []) {
     if (avance.labor_id) updatesByTask.set(avance.labor_id, [...(updatesByTask.get(avance.labor_id) ?? []), avance]);
   }
-  const otherTasks = items.filter((item) => item.asignado_a !== currentUserId);
+  const otherTasks = orderedItems.filter((item) => item.asignado_a !== currentUserId);
 
   const handleQuickPhoto = async (task: LaborItem, file: File) => {
     try {
@@ -380,8 +395,8 @@ function TaskProgressModal({
   const [isVisible, setIsVisible] = useState(false);
   // Un video que todavía se comprime no está en drafts: guardar ahí lo perdía sin aviso.
   const [processing, setProcessing] = useState(false);
-
-  const canSubmit = !saving && !processing && (note.trim().length > 0 || drafts.length > 0);
+  const [error, setError] = useState('');
+  const noteRef = useRef<HTMLTextAreaElement>(null);
 
   // La X, «Cancelar», el fondo y el «atrás» de Android: con una nota, un archivo o uno que se está
   // preparando, se pregunta antes de perderlo.
@@ -392,6 +407,20 @@ function TaskProgressModal({
     title: t('tasks.discardProgressTitle'),
     body: t('tasks.discardProgressBody'),
   });
+
+  const handleConfirm = () => {
+    if (processing) {
+      setError(t('tasks.mediaProcessingWait'));
+      return;
+    }
+    if (note.trim().length === 0 && drafts.length === 0) {
+      setError(t('tasks.progressRequired'));
+      noteRef.current?.focus();
+      return;
+    }
+    setError('');
+    void onConfirm(note, drafts, isVisible);
+  };
 
   return (
     <>
@@ -411,7 +440,7 @@ function TaskProgressModal({
             <button type="button" className="btn btn-ghost" onClick={guard.requestClose} disabled={saving}>
               {t('common.cancel')}
             </button>
-            <button type="button" className="btn btn-primary" onClick={() => onConfirm(note, drafts, isVisible)} disabled={!canSubmit}>
+            <button type="button" className="btn btn-primary" onClick={handleConfirm} disabled={saving}>
               <Plus size={16} /> {saving ? t('common.loading') : t('common.save')}
             </button>
           </>
@@ -421,20 +450,36 @@ function TaskProgressModal({
 
         <div className="form-group">
           <textarea
+            ref={noteRef}
             className="form-input form-textarea"
             placeholder={t('workOrders.progressPlaceholder')}
             value={note}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={(e) => {
+              setNote(e.target.value);
+              if (error) setError('');
+            }}
             rows={3}
             disabled={saving}
+            aria-invalid={!!error || undefined}
           />
+          {error && <p className="task-editor-error" role="alert">{error}</p>}
         </div>
 
         <DraftMediaStrip items={drafts} onRemove={(index) => setDrafts((prev) => prev.filter((_, i) => i !== index))} />
-        <MediaCaptureBar onAdd={(items) => setDrafts((prev) => [...prev, ...items])} disabled={saving} onBusyChange={setProcessing} />
+        <MediaCaptureBar
+          onAdd={(items) => {
+            setDrafts((prev) => [...prev, ...items]);
+            if (error) setError('');
+          }}
+          disabled={saving}
+          onBusyChange={(busy) => {
+            setProcessing(busy);
+            if (!busy) setError((prev) => (prev === t('tasks.mediaProcessingWait') ? '' : prev));
+          }}
+        />
 
         <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-          <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+          <label className="checkbox-label checkbox-touch" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
             <input type="checkbox" checked={isVisible} onChange={(e) => setIsVisible(e.target.checked)} disabled={saving} />
             {isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
             <span>{t('tasks.visibleToCustomer')}</span>

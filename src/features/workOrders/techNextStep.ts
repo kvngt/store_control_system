@@ -119,29 +119,23 @@ export function buildTechActions({
           },
         ]
       : []),
-    {
-      key: 'tasks',
-      icon: ListChecks,
-      label: 'quickActions.myTasks',
-      onClick: () => goTo('tareas', 'tareas'),
-      primary: !hasTechPrimary,
-    },
+    ...(!hasTechPrimary
+      ? [
+          {
+            key: 'tasks',
+            icon: ListChecks,
+            label: 'quickActions.myTasks',
+            onClick: () => goTo('tareas', 'tareas'),
+            primary: true,
+          },
+        ]
+      : []),
     {
       key: 'progress',
       icon: MessageSquarePlus,
       label: 'quickActions.progress',
       onClick: () => goTo('avances', 'avances'),
     },
-    ...(moduloActivo('inspeccion')
-      ? [
-          {
-            key: 'inspection',
-            icon: ClipboardCheck,
-            label: 'quickActions.inspection',
-            onClick: () => goTo('orden', 'inspeccion'),
-          },
-        ]
-      : []),
     ...(order.estatus !== 'finalizado'
       ? [
           {
@@ -149,6 +143,27 @@ export function buildTechActions({
             icon: AlertTriangle,
             label: 'quickActions.reportFinding',
             onClick: onReportFinding,
+          },
+        ]
+      : []),
+    ...(hasTechPrimary
+      ? [
+          {
+            key: 'tasks',
+            icon: ListChecks,
+            label: 'quickActions.myTasks',
+            onClick: () => goTo('tareas', 'tareas'),
+            primary: false,
+          },
+        ]
+      : []),
+    ...(moduloActivo('inspeccion')
+      ? [
+          {
+            key: 'inspection',
+            icon: ClipboardCheck,
+            label: 'quickActions.inspection',
+            onClick: () => goTo('orden', 'inspeccion'),
           },
         ]
       : []),

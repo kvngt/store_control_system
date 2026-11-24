@@ -208,7 +208,7 @@ export function Report({ report, token, s, language, onReload }: ReportProps) {
       <PortalSection
         icon={ClipboardList}
         title={s.receptionTitle}
-        summary={s.receptionPhotosCount.replace('{count}', String(reception.length))}
+        summary={(reception.length === 1 ? s.receptionPhotosCountOne : s.receptionPhotosCountMany).replace('{count}', String(reception.length))}
         defaultOpen={false}
       >
         <dl className="portal-facts">

@@ -16,6 +16,7 @@ import { openInNewTab } from '../lib/openInNewTab';
 import { getErrorMessage } from '../lib/errors';
 import type { FinancialTransaction, TransactionType, TransactionCategory, DashboardStats, WorkOrder, BankStatementImport, StatementSummary } from '../types/database';
 import { toCsv, downloadCsv } from '../lib/csv';
+import { financeCategoryLabel } from '../lib/financeCategories';
 
 // Lazy-loaded: pulls in pdfjs-dist (~1MB), which shouldn't ship in the main
 // bundle for users who never open the import dialog.
@@ -203,14 +204,6 @@ export default function Finance() {
     [stats]
   );
 
-  const categoryLabels: Record<string, string> = {
-    pago_cliente: t('finance.clientPayment'),
-    compra_repuesto: t('finance.partsPurchase'),
-    planilla: t('finance.payroll'),
-    gasto_operativo: t('finance.operatingExpense'),
-    comision_bancaria: t('finance.bankFees'),
-  };
-
   // Like the other dialogs in the app, every failed path has to say why: this
   // modal covers the page-level error box, so a bare `return` reads as a dead
   // button to whoever pressed it.
@@ -294,7 +287,7 @@ export default function Finance() {
     ...rows.map((txn) => [
       txn.fecha,
       txn.tipo === 'ingreso' ? t('finance.income') : t('finance.expense'),
-      categoryLabels[txn.categoria] || txn.categoria,
+      financeCategoryLabel(txn.categoria, t),
       txn.descripcion,
       txn.metodo_pago ? t('delivery.methods.' + txn.metodo_pago) : '',
       txn.referencia_orden_id ? txn.orden?.numero_orden ?? orders.find((o) => o.id === txn.referencia_orden_id)?.numero_orden ?? '' : '',
@@ -548,7 +541,7 @@ export default function Finance() {
                   </span>
                 </td>
                 <td data-label={t('common.category')} style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                  {categoryLabels[txn.categoria]}
+                  {financeCategoryLabel(txn.categoria, t)}
                 </td>
                 <td data-label={t('common.description')}>
                   {txn.descripcion}
@@ -665,7 +658,7 @@ export default function Finance() {
                     onChange={(e) => setForm({ ...form, categoria: e.target.value as TransactionCategory })}
                   >
                     {(form.tipo === 'ingreso' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map((cat) => (
-                      <option key={cat} value={cat}>{categoryLabels[cat]}</option>
+                      <option key={cat} value={cat}>{financeCategoryLabel(cat, t)}</option>
                     ))}
                   </select>
                 </div>

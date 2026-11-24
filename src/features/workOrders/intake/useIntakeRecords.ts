@@ -162,10 +162,8 @@ export function useIntakeRecords({ form, isAdmin, sedeId, targetSedeId }: UseInt
     try {
       if (key === 'customer') {
         await saveNewCustomer(values);
-        showToast('success', t('intake.customerSaved'));
       } else {
         await saveNewVehicle(values, values.selectedCustomer);
-        showToast('success', t('intake.vehicleSaved'));
       }
       return true;
     } catch (err) {

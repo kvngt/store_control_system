@@ -8,7 +8,7 @@
 // returns without saying anything, a disabled button that looks enabled, and a
 // server error reported somewhere the user never sees.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
@@ -67,6 +67,10 @@ async function loadStatement(user: ReturnType<typeof userEvent.setup>) {
 }
 
 const importButton = () => screen.getByRole('button', { name: /Importar Seleccionadas/i });
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -243,5 +247,19 @@ describe('Importar Estado de Cuenta', () => {
 
     expect(mocks.importStatement).not.toHaveBeenCalled();
     expect(await screen.findByRole('alert')).toBeVisible();
+  });
+
+  it('con comisiones apagado muestra "Pagos al personal" para la categoría planilla', async () => {
+    vi.stubEnv('VITE_MODULOS_APAGADOS', 'comisiones');
+    const user = userEvent.setup();
+    renderWithProviders(<ImportStatementModal onClose={() => {}} onImported={() => {}} />);
+
+    await loadStatement(user);
+
+    const rowSelect = screen.getAllByRole('combobox').find((el) => el.textContent?.includes('Pagos al personal'));
+    expect(rowSelect).toBeDefined();
+    // Opción exacta: «Comisiones de banco y tarjeta» (otra categoría) sí sigue ahí.
+    const names = Array.from((rowSelect as HTMLSelectElement).options).map((o) => o.textContent);
+    expect(names).not.toContain('Comisiones');
   });
 });

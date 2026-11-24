@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import type {
+  LineState,
   MyTask,
   OrderHistoryEntry,
   OrderMedia,
@@ -7,6 +8,7 @@ import type {
   PartSummary,
   WorkOrder,
 } from '../../types/database';
+import { hasApprovedLines } from '../../features/workOrders/lineState';
 import { fetchAll } from '../support';
 import { daysFromTodayLocal } from '../../lib/dates';
 import { sanitizeDamageMarks } from '../../lib/vehicleDiagram';
@@ -43,7 +45,9 @@ export const orderQueries = {
         cliente:clientes(*),
         vehiculo:vehiculos(*),
         asignaciones:orden_asignaciones(*, usuario:perfiles(*)),
-        hallazgos:orden_hallazgos(*)
+        hallazgos:orden_hallazgos(*),
+        lineas_labor:orden_labor(estado),
+        lineas_repuestos:orden_repuestos(estado)
       `).order('creado_en', { ascending: false }).order('id');
       if (sedeId) query = query.eq('sede_id', sedeId);
       // Lo que un admin archivó a mano sale del tablero en el acto, sin esperar los 90 días.
@@ -54,17 +58,30 @@ export const orderQueries = {
       return query.range(from, to);
     };
 
+    type WorkOrderListRow = WorkOrder & {
+      lineas_labor?: { estado?: LineState }[] | null;
+      lineas_repuestos?: { estado?: LineState }[] | null;
+    };
+
     // Qué órdenes esperan la respuesta del cliente a un presupuesto, y cuáles una pieza.
     // Tolerantes: si fallan, la lista se ve igual, sin la marca.
     const [data, waiting, waitingParts] = await Promise.all([
-      fetchAll<WorkOrder>(page),
+      fetchAll<WorkOrderListRow>(page),
       quotesService.waitingOrderIds().catch(() => new Set<string>()),
       orderQueries.waitingPartsOrderIds().catch(() => new Set<string>()),
     ]);
-    return data.map((order) => ({
+    return data.map(({ lineas_labor, lineas_repuestos, ...order }): WorkOrder => ({
       ...order,
       esperando_autorizacion: waiting.has(order.id),
       esperando_repuestos: waitingParts.has(order.id),
+      // Algo cotizado que espera al cliente y nada autorizado todavía. Una orden sin ninguna línea
+      // no lleva la etiqueta: no hay cotización pendiente (revisión del arquitecto, 24/11/2026).
+      por_autorizar:
+        order.estatus !== 'entregado' &&
+        !hasApprovedLines(lineas_labor ?? [], lineas_repuestos ?? []) &&
+        [...(lineas_labor ?? []), ...(lineas_repuestos ?? [])].some(
+          (l) => l.estado === 'borrador' || l.estado === 'pendiente'
+        ),
     }));
   },
 
@@ -166,7 +183,9 @@ export const orderQueries = {
         .eq('id', orderId)
         // Las líneas en el orden en que se agregaron: es el orden del presupuesto.
         .order('creado_en', { referencedTable: 'orden_labor', ascending: true })
+        .order('id', { referencedTable: 'orden_labor', ascending: true })
         .order('creado_en', { referencedTable: 'orden_repuestos', ascending: true })
+        .order('id', { referencedTable: 'orden_repuestos', ascending: true })
         .single(),
       supabase.rpc('repuestos_de_orden', { p_orden_id: orderId }),
       // Fotos, videos y notas de voz de la recepción y de cada avance. Tolerante

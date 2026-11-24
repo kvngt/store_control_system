@@ -7,6 +7,8 @@ import { workOrdersService } from '../../../services/workOrders.service';
 import { queryKeys } from '../../../lib/queryClient';
 import { getErrorMessage } from '../../../lib/errors';
 import { isValidEmail } from '../../../lib/email';
+import { orderStatusKey } from '../../../lib/workType';
+import { isApproved } from '../lineState';
 import type { OrderStatus } from '../../../types/database';
 import type { DamageMark } from '../../../lib/vehicleDiagram';
 import type { OrderDetailSharedContext } from './detailTypes';
@@ -52,6 +54,12 @@ export function useOrderTransitions({
   const [readyNotifyOpen, setReadyNotifyOpen] = useState(false);
   const closeReadyNotify = useCallback(() => setReadyNotifyOpen(false), []);
   const bumpStatusEpoch = useCallback(() => setStatusEpoch((n) => n + 1), []);
+  // Confirmación al pasar a Finalizado con tareas autorizadas sin marcar (A-14).
+  const [finishConfirmCount, setFinishConfirmCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    setFinishConfirmCount(null);
+  }, [order?.id]);
 
   // Keep the manual progress input in sync with whichever order is open.
   // Deliberately keyed on the two fields rather than on `order`: the object is
@@ -61,6 +69,17 @@ export function useOrderTransitions({
     if (order) setProgressDraft(String(order.porcentaje_avance));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order?.id, order?.porcentaje_avance]);
+
+  const commitStatusChange = async (orderId: string, nextStatus: OrderStatus, onFail?: () => void) => {
+    try {
+      await workOrdersService.updateWorkOrderStatus(orderId, nextStatus);
+      await refresh();
+      showToast('success', t('workOrders.statusChanged').replace('{status}', t(orderStatusKey(nextStatus))));
+    } catch (err) {
+      onFail?.();
+      fail(err);
+    }
+  };
 
   const changeStatus = async (status: OrderStatus) => {
     if (!order || status === order.estatus) return;
@@ -105,13 +124,26 @@ export function useOrderTransitions({
       return;
     }
 
-    try {
-      await workOrdersService.updateWorkOrderStatus(order.id, status);
-      await refresh();
-    } catch (err) {
-      discard();
-      fail(err);
+    if (status === 'finalizado') {
+      const unmarked = (order.labor_items || []).filter((item) => isApproved(item) && !item.completado_en).length;
+      if (unmarked > 0) {
+        setFinishConfirmCount(unmarked);
+        return;
+      }
     }
+
+    await commitStatusChange(order.id, status, discard);
+  };
+
+  const cancelFinishConfirm = useCallback(() => {
+    setFinishConfirmCount(null);
+    bumpStatusEpoch();
+  }, [bumpStatusEpoch]);
+
+  const confirmFinish = async () => {
+    setFinishConfirmCount(null);
+    if (!order) return;
+    await commitStatusChange(order.id, 'finalizado', bumpStatusEpoch);
   };
 
   // Administración revisa lo que terminó el técnico y confirma que está listo: ahí se le avisa al
@@ -254,6 +286,9 @@ export function useOrderTransitions({
     statusEpoch,
     bumpStatusEpoch,
     changeStatus,
+    finishConfirmCount,
+    cancelFinishConfirm,
+    confirmFinish,
     markReadyForPickup,
     readyNotifyOpen,
     closeReadyNotify,

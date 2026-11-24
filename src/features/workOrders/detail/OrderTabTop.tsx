@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../../../context/language.context';
 import type { WorkOrder } from '../../../types/database';
@@ -9,7 +10,6 @@ import type { findingsToReview } from '../findings';
 import { suggestedTechnicianId } from '../tasks';
 import type { WorkOrderDetailApi } from '../useWorkOrderDetail';
 import type { LaborPrefill } from './detailTypes';
-import OrderQuickActions from './OrderQuickActions';
 
 interface OrderTabTopProps {
   tabId: string;
@@ -21,12 +21,12 @@ interface OrderTabTopProps {
   findings: ReturnType<typeof findingsToReview>;
   unassignedCount: number;
   techWaitsAuthorization: boolean;
+  quickActions?: ReactNode;
   goTo: (tabId: string, sectionId: string) => void;
   onOpenSection: (sectionId: string) => void;
   onSelectTab: (tabId: string) => void;
-  onOpenStickerModal: () => void;
   onSetPrefill: (prefill: LaborPrefill) => void;
-  onReportFinding: () => void;
+  onRegisterAuthorization: () => void;
 }
 
 export default function OrderTabTop({
@@ -39,12 +39,12 @@ export default function OrderTabTop({
   findings,
   unassignedCount,
   techWaitsAuthorization,
+  quickActions,
   goTo,
   onOpenSection,
   onSelectTab,
-  onOpenStickerModal,
   onSetPrefill,
-  onReportFinding,
+  onRegisterAuthorization,
 }: OrderTabTopProps) {
   const { t } = useLanguage();
   const assignments = order.asignaciones || [];
@@ -102,15 +102,14 @@ export default function OrderTabTop({
   if (tabId === 'resumen') {
     return (
       <>
-        <OrderQuickActions
-          order={order}
-          detail={detail}
-          isAdmin={isAdmin}
-          goTo={goTo}
-          onOpenStickerModal={onOpenStickerModal}
-          onReportFinding={onReportFinding}
-        />
-        {isAdmin && <AuthorizationPanel order={order} onOpenQuote={() => goTo('trabajos', 'presupuesto')} />}
+        {!isMobile && quickActions}
+        {isAdmin && (
+          <AuthorizationPanel
+            order={order}
+            onOpenQuote={() => goTo('trabajos', 'presupuesto')}
+            onRegisterAuthorization={onRegisterAuthorization}
+          />
+        )}
         {findingsSection}
         {unassignedNotice}
         {/* Lo que el cliente dejó pendiente en otras visitas: el momento de ofrecerlo es ahora. */}
@@ -127,14 +126,7 @@ export default function OrderTabTop({
   if (tabId === 'tareas' && !isAdmin) {
     return (
       <>
-        <OrderQuickActions
-          order={order}
-          detail={detail}
-          isAdmin={isAdmin}
-          goTo={goTo}
-          onOpenStickerModal={onOpenStickerModal}
-          onReportFinding={onReportFinding}
-        />
+        {!isMobile && quickActions}
         <TechOrderStatus
           order={order}
           myTasks={laborList.filter((l) => l.asignado_a === detail.userId)}

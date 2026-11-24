@@ -177,4 +177,47 @@ describe('buildTechActions', () => {
     inspAction?.onClick();
     expect(goTo).toHaveBeenCalledWith('orden', 'inspeccion');
   });
+
+  it('fija el orden de las acciones del técnico (B-04): principal, avance, hallazgo, resto', () => {
+    const actionsWithStart = buildTechActions({
+      order: { estatus: 'recepcion' } as WorkOrder,
+      laborList: [makeLabor('l1', 'tech-1', 'aprobado')],
+      userId: 'tech-1',
+      canEdit: true,
+      canSuggestNextService: true,
+      changeStatus: vi.fn(),
+      goTo: vi.fn(),
+      onReportFinding: vi.fn(),
+      onSuggestService: vi.fn(),
+    });
+    expect(actionsWithStart.map((a) => a.key)).toEqual([
+      'startWork',
+      'progress',
+      'finding',
+      'tasks',
+      'inspection',
+      'suggestService',
+      'vehicle',
+    ]);
+
+    const actionsWithoutPrimary = buildTechActions({
+      order: { estatus: 'en_proceso' } as WorkOrder,
+      laborList: [makeLabor('l1', 'tech-1', 'aprobado', null)],
+      userId: 'tech-1',
+      canEdit: true,
+      canSuggestNextService: true,
+      changeStatus: vi.fn(),
+      goTo: vi.fn(),
+      onReportFinding: vi.fn(),
+      onSuggestService: vi.fn(),
+    });
+    expect(actionsWithoutPrimary.map((a) => a.key)).toEqual([
+      'tasks',
+      'progress',
+      'finding',
+      'inspection',
+      'suggestService',
+      'vehicle',
+    ]);
+  });
 });

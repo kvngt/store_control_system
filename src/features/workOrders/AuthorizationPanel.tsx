@@ -37,7 +37,15 @@ function linesOf(order: WorkOrder): Line[] {
  * Desde que la firma no autoriza (20261010000022), sin esto la orden no decía que faltaba
  * mandar el presupuesto.
  */
-export default function AuthorizationPanel({ order, onOpenQuote }: { order: WorkOrder; onOpenQuote: () => void }) {
+export default function AuthorizationPanel({
+  order,
+  onOpenQuote,
+  onRegisterAuthorization,
+}: {
+  order: WorkOrder;
+  onOpenQuote: () => void;
+  onRegisterAuthorization?: () => void;
+}) {
   const { t, language } = useLanguage();
   const { sending, sendQuote } = useQuoteSend(order);
 
@@ -68,14 +76,18 @@ export default function AuthorizationPanel({ order, onOpenQuote }: { order: Work
         <div className="authorization-row is-draft">
           <FileWarning size={16} aria-hidden="true" />
           <div className="authorization-row-text">
-            <strong>{t('authorization.notSent').replace('{count}', String(drafts.length)).replace('{total}', money(sum(drafts)))}</strong>
+            <strong>
+              {t(drafts.length === 1 ? 'authorization.notSentOne' : 'authorization.notSentMany')
+                .replace('{count}', String(drafts.length))
+                .replace('{total}', money(sum(drafts)))}
+            </strong>
             <span>{t('authorization.notSentHint')}</span>
           </div>
           <div className="authorization-row-actions">
-            <button type="button" className="btn btn-primary btn-sm" onClick={() => void sendQuote()} disabled={sending}>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => void sendQuote()} disabled={sending}>
               <Send size={14} /> {sending ? t('common.loading') : t('authorization.send')}
             </button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={onOpenQuote}>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={onRegisterAuthorization ?? onOpenQuote}>
               {t('authorization.registerInWork')}
             </button>
           </div>
@@ -91,7 +103,11 @@ export default function AuthorizationPanel({ order, onOpenQuote }: { order: Work
                 .replace('{numero}', String(open.numero))
                 .replace('{time}', relativeTime(open.creado_en, language))}
             </strong>
-            <span>{t('authorization.waitingHint').replace('{count}', String(pending.length)).replace('{total}', money(sum(pending)))}</span>
+            <span>
+              {t(pending.length === 1 ? 'authorization.waitingHintOne' : 'authorization.waitingHintMany')
+                .replace('{count}', String(pending.length))
+                .replace('{total}', money(sum(pending)))}
+            </span>
           </div>
           <div className="authorization-row-actions">
             <button type="button" className="btn btn-ghost btn-sm" onClick={onOpenQuote}>

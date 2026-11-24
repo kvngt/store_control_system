@@ -31,7 +31,7 @@ export function QuoteShareActions({ order, url }: { order: WorkOrder; url: strin
   return (
     <div className="quote-share-actions">
       {waHref ? (
-        <a className="btn btn-primary btn-sm" href={waHref} target="_blank" rel="noopener noreferrer">
+        <a className="btn btn-secondary btn-sm" href={waHref} target="_blank" rel="noopener noreferrer">
           <MessageCircle size={14} /> {t('customerLink.whatsapp')}
         </a>
       ) : (

@@ -126,4 +126,27 @@ describe('Diálogo de avance de una tarea y el botón «atrás»', () => {
     await vi.waitFor(() => expect(screen.queryByRole('button', { name: 'Guardar' })).not.toBeInTheDocument());
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
+
+  it('B-08 y B-06: Guardar no se apaga vacío, avisa qué falta, enfoca y la casilla usa checkbox-touch', async () => {
+    const user = userEvent.setup();
+    const detail = abrirLista();
+
+    await user.click(screen.getByRole('button', { name: /Agregar avance/ }));
+    const save = await screen.findByRole('button', { name: 'Guardar' });
+    const textarea = screen.getByPlaceholderText(/Describe el trabajo realizado/);
+    const visibleLabel = screen.getByText('Visible para el cliente').closest('label');
+
+    expect(visibleLabel).toHaveClass('checkbox-touch');
+    expect(save).toBeEnabled();
+
+    await user.click(save);
+    expect(detail.addProgressUpdate).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Escribe qué se hizo o agrega una foto o video.');
+    expect(textarea).toHaveAttribute('aria-invalid', 'true');
+    expect(textarea).toHaveFocus();
+
+    await user.type(textarea, 'Pastillas nuevas');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(textarea).not.toHaveAttribute('aria-invalid');
+  });
 });

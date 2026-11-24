@@ -65,7 +65,7 @@ las migraciones desde cero en cada cambio (CI).
 
 ### Riesgos para el mantenimiento
 
-**R-B1. La versión vigente de una función está repartida en migraciones.** Hay 101 migraciones en el repositorio (al 17/11/2026, hasta `20261010000047`; 99 aplicadas en producción, hasta la `045`; 161 funciones contadas al 11/10/2026 en la migración `028`, más las de `029` a `047`). Cuando una cambia, la migración nueva
+**R-B1. La versión vigente de una función está repartida en migraciones.** Hay 101 migraciones en el repositorio (al 17/11/2026, hasta `20261010000047`; las 101 aplicadas en producción; 161 funciones contadas al 11/10/2026 en la migración `028`, más las de `029` a `047`). Cuando una cambia, la migración nueva
 la reescribe entera. `handle_order_delivery_payment` va por su quinta versión;
 `sync_order_commissions`, `pay_commissions`, `create_work_order`, `recalculate_order_totals` y
 `trg_guard_order_technician`, por la cuarta o posterior. El riesgo concreto: quien la cambie parte de una

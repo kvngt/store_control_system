@@ -138,6 +138,7 @@ export type _WorkOrder = Expect<
         | 'avances'
         | 'esperando_autorizacion'
         | 'esperando_repuestos'
+        | 'por_autorizar'
         | 'hallazgos'
         | 'trabajos'
       >,
