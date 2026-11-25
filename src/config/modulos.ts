@@ -23,6 +23,11 @@ const MODULOS_VALIDOS: ReadonlySet<string> = new Set<Modulo>([
   'indicadores',
 ]);
 
+/** Indica si `valor` coincide con un módulo configurable conocido. */
+export function esModulo(valor: string): valor is Modulo {
+  return MODULOS_VALIDOS.has(valor);
+}
+
 /**
  * Parsea `VITE_MODULOS_APAGADOS`: separa por comas, ignora espacios y descarta
  * entradas vacías o nombres desconocidos.

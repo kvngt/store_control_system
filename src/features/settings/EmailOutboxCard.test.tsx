@@ -35,11 +35,11 @@ describe('EmailOutboxCard', () => {
     mocks.retryFailedEmails.mockResolvedValue(3);
     renderWithProviders(<EmailOutboxCard />);
 
-    expect(await screen.findByText(/3 correo\(s\) fallaron/)).toBeInTheDocument();
+    expect(await screen.findByText(/3 correos fallaron/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /Reintentar todos/ }));
 
     await waitFor(() => expect(mocks.retryFailedEmails).toHaveBeenCalledTimes(1));
-    expect(await screen.findByText(/3 correo\(s\) volvieron a la cola/)).toBeInTheDocument();
+    expect(await screen.findByText(/3 correos volvieron a la cola/)).toBeInTheDocument();
     // Se vuelve a contar: ya no queda ninguno.
     expect(await screen.findByText(/Ningún correo falló/)).toBeInTheDocument();
   });

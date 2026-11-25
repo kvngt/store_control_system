@@ -80,6 +80,7 @@ jobs:
   # Pruebas E2E (Playwright) y seguridad de la API (qa:security:local) contra el stack completo local.
   e2e:
     name: E2E y seguridad contra stack local
+    timeout-minutes: 45
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -38,8 +38,10 @@ Management system for mechanical and auto body & paint repair shops.
 
 Restorify provides complete management for an auto repair shop: customers, their vehicles,
 work orders from intake to delivery, photos and
-videos of the work, money coming in and going out for each order, and staff
-commissions.
+videos of the work, and money coming in and going out for each order.
+<!-- modulo: comisiones -->
+It also tracks and settles staff commissions.
+<!-- /modulo -->
 
 It runs in your browser without installing anything, although on a phone it is best to
 add it to your home screen (section 16). It is designed to work seamlessly
@@ -74,15 +76,22 @@ parts, assigned technicians, progress, videos, voice notes and the
 customer's signature. Each order receives an automatic number formatted like
 `ORD-2026-001`.
 
-**Labor.** What is charged for the work. It is the base for technician
-commissions, which is why it is the only order financial figure they see.
+**Labor.** What is charged for the work. It is the only order financial figure technicians see.
+<!-- modulo: comisiones -->
+It is also the base used to calculate their commissions.
+<!-- /modulo -->
 
+<!-- modulo: comisiones -->
 **Commission.** The share of labor earned by a technician when the order is
 delivered. Since October 2026, each job (task) has **its technician**, and the commission for
 that job belongs to them.
+<!-- /modulo -->
 
 **Job.** A labor line with its type (mechanical or painting), its price and its
-technician. A job **without a technician** pays commission to nobody.
+technician.
+<!-- modulo: comisiones -->
+A job **without a technician** pays commission to nobody.
+<!-- /modulo -->
 
 **Estimate.** The work presented to the customer for authorization.
 **What the customer does not authorize is not done or charged.**
@@ -162,8 +171,14 @@ amounts.
 ### Sidebar (left)
 
 The main menu, organized in three sections:
-- **Workshop**: **Dashboard**, **Customers**, **Vehicles**, **Work Orders** and, for technicians, **My commissions**. (Customers and Vehicles are only visible to administrators).
-- **Finance** (administrators only): **Finance**, **Commissions** and **Employees**.
+- **Workshop**: **Dashboard**, **Customers**, **Vehicles** and **Work Orders**. (Customers and Vehicles are only visible to administrators).
+<!-- modulo: comisiones -->
+  For technicians, **My commissions** also appears.
+<!-- /modulo -->
+- **Finance** (administrators only): **Finance** and **Employees**.
+<!-- modulo: comisiones -->
+  Also **Commissions**.
+<!-- /modulo -->
 - **System**: **Settings** and **Help** (where you view this manual tailored to your role, with a **Contents** index and the **Search the manual…** field that filters sections instantly).
 
 At the bottom is the **Log Out** button. The Kanban board no longer has its own entry in the menu: it is located inside **Work Orders** (section 10).
@@ -179,7 +194,10 @@ It can be collapsed using the arrow to gain screen space.
   you view from that point forward belongs to the selected workshop.
 - **Language.** ES / EN buttons.
 - **Notification bell.** Your alerts: assigned orders, technician progress updates,
-  orders ready for delivery, and generated commissions. See section 11.
+  and orders ready for delivery. See section 11.
+<!-- modulo: comisiones -->
+  It also alerts on approved commissions.
+<!-- /modulo -->
 - **Avatar.** Your photo or initials. Takes you to **Settings**.
 
 ### On the phone
@@ -189,7 +207,9 @@ It can be collapsed using the arrow to gain screen space.
 - Search opens with the **magnifying glass** in the header and takes over the full screen.
 - A **bottom bar** appears with the most commonly used shortcuts:
   - For everyone: **Home** and **Orders**.
+<!-- modulo: comisiones -->
   - For technicians: **Commissions** (opens their accepted and paid commissions directly).
+<!-- /modulo -->
   - For administration: **Customers** and **Vehicles**.
 - Tables turn into cards, making them easier to tap with your finger.
 - Large forms (such as New Order) open full screen.
@@ -214,8 +234,10 @@ This is the home screen. It summarizes shop activity.
   - **In progress or finished with nothing authorized: nothing would be charged**: orders in progress, on hold or finished that have no authorized job or part. A technician can start and finish an order without anyone authorizing it; if it is delivered like that, the total is $0. Opens the order in Work so you can quote it and record the authorization.
   - **Quoted work not yet authorized: send the estimate or record the authorization**: added jobs that have not been sent to the customer or authorized yet. Opens the order in Work.
   - **Quotes the customer has not answered**: sent estimates awaiting a customer response. Opens the order in Work.
+<!-- modulo: comisiones -->
   - **Jobs without a technician: nobody earns their commission**: nobody earns commission on these jobs until a technician is assigned. Opens the
     order in Work.
+<!-- /modulo -->
   - **Finished jobs to review and mark ready for pickup**: orders where technicians finished the work, waiting for the office to inspect them and mark them ready for pickup.
   - **Next service suggestions to review**: what a technician proposed for the vehicle's next service. Opens the order in Billing & customer.
   - **Orders past their delivery date** (completed orders do not count).
@@ -385,9 +407,13 @@ Each order can display badges depending on its condition:
 | **Waiting for Approval** | The order is paused because the technician reported additional work or the office sent a quote awaiting customer response. It returns to In Progress automatically when the customer responds or when the finding is discarded. The technician cannot lift the pause on their own. The customer link says «Waiting for your approval» only once an estimate has been sent; while the office prepares it, it says «Reviewing additional work». |
 | **Completed** | The technician finished the work. Progress automatically moves to 100% and the office receives a notification that work is finished. **The customer is not notified yet**: their link shows «Final inspection» and the order displays the **To review** badge. The technician cannot reopen it to In Progress; only an administrator can reopen it. |
 | ↳ **Ready for pickup** | A sub-status on Completed set **only by an administrator** using the **Mark ready for pickup** button. At that moment an email is dispatched to the customer letting them know their vehicle is ready, and their link displays «Ready for pickup». |
-| **Delivered** | The customer picked up the vehicle. **Only an administrator** sets this, through the delivery dialog. It records collection in Finance, books parts costs, freezes parking fees if applicable, and generates commissions (section 18). |
+| **Delivered** | The customer picked up the vehicle. **Only an administrator** sets this, through the delivery dialog. It records collection in Finance, books parts costs, and freezes parking fees if applicable (section 18). |
 | **Picked up without repair** | The customer retrieved the vehicle **without all work being completed**. **Only an administrator**, using the **Picked up without repair** button (see below). |
 
+<!-- modulo: comisiones -->
+Upon delivery, task commissions are also generated (section 13).
+
+<!-- /modulo -->
 **Waiting for parts** is not a general order status: in the parts table, each part is marked as **Not ordered**, **Ordered** and then **Arrived**. As long as any part has not arrived, the order displays the **Waiting for parts** badge in the list and on the board, and the customer sees on their report which part is being awaited. When marked **Arrived**, assigned technicians receive a notification.
 
 **Progress updates automatically** with tasks: each task marked as done adds to progress based on its labor price (a $400 task weighs more than a $50 task). A technician or administrator can adjust it manually if it does not reflect actual progress; when the next task is marked as done, it recalculates automatically.
@@ -422,7 +448,9 @@ The **Previous** and **Next** buttons let you navigate between steps without los
 - **Estimated Delivery**.
 - **Insurance work**: check the box if the repair is covered by insurance, and enter the **Insurance company** and **Claim number**.
 - **Add job**: type (Mechanical or Painting), description, price and assigned **Technician**. If the type does not match the person's registered trade (for example, painting assigned to a mechanic), the system displays the warning «Assign a painting job to a mechanic?» with options **Assign anyway**, **Choose another** or **Cancel**. You can leave the job as **Unassigned**.
+<!-- modulo: catalogo -->
 - **From catalog**: next to adding a job manually, this allows selecting a predefined job package from the workshop's catalog (e.g., oil change or major tune-up). When selected, its labor and part lines are instantly added to the intake draft with their respective prices, tagged with their job chip.
+<!-- /modulo -->
 - **Add part**: description, quantity, unit price and optional cost.
 - **The customer accepted this work and these prices**: if the customer already agreed in person to the work and quote upon vehicle drop-off, check this box. The work will be marked as authorized directly under the customer's name, without requiring a separate quote sent later or a manual authorization entry.
 - If you type a job or part and do not tap **Add**, the **Create** button prompts you to add it or discard it before continuing.
@@ -469,7 +497,10 @@ During order check-in (in step 2, after the photo zones, via the **Mark damage o
 
 ### Only the office creates orders
 
-Mechanics and painters do not see the **New Order** button. Opening an order commits the shop, and assigning tasks determines who earns commissions; both responsibilities belong exclusively to administration.
+Mechanics and painters do not see the **New Order** button. Opening an order commits the shop and assigning tasks defines who performs the work, so both responsibilities belong exclusively to administration.
+<!-- modulo: comisiones -->
+Assigning tasks also determines who earns commissions.
+<!-- /modulo -->
 
 ### Work order details
 
@@ -507,7 +538,9 @@ Below the header (on mobile, right below the order title and customer name, befo
   - **My tasks** (highlighted when neither starting nor finishing is due; takes them straight to assigned tasks).
   - **Add progress**.
   - **Report additional work** (active while the order is not completed).
+<!-- modulo: inspeccion -->
   - **Inspection** (opens the **360° Inspection** section, where **Point inspection** is located).
+<!-- /modulo -->
   - **Suggest next service** (opens the dialog to suggest the date and miles for the next maintenance, or takes you to the **Next service** section if the order already has one recorded).
   - **Vehicle details**.
 
@@ -529,14 +562,26 @@ On mobile there are no top tabs: all sections are stacked in a single column in 
 Distributed across tabs, the sections are:
 
 - **In the Administrator view**:
-  - **Summary**: **Vehicle Information**, **Customer Signature**, **Assigned Technician**. (Above it displays alerts for reported additional work, unassigned jobs and pending work from prior visits).
-  - **Work**: **Labor**, **Parts Description**, **Quote**, **Commission split**.
+  - **Summary**: **Vehicle Information**, **Customer Signature**, **Assigned Technician**. (Above it displays alerts for reported additional work and pending work from prior visits).
+<!-- modulo: comisiones -->
+    It also alerts when there are jobs without an assigned technician.
+<!-- /modulo -->
+  - **Work**: **Labor**, **Parts Description**, **Quote**.
+<!-- modulo: comisiones -->
+    It also includes **Commission split**.
+<!-- /modulo -->
   - **Photos & progress**: **360° Inspection**, **Work Progress**.
   - **Billing & customer**: **Totals**, **Parking** (if enabled at the workshop), **Next service**, **Order balance** (if delivered), **Customer link**.
   - **History**: immutable audit log of all order changes.
 - **In the Technician view**:
-  - **Tasks**: list of assigned **Tasks** and the **Your estimated commission** card.
-  - **Order** (on desktop; on mobile all sections are stacked in a single column below **Tasks**): **Vehicle Information**, **360° Inspection** (with the vehicle damage diagram in read-only mode, check-in photo, video and voice note capture, and **Point inspection**), **Parts Description** (with **Ordered** / **Arrived** status, without dollar amounts), **Customer Signature** (only appears if the customer already signed), **Assigned Technician**, **Next service** (suggest only).
+  - **Tasks**: list of assigned **Tasks**.
+<!-- modulo: comisiones -->
+    It also shows the **Your estimated commission** card.
+<!-- /modulo -->
+  - **Order** (on desktop; on mobile all sections are stacked in a single column below **Tasks**): **Vehicle Information**, **360° Inspection** (with the vehicle damage diagram in read-only mode and check-in photo, video and voice note capture), **Parts Description** (with **Ordered** / **Arrived** status, without dollar amounts), **Customer Signature** (only appears if the customer already signed), **Assigned Technician**, **Next service** (suggest only).
+<!-- modulo: inspeccion -->
+    Inside **360° Inspection**, **Point inspection** also appears.
+<!-- /modulo -->
   - **Progress**: log of **Work Progress**.
 
 #### Additional work reported by the technician
@@ -573,20 +618,39 @@ After reporting a finding, inside your **Tasks** section the **Additional work y
 #### Labor and Tasks
 
 - **For administrators (Labor)**:
-  - Green button **Add job**: opens a row with **Type** (Mechanical or Painting), **Description**, **Price**, optional billed **Hours** field, and **Technician**.
+  - Green button **Add job**: opens a row with **Type** (Mechanical or Painting), **Description**, **Price**, and **Technician**.
+<!-- modulo: reloj -->
+    It also includes an optional billed **Hours** field.
+<!-- /modulo -->
+<!-- modulo: catalogo -->
   - **From catalog**: next to «Add job», lets you import a predefined job from the workshop catalog into the order. Choosing a job displays the breakdown of its labor and part lines, allowing you to pre-assign a technician (suggested automatically based on specialty). Tapping «Add» inserts all lines grouped under that job title with their respective hours.
   - **Grouped jobs**: above the labor table, a compact list displays each grouped job with its title, line count, and system-calculated total. From here, an administrator can rename the job or delete it along with all its lines upon confirmation.
   - On each labor or part line belonging to a grouped job, a chip (`.job-chip`) with the job title is displayed for easy recognition.
+<!-- /modulo -->
   - If the type does not match the person's registered trade, the trade mismatch warning appears.
   - On each existing job there are two selectors (**Type** and **Technician**) that can be modified at any time without altering the quoted price. When a job is assigned to a technician, they join the order and receive a notification that a new job was assigned; when removed, they receive a notification that the job was reassigned.
+<!-- modulo: comisiones -->
   - If a job has no technician, it displays the badge **No technician**: nobody will earn that commission until one is assigned. The order warns above Summary with «N job(s) without a technician: nobody will earn their commission until you assign one.» and the **View jobs** button.
+<!-- /modulo -->
+<!-- modulo: reloj -->
   - **Hours and recorded time**: the table displays the billed hours for each labor line. Next to it, total recorded clock duration is displayed live, along with a **Times** button that opens a dialog where administrators can review interval logs, adjust start/end timestamps, or delete incorrect entries.
+<!-- /modulo -->
+<!-- modulo: comisiones -->
   - Once commission is paid, task selectors display a lock and the **Delete** button is disabled; to modify them, the payment must first be undone in Commissions.
+<!-- /modulo -->
 - **For technicians (Tasks)**:
   - Main status button: the **Start work** (in reception with authorized work) and **Done: let the office know** (in progress when all work is completed) actions are placed at the top in the order's **quick actions**, ensuring a single primary button per status. In the task list, when all is done an informational help hint is shown, and if their own tasks are completed but another colleague's tasks are still pending, they see the notice «Your part is done. Still pending: ...».
-  - They view their tasks with description, type and labor price (from which their commission is derived). Parts are shown without prices.
+  - They view their tasks with description, type and labor price. Parts are shown without prices.
+<!-- modulo: comisiones -->
+    Their commission is derived from that price.
+<!-- /modulo -->
+<!-- modulo: reloj -->
   - **Per-task clock**: on their own tasks (labeled **Task: {description}**), each authorized, incomplete task includes an accessible touch button (44px or larger) showing **Start** when stopped or **Pause ({duration})** when running, updating elapsed duration live every minute. A technician can only have one active clock at any time: tapping **Start** on another task automatically pauses the previous one and starts the new one, and tapping **Done** also stops that task's active clock. If a clock is left running by mistake, the system automatically caps it at a maximum of 12 hours. Once the order is **Completed**, the technician can no longer start a task's clock (just as they can no longer reopen a task).
-  - They tap **Done** upon completing a task; a «Task done» confirmation appears, the completed task stays crossed out in place until the order reloads, and if a clock is running it stops automatically. If marked by mistake, they tap **Reopen task** (while the order is not finished; after that, they ask the office).
+<!-- /modulo -->
+  - They tap **Done** upon completing a task; a «Task done» confirmation appears and the completed task stays crossed out in place until the order reloads. If marked by mistake, they tap **Reopen task** (while the order is not finished; after that, they ask the office).
+<!-- modulo: reloj -->
+    If a clock is running for that task, it stops automatically.
+<!-- /modulo -->
   - Using **Photo**, they can directly take or upload a camera snapshot to attach as an update to that task.
   - Using **Add update**, they can upload photos, videos or voice notes linked to that specific task.
 - **Badges on each line**:
@@ -608,8 +672,14 @@ After reporting a finding, inside your **Tasks** section the **Additional work y
   - **Add update** opens a window where you can type what you did, attach photos, video or a voice note, and check **Visible to the customer** if you want to publish it to the customer report right away. Tapping **Save** with no note or files shows what is missing inside the dialog and focuses the note field.
   - **Photo** opens your phone's camera directly; once you take the photo, it opens that same window with the image already attached so you can add an optional note and tap **Save progress**.
   - Below any task that already has updates, the **{n} update(s) for this job** collapsible toggle lets you view its history without leaving the task list.
-  - **The phone's back button does not make you lose what you type or record.** With the camera, the recorder or a photo open, back closes only that and you return to the update as it was; if you already recorded a video or a voice note without using it, it asks first. In the update window, in the form on the **Progress** tab and in the note of an inspection point, with something typed or a file, it asks **Keep editing** or **Discard**; the same if you tap outside the window. With nothing typed, back works as usual.
-- **Other tasks on this order**: when the same order has tasks assigned to other coworkers or **Unassigned**, a read-only **Other tasks on this order** table appears below your tasks showing the **Assigned to** column, authorization status, and whether they are completed. This helps you coordinate with the rest of the shop and see what is still pending before you can tap **Done: let the office know**, though you cannot mark them as done or start their clock.
+  - **The phone's back button does not make you lose what you type or record.** With the camera, the recorder or a photo open, back closes only that and you return to the update as it was; if you already recorded a video or a voice note without using it, it asks first. In the update window and in the form on the **Progress** tab, with something typed or a file, it asks **Keep editing** or **Discard**; the same if you tap outside the window. With nothing typed, back works as usual.
+<!-- modulo: inspeccion -->
+    The same applies when typing a note on an inspection point.
+<!-- /modulo -->
+- **Other tasks on this order**: when the same order has tasks assigned to other coworkers or **Unassigned**, a read-only **Other tasks on this order** table appears below your tasks showing the **Assigned to** column, authorization status, and whether they are completed. This helps you coordinate with the rest of the shop and see what is still pending before you can tap **Done: let the office know**, though you cannot mark them as done.
+<!-- modulo: reloj -->
+  You also cannot start their clock.
+<!-- /modulo -->
 
 #### Parts
 
@@ -626,18 +696,22 @@ If the repair is covered by an insurance company:
 
 ![«Edit insurance».](../public/manual/en/18.webp)
 
+<!-- modulo: comisiones -->
 #### Your estimated commission (technicians)
 <!-- rol: tecnico -->
 
 Assigned technicians see the **Your estimated commission** card in their **Tasks** section. It displays each authorized personal task with its price. The rate and amount show **Pending** until the office accepts the commission, after the order is delivered; the card explains: «Your commission is confirmed when the office accepts it, after the order is delivered.» Once accepted, the calculation appears (*task price × rate*) along with its amount. If the employee is on salary, the card indicates that the order earns no commission.
 
 ![The same order viewed by a mechanic, with the "Your estimated commission" card.](../public/manual/en/19.webp)
+<!-- /modulo -->
 
 #### Assigned technicians
 
 Only administrators can assign staff belonging to the order's workshop.
+<!-- modulo: comisiones -->
 - Anyone added through a job has the **By job** tag and earns only their own jobs.
 - Anyone on legacy jobs from before October 2026 has **In the split** and participates in the pool by specialty.
+<!-- /modulo -->
 - When manually adding a technician to the order, the system automatically assigns them all unassigned non-rejected tasks of their trade (mechanical or painting) on the order; the app displays an alert showing how many tasks were assigned.
 - A technician who has assigned jobs cannot be removed from the order; their tasks must first be reassigned to another person.
 
@@ -647,6 +721,7 @@ A log where staff document work performed with text, photos, videos or voice not
 
 ![A progress entry with photos and a voice note.](../public/manual/en/20.webp)
 
+<!-- modulo: inspeccion -->
 #### Multi-point vehicle inspection
 
 Allows conducting a comprehensive multi-point inspection (brakes, tires, fluids, suspension, lighting, etc.) based on the templates configured for the workshop.
@@ -663,11 +738,14 @@ Allows conducting a comprehensive multi-point inspection (brakes, tires, fluids,
 - **How administration reviews, quotes, and publishes the inspection**:
   - Once the inspection is completed, administrators can turn on the **Show to customer** toggle to make it visible on the customer's portal link.
   - Once published, the inspection is locked for the technician: points, notes and photos can no longer be changed, and their screen says «The customer can already see this inspection: if something changed, tell the office.». The office can still correct it, or tap **Hide from customer** so the technician can edit it again.
-  - On every point marked **Attention** or **Urgent**, administration has two buttons to turn the finding into a quote:
+  - On every point marked **Attention** or **Urgent**, administration can turn the finding into a quote:
     - **Add to estimate**: opens the labor editor pre-filling the point's name and note, ready to assign a technician and set the price.
+<!-- modulo: catalogo -->
     - **From catalog**: opens the frequent job catalog picker to insert a predefined package with its labor lines and parts.
+<!-- /modulo -->
   - **On the customer portal**: once published, the customer sees a dedicated **Vehicle inspection** section featuring three summary badges (Urgent, Attention, Good), detailed cards for critical items showing notes and photos, and a collapsible list of items in good condition.
   - **Previous declined work**: attention and urgent points from completed inspections are automatically recalled on future visits of the same vehicle under the pending recommendations banner.
+<!-- /modulo -->
 
 #### Customer signature
 <!-- rol: admin -->
@@ -702,7 +780,9 @@ When jobs or parts are quoted, they start as **Not authorized**. In the **Estima
 
 Authorized work immediately adds to the order total and alerts technicians about which work to perform; unauthorized work is marked as **Do not do** and is neither charged nor performed. An order with an estimate awaiting response cannot be delivered. In addition, the order automatically moves to **In Progress** upon the first authorization (whether from the portal, recorded manually, or accepted during intake), allowing technicians to start work without waiting for manual status updates.
 
+<!-- modulo: catalogo -->
 **Whole job authorization.** When an order contains grouped jobs from the catalog, the customer on their web portal and the office in the authorization dialog see each job as a single block with its checkbox, title, and total amount, detailing below what it includes («Includes: ...»). Checking or unchecking the box approves or declines the entire job with all its labor and part lines: individual lines within a grouped job are not approved separately.
+<!-- /modulo -->
 
 #### Ready for pickup
 <!-- rol: admin -->
@@ -733,7 +813,9 @@ When selecting the **Delivered** status or tapping **Deliver and charge** in qui
   - The payment or refund entry is booked in Finance.
   - The expense for parts cost is booked.
   - Accrued parking fees are frozen with the delivery date.
+<!-- modulo: comisiones -->
   - Commissions are generated as «To review» for the corresponding technicians.
+<!-- /modulo -->
   - The customer receives the email «Thank you for your visit».
 
 #### Picked up without repair
@@ -748,7 +830,10 @@ Under **What happened with the work?**, choose:
 2. **Only the inspection is charged**: enter the amount under **Charge ($)** for vehicle diagnosis or inspection.
 3. **Some jobs were done**: check under **Jobs that were done** the specific tasks and parts actually completed (and optionally the inspection charge).
 
-The system calculates the difference between what was already collected and what is due, requesting the payment or refund method. Whatever was not charged remains recorded as "not performed" and will appear as a suggestion on future visits for that car. Charged work earns commission for its technician (the inspection does not earn commission). The order does not count as completed on the dashboard.
+The system calculates the difference between what was already collected and what is due, requesting the payment or refund method. Whatever was not charged remains recorded as "not performed" and will appear as a suggestion on future visits for that car. The order does not count as completed on the dashboard.
+<!-- modulo: comisiones -->
+Charged work earns commission for its technician (the inspection does not earn commission).
+<!-- /modulo -->
 
 #### Advance payments
 <!-- rol: admin -->
@@ -768,7 +853,10 @@ Administrators only, on the **Billing & customer** tab → **Totals** → **Appl
 - Select the **Discount type**: **In dollars** or **As a percentage**.
 - Enter the amount or percentage and a **Reason** (such as "regular customer").
 - Tap **Apply**.
-- **The shop absorbs the discount**: it lowers what the customer pays, but does not lower technician labor commissions or alter parking fees.
+- **The shop absorbs the discount**: it lowers what the customer pays and does not alter parking fees.
+<!-- modulo: comisiones -->
+  It also does not lower technician labor commissions.
+<!-- /modulo -->
 - To remove it, tap **Change discount** → **Remove discount**.
 
 #### Order history
@@ -875,9 +963,15 @@ A delivered order remains in the main list for 90 days. To remove it from the da
 ### Deleting an order
 <!-- rol: admin -->
 
-Only an administrator can delete an order, and **only if it has not been delivered yet and has no money recorded in Finance**. An order that already has money recorded in Finance (an advance payment or deposit, for example) cannot be deleted: cancel it with **Picked up without repair**, which records the refund. Deleting an order removes its media files and progress updates; bank-imported transactions remain intact.
+Only an administrator can delete an order, and **only if it has not been delivered yet and has no money recorded in Finance**. An order that already has money recorded in Finance (an advance payment or deposit, for example) cannot be deleted: cancel it with **Picked up without repair**, which records the refund. Deleting an order removes its media files and progress updates.
+<!-- modulo: estados_de_cuenta -->
+Bank-imported transactions remain intact.
+<!-- /modulo -->
 
-**A delivered order is not deleted: it is archived.** It holds the payment, the parts cost and the commissions, and deleting it would erase that money from Finance. In the order list, the delete button is replaced by **Archive**: the order leaves the list and goes to **Archived**, from where you can bring it back whenever you want.
+**A delivered order is not deleted: it is archived.** It holds the payment and the parts cost in Finance, and deleting it would erase that money. In the order list, the delete button is replaced by **Archive**: the order leaves the list and goes to **Archived**, from where you can bring it back whenever you want.
+<!-- modulo: comisiones -->
+It also holds the commissions generated by the work.
+<!-- /modulo -->
 
 ---
 
@@ -1011,11 +1105,15 @@ while the app is open, with a brief on-screen message.
 | **Customer responded to estimate** (or **Customer declined estimate**, if they authorized nothing) | Administrators, when the customer answers from their link |
 | **Additional work reported** | Administrators, when a technician reports additional work |
 | **Needs approval** | Administrators, when the order moves to **Waiting for Approval** |
+<!-- modulo: inspeccion -->
 | **Inspection complete** | Administrators, when a technician completes the order's point inspection |
+<!-- /modulo -->
 | **A part arrived** | Assigned technicians, when an ordered part is marked **Arrived** |
 | **Estimate awaiting response** | Administrators, once a day if an estimate has gone more than 24 hours without a response |
 | **Jobs authorized** / **Work not authorized** | Assigned technicians, when the customer answers the estimate, with what was authorized or not |
+<!-- modulo: comisiones -->
 | **Commission approved** | Each technician, when administration accepts their commission, with the accepted amount |
+<!-- /modulo -->
 | **Next service suggested** | Administrators, when a technician suggests the date or mileage for the next service |
 | **Past the delivery date** | Administrators and assigned technicians, once a day for each overdue order. **It replaces the previous day's notice**: there is only one per order, with the days overdue up to date |
 
@@ -1049,28 +1147,39 @@ just like any other application.
 
 ![Finance.](../public/manual/en/34.webp)
 
-It has three views:
+Available views:
 
 - **Shop records**: what the app records (order payments, parts costs,
-  commissions, and manual transactions). At the top, **Income**, **Expenses** and **Balance**;
+  and manual transactions). At the top, **Income**, **Expenses** and **Balance**;
   below, the table with filters by type and by **Month**. **Export Excel** downloads what the
   table displays (for example, a month) for your accountant.
+<!-- modulo: comisiones -->
+  It also includes commission payments.
+<!-- /modulo -->
+<!-- modulo: estados_de_cuenta -->
 - **Bank statements (bookkeeping)**: imported bank statements, to
   reconcile past months and send them to your accountant. They are separate bookkeeping: **they are not added**
   to app income and expenses. Each shows its statement period, total money in and out, and is
   exported separately.
+<!-- /modulo -->
+<!-- modulo: indicadores -->
 - **Workshop indicators**: essential shop performance and profitability metrics for management and
   shop owners, calculated in the database based on billed and delivered repair orders.
+<!-- /modulo -->
 
 Payment methods are **Cash, Card, Zelle, Transfer and Check**. Bank
 and Clover fees belong in the category **Bank and card fees**: record them manually
-once a month, using the statement amount.
+once a month, using the monthly bank summary amount.
 
 Many transactions **are created automatically by the system** (deposits, final payments upon delivery,
-parts costs, commission payments; section 18). Do not enter them manually or
-they will be duplicated. A commission payment appears as **one expense for each order** it
+and parts costs; section 18). Do not enter them manually or
+they will be duplicated.
+<!-- modulo: comisiones -->
+The same applies to commission payments: a payment appears as **one expense for each order** it
 covers ("Comisión Mario Mecánico - ORD-2026-014"), all sharing the same check number.
+<!-- /modulo -->
 
+<!-- modulo: indicadores -->
 ### Workshop indicators
 
 The **Indicators** tab aggregates key metrics to evaluate shop profitability and operational throughput:
@@ -1087,15 +1196,21 @@ The **Indicators** tab aggregates key metrics to evaluate shop profitability and
   - **Average days in shop**: average turnaround duration in days from check-in to final vehicle delivery.
   - When data is unavailable or a division by zero occurs, the card displays «—». Each card contains a descriptive hint explaining how the metric is calculated.
 - **Technician performance breakdown**: a mobile-optimized table (`cards-on-mobile`) detailing each branch technician's **Billed hours**, accumulated **Clock hours**, **Efficiency** percentage (billed hours / clock hours), and **Completed jobs** count in the selected period.
+<!-- /modulo -->
 
 ### Margin by order
 
 Between the cards and the table, **Margin by order** lists orders delivered in the selected
-month: how much was **collected**, how much **parts** cost, how much was generated in
-**commissions**, and the resulting **margin**, with monthly totals. Commissions count
-from the moment they are generated, whether paid or not. If an order has a linked bank purchase
-or manual transaction, it appears in the order **Balance** but is not subtracted again:
+month: how much was **collected**, how much **parts** cost, and the resulting **margin**, with
+monthly totals.
+<!-- modulo: comisiones -->
+It also shows how much was generated in **commissions**, which count from the moment they are generated, whether paid or not.
+<!-- /modulo -->
+If an order has a linked manual transaction, it appears in the order **Balance** but is not subtracted again:
 parts costs are already derived from their lines.
+<!-- modulo: estados_de_cuenta -->
+If it has a linked bank-imported purchase, it also appears there without being subtracted again.
+<!-- /modulo -->
 
 In the details of a delivered order, the **Order balance** card shows the same figures
 for that order.
@@ -1104,7 +1219,10 @@ for that order.
 
 1. **New Transaction**.
 2. **Type**: **Income** or **Expenses**.
-3. **Category**: when choosing **Income**, it selects **Client Payment**; when choosing **Expenses**, it switches automatically to **Operating Expense** and the list shows only expense categories (Parts Purchase, Commissions —or **Staff payments** if the workshop does not use the commissions module—, Operating Expense or Bank and card fees).
+3. **Category**: when choosing **Income**, it selects **Client Payment**; when choosing **Expenses**, it switches automatically to **Operating Expense** and the list shows only expense categories (Parts Purchase, **Staff payments**, Operating Expense or Bank and card fees).
+<!-- modulo: comisiones -->
+   With the commissions module enabled, the staff payouts category is shown as **Commissions**.
+<!-- /modulo -->
 4. **Amount** and **Date** (required). The date belongs to the shop: a transaction on the 1st
    counts in that month.
 5. **Linked order** (optional): links the transaction to an order. In the table,
@@ -1121,13 +1239,17 @@ entered by mistake**. The ones the system books carry a **lock** instead of the 
 and cannot be deleted from here.
 
 > **Automatic transactions cannot be deleted** (initial deposits, final payments, parts
-> costs, commission payments, adjustments or reversals). The system uses them
+> costs, adjustments or reversals). The system uses them
 > to calculate subsequent balances: if you delete a final payment and the order is later
 > edited, accounts will not balance. To adjust an order's financial figures,
 > correct the order (labor, parts, status) and let the system
-> record the adjustment. To reverse a commission payment, use **Undo payment**
+> record the adjustment.
+<!-- modulo: comisiones -->
+> Commission payments cannot be deleted here either: to reverse one, use **Undo payment**
 > in Commissions.
+<!-- /modulo -->
 
+<!-- modulo: estados_de_cuenta -->
 ### Importing a bank statement
 
 Allows uploading a bank statement PDF and recording its transactions without
@@ -1174,9 +1296,11 @@ all transactions imported with that file in one step. This is the fix when somet
 was imported in excess or categorized incorrectly: revert and import again.
 
 ![Imported bank statements, with "Revert import".](../public/manual/en/38.webp)
+<!-- /modulo -->
 
 ---
 
+<!-- modulo: comisiones -->
 ## 13. Commissions
 
 Technicians earn commissions on labor for orders they deliver.
@@ -1255,18 +1379,25 @@ Technicians can check their earnings without seeing workshop finances:
 - **Payment history**: list of received payments, showing date, method, check number and amount.
 
 > **Why doesn't a newly delivered order show up?** When an order is delivered, its commission starts as suggested ("to review"). It appears in **My commissions** as soon as the office reviews and accepts it.
+<!-- /modulo -->
 
 ### Employees
 <!-- rol: admin -->
 
 *(Sidebar, administrators only.)*
 
-Allows managing who works at the shop, how they are paid, and recent activity:
+Allows managing who works at the shop and their recent activity.
+<!-- modulo: comisiones -->
+It also lets you configure how each employee is paid:
 
 - **How each employee is paid**: list of mechanics and painters with their pay scheme — *Commission · 35% (shop rate)*, *Commission · 40%*, *Salary · $900.00 biweekly* or *Mixed*.
-- Tap **View** to open their profile: shows pending and paid commissions, active and delivered orders, recent progress updates, and their **Pay** configuration:
+<!-- /modulo -->
+- Tap **View** to open their profile: shows active and delivered orders and recent progress updates.
+<!-- modulo: comisiones -->
+  It also shows pending and paid commissions and their **Pay** configuration:
   - **Commission rate**: personal percentage, or leave blank to use the workshop rate.
   - **Salary amount**: amount and frequency. Informational (not recorded in Finance). If an employee switches to salary and has pending commissions, the system alerts you to the amount: upon switching to salary, pending commissions stop counting, so it is best to pay them first.
+<!-- /modulo -->
 - Below is staff administration: create accounts with **New User**, edit details, or remove employees.
 
 ![Employee pay and assigned orders.](../public/manual/en/41.webp)
@@ -1339,7 +1470,9 @@ An administrator can tap **Administrative adjustments** to modify parking charge
 
 - **Accrues automatically:** the system updates the amount hourly while the vehicle remains at the shop.
 - **Freezes on delivery:** tapping **Deliver** closes parking charges permanently with that day's date and adds it to balance due («Includes parking: {amount} ({days} days)»). A delivered order never accrues parking fees again on its own.
+<!-- modulo: comisiones -->
 - **Does not earn commissions:** parking revenue belongs to the shop and is not part of labor.
+<!-- /modulo -->
 - **Discounts do not affect it:** applying a discount to an order reduces only authorized labor and parts, never parking fees.
 - **On the customer link:** the customer sees the parking policy, fee notice, and itemized total on their account in their preferred language.
 
@@ -1363,19 +1496,32 @@ based on role.
 ### Administrators only: workshops, staff and emails
 <!-- rol: admin -->
 
-**Workshops.** Create new locations with **New Workshop** and edit existing ones: name, address, **Change workshop logo**, **Theme color**, **Workshop capacity** (work bays, for shop occupancy), **Reference hourly rate** (for benchmark comparison with effective hourly rate in workshop indicators), and **Commission rate**.
+**Workshops.** Create new locations with **New Workshop** and edit existing ones: name, address, **Change workshop logo**, **Theme color**, and **Workshop capacity** (work bays, for shop occupancy).
+<!-- modulo: indicadores -->
+Also **Reference hourly rate** (for benchmark comparison with effective hourly rate in workshop indicators).
+<!-- /modulo -->
+<!-- modulo: comisiones -->
+Also **Commission rate**.
+<!-- /modulo -->
 
 Contact details and workshop rules:
 
 - **Contact email (customer replies)**: where customer replies to automatic emails are sent.
 - **Contact phones**: manageable list with **Add phone**. Each phone defines its **Type** (**Mobile** or **Office**), description, number and whether it **Answers WhatsApp**. Customers see them on their link (with call and message buttons), in emails and on the PDF.
 - **Parking Fee**: configuration of parking rules and rates for that workshop (section 14).
+<!-- modulo: catalogo -->
 - **Frequent jobs catalog**: management of the workshop's routine work packages (e.g. oil change, brake job, major tune-up). Each predefined job bundles labor lines (with description, specialty, and price) and parts (with description, quantity, retail price, and reference cost). It allows creating new packages with **New job**, editing them, toggling active/inactive status, or deleting them.
+<!-- /modulo -->
+<!-- modulo: inspeccion -->
 - **Inspection templates**: management of the multi-point inspection formats for the workshop. Allows creating new templates with **New template**, setting the **Default** template for new work orders, activating or deactivating templates, and organizing points by section (adding, removing, and reordering with up/down arrows).
+<!-- /modulo -->
 
 An administrator can also use **Join this workshop** to become part of its staff. When deleting a workshop with **Delete everything**, the system shows everything that will be removed and reassigns staff to another workshop.
 
-**Staff.** Adding, editing and removing staff, and configuring each person's pay, is managed in **Employees** (section 13); Settings includes the **Go to Employees** button. Next to each person, a bell icon indicates how many devices have push alerts enabled.
+**Staff.** Adding, editing and removing staff is managed in **Employees**; Settings includes the **Go to Employees** button. Next to each person, a bell icon indicates how many devices have push alerts enabled.
+<!-- modulo: comisiones -->
+Each person's pay is also configured in **Employees** (section 13).
+<!-- /modulo -->
 
 **Customer emails.** Displays the status of automated emails sent by the system. If emails failed in the last 72 hours (for example, due to network or service outages), the **Retry all** button appears to requeue them.
 
@@ -1385,11 +1531,17 @@ To create a user account from the users list:
 2. Fill in **Name**, **Email** and **Temporary Password** (minimum 8 characters).
 3. Select the **Role** (**Admin**, **Mechanic** or **Painter**).
 4. Choose the workshop under **Workshops**.
-5. Tap **Create**. If you selected **Mechanic** or **Painter**, their profile opens right away so you can set how they are paid (or close it to keep the workshop rate).
+5. Tap **Create**.
+<!-- modulo: comisiones -->
+   If you selected **Mechanic** or **Painter**, their profile opens right away so you can set how they are paid (or close it to keep the workshop rate).
+<!-- /modulo -->
 
 ![New user.](../public/manual/en/44.webp)
 
-To remove someone, tap **Remove employee** in their row. **If they have assigned orders, the system blocks removal**: that work must first be reassigned. **If commissions have already been paid to them, removal is also blocked**: their payment records form the accounting history of what was disbursed.
+To remove someone, tap **Remove employee** in their row. **If they have assigned orders, the system blocks removal**: that work must first be reassigned.
+<!-- modulo: comisiones -->
+**If commissions have already been paid to them, removal is also blocked**: their payment records form the accounting history of what was disbursed.
+<!-- /modulo -->
 
 ---
 
@@ -1436,8 +1588,10 @@ update it manually.
 | Report additional work | — | ✅ from the order |
 | Review, quote or discard additional work | ✅ | ❌ |
 | Mark a task as done | ✅ all | ✅ only their own (administration marks tasks without a technician) |
+<!-- modulo: comisiones -->
 | View their commission on the order | — | ✅ on their orders (amount, once the office accepts it) |
 | Check **My commissions** | — | ✅ only their own accepted and paid commissions |
+<!-- /modulo -->
 | Change order status | ✅ | ✅ on their orders (In Progress and Completed only) |
 | Mark **Ready for pickup** | ✅ | ❌ |
 | Mark **Delivered** or **Picked up without repair** | ✅ | ❌ |
@@ -1452,17 +1606,25 @@ update it manually.
 | Send quotes and record authorizations | ✅ | ❌ |
 | Work orders: **archive** and **delete** | ✅ | ❌ |
 | Board: move cards | All | Only their own (except to Delivered or paused) |
-| Shop Finance and Commissions | ✅ | ❌ |
-| Employees: view pay, create and edit staff | ✅ | ❌ |
+| Shop Finance | ✅ | ❌ |
+<!-- modulo: comisiones -->
+| Shop Commissions | ✅ | ❌ |
+<!-- /modulo -->
+| Employees: create and edit staff | ✅ | ❌ |
+<!-- modulo: comisiones -->
+| Employees: view pay schemes | ✅ | ❌ |
+<!-- /modulo -->
 | Settings: profile, language, appearance, push | ✅ | ✅ |
 | Settings: workshops, contact phones and customer emails | ✅ | ❌ |
+<!-- modulo: inspeccion -->
 | Settings: inspection templates | ✅ | ❌ |
 | Start and perform multi-point inspection | ✅ | ✅ on assigned orders |
 | Complete multi-point inspection | ✅ | ✅ |
 | Publish inspection to customer | ✅ | ❌ |
 | Quote inspection points (labor or catalog) | ✅ | ❌ |
+<!-- /modulo -->
 | Switch active workshop | ✅ | ❌ |
-| Notifications | Check-ins, progress, completed orders, finished tasks, quotes | Assignments, tasks, commissions |
+| Notifications | Check-ins, progress, completed orders, finished tasks, quotes | Assignments, tasks and job updates |
 
 All these rules are enforced by the database, so they apply even if someone
 attempts to bypass the user interface.
@@ -1485,23 +1647,39 @@ It is helpful to understand these so you are not surprised or record the same mo
 - The remaining balance is recorded as **income** (or as an expense if refunding money from an excess deposit), with payment method and receipt.
 - Parts costs are recorded as an **expense**.
 - Accrued parking fees freeze with that day's date and add to the settled balance.
+<!-- modulo: comisiones -->
 - **Suggested commissions** (**To accept**) are generated: for each task to its technician (along with legacy specialty splits). The technician receives a notification when the office accepts it, not upon delivery. A task without a technician earns no commission.
+<!-- /modulo -->
 
 **When picking up without repair**, based on the selected option (cancel everything, inspection only, or some jobs), the difference with paid amounts is settled, open quotes are cancelled, and uncollected work is preserved as pending on the vehicle for future visits.
 
-**When editing an already delivered order**, only the difference is recorded—as an additional charge or refund—and pending commissions recalculate.
+**When editing an already delivered order**, only the difference is recorded as an additional charge or refund.
+<!-- modulo: comisiones -->
+Pending commissions also recalculate.
+<!-- /modulo -->
 
-**When removing an order from Delivered**, payments and parts costs are reversed, statuses unfreeze, and unpaid commissions are deleted. If delivered again, everything is re-recorded.
+**When removing an order from Delivered**, payments and parts costs are reversed and statuses unfreeze. If delivered again, everything is re-recorded.
+<!-- modulo: comisiones -->
+Unpaid commissions are also deleted, and recalculated if delivered again.
+<!-- /modulo -->
 
 **Order progress calculates automatically:** it is derived from completed tasks divided by authorized tasks, weighted by each task's price (a $400 task affects the bar more than a $50 task).
 
-**Parking fees accrue automatically:** the system updates the amount hourly while the vehicle remains at the shop with active parking charges. It generates no commission for technicians and shop discounts do not lower it.
+**Parking fees accrue automatically:** the system updates the amount hourly while the vehicle remains at the shop with active parking charges. Shop discounts do not lower it.
+<!-- modulo: comisiones -->
+It generates no commission for technicians.
+<!-- /modulo -->
 
-**When applying a discount**, the shop absorbs it entirely: it discounts what the customer pays but does not lower authorized labor, so technician commissions do not decrease. Nor does it affect parking fees.
+**When applying a discount**, the shop absorbs it entirely: it discounts what the customer pays and does not affect parking fees.
+<!-- modulo: comisiones -->
+It also does not lower authorized labor, so technician commissions do not decrease.
+<!-- /modulo -->
 
 **When adding or removing labor or parts**, totals recalculate automatically.
 
+<!-- modulo: comisiones -->
 **When paying commissions**, the expense is booked in Finance. When undoing payment, it is removed.
+<!-- /modulo -->
 
 **The intake signature does not authorize quoted work:** it confirms vehicle condition upon drop-off. Quoted work is authorized only through a sent estimate or by tapping **Record authorization**.
 
@@ -1517,7 +1695,10 @@ It is helpful to understand these so you are not surprised or record the same mo
 
 **When delivering an order**, the customer link remains accessible for 90 additional days.
 
-**When deleting an order** (only possible if it has not been delivered and has no money recorded in Finance; otherwise, cancel it with **Picked up without repair**), its media files and progress updates are deleted. Bank-imported transactions remain intact.
+**When deleting an order** (only possible if it has not been delivered and has no money recorded in Finance; otherwise, cancel it with **Picked up without repair**), its media files and progress updates are deleted.
+<!-- modulo: estados_de_cuenta -->
+Bank-imported transactions remain intact.
+<!-- /modulo -->
 
 **Periodic cleanup.** Read notifications are deleted after 60 days, and all notifications after 180 days. Completed email and push delivery logs are deleted after 90 days. Abandoned uploads and files from deleted orders are purged from storage.
 
@@ -1530,8 +1711,10 @@ It is helpful to understand these so you are not surprised or record the same mo
 **«The customer did not receive an email that their vehicle is ready.»**
 The order must be in **Completed** status AND an administrator must tap the **Mark ready for pickup** button. When the technician marks the order as Completed, the system only sends an alert to the office notifying them that work is finished so it can be inspected; the automated email to the customer is not sent and their portal does not change to «Ready for pickup» until the office sets the ready for pickup mark.
 
+<!-- modulo: comisiones -->
 **«I am a technician: why can't I see my commission amount in My commissions?»**
 The order must already be delivered, and an administrator must have accepted the commission in **Commissions**. Upon delivery, commissions start with status **To accept** (suggested); until the office reviews and accepts them, they do not appear in your **Accepted, to be paid** list. While the order is not yet delivered, you can check **Your estimated commission** on the order.
+<!-- /modulo -->
 
 **«Why does the parking fee show $0 on an order?»**
 This can happen for several reasons:
@@ -1541,8 +1724,10 @@ This can happen for several reasons:
 4. The order checked in before the workshop's effective date and the option to include prior orders was not checked.
 5. On the order's **Parking** card, the **Charge parking on this order** checkbox was unchecked in administrative adjustments.
 
+<!-- modulo: comisiones -->
 **«The shop gave the customer a discount but my commission did not decrease, is that right?»**
 Yes, that is completely correct. Any commercial discount is absorbed entirely by the shop. Your commission is calculated on the authorized labor price of your tasks, without being reduced by the discount.
+<!-- /modulo -->
 
 **«A customer email shows an error and does not resend on its own.»**
 Failed emails are not retried indefinitely on an automatic loop. An administrator can check the **Needs attention** card on the Dashboard or go to Settings → **Customer emails** and tap **Retry all** (or use **Retry** in the history log of the **Customer link** card on the order).
@@ -1558,9 +1743,11 @@ It is **Waiting for customer**. Cancel the estimate, correct the line, and send 
 This is expected: the signature confirms vehicle drop-off condition, not estimate authorization.
 Send the estimate or record authorization.
 
+<!-- modulo: comisiones -->
 **«The app won't let me delete an order: it says it has paid commissions.»**
 Undo that payment in **Commissions**, delete the order, and re-pay
 remaining commissions if applicable.
+<!-- /modulo -->
 
 **«The app kicked me out to the sign-in screen while I was working.»**
 This should not happen due to poor signal. If it does, note the time and device and notify
@@ -1601,14 +1788,20 @@ report**.
 Check your spam folder. If it still does not arrive, ask an administrator
 to assign you a new password in Settings or Employees.
 
-**«I signed in but I cannot see Finance or Commissions.»**
-These are administrators only. Technicians only see their own earnings in **My commissions**.
+**«I signed in but I cannot see Finance.»**
+It is for administrators only.
+<!-- modulo: comisiones -->
+You will not see **Commissions** either if you are a technician: your earnings from orders appear in **My commissions**.
+<!-- /modulo -->
 
 **«I am a technician and I cannot see prices or the order total.»**
 This is intentional: order finances are managed by administration. You see the labor
-price for your tasks (which determines your commission) and parts without prices; order
-totals and payments are hidden. You view your commission in **My commissions** once
+price for your tasks and parts without prices; order
+totals and payments are hidden.
+<!-- modulo: comisiones -->
+Your commission comes from that labor, and you view it in **My commissions** once
 the office accepts it.
+<!-- /modulo -->
 
 **«I cannot add labor or parts.»**
 These are added by an administrator. If you found something extra during repairs, use **Report additional work** on the order so the office can review and quote it. You can also document it in a progress entry (with photo, video or voice note).
@@ -1618,8 +1811,10 @@ Check that the status filter is set to **All** or tap the **Archived** filter (o
 you are in the correct workshop.
 
 **«I was asked to help on an order and I cannot edit it.»**
-Ask an administrator to assign you to it or assign one of its tasks to you. Assigning splits labor
-commissions, so it is an administrative decision and staff cannot assign themselves.
+Ask an administrator to assign you to it or assign one of its tasks to you. It is an administrative decision and staff cannot assign themselves.
+<!-- modulo: comisiones -->
+Assigning also splits labor commissions.
+<!-- /modulo -->
 
 **«I cannot adjust the progress bar.»**
 The order is Completed or Delivered, or you are not assigned to it. Progress is calculated automatically from completed tasks.
@@ -1648,6 +1843,7 @@ The in-app bell works even if push is disabled.
 If it is a manual transaction, delete it with the trash icon. If it is an automatic transaction, do not
 delete it: ask for assistance to correct the order (section 12).
 
+<!-- modulo: estados_de_cuenta -->
 **«I tapped Import Selected and nothing happened.»**
 A checked row was left without a category: the button is disabled, not broken. Use
 **Assign to uncategorized** or uncheck them.
@@ -1658,6 +1854,7 @@ Finance → Imports → **Revert import** on the duplicate.
 **«The importer says no transactions were found.»**
 It may be a statement from another bank (only Wells Fargo is supported) or a scanned
 PDF. Download it directly from the bank.
+<!-- /modulo -->
 
 **«I cannot delete a customer.»**
 If they have recorded orders, the system blocks deletion to preserve history.
@@ -1674,8 +1871,10 @@ Go to **Settings** (by tapping your avatar at top right or from the ☰ menu on 
 ### Frequent technician questions
 <!-- rol: tecnico -->
 
+<!-- modulo: reloj -->
 **«I left a task clock running by mistake (or the time seems capped at 12 hours).»**
 To prevent a forgotten clock from distorting time logs, the system automatically caps any continuous interval at a maximum of **12 hours** (720 minutes). If you forgot to pause it or need to adjust the actual start or end time, ask an administrator to edit or delete the interval under **Labor → Times** on the order.
+<!-- /modulo -->
 
 **«Why doesn't the Start work or Done: let the office know button appear for me?»**
 Each order status displays a single primary button when its conditions are met:
@@ -1683,8 +1882,10 @@ Each order status displays a single primary button when its conditions are met:
 - If the customer has not authorized **any** work on the order yet, you cannot start or finish it: the screen says «The customer has not authorized any work yet…» and the status selector is turned off. Once the office records the authorization, the order moves to **In Progress** on its own.
 - **Done: let the office know** appears only when the order is **In Progress** and **all** authorized tasks across the entire order are marked as done (including those assigned to coworkers or unassigned, which you can check under **Other tasks on this order**).
 
+<!-- modulo: inspeccion -->
 **«I cannot tap Complete inspection or the inspection points are locked.»**
 The **Complete inspection** button is only enabled once no points remain pending (if a component does not apply to the vehicle, mark it **N/A**). If point buttons are disabled, it is because the inspection has already been published to the customer (**Visible to customer**) or because the order is already **Delivered**; to edit a published inspection on an undelivered order, ask an administrator to tap **Hide from customer** first.
+<!-- /modulo -->
 
 ---
 

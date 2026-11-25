@@ -121,6 +121,22 @@ describe('renderNotification', () => {
     const n = notification({ tipo: 'presupuesto_aprobado', titulo: 'Trabajo autorizado · ORD-2026-014', cuerpo: 'Puedes continuar' });
     expect(renderNotification(n, en)).toEqual({ title: 'Trabajo autorizado · ORD-2026-014', body: 'Puedes continuar' });
   });
+
+  it('redacta orden_vencida en singular cuando lleva 1 día y en plural cuando lleva varios', () => {
+    const uno = notification({
+      tipo: 'orden_vencida',
+      datos: { numero_orden: 'ORD-2026-014', dias: 1, vehiculo: '2019 Toyota Camry', cliente: 'Ana López' },
+    });
+    const tres = notification({
+      tipo: 'orden_vencida',
+      datos: { numero_orden: 'ORD-2026-014', dias: 3, vehiculo: '2019 Toyota Camry', cliente: 'Ana López' },
+    });
+
+    expect(renderNotification(uno, es).body).toBe('1 día de retraso. 2019 Toyota Camry — Ana López');
+    expect(renderNotification(uno, en).body).toBe('1 day late. 2019 Toyota Camry — Ana López');
+    expect(renderNotification(tres, es).body).toBe('3 días de retraso. 2019 Toyota Camry — Ana López');
+    expect(renderNotification(tres, en).body).toBe('3 days late. 2019 Toyota Camry — Ana López');
+  });
 });
 
 describe('relativeTime', () => {

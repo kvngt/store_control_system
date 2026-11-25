@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../../../context/language.context';
+import { pluralKey } from '../../../lib/plural';
 import type { WorkOrder } from '../../../types/database';
 import AuthorizationPanel from '../AuthorizationPanel';
 import FindingsCard from '../FindingsCard';
@@ -82,7 +83,7 @@ export default function OrderTabTop({
   const unassignedNotice = isAdmin && unassignedCount > 0 && (
     <div className="alert-warn order-notice" role="note">
       <AlertTriangle size={16} aria-hidden="true" />
-      <span>{t('tasks.unassignedNotice').replace('{n}', String(unassignedCount))}</span>
+      <span>{t(pluralKey('tasks.unassignedNotice', unassignedCount)).replace('{n}', String(unassignedCount))}</span>
       {!isMobile && (
         <button
           type="button"

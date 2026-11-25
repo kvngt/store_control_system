@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MailWarning, RefreshCw } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { pluralKey } from '../../lib/plural';
 import { useToast } from '../../context/toast.context';
 import { getErrorMessage } from '../../lib/errors';
 import { queryKeys } from '../../lib/queryClient';
@@ -31,7 +32,7 @@ export default function EmailOutboxCard() {
     setBusy(true);
     try {
       const n = await customerPortalService.retryFailedEmails();
-      showToast('success', t('settings.emailOutbox.retried').replace('{n}', String(n)));
+      showToast('success', t(pluralKey('settings.emailOutbox.retried', n)).replace('{n}', String(n)));
       await queryClient.invalidateQueries({ queryKey: queryKeys.failedEmails() });
       // Las tarjetas de cada orden también muestran el estado de sus correos.
       void queryClient.invalidateQueries({ queryKey: ['customer-emails'] });
@@ -56,7 +57,7 @@ export default function EmailOutboxCard() {
             ? t('common.loading')
             : count === 0
               ? t('settings.emailOutbox.none')
-              : t('settings.emailOutbox.failedCount').replace('{n}', String(count))}
+              : t(pluralKey('settings.emailOutbox.failedCount', count)).replace('{n}', String(count))}
         </p>
       )}
       {count > 0 && (

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ClipboardCheck, Plus, Edit2, Trash2, CheckCircle2, XCircle, Star } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { pluralKey } from '../../lib/plural';
 import { useAuth } from '../../context/auth.context';
 import { useToast } from '../../context/toast.context';
 import { AlertError } from '../../components/AlertError';
@@ -152,7 +153,7 @@ export default function InspectionTemplatesCard() {
                       </div>
                     </td>
                     <td data-label={t('inspection.templates.sections')} style={{ color: 'var(--color-text-secondary)' }}>
-                      {t('inspection.templates.pointsCount').replace('{n}', String(tpl.puntos?.length ?? 0))}
+                      {t(pluralKey('inspection.templates.pointsCount', tpl.puntos?.length ?? 0)).replace('{n}', String(tpl.puntos?.length ?? 0))}
                     </td>
                     <td data-label={t('common.status')}>
                       {tpl.activo ? (

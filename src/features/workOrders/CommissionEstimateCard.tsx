@@ -1,5 +1,6 @@
 import { AlertTriangle, Wallet } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { pluralKey } from '../../lib/plural';
 import { money } from '../../lib/money';
 import type { CommissionEstimate, Specialty } from '../../types/database';
 import CommissionApproval, { type ApproveCommission } from './CommissionApproval';
@@ -41,7 +42,7 @@ export default function CommissionEstimateCard({ estimate, isAdmin, userId, name
   const hasPool = (especialidad: Specialty) => estimate.bolsas.some((b) => b.especialidad === especialidad);
   const inheritedDetail = (especialidad: Specialty, porcentaje: number | null, tecnicos: number) => {
     const bolsa = estimate.bolsas.find((b) => b.especialidad === especialidad);
-    return t('commission.detail')
+    return t(pluralKey('commission.detail', tecnicos))
       .replace('{especialidad}', specialtyLabel(especialidad))
       .replace('{labor}', bolsa?.base != null ? money(bolsa.base) : pendingLabel)
       .replace('{rate}', porcentaje != null ? String(Number(porcentaje)) : pendingLabel)
@@ -156,7 +157,7 @@ export default function CommissionEstimateCard({ estimate, isAdmin, userId, name
               <ul className="commission-split-list">
                 {people.map((r) => {
                   const parts = [
-                    r.tareas > 0 ? t('commission.taskCount').replace('{n}', String(r.tareas)) : '',
+                    r.tareas > 0 ? t(pluralKey('commission.taskCount', r.tareas)).replace('{n}', String(r.tareas)) : '',
                     r.heredado && r.tareas > 0 && hasPool(esp) ? t('commission.inheritedShare').replace('{crew}', String(r.tecnicos)) : '',
                   ].filter(Boolean);
                   return (

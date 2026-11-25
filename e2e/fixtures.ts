@@ -58,11 +58,36 @@ export async function openIntakeDialog(page: Page): Promise<Locator> {
   await page.goto('/work-orders');
   const button = page.locator('#new-order-btn');
   await button.waitFor({ state: 'visible', timeout: 20000 });
-  await button.click();
   const modal = page.locator('.modal[role="dialog"]');
-  await expect(modal).toBeVisible({ timeout: 30000 });
+  // Con muchas órdenes y avisos, la página cambia de alto mientras carga: el botón puede quedar bajo el
+  // encabezado fijo después de que Playwright lo desplaza a la vista, y el clic cae en la campana. Se
+  // vuelve arriba antes de cada intento y se toca solo mientras el diálogo no esté abierto.
+  await expect(async () => {
+    if (!(await modal.isVisible())) {
+      await page.evaluate('window.scrollTo(0, 0)');
+      await button.click({ timeout: 8000 });
+    }
+    await expect(modal).toBeVisible({ timeout: 15000 });
+  }).toPass({ timeout: 60000 });
   await expect(modal.locator('#intake-customer-search')).toBeEnabled({ timeout: 30000 });
   return modal;
+}
+
+/**
+ * Elige «Nuevo cliente» en el paso 1 del alta y devuelve el campo del nombre ya visible. El botón
+ * desaparece en cuanto el clic entra, así que solo se vuelve a tocar mientras siga ahí; y si el diálogo
+ * entero se perdió (el servidor de desarrollo de Vite puede recargar la página la primera vez que baja un
+ * módulo diferido), se vuelve a abrir.
+ */
+export async function chooseNewCustomerInIntake(page: Page, modal: Locator): Promise<Locator> {
+  const nameInput = modal.getByPlaceholder(/Nombre|Name/).first();
+  await expect(async () => {
+    if (!(await modal.isVisible())) await openIntakeDialog(page);
+    const newCustomer = modal.locator('#intake-new-customer');
+    if (await newCustomer.isVisible()) await newCustomer.click({ timeout: 8000 });
+    await expect(nameInput).toBeVisible({ timeout: 5000 });
+  }).toPass({ timeout: 60000 });
+  return nameInput;
 }
 
 /**

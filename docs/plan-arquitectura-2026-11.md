@@ -175,7 +175,16 @@ después, según lo que salga.
     - tanda 2: un solo camino claro;
     - tanda 3: se toca y se lee bien;
     - tanda 4: lo que ve el cliente.
-- **Faltan:** Q4 y Q5, y las sobras anotadas en la [bitácora](bitacora.md) (entrada del 24/11).
+- **Q4 publicado** el 24/11: push a `main` y `process-outbox` v23.
+- **Q5 hecho** el 25/11, sin publicar: la prueba e2e «un día en el taller», los datos de ejemplo
+  (`npm run demo:cargar` / `demo:borrar`, solo en local), la Ayuda sin los módulos apagados y plurales
+  de verdad ([informe](ordenes/q5-informe.md)).
+- **Con Q5 publicado, la etapa 1 queda cerrada.** Lo siguiente se decide con el taller usándolo: la
+  puerta de la etapa 3 y lo aplazado (M1/M2, F1 a F5).
+- **Sobras menores:**
+  - en `/work-orders`, el encabezado fijo tapa lo que se desplaza a la vista (`scroll-padding-top`);
+  - el aviso «Trabajos autorizados» sale en español (necesita migración);
+  - falta revisar Parqueo, Catálogo y Nómina a 390 px.
 
 ### Aplazado por decisión del 16/11/2026 — Saber qué pasa (medición de uso)
 

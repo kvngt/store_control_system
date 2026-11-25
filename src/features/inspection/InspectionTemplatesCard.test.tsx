@@ -86,7 +86,7 @@ describe('InspectionTemplatesCard', () => {
     await screen.findByText('Plantillas de inspección multipunto');
     expect(await screen.findByText('Inspección multipunto estándar')).toBeInTheDocument();
     expect(screen.getByText('Predeterminada')).toBeInTheDocument();
-    expect(screen.getByText('2 punto(s)')).toBeInTheDocument();
+    expect(screen.getByText('2 puntos')).toBeInTheDocument();
   });
 
   it('opens the template modal when clicking "Nueva plantilla"', async () => {

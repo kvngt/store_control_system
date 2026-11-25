@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../../context/language.context';
+import { pluralKey } from '../../../lib/plural';
 import { moduloActivo } from '../../../config/modulos';
 import { useToast } from '../../../context/toast.context';
 import { usersService } from '../../../services/users.service';
@@ -282,7 +283,7 @@ export function useOrderLines({
         const especialidadLabel = tipo === 'pintura' ? t('workOrders.painting').toLowerCase() : t('workOrders.mechanical').toLowerCase();
         showToast(
           'success',
-          t('tasks.autoAssigned')
+          t(pluralKey('tasks.autoAssigned', pendingTasksCount))
             .replace('{nombre}', operator.nombre_completo)
             .replace('{n}', String(pendingTasksCount))
             .replace('{especialidad}', especialidadLabel)

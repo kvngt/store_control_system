@@ -272,7 +272,7 @@ Deno 2. Código en `supabase/functions/` (cada función tiene `handler.ts` con `
 | Función | JWT verificado por Supabase | Quién la llama | Cómo se protege | Usa | Versión |
 |---|:---:|---|---|---|---|
 | `portal` | no | Portal del cliente (`/r/<token>`, `/s/<código>` y baja por enlace vencido `044`) | Token de 64 hex (el mismo enlace sirve para darse de baja de los correos aunque haya vencido, `044`); `datos_portal` decide campo por campo | Llave de servicio | v11 (15/11/2026) |
-| `process-outbox` | no | La base (`pg_net`) al crear un aviso, y pg_cron cada minuto | Secreto `x-restorify-secret` | Llave de servicio, Resend, VAPID, Gemini | v22 (15/11/2026) |
+| `process-outbox` | no | La base (`pg_net`) al crear un aviso, y pg_cron cada minuto | Secreto `x-restorify-secret` | Llave de servicio, Resend, VAPID, Gemini | v23 (24/11/2026) |
 | `cleanup-storage` | no | pg_cron a las 09:00 UTC | Secreto `x-restorify-secret` | Llave de servicio | v9 (15/11/2026) |
 | `create-employee` | sí | Empleados → Nuevo usuario | JWT + rol admin | Admin API de Auth | v14 (15/11/2026) |
 | `update-employee` | sí | Empleados → editar | JWT + rol admin; no degrada al último admin | Admin API de Auth | v12 (15/11/2026) |

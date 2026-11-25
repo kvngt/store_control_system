@@ -4,6 +4,7 @@ import { BellRing, KeyRound, Pencil, Search, Shield, Trash2, UserPlus, Users } f
 import { useQuery } from '@tanstack/react-query';
 import { notificationsService } from '../../services/notifications.service';
 import { useLanguage } from '../../context/language.context';
+import { pluralKey } from '../../lib/plural';
 import { useToast } from '../../context/toast.context';
 import { usersService } from '../../services/users.service';
 import { getErrorMessage } from '../../lib/errors';
@@ -270,7 +271,7 @@ export default function UsersCard({ users, sedes, currentUserId, loading, onChan
                       {pushDevices[u.id] ? (
                         <span
                           className="badge badge-push"
-                          title={t('notifications.push.devicesTitle').replace('{count}', String(pushDevices[u.id]))}
+                          title={t(pluralKey('notifications.push.devicesTitle', pushDevices[u.id])).replace('{count}', String(pushDevices[u.id]))}
                         >
                           <BellRing size={11} /> {pushDevices[u.id]}
                         </span>

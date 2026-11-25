@@ -16,6 +16,8 @@
     "db:donde": "node scripts/db-donde.mjs",
     "db:schema": "node scripts/db-schema.mjs",
     "db:types": "node scripts/db-types.mjs",
+    "demo:cargar": "node scripts/demo/cargar.mjs",
+    "demo:borrar": "node scripts/demo/borrar.mjs",
     "qa:security": "node scripts/qa/api-security.mjs",
     "qa:security:local": "node scripts/qa/security-local.mjs",
     "preview": "vite preview",

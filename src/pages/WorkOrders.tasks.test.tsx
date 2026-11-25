@@ -169,7 +169,7 @@ describe('WorkOrders — tareas con técnico', () => {
     renderWithProviders(<WorkOrders />);
     await openDetail(user);
 
-    expect(screen.getByRole('note')).toHaveTextContent('1 tarea(s) sin técnico: nadie cobrará su comisión');
+    expect(screen.getByRole('note')).toHaveTextContent('1 tarea sin técnico: nadie cobrará su comisión');
     expect(within(screen.getByRole('tab', { name: /^Trabajos/ })).getByRole('img')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Ver trabajos' }));
     expect(screen.getByRole('tab', { name: /^Trabajos/ })).toHaveAttribute('aria-selected', 'true');
@@ -275,7 +275,7 @@ describe('WorkOrders — tareas con técnico', () => {
 
     const status = document.querySelector('.tech-order-status') as HTMLElement;
     expect(status).toHaveTextContent('Estado de la orden');
-    expect(status).toHaveTextContent('1 autorizada(s) por el cliente · 1 hecha(s)');
+    expect(status).toHaveTextContent('1 autorizada por el cliente · 1 hecha');
     expect(status).toHaveTextContent('El cliente no autorizó: Frenos traseros');
 
     await user.click(screen.getByRole('button', { name: /^Tareas/ }));

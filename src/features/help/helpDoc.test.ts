@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { esModulo, type Modulo } from '../../config/modulos';
 import { headingId, helpRoleOf, prepareManual, searchSections, sectionHeadings, splitSections } from './helpDoc';
 
 // `node:fs` con importación dinámica y especificador no literal, como en `styles/cardHover.test.ts`:
@@ -131,5 +132,114 @@ describe('búsqueda y secciones', () => {
     expect(searchSections(secciones, 'parqueo').map((s) => s.heading.title)).toContain('14. Cobro por parqueo');
     expect(searchSections(secciones, 'zzzz-no-existe')).toEqual([]);
     expect(searchSections(secciones, '  ')).toBe(secciones);
+  });
+});
+
+const MODULOS_PRODUCCION: ReadonlySet<Modulo> = new Set([
+  'comisiones',
+  'inspeccion',
+  'reloj',
+  'catalogo',
+  'estados_de_cuenta',
+  'indicadores',
+]);
+
+const sinMarcasModulo = (md: string) =>
+  md
+    .split(/\r?\n/)
+    .filter((l) => !/^\s*<!--\s*(?:modulo:.*?|\/modulo)\s*-->\s*$/.test(l))
+    .join('\n');
+
+describe('marcas de módulo en los manuales', () => {
+  it('con todo encendido equivale al manual con las marcas de módulo quitadas a mano', () => {
+    for (const md of Object.values(MANUALES)) {
+      for (const rol of ['admin', 'tecnico'] as const) {
+        expect(prepareManual(md, rol, new Set())).toBe(
+          prepareManual(sinMarcasModulo(md), rol, new Set()),
+        );
+      }
+    }
+  });
+
+  it('con los seis módulos de producción apagados no quedan términos propios de esos módulos', () => {
+    for (const rol of ['admin', 'tecnico'] as const) {
+      const es = prepareManual(MANUALES.es, rol, MODULOS_PRODUCCION);
+      // Excepción explícita y justificada:
+      // - "Comisiones de banco y tarjeta": nombre de la categoría en Finanzas para cargos
+      //   bancarios o de Clover; no corresponde a comisiones del personal.
+      const esSinExcepciones = es.replace(/Comisiones de banco y tarjeta/g, '');
+      expect(esSinExcepciones).not.toMatch(/comisi[oó]n/i);
+      expect(esSinExcepciones).not.toMatch(/reloj/i);
+      expect(esSinExcepciones).not.toMatch(/cat[aá]logo/i);
+      expect(esSinExcepciones).not.toMatch(
+        /inspecci[oó]n por puntos|plantillas? de inspecci[oó]n|terminar inspecci[oó]n/i,
+      );
+
+      const en = prepareManual(MANUALES.en, rol, MODULOS_PRODUCCION);
+      // Excepciones explícitas y justificadas para "inspection" fuera del módulo `inspeccion`:
+      // - "360° Inspection" / "360° inspection" / "This inspection is shop evidence": fotos 360° de ingreso (siempre activas).
+      // - "General inspection": opción de calcomanía de próximo servicio ("Revisión general").
+      // - "Final inspection": estado mostrado al cliente cuando la orden está en "Completed".
+      // - "Only the inspection is charged" / "diagnosis or inspection" / "inspection charge" /
+      //   "inspection only": cobro de revisión diagnóstica al retirar sin reparar.
+      expect(en).not.toMatch(/commissions?/i);
+      expect(en).not.toMatch(/clocks?/i);
+      expect(en).not.toMatch(/catalogs?/i);
+      expect(en).not.toMatch(
+        /point(?:-by-point)? inspection|multi-point inspection|inspection templates?|complete inspection|start inspection/i,
+      );
+
+      for (const texto of [es, en]) {
+        expect(texto).not.toMatch(/<!--/);
+        const secciones = splitSections(texto);
+        expect(secciones.length).toBeGreaterThan(10);
+        const ids = secciones.flatMap((s) => sectionHeadings(s).map((h) => h.id));
+        expect(new Set(ids).size).toBe(ids.length);
+      }
+    }
+  });
+
+  it('las marcas de módulo están balanceadas, en línea propia y con la misma secuencia en ambos idiomas', () => {
+    const secuenciaModulos = (md: string) => {
+      const pila: string[] = [];
+      const tokens: string[] = [];
+      for (const [i, linea] of md.split(/\r?\n/).entries()) {
+        if (/<!--\s*\/?modulo[:\s>]/.test(linea)) {
+          expect(linea.trim(), `marca en línea propia (${i + 1})`).toMatch(
+            /^<!--\s*(?:modulo:\s*[a-z_]+|\/modulo)\s*-->$/,
+          );
+        }
+        const abre = /^<!--\s*modulo:\s*(.*?)\s*-->$/.exec(linea.trim());
+        if (abre) {
+          const mod = abre[1].trim();
+          expect(esModulo(mod), `módulo desconocido "${mod}" en línea ${i + 1}`).toBe(true);
+          pila.push(mod);
+          tokens.push(`+${mod}`);
+          continue;
+        }
+        if (/^<!--\s*\/modulo\s*-->$/.test(linea.trim())) {
+          expect(pila.length, `cierre sin abrir en línea ${i + 1}`).toBeGreaterThan(0);
+          const cierre = pila.pop();
+          if (cierre) tokens.push(`-${cierre}`);
+        }
+      }
+      expect(pila).toEqual([]);
+      return tokens;
+    };
+
+    expect(secuenciaModulos(MANUALES.en)).toEqual(secuenciaModulos(MANUALES.es));
+  });
+
+  it('rechaza marcas abiertas sin cerrar, cierres sin abrir, anidamiento repetido y módulos desconocidos', () => {
+    const abiertoSinCerrar = '# Manual\n\n<!-- modulo: reloj -->\nTexto\n';
+    const cierreSinAbrir = '# Manual\n\nTexto\n<!-- /modulo -->\n';
+    const moduloDesconocido = '# Manual\n\n<!-- modulo: inventado -->\nTexto\n<!-- /modulo -->\n';
+    const anidadoRepetido =
+      '# Manual\n\n<!-- modulo: reloj -->\n<!-- modulo: reloj -->\nTexto\n<!-- /modulo -->\n<!-- /modulo -->\n';
+
+    expect(() => prepareManual(abiertoSinCerrar, 'admin', new Set())).toThrow(/sin cerrar/i);
+    expect(() => prepareManual(cierreSinAbrir, 'admin', new Set())).toThrow(/sin abrir/i);
+    expect(() => prepareManual(moduloDesconocido, 'admin', new Set())).toThrow(/desconocido/i);
+    expect(() => prepareManual(anidadoRepetido, 'admin', new Set())).toThrow(/anidada/i);
   });
 });

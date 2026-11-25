@@ -85,4 +85,14 @@ describe('translations', () => {
     expect(es.get('settings.emailOutbox.hint')).not.toMatch(/Resend|RESEND_API_KEY/i);
     expect(en.get('settings.emailOutbox.hint')).not.toMatch(/Resend|RESEND_API_KEY/i);
   });
+
+  it('ninguna traducción usa "(s)" ni "(es)" en lugar de singular y plural', () => {
+    const conParentesis = [
+      ...[...es].map(([k, v]) => [`es.${k}`, v] as const),
+      ...[...en].map(([k, v]) => [`en.${k}`, v] as const),
+    ]
+      .filter(([, v]) => /\(e?s\)/i.test(v))
+      .map(([k, v]) => `${k}: ${v}`);
+    expect(conParentesis, 'Quedaron textos con "(s)" o "(es)": usa claves *One/*Many con pluralKey').toEqual([]);
+  });
 });

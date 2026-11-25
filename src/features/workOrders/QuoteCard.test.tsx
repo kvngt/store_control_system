@@ -69,7 +69,7 @@ describe('QuoteCard', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderWithProviders(<QuoteCard order={order([{ id: 'l1', descripcion: 'Pintura', costo: 500, estado: 'borrador' }])} />);
 
-    expect(await screen.findByText(/1 línea\(s\) por \$500.00/)).toBeInTheDocument();
+    expect(await screen.findByText(/1 línea por \$500\.00/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /Enviar presupuesto al cliente/ }));
 
     expect(mocks.sendQuote).toHaveBeenCalledWith('ord-1', true);
@@ -198,7 +198,7 @@ describe('QuoteCard', () => {
     );
 
     expect(await screen.findByText(/Presupuesto 1 · desde su enlace/)).toBeInTheDocument();
-    expect(screen.getByText(/1 autorizado\(s\) · 1 rechazado\(s\) · \$200.00/)).toBeInTheDocument();
+    expect(screen.getByText(/1 autorizado · 1 rechazado · \$200\.00/)).toBeInTheDocument();
     expect(screen.getByText(/La pintura después/)).toBeInTheDocument();
   });
 });

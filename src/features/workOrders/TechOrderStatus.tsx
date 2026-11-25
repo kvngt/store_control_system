@@ -1,5 +1,6 @@
 import { CheckCircle2, Clock, PauseCircle, XCircle } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { pluralKey } from '../../lib/plural';
 import type { LaborItem, WorkOrder } from '../../types/database';
 import { summarizeTechTasks } from './techStatus';
 
@@ -41,7 +42,7 @@ export default function TechOrderStatus({
           {summary.authorized > 0 && (
             <li className="is-authorized">
               <CheckCircle2 size={14} aria-hidden="true" />
-              {t('techStatus.authorized').replace('{n}', String(summary.authorized)).replace('{done}', String(summary.done))}
+              {`${t(pluralKey('techStatus.authorized', summary.authorized)).replace('{n}', String(summary.authorized))} · ${t(pluralKey('techStatus.done', summary.done)).replace('{done}', String(summary.done))}`}
             </li>
           )}
           {summary.waiting.length > 0 && (

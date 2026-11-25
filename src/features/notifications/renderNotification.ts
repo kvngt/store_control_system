@@ -1,5 +1,6 @@
 import type { AppNotification } from '../../types/database';
 import { money as formatMoney } from '../../lib/money';
+import { pluralKey } from '../../lib/plural';
 
 // Un dato ausente deja el hueco vacío en vez de afirmar "$0.00": un aviso que inventa una
 // cifra es peor que uno incompleto.
@@ -40,7 +41,8 @@ export function renderNotification(n: AppNotification, t: (key: string) => strin
       : '';
 
   const titleKey = `notifications.types.${n.tipo}${variante}.title`;
-  const bodyKey = `notifications.types.${n.tipo}${variante}.body`;
+  const bodyBase = `notifications.types.${n.tipo}${variante}.body`;
+  const bodyKey = n.tipo === 'orden_vencida' ? pluralKey(bodyBase, Number(data.dias)) : bodyBase;
   const titleTemplate = t(titleKey);
   const bodyTemplate = t(bodyKey);
 

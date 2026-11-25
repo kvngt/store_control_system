@@ -12,6 +12,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { useLanguage } from '../context/language.context';
+import { pluralKey } from '../lib/plural';
 import { useAuth } from '../context/auth.context';
 import { useToast } from '../context/toast.context';
 import { commissionsService } from '../services/commissions.service';
@@ -99,7 +100,7 @@ export default function Payroll() {
     try {
       const n = await commissionsService.approveMany(ids);
       reload();
-      showToast('success', t('payroll.approvedMany').replace('{count}', String(n)));
+      showToast('success', t(pluralKey('payroll.approved', n)).replace('{count}', String(n)));
     } catch (err) {
       showToast('error', t('payroll.approveError'), getErrorMessage(err, language));
     } finally {
@@ -264,7 +265,7 @@ export default function Payroll() {
                 {money(totalPending)}
               </div>
               {isAdmin && totalToReview > 0 && (
-                <div className="field-hint">{t('payroll.toReviewHint').replace('{count}', String(totalToReview))}</div>
+                <div className="field-hint">{t(pluralKey('payroll.toReviewHint', totalToReview)).replace('{count}', String(totalToReview))}</div>
               )}
             </div>
             <div>
@@ -595,7 +596,7 @@ export default function Payroll() {
                 {acceptedCount} {t(acceptedCount === 1 ? 'payroll.ordersCountOne' : 'payroll.ordersCount')} · {t('payroll.amountIsServerSide')}
               </p>
               {payTarget.porRevisar > 0 && (
-                <p className="field-hint">{t('payroll.unreviewedNotPaid').replace('{count}', String(payTarget.porRevisar))}</p>
+                <p className="field-hint">{t(pluralKey('payroll.unreviewedNotPaid', payTarget.porRevisar)).replace('{count}', String(payTarget.porRevisar))}</p>
               )}
 
               <div className="form-row" style={{ marginTop: 'var(--space-4)' }}>

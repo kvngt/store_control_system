@@ -9,6 +9,7 @@ de cada una, la [bitácora](../bitacora.md).
 | `q1-recorrido-de-calidad.md` | Orden del recorrido de calidad; sus informes: `q1-informe-administracion.md`, `q1-informe-tecnico-y-cliente.md` |
 | `q2-prioridades.md` | Qué se arregla del recorrido, en qué orden y con qué diseño (tandas 0 a 4) |
 | `q3-modulos-apagados.md` | Orden de los módulos apagados para este taller |
+| `q5-un-dia-en-el-taller.md` | Orden de la prueba «un día en el taller», los datos de ejemplo y las sobras de la etapa 1; su informe: `q5-informe.md` |
 
 ## Protocolo del jefe de obra
 

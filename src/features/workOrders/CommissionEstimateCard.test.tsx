@@ -53,7 +53,7 @@ describe('CommissionEstimateCard', () => {
     const estimate = { ...REUNION, reparto: [REUNION.reparto[0]], mi_total: 70 };
     renderWithProviders(<CommissionEstimateCard estimate={estimate} isAdmin={false} userId="u-mario" names={NAMES} />);
 
-    expect(screen.getByText('Mecánica: mano de obra $200.00 × 35% ÷ 1 técnico(s)')).toBeInTheDocument();
+    expect(screen.getByText('Mecánica: mano de obra $200.00 × 35% ÷ 1 técnico')).toBeInTheDocument();
     expect(screen.getByText('$70.00')).toBeInTheDocument();
     // La bolsa de pintura no es suya: no se le cuenta.
     expect(screen.queryByText(/Pintura:/)).not.toBeInTheDocument();
@@ -108,7 +108,7 @@ describe('CommissionEstimateCard', () => {
       // Y el total de cada quien, como lo suma la base: dos tareas de la pintora.
       const pinturaSplit = screen.getByText('Pintura', { selector: 'strong' }).closest('.commission-split') as HTMLElement;
       const paula = within(pinturaSplit).getByText('Paula Pintora').closest('li') as HTMLElement;
-      expect(paula).toHaveTextContent('2 tarea(s)');
+      expect(paula).toHaveTextContent('2 tareas');
       expect(within(paula).getByText('$560.00')).toBeInTheDocument();
     });
 
@@ -160,7 +160,7 @@ describe('CommissionEstimateCard', () => {
       };
       renderWithProviders(<CommissionEstimateCard estimate={estimate} isAdmin={false} userId="u-mario" names={NAMES} />);
 
-      expect(screen.getByText('Mecánica: mano de obra $200.00 × 30% ÷ 2 técnico(s)')).toBeInTheDocument();
+      expect(screen.getByText('Mecánica: mano de obra $200.00 × 30% ÷ 2 técnicos')).toBeInTheDocument();
       expect(screen.getByText('Tarea «Cambio de aceite»: $120.00 × 30%')).toBeInTheDocument();
       expect(screen.getByText('$66.00')).toBeInTheDocument();
     });

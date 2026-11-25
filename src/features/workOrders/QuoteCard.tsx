@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, FileSignature, RotateCcw, Send, XCircle } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { pluralKey } from '../../lib/plural';
 import { useToast } from '../../context/toast.context';
 import { getErrorMessage } from '../../lib/errors';
 import { queryKeys } from '../../lib/queryClient';
@@ -110,12 +111,12 @@ export default function QuoteCard({ order, registerRequest = 0 }: { order: WorkO
         <div className="quote-status is-open">
           <strong>{t('quotes.openTitle').replace('{numero}', String(open.numero))}</strong>
           <p>
-            {t('quotes.openHint')
+            {t(pluralKey('quotes.openHint', pending.length))
               .replace('{time}', relativeTime(open.creado_en, language))
               .replace('{count}', String(pending.length))
               .replace('{total}', money(sum(pending)))}
           </p>
-          {drafts.length > 0 && <p>{t('quotes.openDraftsHint').replace('{count}', String(drafts.length))}</p>}
+          {drafts.length > 0 && <p>{t(pluralKey('quotes.openDraftsHint', drafts.length)).replace('{count}', String(drafts.length))}</p>}
           <div className="quote-actions">
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRegistering(true)} disabled={isBusy}>
               <CheckCircle2 size={14} /> {t('quotes.register')}
@@ -134,7 +135,7 @@ export default function QuoteCard({ order, registerRequest = 0 }: { order: WorkO
         <div className="quote-status is-draft">
           <strong>{t('quotes.draftsTitle')}</strong>
           <p>
-            {t('quotes.draftsHint').replace('{count}', String(drafts.length)).replace('{total}', money(sum(drafts)))}
+            {t(pluralKey('quotes.draftsHint', drafts.length)).replace('{count}', String(drafts.length)).replace('{total}', money(sum(drafts)))}
           </p>
           <div className="quote-actions">
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => void sendQuote()} disabled={isBusy}>
@@ -206,11 +207,15 @@ function QuoteCounts({ quote, lines }: { quote: Quote; lines: QuoteLine[] }) {
   // Las líneas de este presupuesto. Una rechazada que se corrigió vuelve a borrador
   // y sale de él, así que el total autorizado es el que guardó la base.
   const own = lines.filter((l) => l.presupuestoId === quote.id);
+  const approvedCount = own.filter((l) => l.estado === 'aprobado').length;
+  const rejectedCount = own.filter((l) => l.estado === 'rechazado').length;
+  const approved = t(pluralKey('quotes.historyApproved', approvedCount)).replace('{count}', String(approvedCount));
+  const rejected = t(pluralKey('quotes.historyRejected', rejectedCount)).replace('{count}', String(rejectedCount));
   return (
     <div className="quote-history-muted">
       {t('quotes.historyCounts')
-        .replace('{approved}', String(own.filter((l) => l.estado === 'aprobado').length))
-        .replace('{rejected}', String(own.filter((l) => l.estado === 'rechazado').length))
+        .replace('{approved}', approved)
+        .replace('{rejected}', rejected)
         .replace('{total}', money(Number(quote.total_aprobado ?? 0)))}
     </div>
   );

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Camera, CheckCircle2, Circle, MessageSquarePlus, Clock, Plus, Eye, EyeOff, XCircle, Play, Pause } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { pluralKey } from '../../lib/plural';
 import { moduloActivo } from '../../config/modulos';
 import { useToast } from '../../context/toast.context';
 import { formatDurationMinutes } from '../../lib/dates';
@@ -157,7 +158,7 @@ export default function TechnicianTaskList({ items, currentUserId, detail, repor
               {(updatesByTask.get(task.id) ?? []).length > 0 && (
                 <div className="task-updates">
                   <div className="task-updates-title">
-                    {t('workOrders.taskProgressCount').replace('{n}', String(updatesByTask.get(task.id)!.length))}
+                    {t(pluralKey('workOrders.taskProgressCount', updatesByTask.get(task.id)!.length)).replace('{n}', String(updatesByTask.get(task.id)!.length))}
                   </div>
                   <ul>
                     {[...updatesByTask.get(task.id)!]

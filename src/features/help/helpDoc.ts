@@ -8,6 +8,8 @@
 // repositorio; la app las sirve desde /manual/<idioma>/NN.webp. No van en /ayuda/: esa es la ruta de la pantalla de Ayuda,
 // y una carpeta real con ese nombre hacía que el servidor respondiera 403 al recargarla.
 
+import { esModulo, modulosApagados, type Modulo } from '../../config/modulos';
+
 export type HelpRole = 'admin' | 'tecnico';
 
 export interface HelpHeading {
@@ -24,6 +26,8 @@ export interface HelpSection {
 }
 
 const ROLE_MARK = /^<!--\s*rol:\s*(admin|tecnico)\s*-->\s*$/;
+const MODULE_OPEN = /^<!--\s*modulo:\s*(.*?)\s*-->\s*$/;
+const MODULE_CLOSE = /^<!--\s*\/modulo\s*-->\s*$/;
 const HEADING = /^(#{1,6})\s+(.*?)\s*#*\s*$/;
 
 /** Mecánico y pintor tienen los mismos permisos: para la ayuda los dos son "técnico". */
@@ -95,10 +99,69 @@ function filterByRole(lines: string[], role: HelpRole): string[] {
   return out;
 }
 
-/** El manual listo para mostrar a un rol: sin notas internas, sin lo del otro rol y con las rutas de la app. */
-export function prepareManual(markdown: string, role: HelpRole): string {
+/**
+ * Quita los bloques delimitados por `<!-- modulo: X -->` ... `<!-- /modulo -->` cuando `X` está en
+ * `apagados`. Valida siempre que las marcas estén balanceadas, no repitan el mismo módulo al
+ * anidarse y nombren módulos válidos para no publicar un manual truncado en silencio.
+ */
+function filterByModules(lines: string[], apagados: ReadonlySet<Modulo>): string[] {
+  const out: string[] = [];
+  const stack: Array<{ mod: Modulo; line: number; hidden: boolean }> = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineNum = i + 1;
+
+    const open = MODULE_OPEN.exec(line);
+    if (open) {
+      const mod = open[1].trim();
+      if (!esModulo(mod)) {
+        throw new Error(`Módulo desconocido "${mod}" en línea ${lineNum}`);
+      }
+      if (stack.some((frame) => frame.mod === mod)) {
+        throw new Error(`Marca <!-- modulo: ${mod} --> anidada dentro del mismo módulo en línea ${lineNum}`);
+      }
+      const parentHidden = stack.length > 0 && stack[stack.length - 1].hidden;
+      stack.push({ mod, line: lineNum, hidden: parentHidden || apagados.has(mod) });
+      continue;
+    }
+
+    if (MODULE_CLOSE.test(line)) {
+      if (stack.length === 0) {
+        throw new Error(`Marca <!-- /modulo --> sin abrir en línea ${lineNum}`);
+      }
+      stack.pop();
+      continue;
+    }
+
+    const hidden = stack.length > 0 && stack[stack.length - 1].hidden;
+    if (!hidden) out.push(line);
+  }
+
+  if (stack.length > 0) {
+    const unclosed = stack[stack.length - 1];
+    throw new Error(`Marca <!-- modulo: ${unclosed.mod} --> abierta en línea ${unclosed.line} sin cerrar`);
+  }
+
+  return out;
+}
+
+/**
+ * El manual listo para mostrar a un rol: sin bloques de módulos apagados, sin notas internas,
+ * sin lo del otro rol y con las rutas de la app.
+ */
+export function prepareManual(
+  markdown: string,
+  role: HelpRole,
+  apagados: ReadonlySet<Modulo> = modulosApagados(
+    typeof import.meta.env.VITE_MODULOS_APAGADOS === 'string'
+      ? import.meta.env.VITE_MODULOS_APAGADOS
+      : undefined,
+  ),
+): string {
   const lines = markdown.replace(/\r\n/g, '\n').split('\n');
-  return filterByRole(stripEditorialParts(lines), role)
+  const activeLines = filterByModules(lines, apagados);
+  return filterByRole(stripEditorialParts(activeLines), role)
     .join('\n')
     .replace(/\]\(\.\.\/public\/manual\//g, '](/manual/')
     .replace(/<!--[\s\S]*?-->/g, '')

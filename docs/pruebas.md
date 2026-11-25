@@ -16,6 +16,7 @@ decidir cuál y corregirlo.
 1. [Resumen: las capas](#1-resumen-las-capas)
 2. [Pruebas automatizadas](#2-pruebas-automatizadas)
 3. [Pruebas manuales y de seguridad](#3-pruebas-manuales-y-de-seguridad)
+4. [Datos de ejemplo (`demo:cargar` / `demo:borrar`)](#4-datos-de-ejemplo-democargar--demoborrar)
 
 ---
 
@@ -739,3 +740,24 @@ Si buscas una sección de la versión anterior de este documento:
 | 7. Regresiones | [7. Regresiones](plan-de-pruebas.md#7-regresiones) |
 | 8. Antes de cada publicación | [8. Antes de cada publicación](plan-de-pruebas.md#8-antes-de-cada-publicación) |
 | 9. Cómo reportar un error | [9. Reporte de resultados](plan-de-pruebas.md#9-reporte-de-resultados) |
+
+---
+
+## 4. Datos de ejemplo (`demo:cargar` / `demo:borrar`)
+
+Para enseñar la aplicación con datos ficticios y realistas sobre la base **local**:
+
+```bash
+npx supabase start
+npm run demo:cargar   # carga clientes, vehículos y órdenes de ejemplo
+npm run demo:borrar   # limpia lo marcado respetando las reglas de la base
+```
+
+- **Solo corre en local.** Toma la URL y las llaves de `supabase status` (o `E2E_SUPABASE_*`) mediante `localStack()` (`scripts/lib/local-stack.mjs`), rechazando cualquier URL que no sea de esta máquina.
+- **Cuentas de demostración.** Crea o actualiza en la primera sede tres cuentas con contraseña aleatoria nueva en cada corrida (impresa en consola, sin guardarse en archivos):
+  - `demo-admin@demo.restorify.test` (admin)
+  - `demo-mecanico@demo.restorify.test` (mecánico)
+  - `demo-pintor@demo.restorify.test` (pintor)
+- **Qué crea `demo:cargar`.** 12 clientes ficticios terminados en ` · demo` (mitad en inglés, mitad en español, uno sin correo), 12 vehículos y 10 órdenes repartidas por todos los estados (recepción sin firma, esperando autorización por presupuesto, en proceso con avances y sin avances, en espera por hallazgo, terminada por revisar, lista para entregar, entregadas cobradas con tarjeta y Zelle, y retirada sin reparar), imprimiendo al final rutas `/r/<token>` de prueba. **No inserta dinero a mano**: todo pasa por `signInWithPassword` y las mismas RPCs de la app (`create_work_order`, `enviar_presupuesto`, `registrar_autorizacion`, `reportar_hallazgo`, `marcar_labor_completada`, `marcar_lista_para_entregar`, `entregar_orden`, `retirar_sin_reparar`), sin tocar los módulos apagados. Si ya hay datos de ejemplo activos, sale sin duplicar.
+- **Qué hace `demo:borrar`.** Inicia sesión como `demo-admin@demo.restorify.test` y quita solo lo marcado con ` · demo` respetando las reglas de la base: borra las órdenes abiertas sin dinero junto con sus clientes y vehículos; **las órdenes entregadas (incluidas las retiradas sin reparar) no se borran por diseño**, así que se archivan (`archivada_en`) y sus clientes y vehículos se conservan. Si una orden abierta tuviera movimientos en Finanzas, se reporta por qué no puede borrarse. Las cuentas de demostración se dejan para reutilizarlas al volver a cargar.
+- **Limpieza total y pgTAP.** `npx supabase db reset` borra todos los datos locales (incluidos los archivados y las cuentas). Ten en cuenta la nota sobre pgTAP y los datos de demostración en [§ 2.2 Base de datos (pgTAP)](#22-base-de-datos-pgtap).

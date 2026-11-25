@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { AlertTriangle, FileSignature, Paperclip, X } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { pluralKey } from '../../lib/plural';
 import Modal from '../../components/Modal';
 import type { OrderFinding } from '../../types/database';
 
@@ -47,7 +48,7 @@ export default function FindingsCard({ findings, names, mediaCount, busy, onQuot
                 {files > 0 && (
                   <>
                     {' · '}
-                    <Paperclip size={12} aria-hidden="true" /> {t('findings.files').replace('{n}', String(files))}
+                    <Paperclip size={12} aria-hidden="true" /> {t(pluralKey('findings.files', files)).replace('{n}', String(files))}
                   </>
                 )}
               </p>

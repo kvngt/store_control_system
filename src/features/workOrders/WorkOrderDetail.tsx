@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
 import Tabs, { TabPanel, type TabItem } from '../../components/Tabs';
 import { useAuth } from '../../context/auth.context';
 import { useLanguage } from '../../context/language.context';
+import { pluralKey } from '../../lib/plural';
 import { useToast } from '../../context/toast.context';
 import { useUnsavedChanges } from '../../context/unsavedChanges.context';
 import { useIsMobile } from '../../lib/useMediaQuery';
@@ -334,7 +335,7 @@ export default function WorkOrderDetail({ detail, statusLabels, onBack }: WorkOr
           attention: hasUnauthorized || unassignedCount > 0,
           attentionLabel: hasUnauthorized
             ? t('workOrders.tabs.unauthorized')
-            : t('tasks.unassignedNotice').replace('{n}', String(unassignedCount)),
+            : t(pluralKey('tasks.unassignedNotice', unassignedCount)).replace('{n}', String(unassignedCount)),
         },
         { id: 'fotos', label: t('workOrders.tabs.media'), count: receptionMedia.length + progressEntries.length },
         { id: 'cobro', label: t('workOrders.tabs.billing') },

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { pluralKey } from '../../lib/plural';
 import { useAuth } from '../../context/auth.context';
 import { useToast } from '../../context/toast.context';
 import { sedesService, type SedeDeleteImpact } from '../../services/sedes.service';
@@ -128,7 +129,7 @@ export default function DeleteSedeModal({ sede, onClose, onDeleted }: DeleteSede
               login, and wiping a workshop should not close accounts. */}
           {deleteImpact.empleados > 0 && (
             <p className="field-hint" style={{ marginTop: 'var(--space-2)' }}>
-              {t('settings.deleteSedeStaff').replace('{count}', String(deleteImpact.empleados))}
+              {t(pluralKey('settings.deleteSedeStaff', deleteImpact.empleados)).replace('{count}', String(deleteImpact.empleados))}
             </p>
           )}
           {deleteImpact.otras_sedes === 0 && (

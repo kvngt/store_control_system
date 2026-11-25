@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Car, ChevronRight, Circle, Clock } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { pluralKey } from '../../lib/plural';
 import { workOrdersService } from '../../services/workOrders.service';
 import { queryKeys } from '../../lib/queryClient';
 import { orderDueState } from '../../lib/orderDue';
@@ -95,7 +96,7 @@ export default function MyTasksCard({ userId }: { userId: string }) {
           })}
         </ul>
       )}
-      {done > 0 && <p className="field-hint my-tasks-done">{t('myTasks.doneCount').replace('{n}', String(done))}</p>}
+      {done > 0 && <p className="field-hint my-tasks-done">{t(pluralKey('myTasks.doneCount', done)).replace('{n}', String(done))}</p>}
     </div>
   );
 }

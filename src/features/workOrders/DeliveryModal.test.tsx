@@ -189,7 +189,7 @@ describe('DeliveryModal', () => {
 
     const note = await screen.findByRole('note');
     expect(mocks.getEstimate).toHaveBeenCalledWith('ord-1');
-    expect(note).toHaveTextContent('Hay 2 tarea(s) autorizada(s) sin técnico: nadie cobrará su comisión.');
+    expect(note).toHaveTextContent('Hay 2 tareas autorizadas sin técnico: nadie cobrará su comisión.');
     expect(note).toHaveTextContent('Alineación');
     expect(note).toHaveTextContent('Pulido');
     // Lo que el cliente no autorizó no se cobra ni genera comisión: no es dinero que se pierda.

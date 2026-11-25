@@ -131,8 +131,10 @@ test.describe('WORK-04 | Detalle de orden de trabajo', () => {
     // The detail is NOT a modal — it replaces the list view entirely.
     // The order number links/buttons in the table open the detail.
     const orderNumLink = page.locator('.table-actions button.btn-ghost').first();
-    const hasOrders = await orderNumLink.count();
-    if (hasOrders === 0) {
+    // Las órdenes llegan por la red después del título: se espera la primera antes de dar por vacío el
+    // entorno (con la suite en paralelo, contar al instante saltaba la prueba sin que faltaran órdenes).
+    const hasOrders = await orderNumLink.waitFor({ state: 'visible', timeout: 15000 }).then(() => true, () => false);
+    if (!hasOrders) {
       test.skip(); // No orders in this environment yet
     }
     await orderNumLink.click();
@@ -147,7 +149,7 @@ test.describe('WORK-04 | Detalle de orden de trabajo', () => {
     await page.waitForSelector('.page-title', { timeout: 12000 });
 
     const orderNumLink = page.locator('.table-actions button.btn-ghost').first();
-    if ((await orderNumLink.count()) === 0) test.skip();
+    if (!(await orderNumLink.waitFor({ state: 'visible', timeout: 15000 }).then(() => true, () => false))) test.skip();
     await orderNumLink.click();
 
     // PDF button is shown to admins as btn-secondary in the h1 area

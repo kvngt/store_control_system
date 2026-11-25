@@ -7,6 +7,7 @@ import {
   hasAdminCredentials,
   isLocalStack,
   login,
+  chooseNewCustomerInIntake,
   openIntakeDialog,
 } from './fixtures.js';
 import { RECEIPT, adminClient, createTestOrder } from './localData.js';
@@ -110,9 +111,8 @@ test.describe('COB | Cobros: anticipo, entrega y depósito del alta', () => {
     const tag = `${Date.now()}`.slice(-7);
     // Un solo clic, con el diálogo ya listo (`openIntakeDialog`): «Nuevo cliente» cambia el panel y el
     // botón desaparece en cuanto el clic entra, así que reintentarlo a ciegas fallaba aunque hubiera entrado.
-    await page.locator('#intake-new-customer').click();
-    await expect(modal.getByPlaceholder(/Nombre|Name/).first()).toBeVisible({ timeout: 15000 });
-    await modal.getByPlaceholder(/Nombre|Name/).first().fill(`${TEST_DATA_PREFIX} Alta ${tag}`);
+    const nameInput = await chooseNewCustomerInIntake(page, modal);
+    await nameInput.fill(`${TEST_DATA_PREFIX} Alta ${tag}`);
     await modal.locator('input[type="tel"]').first().fill(`410${tag}`);
     await next();
     await page.fill('#vehicle-brand', 'Honda');

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, PackageCheck } from 'lucide-react';
 import { useLanguage } from '../../context/language.context';
+import { pluralKey } from '../../lib/plural';
 import { useToast } from '../../context/toast.context';
 import { AlertError } from '../../components/AlertError';
 import Modal from '../../components/Modal';
@@ -147,7 +148,7 @@ export default function DeliveryModal({ order, onCancel, onDelivered }: Delivery
             <div className="alert-warn delivery-unassigned" role="note">
               <p>
                 <AlertTriangle size={14} aria-hidden="true" style={{ verticalAlign: 'middle', marginRight: 6 }} />
-                {t('delivery.unassignedWarning').replace('{n}', String(unassignedTasks.length))}
+                {t(pluralKey('delivery.unassignedWarning', unassignedTasks.length)).replace('{n}', String(unassignedTasks.length))}
               </p>
               <ul>
                 {unassignedTasks.map((descripcion, i) => (
