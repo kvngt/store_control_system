@@ -16,7 +16,9 @@ import { applySedeBranding } from '../lib/branding';
 import { formatPhone, telUrl, whatsAppUrl } from '../lib/phone';
 import { translateVehicleColor } from '../lib/vehicleColor';
 import { fetchService } from './portal.api';
+import { ContactPhones } from './components/ContactPhones';
 import { toDate } from './format';
+import { publicShopPhones } from './publicContact';
 import { computeServiceStatus } from './serviceStatus';
 import {
   initialPortalLanguage,
@@ -43,6 +45,10 @@ export default function ServicePage({ token }: ServicePageProps) {
   });
 
   const strings = portalStrings[language];
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
 
   useEffect(() => {
     if (!token) {
@@ -141,6 +147,8 @@ export default function ServicePage({ token }: ServicePageProps) {
           <div className="portal-card portal-unavailable">
             <h1>{strings.service.notFoundTitle}</h1>
             <p>{strings.service.notFoundBody}</p>
+            <p>{strings.service.notFoundAskAgain}</p>
+            <ContactPhones phones={publicShopPhones()} s={strings} whatsappMessage="" />
           </div>
         </div>
       )}

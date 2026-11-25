@@ -96,15 +96,26 @@ function safeColor(color: string | null | undefined): string {
   return color && /^#[0-9a-f]{6}$/i.test(color) ? color : DEFAULT_COLOR;
 }
 
-/** Texto blanco u oscuro según qué se lea mejor sobre el color del taller. */
-function textOn(hex: string): string {
+function luminance(hex: string): number {
   const int = parseInt(hex.slice(1), 16);
   const [r, g, b] = [(int >> 16) & 255, (int >> 8) & 255, int & 255].map((c) => {
     const s = c / 255;
     return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
   });
-  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return luminance > 0.4 ? '#111111' : '#FFFFFF';
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** Texto blanco u oscuro según qué se lea mejor sobre el color del taller. */
+function textOn(hex: string): string {
+  return luminance(hex) > 0.4 ? '#111111' : '#FFFFFF';
+}
+
+function buttonBorder(hex: string): string {
+  return luminance(hex) > 0.75 ? 'border:1px solid #1A1A1F;' : '';
+}
+
+function shortVehicle(vehicle: string): string {
+  return vehicle.length <= 40 ? vehicle : `${vehicle.slice(0, 39).trimEnd()}…`;
 }
 
 function safeHttpsUrl(url: string | null | undefined): string | null {
@@ -176,6 +187,7 @@ interface Copy {
 function copyEs(template: EmailTemplate, ctx: EmailContext): Copy | null {
   const tz = ctx.timeZone || 'America/New_York';
   const vehicle = ctx.vehiculo?.trim() || 'su vehículo';
+  const subjectVehicle = shortVehicle(vehicle);
   const shop = ctx.taller.nombre;
 
   switch (template) {
@@ -183,7 +195,7 @@ function copyEs(template: EmailTemplate, ctx: EmailContext): Copy | null {
       const date = formatDate(ctx.orden.fechaIngreso, tz, 'es');
       const eta = formatDate(ctx.orden.fechaEstimadaEntrega, tz, 'es');
       return {
-        subject: `Recibimos su ${vehicle} · ${ctx.orden.numero}`,
+        subject: `Recibimos su ${subjectVehicle} · ${ctx.orden.numero}`,
         preheader: `Vea el reporte de recepción con fotos y la firma.`,
         heading: `Su ${vehicle} ingresó al taller`,
         paragraphs: [
@@ -198,13 +210,13 @@ function copyEs(template: EmailTemplate, ctx: EmailContext): Copy | null {
       const status = ctx.orden.estatus as AnnouncedStatus;
       const byStatus: Record<AnnouncedStatus, Omit<Copy, 'button'>> = {
         en_proceso: {
-          subject: `Estamos trabajando en su ${vehicle} · ${ctx.orden.numero}`,
+          subject: `Estamos trabajando en su ${subjectVehicle} · ${ctx.orden.numero}`,
           preheader: 'El trabajo en su vehículo ya comenzó.',
           heading: 'Comenzamos el trabajo',
           paragraphs: [`El equipo de ${shop} ya está trabajando en su ${vehicle}.`],
         },
         finalizado: {
-          subject: `Su ${vehicle} está listo · ${ctx.orden.numero}`,
+          subject: `Su ${subjectVehicle} está listo · ${ctx.orden.numero}`,
           preheader: 'Ya puede pasar a recogerlo.',
           heading: 'Su vehículo está listo',
           paragraphs: [
@@ -245,8 +257,11 @@ function copyEs(template: EmailTemplate, ctx: EmailContext): Copy | null {
       if (!quote || quote.estado !== 'enviado' || lines.length === 0) return null;
       const total = lines.reduce((sum, l) => sum + Number(l.monto), 0);
       return {
-        subject: `Presupuesto para su ${vehicle} · ${ctx.orden.numero}`,
-        preheader: `${lines.length} trabajo(s) por ${money(total)} esperan su autorización.`,
+        subject: `Presupuesto para su ${subjectVehicle} · ${ctx.orden.numero}`,
+        preheader:
+          lines.length === 1
+            ? `1 trabajo por ${money(total)} espera su autorización.`
+            : `${lines.length} trabajos por ${money(total)} esperan su autorización.`,
         heading: 'Tiene un presupuesto por autorizar',
         paragraphs: [
           `${shop} preparó un presupuesto para su ${vehicle}. En el enlace puede autorizar cada trabajo por separado: solo realizaremos lo que autorice.`,
@@ -265,7 +280,11 @@ function copyEs(template: EmailTemplate, ctx: EmailContext): Copy | null {
       const approvedTotal = quote.totalAprobado ?? approved.reduce((sum, l) => sum + Number(l.monto), 0);
       return {
         subject: `${byShop ? 'Registramos su autorización' : 'Recibimos su respuesta'} · ${ctx.orden.numero}`,
-        preheader: approved.length ? `Autorizó ${approved.length} trabajo(s) por ${money(approvedTotal)}.` : 'No autorizó ningún trabajo.',
+        preheader: approved.length
+          ? approved.length === 1
+            ? `Autorizó 1 trabajo por ${money(approvedTotal)}.`
+            : `Autorizó ${approved.length} trabajos por ${money(approvedTotal)}.`
+          : 'No autorizó ningún trabajo.',
         heading: approved.length ? 'Estos son los trabajos que autorizó' : 'No autorizó ningún trabajo',
         paragraphs: [
           byShop
@@ -283,7 +302,7 @@ function copyEs(template: EmailTemplate, ctx: EmailContext): Copy | null {
       // Lo manda un admin a propósito ("Enviar reporte"): el reporte completo de la
       // orden, en el estado en que esté.
       return {
-        subject: `Reporte de su ${vehicle} · ${ctx.orden.numero}`,
+        subject: `Reporte de su ${subjectVehicle} · ${ctx.orden.numero}`,
         preheader: 'El estado, las fotos y videos del trabajo y su cuenta, en un enlace.',
         heading: 'El reporte de su vehículo',
         paragraphs: [
@@ -294,7 +313,7 @@ function copyEs(template: EmailTemplate, ctx: EmailContext): Copy | null {
       };
     case 'avance':
       return {
-        subject: `Novedades de su ${vehicle} · ${ctx.orden.numero}`,
+        subject: `Novedades de su ${subjectVehicle} · ${ctx.orden.numero}`,
         preheader: 'El taller compartió fotos o videos del trabajo.',
         heading: 'Hay novedades del trabajo',
         paragraphs: [`${shop} compartió fotos o videos del avance en su ${vehicle}.`],
@@ -308,6 +327,7 @@ function copyEs(template: EmailTemplate, ctx: EmailContext): Copy | null {
 function copyEn(template: EmailTemplate, ctx: EmailContext): Copy | null {
   const tz = ctx.timeZone || 'America/New_York';
   const vehicle = ctx.vehiculo?.trim() || 'your vehicle';
+  const subjectVehicle = shortVehicle(vehicle);
   const shop = ctx.taller.nombre;
 
   switch (template) {
@@ -315,7 +335,7 @@ function copyEn(template: EmailTemplate, ctx: EmailContext): Copy | null {
       const date = formatDate(ctx.orden.fechaIngreso, tz, 'en');
       const eta = formatDate(ctx.orden.fechaEstimadaEntrega, tz, 'en');
       return {
-        subject: `We received your ${vehicle} · ${ctx.orden.numero}`,
+        subject: `We received your ${subjectVehicle} · ${ctx.orden.numero}`,
         preheader: 'See the check-in report with photos and your signature.',
         heading: `Your ${vehicle} is at the shop`,
         paragraphs: [
@@ -330,13 +350,13 @@ function copyEn(template: EmailTemplate, ctx: EmailContext): Copy | null {
       const status = ctx.orden.estatus as AnnouncedStatus;
       const byStatus: Record<AnnouncedStatus, Omit<Copy, 'button'>> = {
         en_proceso: {
-          subject: `We are working on your ${vehicle} · ${ctx.orden.numero}`,
+          subject: `We are working on your ${subjectVehicle} · ${ctx.orden.numero}`,
           preheader: 'Work on your vehicle has started.',
           heading: 'We started the work',
           paragraphs: [`The ${shop} team is now working on your ${vehicle}.`],
         },
         finalizado: {
-          subject: `Your ${vehicle} is ready · ${ctx.orden.numero}`,
+          subject: `Your ${subjectVehicle} is ready · ${ctx.orden.numero}`,
           preheader: 'You can come pick it up.',
           heading: 'Your vehicle is ready',
           paragraphs: [
@@ -376,8 +396,11 @@ function copyEn(template: EmailTemplate, ctx: EmailContext): Copy | null {
       if (!quote || quote.estado !== 'enviado' || lines.length === 0) return null;
       const total = lines.reduce((sum, l) => sum + Number(l.monto), 0);
       return {
-        subject: `Estimate for your ${vehicle} · ${ctx.orden.numero}`,
-        preheader: `${lines.length} job(s) for ${money(total)} are waiting for your approval.`,
+        subject: `Estimate for your ${subjectVehicle} · ${ctx.orden.numero}`,
+        preheader:
+          lines.length === 1
+            ? `1 job for ${money(total)} is waiting for your approval.`
+            : `${lines.length} jobs for ${money(total)} are waiting for your approval.`,
         heading: 'You have an estimate to approve',
         paragraphs: [
           `${shop} prepared an estimate for your ${vehicle}. At the link you can approve each job separately: we will only do what you approve.`,
@@ -396,7 +419,11 @@ function copyEn(template: EmailTemplate, ctx: EmailContext): Copy | null {
       const approvedTotal = quote.totalAprobado ?? approved.reduce((sum, l) => sum + Number(l.monto), 0);
       return {
         subject: `${byShop ? 'We recorded your approval' : 'We received your answer'} · ${ctx.orden.numero}`,
-        preheader: approved.length ? `You approved ${approved.length} job(s) for ${money(approvedTotal)}.` : 'You did not approve any work.',
+        preheader: approved.length
+          ? approved.length === 1
+            ? `You approved 1 job for ${money(approvedTotal)}.`
+            : `You approved ${approved.length} jobs for ${money(approvedTotal)}.`
+          : 'You did not approve any work.',
         heading: approved.length ? 'These are the jobs you approved' : 'You did not approve any work',
         paragraphs: [
           byShop
@@ -412,7 +439,7 @@ function copyEn(template: EmailTemplate, ctx: EmailContext): Copy | null {
     }
     case 'reporte':
       return {
-        subject: `Report for your ${vehicle} · ${ctx.orden.numero}`,
+        subject: `Report for your ${subjectVehicle} · ${ctx.orden.numero}`,
         preheader: 'The status, the photos and videos of the work and your balance, in one link.',
         heading: 'Your vehicle report',
         paragraphs: [
@@ -423,7 +450,7 @@ function copyEn(template: EmailTemplate, ctx: EmailContext): Copy | null {
       };
     case 'avance':
       return {
-        subject: `Updates on your ${vehicle} · ${ctx.orden.numero}`,
+        subject: `Updates on your ${subjectVehicle} · ${ctx.orden.numero}`,
         preheader: 'The shop shared photos or videos of the work.',
         heading: 'There are updates on the work',
         paragraphs: [`${shop} shared photos or videos of the progress on your ${vehicle}.`],
@@ -493,7 +520,15 @@ export function renderEmail(template: string, ctx: EmailContext): RenderedEmail 
   const unsubscribe = `${portal}?correos=baja`;
   const name = firstName(ctx.cliente.nombre);
   const greeting = chrome.hello(name);
-  const contact = [ctx.taller.direccion, ...shopPhones(ctx.taller, chrome)].filter((v) => v && String(v).trim()) as string[];
+  const address = ctx.taller.direccion?.trim() || null;
+  const phones = shopPhones(ctx.taller, chrome)
+    .map((p) => (p ?? '').trim())
+    .filter(Boolean);
+  const contact = [address, ...phones].filter((v): v is string => Boolean(v));
+  const contactHtml = [
+    ...(address ? [escapeHtml(address)] : []),
+    ...phones.map((p) => `<span style="white-space:nowrap">${escapeHtml(p)}</span>`),
+  ];
 
   const html = `<!doctype html>
 <html lang="${lang}">
@@ -520,15 +555,15 @@ ${copy.paragraphs.map((p) => `<p style="margin:0 0 12px;font-size:16px;line-heig
 ${renderItems(copy.items)}
 </td></tr>
 <tr><td style="padding:12px 28px 8px;">
-<a href="${escapeHtml(portal)}" style="display:inline-block;background:${color};color:${buttonText};text-decoration:none;font-weight:700;font-size:16px;padding:14px 24px;border-radius:8px;">${escapeHtml(copy.button)}</a>
+<a href="${escapeHtml(portal)}" style="display:inline-block;background:${color};color:${buttonText};${buttonBorder(color)}text-decoration:none;font-weight:700;font-size:16px;padding:14px 24px;border-radius:8px;">${escapeHtml(copy.button)}</a>
 </td></tr>
 <tr><td style="padding:8px 28px 24px;">
 <p style="margin:0;font-size:13px;line-height:1.5;color:#6B6B76;">${chrome.order} ${escapeHtml(ctx.orden.numero)}${ctx.vehiculo ? ` · ${escapeHtml(ctx.vehiculo)}` : ''}. ${chrome.personalLink}</p>
 </td></tr>
 <tr><td style="padding:16px 28px 24px;border-top:1px solid #EDEDF0;">
-<p style="margin:0 0 6px;font-size:13px;line-height:1.5;color:#6B6B76;">${escapeHtml(ctx.taller.nombre)}${contact.length ? ` · ${contact.map(escapeHtml).join(' · ')}` : ''}</p>
+<p style="margin:0 0 6px;font-size:13px;line-height:1.5;color:#6B6B76;">${escapeHtml(ctx.taller.nombre)}${contactHtml.length ? ` · ${contactHtml.join(' · ')}` : ''}</p>
 ${ctx.taller.email ? `<p style="margin:0 0 6px;font-size:13px;line-height:1.5;color:#6B6B76;">${chrome.canReply}</p>` : ''}
-<p style="margin:0;font-size:12px;line-height:1.5;color:#9A9AA6;"><a href="${escapeHtml(unsubscribe)}" style="color:#9A9AA6;">${chrome.unsubscribe}</a></p>
+<p style="margin:0;font-size:12px;line-height:1.5;color:#6B6B76;"><a href="${escapeHtml(unsubscribe)}" style="color:#6B6B76;">${chrome.unsubscribe}</a></p>
 </td></tr>
 </table>
 </td></tr>
@@ -612,10 +647,10 @@ ${logo ? `<img src="${escapeHtml(logo)}" alt="${escapeHtml(ctx.taller.nombre)}" 
 ${lineas.map((l) => `<p style="margin:0 0 8px;font-size:15px;line-height:1.5;">• ${escapeHtml(l)}</p>`).join('\n')}
 </td></tr>
 <tr><td style="padding:12px 28px 24px;">
-<a href="${escapeHtml(url)}" style="display:inline-block;background:${color};color:${buttonText};text-decoration:none;font-weight:700;font-size:16px;padding:14px 24px;border-radius:8px;">${escapeHtml(button)}</a>
+<a href="${escapeHtml(url)}" style="display:inline-block;background:${color};color:${buttonText};${buttonBorder(color)}text-decoration:none;font-weight:700;font-size:16px;padding:14px 24px;border-radius:8px;">${escapeHtml(button)}</a>
 </td></tr>
 <tr><td style="padding:16px 28px 24px;border-top:1px solid #EDEDF0;">
-<p style="margin:0;font-size:12px;line-height:1.5;color:#9A9AA6;">Aviso automático de Restorify para el equipo de ${escapeHtml(ctx.taller.nombre)}.</p>
+<p style="margin:0;font-size:12px;line-height:1.5;color:#6B6B76;">Aviso automático de Restorify para el equipo de ${escapeHtml(ctx.taller.nombre)}.</p>
 </td></tr>
 </table>
 </td></tr>

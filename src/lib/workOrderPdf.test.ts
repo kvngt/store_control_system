@@ -144,6 +144,27 @@ describe('generateWorkOrderPdf', () => {
 });
 
 // En español o en inglés, como lo elija administración (decisión del taller, 05/10/2026).
+const withStubbedCanvas = async (fn: () => Promise<void>) => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob() }));
+  vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({ width: 100, height: 50, close: vi.fn() }));
+  vi.stubGlobal('document', {
+    createElement: () => ({
+      width: 0,
+      height: 0,
+      getContext: () => ({ drawImage: vi.fn() }),
+      toDataURL: () => 'data:image/png;base64,AA==',
+    }),
+  });
+  try {
+    await fn();
+  } finally {
+    vi.unstubAllGlobals();
+  }
+};
+
+const shortDate = (date: Date, locale: string, timeZone?: string) =>
+  new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric', ...(timeZone ? { timeZone } : {}) }).format(date);
+
 describe('generateWorkOrderPdf: idioma y cuenta', () => {
   const conLineas = () =>
     ({
@@ -303,8 +324,8 @@ describe('generateWorkOrderPdf: idioma y cuenta', () => {
 
   it('formatea fecha de ingreso y firma con la zona horaria de la sede y las millas con separador de miles', async () => {
     const iso = '2026-09-02T03:00:00Z';
-    const expectedNy = new Date(iso).toLocaleDateString('es-US', { timeZone: 'America/New_York' });
-    const expectedTokyo = new Date(iso).toLocaleDateString('es-US', { timeZone: 'Asia/Tokyo' });
+    const expectedNy = shortDate(new Date(iso), 'es-US', 'America/New_York');
+    const expectedTokyo = shortDate(new Date(iso), 'es-US', 'Asia/Tokyo');
     expect(expectedNy).not.toBe(expectedTokyo);
 
     const ordenConFirma = {
@@ -315,18 +336,7 @@ describe('generateWorkOrderPdf: idioma y cuenta', () => {
       firma_fecha: iso,
     } as unknown as WorkOrder;
 
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob() }));
-    vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({ width: 100, height: 50, close: vi.fn() }));
-    vi.stubGlobal('document', {
-      createElement: () => ({
-        width: 0,
-        height: 0,
-        getContext: () => ({ drawImage: vi.fn() }),
-        toDataURL: () => 'data:image/png;base64,AA==',
-      }),
-    });
-
-    try {
+    await withStubbedCanvas(async () => {
       await generateWorkOrderPdf(ordenConFirma, { ...SEDE, zona_horaria: 'Asia/Tokyo' }, { 'firmas/o1.png': 'https://cdn.test/firma.png' });
       const textoTokyo = textoPintado();
       expect(textoTokyo).toContain('108,500');
@@ -338,8 +348,86 @@ describe('generateWorkOrderPdf: idioma y cuenta', () => {
       const textoDefaultNy = textoPintado();
       expect(textoDefaultNy).toContain(expectedNy);
       expect(textoDefaultNy).toContain(`Firmado: ${expectedNy}`);
+    });
+  });
+
+  it('con un vehículo de varias líneas, la etiqueta VIN se pinta debajo de la última línea del vehículo', async () => {
+    const o = {
+      ...orden('en_proceso'),
+      vehiculo: {
+        anio: 2021,
+        marca: 'Mercedes-Benz',
+        modelo: 'Sprinter 3500XD\nCargo Van High Roof Extended',
+        placa: 'VAN123',
+        vin: 'WD3PE8CD5MP000001',
+      },
+    } as unknown as WorkOrder;
+
+    await generateWorkOrderPdf(o, SEDE);
+
+    const textCalls = llamadas.lista.filter(([m]) => m === 'text');
+    const vehCall = textCalls.find(([, a]) => Array.isArray(a[0]) && a[0].length === 2 && String(a[0][0]).includes('Sprinter'));
+    const vinCall = textCalls.find(([, a]) => a[0] === 'VIN');
+    expect(vehCall).toBeDefined();
+    expect(vinCall).toBeDefined();
+    expect(Number(vinCall![1][2])).toBeGreaterThan(Number(vehCall![1][2]) + 4.5);
+  });
+
+  it('en la firma, un nombre largo se parte en varias líneas y «Firmado: …» sale debajo, alineado a la izquierda', async () => {
+    const o = {
+      ...orden('en_proceso'),
+      cliente: { nombre: 'Alexandria Montgomery-Fitzgerald\nWorthington III', telefono: '+15550123' },
+      firma_ruta: 'firmas/o1.png',
+      firma_fecha: '2026-09-02T15:00:00Z',
+    } as unknown as WorkOrder;
+
+    await withStubbedCanvas(async () => {
+      await generateWorkOrderPdf(o, SEDE, { 'firmas/o1.png': 'https://cdn.test/firma.png' });
+    });
+
+    const textCalls = llamadas.lista.filter(([m]) => m === 'text');
+    const nameCall = textCalls.find(([, a]) => Array.isArray(a[0]) && String(a[0][0]).includes('Alexandria'));
+    const signedCall = textCalls.find(([, a]) => typeof a[0] === 'string' && a[0].startsWith('Firmado: '));
+    expect(nameCall).toBeDefined();
+    expect(signedCall).toBeDefined();
+    expect(Number(signedCall![1][2])).toBeGreaterThan(Number(nameCall![1][2]));
+    expect(signedCall![1][1]).toBe(nameCall![1][1]);
+    expect(signedCall![1][3]).toBeUndefined();
+  });
+
+  it('usa fecha corta sin ambigüedad en español e inglés y «Generado» usa la zona horaria del taller', async () => {
+    vi.useFakeTimers();
+    const now = new Date('2026-09-02T03:00:00Z');
+    vi.setSystemTime(now);
+    try {
+      const o = {
+        ...orden('en_proceso'),
+        fecha_estimada_entrega: '2026-12-04',
+        avances: [
+          { id: 'a1', orden_id: 'o1', usuario_id: 'u1', descripcion: 'Avance', creado_en: '2026-11-15T12:00:00Z', visible_cliente: true },
+        ],
+      } as unknown as WorkOrder;
+
+      await generateWorkOrderPdf(o, { ...SEDE, zona_horaria: 'Asia/Tokyo' }, {}, { language: 'es' });
+      const textoEs = textoPintado();
+      const expectedGenTokyoEs = shortDate(now, 'es-US', 'Asia/Tokyo');
+      const expectedEtaEs = shortDate(new Date(2026, 11, 4), 'es-US');
+      const expectedProgressEs = shortDate(new Date(2026, 10, 15), 'es-US');
+      expect(textoEs.some((t) => t.startsWith(`Generado: ${expectedGenTokyoEs}`))).toBe(true);
+      expect(textoEs).toContain(expectedEtaEs);
+      expect(textoEs).toContain(expectedProgressEs);
+
+      llamadas.lista = [];
+      await generateWorkOrderPdf(o, { ...SEDE, zona_horaria: 'America/New_York' }, {}, { language: 'en' });
+      const textoEn = textoPintado();
+      const expectedGenNyEn = shortDate(now, 'en-US', 'America/New_York');
+      const expectedEtaEn = shortDate(new Date(2026, 11, 4), 'en-US');
+      const expectedProgressEn = shortDate(new Date(2026, 10, 15), 'en-US');
+      expect(textoEn.some((t) => t.startsWith(`Generated: ${expectedGenNyEn}`))).toBe(true);
+      expect(textoEn).toContain(expectedEtaEn);
+      expect(textoEn).toContain(expectedProgressEn);
     } finally {
-      vi.unstubAllGlobals();
+      vi.useRealTimers();
     }
   });
 });

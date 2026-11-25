@@ -181,22 +181,40 @@ const STRINGS = {
 
 const DEFAULT_TIMEZONE = 'America/New_York';
 
+/** Formatea una fecha en la zona horaria dada, cayendo a `DEFAULT_TIMEZONE` si `Intl` la rechaza. */
+function formatInZone(
+  date: Date,
+  locale: string,
+  options: Intl.DateTimeFormatOptions,
+  timeZone: string
+): string {
+  try {
+    return new Intl.DateTimeFormat(locale, { ...options, timeZone }).format(date);
+  } catch {
+    return new Intl.DateTimeFormat(locale, { ...options, timeZone: DEFAULT_TIMEZONE }).format(date);
+  }
+}
+
+/** Fecha corta con el mes en letras abreviadas («4 dic 2026» / «Dec 4, 2026»). */
+function formatShortDate(date: Date, locale: string, timeZone?: string): string {
+  const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
+  return timeZone
+    ? formatInZone(date, locale, options, timeZone)
+    : new Intl.DateTimeFormat(locale, options).format(date);
+}
+
 /** 'AAAA-MM-DD' como fecha local, sin el corrimiento de zona de `new Date('AAAA-MM-DD')`. */
 function formatDay(value: string, locale: string) {
   const [y, m, d] = value.slice(0, 10).split('-').map(Number);
   if (!y || !m || !d) return value;
-  return new Date(y, m - 1, d).toLocaleDateString(locale);
+  return formatShortDate(new Date(y, m - 1, d), locale);
 }
 
 /** Formatea una marca ISO en la zona horaria de la sede (no la del dispositivo). */
 function formatTimestampDate(value: string, locale: string, timeZone: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  try {
-    return date.toLocaleDateString(locale, { timeZone });
-  } catch {
-    return date.toLocaleDateString(locale, { timeZone: DEFAULT_TIMEZONE });
-  }
+  return formatShortDate(date, locale, timeZone);
 }
 
 // Phone photos come in at several MB each; embedding them raw produced a
@@ -330,7 +348,9 @@ async function buildWorkOrderPdf(
     doc.text(text, x, y);
     doc.setFontSize(10);
     doc.setTextColor(20, 20, 30);
-    doc.text(doc.splitTextToSize(value || '—', width), x, y + 4.5);
+    const lines = doc.splitTextToSize(value || '—', width) as string[];
+    doc.text(lines, x, y + 4.5);
+    return 4.5 + lines.length * 4.5 + 2;
   };
 
   // ===== Header =====
@@ -391,8 +411,9 @@ async function buildWorkOrderPdf(
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...MUTED);
+  const now = new Date();
   doc.text(
-    `${S.generated}: ${new Date().toLocaleDateString(S.locale)} ${new Date().toLocaleTimeString(S.locale, { hour: '2-digit', minute: '2-digit' })}`,
+    `${S.generated}: ${formatShortDate(now, S.locale, sedeTimeZone)} ${formatInZone(now, S.locale, { hour: '2-digit', minute: '2-digit' }, sedeTimeZone)}`,
     pageWidth - MARGIN,
     y + 2,
     { align: 'right' }
@@ -439,25 +460,32 @@ async function buildWorkOrderPdf(
   // ===== Customer & vehicle =====
   sectionTitle(S.customerVehicle);
   const half = contentWidth / 2;
-  label(S.customer, order.cliente?.nombre || '', MARGIN, half - 5);
-  label(S.phone, formatPhone(order.cliente?.telefono), MARGIN + half, half - 5);
-  y += 11;
+  const row = (left: number, right: number) => {
+    y += Math.max(11, left, right);
+  };
+  row(
+    label(S.customer, order.cliente?.nombre || '', MARGIN, half - 5),
+    label(S.phone, formatPhone(order.cliente?.telefono), MARGIN + half, half - 5)
+  );
   const vehicleColor = order.vehiculo?.color ? translateVehicleColor(order.vehiculo.color, lang) : '';
   const vehicleDesc = `${order.vehiculo?.anio || ''} ${order.vehiculo?.marca || ''} ${order.vehiculo?.modelo || ''}${vehicleColor ? ` (${vehicleColor})` : ''}`.trim();
-  label(S.vehicle, vehicleDesc, MARGIN, half - 5);
-  label(S.plate, order.vehiculo?.placa || '', MARGIN + half, half - 5);
-  y += 11;
-  label(S.vin, order.vehiculo?.vin || '—', MARGIN, half - 5);
-  label(
-    S.milesIn,
-    order.millas_ingreso != null ? new Intl.NumberFormat(S.locale).format(order.millas_ingreso) : '',
-    MARGIN + half,
-    half - 5
+  row(
+    label(S.vehicle, vehicleDesc, MARGIN, half - 5),
+    label(S.plate, order.vehiculo?.placa || '', MARGIN + half, half - 5)
   );
-  y += 11;
-  label(S.dateIn, order.fecha_ingreso ? formatTimestampDate(order.fecha_ingreso, S.locale, sedeTimeZone) : '', MARGIN, half - 5);
-  label(S.estimated, order.fecha_estimada_entrega ? formatDay(order.fecha_estimada_entrega, S.locale) : '', MARGIN + half, half - 5);
-  y += 11;
+  row(
+    label(S.vin, order.vehiculo?.vin || '—', MARGIN, half - 5),
+    label(
+      S.milesIn,
+      order.millas_ingreso != null ? new Intl.NumberFormat(S.locale).format(order.millas_ingreso) : '',
+      MARGIN + half,
+      half - 5
+    )
+  );
+  row(
+    label(S.dateIn, order.fecha_ingreso ? formatTimestampDate(order.fecha_ingreso, S.locale, sedeTimeZone) : '', MARGIN, half - 5),
+    label(S.estimated, order.fecha_estimada_entrega ? formatDay(order.fecha_estimada_entrega, S.locale) : '', MARGIN + half, half - 5)
+  );
 
   // ===== Labor =====
   // Solo lo autorizado: es lo que se cobra y lo que suman los totales.
@@ -689,7 +717,7 @@ async function buildWorkOrderPdf(
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...MUTED);
-      doc.text(new Date(`${group.day}T12:00:00`).toLocaleDateString(S.locale), MARGIN, y);
+      doc.text(formatDay(group.day, S.locale), MARGIN, y);
       y += 3;
       if (group.notes.length) {
         doc.setFontSize(10);
@@ -762,9 +790,15 @@ async function buildWorkOrderPdf(
     if (firma) {
       const sigH = 22;
       const sigW = Math.min(70, sigH * firma.ratio);
-      // Reserve the whole block (title + rule + image + name line) up front so
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      const nameLines = doc.splitTextToSize(order.cliente?.nombre || S.customerFallback, 70) as string[];
+      const signedLine = order.firma_fecha
+        ? `${S.signed}: ${formatTimestampDate(order.firma_fecha, S.locale, sedeTimeZone)}`
+        : null;
+      // Reserve the whole block (title + rule + image + name lines + signed date) up front so
       // the heading never lands alone at the bottom of a page.
-      ensureSpace(sigH + 34);
+      ensureSpace(sigH + 34 + Math.max(0, nameLines.length - 1) * 4 + (signedLine ? 4 : 0));
       sectionTitle(S.signature);
       try {
         doc.addImage(firma.dataUrl, 'PNG', MARGIN, y, sigW, sigH);
@@ -779,13 +813,14 @@ async function buildWorkOrderPdf(
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...MUTED);
-      doc.text(order.cliente?.nombre || S.customerFallback, MARGIN, y);
-      if (order.firma_fecha) {
-        doc.text(`${S.signed}: ${formatTimestampDate(order.firma_fecha, S.locale, sedeTimeZone)}`, MARGIN + 70, y, {
-          align: 'right',
-        });
+      doc.text(nameLines, MARGIN, y);
+      y += nameLines.length * 4;
+      if (signedLine) {
+        doc.text(signedLine, MARGIN, y);
+        y += LINE;
+      } else {
+        y += 2;
       }
-      y += LINE;
     }
   }
 

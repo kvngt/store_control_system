@@ -164,6 +164,19 @@ lo que hay no tropiece. La vara, para el taller de una sede:
 Orden: Q1 primero (dice qué hay que arreglar). Q3 puede ir en paralelo con Q1. Q2, Q4 y Q5
 después, según lo que salga.
 
+**Estado al 24/11/2026:**
+
+- **Hechos y publicados:**
+  - Q1: 35 hallazgos.
+  - Q3: módulos apagados.
+  - Q2 completo, en todas sus tandas (las prioridades están en [ordenes/q2-prioridades.md](ordenes/q2-prioridades.md)):
+    - tanda 0: el técnico termina su orden (`046`);
+    - tanda 1: datos sucios en la recepción (`047`);
+    - tanda 2: un solo camino claro;
+    - tanda 3: se toca y se lee bien;
+    - tanda 4: lo que ve el cliente.
+- **Faltan:** Q4 y Q5, y las sobras anotadas en la [bitácora](bitacora.md) (entrada del 24/11).
+
 ### Aplazado por decisión del 16/11/2026 — Saber qué pasa (medición de uso)
 
 | # | Qué | Depende de | Tamaño | Aceptación |

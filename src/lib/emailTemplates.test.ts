@@ -211,6 +211,57 @@ describe('renderEmail: presupuestos', () => {
     const fromPortal = renderEmail('presupuesto_confirmacion', { ...base, presupuesto: { ...answered, via: 'cliente_portal' } })!;
     expect(fromPortal.subject).toBe('Recibimos su respuesta · ORD-2026-014');
   });
+
+  it('usa singular y plural sin "(s)" en la vista previa de presupuesto y confirmación', () => {
+    const onePending = { ...quote, lineas: [{ descripcion: 'Frenos', monto: 300, estado: 'pendiente' }] };
+    const twoPending = {
+      ...quote,
+      lineas: [
+        { descripcion: 'Frenos', monto: 300, estado: 'pendiente' },
+        { descripcion: 'Pintura', monto: 500, estado: 'pendiente' },
+      ],
+    };
+    const oneApproved = { ...quote, estado: 'respondido', via: 'cliente_portal', totalAprobado: 300, lineas: [{ descripcion: 'Frenos', monto: 300, estado: 'aprobado' }] };
+    const twoApproved = {
+      ...quote,
+      estado: 'respondido',
+      via: 'cliente_portal',
+      totalAprobado: 800,
+      lineas: [
+        { descripcion: 'Frenos', monto: 300, estado: 'aprobado' },
+        { descripcion: 'Pintura', monto: 500, estado: 'aprobado' },
+      ],
+    };
+
+    expect(renderEmail('presupuesto', { ...base, lang: 'es', presupuesto: onePending })!.html).toContain('1 trabajo por $300.00 espera su autorización.');
+    expect(renderEmail('presupuesto', { ...base, lang: 'es', presupuesto: twoPending })!.html).toContain('2 trabajos por $800.00 esperan su autorización.');
+    expect(renderEmail('presupuesto', { ...base, lang: 'en', presupuesto: onePending })!.html).toContain('1 job for $300.00 is waiting for your approval.');
+    expect(renderEmail('presupuesto', { ...base, lang: 'en', presupuesto: twoPending })!.html).toContain('2 jobs for $800.00 are waiting for your approval.');
+
+    expect(renderEmail('presupuesto_confirmacion', { ...base, lang: 'es', presupuesto: oneApproved })!.html).toContain('Autorizó 1 trabajo por $300.00.');
+    expect(renderEmail('presupuesto_confirmacion', { ...base, lang: 'es', presupuesto: twoApproved })!.html).toContain('Autorizó 2 trabajos por $800.00.');
+    expect(renderEmail('presupuesto_confirmacion', { ...base, lang: 'en', presupuesto: oneApproved })!.html).toContain('You approved 1 job for $300.00.');
+    expect(renderEmail('presupuesto_confirmacion', { ...base, lang: 'en', presupuesto: twoApproved })!.html).toContain('You approved 2 jobs for $800.00.');
+
+    const allSamples = [
+      renderEmail('recepcion', { ...base, orden: { ...base.orden, estatus: 'recepcion' } })!,
+      renderEmail('estatus', { ...base, orden: { ...base.orden, estatus: 'en_proceso' } })!,
+      renderEmail('avance', base)!,
+      renderEmail('reporte', base)!,
+      renderEmail('presupuesto', { ...base, presupuesto: onePending })!,
+      renderEmail('presupuesto_confirmacion', { ...base, presupuesto: oneApproved })!,
+      renderEmail('recepcion', { ...base, lang: 'en', orden: { ...base.orden, estatus: 'recepcion' } })!,
+      renderEmail('estatus', { ...base, lang: 'en', orden: { ...base.orden, estatus: 'en_proceso' } })!,
+      renderEmail('avance', { ...base, lang: 'en' })!,
+      renderEmail('reporte', { ...base, lang: 'en' })!,
+      renderEmail('presupuesto', { ...base, lang: 'en', presupuesto: onePending })!,
+      renderEmail('presupuesto_confirmacion', { ...base, lang: 'en', presupuesto: oneApproved })!,
+    ];
+    for (const email of allSamples) {
+      expect(email.html).not.toContain('(s)');
+      expect(email.text).not.toContain('(s)');
+    }
+  });
 });
 
 describe('renderEmail: reporte', () => {
@@ -296,5 +347,70 @@ describe('renderEmployeeEmail', () => {
     });
     expect(email.text).toContain('El cliente respondió el presupuesto de tu orden.');
     expect(email.text).toContain('- No realizar: Frenos.');
+  });
+});
+
+describe('renderEmail y renderEmployeeEmail: contraste, teléfonos, asunto y botón', () => {
+  it('usa #6B6B76 en el pie en lugar de #9A9AA6 y envuelve cada teléfono con white-space:nowrap', () => {
+    const telefonos = [
+      { label: 'Spanish', numero: '202-607-6126', tipo: 'celular' as const, whatsapp: true },
+      { label: 'Office', numero: '+1 (301) 909-9937', tipo: 'oficina' as const, whatsapp: false },
+    ];
+    const clientEmail = renderEmail('avance', { ...base, taller: { ...base.taller, telefonos } })!;
+    expect(clientEmail.html).not.toContain('#9A9AA6');
+    expect(clientEmail.html).toContain('<span style="white-space:nowrap">Spanish: 202-607-6126 (WhatsApp)</span>');
+    expect(clientEmail.html).toContain('<span style="white-space:nowrap">Office: +1 (301) 909-9937</span>');
+    expect(clientEmail.html).not.toContain('<span style="white-space:nowrap">Oak 12</span>');
+
+    const singlePhoneEmail = renderEmail('avance', { ...base, taller: { ...base.taller, telefonos: [] } })!;
+    expect(singlePhoneEmail.html).toContain('<span style="white-space:nowrap">555-0100</span>');
+
+    const employeeEmail = renderEmployeeEmail({
+      appUrl: 'https://restorifyauto.net/work-orders?open=o-1',
+      taller: { nombre: 'Reinventa Norte' },
+      tipo: 'asignacion',
+      titulo: 'Nueva orden · ORD-2026-014',
+      lineas: ['Revisar frenos'],
+    });
+    expect(employeeEmail.html).not.toContain('#9A9AA6');
+    expect(employeeEmail.html).toContain('color:#6B6B76;">Aviso automático de Restorify');
+  });
+
+  it('recorta el vehículo largo en el asunto a 40 caracteres y lo deja completo en el cuerpo', () => {
+    const longVehicle = '2019 Toyota Land Cruiser Prado VXR Turbo Diésel 4x4';
+    const email = renderEmail('avance', { ...base, vehiculo: longVehicle })!;
+    const expectedShort = `${longVehicle.slice(0, 39).trimEnd()}…`;
+    expect(expectedShort.length).toBeLessThanOrEqual(40);
+    expect(email.subject).toBe(`Novedades de su ${expectedShort} · ORD-2026-014`);
+    expect(email.subject).not.toContain(longVehicle);
+    expect(email.html).toContain(`<title>Novedades de su ${expectedShort} · ORD-2026-014</title>`);
+    expect(email.html).toContain(longVehicle);
+    expect(email.text).toContain(longVehicle);
+  });
+
+  it('agrega borde oscuro al botón cuando el color del taller es muy claro, pero no con colores normales', () => {
+    const lightClient = renderEmail('avance', { ...base, taller: { ...base.taller, color: '#F2F2F2' } })!;
+    expect(lightClient.html).toContain('background:#F2F2F2;color:#111111;border:1px solid #1A1A1F;');
+
+    const yellowClient = renderEmail('avance', { ...base, taller: { ...base.taller, color: '#EBC334' } })!;
+    expect(yellowClient.html).not.toContain('border:1px solid #1A1A1F');
+
+    const lightEmployee = renderEmployeeEmail({
+      appUrl: 'https://restorifyauto.net/work-orders?open=o-1',
+      taller: { nombre: 'Reinventa Norte', color: '#F2F2F2' },
+      tipo: 'asignacion',
+      titulo: 'Nueva orden · ORD-2026-014',
+      lineas: ['Revisar frenos'],
+    });
+    expect(lightEmployee.html).toContain('background:#F2F2F2;color:#111111;border:1px solid #1A1A1F;');
+
+    const yellowEmployee = renderEmployeeEmail({
+      appUrl: 'https://restorifyauto.net/work-orders?open=o-1',
+      taller: { nombre: 'Reinventa Norte', color: '#EBC334' },
+      tipo: 'asignacion',
+      titulo: 'Nueva orden · ORD-2026-014',
+      lineas: ['Revisar frenos'],
+    });
+    expect(yellowEmployee.html).not.toContain('border:1px solid #1A1A1F');
   });
 });

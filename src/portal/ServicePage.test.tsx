@@ -54,6 +54,7 @@ function sampleService(overrides: Partial<ServiceResponse> = {}): ServiceRespons
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  document.documentElement.lang = '';
 });
 
 describe('ServicePage', () => {
@@ -162,16 +163,34 @@ describe('ServicePage', () => {
     expect(html).not.toMatch(/placa/i);
   });
 
-  it('con estado no_existe: muestra mensaje amigable', async () => {
+  it('con estado no_existe: muestra mensaje amigable, cómo llamar al taller y teléfonos públicos sin nombres', async () => {
     mocks.fetchService.mockResolvedValue({ estado: 'no_existe' });
 
-    render(<ServicePage token={TOKEN} />);
+    const { container } = render(<ServicePage token={TOKEN} />);
 
     // Sin datos no hay idioma del cliente: la página sale en el del navegador.
     expect(
       await screen.findByRole('heading', { name: /Servicio no encontrado|Service not found/ })
     ).toBeInTheDocument();
     expect(screen.getByText(/ya no está disponible|no longer available/i)).toBeInTheDocument();
+    expect(screen.getByText(/confirmar su próximo servicio|confirm your next service/i)).toBeInTheDocument();
+    const telLinks = container.querySelectorAll('a[href^="tel:"]');
+    expect(telLinks.length).toBeGreaterThan(0);
+    expect(container.innerHTML).not.toMatch(/Jesus|Carlos/i);
+  });
+
+  it('con estado ok: declara el idioma del documento en documentElement.lang', async () => {
+    mocks.fetchService.mockResolvedValue(sampleService({ idioma: 'es' }));
+
+    const { unmount } = render(<ServicePage token={TOKEN} />);
+    await screen.findByText('Taller San José');
+    expect(document.documentElement.lang).toBe('es');
+    unmount();
+
+    mocks.fetchService.mockResolvedValue(sampleService({ idioma: 'en' }));
+    render(<ServicePage token={TOKEN} />);
+    await screen.findByText('Taller San José');
+    expect(document.documentElement.lang).toBe('en');
   });
 
   it('traduce el color del vehículo al inglés si el idioma es en', async () => {
