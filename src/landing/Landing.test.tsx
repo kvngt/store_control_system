@@ -100,8 +100,11 @@ describe('Landing', () => {
   it('shows real work from the shop, with its before and after', () => {
     render(<Landing />);
     const work = screen.getByRole('region', { name: 'Work from our shop.' });
-    expect(within(work).getByRole('img', { name: /Lexus in gray primer/ })).toBeInTheDocument();
-    expect(within(work).getByRole('img', { name: /same Lexus, finished in gloss black/ })).toBeInTheDocument();
+    expect(within(work).getByRole('img', { name: /Elantra with its rear end crushed/ })).toBeInTheDocument();
+    expect(within(work).getByRole('img', { name: /same Elantra with its rear end rebuilt/ })).toBeInTheDocument();
+    // Cuatro trabajos, cada uno con su antes y su después, y ninguna foto sin descripción.
+    expect(within(work).getAllByRole('img')).toHaveLength(8);
+    expect(within(work).getAllByText('Before')).toHaveLength(4);
     expect(within(work).getAllByText('Before').length).toBe(within(work).getAllByText('After').length);
     expect(within(work).getByRole('link', { name: /Instagram/ })).toHaveAttribute('href', 'https://www.instagram.com/restorifyauto/');
   });

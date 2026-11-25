@@ -62,6 +62,34 @@ al día aparte.
 Antes de empezar: `git status` (lo que no tiene commit es trabajo en curso de otro agente; no
 lo descartes) y `npm run db:check` (si la base de producción va atrasada respecto al código).
 
+### 25/11/2026 — Claude Code (producción sin datos de prueba y fotos nuevas en la página del taller)
+
+**Producción sin datos de prueba.** La persona responsable confirmó con el taller que lo que había eran
+pruebas y pidió borrarlo.
+- **Alcance:** lo eligió la persona responsable, sin respaldo previo: conservar cuentas, sede, clientes y vehículos.
+- **Base:** se corrió `scripts/admin/empezar-de-cero.sql` contra producción (un solo `TRUNCATE`).
+- **Archivos:** se borraron los 24 de `orden_media`, por su ruta exacta y sin `-r`, como el 06/11.
+- **Verificado después, en solo lectura:**
+  - 0 órdenes, 0 multimedia, 0 movimientos de Finanzas y 0 comisiones;
+  - se quedaron 1 cliente, 1 vehículo, 7 perfiles y 1 sede;
+  - en Storage quedan solo los 2 logos de `sede_logos`.
+
+**Fotos de «Trabajos de nuestro taller»** (`src/landing/sections/Work.tsx`). El taller mandó collages de
+antes y después y la persona responsable pidió cambiar las fotos viejas (Lexus y Charger color vino).
+- **Qué se publica:** cuatro trabajos. El Hyundai Elantra (golpe trasero) va en grande; el Dodge Charger
+  (frente y cambio a blanco), el Nissan Kicks (golpe lateral) y el Toyota Corolla (puerta trasera) van en
+  chico.
+- **Cómo se recortan:** `scripts/landing/fotos-de-trabajos.mjs`, con el Chromium de Playwright. Ahí están
+  los recortes y por qué quedaron fuera:
+  - el Camry, porque su placa se lee a medias;
+  - la Sienna, por el papel de enmascarar a la vista;
+  - las tomas del Charger con placa o con una persona.
+- **Los collages no van al repositorio:** los tiene el taller.
+- **Textos en es y en, y diseño:** dos columnas iguales en escritorio; el grande lado a lado en la tableta;
+  apilado en el teléfono, sin desborde horizontal.
+- **Revisado:** con capturas a 1366, 820 y 390 px, `tsc`, lint y las 36 pruebas de la página.
+- **Sin commit ni publicar.** Publicar es un push a `main` (sin base ni funciones).
+
 ### 24/11/2026 — Claude Code dirige, Gemini 4 Hydrogen programa (traspaso y tanda 2)
 
 **Dónde estamos.** La etapa 1 del [plan de arquitectura](plan-arquitectura-2026-11.md) (calidad comercial

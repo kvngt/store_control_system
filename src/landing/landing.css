@@ -890,6 +890,12 @@ body:has(.lp) {
   margin-bottom: 28px;
 }
 
+/* Los tres trabajos chicos, uno debajo del otro (al lado del grande en escritorio). */
+.lp-work__more {
+  display: grid;
+  gap: 28px;
+}
+
 .lp-case {
   display: grid;
   gap: 14px;
@@ -900,14 +906,24 @@ body:has(.lp) {
   gap: 6px;
 }
 
-.lp-case--charger .lp-case__shots {
+/* Cada trabajo chico, su antes y su después lado a lado (4:3, como sus recortes). */
+.lp-case--compact .lp-case__shots {
   grid-template-columns: 1fr 1fr;
 }
 
-/* En la tableta, las cuatro tomas del Charger en una fila: de dos en dos medían casi 940 px de alto. */
+.lp-case--compact .lp-shot {
+  aspect-ratio: 4 / 3;
+}
+
+/* El grande, el antes sobre el después (3:2, como sus recortes). En la tableta, lado a lado: uno
+   sobre otro medían casi 900 px de alto. */
+.lp-case--featured .lp-shot {
+  aspect-ratio: 3 / 2;
+}
+
 @media (min-width: 640px) and (max-width: 1023px) {
-  .lp-case--charger .lp-case__shots {
-    grid-template-columns: repeat(4, 1fr);
+  .lp-case--featured .lp-case__shots {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
@@ -921,19 +937,6 @@ body:has(.lp) {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.lp-case--lexus .lp-shot {
-  aspect-ratio: 2.15;
-}
-
-/* El Lexus terminado ocupa casi todo el ancho de su foto: centrado, no se le corta el bumper. */
-.lp-case--lexus .lp-shot--after img {
-  object-position: 51% 50%;
-}
-
-.lp-case--charger .lp-shot {
-  aspect-ratio: 3 / 4;
 }
 
 .lp-shot__label {
@@ -966,8 +969,9 @@ body:has(.lp) {
 }
 
 @media (min-width: 1024px) {
+  /* Dos columnas iguales: el grande (dos tomas de 3:2) y los tres chicos (de 4:3) miden casi lo mismo. */
   .lp-work__grid {
-    grid-template-columns: 7fr 5fr;
+    grid-template-columns: 1fr 1fr;
     align-items: start;
     gap: 28px;
   }
